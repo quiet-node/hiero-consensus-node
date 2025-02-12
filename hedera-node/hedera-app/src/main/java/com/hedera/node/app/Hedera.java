@@ -700,7 +700,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             throw new IllegalStateException("Platform should never change once set");
         }
         this.platform = requireNonNull(platform);
-        if (state.getReadableStates(PlatformStateService.NAME).isEmpty()) {
+        if (state.getReadableStates(EntityIdService.NAME).isEmpty()) {
             initializeStatesApi(state, trigger, null, platform.getContext().getConfiguration());
         }
         // With the States API grounded in the working state, we can create the object graph from it

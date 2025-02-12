@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
+ * Copyright (C) 2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ public class FakeState implements MerkleNodeState {
 
     /**
      * Exposes the underlying states for direct manipulation in tests.
+     *
      * @return the states
      */
     public Map<String, Map<String, Object>> getStates() {
@@ -103,7 +104,7 @@ public class FakeState implements MerkleNodeState {
      * Removes the state with the given key for the service with the given name.
      *
      * @param serviceName the name of the service
-     * @param stateKey the key of the state
+     * @param stateKey    the key of the state
      */
     public void removeServiceState(@NonNull final String serviceName, @NonNull final String stateKey) {
         requireNonNull(serviceName);
@@ -300,16 +301,6 @@ public class FakeState implements MerkleNodeState {
 
     @Override
     public void unregisterService(@NonNull String serviceName) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean release() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean isDestroyed() {
         throw new UnsupportedOperationException();
     }
 }

@@ -31,6 +31,9 @@ import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
+/**
+ * An adapter for {@link MerkleNodeState} that delegates all calls to the wrapped instance.
+ */
 @ConstructableIgnored
 public class MerkleNodeStateAdapter implements MerkleNodeState {
 
@@ -40,28 +43,43 @@ public class MerkleNodeStateAdapter implements MerkleNodeState {
         this.delegate = delegate;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @NonNull
     @Override
     public MerkleNodeStateAdapter copy() {
         return new MerkleNodeStateAdapter(delegate.copy());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public <T extends MerkleNode> void putServiceStateIfAbsent(
             @NonNull StateMetadata<?, ?> md, @NonNull Supplier<T> nodeSupplier, @NonNull Consumer<T> nodeInitializer) {
         delegate.putServiceStateIfAbsent(md, nodeSupplier, nodeInitializer);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void unregisterService(@NonNull String serviceName) {
         delegate.unregisterService(serviceName);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void removeServiceState(@NonNull String serviceName, @NonNull String stateKey) {
         delegate.removeServiceState(serviceName, stateKey);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean release() {
         return delegate.release();
@@ -72,6 +90,9 @@ public class MerkleNodeStateAdapter implements MerkleNodeState {
         return delegate.isDestroyed();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void init(
             @NonNull final Configuration configuration,
@@ -82,18 +103,27 @@ public class MerkleNodeStateAdapter implements MerkleNodeState {
         delegate.init(configuration, time, metrics, merkleCryptography, roundSupplier);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @NonNull
     @Override
     public ReadableStates getReadableStates(@NonNull String serviceName) {
         return delegate.getReadableStates(serviceName);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @NonNull
     @Override
     public WritableStates getWritableStates(@NonNull String serviceName) {
         return delegate.getWritableStates(serviceName);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setHash(Hash hash) {
         delegate.setHash(hash);
