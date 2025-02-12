@@ -96,6 +96,7 @@ import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.crypto.CryptoStatic;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.state.State;
@@ -184,7 +185,7 @@ public class TransactionExecutorsTest {
     private GasCalculator gasCalculator;
 
     @Mock
-    private State state;
+    private MerkleNodeState state;
 
     @Mock
     private ConfigProviderImpl configProvider;
@@ -385,7 +386,7 @@ public class TransactionExecutorsTest {
                 .transactionValidDuration(new Duration(minValidDuration));
     }
 
-    private State genesisState(@NonNull final Map<String, String> overrides) {
+    private MerkleNodeState genesisState(@NonNull final Map<String, String> overrides) {
         final var state = new FakeState();
         final var configBuilder = HederaTestConfigBuilder.create();
         overrides.forEach(configBuilder::withValue);
@@ -420,7 +421,6 @@ public class TransactionExecutorsTest {
                 new ConfigProviderImpl().getConfiguration(),
                 config,
                 networkInfo,
-                NO_OP_METRICS,
                 startupNetworks,
                 storeMetricsService,
                 configProvider,

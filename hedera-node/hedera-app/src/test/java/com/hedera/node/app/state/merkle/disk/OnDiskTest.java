@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.state.merkle.disk;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,7 +18,7 @@ import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
-import com.swirlds.state.merkle.StateUtils;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
 import com.swirlds.state.merkle.disk.OnDiskWritableKVState;
 import com.swirlds.virtualmap.VirtualMap;
@@ -81,7 +66,7 @@ class OnDiskTest extends MerkleTestBase {
         final var tableConfig = new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 100, 0);
 
         final var builder = new MerkleDbDataSourceBuilder(storageDir, tableConfig, CONFIGURATION);
-        virtualMap = new VirtualMap(StateUtils.computeLabel(SERVICE_NAME, ACCOUNT_STATE_KEY), builder, CONFIGURATION);
+        virtualMap = new VirtualMap(StateMetadata.computeLabel(SERVICE_NAME, ACCOUNT_STATE_KEY), builder, CONFIGURATION);
 
         Configuration config = mock(Configuration.class);
         final var hederaConfig = mock(HederaConfig.class);

@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.state;
 
 import static com.swirlds.state.merkle.StateUtils.registerWithSystem;
@@ -54,9 +39,8 @@ import com.swirlds.platform.system.events.Event;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.StateMetadata;
-import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.merkle.singleton.StringLeaf;
 import com.swirlds.state.spi.CommittableWritableStates;
@@ -160,7 +144,7 @@ public enum FakeStateLifecycles implements StateLifecycles<MerkleNodeState> {
                 .forEach(def -> {
                     final var md = new StateMetadata<>(RosterStateId.NAME, schema, def);
                     if (def.singleton()) {
-                        merkleStateRoot.putServiceStateIfAbsent(
+                        state.putServiceStateIfAbsent(
                                 md,
                                 () -> new SingletonNode<>(
                                         md.serviceName(),
@@ -169,10 +153,10 @@ public enum FakeStateLifecycles implements StateLifecycles<MerkleNodeState> {
                                         md.stateDefinition().valueCodec(),
                                         null));
                     } else if (def.onDisk()) {
-                        merkleStateRoot.putServiceStateIfAbsent(md, () -> {
+                        state.putServiceStateIfAbsent(md, () -> {
                             final var tableConfig =
                                     new MerkleDbTableConfig((short) 1, DigestType.SHA_384, def.maxKeysHint(), 16);
-                            final var label = StateUtils.computeLabel(RosterStateId.NAME, def.stateKey());
+                            final var label = StateMetadata.computeLabel(RosterStateId.NAME, def.stateKey());
                             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
                             final var virtualMap = new VirtualMap(label, dsBuilder, CONFIGURATION);
                             return virtualMap;

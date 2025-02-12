@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state.service;
 
 import static com.hedera.hapi.util.HapiUtils.asInstant;
@@ -34,7 +19,6 @@ import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.state.State;
-import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -157,11 +141,6 @@ public class PlatformStateFacade {
     public @Nullable PlatformState platformStateOf(@NonNull final State state) {
         final ReadableStates readableStates = state.getReadableStates(NAME);
         if (readableStates.isEmpty()) {
-            // fallback to lookup directly in the Merkle tree, useful for loading the state from disk
-            if (state instanceof MerkleStateRoot<?> merkleStateRoot) {
-                // temp to compile code
-                return UNINITIALIZED_PLATFORM_STATE;
-            }
             return UNINITIALIZED_PLATFORM_STATE;
         } else {
             return (PlatformState)
@@ -346,7 +325,7 @@ public class PlatformStateFacade {
     private PlatformStateAccessor readablePlatformStateStore(@NonNull final State state) {
         final ReadableStates readableStates = state.getReadableStates(NAME);
         if (readableStates.isEmpty()) {
-            return new SnapshotPlatformStateAccessor(platformStateOf(state), versionFactory);
+            return new SnapshotPlatformStateAccessor(UNINITIALIZED_PLATFORM_STATE, versionFactory);
         }
         return new ReadablePlatformStateStore(readableStates, versionFactory);
     }

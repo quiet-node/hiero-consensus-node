@@ -1,42 +1,25 @@
-/*
- * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.state;
 
 import static java.util.Objects.requireNonNull;
 
-import com.swirlds.base.time.Time;
-import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.crypto.Hashable;
-import com.swirlds.common.merkle.crypto.MerkleCryptography;
+import com.swirlds.common.constructable.ConstructableIgnored;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.metrics.api.Metrics;
+import com.swirlds.platform.state.MerkleNodeStateAdapter;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.LongSupplier;
 
 /**
  * A {@link State} that wraps another {@link State} and provides a {@link #commit()} method that
  * commits all modifications to the underlying state.
  */
-public class WrappedState implements State, Hashable {
+@ConstructableIgnored
+public class WrappedState extends MerkleNodeStateAdapter {
 
     private final State delegate;
     private final Map<String, WrappedWritableStates> writableStatesMap = new HashMap<>();
@@ -47,16 +30,9 @@ public class WrappedState implements State, Hashable {
      * @param delegate the {@link State} to wrap
      * @throws NullPointerException if {@code delegate} is {@code null}
      */
-    public WrappedState(@NonNull final State delegate) {
+    public WrappedState(@NonNull final MerkleNodeState delegate) {
+        super(delegate);
         this.delegate = requireNonNull(delegate, "delegate must not be null");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void init(@NonNull final Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
-        delegate.init(configuration, time, metrics, merkleCryptography, roundSupplier);
     }
 
     /**
@@ -109,13 +85,5 @@ public class WrappedState implements State, Hashable {
         for (final var writableStates : writableStatesMap.values()) {
             writableStates.commit();
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setHash(Hash hash) {
-        delegate.setHash(hash);
     }
 }

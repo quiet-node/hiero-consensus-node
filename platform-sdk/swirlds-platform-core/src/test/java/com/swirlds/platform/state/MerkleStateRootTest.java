@@ -20,8 +20,8 @@ import static com.swirlds.platform.state.PlatformStateAccessor.GENESIS_ROUND;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
+import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
 import static com.swirlds.state.merkle.MerkleStateRoot.CURRENT_VERSION;
-import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -50,7 +50,7 @@ import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StateDefinition;
-import com.swirlds.state.merkle.StateMetadata;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.state.spi.ReadableQueueState;
@@ -90,7 +90,7 @@ class MerkleStateRootTest extends MerkleTestBase {
         FakeStateLifecycles.registerMerkleStateRootClassIds();
         setupFruitMerkleMap();
         stateRoot = new TestMerkleStateRoot();
-        stateRoot.init(, new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
+        stateRoot.init(CONFIGURATION, new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
     }
 
     /** Looks for a merkle node with the given label */
@@ -810,14 +810,14 @@ class MerkleStateRootTest extends MerkleTestBase {
             var node2 = mock(MerkleNode.class);
             stateRoot.setChild(1, node2);
             reset(node1, node2);
-            assertSame(stateRoot, stateRoot.migrate(CURRENT_VERSION));
+            assertSame(stateRoot, stateRoot.migrate(CONFIGURATION, CURRENT_VERSION));
             verifyNoMoreInteractions(node1, node2);
         }
 
         @Test
         @DisplayName("Migration from previous versions is not supported")
         void migration_not_supported() {
-            assertThrows(UnsupportedOperationException.class, () -> stateRoot.migrate(CURRENT_VERSION - 1));
+            assertThrows(UnsupportedOperationException.class, () -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1));
         }
     }
 
@@ -852,7 +852,7 @@ class MerkleStateRootTest extends MerkleTestBase {
                             .withConfigDataType(CryptoConfig.class)
                             .build(),
                     CryptographyFactory.create());
-            stateRoot.init(, new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
+            stateRoot.init(CONFIGURATION, new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
         }
 
         @Test

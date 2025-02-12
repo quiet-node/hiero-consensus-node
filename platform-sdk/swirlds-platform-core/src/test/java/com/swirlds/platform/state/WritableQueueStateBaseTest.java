@@ -352,7 +352,7 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
         @Test
         void commitResetsIndex() {
             final var backingList = new LinkedList<String>();
-            final var subject = new ListWritableQueueState<>(STEAM_STATE_KEY, backingList);
+            final var subject = new ListWritableQueueState<>(STEAM_SERVICE_NAME, STEAM_STATE_KEY, backingList);
             subject.add(ART);
             subject.add(BIOLOGY);
             subject.removeIf(s -> true);

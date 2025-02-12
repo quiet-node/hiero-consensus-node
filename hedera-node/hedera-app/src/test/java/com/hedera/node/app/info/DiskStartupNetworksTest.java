@@ -293,7 +293,6 @@ class DiskStartupNetworksTest {
                 new ConfigProviderImpl().getConfiguration(),
                 DEFAULT_CONFIG,
                 FAKE_NETWORK_INFO,
-                NO_OP_METRICS,
                 startupNetworks,
                 storeMetricsService,
                 configProvider,

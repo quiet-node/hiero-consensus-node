@@ -1,27 +1,12 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package com.swirlds.state.merkle;
+// SPDX-License-Identifier: Apache-2.0
+package com.swirlds.common.merkle.utility;
 
 import static com.swirlds.common.io.utility.FileUtils.writeAndFlush;
+import static com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
+import static com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader.SIG_SET_SEPARATE_STATE_FILE_VERSION;
+import static com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader.VERSIONED_FILE_BYTE;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.logging.legacy.LogMarker.STATE_TO_DISK;
-import static com.swirlds.state.merkle.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
-import static com.swirlds.state.merkle.MerkleTreeSnapshotReader.SIG_SET_SEPARATE_STATE_FILE_VERSION;
-import static com.swirlds.state.merkle.MerkleTreeSnapshotReader.VERSIONED_FILE_BYTE;
 
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
 import com.swirlds.common.merkle.MerkleNode;
@@ -32,7 +17,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Utility class for writing a snapshot of a {@link MerkleStateRoot} to disk.
+ * Utility class for writing a snapshot of a Merkle tree to disk.
  */
 public final class MerkleTreeSnapshotWriter {
 
@@ -43,8 +28,8 @@ public final class MerkleTreeSnapshotWriter {
     }
 
     /**
-     * Writes a snapshot of the given {@link MerkleStateRoot} to the given {@link Path}.
-     * @param merkleRoot the {@link MerkleStateRoot} to write
+     * Writes a snapshot of the given {@link MerkleNode} to the given {@link Path}.
+     * @param merkleRoot the {@link MerkleNode} representing a root of the Merkle tree to write
      * @param targetPath the {@link Path} to write the snapshot to
      */
     public static void createSnapshot(

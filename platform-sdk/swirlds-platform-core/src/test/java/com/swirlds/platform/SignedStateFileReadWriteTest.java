@@ -17,6 +17,7 @@
 package com.swirlds.platform;
 
 import static com.swirlds.common.io.utility.FileUtils.throwIfFileExists;
+import static com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
 import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStateFile;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.CURRENT_ROSTER_FILE_NAME;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.HASH_INFO_FILE_NAME;
@@ -25,7 +26,6 @@ import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeHas
 import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeSignatureSetFile;
 import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeSignedStateToDisk;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
-import static com.swirlds.state.merkle.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
 import static java.nio.file.Files.exists;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -151,8 +151,10 @@ class SignedStateFileReadWriteTest {
         assertTrue(exists(signatureSetFile), "signature set file should be present");
 
         MerkleDb.resetDefaultInstancePath();
+        Configuration configuration =
+                TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
-                TestPlatformContextBuilder.create().build().getConfiguration(), stateFile, TEST_PLATFORM_STATE_FACADE);
+                configuration, stateFile, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
         MerkleCryptoFactory.getInstance()
                 .digestTreeSync(deserializedSignedState
                         .reservedSignedState()

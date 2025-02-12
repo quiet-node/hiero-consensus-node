@@ -22,18 +22,18 @@ import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.base.time.Time;
+import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
+import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
+import com.swirlds.common.merkle.utility.MerkleTreeSnapshotWriter;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.StateChangeListener;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.MerkleRootSnapshotMetrics;
-import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.MerkleTreeSnapshotReader;
-import com.swirlds.state.merkle.MerkleTreeSnapshotWriter;
-import com.swirlds.state.merkle.StateMetadata;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
 import com.swirlds.state.merkle.disk.OnDiskReadableQueueState;
 import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
@@ -57,7 +57,6 @@ import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -69,7 +68,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -133,6 +134,8 @@ public class NewStateRoot implements MerkleNodeState {
      */
     protected NewStateRoot(@NonNull final NewStateRoot from) {
         this.virtualMap = from.virtualMap.copy(); // not sure in this
+
+        this.roundSupplier = from.roundSupplier;
 
         this.listeners.addAll(from.listeners);
 
@@ -206,6 +209,11 @@ public class NewStateRoot implements MerkleNodeState {
         return new NewStateRoot(this);
     }
 
+    @Override
+    public void setHash(Hash hash) {
+        virtualMap.setHash(hash);
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -239,7 +247,7 @@ public class NewStateRoot implements MerkleNodeState {
         throwIfMutable();
         throwIfDestroyed();
         final long startTime = time.currentTimeMillis();
-        MerkleTreeSnapshotWriter.createSnapshot(virtualMap, targetPath, getCurrentRound()); // TODO: double check
+        MerkleTreeSnapshotWriter.createSnapshot(virtualMap, targetPath, roundSupplier.getAsLong()); // TODO: double check
         snapshotMetrics.updateWriteStateToDiskTimeMetric(time.currentTimeMillis() - startTime);
     }
 
@@ -247,32 +255,13 @@ public class NewStateRoot implements MerkleNodeState {
      * {@inheritDoc}
      */
     @Override
-    public MerkleStateRoot<?> loadSnapshot(@NonNull Path targetPath) throws IOException {
+    public MerkleNodeState loadSnapshot(@NonNull Path targetPath) throws IOException {
         requireNonNull(configuration);
-        return (MerkleStateRoot<?>) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
+        return (MerkleNodeState) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
                 .stateRoot();
     }
 
     // Getters and setters
-
-    // TODO: update two methods below (most likely after closing of
-    // https://github.com/hashgraph/hedera-services/issues/17357)
-
-    public @Nullable PlatformState getPlatformState() {
-        ReadableStates readableStates = getReadableStates("PlatformStateService");
-        return readableStates.isEmpty()
-                ? null
-                : (PlatformState) readableStates.getSingleton("PLATFORM_STATE").get();
-    }
-
-    /**
-     * Returns the round number from the consensus snapshot, or the genesis round if there is no consensus snapshot.
-     */
-    public long getCurrentRound() {
-        return (getPlatformState() == null || getPlatformState().consensusSnapshot() == null)
-                ? 0
-                : getPlatformState().consensusSnapshot().round();
-    }
 
     /**
      * Sets the time for this state.
@@ -302,8 +291,6 @@ public class NewStateRoot implements MerkleNodeState {
     }
 
     // State API related ops
-
-    // TODO: unify names of those three methods below: initializeState, unregisterService, removeServiceState
 
     /**
      * Initializes the defined service state.

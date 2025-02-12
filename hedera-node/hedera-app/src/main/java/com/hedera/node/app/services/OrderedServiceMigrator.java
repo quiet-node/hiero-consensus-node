@@ -26,9 +26,9 @@ import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
 import com.hedera.node.app.state.merkle.MerkleSchemaRegistry;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.SoftwareVersion;
-import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import com.swirlds.state.lifecycle.Service;
 import com.swirlds.state.lifecycle.StartupNetworks;
@@ -69,7 +69,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
      * @param platformConfig      The platform configuration to use for subsequent object initializations
      * @param genesisNetworkInfo  The network information to use for the migrations.
      *                            This is only used in genesis case
-     * @param metrics             The metrics to use for the migrations
      * @param startupNetworks     The startup networks to use for the migrations
      * @param storeMetricsService The store metrics service to use for the migrations
      * @param configProvider
@@ -78,14 +77,13 @@ public class OrderedServiceMigrator implements ServiceMigrator {
      */
     @Override
     public List<StateChanges.Builder> doMigrations(
-            @NonNull final State state,
+            @NonNull final MerkleNodeState state,
             @NonNull final ServicesRegistry servicesRegistry,
             @Nullable final SoftwareVersion previousVersion,
             @NonNull final SoftwareVersion currentVersion,
             @NonNull final Configuration appConfig,
             @NonNull final Configuration platformConfig,
             @Nullable final NetworkInfo genesisNetworkInfo,
-            @NonNull final Metrics metrics,
             @NonNull final StartupNetworks startupNetworks,
             @NonNull final StoreMetricsServiceImpl storeMetricsService,
             @NonNull final ConfigProviderImpl configProvider,
@@ -94,7 +92,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
         requireNonNull(currentVersion);
         requireNonNull(appConfig);
         requireNonNull(platformConfig);
-        requireNonNull(metrics);
 
         final Map<String, Object> sharedValues = new HashMap<>();
         final var migrationStateChanges = new MigrationStateChanges(state, appConfig, storeMetricsService);
@@ -114,7 +111,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
                 appConfig,
                 platformConfig,
                 genesisNetworkInfo,
-                metrics,
                 // We call with null here because we're migrating the entity ID service itself
                 null,
                 sharedValues,
@@ -154,7 +150,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
                             appConfig,
                             platformConfig,
                             genesisNetworkInfo,
-                            metrics,
                             entityIdStore,
                             sharedValues,
                             migrationStateChanges,

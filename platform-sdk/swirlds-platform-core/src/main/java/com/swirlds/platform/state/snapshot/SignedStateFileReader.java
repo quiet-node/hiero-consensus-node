@@ -22,7 +22,9 @@ import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.SUPPORTED
 import static java.nio.file.Files.exists;
 
 import com.swirlds.common.RosterStateId;
+import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
+import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -34,8 +36,7 @@ import com.swirlds.platform.state.signed.SigSet;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
-import com.swirlds.state.merkle.MerkleTreeSnapshotReader;
-import com.swirlds.state.merkle.StateMetadata;
+import com.swirlds.state.lifecycle.StateMetadata;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -63,7 +64,8 @@ public final class SignedStateFileReader {
     public static @NonNull DeserializedSignedState readStateFile(
             @NonNull final Configuration configuration,
             @NonNull final Path stateFile,
-            @NonNull final PlatformStateFacade stateFacade)
+            @NonNull final PlatformStateFacade stateFacade,
+            @NonNull final PlatformContext platformContext)
             throws IOException {
 
         Objects.requireNonNull(configuration);
@@ -91,6 +93,7 @@ public final class SignedStateFileReader {
                 false,
                 false,
                 stateFacade);
+        newSignedState.init(platformContext);
 
         registerServiceStates(newSignedState);
 
@@ -171,11 +174,7 @@ public final class SignedStateFileReader {
                 .forEach(def -> {
                     final var md = new StateMetadata<>(name, schema, def);
                     if (def.singleton() || def.onDisk()) {
-                        state.putServiceStateIfAbsent(md, () -> {
-                            throw new IllegalStateException(
-                                    "State nodes " + md.stateDefinition().stateKey() + " for service " + name
-                                            + " are supposed to exist in the state snapshot already.");
-                        });
+                        state.initializeState(md);
                     } else {
                         throw new IllegalStateException(
                                 "Only singletons and onDisk virtual maps are supported as stub states");

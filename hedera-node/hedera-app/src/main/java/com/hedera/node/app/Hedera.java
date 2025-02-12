@@ -148,6 +148,7 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadablePlatformStateStore;
 import com.swirlds.platform.state.service.ReadableRosterStore;
+import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.Round;
@@ -161,7 +162,10 @@ import com.swirlds.platform.system.transaction.Transaction;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StartupNetworks;
+import com.swirlds.state.lifecycle.StateDefinition;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
+import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -170,6 +174,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.InstantSource;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -337,7 +342,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * When initializing the State API, the state being initialized.
      */
     @Nullable
-    private State initState;
+    private MerkleNodeState initState;
 
     /**
      * The metrics object being used for reporting.
@@ -620,12 +625,18 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * @param platformConfig the platform configuration
      */
     public void initializeStatesApi(
-            @NonNull final State state,
+            @NonNull final MerkleNodeState state,
             @NonNull final InitTrigger trigger,
             @Nullable final Network genesisNetwork,
             @NonNull final Configuration platformConfig) {
         requireNonNull(state);
         requireNonNull(platformConfig);
+
+        if (trigger != GENESIS) {
+            // FIXME: remove?
+            registerPlatformService(state);
+        }
+
         this.configProvider = new ConfigProviderImpl(trigger == GENESIS, metrics);
         final var deserializedVersion = platformStateFacade.creationSemanticVersionOf(state);
         logger.info(
@@ -650,7 +661,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             throw new IllegalStateException("Cannot downgrade from " + savedStateVersion + " to " + version);
         }
         try {
-            migrateSchemas(state, savedStateVersion, trigger, metrics, genesisNetwork, platformConfig);
+            migrateSchemas(state, savedStateVersion, trigger, genesisNetwork, platformConfig);
             logConfiguration();
         } catch (final Throwable t) {
             logger.fatal("Critical failure during schema migration", t);
@@ -663,13 +674,25 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 platformStateFacade.lastFrozenTimeOf(state));
     }
 
+    public static void registerPlatformService(@NonNull final MerkleNodeState state) {
+        V0540PlatformStateSchema schema = new V0540PlatformStateSchema();
+        schema.statesToCreate().stream()
+                .sorted(Comparator.comparing(StateDefinition::stateKey))
+                .forEach(def -> {
+                    final var md = new StateMetadata<>(PlatformStateService.NAME, schema, def);
+                    state.initializeState(md);
+                });
+    }
+
     /**
      * Invoked by the platform when the state should be initialized. This happens <b>BEFORE</b>
      * {@link SwirldMain#init(Platform, NodeId)} and after {@link #newStateRoot()}.
      */
     @SuppressWarnings("java:S1181") // catching Throwable instead of Exception when we do a direct System.exit()
     public void onStateInitialized(
-            @NonNull final State state, @NonNull final Platform platform, @NonNull final InitTrigger trigger) {
+            @NonNull final MerkleNodeState state,
+            @NonNull final Platform platform,
+            @NonNull final InitTrigger trigger) {
         // A Hedera object can receive multiple onStateInitialized() calls throughout its lifetime if
         // the platform needs to initialize a learned state after reconnect; however, it cannot be
         // used by multiple platform instances
@@ -708,10 +731,9 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * @param platformConfig platform configuration
      */
     private void migrateSchemas(
-            @NonNull final State state,
+            @NonNull final MerkleNodeState state,
             @Nullable final ServicesSoftwareVersion deserializedVersion,
             @NonNull final InitTrigger trigger,
-            @NonNull final Metrics metrics,
             @Nullable final Network genesisNetwork,
             @NonNull final Configuration platformConfig) {
         final var previousVersion = deserializedVersion == null ? null : deserializedVersion.getPbjSemanticVersion();
@@ -746,7 +768,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 configProvider.getConfiguration(),
                 platformConfig,
                 genesisNetworkInfo,
-                metrics,
                 startupNetworks,
                 storeMetricsService,
                 configProvider,
@@ -779,7 +800,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * {@link #newStateRoot()} or an instance of {@link MerkleNodeState} created by the platform and
      * loaded from the saved state).
      *
-     * <p>(FUTURE) Consider moving this initialization into {@link #onStateInitialized(State, Platform, InitTrigger)}
+     * <p>(FUTURE) Consider moving this initialization into {@link #onStateInitialized(MerkleNodeState, Platform, InitTrigger)}
      * instead, as there is no special significance to having it here instead.
      */
     @SuppressWarnings("java:S1181") // catching Throwable instead of Exception when we do a direct System.exit()
@@ -951,7 +972,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      */
     public void onHandleConsensusRound(
             @NonNull final Round round,
-            @NonNull final State state,
+            @NonNull final MerkleNodeState state,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
         daggerApp.workingStateAccessor().setState(state);
         daggerApp.handleWorkflow().handleRound(state, round, stateSignatureTxnCallback);
