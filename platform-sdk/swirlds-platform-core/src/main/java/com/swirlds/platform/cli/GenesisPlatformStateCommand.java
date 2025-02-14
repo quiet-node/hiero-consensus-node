@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.swirlds.platform.cli;
 
+import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
 import static com.swirlds.platform.state.snapshot.SavedStateMetadata.NO_NODE_ID;
 import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeSignedStateFilesToDirectory;
 
@@ -30,7 +31,7 @@ import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.config.DefaultConfiguration;
 import com.swirlds.platform.consensus.SyntheticSnapshot;
 import com.swirlds.platform.state.PlatformStateAccessor;
-import com.swirlds.platform.state.PlatformStateModifier;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.WritableRosterStore;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
@@ -77,12 +78,11 @@ public class GenesisPlatformStateCommand extends AbstractCommand {
         final PlatformContext platformContext = PlatformContext.create(configuration);
 
         System.out.printf("Reading from %s %n", statePath.toAbsolutePath());
+        final PlatformStateFacade stateFacade = DEFAULT_PLATFORM_STATE_FACADE;
         final DeserializedSignedState deserializedSignedState =
-                SignedStateFileReader.readStateFile(configuration, statePath);
+                SignedStateFileReader.readStateFile(configuration, statePath, stateFacade);
         try (final ReservedSignedState reservedSignedState = deserializedSignedState.reservedSignedState()) {
-            final PlatformStateModifier platformState =
-                    reservedSignedState.get().getState().getWritablePlatformState();
-            platformState.bulkUpdate(v -> {
+            stateFacade.bulkUpdateOf(reservedSignedState.get().getState(), v -> {
                 System.out.printf("Replacing platform data %n");
                 v.setRound(PlatformStateAccessor.GENESIS_ROUND);
                 v.setSnapshot(SyntheticSnapshot.getGenesisSnapshot());
@@ -106,7 +106,8 @@ public class GenesisPlatformStateCommand extends AbstractCommand {
                     .digestTreeAsync(reservedSignedState.get().getState())
                     .get();
             System.out.printf("Writing modified state to %s %n", outputDir.toAbsolutePath());
-            writeSignedStateFilesToDirectory(platformContext, NO_NODE_ID, outputDir, reservedSignedState.get());
+            writeSignedStateFilesToDirectory(
+                    platformContext, NO_NODE_ID, outputDir, reservedSignedState.get(), stateFacade);
         }
 
         return 0;

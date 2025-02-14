@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.hss.schedulenative;
 
+import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.HtsSystemContract.HTS_167_CONTRACT_ID;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hss.schedulenative.ScheduleNativeTranslator.SCHEDULED_NATIVE_CALL;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hss.signschedule.SignScheduleTranslator.SIGN_SCHEDULE;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT_CONFIG;
@@ -37,6 +38,7 @@ import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.contract.impl.exec.gas.DispatchType;
 import com.hedera.node.app.service.contract.impl.exec.gas.SystemContractGasCalculator;
+import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.scope.VerificationStrategies;
 import com.hedera.node.app.service.contract.impl.exec.scope.VerificationStrategy;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hss.HssCallAttempt;
@@ -46,7 +48,9 @@ import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.Addres
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.HtsCallFactory;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.CreateDecoder;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.CreateTranslator;
+import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethodRegistry;
 import com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.common.CallTestBase;
+import com.hedera.node.app.spi.signatures.SignatureVerifier;
 import com.hedera.node.config.data.ContractsConfig;
 import com.swirlds.config.api.Configuration;
 import java.util.Set;
@@ -94,14 +98,22 @@ class ScheduleNativeTranslatorTest extends CallTestBase {
     @Mock
     private ContractsConfig contractsConfig;
 
+    @Mock
+    private SignatureVerifier signatureVerifier;
+
     private CreateTranslator createTranslator;
+
+    @Mock
+    private ContractMetrics contractMetrics;
+
+    private final SystemContractMethodRegistry systemContractMethodRegistry = new SystemContractMethodRegistry();
 
     private ScheduleNativeTranslator subject;
 
     @BeforeEach
     void setUp() {
-        createTranslator = new CreateTranslator(decoder);
-        subject = new ScheduleNativeTranslator(htsCallFactory);
+        createTranslator = new CreateTranslator(decoder, systemContractMethodRegistry, contractMetrics);
+        subject = new ScheduleNativeTranslator(htsCallFactory, systemContractMethodRegistry, contractMetrics);
     }
 
     @Test
@@ -120,10 +132,12 @@ class ScheduleNativeTranslatorTest extends CallTestBase {
                 mockEnhancement(),
                 addressIdConverter,
                 verificationStrategies,
+                signatureVerifier,
                 gasCalculator,
+                systemContractMethodRegistry,
                 configuration);
         // when/then
-        assertTrue(subject.matches(attempt));
+        assertTrue(subject.identifyMethod(attempt).isPresent());
     }
 
     @Test
@@ -135,11 +149,13 @@ class ScheduleNativeTranslatorTest extends CallTestBase {
                 mockEnhancement(),
                 addressIdConverter,
                 verificationStrategies,
+                signatureVerifier,
                 gasCalculator,
+                systemContractMethodRegistry,
                 DEFAULT_CONFIG);
 
         // when/then
-        assertFalse(subject.matches(attempt));
+        assertFalse(subject.identifyMethod(attempt).isPresent());
     }
 
     @Test
@@ -174,6 +190,7 @@ class ScheduleNativeTranslatorTest extends CallTestBase {
         given(attempt.inputBytes()).willReturn(inputBytes.toArray());
         given(attempt.addressIdConverter()).willReturn(addressIdConverter);
         given(attempt.keySetFor()).willReturn(Set.of());
+        given(attempt.systemContractID()).willReturn(HTS_167_CONTRACT_ID);
         given(addressIdConverter.convert(any())).willReturn(SENDER_ID);
 
         // when

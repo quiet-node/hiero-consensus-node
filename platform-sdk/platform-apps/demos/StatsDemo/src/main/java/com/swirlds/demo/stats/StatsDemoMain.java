@@ -32,6 +32,8 @@ import static com.swirlds.platform.gui.SwirldsGui.createConsole;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.Console;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
@@ -44,7 +46,8 @@ import com.swirlds.metrics.api.Metric.ValueType;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Browser;
 import com.swirlds.platform.ParameterProvider;
-import com.swirlds.platform.state.PlatformMerkleStateRoot;
+import com.swirlds.platform.state.NoOpStateLifecycles;
+import com.swirlds.platform.state.StateLifecycles;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
@@ -63,7 +66,7 @@ import java.util.Random;
  * screen, and also saves them to disk in a comma separated value (.csv) file. Each transaction is 100
  * random bytes. So StatsDemoState.handleTransaction doesn't actually do anything.
  */
-public class StatsDemoMain implements SwirldMain {
+public class StatsDemoMain implements SwirldMain<StatsDemoState> {
     // the first four come from the parameters in the config.txt file
 
     /** should this run with no windows? */
@@ -94,8 +97,8 @@ public class StatsDemoMain implements SwirldMain {
         try {
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(new ClassConstructorPair(StatsDemoState.class, () -> {
-                StatsDemoState statsDemoState = new StatsDemoState(
-                        FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
+                StatsDemoState statsDemoState =
+                        new StatsDemoState(version -> new BasicSoftwareVersion(version.major()));
                 return statsDemoState;
             }));
             registerMerkleStateRootClassIds();
@@ -315,12 +318,17 @@ public class StatsDemoMain implements SwirldMain {
 
     @NonNull
     @Override
-    public PlatformMerkleStateRoot newMerkleStateRoot() {
-        final PlatformMerkleStateRoot state = new StatsDemoState(
-                FAKE_MERKLE_STATE_LIFECYCLES,
-                version -> new BasicSoftwareVersion(softwareVersion.getSoftwareVersion()));
+    public StatsDemoState newMerkleStateRoot() {
+        final StatsDemoState state =
+                new StatsDemoState(version -> new BasicSoftwareVersion(softwareVersion.getSoftwareVersion()));
         FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
         return state;
+    }
+
+    @NonNull
+    @Override
+    public StateLifecycles newStateLifecycles() {
+        return NoOpStateLifecycles.NO_OP_STATE_LIFECYCLES;
     }
 
     /**
@@ -329,5 +337,10 @@ public class StatsDemoMain implements SwirldMain {
     @Override
     public BasicSoftwareVersion getSoftwareVersion() {
         return softwareVersion;
+    }
+
+    @Override
+    public Bytes encodeSystemTransaction(@NonNull StateSignatureTransaction transaction) {
+        return StateSignatureTransaction.PROTOBUF.toBytes(transaction);
     }
 }

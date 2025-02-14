@@ -606,7 +606,7 @@ class VirtualPipelineTests {
         }
 
         @Override
-        public boolean tryFlush() {
+        public void flush() {
             try {
                 if (!flushFinishedLatch.await(30, TimeUnit.SECONDS)) {
                     throw new RuntimeException("Wait exceeded");
@@ -615,7 +615,7 @@ class VirtualPipelineTests {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(ex);
             }
-            return super.tryFlush();
+            super.flush();
         }
 
         @Override

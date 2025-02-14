@@ -38,19 +38,6 @@ class OnDiskReadableStateTest extends MerkleTestBase {
         setupFruitVirtualMap();
     }
 
-    @Test
-    @DisplayName("The size of the state is the size of the virtual map")
-    void sizeWorks() {
-        final var state = new OnDiskReadableKVState<>(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
-        assertThat(state.size()).isZero();
-
-        add(A_KEY, APPLE);
-        add(B_KEY, BANANA);
-        add(C_KEY, CHERRY);
-        assertThat(state.size()).isEqualTo(fruitVirtualMap.size());
-        assertThat(state.size()).isEqualTo(3);
-    }
-
     private void add(String key, String value) {
         add(fruitVirtualMap, STRING_CODEC, STRING_CODEC, key, value);
     }

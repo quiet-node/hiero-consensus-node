@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import static com.hedera.node.app.hapi.utils.forensics.OrderedComparison.statusH
 import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.CLASSIC_HAPI_TEST_NETWORK_SIZE;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asDnsServiceEndpoint;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asServiceEndpoint;
+import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
+import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.keys.SigControl.ED25519_ON;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getFileContents;
@@ -39,6 +41,7 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.uploadInitCode;
 import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.simulatePostUpgradeTransaction;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.blockingOrder;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doWithStartupConfig;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.given;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.nOps;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
@@ -50,6 +53,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcing;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.validateChargedUsdWithin;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.visibleItems;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.writeToNodeWorkingDirs;
 import static com.hedera.services.bdd.spec.utilops.grouping.GroupingVerbs.getSystemFiles;
@@ -75,6 +79,7 @@ import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
@@ -146,9 +151,12 @@ public class SystemFileExportsTest {
                         .serviceEndpoint(endpointsFor(i))
                         .grpcCertificateHash(grpcCertHashes[i])
                         .gossipCaCertificate(derEncoded(gossipCertificates.get().get((long) i)))))),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
-                cryptoCreate("secondUser").via("addressBookExport"));
+                cryptoCreate("secondUser").via("addressBookExport"),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
     }
 
     @GenesisHapiTest
@@ -169,9 +177,46 @@ public class SystemFileExportsTest {
                         .serviceEndpoint(endpointsFor(i))
                         .grpcCertificateHash(grpcCertHashes[i])
                         .gossipCaCertificate(derEncoded(gossipCertificates.get().get((long) i)))))),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
-                cryptoCreate("secondUser").via("addressBookExport"));
+                cryptoCreate("secondUser").via("addressBookExport"),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
+    }
+
+    @GenesisHapiTest
+    final Stream<DynamicTest> syntheticAddressBookCreatedAtGenesis() {
+        final AtomicReference<Bytes> addressBookContent = new AtomicReference<>();
+        return hapiTest(
+                recordStreamMustIncludeNoFailuresFrom(visibleItems(
+                        validatorSpecificSysFileFor(addressBookContent, "files.addressBook", "genesisTxn"),
+                        "genesisTxn")),
+                sourcingContextual(spec ->
+                        getSystemFiles(spec.startupProperties().getLong("files.addressBook"), addressBookContent::set)),
+                cryptoCreate("firstUser").via("genesisTxn"),
+                // Assert the first created entity still has the expected number
+                withOpContext((spec, opLog) -> assertEquals(
+                        spec.startupProperties().getLong("hedera.firstUserEntity"),
+                        spec.registry().getAccountID("firstUser").getAccountNum(),
+                        "First user entity num doesn't match config")));
+    }
+
+    @GenesisHapiTest
+    final Stream<DynamicTest> syntheticNodeDetailsCreatedAtGenesis() {
+        final AtomicReference<Bytes> addressBookContent = new AtomicReference<>();
+        return hapiTest(
+                recordStreamMustIncludeNoFailuresFrom(visibleItems(
+                        validatorSpecificSysFileFor(addressBookContent, "files.nodeDetails", "genesisTxn"),
+                        "genesisTxn")),
+                sourcingContextual(spec ->
+                        getSystemFiles(spec.startupProperties().getLong("files.nodeDetails"), addressBookContent::set)),
+                cryptoCreate("firstUser").via("genesisTxn"),
+                // Assert the first created entity still has the expected number
+                withOpContext((spec, opLog) -> assertEquals(
+                        spec.startupProperties().getLong("hedera.firstUserEntity"),
+                        spec.registry().getAccountID("firstUser").getAccountNum(),
+                        "First user entity num doesn't match config")));
     }
 
     @GenesisHapiTest
@@ -193,6 +238,7 @@ public class SystemFileExportsTest {
                         "networkAdmin.upgradeFeeSchedulesFile",
                         feeSchedulesFile ->
                                 writeToNodeWorkingDirs(feeSchedulesJson, "data", "config", feeSchedulesFile)),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
                 // Verify the new fee schedules (which include a subtype for scheduled contract fees) are in effect
@@ -208,7 +254,9 @@ public class SystemFileExportsTest {
                                         .fee(ONE_HBAR))
                         .payingWith("civilian")
                         .via("contractCall"),
-                validateChargedUsdWithin("contractCall", 0.1, 3.0));
+                validateChargedUsdWithin("contractCall", 0.1, 3.0),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
     }
 
     @GenesisHapiTest
@@ -230,6 +278,7 @@ public class SystemFileExportsTest {
                 doWithStartupConfig(
                         "networkAdmin.upgradeThrottlesFile",
                         throttleDefsFile -> writeToNodeWorkingDirs(throttlesJson, "data", "config", throttleDefsFile)),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
                 // Then verify the new throttles are in effect
@@ -240,7 +289,9 @@ public class SystemFileExportsTest {
                         .deferStatusResolution(),
                 mintToken("nft", List.of(ByteString.copyFromUtf8("NO")))
                         .payingWith("civilian")
-                        .hasPrecheck(BUSY));
+                        .hasPrecheck(BUSY),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
     }
 
     @GenesisHapiTest
@@ -264,6 +315,7 @@ public class SystemFileExportsTest {
                         "networkAdmin.upgradePropertyOverridesFile",
                         propOverridesFile ->
                                 writeToNodeWorkingDirs(overrideProperties, "data", "config", propOverridesFile)),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
                 // Then verify the new properties are in effect
@@ -274,7 +326,9 @@ public class SystemFileExportsTest {
                                         ByteString.copyFromUtf8("ONE"),
                                         ByteString.copyFromUtf8("TOO"),
                                         ByteString.copyFromUtf8("MANY")))
-                        .hasKnownStatus(BATCH_SIZE_LIMIT_EXCEEDED));
+                        .hasKnownStatus(BATCH_SIZE_LIMIT_EXCEEDED),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
     }
 
     @GenesisHapiTest
@@ -293,6 +347,7 @@ public class SystemFileExportsTest {
                 doWithStartupConfig(
                         "networkAdmin.upgradePropertyOverridesFile",
                         propOverridesFile -> writeToNodeWorkingDirs("", "data", "config", propOverridesFile)),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
                 // Then verify the previous override properties are cleared
@@ -303,7 +358,9 @@ public class SystemFileExportsTest {
                                 ByteString.copyFromUtf8("ONCE"),
                                 ByteString.copyFromUtf8("AGAIN"),
                                 ByteString.copyFromUtf8("OK"))),
-                getFileContents(APP_PROPERTIES).hasContents(ignore -> new byte[0]));
+                getFileContents(APP_PROPERTIES).hasContents(ignore -> new byte[0]),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
     }
 
     @GenesisHapiTest
@@ -327,6 +384,7 @@ public class SystemFileExportsTest {
                         "networkAdmin.upgradePermissionOverridesFile",
                         permissionOverridesFile ->
                                 writeToNodeWorkingDirs(overridePermissions, "data", "config", permissionOverridesFile)),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
                 // Then verify the new permissions are in effect
@@ -339,7 +397,9 @@ public class SystemFileExportsTest {
                                         ByteString.copyFromUtf8("TO"),
                                         ByteString.copyFromUtf8("BE")))
                         .payingWith("civilian")
-                        .hasKnownStatus(UNAUTHORIZED));
+                        .hasKnownStatus(UNAUTHORIZED),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
     }
 
     @GenesisHapiTest
@@ -369,6 +429,7 @@ public class SystemFileExportsTest {
                                 "data",
                                 "config",
                                 nodeAdminKeysFile))),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 // And now simulate an upgrade boundary
                 simulatePostUpgradeTransaction(),
                 // Then verify the new admin keys are in effect
@@ -386,7 +447,9 @@ public class SystemFileExportsTest {
                 nodeUpdate("3")
                         .payingWith(GENESIS)
                         .signedBy(GENESIS, "node3AdminKey")
-                        .description("C"));
+                        .description("C"),
+                // Trigger block closure to ensure block is closed
+                doingContextual(TxnUtils::triggerAndCloseAtLeastOneFileIfNotInterrupted));
     }
 
     @GenesisHapiTest
@@ -440,8 +503,8 @@ public class SystemFileExportsTest {
         return (spec, records) -> {
             final var items = records.get(SELECTED_ITEMS_KEY);
             assertNotNull(items, "No post-upgrade txn found");
-            final var targetId =
-                    new FileID(0, 0, Long.parseLong(spec.startupProperties().get(fileNumProperty)));
+            final var targetId = new FileID(
+                    shard, realm, Long.parseLong(spec.startupProperties().get(fileNumProperty)));
             final var updateItem = items.entries().stream()
                     .filter(item -> item.function() == FileUpdate)
                     .filter(item ->
@@ -472,13 +535,15 @@ public class SystemFileExportsTest {
                     .findFirst()
                     .orElseThrow();
             final var synthOp = updateItem.body().getFileUpdate();
-            final var nodeDetailsId =
-                    new FileID(0, 0, Long.parseLong(spec.startupProperties().get("files.nodeDetails")));
+            final var nodeDetailsId = new FileID(
+                    shard, realm, Long.parseLong(spec.startupProperties().get("files.nodeDetails")));
             assertEquals(nodeDetailsId, toPbj(synthOp.getFileID()));
             try {
                 final var updatedAddressBook = NodeAddressBook.PROTOBUF.parse(
                         Bytes.wrap(synthOp.getContents().toByteArray()));
+                var prevNodeId = -1L;
                 for (final var address : updatedAddressBook.nodeAddress()) {
+                    assertTrue(address.nodeId() > prevNodeId, "Node IDs must be in ascending order");
                     final var expectedCert = gossipCertificates.get().get(address.nodeId());
                     final var expectedPubKey = expectedCert.getPublicKey().getEncoded();
                     final var actualPubKey = unhex(address.rsaPubKey());
@@ -495,6 +560,7 @@ public class SystemFileExportsTest {
 
                     final var expectedServiceEndpoint = endpointsFor((int) address.nodeId());
                     assertEquals(expectedServiceEndpoint, address.serviceEndpoint());
+                    prevNodeId = address.nodeId();
                 }
             } catch (ParseException e) {
                 Assertions.fail("Update contents was not protobuf " + e.getMessage());
@@ -512,8 +578,8 @@ public class SystemFileExportsTest {
         return (spec, records) -> {
             final var items = records.get(SELECTED_ITEMS_KEY);
             assertNotNull(items, "No post-upgrade txn found");
-            final var targetId =
-                    new FileID(0, 0, Long.parseLong(spec.startupProperties().get(fileNumProperty)));
+            final var targetId = new FileID(
+                    shard, realm, Long.parseLong(spec.startupProperties().get(fileNumProperty)));
             final var updateItem = items.entries().stream()
                     .filter(item -> item.function() == FileUpdate)
                     .filter(item ->
@@ -522,13 +588,15 @@ public class SystemFileExportsTest {
                     .orElse(null);
             assertNotNull(updateItem, "No update for " + fileNumProperty + " found in post-upgrade txn");
             final var synthOp = updateItem.body().getFileUpdate();
-            final var addressBookId =
-                    new FileID(0, 0, Long.parseLong(spec.startupProperties().get("files.addressBook")));
+            final var addressBookId = new FileID(
+                    shard, realm, Long.parseLong(spec.startupProperties().get(fileNumProperty)));
             assertEquals(addressBookId, toPbj(synthOp.getFileID()));
             try {
                 final var updatedAddressBook = NodeAddressBook.PROTOBUF.parse(
                         Bytes.wrap(synthOp.getContents().toByteArray()));
+                var prevNodeId = -1L;
                 for (final var address : updatedAddressBook.nodeAddress()) {
+                    assertTrue(address.nodeId() > prevNodeId, "Node IDs must be in ascending order");
                     final var actualCertHash = address.nodeCertHash().toByteArray();
                     assertArrayEquals(
                             getHexStringBytesFromBytes(grpcCertHashes[(int) address.nodeId()]),
@@ -537,6 +605,7 @@ public class SystemFileExportsTest {
 
                     final var expectedServiceEndpoint = endpointsFor((int) address.nodeId());
                     assertEquals(expectedServiceEndpoint, address.serviceEndpoint());
+                    prevNodeId = address.nodeId();
                 }
             } catch (ParseException e) {
                 Assertions.fail("Update contents was not protobuf " + e.getMessage());
@@ -562,19 +631,83 @@ public class SystemFileExportsTest {
         assertEquals(Map.of(SUCCESS, 1), histogram.get(NodeStakeUpdate));
         final var postGenesisContents = SysFileLookups.getSystemFileContents(spec, fileNum -> true);
         items.entries().stream().filter(item -> item.function() == FileCreate).forEach(item -> {
+            final var fileId = item.createdFileId();
             final var preContents = requireNonNull(
-                    preGenesisContents.get(item.createdFileId()),
-                    "No pre-genesis contents for " + item.createdFileId());
+                    preGenesisContents.get(item.createdFileId()), "No pre-genesis contents for " + fileId);
             final var postContents = requireNonNull(
-                    postGenesisContents.get(item.createdFileId()),
-                    "No post-genesis contents for " + item.createdFileId());
+                    postGenesisContents.get(item.createdFileId()), "No post-genesis contents for " + fileId);
             final var exportedContents =
                     fromByteString(item.body().getFileCreate().getContents());
-            assertEquals(
-                    exportedContents, preContents, item.createdFileId() + " contents don't match pre-genesis query");
-            assertEquals(
-                    exportedContents, postContents, item.createdFileId() + " contents don't match post-genesis query");
+            if (fileId.fileNum()
+                    != 102) { // for nodedetail, the node's weight changed between preContent and exportedContents
+                assertEquals(exportedContents, preContents, fileId + " contents don't match pre-genesis query");
+            }
+            assertEquals(exportedContents, postContents, fileId + " contents don't match post-genesis query");
         });
+    }
+
+    private static VisibleItemsValidator validatorSpecificSysFileFor(
+            @NonNull final AtomicReference<Bytes> fileContent,
+            @NonNull final String fileNumProperty,
+            @NonNull final String specTxnIds) {
+        return (spec, records) ->
+                specificSysFileValidator(spec, records, fileContent.get(), fileNumProperty, specTxnIds);
+    }
+
+    private static void specificSysFileValidator(
+            @NonNull final HapiSpec spec,
+            @NonNull final Map<String, VisibleItems> genesisRecords,
+            @NonNull final Bytes fileContent,
+            @NonNull final String fileNumProperty,
+            @NonNull final String specTxnIds) {
+        final var items = requireNonNull(genesisRecords.get(specTxnIds));
+        final long fileNumb = spec.startupProperties().getLong(fileNumProperty);
+        final var histogram = statusHistograms(items.entries());
+        final var systemFileNums =
+                SysFileLookups.allSystemFileNums(spec).boxed().toList();
+        assertEquals(Map.of(SUCCESS, systemFileNums.size()), histogram.get(FileCreate));
+        // Also check we export a node stake update at genesis
+        assertEquals(Map.of(SUCCESS, 1), histogram.get(NodeStakeUpdate));
+        final var fileItem = items.entries().stream()
+                .filter(item -> item.function() == FileCreate)
+                .filter(item -> item.createdFileId().equals(new FileID(shard, realm, fileNumb)))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(fileItem, "No create item for " + fileNumProperty + " found in " + specTxnIds + " txn");
+        final var fileCreateContents = fileItem.body().getFileCreate().getContents();
+        assertNotNull(
+                fileCreateContents, "No create content for " + fileNumProperty + " found in " + specTxnIds + " txn");
+        if (fileNumProperty.equals("files.nodeDetails")) {
+            try {
+                final var addressBook = NodeAddressBook.PROTOBUF.parse(fileContent);
+                final var updatedAddressBook =
+                        NodeAddressBook.PROTOBUF.parse(Bytes.wrap(fileCreateContents.toByteArray()));
+                assertEquals(
+                        addressBook.nodeAddress().size(),
+                        updatedAddressBook.nodeAddress().size(),
+                        "address book size mismatch");
+
+                for (int i = 0;
+                        i < addressBook.nodeAddress().size();
+                        i++) { // only stake not matching because of recalculating
+                    final var address = updatedAddressBook.nodeAddress().get(i);
+                    final var updatedAddress = updatedAddressBook.nodeAddress().get(i);
+                    assertEquals(address.nodeId(), updatedAddress.nodeId(), "nodeId mismatch");
+                    assertEquals(address.nodeAccountId(), updatedAddress.nodeAccountId(), "nodeAccountId mismatch");
+                    assertEquals(address.nodeCertHash(), updatedAddress.nodeCertHash(), "nodeCertHash mismatch");
+                    assertEquals(address.description(), updatedAddress.description(), "description mismatch");
+                    assertEquals(address.rsaPubKey(), updatedAddress.rsaPubKey(), "rsaPubKey mismatch");
+                    assertEquals(
+                            address.serviceEndpoint(), updatedAddress.serviceEndpoint(), "serviceEndpoint mismatch");
+                }
+            } catch (ParseException e) {
+                Assertions.fail("Update contents was not protobuf " + e.getMessage());
+            }
+        } else {
+            assertEquals(
+                    fileContent, fromByteString(fileCreateContents), fileNumb + " contents don't match genesis query");
+        }
     }
 
     private static Map<Long, X509Certificate> generateCertificates(final int n) {

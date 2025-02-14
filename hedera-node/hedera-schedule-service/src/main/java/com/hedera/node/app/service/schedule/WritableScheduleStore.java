@@ -43,12 +43,17 @@ public interface WritableScheduleStore extends ReadableScheduleStore {
     Schedule delete(@Nullable ScheduleID scheduleToDelete, @NonNull Instant consensusTime);
 
     /**
-     * Add a schedule to this state.
-     * If the schedule already exists it will be replaced.
+     * Add a schedule to this state. If the schedule already exists it will be replaced.
      *
      * @param scheduleToAdd The schedule to add
      */
     void put(@NonNull Schedule scheduleToAdd);
+
+    /**
+     * Adds a new schedule to the store. This will also increment the entity counts for schedules.
+     * @param scheduleToAdd The schedule to add to the store
+     */
+    void putAndIncrementCount(@NonNull Schedule scheduleToAdd);
 
     /**
      * Purges all schedule state associated with the given order.

@@ -16,7 +16,6 @@
 
 package com.swirlds.platform.test;
 
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -29,6 +28,7 @@ import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.PlatformMerkleStateRoot;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import java.util.Random;
@@ -84,8 +84,8 @@ class StateTest {
 
     private static SignedState randomSignedState() {
         Random random = new Random(0);
-        PlatformMerkleStateRoot merkleStateRoot = new PlatformMerkleStateRoot(
-                FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
+        PlatformMerkleStateRoot merkleStateRoot =
+                new PlatformMerkleStateRoot(version -> new BasicSoftwareVersion(version.major()));
         boolean shouldSaveToDisk = random.nextBoolean();
         SignedState signedState = new SignedState(
                 TestPlatformContextBuilder.create().build().getConfiguration(),
@@ -94,7 +94,8 @@ class StateTest {
                 "test",
                 shouldSaveToDisk,
                 false,
-                false);
+                false,
+                new PlatformStateFacade(version -> new BasicSoftwareVersion(version.major())));
         signedState.getState().setHash(RandomUtils.randomHash(random));
         return signedState;
     }

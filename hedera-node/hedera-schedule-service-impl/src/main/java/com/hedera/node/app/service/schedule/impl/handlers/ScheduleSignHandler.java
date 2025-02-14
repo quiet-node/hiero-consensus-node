@@ -30,7 +30,6 @@ import com.hedera.hapi.node.base.ScheduleID;
 import com.hedera.hapi.node.base.SubType;
 import com.hedera.hapi.node.scheduled.ScheduleSignTransactionBody;
 import com.hedera.hapi.node.state.schedule.Schedule;
-import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.hapi.fees.usage.SigUsage;
 import com.hedera.node.app.hapi.fees.usage.schedule.ScheduleOpsUsage;
 import com.hedera.node.app.hapi.utils.fee.SigValueObj;
@@ -43,6 +42,7 @@ import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.PreHandleContext;
+import com.hedera.node.app.spi.workflows.PureChecksContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.SchedulingConfig;
@@ -60,12 +60,14 @@ public class ScheduleSignHandler extends AbstractScheduleHandler implements Tran
     private final ScheduleOpsUsage scheduleOpsUsage = new ScheduleOpsUsage();
 
     @Inject
-    public ScheduleSignHandler() {
-        // Dagger2
+    public ScheduleSignHandler(@NonNull final ScheduleFeeCharging feeCharging) {
+        super(feeCharging);
     }
 
     @Override
-    public void pureChecks(@NonNull final TransactionBody body) throws PreCheckException {
+    public void pureChecks(@NonNull final PureChecksContext context) throws PreCheckException {
+        requireNonNull(context);
+        final var body = context.body();
         requireNonNull(body);
         validateTruePreCheck(body.hasScheduleSign(), INVALID_TRANSACTION_BODY);
         final var op = body.scheduleSignOrThrow();

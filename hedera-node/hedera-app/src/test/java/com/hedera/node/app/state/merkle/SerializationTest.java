@@ -17,13 +17,12 @@
 package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
+import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.services.MigrationStateChanges;
-import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.config.data.HederaConfig;
 import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.common.config.StateCommonConfig_;
@@ -35,6 +34,7 @@ import com.swirlds.common.crypto.CryptographyFactory;
 import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
@@ -44,8 +44,6 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.state.PlatformMerkleStateRoot;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.system.InitTrigger;
-import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import com.swirlds.state.lifecycle.MigrationContext;
@@ -234,9 +232,7 @@ class SerializationTest extends MerkleTestBase {
                 .withTime(new FakeTime())
                 .build();
 
-        Platform mockPlatform = mock(Platform.class);
-        when(mockPlatform.getContext()).thenReturn(context);
-        originalTree.init(mockPlatform, InitTrigger.RESTART, new ServicesSoftwareVersion(schemaV1.getVersion()));
+        originalTree.init(context.getTime(), new NoOpMetrics(), merkleCryptography);
 
         // prepare the tree and create a snapshot
         originalTree.copy();
@@ -318,8 +314,9 @@ class SerializationTest extends MerkleTestBase {
                 mock(WritableEntityIdStore.class),
                 new HashMap<>(),
                 migrationStateChanges,
-                startupNetworks);
-        loadedTree.migrate(MerkleStateRoot.CURRENT_VERSION);
+                startupNetworks,
+                TEST_PLATFORM_STATE_FACADE);
+        (loadedTree).migrate(MerkleStateRoot.CURRENT_VERSION);
     }
 
     private PlatformMerkleStateRoot createMerkleHederaState(Schema schemaV1) {
@@ -341,7 +338,8 @@ class SerializationTest extends MerkleTestBase {
                 mock(WritableEntityIdStore.class),
                 new HashMap<>(),
                 migrationStateChanges,
-                startupNetworks);
+                startupNetworks,
+                TEST_PLATFORM_STATE_FACADE);
         return originalTree;
     }
 

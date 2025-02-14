@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2016-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.swirlds.platform.state.editor;
 
 import static com.swirlds.platform.state.editor.StateEditorUtils.formatNodeType;
 import static com.swirlds.platform.state.editor.StateEditorUtils.formatRoute;
+import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
 
 import com.swirlds.cli.utility.CommandBuilder;
 import com.swirlds.common.context.PlatformContext;
@@ -66,7 +67,7 @@ public class StateEditor {
         platformContext = PlatformContext.create(configuration);
 
         final DeserializedSignedState deserializedSignedState =
-                SignedStateFileReader.readStateFile(configuration, statePath);
+                SignedStateFileReader.readStateFile(configuration, statePath, DEFAULT_PLATFORM_STATE_FACADE);
 
         try (final ReservedSignedState reservedSignedState = deserializedSignedState.reservedSignedState()) {
             System.out.println("\nLoading state from " + statePath);
@@ -208,7 +209,8 @@ public class StateEditor {
                     "StateEditor.getSignedStateCopy()",
                     reservedSignedState.get().isFreezeState(),
                     false,
-                    false);
+                    false,
+                    DEFAULT_PLATFORM_STATE_FACADE);
 
             signedState.set(newSignedState, "StateEditor.getSignedStateCopy() 2");
 

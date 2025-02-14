@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,25 +19,26 @@ package com.swirlds.platform.wiring;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.common.utility.ValueReference;
-import com.swirlds.common.wiring.model.WiringModel;
-import com.swirlds.common.wiring.model.WiringModelBuilder;
-import com.swirlds.common.wiring.schedulers.TaskScheduler;
-import com.swirlds.common.wiring.schedulers.builders.TaskSchedulerType;
-import com.swirlds.common.wiring.wires.input.BindableInputWire;
-import com.swirlds.common.wiring.wires.output.OutputWire;
+import com.swirlds.component.framework.model.WiringModel;
+import com.swirlds.component.framework.model.WiringModelBuilder;
+import com.swirlds.component.framework.schedulers.TaskScheduler;
+import com.swirlds.component.framework.schedulers.builders.TaskSchedulerType;
+import com.swirlds.component.framework.wires.input.BindableInputWire;
+import com.swirlds.component.framework.wires.output.OutputWire;
 import com.swirlds.platform.crypto.SignatureVerifier;
 import com.swirlds.platform.state.PlatformMerkleStateRoot;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 class SignedStateReserverTest {
 
@@ -50,18 +51,19 @@ class SignedStateReserverTest {
 
         final SignedState signedState = new SignedState(
                 platformContext.getConfiguration(),
-                Mockito.mock(SignatureVerifier.class),
-                Mockito.mock(PlatformMerkleStateRoot.class),
+                mock(SignatureVerifier.class),
+                mock(PlatformMerkleStateRoot.class),
                 "create",
                 false,
                 false,
-                false);
+                false,
+                mock(PlatformStateFacade.class));
 
         final WiringModel model = WiringModelBuilder.create(platformContext).build();
-        final TaskScheduler<ReservedSignedState> taskScheduler = model.schedulerBuilder("scheduler")
+        final TaskScheduler<ReservedSignedState> taskScheduler = model.<ReservedSignedState>schedulerBuilder(
+                        "scheduler")
                 .withType(TaskSchedulerType.DIRECT)
-                .build()
-                .cast();
+                .build();
         final OutputWire<ReservedSignedState> outputWire =
                 taskScheduler.getOutputWire().buildAdvancedTransformer(new SignedStateReserver("reserver"));
         final BindableInputWire<ReservedSignedState, ReservedSignedState> inputWire =

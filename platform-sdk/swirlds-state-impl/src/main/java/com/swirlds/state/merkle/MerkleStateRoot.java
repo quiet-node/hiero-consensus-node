@@ -828,7 +828,9 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
          * @param stateKey the state key
          */
         public void remove(String stateKey) {
-            stateMetadata.remove(stateKey);
+            if (!Map.of().equals(stateMetadata)) {
+                stateMetadata.remove(stateKey);
+            }
             kvInstances.remove(stateKey);
             singletonInstances.remove(stateKey);
             queueInstances.remove(stateKey);

@@ -49,7 +49,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -144,7 +143,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         // hashes are calculated and put to the cache. Here the cache doesn't contain hashes for dirty leaves
         // (bananaLeaf0, appleLeaf0, cherryLeaf0). Should dirtyHashes() include these leaf nodes? Currently
         // it doesn't
-        cache0.prepareForFlush();
         validateDirtyInternals(Set.of(rootInternal0, leftInternal0), cache0.dirtyHashesForFlush(4));
 
         // ROUND 1: Add D and E.
@@ -206,8 +204,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                         dateLeaf1,
                         appleLeaf1,
                         eggplantLeaf1));
-        // prepareForFlush() removes version 0 mutations for paths 2 and 3
-        cache1.prepareForFlush();
         validateDirtyInternals(
                 Set.of(rootInternal1, leftInternal1, rightInternal1, leftLeftInternal1), cache1.dirtyHashesForFlush(8));
 
@@ -279,8 +275,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                         figLeaf2,
                         bananaLeaf2,
                         grapeLeaf2));
-        // prepareForFlush() removes version 1 mutations for paths 4 and 5
-        cache2.prepareForFlush();
         validateDirtyInternals(
                 Set.of(rootInternal2, leftInternal2, rightInternal2, leftRightInternal2, rightLeftInternal2),
                 cache2.dirtyHashesForFlush(12));
@@ -380,8 +374,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache3.putHash(leftInternal3);
         cache3.putHash(rootInternal3);
         cache3.seal();
-        // prepareForFlush() removes version 1 mutations for paths 6 and 7
-        cache3.prepareForFlush();
         validateDirtyInternals(
                 Set.of(
                         rootInternal3,
@@ -395,14 +387,7 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         // At this point, we have built the tree successfully. Verify one more time that each version of
         // the cache still sees things the same way it did at the time the copy was made.
         final VirtualNodeCache cache4 = cache;
-        validateTree(
-                cache0,
-                asList(
-                        rootInternal0,
-                        leftInternal0,
-                        null, // became internal in version 1
-                        null, // became internal in version 1
-                        null)); // became internal in version 2
+        validateTree(cache0, asList(rootInternal0, leftInternal0, bananaLeaf0, appleLeaf0, cherryLeaf0));
         validateTree(
                 cache1,
                 asList(
@@ -410,10 +395,10 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                         leftInternal1,
                         rightInternal1,
                         leftLeftInternal1,
-                        null, // became internal in version 1
-                        null, // became internal in version 1
-                        null, // became internal in version 2
-                        null, // became internal in version 2, then updated in version 3
+                        cherryLeaf0,
+                        bananaLeaf1,
+                        dateLeaf1,
+                        appleLeaf1,
                         eggplantLeaf1));
         validateTree(
                 cache2,
@@ -424,13 +409,13 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                         leftLeftInternal1,
                         leftRightInternal2,
                         rightLeftInternal2,
-                        null, // updated in version 3
-                        null, // updated in version 3
+                        dateLeaf1,
+                        appleLeaf1,
                         eggplantLeaf1,
                         cherryLeaf2,
-                        null, // updated in version 3
-                        null, // updated in version 3
-                        null)); // updated in version 3
+                        figLeaf2,
+                        bananaLeaf2,
+                        grapeLeaf2));
         validateTree(
                 cache3,
                 asList(
@@ -476,9 +461,9 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                                     rightInternal1,
                                     leftLeftInternal1,
                                     null,
-                                    null,
-                                    null,
-                                    null,
+                                    bananaLeaf1,
+                                    dateLeaf1,
+                                    appleLeaf1,
                                     eggplantLeaf1));
                 },
                 Duration.ofSeconds(1),
@@ -494,13 +479,13 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                                     leftLeftInternal1,
                                     leftRightInternal2,
                                     rightLeftInternal2,
-                                    null,
-                                    null,
+                                    dateLeaf1,
+                                    appleLeaf1,
                                     eggplantLeaf1,
                                     cherryLeaf2,
-                                    null,
-                                    null,
-                                    null));
+                                    figLeaf2,
+                                    bananaLeaf2,
+                                    grapeLeaf2));
                 },
                 Duration.ofSeconds(1),
                 "expected cache2 to eventually become clean");
@@ -564,9 +549,9 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                                     null,
                                     null,
                                     cherryLeaf2,
-                                    null,
-                                    null,
-                                    null));
+                                    figLeaf2,
+                                    bananaLeaf2,
+                                    grapeLeaf2));
                 },
                 Duration.ofSeconds(1),
                 "expected cache2 to eventually become clean");
@@ -583,7 +568,7 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                                     rightLeftInternal3,
                                     dogLeaf3,
                                     grapeLeaf3,
-                                    null, // E hasn't changed since version 1
+                                    null,
                                     cherryLeaf2,
                                     foxLeaf3,
                                     bananaLeaf3updated,
@@ -1105,7 +1090,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                 cache1.lookupLeafByKey(B_KEY),
                 "value that was looked up should match original value");
 
-        cache1.prepareForFlush();
         final List<VirtualLeafBytes> dirtyLeaves =
                 cache1.dirtyLeavesForFlush(1, 1).toList();
         assertEquals(1, dirtyLeaves.size(), "incorrect number of dirty leaves");
@@ -1298,7 +1282,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
 
         // Verify everything
         final AtomicInteger index = new AtomicInteger(0);
-        cache1.prepareForFlush();
         cache1.dirtyLeavesForFlush(totalMutationCount, totalMutationCount * 2)
                 .sorted(Comparator.comparingLong(VirtualLeafBytes::path))
                 .forEach(rec -> {
@@ -2548,7 +2531,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache.deleteLeaf(cherryLeaf(1));
         cache.seal();
 
-        cache.prepareForFlush();
         final List<VirtualLeafBytes> leaves = cache.dirtyLeavesForFlush(-1, -1).toList();
         assertEquals(0, leaves.size(), "All leaves should be missing");
     }
@@ -2611,7 +2593,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache0.merge();
         cache1.merge();
 
-        cache2.prepareForFlush();
         final Set<VirtualLeafBytes> leaves = cache2.dirtyLeavesForFlush(4, 8).collect(Collectors.toSet());
         assertEquals(5, leaves.size(), "All leaves should be dirty");
         assertEquals(Set.of(cherryLeaf(4), bananaLeaf(5), dateLeaf(6), appleLeaf(7), eggplantLeaf(8)), leaves);
@@ -2650,7 +2631,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache0.merge();
         cache1.merge();
 
-        cache2.prepareForFlush();
         final Set<VirtualLeafBytes> leaves = cache2.dirtyLeavesForFlush(3, 6).collect(Collectors.toSet());
         assertEquals(4, leaves.size(), "Some leaves should be dirty");
         assertEquals(Set.of(figLeaf(3), eggplantLeaf(4), dateLeaf(5), grapeLeaf(6)), leaves);
@@ -2690,7 +2670,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache0.merge();
         cache1.merge();
 
-        cache2.prepareForFlush();
         final List<VirtualLeafBytes> leaves = cache2.dirtyLeavesForFlush(-1, -1).toList();
         assertEquals(0, leaves.size(), "All leaves should be deleted");
     }
@@ -2710,7 +2689,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache0.putHash(rightLeftInternal());
         cache0.seal();
 
-        cache0.prepareForFlush();
         final List<VirtualHashRecord> internals = cache0.dirtyHashesForFlush(12).toList();
         assertEquals(6, internals.size(), "All internals should be dirty");
         assertEquals(rootInternal(), internals.get(0), "Unexpected internal");
@@ -2738,7 +2716,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache1.seal();
         cache0.merge();
 
-        cache1.prepareForFlush();
         final List<VirtualHashRecord> internals = cache1.dirtyHashesForFlush(12).toList();
         assertEquals(6, internals.size(), "All internals should be dirty");
         assertEquals(
@@ -2782,7 +2759,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache0.merge();
         cache1.merge();
 
-        cache2.prepareForFlush();
         final List<VirtualHashRecord> internals = cache2.dirtyHashesForFlush(12).toList();
         assertEquals(6, internals.size(), "All internals should be dirty");
         assertEquals(
@@ -2828,7 +2804,6 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache0.merge();
         cache1.merge();
 
-        cache2.prepareForFlush();
         final List<VirtualHashRecord> internals = cache2.dirtyHashesForFlush(-1).toList();
         assertEquals(0, internals.size(), "No internals should be dirty");
     }
@@ -2860,82 +2835,10 @@ class VirtualNodeCacheTest extends VirtualTestBase {
                 cache1.dirtyLeavesForHash(2, 4).toList();
         assertEquals(List.of(appleLeaf(3), cherryLeaf(4)), dirtyLeaves1);
 
-        cache0.prepareForFlush();
         // Flush version 0
         final Set<VirtualLeafBytes> dirtyLeaves0F =
                 cache0.dirtyLeavesForFlush(1, 2).collect(Collectors.toSet());
         assertEquals(Set.of(appleLeaf(1), bananaLeaf(2)), dirtyLeaves0F);
-    }
-
-    @Test
-    @Tags({@Tag("VirtualMerkle"), @Tag("VirtualNodeCache")})
-    void addedThenDeletedLeaves() {
-        final VirtualNodeCache cache0 = cache;
-        // add A
-        cache0.putLeaf(appleLeaf(1));
-        // add B
-        cache0.putLeaf(bananaLeaf(2));
-
-        nextRound();
-        System.err.println(
-                "H0: " + Arrays.toString(cache0.dirtyLeavesForHash(1, 2).toArray()));
-        cache0.seal();
-
-        final VirtualNodeCache cache1 = cache;
-        // add C
-        cache1.clearLeafPath(1);
-        cache1.putLeaf(appleLeaf(3));
-        cache1.putLeaf(cherryLeaf(4));
-        // add D
-        cache1.clearLeafPath(2);
-        cache1.putLeaf(bananaLeaf(5));
-        cache1.putLeaf(dateLeaf(6));
-
-        nextRound();
-        System.err.println(
-                "H1: " + Arrays.toString(cache1.dirtyLeavesForHash(3, 6).toArray()));
-        cache1.seal();
-
-        final VirtualNodeCache cache2 = cache;
-        // delete A
-        cache2.deleteLeaf(appleLeaf(3));
-        cache2.clearLeafPath(6);
-        cache2.putLeaf(dateLeaf(3));
-        cache2.clearLeafPath(5);
-        cache2.putLeaf(bananaLeaf(2));
-
-        nextRound();
-        System.err.println(
-                "H2: " + Arrays.toString(cache2.dirtyLeavesForHash(2, 4).toArray()));
-        cache2.seal();
-
-        final VirtualNodeCache cache3 = cache;
-        // add E
-        cache3.clearLeafPath(2);
-        cache3.putLeaf(dateLeaf(5));
-        cache3.putLeaf(eggplantLeaf(6));
-        // add G
-        cache3.clearLeafPath(3);
-        cache3.putLeaf(dateLeaf(7));
-        cache3.putLeaf(grapeLeaf(8));
-
-        nextRound();
-        System.err.println(
-                "H3: " + Arrays.toString(cache3.dirtyLeavesForHash(4, 8).toArray()));
-        cache3.seal();
-
-        cache0.merge();
-        cache1.merge();
-        cache2.merge();
-
-        cache3.prepareForFlush();
-        final List<VirtualLeafBytes> dirtyLeaves =
-                cache3.dirtyLeavesForFlush(4, 8).toList();
-        System.err.println(dirtyLeaves);
-        final List<VirtualLeafBytes> deletedLeaves = cache3.deletedLeaves().toList();
-        System.err.println(deletedLeaves);
-
-        assertEquals(1, deletedLeaves.size());
     }
 
     // ----------------------------------------------------------------------

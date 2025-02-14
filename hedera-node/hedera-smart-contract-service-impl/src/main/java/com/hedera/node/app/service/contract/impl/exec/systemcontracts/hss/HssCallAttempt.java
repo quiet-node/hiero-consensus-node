@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,11 @@ import com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.Abs
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.Call;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.CallTranslator;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.AddressIdConverter;
+import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethod;
+import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethod.SystemContract;
+import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethodRegistry;
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
+import com.hedera.node.app.spi.signatures.SignatureVerifier;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -55,9 +59,13 @@ public class HssCallAttempt extends AbstractCallAttempt<HssCallAttempt> {
     @Nullable
     private final Schedule redirectScheduleTxn;
 
+    @NonNull
+    private final SignatureVerifier signatureVerifier;
+
     // too many parameters
     @SuppressWarnings("java:S107")
     public HssCallAttempt(
+            @NonNull final ContractID contractID,
             @NonNull final Bytes input,
             @NonNull final Address senderAddress,
             final boolean onlyDelegatableContractKeysActive,
@@ -65,10 +73,13 @@ public class HssCallAttempt extends AbstractCallAttempt<HssCallAttempt> {
             @NonNull final Configuration configuration,
             @NonNull final AddressIdConverter addressIdConverter,
             @NonNull final VerificationStrategies verificationStrategies,
+            @NonNull final SignatureVerifier signatureVerifier,
             @NonNull final SystemContractGasCalculator gasCalculator,
             @NonNull final List<CallTranslator<HssCallAttempt>> callTranslators,
+            @NonNull final SystemContractMethodRegistry systemContractMethodRegistry,
             final boolean isStaticCall) {
         super(
+                contractID,
                 input,
                 senderAddress,
                 senderAddress,
@@ -80,12 +91,19 @@ public class HssCallAttempt extends AbstractCallAttempt<HssCallAttempt> {
                 gasCalculator,
                 callTranslators,
                 isStaticCall,
+                systemContractMethodRegistry,
                 REDIRECT_FOR_SCHEDULE_TXN);
         if (isRedirect()) {
             this.redirectScheduleTxn = linkedSchedule(requireNonNull(redirectAddress));
         } else {
             this.redirectScheduleTxn = null;
         }
+        this.signatureVerifier = signatureVerifier;
+    }
+
+    @Override
+    protected SystemContract systemContractKind() {
+        return SystemContractMethod.SystemContract.HSS;
     }
 
     @Override
@@ -194,5 +212,14 @@ public class HssCallAttempt extends AbstractCallAttempt<HssCallAttempt> {
                     .contractID(ContractID.newBuilder().contractNum(contractNum).build())
                     .build());
         }
+    }
+
+    /*
+     * Returns the {@link SignatureVerifier} used for this call.
+     *
+     * @return the {@link SignatureVerifier} used for this call
+     */
+    public @NonNull SignatureVerifier signatureVerifier() {
+        return signatureVerifier;
     }
 }

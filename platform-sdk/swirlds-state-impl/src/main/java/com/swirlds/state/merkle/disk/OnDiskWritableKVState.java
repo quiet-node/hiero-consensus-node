@@ -27,7 +27,6 @@ import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
-import com.swirlds.state.spi.metrics.StoreMetrics;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
@@ -49,8 +48,6 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
 
     @NonNull
     private final Codec<V> valueCodec;
-
-    private StoreMetrics storeMetrics;
 
     /**
      * Create a new instance
@@ -95,9 +92,6 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
     protected void putIntoDataSource(@NonNull K key, @NonNull V value) {
         final Bytes kb = keyCodec.toBytes(key);
         assert kb != null;
-        // If we expect a lot of empty values, Bytes.EMPTY optimization below may be helpful, but
-        // for now it just adds a call to measureRecord(), but benefits are unclear
-        // final Bytes v = valueCodec.measureRecord(value) == 0 ? Bytes.EMPTY : valueCodec.toBytes(value);
         virtualMap.put(kb, value, valueCodec);
         // Log to transaction state log, what was put
         logMapPut(getStateKey(), key, value);
@@ -122,16 +116,7 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
     }
 
     @Override
-    public void setMetrics(@NonNull StoreMetrics storeMetrics) {
-        this.storeMetrics = requireNonNull(storeMetrics);
-    }
-
-    @Override
     public void commit() {
         super.commit();
-
-        if (storeMetrics != null) {
-            storeMetrics.updateCount(sizeOfDataSource());
-        }
     }
 }

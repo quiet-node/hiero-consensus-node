@@ -365,28 +365,6 @@ class VirtualMapTests extends VirtualTestBase {
     }
 
     @Test
-    @DisplayName("Replace of non-existent key throws an exception")
-    void replaceOfNonExistentKey() {
-        final VirtualMap fcm = createMap();
-        assertNull(fcm.get(A_KEY, TestValueCodec.INSTANCE), "Unexpected element");
-
-        fcm.put(A_KEY, APPLE, TestValueCodec.INSTANCE);
-        fcm.put(B_KEY, BANANA, TestValueCodec.INSTANCE);
-        assertNull(fcm.get(C_KEY, TestValueCodec.INSTANCE), "Unexpected element");
-        assertNull(fcm.getBytes(C_KEY), "Unexpected element");
-        fcm.release();
-    }
-
-    @Test
-    @DisplayName("Replace throws exception on null key")
-    void replaceThrowsExceptionOnNullKey() {
-        final VirtualMap fcm = createMap();
-        assertThrows(
-                NullPointerException.class, () -> fcm.get(null, TestValueCodec.INSTANCE), "Null keys are not allowed");
-        fcm.release();
-    }
-
-    @Test
     @DisplayName("Replace many and get many")
     void replaceManyAndGetMany() {
         final VirtualMap original = createMap();
@@ -677,8 +655,8 @@ class VirtualMapTests extends VirtualTestBase {
     }
 
     @Test
-    @DisplayName("GetForModify should not mutate old copies")
-    void checkGetForModifyMutation() throws InterruptedException {
+    @DisplayName("put should not mutate old copies")
+    void checkPutMutation() throws InterruptedException {
         final VirtualMap vm = createMap();
         vm.put(A_KEY, APPLE, TestValueCodec.INSTANCE);
         final TestValue value = vm.get(A_KEY, TestValueCodec.INSTANCE);

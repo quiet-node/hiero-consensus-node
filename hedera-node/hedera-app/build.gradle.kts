@@ -37,6 +37,7 @@ mainModuleInfo {
 
 testModuleInfo {
     requires("com.fasterxml.jackson.databind")
+    requires("com.google.protobuf")
     requires("com.google.common.jimfs")
     requires("com.hedera.node.app")
     requires("com.hedera.node.app.spi.test.fixtures")
@@ -54,6 +55,7 @@ testModuleInfo {
     requires("org.junit.jupiter.params")
     requires("org.mockito")
     requires("org.mockito.junit.jupiter")
+    requires("tuweni.bytes")
     requires("uk.org.webcompere.systemstubs.core")
     requires("uk.org.webcompere.systemstubs.jupiter")
     requiresStatic("com.github.spotbugs.annotations")
@@ -62,17 +64,11 @@ testModuleInfo {
 jmhModuleInfo {
     requires("com.hedera.node.app")
     requires("com.hedera.node.app.hapi.utils")
-    requires("com.hedera.node.app.spi")
     requires("com.hedera.node.app.spi.test.fixtures")
     requires("com.hedera.node.app.test.fixtures")
-    requires("com.hedera.node.config")
     requires("com.hedera.node.hapi")
     requires("com.hedera.pbj.runtime")
     requires("com.swirlds.common")
-    requires("com.swirlds.config.api")
-    requires("com.swirlds.metrics.api")
-    requires("com.swirlds.platform.core")
-    requires("com.swirlds.state.api")
     requires("jmh.core")
 }
 
@@ -142,6 +138,9 @@ tasks.register<JavaExec>("run") {
     workingDir = nodeWorkingDir.get().asFile
     jvmArgs = listOf("-cp", "data/lib/*:data/apps/*")
     mainClass.set("com.hedera.node.app.ServicesMain")
+
+    // Add arguments for the application to run a local node
+    args = listOf("-local", "0")
 }
 
 val cleanRun =

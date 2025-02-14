@@ -39,20 +39,6 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         }
 
         @Test
-        @DisplayName("The size of the state is the size of the virtual map")
-        void sizeWorks() {
-            final var state = new OnDiskWritableKVState<>(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
-            assertThat(state.size()).isZero();
-
-            add(A_KEY, APPLE);
-            add(B_KEY, BANANA);
-            add(C_KEY, CHERRY);
-
-            assertThat(state.size()).isEqualTo(fruitVirtualMap.size());
-            assertThat(state.size()).isEqualTo(3);
-        }
-
-        @Test
         @DisplayName("You must specify the metadata")
         void nullMetadataThrows() {
             //noinspection DataFlowIssue
@@ -225,8 +211,7 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         @DisplayName("The Smörgåsbord of modifications, rollbacks, commits, and fast copies")
         void smorgasbord() throws ParseException {
             //            setupConstructableRegistry();
-            // Let's read with get and getForModify, remove something, put a modification, and
-            // put something new.
+            // Let's read with get, remove something, put a modification, and put something new
             assertThat(state.get(A_KEY)).isEqualTo(APPLE);
             assertThat(state.get(B_KEY)).isEqualTo(BANANA);
             state.put(C_KEY, CHERRY);
