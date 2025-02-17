@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ class TokenGetNftInfoHandlerTest extends CryptoTokenHandlerTestBase {
     void validatesQueryIfInvalidNft() {
         final var state = MapReadableKVState.<NftID, Nft>builder(TokenService.NAME, NFTS).build();
         given(readableStates.<NftID, Nft>get(NFTS)).willReturn(state);
-        final var store = new ReadableNftStoreImpl(readableStates);
+        final var store = new ReadableNftStoreImpl(readableStates, readableEntityCounters);
 
         final var query = createTokenGetNftInfoQuery(nftIdSl1);
         when(context.query()).thenReturn(query);
@@ -141,7 +141,8 @@ class TokenGetNftInfoHandlerTest extends CryptoTokenHandlerTestBase {
     void validatesQueryIfInvalidNftInTrans() {
         final var state = MapReadableKVState.<NftID, Nft>builder(TokenService.NAME, NFTS).build();
         given(readableStates.<NftID, Nft>get(NFTS)).willReturn(state);
-        final var store = new ReadableNftStoreImpl(readableStates);
+        final var store = new ReadableNftStoreImpl(readableStates, readableEntityCounters);
+        ;
 
         final var query = createEmptyTokenGetNftInfoQuery();
         when(context.query()).thenReturn(query);
@@ -174,8 +175,9 @@ class TokenGetNftInfoHandlerTest extends CryptoTokenHandlerTestBase {
     void getsResponseIfInvalidNft() {
         final var state = MapReadableKVState.<NftID, Nft>builder(TokenService.NAME, NFTS).build();
         given(readableStates.<NftID, Nft>get(NFTS)).willReturn(state);
-        final var store = new ReadableNftStoreImpl(readableStates);
-        final var tokenStore = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableNftStoreImpl(readableStates, readableEntityCounters);
+        ;
+        final var tokenStore = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         final var responseHeader = ResponseHeader.newBuilder()
                 .nodeTransactionPrecheckCode(ResponseCodeEnum.OK)
@@ -213,8 +215,9 @@ class TokenGetNftInfoHandlerTest extends CryptoTokenHandlerTestBase {
                 .value(nftIdSl1, nftSl1)
                 .build();
         given(readableStates.<NftID, Nft>get(NFTS)).willReturn(state);
-        final var store = new ReadableNftStoreImpl(readableStates);
-        final var tokenStore = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableNftStoreImpl(readableStates, readableEntityCounters);
+        ;
+        final var tokenStore = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         checkResponse(responseHeader, expectedInfo, store, tokenStore);
     }
@@ -235,8 +238,9 @@ class TokenGetNftInfoHandlerTest extends CryptoTokenHandlerTestBase {
                 .value(nftIdSl1, nftSl1)
                 .build();
         given(readableStates.<NftID, Nft>get(NFTS)).willReturn(state);
-        final var store = new ReadableNftStoreImpl(readableStates);
-        final var tokenStore = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableNftStoreImpl(readableStates, readableEntityCounters);
+        ;
+        final var tokenStore = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         checkResponse(responseHeader, expectedInfo, store, tokenStore);
     }

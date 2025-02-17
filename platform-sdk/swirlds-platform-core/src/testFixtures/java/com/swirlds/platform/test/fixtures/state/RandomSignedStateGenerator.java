@@ -21,18 +21,19 @@ import static com.swirlds.common.test.fixtures.RandomUtils.randomHash;
 import static com.swirlds.common.test.fixtures.RandomUtils.randomSignature;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.registerMerkleStateRootClassIds;
+import static org.mockito.Mockito.spy;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.swirlds.base.time.Time;
+import com.swirlds.base.utility.Pair;
 import com.swirlds.common.Reservable;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.crypto.Signature;
 import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.RandomUtils;
-import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.config.StateConfig;
@@ -41,14 +42,12 @@ import com.swirlds.platform.crypto.SignatureVerifier;
 import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.MinimumJudgeInfo;
 import com.swirlds.platform.state.PlatformMerkleStateRoot;
-import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder.WeightDistributionStrategy;
 import com.swirlds.platform.test.fixtures.state.manager.SignatureVerificationTestUtils;
-import com.swirlds.state.State;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
@@ -121,6 +120,16 @@ public class RandomSignedStateGenerator {
      * @return a new signed state
      */
     public SignedState build() {
+        return buildWithFacade().left();
+    }
+
+    /**
+     * Build a pair of new signed state and a platform state facade used for that
+     *
+     * @return a new signed state
+     */
+    public Pair<SignedState, TestPlatformStateFacade> buildWithFacade() {
+
         final Roster rosterInstance;
         if (roster == null) {
             rosterInstance = RandomRosterBuilder.create(random)
@@ -139,24 +148,23 @@ public class RandomSignedStateGenerator {
 
         final PlatformMerkleStateRoot stateInstance;
         registerMerkleStateRootClassIds();
-        if (state == null) {
-            if (useBlockingState) {
-                stateInstance = new BlockingSwirldState();
-            } else {
-                stateInstance = new PlatformMerkleStateRoot(
-                        FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
-            }
-            // will be updated -- added for helping to solve compile issues
-//            stateInstance.setTime(Time.getCurrent());
-        } else {
-            stateInstance = state;
-        }
-
         final long roundInstance;
         if (round == null) {
             roundInstance = Math.abs(random.nextLong());
         } else {
             roundInstance = round;
+        }
+
+        TestPlatformStateFacade platformStateFacade = new TestPlatformStateFacade((v -> softwareVersionInstance));
+        if (state == null) {
+            if (useBlockingState) {
+                stateInstance = new BlockingState(platformStateFacade);
+            } else {
+                stateInstance = new PlatformMerkleStateRoot(version -> new BasicSoftwareVersion(version.major()));
+            }
+            stateInstance.init(Time.getCurrent(), new NoOpMetrics(), MerkleCryptoFactory.getInstance());
+        } else {
+            stateInstance = state;
         }
 
         final Hash legacyRunningEventHashInstance;
@@ -200,10 +208,9 @@ public class RandomSignedStateGenerator {
         } else {
             consensusSnapshotInstance = consensusSnapshot;
         }
-        FAKE_MERKLE_STATE_LIFECYCLES.initPlatformState((MerkleStateRoot) stateInstance);
-        final PlatformStateModifier platformState = stateInstance.getWritablePlatformState();
+        FAKE_MERKLE_STATE_LIFECYCLES.initPlatformState(stateInstance);
 
-        platformState.bulkUpdate(v -> {
+        platformStateFacade.bulkUpdateOf(stateInstance, v -> {
             v.setSnapshot(consensusSnapshotInstance);
             v.setLegacyRunningEventHash(legacyRunningEventHashInstance);
             v.setCreationSoftwareVersion(softwareVersionInstance);
@@ -211,8 +218,8 @@ public class RandomSignedStateGenerator {
             v.setConsensusTimestamp(consensusTimestampInstance);
         });
 
-        FAKE_MERKLE_STATE_LIFECYCLES.initRosterState((MerkleStateRoot) stateInstance);
-        RosterUtils.setActiveRoster((State) stateInstance, rosterInstance, roundInstance);
+        FAKE_MERKLE_STATE_LIFECYCLES.initRosterState(stateInstance);
+        RosterUtils.setActiveRoster(stateInstance, rosterInstance, roundInstance);
 
         if (signatureVerifier == null) {
             signatureVerifier = SignatureVerificationTestUtils::verifySignature;
@@ -222,9 +229,6 @@ public class RandomSignedStateGenerator {
                 .withValue("state.stateHistoryEnabled", true)
                 .withConfigDataType(StateConfig.class)
                 .getOrCreateConfig();
-        final PlatformContext platformContext = TestPlatformContextBuilder.create()
-                .withConfiguration(configuration)
-                .build();
 
         final SignedState signedState = new SignedState(
                 configuration,
@@ -233,9 +237,10 @@ public class RandomSignedStateGenerator {
                 "RandomSignedStateGenerator.build()",
                 freezeStateInstance,
                 deleteOnBackgroundThread,
-                pcesRound);
+                pcesRound,
+                platformStateFacade);
 
-        MerkleCryptoFactory.getInstance().digestTreeSync(stateInstance);
+        MerkleCryptoFactory.getInstance().digestTreeSync(stateInstance.cast());
         if (stateHash != null) {
             stateInstance.setHash(stateHash);
         }
@@ -269,7 +274,7 @@ public class RandomSignedStateGenerator {
         }
 
         builtSignedStates.get().add(signedState);
-        return signedState;
+        return Pair.of(signedState, spy(platformStateFacade));
     }
 
     /**
@@ -457,10 +462,10 @@ public class RandomSignedStateGenerator {
     }
 
     /**
-     * Set if this state should use a {@link BlockingSwirldState} instead of a {@link MerkleStateRoot}.
+     * Set if this state should use a {@link BlockingState} instead of a {@link MerkleStateRoot}.
      * This flag is fasle by default.
      *
-     * @param useBlockingState true if this state should use {@link BlockingSwirldState}
+     * @param useBlockingState true if this state should use {@link BlockingState}
      * @return this object
      */
     public RandomSignedStateGenerator setUseBlockingState(boolean useBlockingState) {

@@ -20,10 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.state.addressbook.Node;
 import com.hedera.hapi.node.state.common.EntityNumber;
-import com.hedera.node.app.spi.metrics.StoreMetricsService;
-import com.hedera.node.app.spi.metrics.StoreMetricsService.StoreType;
-import com.hedera.node.config.data.NodesConfig;
-import com.swirlds.config.api.Configuration;
+import com.hedera.node.app.hapi.utils.EntityType;
+import com.hedera.node.app.spi.ids.WritableEntityCounters;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -37,22 +35,16 @@ import java.util.Set;
  * This class is not complete, it will be extended with other methods like remove, update etc.,
  */
 public class WritableNodeStore extends ReadableNodeStoreImpl {
+    private final WritableEntityCounters entityCounters;
     /**
      * Create a new {@link WritableNodeStore} instance.
      *
      * @param states The state to use.
-     * @param configuration The configuration used to read the maximum capacity.
-     * @param storeMetricsService Service that provides utilization metrics.
      */
     public WritableNodeStore(
-            @NonNull final WritableStates states,
-            @NonNull final Configuration configuration,
-            @NonNull final StoreMetricsService storeMetricsService) {
-        super(states);
-
-        final long maxCapacity = configuration.getConfigData(NodesConfig.class).maxNumber();
-        final var storeMetrics = storeMetricsService.get(StoreType.NODE, maxCapacity);
-        nodesState().setMetrics(storeMetrics);
+            @NonNull final WritableStates states, @NonNull final WritableEntityCounters entityCounters) {
+        super(states, entityCounters);
+        this.entityCounters = entityCounters;
     }
 
     @Override
@@ -61,8 +53,9 @@ public class WritableNodeStore extends ReadableNodeStoreImpl {
     }
 
     /**
-     * Persists a new {@link Node} into the state, as well as exporting its ID to the transaction
+     * Persists an updated {@link Node} into the state, as well as exporting its ID to the transaction
      * receipt.
+     * If a node with the same ID already exists, it will be overwritten.
      *
      * @param node - the node to be mapped onto a new {@link Node}
      */
@@ -72,12 +65,13 @@ public class WritableNodeStore extends ReadableNodeStoreImpl {
     }
 
     /**
-     * Returns the number of nodes in the state.
-     * @return the number of nodes in the state
+     * Persists a new {@link Node} into the state, as well as exporting its ID to the transaction. It
+     * will also increment the entity type count for {@link EntityType#NODE}.
+     * @param node - the node to be mapped onto a new {@link Node}
      */
-    @Override
-    public long sizeOfState() {
-        return nodesState().size();
+    public void putAndIncrementCount(@NonNull final Node node) {
+        put(node);
+        entityCounters.incrementEntityTypeCount(EntityType.NODE);
     }
 
     /**

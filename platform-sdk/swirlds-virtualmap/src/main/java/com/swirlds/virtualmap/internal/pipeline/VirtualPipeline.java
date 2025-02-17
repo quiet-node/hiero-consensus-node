@@ -475,20 +475,18 @@ public class VirtualPipeline {
     }
 
     /**
-     * Try to flush a copy. Hash it if necessary. If the copy is not flushed, it
-     * will be eligible to merge.
+     * Try to flush a copy. Hash it if necessary.
      *
      * @param copy the copy to flush
-     * @return if the copy was flushed
      */
-    private boolean tryFlush(final VirtualRoot copy) {
+    private void flush(final VirtualRoot copy) {
         if (copy.isFlushed()) {
             throw new IllegalStateException("copy is already flushed");
         }
         if (!copy.isHashed()) {
             hashCopy(copy);
         }
-        return copy.tryFlush();
+        copy.flush();
     }
 
     /**
@@ -542,20 +540,14 @@ public class VirtualPipeline {
             if (!copy.isImmutable()) {
                 break;
             }
-            boolean flushed = false;
             if ((next == copies.getFirst()) && shouldBeFlushed(copy)) {
-                logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Try to flush {}", copy.getFastCopyVersion());
-                flushed = tryFlush(copy);
-                if (flushed) {
-                    logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Flushed {}", copy.getFastCopyVersion());
-                    copies.remove(next);
-                }
-            }
-            if (!flushed && (canBeMerged(next))) {
+                logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Flush {}", copy.getFastCopyVersion());
+                flush(copy);
+                copies.remove(next);
+            } else if (canBeMerged(next)) {
                 assert !copy.isMerged();
                 logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Merge {}", copy.getFastCopyVersion());
                 merge(next);
-                logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Merged {}", copy.getFastCopyVersion());
                 copies.remove(next);
             }
             statistics.setPipelineSize(copies.getSize());

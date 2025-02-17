@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2020-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.hedera.services.bdd.spec.transactions;
 
 import static com.hedera.services.bdd.spec.HapiPropertySource.explicitBytesOf;
+import static com.hedera.services.bdd.spec.dsl.entities.SpecContract.VARIANT_NONE;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.randomUppercase;
 import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.tinyBarsFromAccountToAlias;
@@ -34,6 +35,7 @@ import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 import static com.hedera.services.bdd.suites.HapiSuite.TOKEN_TREASURY;
 import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.CONSTRUCTOR;
 import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
+import static com.hedera.services.bdd.suites.contract.Utils.defaultContractsRoot;
 import static com.hedera.services.bdd.suites.contract.Utils.extractByteCode;
 import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
 import static com.hedera.services.bdd.suites.contract.Utils.getResourcePath;
@@ -75,6 +77,7 @@ import com.hedera.services.bdd.spec.transactions.schedule.HapiScheduleCreate;
 import com.hedera.services.bdd.spec.transactions.schedule.HapiScheduleDelete;
 import com.hedera.services.bdd.spec.transactions.schedule.HapiScheduleSign;
 import com.hedera.services.bdd.spec.transactions.system.HapiFreeze;
+import com.hedera.services.bdd.spec.transactions.system.HapiStateSignature;
 import com.hedera.services.bdd.spec.transactions.system.HapiSysDelete;
 import com.hedera.services.bdd.spec.transactions.system.HapiSysUndelete;
 import com.hedera.services.bdd.spec.transactions.token.HapiTokenAirdrop;
@@ -494,7 +497,37 @@ public class TxnVerbs {
      * @param params the arguments (if any) passed to the contract's function
      */
     public static HapiContractCall contractCall(String contract, String functionName, Object... params) {
-        final var abi = getABIFor(FUNCTION, functionName, contract);
+        return innerContractCall(Optional.empty(), contract, functionName, params);
+    }
+
+    /**
+     * This method allows the developer to invoke a contract function by the name of the called
+     * contract and the name of the desired function
+     *
+     * @param variant the variant root directory for the contract
+     * @param contract the name of the contract
+     * @param functionName the name of the function
+     * @param params the arguments (if any) passed to the contract's function
+     */
+    public static HapiContractCall contractCall(
+            Optional<String> variant, String contract, String functionName, Object... params) {
+        return innerContractCall(variant, contract, functionName, params);
+    }
+
+    /**
+     * This method allows the developer to invoke a contract function by the name of the called
+     * contract and the name of the desired function
+     *
+     * This overload allows for a variant root directory for the contract
+     *
+     * @param variant the optional variant root directory for the contract
+     * @param contract the name of the contract
+     * @param functionName the name of the function
+     * @param params the arguments (if any) passed to the contract's function
+     */
+    private static HapiContractCall innerContractCall(
+            final Optional<String> variant, final String contract, final String functionName, final Object... params) {
+        final var abi = getABIFor(variant.orElse(VARIANT_NONE), FUNCTION, functionName, contract);
         return new HapiContractCall(abi, contract, params);
     }
 
@@ -651,14 +684,23 @@ public class TxnVerbs {
      * @param contractsNames the name(s) of the contract(s), which are to be deployed
      */
     public static HapiSpecOperation uploadInitCode(final String... contractsNames) {
-        return uploadInitCode(Optional.empty(), contractsNames);
+        return uploadInitCode(Optional.empty(), VARIANT_NONE, contractsNames);
     }
 
-    public static HapiSpecOperation uploadInitCode(final Optional<String> payer, final String... contractsNames) {
+    /**
+     * This method enables the developer to upload one or many contract(s) bytecode(s) specifying a payer and
+     * potentially a variant location for the contract(s)
+     *
+     * @param payer the payer of the file transaction
+     * @param variant the variant location of the contract(s)
+     * @param contractsNames the name(s) of the contract(s), which are to be deployed
+     */
+    public static HapiSpecOperation uploadInitCode(
+            final Optional<String> payer, final String variant, final String... contractsNames) {
         return withOpContext((spec, ctxLog) -> {
             final List<SpecOperation> ops = new ArrayList<>();
             for (String contractName : contractsNames) {
-                final var path = getResourcePath(contractName, ".bin");
+                final var path = getResourcePath(defaultContractsRoot(variant), contractName, ".bin");
                 final var file = new HapiFileCreate(contractName);
                 final var updatedFile = updateLargeFile(payer.orElse(GENESIS), contractName, extractByteCode(path));
                 ops.add(file);
@@ -740,7 +782,7 @@ public class TxnVerbs {
             final byte[] params = args.length == 0
                     ? new byte[] {}
                     : com.esaulpaugh.headlong.abi.Function.fromJson(abi)
-                            .encodeCall(Tuple.of(args))
+                            .encodeCall(Tuple.from(args))
                             .array();
             final var updatedFile = updateLargeFile(
                     GENESIS,
@@ -755,6 +797,10 @@ public class TxnVerbs {
     /* SYSTEM */
     public static HapiFreeze hapiFreeze(final Instant freezeStartTime) {
         return new HapiFreeze().startingAt(freezeStartTime);
+    }
+
+    public static HapiStateSignature hapiStateSignature() {
+        return new HapiStateSignature();
     }
 
     /* UTIL */

@@ -431,6 +431,9 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
             // it is necessary to use the statistics object from the previous instance of the state.
             statistics = new VirtualMapStatistics(state.getLabel());
         }
+        // VM size metric value is updated in add() and remove(). However, if no elements are added or
+        // removed, the metric may have a stale value for a long time. Update it explicitly here
+        statistics.setSize(size());
         // At this point in time the copy knows if it should be flushed or merged, and so it is safe
         // to register with the pipeline.
         if (pipeline == null) {
@@ -1118,7 +1121,7 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
      * {@inheritDoc}
      */
     @Override
-    public boolean tryFlush() {
+    public void flush() {
         if (!isImmutable()) {
             throw new IllegalStateException("mutable copies can not be flushed");
         }
@@ -1129,25 +1132,19 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
             throw new IllegalStateException("a merged copy can not be flushed");
         }
 
-        // Prepare the cache for flush. It may affect cache's estimated size
-        cache.prepareForFlush();
-        if (shouldBeFlushed(virtualMapConfig.percentCopyFlushAfterGCThreshold())) {
-            logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "To flush {}", cache.getFastCopyVersion());
-            final long start = System.currentTimeMillis();
-            flush(cache, state, dataSource);
-            cache.release();
-            final long end = System.currentTimeMillis();
-            flushed.set(true);
-            flushLatch.countDown();
-            statistics.recordFlush(end - start);
-            logger.debug(
-                    VIRTUAL_MERKLE_STATS.getMarker(), "Flushed {} in {} ms", cache.getFastCopyVersion(), end - start);
-            return true;
-        } else {
-            logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "To GC {}", cache.getFastCopyVersion());
-            cache.garbageCollect();
-            return false;
-        }
+        final long start = System.currentTimeMillis();
+        flush(cache, state, dataSource);
+        cache.release();
+        final long end = System.currentTimeMillis();
+        flushed.set(true);
+        flushLatch.countDown();
+        statistics.recordFlush(end - start);
+        logger.debug(
+                VIRTUAL_MERKLE_STATS.getMarker(),
+                "Flushed {} v{} in {} ms",
+                state.getLabel(),
+                cache.getFastCopyVersion(),
+                end - start);
     }
 
     private void flush(VirtualNodeCache cacheToFlush, VirtualStateAccessor stateToUse, VirtualDataSource ds) {
@@ -1371,7 +1368,6 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
         final VirtualDataSource dataSourceCopy = dataSourceBuilder.copy(dataSource, false, true);
         try {
             final VirtualNodeCache cacheSnapshot = cache.snapshot();
-            cacheSnapshot.prepareForFlush();
             flush(cacheSnapshot, state, dataSourceCopy);
             dataSourceBuilder.snapshot(destination, dataSourceCopy);
         } finally {
@@ -1442,7 +1438,6 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
             // will NEVER be updated again.
             assert originalMap.isHashed() : "The system should have made sure this was hashed by this point!";
             final VirtualNodeCache snapshotCache = originalMap.cache.snapshot();
-            snapshotCache.prepareForFlush();
             flush(snapshotCache, originalMap.state, this.dataSource);
 
             return new RecordAccessorImpl(reconnectState, snapshotCache, dataSource);
@@ -1708,7 +1703,7 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
         final VirtualLeafBytes<V> newLeaf = valueCodec != null
                 ? new VirtualLeafBytes<>(leafPath, key, value, valueCodec)
                 : new VirtualLeafBytes<>(leafPath, key, valueBytes);
-        cache.putLeaf(newLeaf, true);
+        cache.putLeaf(newLeaf);
     }
 
     @Override

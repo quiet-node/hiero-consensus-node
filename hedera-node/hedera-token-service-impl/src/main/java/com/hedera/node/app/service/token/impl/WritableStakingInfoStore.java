@@ -20,7 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
+import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
+import com.hedera.node.app.spi.ids.WritableEntityCounters;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -37,20 +39,24 @@ public class WritableStakingInfoStore extends ReadableStakingInfoStoreImpl {
     /** The underlying data storage class that holds the staking data. */
     private final WritableKVState<EntityNumber, StakingNodeInfo> stakingInfoState;
 
+    private final WritableEntityCounters entityCounters;
+
     /**
      * Create a new {@link WritableStakingInfoStore} instance.
      *
-     * @param states The state to use
+     * @param states         The state to use
+     * @param entityCounters
      */
-    public WritableStakingInfoStore(@NonNull final WritableStates states) {
+    public WritableStakingInfoStore(@NonNull final WritableStates states, final WritableEntityCounters entityCounters) {
         super(states);
         requireNonNull(states);
 
         this.stakingInfoState = states.get(V0490TokenSchema.STAKING_INFO_KEY);
+        this.entityCounters = requireNonNull(entityCounters);
     }
 
     /**
-     * Persists a new {@link StakingNodeInfo} into state.
+     * Persists a {@link StakingNodeInfo} into state.
      *
      * @param nodeId the node's ID
      * @param stakingNodeInfo the staking info to persist
@@ -58,6 +64,16 @@ public class WritableStakingInfoStore extends ReadableStakingInfoStoreImpl {
     public void put(final long nodeId, @NonNull final StakingNodeInfo stakingNodeInfo) {
         requireNonNull(stakingNodeInfo);
         stakingInfoState.put(EntityNumber.newBuilder().number(nodeId).build(), stakingNodeInfo);
+    }
+
+    /**
+     * Persists a {@link StakingNodeInfo} into state and increments the entity counter for staking info.
+     * @param nodeId the node's ID
+     * @param stakingNodeInfo the staking info to persist
+     */
+    public void putAndIncrementCount(final long nodeId, @NonNull final StakingNodeInfo stakingNodeInfo) {
+        put(nodeId, stakingNodeInfo);
+        entityCounters.incrementEntityTypeCount(EntityType.STAKING_INFO);
     }
 
     /**

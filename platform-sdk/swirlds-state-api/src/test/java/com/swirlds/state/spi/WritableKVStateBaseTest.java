@@ -17,7 +17,6 @@
 package com.swirlds.state.spi;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.inOrder;
@@ -139,73 +138,6 @@ public class WritableKVStateBaseTest extends ReadableKVStateBaseTest {
         }
     }
 
-    /**
-     * Gives size of backing store plus modifications (additions or removals).
-     * If a new key is added by calling {@code put()}, then size increases, as new key is added to modifications map for addition.
-     * If an existing key is removed by calling {@code remove()}, then size decreases, as new key is added to modifications map for removal.
-     */
-    @Nested
-    @DisplayName("size")
-    final class SizeTest {
-        @Test
-        @DisplayName("Adding a key that does not already exist in the backing store impacts size")
-        void putNew() {
-            assertThat(state.readKeys()).isEmpty();
-            assertThat(state.modifiedKeys()).isEmpty();
-
-            // Before doing put, the size should be 2 (setup of the test adds 2 keys)
-            assertEquals(2, state.size());
-            state.put(C_KEY, CHERRY);
-
-            // After put, size includes modifications as well. So the size should be 3.
-            assertEquals(3, state.size());
-
-            // Commit should keep the size, as the modifications are considered in size.
-            state.commit();
-            verify(state, Mockito.times(1)).putIntoDataSource(anyString(), anyString());
-            verify(state, Mockito.times(1)).putIntoDataSource(C_KEY, CHERRY);
-            verify(state, Mockito.never()).removeFromDataSource(anyString());
-            assertEquals(3, state.size());
-        }
-
-        @Test
-        @DisplayName("Removing a key that exists in the backing store impacts size")
-        void removeExisting() {
-            assertThat(state.readKeys()).isEmpty();
-            assertThat(state.modifiedKeys()).isEmpty();
-
-            // Before remove, the size should be 2 (setup of the test adds 2 keys)
-            assertEquals(2, state.size());
-
-            state.remove(A_KEY);
-            // After remove, size includes modifications as well. So the size should be 1.
-            assertEquals(1, state.size());
-
-            // Commit should not cause any change in size, as the modifications were considered
-            state.commit();
-            verify(state, Mockito.never()).putIntoDataSource(anyString(), anyString());
-            verify(state, Mockito.times(1)).removeFromDataSource(A_KEY);
-            assertEquals(1, state.size());
-        }
-
-        @Test
-        @DisplayName("Getting a key from the backing store doesn't affect size")
-        void getDoesntAffect() {
-            assertThat(state.readKeys()).isEmpty();
-            assertThat(state.modifiedKeys()).isEmpty();
-
-            state.get(A_KEY);
-            // Before commit, the size should be 2 (setup of the test adds 2 keys)
-            assertEquals(2, state.size());
-
-            // Commit should not have any effect on size
-            state.commit();
-            verify(state, Mockito.never()).putIntoDataSource(anyString(), anyString());
-            verify(state, Mockito.never()).removeFromDataSource(anyString());
-            assertEquals(2, state.size());
-        }
-    }
-
     @Nested
     @DisplayName("put")
     final class PutTest {
@@ -216,7 +148,7 @@ public class WritableKVStateBaseTest extends ReadableKVStateBaseTest {
          */
         @Test
         @DisplayName("Put a key that does not already exist in the backing store")
-        void putNew() {
+        void putAndIncrementCount() {
             assertThat(state.readKeys()).isEmpty();
             assertThat(state.modifiedKeys()).isEmpty();
 
@@ -272,7 +204,7 @@ public class WritableKVStateBaseTest extends ReadableKVStateBaseTest {
         }
 
         /**
-         * If the key has been previously part of "getForModify", and then we "put", then the key
+         * If the key has been previously part of "get", and then we "put", then the key
          * will still be listed as a "read" key, and will also be a modified key.
          */
         @Test
@@ -521,36 +453,6 @@ public class WritableKVStateBaseTest extends ReadableKVStateBaseTest {
             verify(state, Mockito.never()).putIntoDataSource(anyString(), anyString());
             verify(state, Mockito.times(1)).removeFromDataSource(anyString());
             verify(state, Mockito.times(1)).removeFromDataSource(C_KEY);
-        }
-
-        /**
-         * If the key was previously "getForModify" and is then removed, it MUST be present in both
-         * the "readKeys" and "modified" keys.
-         *
-         * <p>On commit, the remove method MUST be called on the backing store.
-         */
-        @Test
-        @DisplayName("Remove a known key after getForModify")
-        void removeAfterGetForModify() {
-            // Initially everything is clean
-            assertThat(state.readKeys()).isEmpty();
-            assertThat(state.modifiedKeys()).isEmpty();
-
-            // Remove a known key after getting it
-            assertThat(state.get(A_KEY)).isEqualTo(APPLE);
-            state.remove(A_KEY);
-
-            // "readKeys" is now populated, and "modifiedKeys" has the key
-            assertThat(state.readKeys()).hasSize(1);
-            assertThat(state.modifiedKeys()).hasSize(1);
-            assertThat(state.readKeys()).contains(A_KEY);
-            assertThat(state.modifiedKeys()).contains(A_KEY);
-
-            // Commit should cause the value to be removed but not "put"
-            state.commit();
-            verify(state, Mockito.never()).putIntoDataSource(anyString(), anyString());
-            verify(state, Mockito.times(1)).removeFromDataSource(anyString());
-            verify(state, Mockito.times(1)).removeFromDataSource(A_KEY);
         }
 
         /**

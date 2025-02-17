@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2022-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,10 +28,12 @@ import static com.hedera.node.app.workflows.prehandle.PreHandleResult.unknownFai
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;
+import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.SignaturePair;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.transaction.TransactionBody;
+import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.node.app.service.token.ReadableAccountStore;
 import com.hedera.node.app.signature.ExpandedSignaturePair;
 import com.hedera.node.app.signature.SignatureExpander;
@@ -45,6 +47,7 @@ import com.hedera.node.app.store.ReadableStoreFactory;
 import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.node.app.workflows.TransactionInfo;
 import com.hedera.node.app.workflows.dispatcher.TransactionDispatcher;
+import com.hedera.node.app.workflows.purechecks.PureChecksContextImpl;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfiguration;
 import com.swirlds.platform.system.events.Event;
@@ -54,6 +57,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -128,11 +132,13 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
     public void preHandle(
             @NonNull final ReadableStoreFactory readableStoreFactory,
             @NonNull final AccountID creator,
-            @NonNull final Stream<Transaction> transactions) {
+            @NonNull final Stream<Transaction> transactions,
+            @NonNull final Consumer<StateSignatureTransaction> stateSignatureTxnCallback) {
 
         requireNonNull(readableStoreFactory);
         requireNonNull(creator);
         requireNonNull(transactions);
+        requireNonNull(stateSignatureTxnCallback);
 
         // Used for looking up payer account information.
         final var accountStore = readableStoreFactory.getStore(ReadableAccountStore.class);
@@ -141,13 +147,13 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
         transactions.parallel().forEach(tx -> {
             if (tx.isSystem()) return;
             try {
-                tx.setMetadata(preHandleTransaction(creator, readableStoreFactory, accountStore, tx));
+                tx.setMetadata(preHandleTransaction(
+                        creator, readableStoreFactory, accountStore, tx, stateSignatureTxnCallback));
             } catch (final Exception unexpectedException) {
                 // If some random exception happened, then we should not charge the node for it. Instead,
                 // we will just record the exception and try again during handle. Then if we fail again
                 // at handle, then we will throw away the transaction (hopefully, deterministically!)
-                logger.error(
-                        "Possibly CATASTROPHIC failure while running the pre-handle workflow", unexpectedException);
+                logger.error("Unexpected Exception while running the pre-handle workflow", unexpectedException);
                 tx.setMetadata(unknownFailure());
             }
         });
@@ -163,7 +169,8 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
             @NonNull final ReadableStoreFactory storeFactory,
             @NonNull final ReadableAccountStore accountStore,
             @NonNull final Transaction platformTx,
-            @Nullable PreHandleResult previousResult) {
+            @Nullable PreHandleResult previousResult,
+            @NonNull final Consumer<StateSignatureTransaction> stateSignatureTransactionCallback) {
         // 0. Ignore the previous result if it was computed using different node configuration
         if (!wasComputedWithCurrentNodeConfiguration(previousResult)) {
             previousResult = null;
@@ -181,6 +188,12 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
                 // In particular, a null transaction info means we already know the transaction's final failure status
                 return previousResult;
             }
+
+            if (txInfo.functionality() == HederaFunctionality.STATE_SIGNATURE_TRANSACTION) {
+                stateSignatureTransactionCallback.accept(txInfo.txBody().stateSignatureTransaction());
+                return PreHandleResult.stateSignatureTransactionEncountered(txInfo);
+            }
+
             // But we still re-check for node diligence failures
             transactionChecker.checkParsed(txInfo);
             // The transaction account ID MUST have matched the creator!
@@ -264,7 +277,7 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
             // implementation pair, with the implementation in `hedera-app`, then we will change the constructor,
             // so I can pass the payer account in directly, since I've already looked it up. But I don't really want
             // that as a public API in the SPI, so for now, we do a double lookup. Boo.
-            context = new PreHandleContextImpl(storeFactory, txBody, configuration, dispatcher);
+            context = new PreHandleContextImpl(storeFactory, txBody, configuration, dispatcher, transactionChecker);
         } catch (PreCheckException preCheck) {
             // This should NEVER happen. The only way an exception is thrown from the PreHandleContext constructor
             // is if the payer account doesn't exist, but by the time we reach this line of code, we already know
@@ -291,7 +304,9 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
         // 2b. Call Pre-Transaction Handlers
         try {
             // First, perform semantic checks on the transaction
-            dispatcher.dispatchPureChecks(txBody);
+            final var pureChecksContext =
+                    new PureChecksContextImpl(txBody, configuration, dispatcher, transactionChecker);
+            dispatcher.dispatchPureChecks(pureChecksContext);
             // Then gather the signatures from the transaction handler
             dispatcher.dispatchPreHandle(context);
         } catch (PreCheckException preCheck) {

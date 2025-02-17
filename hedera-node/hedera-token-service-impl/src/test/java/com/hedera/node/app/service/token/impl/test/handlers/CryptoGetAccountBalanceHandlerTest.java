@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,8 +62,11 @@ import com.hedera.node.app.service.token.impl.handlers.CryptoGetAccountBalanceHa
 import com.hedera.node.app.service.token.impl.test.handlers.util.CryptoHandlerTestBase;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.QueryContext;
+import com.hedera.node.config.ConfigProvider;
+import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.common.metrics.SpeedometerMetric;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
@@ -95,13 +98,22 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
     @Mock
     private ReadableStates readableStates1, readableStates2, readableStates3;
 
+    @Mock
+    private ConfigProvider configProvider;
+
+    @Mock
+    private Configuration configuration;
+
     private CryptoGetAccountBalanceHandler subject;
 
     @BeforeEach
     public void setUp() {
         super.setUp();
+        final var config = HederaTestConfigBuilder.createConfig();
+        final var versionedConfig = new VersionedConfigImpl(config, 1);
+        when(configProvider.getConfiguration()).thenReturn(versionedConfig);
         given(metrics.getOrCreate(any())).willReturn(balanceSpeedometer);
-        subject = new CryptoGetAccountBalanceHandler(metrics);
+        subject = new CryptoGetAccountBalanceHandler(metrics, configProvider);
     }
 
     @Test
@@ -133,7 +145,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
         givenValidAccount(accountNum);
         readableAccounts = emptyReadableAccountStateBuilder().value(id, account).build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(readableAccounts);
-        readableStore = new ReadableAccountStoreImpl(readableStates);
+        readableStore = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
+        ;
 
         final var query = createGetAccountBalanceQuery(accountNum);
         given(context.query()).willReturn(query);
@@ -148,7 +161,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
         givenValidContract();
         readableAccounts = emptyReadableAccountStateBuilder().value(id, account).build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(readableAccounts);
-        readableStore = new ReadableAccountStoreImpl(readableStates);
+        readableStore = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
+        ;
 
         final var query = createGetAccountBalanceQueryWithContract(accountNum);
         given(context.query()).willReturn(query);
@@ -163,7 +177,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
         final var state =
                 MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
-        final var store = new ReadableAccountStoreImpl(readableStates);
+        final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
+        ;
 
         final var query = createEmptyGetAccountBalanceQuery();
 
@@ -181,7 +196,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
         final var state =
                 MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
-        final var store = new ReadableAccountStoreImpl(readableStates);
+        final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
+        ;
 
         final var query = createGetAccountBalanceQuery(accountNum);
         when(context.query()).thenReturn(query);
@@ -198,7 +214,7 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
         final var state =
                 MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
-        final var store = new ReadableAccountStoreImpl(readableStates);
+        final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
         final AccountID invalidRealmAccountId =
                 AccountID.newBuilder().accountNum(5).realmNum(-1L).build();
 
@@ -217,7 +233,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
         final var state =
                 MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
-        final var store = new ReadableAccountStoreImpl(readableStates);
+        final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
+        ;
 
         final var query = createGetAccountBalanceQueryWithContract(accountNum);
         when(context.query()).thenReturn(query);
@@ -236,8 +253,7 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                 .value(deleteAccountId, deleteAccount)
                 .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(readableAccounts);
-        readableStore = new ReadableAccountStoreImpl(readableStates);
-
+        readableStore = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
         final var query = createGetAccountBalanceQuery(deleteAccountNum);
         when(context.query()).thenReturn(query);
         when(context.createStore(ReadableAccountStore.class)).thenReturn(readableStore);
@@ -256,7 +272,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                 .value(deleteAccountId, deleteAccount)
                 .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(readableAccounts);
-        readableStore = new ReadableAccountStoreImpl(readableStates);
+        readableStore = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
+        ;
 
         final var query = createGetAccountBalanceQueryWithContract(deleteAccountNum);
         when(context.query()).thenReturn(query);
@@ -303,14 +320,15 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                 .value(id, account)
                 .build();
         given(readableStates1.<AccountID, Account>get(ACCOUNTS)).willReturn(readableAccounts);
-        ReadableAccountStore ReadableAccountStore = new ReadableAccountStoreImpl(readableStates1);
+        ReadableAccountStore ReadableAccountStore =
+                new ReadableAccountStoreImpl(readableStates1, readableEntityCounters);
 
         lenient().when(token1.decimals()).thenReturn(100); // only needed when balancesInQueriesEnabled is true
         final var readableToken = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS)
                 .value(asToken(3L), token1)
                 .build();
         given(readableStates2.<TokenID, Token>get(TOKENS)).willReturn(readableToken);
-        final var readableTokenStore = new ReadableTokenStoreImpl(readableStates2);
+        final var readableTokenStore = new ReadableTokenStoreImpl(readableStates2, readableEntityCounters);
 
         final var tokenRelation = TokenRelation.newBuilder()
                 .tokenId(asToken(3L))
@@ -331,7 +349,7 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                         tokenRelation)
                 .build();
         given(readableStates3.<EntityIDPair, TokenRelation>get(TOKEN_RELS)).willReturn(readableTokenRel);
-        final var readableTokenRelStore = new ReadableTokenRelationStoreImpl(readableStates3);
+        final var readableTokenRelStore = new ReadableTokenRelationStoreImpl(readableStates3, readableEntityCounters);
 
         final var query = createGetAccountBalanceQuery(accountNum);
         when(context.query()).thenReturn(query);
@@ -372,7 +390,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                 .value(id, account)
                 .build();
         given(readableStates1.<AccountID, Account>get(ACCOUNTS)).willReturn(readableAccounts);
-        ReadableAccountStore ReadableAccountStore = new ReadableAccountStoreImpl(readableStates1);
+        ReadableAccountStore ReadableAccountStore =
+                new ReadableAccountStoreImpl(readableStates1, readableEntityCounters);
 
         lenient().when(token1.decimals()).thenReturn(100); // only needed when balancesInQueriesEnabled is true
         lenient().when(token2.decimals()).thenReturn(50); // only needed when balancesInQueriesEnabled is true
@@ -382,7 +401,7 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                 .value(asToken(5L), token3)
                 .build();
         given(readableStates2.<TokenID, Token>get(TOKENS)).willReturn(readableToken);
-        final var readableTokenStore = new ReadableTokenStoreImpl(readableStates2);
+        final var readableTokenStore = new ReadableTokenStoreImpl(readableStates2, readableEntityCounters);
 
         final var tokenRelation1 = TokenRelation.newBuilder()
                 .tokenId(asToken(3L))
@@ -435,7 +454,7 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                         tokenRelation3)
                 .build();
         given(readableStates3.<EntityIDPair, TokenRelation>get(TOKEN_RELS)).willReturn(readableTokenRel);
-        final var readableTokenRelStore = new ReadableTokenRelationStoreImpl(readableStates3);
+        final var readableTokenRelStore = new ReadableTokenRelationStoreImpl(readableStates3, readableEntityCounters);
 
         final var query = createGetAccountBalanceQuery(accountNum);
         when(context.query()).thenReturn(query);

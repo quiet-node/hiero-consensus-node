@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.config.singleton.ConfigurationHolder;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
@@ -40,12 +39,10 @@ import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.merkle.route.MerkleRoute;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.test.fixtures.ExampleFixedValue;
 import com.swirlds.merkledb.test.fixtures.ExampleLongKey;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
-import com.swirlds.virtualmap.config.VirtualMapConfig_;
 import com.swirlds.virtualmap.datasource.VirtualDataSourceBuilder;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import com.swirlds.virtualmap.internal.merkle.VirtualInternalNode;
@@ -347,87 +344,5 @@ class VirtualMapSerializationTests {
         copy1.release();
 
         MILLISECONDS.sleep(100); // Hack. Release methods may not have finished their work yet.
-    }
-
-    @Test
-    void inMemoryModeSerde() throws IOException {
-        final Configuration configuration = new TestConfigBuilder()
-                .withValue(VirtualMapConfig_.COPY_FLUSH_CANDIDATE_THRESHOLD, 1_000_000)
-                .getOrCreateConfig();
-        ConfigurationHolder.getInstance().setConfiguration(configuration);
-
-        VirtualMap map = new VirtualMap("inMemoryModeSerde", constructBuilder(configuration), configuration);
-
-        // Copy 0
-        for (int i = 0; i < 100; i++) {
-            final Bytes key = ExampleLongKey.longToKey(i);
-            final ExampleFixedValue value = new ExampleFixedValue(1000000 + i);
-            map.put(key, value, ExampleFixedValue.CODEC);
-        }
-
-        // Copy 1
-        final VirtualMap copy1 = map.copy();
-        map.release();
-        map = copy1;
-        for (int i = 100; i < 200; i++) {
-            final Bytes key = ExampleLongKey.longToKey(i);
-            final ExampleFixedValue value = new ExampleFixedValue(1000000 + i);
-            map.put(key, value, ExampleFixedValue.CODEC);
-        }
-        // Add more entries to copy 1 to force it to flush
-        for (int i = 100000; i < 120000; i++) {
-            final Bytes key = ExampleLongKey.longToKey(i);
-            final ExampleFixedValue value = new ExampleFixedValue(1000000 + i);
-            map.put(key, value, ExampleFixedValue.CODEC);
-        }
-
-        final int nCopies = 100;
-        for (int copyNo = 2; copyNo < nCopies; copyNo++) {
-            final VirtualMap copy = map.copy();
-            map.release();
-            map = copy;
-            for (int i = 0; i < 100; i++) {
-                final int toAdd = copyNo * 100 + i;
-                final Bytes keyToAdd = ExampleLongKey.longToKey(toAdd);
-                final ExampleFixedValue value = new ExampleFixedValue(1000000 + toAdd);
-                map.put(keyToAdd, value, ExampleFixedValue.CODEC);
-                final int toRemove = (copyNo - 2) * 100 + i + 75;
-                final Bytes keytoRemove = ExampleLongKey.longToKey(toRemove);
-                final ExampleFixedValue removed = map.remove(keytoRemove, ExampleFixedValue.CODEC);
-                assertNotNull(removed);
-            }
-        }
-
-        // Final copy
-        final VirtualMap copyF = map.copy();
-        map.release();
-        map = copyF;
-
-        // And one more to make sure copyF is immutable and can be serialized
-        final VirtualMap copyOneMore = map.copy();
-
-        final Hash originalHash = MerkleCryptoFactory.getInstance().digestTreeSync(copyF);
-
-        final ByteArrayOutputStream bout = new ByteArrayOutputStream();
-        final Path tmp = LegacyTemporaryFileBuilder.buildTemporaryDirectory("inMemoryModeSerde", configuration);
-        try (final SerializableDataOutputStream out = new SerializableDataOutputStream(bout)) {
-            copyF.serialize(out, tmp);
-        }
-
-        MerkleDb.resetDefaultInstancePath();
-
-        final ByteArrayInputStream bin = new ByteArrayInputStream(bout.toByteArray());
-        map = new VirtualMap(configuration);
-        try (final SerializableDataInputStream in = new SerializableDataInputStream(bin)) {
-            map.deserialize(in, tmp, 3);
-        }
-
-        final VirtualMap copyAfter = map.copy();
-
-        final Hash restoredHash = MerkleCryptoFactory.getInstance().digestTreeSync(map);
-        assertEquals(originalHash, restoredHash);
-
-        copyOneMore.release();
-        copyAfter.release();
     }
 }

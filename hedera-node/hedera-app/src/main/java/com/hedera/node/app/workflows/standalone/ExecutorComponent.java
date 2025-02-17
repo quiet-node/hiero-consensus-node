@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,20 @@ import com.hedera.node.app.annotations.MaxSignedTxnSize;
 import com.hedera.node.app.authorization.AuthorizerInjectionModule;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
 import com.hedera.node.app.config.ConfigProviderImpl;
+import com.hedera.node.app.fees.AppFeeCharging;
 import com.hedera.node.app.fees.ExchangeRateManager;
+import com.hedera.node.app.hints.HintsService;
+import com.hedera.node.app.platform.PlatformStateModule;
 import com.hedera.node.app.service.contract.impl.ContractServiceImpl;
 import com.hedera.node.app.service.file.impl.FileServiceImpl;
+import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.schedule.impl.ScheduleServiceImpl;
 import com.hedera.node.app.services.ServicesInjectionModule;
+import com.hedera.node.app.spi.AppContext;
 import com.hedera.node.app.spi.throttle.Throttle;
 import com.hedera.node.app.state.HederaStateInjectionModule;
 import com.hedera.node.app.throttle.ThrottleServiceManager;
 import com.hedera.node.app.throttle.ThrottleServiceModule;
-import com.hedera.node.app.tss.TssBaseService;
 import com.hedera.node.app.workflows.FacilityInitModule;
 import com.hedera.node.app.workflows.handle.DispatchProcessor;
 import com.hedera.node.app.workflows.handle.HandleWorkflowModule;
@@ -58,22 +62,26 @@ import javax.inject.Singleton;
             ServicesInjectionModule.class,
             HederaStateInjectionModule.class,
             ThrottleServiceModule.class,
-            FacilityInitModule.class
+            FacilityInitModule.class,
+            PlatformStateModule.class
         })
 public interface ExecutorComponent {
     @Component.Builder
     interface Builder {
         @BindsInstance
-        Builder tssBaseService(TssBaseService tssBaseService);
+        Builder fileServiceImpl(FileServiceImpl fileService);
 
         @BindsInstance
-        Builder fileServiceImpl(FileServiceImpl fileService);
+        Builder scheduleService(ScheduleService scheduleService);
 
         @BindsInstance
         Builder contractServiceImpl(ContractServiceImpl contractService);
 
         @BindsInstance
         Builder scheduleServiceImpl(ScheduleServiceImpl scheduleService);
+
+        @BindsInstance
+        Builder hintsService(HintsService hintsService);
 
         @BindsInstance
         Builder configProviderImpl(ConfigProviderImpl configProvider);
@@ -90,10 +98,15 @@ public interface ExecutorComponent {
         @BindsInstance
         Builder maxSignedTxnSize(@MaxSignedTxnSize int maxSignedTxnSize);
 
+        @BindsInstance
+        Builder appContext(AppContext appContext);
+
         ExecutorComponent build();
     }
 
     Consumer<State> initializer();
+
+    AppFeeCharging appFeeCharging();
 
     DispatchProcessor dispatchProcessor();
 

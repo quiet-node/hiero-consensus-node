@@ -112,8 +112,8 @@ import java.util.List;
  * <p>
  * This class presents a map-like interface for getting and putting values. These values are stored
  * in the leaf nodes of this node's sub-tree. The map-like methods {@link #get(Bytes, Codec)},
- * {@link #put(Bytes, Object, Codec)}, and {@link #remove(Bytes, Codec)}
- * can be used as a fast and convenient way to read, add, modify, or delete the corresponding leaf nodes and
+ * {@link #put(Bytes, Object, Codec)}, and {@link #remove(Bytes, Codec)} can be used as a
+ * fast and convenient way to read, add, modify, or delete the corresponding leaf nodes and
  * internal nodes. Indeed, you <strong>MUST NOT</strong> modify the tree structure directly, only
  * through the map-like methods.
  */

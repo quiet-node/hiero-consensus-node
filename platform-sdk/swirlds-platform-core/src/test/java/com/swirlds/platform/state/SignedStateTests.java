@@ -28,6 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import com.swirlds.base.utility.Pair;
 import com.swirlds.common.exceptions.ReferenceCountException;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
@@ -38,6 +39,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,8 +56,9 @@ class SignedStateTests {
     /**
      * Generate a signed state.
      */
-    private SignedState generateSignedState(final Random random, final PlatformMerkleStateRoot state) {
-        return new RandomSignedStateGenerator(random).setState(state).build();
+    private Pair<SignedState, TestPlatformStateFacade> generateSignedStateFacadePair(
+            final Random random, final PlatformMerkleStateRoot state) {
+        return new RandomSignedStateGenerator(random).setState(state).buildWithFacade();
     }
 
     @BeforeEach
@@ -76,14 +79,10 @@ class SignedStateTests {
      */
     private PlatformMerkleStateRoot buildMockState(
             final Random random, final Runnable reserveCallback, final Runnable releaseCallback) {
-        final var real = new PlatformMerkleStateRoot(
-                FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
+        final var real = new PlatformMerkleStateRoot(version -> new BasicSoftwareVersion(version.major()));
         FAKE_MERKLE_STATE_LIFECYCLES.initStates(real);
         RosterUtils.setActiveRoster(real, RandomRosterBuilder.create(random).build(), 0L);
         final PlatformMerkleStateRoot state = spy(real);
-
-        final PlatformStateModifier platformState = new PlatformState();
-        when(state.getWritablePlatformState()).thenReturn(platformState);
         if (reserveCallback != null) {
             doAnswer(invocation -> {
                         reserveCallback.run();
@@ -124,7 +123,11 @@ class SignedStateTests {
                     released.set(true);
                 });
 
-        final SignedState signedState = generateSignedState(random, state);
+        Pair<SignedState, TestPlatformStateFacade> pair = generateSignedStateFacadePair(random, state);
+        final SignedState signedState = pair.left();
+        final TestPlatformStateFacade platformStateFacade = pair.right();
+        final PlatformStateModifier platformState = new PlatformState();
+        when(platformStateFacade.getWritablePlatformStateOf(state)).thenReturn(platformState);
 
         final ReservedSignedState reservedSignedState;
         reservedSignedState = signedState.reserve("test");
@@ -187,7 +190,11 @@ class SignedStateTests {
                     released.set(true);
                 });
 
-        final SignedState signedState = generateSignedState(random, state);
+        Pair<SignedState, TestPlatformStateFacade> pair = generateSignedStateFacadePair(random, state);
+        final SignedState signedState = pair.left();
+        final TestPlatformStateFacade platformStateFacade = pair.right();
+        final PlatformStateModifier platformState = new PlatformState();
+        when(platformStateFacade.getWritablePlatformStateOf(state)).thenReturn(platformState);
 
         final ReservedSignedState reservedSignedState = signedState.reserve("test");
 
@@ -225,11 +232,11 @@ class SignedStateTests {
     @Test
     @DisplayName("Alternate Constructor Reservations Test")
     void alternateConstructorReservationsTest() {
-        final PlatformMerkleStateRoot state = spy(new PlatformMerkleStateRoot(
-                FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major())));
+        final PlatformMerkleStateRoot state =
+                spy(new PlatformMerkleStateRoot(version -> new BasicSoftwareVersion(version.major())));
         final PlatformStateModifier platformState = mock(PlatformStateModifier.class);
+        final TestPlatformStateFacade platformStateFacade = mock(TestPlatformStateFacade.class);
         FAKE_MERKLE_STATE_LIFECYCLES.initPlatformState(state);
-        when(state.getReadablePlatformState()).thenReturn(platformState);
         when(platformState.getRound()).thenReturn(0L);
         final SignedState signedState = new SignedState(
                 TestPlatformContextBuilder.create().build().getConfiguration(),
@@ -238,7 +245,8 @@ class SignedStateTests {
                 "test",
                 false,
                 false,
-                false);
+                false,
+                platformStateFacade);
 
         assertFalse(state.isDestroyed(), "state should not yet be destroyed");
 

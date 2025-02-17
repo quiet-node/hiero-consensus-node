@@ -69,18 +69,6 @@ class InMemoryWritableStateTest extends MerkleTestBase {
             final var state = createState();
             assertThat(state.getStateKey()).isEqualTo(FRUIT_STATE_KEY);
         }
-
-        @Test
-        @DisplayName("The size of the state is the size of the merkle map")
-        void sizeWorks() {
-            final var state = createState();
-            assertThat(state.size()).isZero();
-
-            add(A_KEY, APPLE);
-            add(B_KEY, BANANA);
-            add(C_KEY, CHERRY);
-            assertThat(state.sizeOfDataSource()).isEqualTo(fruitMerkleMap.size());
-        }
     }
 
     private InMemoryWritableKVState<String, String> createState() {
@@ -235,8 +223,7 @@ class InMemoryWritableStateTest extends MerkleTestBase {
             // This needs to be done so fast-copy on merkle map will work
             setupConstructableRegistry();
 
-            // Let's read with get and getForModify, remove something, put a modification, and
-            // put something new.
+            // Let's read with get, remove something, put a modification, and put something new
             assertThat(state.get(A_KEY)).isEqualTo(APPLE);
             assertThat(state.get(B_KEY)).isEqualTo(BANANA);
             state.put(C_KEY, CHERRY);

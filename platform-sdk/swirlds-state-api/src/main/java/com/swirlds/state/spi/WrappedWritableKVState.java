@@ -16,7 +16,6 @@
 
 package com.swirlds.state.spi;
 
-import com.swirlds.state.spi.metrics.StoreMetrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
 import java.util.Objects;
@@ -78,11 +77,5 @@ public class WrappedWritableKVState<K, V> extends WritableKVStateBase<K, V> {
     @Override
     public long sizeOfDataSource() {
         return delegate.size();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void setMetrics(@NonNull StoreMetrics storeMetrics) {
-        delegate.setMetrics(storeMetrics);
     }
 }

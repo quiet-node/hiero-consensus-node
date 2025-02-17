@@ -42,7 +42,7 @@ class WritableScheduleStoreImplTest extends ScheduleTestBase {
     }
 
     @Test
-    void verifyGetForModifyNullIsNull() {
+    void verifyGetNullIsNull() {
         final var actual = writableSchedules.get(null);
         assertThat(actual).isNull();
     }

@@ -87,7 +87,7 @@ class StateRegistryTests {
         final List<PlatformMerkleStateRoot> states = new LinkedList<>();
         // Create a bunch of states
         for (int i = 0; i < 100; i++) {
-            states.add(new PlatformMerkleStateRoot(FAKE_MERKLE_STATE_LIFECYCLES, softwareVersionSupplier));
+            states.add(new PlatformMerkleStateRoot(softwareVersionSupplier));
             assertEquals(
                     states.size(),
                     RuntimeObjectRegistry.getActiveObjectsCount(PlatformMerkleStateRoot.class),
@@ -95,8 +95,7 @@ class StateRegistryTests {
         }
 
         // Fast copy a state
-        final PlatformMerkleStateRoot stateToCopy =
-                new PlatformMerkleStateRoot(FAKE_MERKLE_STATE_LIFECYCLES, softwareVersionSupplier);
+        final PlatformMerkleStateRoot stateToCopy = new PlatformMerkleStateRoot(softwareVersionSupplier);
         states.add(stateToCopy);
         final PlatformMerkleStateRoot copyOfStateToCopy = stateToCopy.copy();
         states.add(copyOfStateToCopy);
@@ -108,8 +107,7 @@ class StateRegistryTests {
         final Path dir = testDirectory;
 
         // Deserialize a state
-        final PlatformMerkleStateRoot stateToSerialize =
-                new PlatformMerkleStateRoot(FAKE_MERKLE_STATE_LIFECYCLES, softwareVersionSupplier);
+        final PlatformMerkleStateRoot stateToSerialize = new PlatformMerkleStateRoot(softwareVersionSupplier);
         FAKE_MERKLE_STATE_LIFECYCLES.initPlatformState(stateToSerialize);
         final var platformState = stateToSerialize.getWritablePlatformState();
         platformState.bulkUpdate(v -> {

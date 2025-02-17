@@ -16,7 +16,6 @@
 
 package com.swirlds.state.spi;
 
-import com.swirlds.state.spi.metrics.StoreMetrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Iterator;
@@ -54,7 +53,8 @@ public interface WritableKVState<K, V> extends ReadableKVState<K, V> {
 
     /**
      * Removes the given key and its associated value from the map. Subsequent calls to {@link
-     * #contains} with the given key will return false.
+     * #contains} with the given key will return false, and subsequent calls to {@link
+     * #get} will return {@code null}.
      *
      * @param key The key representing the key/value to remove. Cannot be null.
      * @throws NullPointerException if the key or value is null.
@@ -94,14 +94,4 @@ public interface WritableKVState<K, V> extends ReadableKVState<K, V> {
     default boolean isModified() {
         return !modifiedKeys().isEmpty();
     }
-
-    /**
-     * Sets up metrics for the {@code WritableKVState}.
-     *
-     * <p>This is an intermediate solution until we are sure the data layer is reporting the right values.
-     * The default implementation is empty which means that no metrics are set up.
-     *
-     * @param storeMetrics helper class to report utilization-metrics
-     */
-    default void setMetrics(@NonNull StoreMetrics storeMetrics) {}
 }

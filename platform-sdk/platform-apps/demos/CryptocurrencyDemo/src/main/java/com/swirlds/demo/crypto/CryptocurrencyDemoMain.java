@@ -31,6 +31,8 @@ import static com.swirlds.platform.gui.SwirldsGui.createConsole;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.Console;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
@@ -41,7 +43,7 @@ import com.swirlds.common.threading.framework.config.StoppableThreadConfiguratio
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Browser;
-import com.swirlds.platform.state.PlatformMerkleStateRoot;
+import com.swirlds.platform.state.StateLifecycles;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
@@ -55,14 +57,14 @@ import java.util.Random;
  * ask or a bid on a stock, offering to sell or buy, respectively, a single share at a random price between 1 and 127
  * cents (inclusive).
  */
-public class CryptocurrencyDemoMain implements SwirldMain {
+public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoState> {
 
     static {
         try {
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(new ClassConstructorPair(CryptocurrencyDemoState.class, () -> {
-                CryptocurrencyDemoState cryptocurrencyDemoState = new CryptocurrencyDemoState(
-                        FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
+                CryptocurrencyDemoState cryptocurrencyDemoState =
+                        new CryptocurrencyDemoState(version -> new BasicSoftwareVersion(version.major()));
                 return cryptocurrencyDemoState;
             }));
             registerMerkleStateRootClassIds();
@@ -199,12 +201,14 @@ public class CryptocurrencyDemoMain implements SwirldMain {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @NonNull
-    public PlatformMerkleStateRoot newMerkleStateRoot() {
-        final PlatformMerkleStateRoot state = new CryptocurrencyDemoState(
-                FAKE_MERKLE_STATE_LIFECYCLES,
-                version -> new BasicSoftwareVersion(softwareVersion.getSoftwareVersion()));
+    public CryptocurrencyDemoState newMerkleStateRoot() {
+        final CryptocurrencyDemoState state =
+                new CryptocurrencyDemoState(version -> new BasicSoftwareVersion(softwareVersion.getSoftwareVersion()));
         FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
         return state;
     }
@@ -213,7 +217,21 @@ public class CryptocurrencyDemoMain implements SwirldMain {
      * {@inheritDoc}
      */
     @Override
+    @NonNull
+    public StateLifecycles<CryptocurrencyDemoState> newStateLifecycles() {
+        return new CryptocurrencyDemoStateLifecycles();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public BasicSoftwareVersion getSoftwareVersion() {
         return softwareVersion;
+    }
+
+    @Override
+    public Bytes encodeSystemTransaction(@NonNull StateSignatureTransaction transaction) {
+        return StateSignatureTransaction.PROTOBUF.toBytes(transaction);
     }
 }

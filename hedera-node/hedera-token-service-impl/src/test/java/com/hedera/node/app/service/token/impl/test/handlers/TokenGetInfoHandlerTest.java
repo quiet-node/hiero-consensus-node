@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,7 +111,7 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
     void validatesQueryIfInvalidToken() {
         final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS).build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
-        final var store = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         final var query = createTokenGetInfoQuery(fungibleTokenId);
         when(context.query()).thenReturn(query);
@@ -126,7 +126,7 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
     void validatesQueryIfInvalidTokenInTrans() {
         final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS).build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
-        final var store = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         final var query = createEmptyTokenGetInfoQuery();
         when(context.query()).thenReturn(query);
@@ -161,7 +161,7 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
     void getsResponseIfInvalidToken() {
         final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS).build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
-        final var store = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         final var responseHeader = ResponseHeader.newBuilder()
                 .nodeTransactionPrecheckCode(ResponseCodeEnum.OK)
@@ -215,7 +215,7 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
                 .value(fungibleTokenId, fungibleToken)
                 .build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
-        final var store = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         checkResponse(responseHeader, expectedInfo, store);
     }
@@ -232,7 +232,7 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
                 .value(fungibleTokenId, fungibleToken)
                 .build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
-        final var store = new ReadableTokenStoreImpl(readableStates);
+        final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
         checkResponse(responseHeader, expectedInfo, store);
     }

@@ -29,7 +29,6 @@ import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
-import com.swirlds.state.spi.metrics.StoreMetrics;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
@@ -52,8 +51,6 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
 
     @NonNull
     private final Codec<V> valueCodec;
-
-    private StoreMetrics storeMetrics;
 
     /**
      * Create a new instance
@@ -125,16 +122,7 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
     }
 
     @Override
-    public void setMetrics(@NonNull StoreMetrics storeMetrics) {
-        this.storeMetrics = requireNonNull(storeMetrics);
-    }
-
-    @Override
     public void commit() {
         super.commit();
-
-        if (storeMetrics != null) {
-            storeMetrics.updateCount(sizeOfDataSource());
-        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,11 @@ import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.SUPPORTED
 import static java.nio.file.Files.exists;
 
 import com.swirlds.common.RosterStateId;
-import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.config.singleton.ConfigurationHolder;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.PlatformMerkleStateRoot;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.state.service.schemas.V0540RosterBaseSchema;
@@ -50,7 +47,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -58,25 +54,6 @@ import java.util.Objects;
  */
 public final class SignedStateFileReader {
     private SignedStateFileReader() {}
-
-    /**
-     * Same as {@link SignedStateFilePath#getSavedStateFiles(String, NodeId, String)} but uses the config from
-     * {@link ConfigurationHolder}
-     *
-     * @deprecated this uses a static config, which means that a unit test cannot configure it for its scope. this
-     * causes unit tests to fail randomly if another test sets an inadequate value in the config holder.
-     */
-    @Deprecated(forRemoval = true)
-    @NonNull
-    public static List<SavedStateInfo> getSavedStateFiles(
-            @NonNull final PlatformContext platformContext,
-            final String mainClassName,
-            final NodeId platformId,
-            final String swirldName) {
-        // new instance on every call in case the config changes in the holder
-        return new SignedStateFilePath(platformContext.getConfiguration().getConfigData(StateCommonConfig.class))
-                .getSavedStateFiles(mainClassName, platformId, swirldName);
-    }
 
     /**
      * Reads a SignedState from disk. If the reader throws an exception, it is propagated by this method to the caller.
@@ -87,7 +64,10 @@ public final class SignedStateFileReader {
      * @throws IOException if there is any problems with reading from a file
      */
     public static @NonNull DeserializedSignedState readStateFile(
-            @NonNull final Configuration configuration, @NonNull final Path stateFile) throws IOException {
+            @NonNull final Configuration configuration,
+            @NonNull final Path stateFile,
+            @NonNull final PlatformStateFacade stateFacade)
+            throws IOException {
 
         Objects.requireNonNull(configuration);
         Objects.requireNonNull(stateFile);
@@ -111,7 +91,8 @@ public final class SignedStateFileReader {
                 "SignedStateFileReader.readStateFile()",
                 false,
                 false,
-                false);
+                false,
+                stateFacade);
 
         registerServiceStates(newSignedState);
 
@@ -172,7 +153,7 @@ public final class SignedStateFileReader {
      * @param signedState a signed state to register schemas in
      */
     public static void registerServiceStates(@NonNull final SignedState signedState) {
-        registerServiceStates((MerkleStateRoot) signedState.getState());
+        registerServiceStates(signedState.getState());
     }
 
     /**

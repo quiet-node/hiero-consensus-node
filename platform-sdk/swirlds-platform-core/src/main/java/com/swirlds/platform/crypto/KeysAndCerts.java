@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2021-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,9 @@
 
 package com.swirlds.platform.crypto;
 
-import com.hedera.cryptography.bls.BlsKeyPair;
-import com.hedera.cryptography.bls.BlsPrivateKey;
-import com.hedera.cryptography.bls.BlsPublicKey;
 import com.swirlds.common.crypto.internal.CryptoUtils;
+import com.swirlds.common.platform.NodeId;
+import com.swirlds.platform.roster.RosterUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.Key;
 import java.security.KeyPair;
@@ -62,20 +61,15 @@ public record KeysAndCerts(
         KeyPair agrKeyPair,
         X509Certificate sigCert,
         X509Certificate agrCert,
-        PublicStores publicStores,
-        BlsPrivateKey privateTssEncryptionKey,
-        BlsPublicKey publicTssEncryptionKey) {
+        PublicStores publicStores) {
     private static final int SIG_SEED = 2;
     private static final int AGR_SEED = 0;
-    private static final int TSS_ENCRYPTION_KEY_SEED = 3;
 
     /**
      * Creates an instance holding all the keys and certificates. It reads its own key pairs from privateKeyStore
      * and publicKeyStore, creates the agreement key if absent, and remembers the trust stores.
      *
-     * @param name            The name to associate with the key. For example, if it is "alice", then the three key
-     *                        pairs will be named "s-alice", "e-alice", "a-alice" for signing, encrypting, and key
-     *                        agreement.
+     * @param nodeId the node identifier
      * @param privateKeyStore read the 2 keyPairs (signing,agreement) from this store
      * @param publicStores    all public certificates
      * @throws KeyStoreException         if the supplied key store is not initialized
@@ -84,21 +78,21 @@ public record KeysAndCerts(
      * @throws KeyLoadingException       if a required certificate is missing or is not an instance of X509Certificate
      */
     public static KeysAndCerts loadExistingAndCreateAgrKeyIfMissing(
-            final String name, final char[] password, final KeyStore privateKeyStore, final PublicStores publicStores)
+            final NodeId nodeId, final char[] password, final KeyStore privateKeyStore, final PublicStores publicStores)
             throws KeyStoreException, UnrecoverableKeyException, NoSuchAlgorithmException, KeyLoadingException,
                     NoSuchProviderException, KeyGeneratingException {
-        final String signingName = KeyCertPurpose.SIGNING.storeName(name);
+        final String signingName = KeyCertPurpose.SIGNING.storeName(nodeId);
         // get the signing key pair and cert, these must exist.
         final KeyPair signingKeyPair = getKeyPair(privateKeyStore, password, signingName);
-        final X509Certificate signingCert = publicStores.getCertificate(KeyCertPurpose.SIGNING, name);
+        final X509Certificate signingCert = publicStores.getCertificate(KeyCertPurpose.SIGNING, nodeId);
 
         // get the agreement key pair and cert, if they exist, otherwise generate them.
-        final String agreementName = KeyCertPurpose.AGREEMENT.storeName(name);
+        final String agreementName = KeyCertPurpose.AGREEMENT.storeName(nodeId);
         KeyPair agreementKeyPair;
         X509Certificate agreementCert;
         try {
             agreementKeyPair = getKeyPair(privateKeyStore, password, agreementName);
-            agreementCert = publicStores.getCertificate(KeyCertPurpose.AGREEMENT, name);
+            agreementCert = publicStores.getCertificate(KeyCertPurpose.AGREEMENT, nodeId);
         } catch (final KeyLoadingException
                 | KeyStoreException
                 | NoSuchAlgorithmException
@@ -106,7 +100,7 @@ public record KeysAndCerts(
             // failed to load agreement key or cert from disk, attempt to generate them
             agreementKeyPair = generateAgreementKeyPair();
             // generate the agreement certificate with the signing certificate as the issuer.
-            final String dnA = CryptoStatic.distinguishedName(KeyCertPurpose.AGREEMENT.storeName(name));
+            final String dnA = CryptoStatic.distinguishedName(KeyCertPurpose.AGREEMENT.storeName(nodeId));
             agreementCert = CryptoStatic.generateCertificate(
                     dnA,
                     agreementKeyPair,
@@ -114,10 +108,10 @@ public record KeysAndCerts(
                     signingKeyPair,
                     SecureRandom.getInstanceStrong());
             // add agreement certificate to public stores for later retrieval.
-            publicStores.setCertificate(KeyCertPurpose.AGREEMENT, agreementCert, dnA);
+            publicStores.setCertificate(KeyCertPurpose.AGREEMENT, agreementCert, nodeId);
         }
 
-        return new KeysAndCerts(signingKeyPair, agreementKeyPair, signingCert, agreementCert, publicStores, null, null);
+        return new KeysAndCerts(signingKeyPair, agreementKeyPair, signingCert, agreementCert, publicStores);
     }
 
     private static KeyPair getKeyPair(final KeyStore privateKeyStore, final char[] password, final String storeName)
@@ -138,8 +132,7 @@ public record KeysAndCerts(
      * state. The key pairs are generated as a function of the seed. The seed is the combination of the three
      * parameters. The signing key pair is used to sign all 3 certs.
      *
-     * @param name         The name to associate with the key. For example, if it is "alice", then the three key pairs
-     *                     will be named "s-alice", "e-alice", "a-alice" for signing, encrypting, and key agreement.
+     * @param nodeId the node identifier
      * @param masterKey    master key used to derive key pairs for many identities in many swirlds
      * @param swirldId     which swirlds is running
      * @param memberId     which identity is acting as a member in this swirld (because one human user might have
@@ -147,7 +140,7 @@ public record KeysAndCerts(
      * @param publicStores all public certificates
      */
     public static KeysAndCerts generate(
-            final String name,
+            final NodeId nodeId,
             final byte[] masterKey,
             final byte[] swirldId,
             final byte[] memberId,
@@ -158,14 +151,12 @@ public record KeysAndCerts(
 
         final SecureRandom sigDetRandom; // deterministic CSPRNG, used briefly then discarded
         final SecureRandom agrDetRandom; // deterministic CSPRNG, used briefly then discarded
-        final SecureRandom tssEncryptionKeyRandom;
 
         sigKeyGen = KeyPairGenerator.getInstance(CryptoConstants.SIG_TYPE1, CryptoConstants.SIG_PROVIDER);
         agrKeyGen = KeyPairGenerator.getInstance(CryptoConstants.AGR_TYPE, CryptoConstants.AGR_PROVIDER);
 
         sigDetRandom = CryptoUtils.getDetRandom(); // deterministic, not shared
         agrDetRandom = CryptoUtils.getDetRandom(); // deterministic, not shared
-        tssEncryptionKeyRandom = CryptoUtils.getDetRandom(); // deterministic, not shared
 
         sigDetRandom.setSeed(masterKey);
         sigDetRandom.setSeed(swirldId);
@@ -179,16 +170,12 @@ public record KeysAndCerts(
         agrDetRandom.setSeed(AGR_SEED);
         agrKeyGen.initialize(CryptoConstants.AGR_KEY_SIZE_BITS, agrDetRandom);
 
-        tssEncryptionKeyRandom.setSeed(masterKey);
-        tssEncryptionKeyRandom.setSeed(swirldId);
-        tssEncryptionKeyRandom.setSeed(memberId);
-        tssEncryptionKeyRandom.setSeed(TSS_ENCRYPTION_KEY_SEED);
-
         final KeyPair sigKeyPair = sigKeyGen.generateKeyPair();
         final KeyPair agrKeyPair = agrKeyGen.generateKeyPair();
 
-        final String dnS = CryptoStatic.distinguishedName("s-" + name);
-        final String dnA = CryptoStatic.distinguishedName("a-" + name);
+        final String nodeName = RosterUtils.formatNodeName(nodeId);
+        final String dnS = CryptoStatic.distinguishedName("s-" + nodeName);
+        final String dnA = CryptoStatic.distinguishedName("a-" + nodeName);
 
         // create the 2 certs (java.security.cert.Certificate)
         // both are signed by sigKeyPair, so sigCert is self-signed
@@ -198,19 +185,10 @@ public record KeysAndCerts(
                 CryptoStatic.generateCertificate(dnA, agrKeyPair, dnS, sigKeyPair, agrDetRandom);
 
         // add to the 3 trust stores (which have references stored here and in the caller)
-        publicStores.setCertificate(KeyCertPurpose.SIGNING, sigCert, name);
-        publicStores.setCertificate(KeyCertPurpose.AGREEMENT, agrCert, name);
+        publicStores.setCertificate(KeyCertPurpose.SIGNING, sigCert, nodeId);
+        publicStores.setCertificate(KeyCertPurpose.AGREEMENT, agrCert, nodeId);
 
-        final BlsKeyPair blsKeyPair = CryptoStatic.generateBlsKeyPair(tssEncryptionKeyRandom);
-
-        return new KeysAndCerts(
-                sigKeyPair,
-                agrKeyPair,
-                sigCert,
-                agrCert,
-                publicStores,
-                blsKeyPair.privateKey(),
-                blsKeyPair.publicKey());
+        return new KeysAndCerts(sigKeyPair, agrKeyPair, sigCert, agrCert, publicStores);
     }
 
     /**

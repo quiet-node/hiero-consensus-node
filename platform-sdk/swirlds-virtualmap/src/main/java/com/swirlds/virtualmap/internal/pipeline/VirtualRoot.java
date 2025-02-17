@@ -46,10 +46,8 @@ public interface VirtualRoot extends MerkleNode {
      * returning true are guaranteed to be flushed, but other copies may be flushed, too.
      *
      * <p>This method can be expensive and may block for a long time before returning.
-     *
-     * @return if the copy has been flushed
      */
-    boolean tryFlush();
+    void flush();
 
     /**
      * Check if this copy has already been flushed.
