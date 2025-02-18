@@ -174,4 +174,13 @@ public class TurtleNode {
     public void tick() {
         model.tick();
     }
+
+    /**
+     * Get the platform for this node.
+     *
+     * @return the platform
+     */
+    public Platform getPlatform() {
+        return platform;
+    }
 }

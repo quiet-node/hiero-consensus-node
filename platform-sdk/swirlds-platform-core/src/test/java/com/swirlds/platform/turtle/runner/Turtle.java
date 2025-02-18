@@ -231,9 +231,14 @@ public class Turtle {
             List<ReservedSignedState> reservedSignedStates =
                     node.getSignedStateHolder().getCollectedSignedStates();
 
-            for (ReservedSignedState reservedSignedState : reservedSignedStates) {
+            for (final ReservedSignedState reservedSignedState : reservedSignedStates) {
                 assertTrue(reservedSignedState.get().isComplete());
                 assertTrue(reservedSignedState.get().isVerifiable());
+                assertTrue(reservedSignedState.get().getCreationTimestamp().isBefore(Instant.now()));
+                assertTrue(reservedSignedState
+                        .get()
+                        .getSigSet()
+                        .hasSignature(node.getPlatform().getSelfId()));
             }
         }
     }
