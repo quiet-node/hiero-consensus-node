@@ -34,7 +34,7 @@ import com.hedera.node.app.service.addressbook.ReadableNodeStore;
 import com.hedera.node.app.service.file.ReadableUpgradeFileStore;
 import com.hedera.node.app.service.networkadmin.ReadableFreezeStore;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
-import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.app.spi.ids.EntityIdFactory;
 import com.hedera.node.config.data.NetworkAdminConfig;
 import com.hedera.node.config.data.NodesConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -69,7 +69,6 @@ public class ReadableFreezeUpgradeActions {
     private final NetworkAdminConfig networkAdminConfig;
     private final ReadableFreezeStore freezeStore;
     private final ReadableUpgradeFileStore upgradeFileStore;
-    private final HederaConfig hederaConfig;
     private final FileID upgradeFileId;
 
     private final ReadableNodeStore nodeStore;
@@ -98,7 +97,8 @@ public class ReadableFreezeUpgradeActions {
             @NonNull final Executor executor,
             @NonNull final ReadableUpgradeFileStore upgradeFileStore,
             @NonNull final ReadableNodeStore nodeStore,
-            @NonNull final ReadableStakingInfoStore stakingInfoStore) {
+            @NonNull final ReadableStakingInfoStore stakingInfoStore,
+            @NonNull final EntityIdFactory idFactory) {
         requireNonNull(configuration, "configuration is required for freeze upgrade actions");
         requireNonNull(freezeStore, "Freeze store is required for freeze upgrade actions");
         requireNonNull(executor, "Executor is required for freeze upgrade actions");
@@ -109,17 +109,12 @@ public class ReadableFreezeUpgradeActions {
         this.networkAdminConfig = configuration.getConfigData(NetworkAdminConfig.class);
         this.nodesConfig = configuration.getConfigData(NodesConfig.class);
         this.addressBookConfig = configuration.getConfigData(AddressBookConfig.class);
-        this.hederaConfig = configuration.getConfigData(HederaConfig.class);
         this.freezeStore = freezeStore;
         this.executor = executor;
         this.upgradeFileStore = upgradeFileStore;
         this.nodeStore = nodeStore;
         this.stakingInfoStore = stakingInfoStore;
-        this.upgradeFileId = FileID.newBuilder()
-                .shardNum(hederaConfig.shard())
-                .realmNum(hederaConfig.realm())
-                .fileNum(UPGRADE_FILE_ID)
-                .build();
+        this.upgradeFileId = idFactory.newFileId(UPGRADE_FILE_ID);
     }
 
     /**
@@ -421,9 +416,6 @@ public class ReadableFreezeUpgradeActions {
             return;
         }
 
-        var shard = hederaConfig.shard();
-        var realm = hederaConfig.realm();
-
         try {
             final var curSpecialFileContents = upgradeFileStore.getFull(upgradeFileId);
             if (!isPreparedFileHashValidGiven(
@@ -431,8 +423,8 @@ public class ReadableFreezeUpgradeActions {
                     freezeStore.updateFileHash().toByteArray())) {
                 log.error(
                         "Cannot redo NMT upgrade prep, file {}.{}.{} changed since FREEZE_UPGRADE",
-                        shard,
-                        realm,
+                        upgradeFileId.shardNum(),
+                        upgradeFileId.realmNum(),
                         upgradeFileId.fileNum());
                 log.error(MANUAL_REMEDIATION_ALERT);
                 return;
@@ -441,8 +433,8 @@ public class ReadableFreezeUpgradeActions {
         } catch (final IOException e) {
             log.error(
                     "Cannot redo NMT upgrade prep, file {}.{}.{} changed since FREEZE_UPGRADE",
-                    shard,
-                    realm,
+                    upgradeFileId.shardNum(),
+                    upgradeFileId.realmNum(),
                     upgradeFileId.fileNum(),
                     e);
             log.error(MANUAL_REMEDIATION_ALERT);

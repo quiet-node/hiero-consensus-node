@@ -31,6 +31,7 @@ import com.hedera.node.app.service.networkadmin.impl.WritableFreezeStore;
 import com.hedera.node.app.service.networkadmin.impl.handlers.FreezeUpgradeActions;
 import com.hedera.node.app.service.networkadmin.impl.handlers.ReadableFreezeUpgradeActions;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
+import com.hedera.node.app.spi.fixtures.ids.EntityIdFactoryImpl;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
@@ -111,14 +112,19 @@ class FreezeUpgradeActionsTest {
         given(configuration.getConfigData(NetworkAdminConfig.class)).willReturn(adminServiceConfig);
         given(configuration.getConfigData(AddressBookConfig.class)).willReturn(addressBookConfig);
         given(configuration.getConfigData(NodesConfig.class)).willReturn(nodesConfig);
-        given(configuration.getConfigData(HederaConfig.class)).willReturn(hederaConfig);
 
         noiseSubFileLoc = zipOutputDir.toPath().resolve("edargpu");
 
         final Executor freezeExectuor = new ForkJoinPool(
                 1, ForkJoinPool.defaultForkJoinWorkerThreadFactory, Thread.getDefaultUncaughtExceptionHandler(), true);
         subject = new FreezeUpgradeActions(
-                configuration, freezeStore, freezeExectuor, upgradeFileStore, nodeStore, stakingInfoStore);
+                configuration,
+                freezeStore,
+                freezeExectuor,
+                upgradeFileStore,
+                nodeStore,
+                stakingInfoStore,
+                new EntityIdFactoryImpl(0, 0));
 
         // set up test zip
         zipSourceDir = Files.createTempDirectory("zipSourceDir");

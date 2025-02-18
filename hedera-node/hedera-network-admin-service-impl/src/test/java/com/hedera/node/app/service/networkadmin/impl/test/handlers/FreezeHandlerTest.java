@@ -52,6 +52,7 @@ import com.hedera.node.app.service.networkadmin.impl.WritableFreezeStore;
 import com.hedera.node.app.service.networkadmin.impl.handlers.FreezeHandler;
 import com.hedera.node.app.service.token.ReadableAccountStore;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
+import com.hedera.node.app.spi.fixtures.ids.EntityIdFactoryImpl;
 import com.hedera.node.app.spi.store.StoreFactory;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
@@ -113,8 +114,13 @@ class FreezeHandlerTest {
             .build();
     private final AccountID nonAdminAccount =
             AccountID.newBuilder().accountNum(9999L).build();
-    private final FreezeHandler subject = new FreezeHandler(new ForkJoinPool(
-            1, ForkJoinPool.defaultForkJoinWorkerThreadFactory, Thread.getDefaultUncaughtExceptionHandler(), true));
+    private final FreezeHandler subject = new FreezeHandler(
+            new EntityIdFactoryImpl(0, 0),
+            new ForkJoinPool(
+                    1,
+                    ForkJoinPool.defaultForkJoinWorkerThreadFactory,
+                    Thread.getDefaultUncaughtExceptionHandler(),
+                    true));
 
     @BeforeEach
     void setUp() {

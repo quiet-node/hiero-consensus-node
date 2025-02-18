@@ -51,6 +51,7 @@ import com.hedera.node.app.service.networkadmin.impl.WritableFreezeStore;
 import com.hedera.node.app.service.networkadmin.impl.handlers.FreezeUpgradeActions;
 import com.hedera.node.app.service.networkadmin.impl.handlers.ReadableFreezeUpgradeActions;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
+import com.hedera.node.app.spi.fixtures.ids.EntityIdFactoryImpl;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
@@ -181,9 +182,6 @@ class ReadableFreezeUpgradeActionsTest {
         given(configuration.getConfigData(NetworkAdminConfig.class)).willReturn(adminServiceConfig);
         given(configuration.getConfigData(NodesConfig.class)).willReturn(nodesConfig);
         given(configuration.getConfigData(AddressBookConfig.class)).willReturn(addressBookConfig);
-        given(configuration.getConfigData(HederaConfig.class)).willReturn(hederaConfig);
-        given(hederaConfig.shard()).willReturn(1L);
-        given(hederaConfig.realm()).willReturn(2L);
 
         noiseFileLoc = zipOutputDir.toPath().resolve("forgotten.cfg");
         noiseSubFileLoc = zipOutputDir.toPath().resolve("edargpu");
@@ -196,7 +194,13 @@ class ReadableFreezeUpgradeActionsTest {
         freezeExecutor = new ForkJoinPool(
                 1, ForkJoinPool.defaultForkJoinWorkerThreadFactory, Thread.getDefaultUncaughtExceptionHandler(), true);
         subject = new FreezeUpgradeActions(
-                configuration, writableFreezeStore, freezeExecutor, upgradeFileStore, nodeStore, stakingInfoStore);
+                configuration,
+                writableFreezeStore,
+                freezeExecutor,
+                upgradeFileStore,
+                nodeStore,
+                stakingInfoStore,
+                new EntityIdFactoryImpl(0, 0));
 
         // set up test zip
         zipSourceDir = Files.createTempDirectory("zipSourceDir");
@@ -499,7 +503,13 @@ class ReadableFreezeUpgradeActionsTest {
         nodeStore = new ReadableNodeStoreImpl(readableStates, readableEntityCounters);
         given(readableEntityCounters.getCounterFor(EntityType.NODE)).willReturn(4L);
         subject = new FreezeUpgradeActions(
-                configuration, writableFreezeStore, freezeExecutor, upgradeFileStore, nodeStore, stakingInfoStore);
+                configuration,
+                writableFreezeStore,
+                freezeExecutor,
+                upgradeFileStore,
+                nodeStore,
+                stakingInfoStore,
+                new EntityIdFactoryImpl(0, 0));
         var stakingNodeInfo1 = mock(StakingNodeInfo.class);
         var stakingNodeInfo2 = mock(StakingNodeInfo.class);
         var stakingNodeInfo4 = mock(StakingNodeInfo.class);
@@ -624,7 +634,13 @@ class ReadableFreezeUpgradeActionsTest {
         nodeStore = new ReadableNodeStoreImpl(readableStates, readableEntityCounters);
         given(readableEntityCounters.getCounterFor(EntityType.NODE)).willReturn(4L);
         subject = new FreezeUpgradeActions(
-                configuration, writableFreezeStore, freezeExecutor, upgradeFileStore, nodeStore, stakingInfoStore);
+                configuration,
+                writableFreezeStore,
+                freezeExecutor,
+                upgradeFileStore,
+                nodeStore,
+                stakingInfoStore,
+                new EntityIdFactoryImpl(0, 0));
         var stakingNodeInfo1 = mock(StakingNodeInfo.class);
         var stakingNodeInfo2 = mock(StakingNodeInfo.class);
         var stakingNodeInfo3 = mock(StakingNodeInfo.class);

@@ -18,6 +18,7 @@ package com.hedera.node.app.state.listeners;
 
 import static org.mockito.Mockito.verify;
 
+import com.hedera.node.app.spi.fixtures.ids.EntityIdFactoryImpl;
 import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.config.ConfigProvider;
 import com.swirlds.common.utility.AutoCloseableWrapper;
@@ -54,7 +55,12 @@ class WriteStateToDiskListenerTest {
     @BeforeEach
     void setUp() {
         subject = new WriteStateToDiskListener(
-                stateAccessor, executor, configProvider, startupNetworks, ServicesSoftwareVersion::new);
+                stateAccessor,
+                executor,
+                configProvider,
+                startupNetworks,
+                ServicesSoftwareVersion::new,
+                new EntityIdFactoryImpl(0, 0));
     }
 
     @Test
