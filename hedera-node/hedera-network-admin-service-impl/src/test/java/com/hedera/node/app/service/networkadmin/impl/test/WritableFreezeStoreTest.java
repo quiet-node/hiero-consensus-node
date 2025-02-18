@@ -36,6 +36,7 @@ import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,23 +64,8 @@ class WritableFreezeStoreTest {
     void testFreezeTime() {
         final AtomicReference<ProtoBytes> freezeTimeBackingStore = new AtomicReference<>(null);
         when(writableStates.getSingleton(FREEZE_TIME_KEY))
-                .then(invocation -> new WritableSingletonStateBase<ProtoBytes>(
-                        FreezeService.NAME, FREEZE_TIME_KEY) {
-                    @Override
-                    protected ProtoBytes readFromDataSource() {
-                        return freezeTimeBackingStore.get();
-                    }
-
-                    @Override
-                    protected void putIntoDataSource(@NotNull ProtoBytes value) {
-                        freezeTimeBackingStore.set(value);
-                    }
-
-                    @Override
-                    protected void removeFromDataSource() {
-                        freezeTimeBackingStore.set(null);
-                    }
-                });
+                .then(invocation -> new FunctionWritableSingletonState<>(
+                        FreezeService.NAME, FREEZE_TIME_KEY, freezeTimeBackingStore::get, freezeTimeBackingStore::set));
         final AtomicReference<ProtoBytes> lastFrozenBackingStore = new AtomicReference<>(null);
         final WritableFreezeStore store = new WritableFreezeStore(writableStates);
 
@@ -98,22 +84,7 @@ class WritableFreezeStoreTest {
         final AtomicReference<ProtoBytes> backingStore = new AtomicReference<>(null);
         when(writableStates.getSingleton(UPGRADE_FILE_HASH_KEY))
                 .then(invocation ->
-                        new WritableSingletonStateBase<ProtoBytes>(FreezeService.NAME, UPGRADE_FILE_HASH_KEY) {
-                            @Override
-                            protected ProtoBytes readFromDataSource() {
-                                return backingStore.get();
-                            }
-
-                            @Override
-                            protected void putIntoDataSource(@NotNull ProtoBytes value) {
-                                backingStore.set(value);
-                            }
-
-                            @Override
-                            protected void removeFromDataSource() {
-                                backingStore.set(null);
-                            }
-                        });
+                        new FunctionWritableSingletonState<>(FreezeService.NAME, UPGRADE_FILE_HASH_KEY, backingStore::get, backingStore::set));
         final WritableFreezeStore store = new WritableFreezeStore(writableStates);
 
         // test with no file hash set

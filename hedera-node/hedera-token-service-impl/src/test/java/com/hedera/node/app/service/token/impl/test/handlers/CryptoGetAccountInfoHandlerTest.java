@@ -79,6 +79,7 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
 import java.time.InstantSource;
 import java.util.ArrayList;
@@ -484,12 +485,7 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
     private void setupStakingRewardsStore() {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 100000L, 50000L, 1000L));
-        final var stakingRewardsState = new ReadableSingletonStateBase<NetworkStakingRewards>(TOKEN_SERVICE, NETWORK_REWARDS) {
-            @Override
-            protected NetworkStakingRewards readFromDataSource() {
-                return backingValue.get();
-            }
-        };
+        final var stakingRewardsState = new FunctionReadableSingletonState<>(TOKEN_SERVICE, NETWORK_REWARDS, backingValue::get);
         given(readableStates.getSingleton(NETWORK_REWARDS)).willReturn((ReadableSingletonState) stakingRewardsState);
         final var readableRewardsStore = new ReadableNetworkStakingRewardsStoreImpl(readableStates);
         when(context.createStore(ReadableNetworkStakingRewardsStore.class)).thenReturn(readableRewardsStore);

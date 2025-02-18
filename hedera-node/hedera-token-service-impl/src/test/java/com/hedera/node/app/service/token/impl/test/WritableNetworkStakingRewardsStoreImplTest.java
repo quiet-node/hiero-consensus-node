@@ -27,6 +27,8 @@ import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import java.util.concurrent.atomic.AtomicReference;
+
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,22 +50,7 @@ class WritableNetworkStakingRewardsStoreImplTest {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 1L, 2L, 3L));
         stakingRewardsState =
-                new WritableSingletonStateBase<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY) {
-                    @Override
-                    protected NetworkStakingRewards readFromDataSource() {
-                        return backingValue.get();
-                    }
-
-                    @Override
-                    protected void putIntoDataSource(@NotNull NetworkStakingRewards value) {
-                        backingValue.set(value);
-                    }
-
-                    @Override
-                    protected void removeFromDataSource() {
-                        backingValue.set(null);
-                    }
-                };
+                new FunctionWritableSingletonState<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, backingValue::get, backingValue::set);
         given(states.getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn((WritableSingletonState) stakingRewardsState);
 

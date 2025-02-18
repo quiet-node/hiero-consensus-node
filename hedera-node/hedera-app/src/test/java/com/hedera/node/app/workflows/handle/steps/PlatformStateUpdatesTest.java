@@ -74,6 +74,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import org.assertj.core.api.Assertions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,27 +115,12 @@ public class PlatformStateUpdatesTest implements TransactionFactory {
         entityCountsBackingStore = new AtomicReference<>(EntityCounts.DEFAULT);
 
         when(writableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .then(invocation -> new WritableSingletonStateBase<>(
-                        ENTITY_COUNTS_KEY, entityCountsBackingStore::get, entityCountsBackingStore::set));
+                .then(invocation -> new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY, entityCountsBackingStore::get, entityCountsBackingStore::set));
 
         when(writableStates.getSingleton(FREEZE_TIME_KEY))
-                .then(invocation -> new WritableSingletonStateBase<Timestamp>(
-                        FreezeService.NAME, FREEZE_TIME_KEY) {
-                    @Override
-                    protected Timestamp readFromDataSource() {
-                        return freezeTimeBackingStore.get();
-                    }
-
-                    @Override
-                    protected void putIntoDataSource(@NotNull Timestamp value) {
-                        freezeTimeBackingStore.set(value);
-                    }
-
-                    @Override
-                    protected void removeFromDataSource() {
-                        freezeTimeBackingStore.set(null);
-                    }
-                });
+                .then(invocation -> new FunctionWritableSingletonState<>(
+                        FreezeService.NAME, FREEZE_TIME_KEY, freezeTimeBackingStore::get, freezeTimeBackingStore::set));
 
         state = new FakeState()
                 .addService(FreezeService.NAME, Map.of(FREEZE_TIME_KEY, freezeTimeBackingStore))

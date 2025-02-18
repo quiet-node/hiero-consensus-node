@@ -17,7 +17,6 @@
 package com.swirlds.state.test.fixtures;
 
 import com.swirlds.state.spi.ReadableSingletonState;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -151,33 +150,13 @@ public class StateTestBase extends TestBase {
 
     @NonNull
     protected ReadableSingletonState<String> readableSpaceState() {
-        return new ReadableSingletonStateBase<>(SPACE_SERVICE_NAME, SPACE_STATE_KEY) {
-            @Override
-            protected String readFromDataSource() {
-                return ASTRONAUT;
-            }
-        };
+        return new FunctionReadableSingletonState<>(SPACE_SERVICE_NAME, SPACE_STATE_KEY, () -> ASTRONAUT);
     }
 
     @NonNull
     protected WritableSingletonState<String> writableSpaceState() {
         final AtomicReference<String> backingValue = new AtomicReference<>(ASTRONAUT);
-        return new WritableSingletonStateBase<>(SPACE_SERVICE_NAME, SPACE_STATE_KEY) {
-            @Override
-            protected String readFromDataSource() {
-                return backingValue.get();
-            }
-
-            @Override
-            protected void putIntoDataSource(@NonNull String value) {
-                backingValue.set(value);
-            }
-
-            @Override
-            protected void removeFromDataSource() {
-                backingValue.set("");
-            }
-        };
+        return new FunctionWritableSingletonState<>(SPACE_SERVICE_NAME, SPACE_STATE_KEY, backingValue::get, backingValue::set);
     }
 
     @NonNull
@@ -208,32 +187,12 @@ public class StateTestBase extends TestBase {
 
     @NonNull
     protected ReadableSingletonState<String> readableCountryState() {
-        return new ReadableSingletonStateBase<>(COUNTRY_SERVICE_NAME, COUNTRY_STATE_KEY) {
-            @Override
-            protected String readFromDataSource() {
-                return AUSTRALIA;
-            }
-        };
+        return new FunctionReadableSingletonState<>(COUNTRY_SERVICE_NAME, COUNTRY_STATE_KEY, () -> AUSTRALIA);
     }
 
     @NonNull
     protected WritableSingletonState<String> writableCountryState() {
         final AtomicReference<String> backingValue = new AtomicReference<>(AUSTRALIA);
-        return new WritableSingletonStateBase<>(COUNTRY_SERVICE_NAME, COUNTRY_STATE_KEY) {
-            @Override
-            protected String readFromDataSource() {
-                return backingValue.get();
-            }
-
-            @Override
-            protected void putIntoDataSource(@NonNull String value) {
-                backingValue.set(value);
-            }
-
-            @Override
-            protected void removeFromDataSource() {
-                backingValue.set("");
-            }
-        };
+        return new FunctionWritableSingletonState<>(COUNTRY_SERVICE_NAME, COUNTRY_STATE_KEY, backingValue::get, backingValue::set);
     }
 }

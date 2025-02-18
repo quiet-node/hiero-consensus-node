@@ -80,6 +80,7 @@ import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
@@ -92,6 +93,8 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -459,7 +462,7 @@ class BlockStreamManagerImplTest {
         given(readableStates.<BlockStreamInfo>getSingleton(BLOCK_STREAM_INFO_KEY))
                 .willReturn(blockStreamInfoState);
         given(readableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
-                .willReturn(new WritableSingletonStateBase<>(PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
+                .willReturn(new FunctionWritableSingletonState<>(PlatformStateService.NAME, PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
 
         // Initialize the last (N-1) block hash
         subject.initLastBlockHash(FAKE_RESTART_BLOCK_HASH);
@@ -835,7 +838,7 @@ class BlockStreamManagerImplTest {
         given(state.getReadableStates(PlatformStateService.NAME)).willReturn(readableStates);
         infoRef.set(blockStreamInfo);
         stateRef.set(platformState);
-        blockStreamInfoState = new WritableSingletonStateBase<>(BLOCK_STREAM_INFO_KEY, infoRef::get, infoRef::set);
+        blockStreamInfoState = new FunctionWritableSingletonState<>(BlockStreamService.NAME, BLOCK_STREAM_INFO_KEY, infoRef::get, infoRef::set);
     }
 
     private void givenEndOfRoundSetup() {
@@ -872,7 +875,7 @@ class BlockStreamManagerImplTest {
                 .thenReturn(blockStreamInfoState);
         lenient()
                 .when(readableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
-                .thenReturn(new WritableSingletonStateBase<>(PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
+                .thenReturn(new FunctionWritableSingletonState<>(PlatformStateService.NAME, PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
         lenient()
                 .doAnswer(invocationOnMock -> {
                     blockStreamInfoState.commit();

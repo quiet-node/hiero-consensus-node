@@ -34,9 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.WritableEntityIdStore;
-import com.hedera.hapi.node.transaction.SignedTransaction;
-import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.WritableNetworkStakingRewardsStore;
 import com.hedera.node.app.service.token.impl.WritableStakingInfoStore;
@@ -47,6 +46,7 @@ import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.spi.WritableSingletonStateBase;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
 import java.util.Map;
@@ -78,9 +78,9 @@ class StakeInfoHelperTest {
     void setup() {
         entityIdStore = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new WritableSingletonStateBase<>(ENTITY_ID_STATE_KEY, () -> null, c -> {}),
+                new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> null, c -> {}),
                 ENTITY_COUNTS_KEY,
-                new WritableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> null, c -> {}))));
+                new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> null, c -> {}))));
     }
 
     @ParameterizedTest
@@ -150,22 +150,7 @@ class StakeInfoHelperTest {
         //noinspection ReturnOfNull
         return MapWritableStates.builder()
                 .state(stakingInfo)
-                .state(new WritableSingletonStateBase<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY) {
-                    @Override
-                    protected Object readFromDataSource() {
-                        return null;
-                    }
-
-                    @Override
-                    protected void putIntoDataSource(@NotNull Object value) {
-                        // no-op
-                    }
-
-                    @Override
-                    protected void removeFromDataSource() {
-                        // no-op
-                    }
-                })
+                .state(new FunctionWritableSingletonState<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, () -> null, c -> {}))
                 .build();
     }
 

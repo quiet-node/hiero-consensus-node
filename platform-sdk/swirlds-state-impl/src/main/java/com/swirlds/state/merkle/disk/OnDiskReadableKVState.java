@@ -91,7 +91,6 @@ public final class OnDiskReadableKVState<K, V> extends ReadableKVStateBase<K, V>
 
     /**
      * {@inheritDoc}
-     * @deprecated state sizes will be tracked using a different mechanism.
      */
     @Override
     @Deprecated

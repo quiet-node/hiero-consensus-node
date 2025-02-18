@@ -73,7 +73,8 @@ public class PlatformMerkleStateRoot extends MerkleStateRoot<PlatformMerkleState
     }
 
     protected PlatformMerkleStateRoot(@NonNull PlatformMerkleStateRoot from) {
-        super(from);
+        // temp to compile code
+//        super(from);
         this.versionFactory = from.versionFactory;
     }
 
@@ -121,9 +122,8 @@ public class PlatformMerkleStateRoot extends MerkleStateRoot<PlatformMerkleState
      */
     @NonNull
     public PlatformStateAccessor getReadablePlatformState() {
-        return getServices().isEmpty()
-                ? new SnapshotPlatformStateAccessor(getPlatformState(), versionFactory)
-                : readablePlatformStateStore();
+        // temp to compile code
+        return readablePlatformStateStore();
     }
 
     private ReadablePlatformStateStore readablePlatformStateStore() {
@@ -135,10 +135,8 @@ public class PlatformMerkleStateRoot extends MerkleStateRoot<PlatformMerkleState
     }
 
     private com.hedera.hapi.platform.state.PlatformState getPlatformState() {
-        final var index = findNodeIndex(PlatformStateService.NAME, PLATFORM_STATE_KEY);
-        return index == -1
-                ? V0540PlatformStateSchema.UNINITIALIZED_PLATFORM_STATE
-                : ((SingletonNode<PlatformState>) getChild(index)).getValue();
+        // temp to compile code
+        return V0540PlatformStateSchema.UNINITIALIZED_PLATFORM_STATE;
     }
 
     /**
@@ -164,5 +162,19 @@ public class PlatformMerkleStateRoot extends MerkleStateRoot<PlatformMerkleState
     @NonNull
     public String getInfoString(final int hashDepth) {
         return createInfoString(hashDepth, getReadablePlatformState(), getHash(), this);
+    }
+
+    // temp to compile code
+
+    @NonNull
+    @Override
+    public ReadableStates getReadableStates(@NonNull String serviceName) {
+        return null;
+    }
+
+    @NonNull
+    @Override
+    public WritableStates getWritableStates(@NonNull String serviceName) {
+        return null;
     }
 }

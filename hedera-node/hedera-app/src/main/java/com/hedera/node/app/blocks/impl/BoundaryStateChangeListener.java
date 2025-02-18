@@ -80,7 +80,7 @@ public class BoundaryStateChangeListener implements StateChangeListener {
     private final SortedMap<Integer, StateChange> singletonUpdates = new TreeMap<>();
     private final SortedMap<Integer, List<StateChange>> queueUpdates = new TreeMap<>();
     private static final int ENTITY_COUNTS_STATE_ID =
-            BlockImplUtils.stateIdFor(EntityIdService.NAME, ENTITY_COUNTS_KEY);
+            StateUtils.stateIdFor(EntityIdService.NAME, ENTITY_COUNTS_KEY);
 
     @Nullable
     private Instant lastConsensusTime;

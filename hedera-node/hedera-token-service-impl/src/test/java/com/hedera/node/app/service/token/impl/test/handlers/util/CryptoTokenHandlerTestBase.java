@@ -69,6 +69,7 @@ import com.hedera.hapi.node.transaction.CustomFee;
 import com.hedera.hapi.node.transaction.FixedFee;
 import com.hedera.hapi.node.transaction.FractionalFee;
 import com.hedera.hapi.node.transaction.RoyaltyFee;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.ReadableEntityIdStoreImpl;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.service.token.ReadableAccountStore;
@@ -112,6 +113,8 @@ import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
@@ -608,15 +611,15 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
                 .numAirdrops(pendingAirdropMap.size())
                 .build();
         given(writableStates.getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new WritableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
         given(writableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new WritableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> entityCounts, c -> {}));
+                .willReturn(new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> entityCounts, c -> {}));
         given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+                .willReturn(new FunctionReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
         given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> entityCounts));
+                .willReturn(new FunctionReadableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> entityCounts));
         readableEntityCounters = new ReadableEntityIdStoreImpl(readableStates);
         writableEntityCounters = new WritableEntityIdStore(writableStates);
     }
@@ -683,21 +686,16 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
         given(writableStates.<EntityNumber, StakingNodeInfo>get(STAKING_INFO)).willReturn(writableStakingInfoState);
         final var entityIdStore = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new WritableSingletonStateBase<>(ENTITY_ID_STATE_KEY, () -> null, c -> {}),
+                new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> null, c -> {}),
                 ENTITY_COUNTS_KEY,
-                new WritableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> null, c -> {}))));
+                new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> null, c -> {}))));
         writableStakingInfoStore = new WritableStakingInfoStore(writableStates, entityIdStore);
     }
 
     private void givenReadableStakingRewardsStore() {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 100000L, 50000L, 1000L));
-        final var stakingRewardsState = new ReadableSingletonStateBase<>(TOKEN_SERVICE, NETWORK_REWARDS) {
-            @Override
-            protected Object readFromDataSource() {
-                return backingValue.get();
-            }
-        };
+        final var stakingRewardsState = new FunctionReadableSingletonState<>(TOKEN_SERVICE, NETWORK_REWARDS, backingValue::get);
         given(readableStates.getSingleton(NETWORK_REWARDS)).willReturn((ReadableSingletonState) stakingRewardsState);
         readableRewardsStore = new ReadableNetworkStakingRewardsStoreImpl(readableStates);
     }
@@ -706,22 +704,7 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 100000L, 50000L, 1000L));
         final var stakingRewardsState =
-                new WritableSingletonStateBase<NetworkStakingRewards>(TOKEN_SERVICE, NETWORK_REWARDS) {
-                    @Override
-                    protected NetworkStakingRewards readFromDataSource() {
-                        return backingValue.get();
-                    }
-
-                    @Override
-                    protected void putIntoDataSource(@NotNull NetworkStakingRewards value) {
-                        backingValue.set(value);
-                    }
-
-                    @Override
-                    protected void removeFromDataSource() {
-                        backingValue.set(null);
-                    }
-                };
+                new FunctionWritableSingletonState<>(TOKEN_SERVICE, NETWORK_REWARDS, backingValue::get, backingValue::set);
         given(writableStates.getSingleton(NETWORK_REWARDS)).willReturn((WritableSingletonState) stakingRewardsState);
         writableRewardsStore = new WritableNetworkStakingRewardsStore(writableStates);
     }

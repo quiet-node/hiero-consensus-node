@@ -60,6 +60,7 @@ import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.FileSystem;
@@ -448,19 +449,9 @@ final class BlockRecordManagerTest extends AppTestBase {
             public ReadableStates getReadableStates(@NonNull final String serviceName) {
                 return new MapReadableStates(Map.of(
                         V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY,
-                        new ReadableSingletonStateBase<BlockInfo>(BlockRecordService.NAME, V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY) {
-                            @Override
-                            protected BlockInfo readFromDataSource() {
-                                return blockInfo;
-                            }
-                        },
+                        new FunctionReadableSingletonState<>(BlockRecordService.NAME, V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY, () -> blockInfo),
                         RUNNING_HASHES_STATE_KEY,
-                        new ReadableSingletonStateBase<RunningHashes>(BlockRecordService.NAME, RUNNING_HASHES_STATE_KEY) {
-                            @Override
-                            protected RunningHashes readFromDataSource() {
-                                return RunningHashes.DEFAULT;
-                            }
-                        }));
+                        new FunctionReadableSingletonState<>(BlockRecordService.NAME, RUNNING_HASHES_STATE_KEY, () -> RunningHashes.DEFAULT)));
             }
 
             @NonNull

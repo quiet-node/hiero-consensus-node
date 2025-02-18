@@ -29,7 +29,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,22 +43,7 @@ public class WritableSingletonStateBaseTest extends ReadableSingletonStateTest {
 
     @Override
     protected WritableSingletonStateBase<String> createState() {
-        return new WritableSingletonStateBase<>(COUNTRY_STATE_KEY, COUNTRY_SERVICE_NAME) {
-            @Override
-            protected String readFromDataSource() {
-                return backingStore.get();
-            }
-
-            @Override
-            protected void putIntoDataSource(@NonNull String value) {
-                backingStore.set(value);
-            }
-
-            @Override
-            protected void removeFromDataSource() {
-                backingStore.set("");
-            }
-        };
+        return new FunctionWritableSingletonState<>(COUNTRY_STATE_KEY, COUNTRY_SERVICE_NAME, backingStore::get, backingStore::set);
     }
 
     @Nested
@@ -67,44 +53,16 @@ public class WritableSingletonStateBaseTest extends ReadableSingletonStateTest {
         @DisplayName("Constructor throws NPE if serviceName is null")
         void nullServiceName() {
             //noinspection DataFlowIssue
-            assertThatThrownBy(() -> new WritableSingletonStateBase<String>(null, COUNTRY_STATE_KEY) {
-                @Override
-                protected String readFromDataSource() {
-                    return AUSTRALIA;
-                }
-
-                @Override
-                protected void putIntoDataSource(@NonNull String value) {
-                    // no-op
-                }
-
-                @Override
-                protected void removeFromDataSource() {
-                    // no-op
-                }
-            }).isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new FunctionWritableSingletonState<>(null, COUNTRY_STATE_KEY, null, val -> {}))
+                    .isInstanceOf(NullPointerException.class);
         }
 
         @Test
         @DisplayName("Constructor throws NPE if stateKey is null")
         void nullStateKey() {
             //noinspection DataFlowIssue
-            assertThatThrownBy(() -> new WritableSingletonStateBase<String>(COUNTRY_SERVICE_NAME, null) {
-                @Override
-                protected String readFromDataSource() {
-                    return AUSTRALIA;
-                }
-
-                @Override
-                protected void putIntoDataSource(@NonNull String value) {
-                    // no-op
-                }
-
-                @Override
-                protected void removeFromDataSource() {
-                    // no-op
-                }
-            }).isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new FunctionWritableSingletonState<>(COUNTRY_STATE_KEY, null, () -> AUSTRALIA, null))
+                    .isInstanceOf(NullPointerException.class);
         }
     }
 

@@ -34,6 +34,8 @@ import com.swirlds.state.spi.WritableKVStateBase;
 import com.swirlds.state.spi.WritableQueueStateBase;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.ListReadableQueueState;
 import com.swirlds.state.test.fixtures.ListWritableQueueState;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
@@ -121,12 +123,7 @@ public class FakeState implements State {
                 } else if (state instanceof Map map) {
                     states.put(stateName, new MapReadableKVState(serviceName, stateName, map));
                 } else if (state instanceof AtomicReference ref) {
-                    states.put(stateName, new ReadableSingletonStateBase<>(serviceName, stateName) {
-                        @Override
-                        protected Object readFromDataSource() {
-                            return ref.get();
-                        }
-                    });
+                    states.put(stateName, new FunctionReadableSingletonState(serviceName, stateName, ref::get));
                 }
             }
             return new MapReadableStates(states);
@@ -187,22 +184,7 @@ public class FakeState implements State {
 
     private <V> WritableSingletonStateBase<V> withAnyRegisteredListeners(
             @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final AtomicReference<V> ref) {
-        final var state = new WritableSingletonStateBase<V>(stateKey, serviceName) {
-            @Override
-            protected V readFromDataSource() {
-                return ref.get();
-            }
-
-            @Override
-            protected void putIntoDataSource(@NotNull V value) {
-                ref.set(value);
-            }
-
-            @Override
-            protected void removeFromDataSource() {
-                ref.set(null);
-            }
-        };
+        final var state = new FunctionWritableSingletonState<>(stateKey, serviceName, ref::get, ref::set);
         listeners.forEach(listener -> {
             if (listener.stateTypes().contains(SINGLETON)) {
                 registerSingletonListener(serviceName, state, listener);

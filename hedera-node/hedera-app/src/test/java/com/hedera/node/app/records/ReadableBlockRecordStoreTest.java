@@ -24,6 +24,7 @@ import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.node.app.records.schemas.V0490BlockRecordSchema;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.spi.ReadableSingletonStateBase;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableStates;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
@@ -56,13 +57,8 @@ class ReadableBlockRecordStoreTest {
                 .build();
 
         final var blockState = new MapReadableStates(Map.of(
-                V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY, new ReadableSingletonStateBase<BlockInfo>(NAME,
-                        V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY) {
-                    @Override
-                    protected BlockInfo readFromDataSource() {
-                        return expectedBlockInfo;
-                    }
-                }));
+                V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY, new FunctionReadableSingletonState<>(NAME,
+                        V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY, () -> expectedBlockInfo)));
         final var subject = new ReadableBlockRecordStore(blockState);
 
         // When

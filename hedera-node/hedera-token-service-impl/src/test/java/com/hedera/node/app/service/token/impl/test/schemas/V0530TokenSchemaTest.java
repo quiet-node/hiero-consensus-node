@@ -37,6 +37,7 @@ import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.state.token.AccountPendingAirdrop;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.ids.schemas.V0490EntityIdSchema;
 import com.hedera.node.app.service.token.TokenService;
@@ -49,6 +50,7 @@ import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
 import java.util.Comparator;
@@ -86,23 +88,8 @@ class V0530TokenSchemaTest {
     void setsStakingInfoMinStakeToZero() {
         final var accounts = MapWritableKVState.<AccountID, Account>builder(TokenService.NAME, V0490TokenSchema.ACCOUNTS_KEY)
                 .build();
-        final var entityIdState = new WritableSingletonStateBase<EntityNumber>(
-                TokenService.NAME, V0490EntityIdSchema.ENTITY_ID_STATE_KEY) {
-            @Override
-            protected EntityNumber readFromDataSource() {
-                return new EntityNumber(1000);
-            }
-
-            @Override
-            protected void putIntoDataSource(@NotNull EntityNumber value) {
-                // no-op
-            }
-
-            @Override
-            protected void removeFromDataSource() {
-                // no-op
-            }
-        };
+        final var entityIdState = new FunctionWritableSingletonState<>(
+                TokenService.NAME, V0490EntityIdSchema.ENTITY_ID_STATE_KEY, () -> new EntityNumber(1000), c -> {});
 
         final var stakingInfosState = new MapWritableKVState.Builder<EntityNumber, StakingNodeInfo>(TokenService.NAME, STAKING_INFO_KEY)
                 .value(NODE_NUM_1, STAKING_INFO_1)
@@ -114,15 +101,15 @@ class V0530TokenSchemaTest {
                 MapWritableKVState.<Bytes, AccountID>builder(TokenService.NAME, ALIASES_KEY).build(),
                 entityIdState,
                 stakingInfosState,
-                new WritableSingletonStateBase<>(
-                        ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}));
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}));
         final var newStates = newStatesInstance(
                 accounts,
                 MapWritableKVState.<Bytes, AccountID>builder(TokenService.NAME, ALIASES_KEY).build(),
                 entityIdState,
                 stakingInfosState,
-                new WritableSingletonStateBase<>(
-                        ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}));
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}));
         final var entityIdStore = new WritableEntityIdStore(newStates);
 
         final var networkInfo = new FakeNetworkInfo();
@@ -165,22 +152,7 @@ class V0530TokenSchemaTest {
                 .state(accts)
                 .state(aliases)
                 .state(stakingInfo)
-                .state(new WritableSingletonStateBase<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY) {
-                    @Override
-                    protected Object readFromDataSource() {
-                        return null;
-                    }
-
-                    @Override
-                    protected void putIntoDataSource(@NotNull Object value) {
-                        // no-op
-                    }
-
-                    @Override
-                    protected void removeFromDataSource() {
-                        // no-op
-                    }
-                })
+                .state(new FunctionWritableSingletonState<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, () -> null, c -> {}))
                 .state(entityIdState)
                 .state(entityCounts)
                 .build();

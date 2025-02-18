@@ -101,7 +101,8 @@ public class ISSTestingToolState extends PlatformMerkleStateRoot {
         throwIfImmutable();
 
         final PlatformContext platformContext = platform.getContext();
-        super.init(platformContext.getTime(), platformContext.getMetrics(), platformContext.getMerkleCryptography());
+        // temp to compile code
+//        super.init(platformContext.getTime(), platformContext.getMetrics(), platformContext.getMerkleCryptography());
 
         // since the test occurrences are relative to the genesis timestamp, the data only needs to be parsed at genesis
         if (trigger == InitTrigger.GENESIS) {

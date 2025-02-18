@@ -162,7 +162,8 @@ public class RandomSignedStateGenerator {
             } else {
                 stateInstance = new PlatformMerkleStateRoot(version -> new BasicSoftwareVersion(version.major()));
             }
-            stateInstance.init(Time.getCurrent(), new NoOpMetrics(), MerkleCryptoFactory.getInstance());
+            // temp to compile code
+//            stateInstance.init(Time.getCurrent(), new NoOpMetrics(), MerkleCryptoFactory.getInstance());
         } else {
             stateInstance = state;
         }

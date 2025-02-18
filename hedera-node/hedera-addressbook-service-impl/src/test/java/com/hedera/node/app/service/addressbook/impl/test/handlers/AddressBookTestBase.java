@@ -35,6 +35,7 @@ import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.hapi.node.state.token.Account;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.ids.ReadableEntityIdStoreImpl;
@@ -54,6 +55,8 @@ import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -64,6 +67,8 @@ import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -190,34 +195,34 @@ public class AddressBookTestBase {
 
     protected void givenEntityCounters() {
         given(writableStates.getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new WritableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
         given(writableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new WritableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {}));
+                .willReturn(new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {}));
         given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+                .willReturn(new FunctionReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
         given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT));
+                .willReturn(new FunctionReadableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT));
         readableEntityCounters = new ReadableEntityIdStoreImpl(readableStates);
         writableEntityCounters = new WritableEntityIdStore(writableStates);
     }
 
     protected void givenEntityCountersWithOneNodeInWritable() {
         given(writableStates.getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new WritableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
         given(writableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new WritableSingletonStateBase<>(
-                        ENTITY_COUNTS_KEY,
+                .willReturn(new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numNodes(1).build(),
                         c -> {}));
         given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+                .willReturn(new FunctionReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
         given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(
-                        ENTITY_COUNTS_KEY,
+                .willReturn(new FunctionReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numNodes(1).build()));
         readableEntityCounters = new ReadableEntityIdStoreImpl(readableStates);
         writableEntityCounters = new WritableEntityIdStore(writableStates);
