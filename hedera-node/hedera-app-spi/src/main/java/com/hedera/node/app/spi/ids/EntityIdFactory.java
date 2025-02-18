@@ -16,6 +16,7 @@
 
 package com.hedera.node.app.spi.ids;
 
+import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.FileID;
 import com.hedera.hapi.node.base.ScheduleID;
 import com.hedera.hapi.node.base.TokenID;
@@ -42,6 +43,12 @@ public interface EntityIdFactory {
      * @param number the number
      */
     ScheduleID newScheduleId(long number);
+
+    /**
+     * Returns an account id for the given number.
+     * @param number the number
+     */
+    AccountID newAccountId(long number);
 
     /**
      * Returns a file id for the given number.
