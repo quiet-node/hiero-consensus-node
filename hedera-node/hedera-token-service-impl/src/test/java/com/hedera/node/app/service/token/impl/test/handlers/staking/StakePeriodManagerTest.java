@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,16 +33,13 @@ import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.VersionedConfiguration;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.state.spi.WritableSingletonState;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -227,8 +224,8 @@ class StakePeriodManagerTest {
     private void givenStakingRewardsActivated() {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 1L, 2L, 3L));
-        final var stakingRewardsState =
-                new FunctionWritableSingletonState<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, backingValue::get, backingValue::set);
+        final var stakingRewardsState = new FunctionWritableSingletonState<>(
+                TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, backingValue::get, backingValue::set);
         given(states.getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn((WritableSingletonState) stakingRewardsState);
         stakingRewardsStore = new ReadableNetworkStakingRewardsStoreImpl(states);
@@ -237,8 +234,8 @@ class StakePeriodManagerTest {
     private void givenStakingRewardsNotActivated() {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(false, 1L, 2L, 3L));
-        final var stakingRewardsState =
-                new FunctionWritableSingletonState<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, backingValue::get, backingValue::set);
+        final var stakingRewardsState = new FunctionWritableSingletonState<>(
+                TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, backingValue::get, backingValue::set);
         given(states.getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn((WritableSingletonState) stakingRewardsState);
         stakingRewardsStore = new ReadableNetworkStakingRewardsStoreImpl(states);

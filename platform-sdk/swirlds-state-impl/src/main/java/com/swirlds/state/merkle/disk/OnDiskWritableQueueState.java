@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import com.swirlds.state.merkle.queue.QueueState;
 import com.swirlds.state.spi.WritableQueueStateBase;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.util.Iterator;
 import java.util.Objects;
 
@@ -72,7 +71,8 @@ public class OnDiskWritableQueueState<E> extends WritableQueueStateBase<E> {
     protected void removeFromDataSource() {
         final QueueState state = queueHelper.getState();
         if (!state.isEmpty()) {
-            final var valueToRemove = virtualMap.remove(getVirtualMapKey(serviceName, stateKey, state.getHeadAndIncrement()), valueCodec);
+            final var valueToRemove =
+                    virtualMap.remove(getVirtualMapKey(serviceName, stateKey, state.getHeadAndIncrement()), valueCodec);
             queueHelper.updateState(state);
             // Log to transaction state log, what was added
             logQueueRemove(computeLabel(serviceName, stateKey), valueToRemove);

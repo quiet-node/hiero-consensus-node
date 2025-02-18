@@ -17,22 +17,18 @@
 package com.swirlds.platform.state;
 
 import static com.swirlds.platform.state.MerkleStateUtils.createInfoString;
-import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadablePlatformStateStore;
-import com.swirlds.platform.state.service.SnapshotPlatformStateAccessor;
 import com.swirlds.platform.state.service.WritablePlatformStateStore;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.state.State;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -74,7 +70,7 @@ public class PlatformMerkleStateRoot extends MerkleStateRoot<PlatformMerkleState
 
     protected PlatformMerkleStateRoot(@NonNull PlatformMerkleStateRoot from) {
         // temp to compile code
-//        super(from);
+        //        super(from);
         this.versionFactory = from.versionFactory;
     }
 

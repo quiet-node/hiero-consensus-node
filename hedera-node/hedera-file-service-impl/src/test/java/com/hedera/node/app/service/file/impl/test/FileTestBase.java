@@ -31,9 +31,9 @@ import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.file.File;
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.node.app.ids.EntityIdService;
-import com.hedera.node.app.service.file.FileService;
 import com.hedera.node.app.ids.ReadableEntityIdStoreImpl;
 import com.hedera.node.app.ids.WritableEntityIdStore;
+import com.hedera.node.app.service.file.FileService;
 import com.hedera.node.app.service.file.impl.ReadableFileStoreImpl;
 import com.hedera.node.app.service.file.impl.ReadableUpgradeFileStoreImpl;
 import com.hedera.node.app.service.file.impl.WritableFileStore;
@@ -47,9 +47,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.spi.FilteredReadableStates;
 import com.swirlds.state.spi.FilteredWritableStates;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
@@ -59,8 +57,6 @@ import com.swirlds.state.test.fixtures.MapReadableKVState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -223,18 +219,24 @@ public class FileTestBase {
     protected void givenEntityCounters(int numFiles) {
         given(writableStates.getSingleton(ENTITY_ID_STATE_KEY))
                 .willReturn(new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}));
         given(writableStates.getSingleton(ENTITY_COUNTS_KEY))
                 .willReturn(new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY,
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numFiles(numFiles).build(),
                         c -> {}));
         given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
                 .willReturn(new FunctionReadableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder()
+                                .build()));
         given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
                 .willReturn(new FunctionReadableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY,
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numFiles(numFiles).build()));
         readableEntityCounters = new ReadableEntityIdStoreImpl(readableStates);
         writableEntityCounters = new WritableEntityIdStore(writableStates);
@@ -273,7 +275,8 @@ public class FileTestBase {
 
     @NonNull
     protected ListWritableQueueState<ProtoBytes> emptyUpgradeDataState() {
-        return ListWritableQueueState.<ProtoBytes>builder(FileService.NAME, UPGRADE_DATA_KEY).build();
+        return ListWritableQueueState.<ProtoBytes>builder(FileService.NAME, UPGRADE_DATA_KEY)
+                .build();
     }
 
     @NonNull

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,9 +63,10 @@ class ReadableUpgradeFileStoreImplTest extends FileTestBase {
 
     @Test
     void missingUpgradeFileIsNull() {
-        final var stateData =
-                ListReadableQueueState.<ProtoBytes>builder(FileService.NAME, UPGRADE_DATA_KEY).build();
-        final var stateFile = MapWritableKVState.<FileID, File>builder(FileService.NAME, FILES).build();
+        final var stateData = ListReadableQueueState.<ProtoBytes>builder(FileService.NAME, UPGRADE_DATA_KEY)
+                .build();
+        final var stateFile = MapWritableKVState.<FileID, File>builder(FileService.NAME, FILES)
+                .build();
 
         given(filteredReadableStates.<FileID, File>get(FILES)).willReturn(stateFile);
         subject = new ReadableUpgradeFileStoreImpl(filteredReadableStates);

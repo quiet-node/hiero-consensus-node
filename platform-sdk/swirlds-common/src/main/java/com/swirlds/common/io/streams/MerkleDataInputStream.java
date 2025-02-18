@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2020-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -204,7 +204,8 @@ public class MerkleDataInputStream extends SerializableDataInputStream {
      * @throws IOException
      * 		thrown when version or the options or nodes count are invalid
      */
-    public <T extends MerkleNode> T readMerkleTree(@NonNull final Configuration configuration, final Path directory, final int maxNumberOfNodes)
+    public <T extends MerkleNode> T readMerkleTree(
+            @NonNull final Configuration configuration, final Path directory, final int maxNumberOfNodes)
             throws IOException {
 
         validateDirectory(directory);
@@ -233,7 +234,8 @@ public class MerkleDataInputStream extends SerializableDataInputStream {
             readNextNode(directory, deserializedVersions);
         }
 
-        final MerkleNode migratedRoot = initializeAndMigrateTreeAfterDeserialization(configuration, root, deserializedVersions);
+        final MerkleNode migratedRoot =
+                initializeAndMigrateTreeAfterDeserialization(configuration, root, deserializedVersions);
 
         if (migratedRoot == null) {
             return null;

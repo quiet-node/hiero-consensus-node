@@ -21,7 +21,6 @@ import static com.hedera.node.app.state.merkle.SchemaApplicationType.RESTART;
 import static com.hedera.node.app.state.merkle.SchemaApplicationType.STATE_DEFINITIONS;
 import static com.hedera.node.app.state.merkle.VersionUtils.alreadyIncludesStateDefs;
 import static com.hedera.node.app.state.merkle.VersionUtils.isSoOrdered;
-import static com.hedera.node.app.workflows.handle.metric.UnavailableMetrics.UNAVAILABLE_METRICS;
 import static com.swirlds.state.merkle.StateUtils.registerWithSystem;
 import static java.util.Objects.requireNonNull;
 
@@ -31,12 +30,7 @@ import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.services.MigrationContextImpl;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.crypto.DigestType;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.merkle.map.MerkleMap;
-import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
-import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.state.State;
@@ -51,12 +45,9 @@ import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.merkle.NewStateRoot;
 import com.swirlds.state.merkle.StateMetadata;
 import com.swirlds.state.merkle.StateUtils;
-import com.swirlds.state.merkle.queue.QueueNode;
-import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.spi.FilteredReadableStates;
 import com.swirlds.state.spi.FilteredWritableStates;
 import com.swirlds.state.spi.WritableStates;
-import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Comparator;
@@ -284,7 +275,8 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                 migrationStateChanges.trackCommit();
             }
             // And finally we can remove any states we need to remove
-//            schema.statesToRemove().forEach(stateKey -> stateRoot.removeServiceState(serviceName, stateKey));
+            //            schema.statesToRemove().forEach(stateKey -> stateRoot.removeServiceState(serviceName,
+            // stateKey));
         }
     }
 
@@ -311,58 +303,66 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                     logger.info("  Ensuring {} has state {}", serviceName, stateKey);
                     final var md = new StateMetadata<>(serviceName, schema, def);
                     if (def.singleton()) {
-//                        stateRoot.putServiceStateIfAbsent(
-//                                md,
-//                                () -> new SingletonNode<>(
-//                                        md.serviceName(),
-//                                        md.stateDefinition().stateKey(),
-//                                        md.singletonClassId(),
-//                                        md.stateDefinition().valueCodec(),
-//                                        null));
+                        //                        stateRoot.putServiceStateIfAbsent(
+                        //                                md,
+                        //                                () -> new SingletonNode<>(
+                        //                                        md.serviceName(),
+                        //                                        md.stateDefinition().stateKey(),
+                        //                                        md.singletonClassId(),
+                        //                                        md.stateDefinition().valueCodec(),
+                        //                                        null));
 
                     } else if (def.queue()) {
-//                        stateRoot.putServiceStateIfAbsent(
-//                                md,
-//                                () -> new QueueNode<>(
-//                                        md.serviceName(),
-//                                        md.stateDefinition().stateKey(),
-//                                        md.queueNodeClassId(),
-//                                        md.singletonClassId(),
-//                                        md.stateDefinition().valueCodec()));
+                        //                        stateRoot.putServiceStateIfAbsent(
+                        //                                md,
+                        //                                () -> new QueueNode<>(
+                        //                                        md.serviceName(),
+                        //                                        md.stateDefinition().stateKey(),
+                        //                                        md.queueNodeClassId(),
+                        //                                        md.singletonClassId(),
+                        //                                        md.stateDefinition().valueCodec()));
 
                     } else if (!def.onDisk()) {
-//                        stateRoot.putServiceStateIfAbsent(md, () -> {
-//                            final var map = new MerkleMap<>();
-//                            map.setLabel(StateUtils.computeLabel(serviceName, stateKey));
-//                            return map;
-//                        });
+                        //                        stateRoot.putServiceStateIfAbsent(md, () -> {
+                        //                            final var map = new MerkleMap<>();
+                        //                            map.setLabel(StateUtils.computeLabel(serviceName, stateKey));
+                        //                            return map;
+                        //                        });
                     } else {
-//                        stateRoot.putServiceStateIfAbsent(
-//                                md,
-//                                () -> {
-//                                    // MAX_IN_MEMORY_HASHES (ramToDiskThreshold) = 8388608
-//                                    // PREFER_DISK_BASED_INDICES = false
-//                                    final MerkleDbConfig merkleDbConfig =
-//                                            platformConfiguration.getConfigData(MerkleDbConfig.class);
-//                                    final var tableConfig = new MerkleDbTableConfig(
-//                                            (short) 1,
-//                                            DigestType.SHA_384,
-//                                            def.maxKeysHint(),
-//                                            merkleDbConfig.hashesRamToDiskThreshold());
-//                                    final var label = StateUtils.computeLabel(serviceName, stateKey);
-//                                    final var dsBuilder =
-//                                            new MerkleDbDataSourceBuilder(tableConfig, platformConfiguration);
-//                                    return new VirtualMap(label, dsBuilder, platformConfiguration);
-//                                },
-//                                // Register the metrics for the virtual map if they are available.
-//                                // Early rounds of migration done by services such as PlatformStateService,
-//                                // EntityIdService and RosterService will not have metrics available yet, but their
-//                                // later rounds of migration will.
-//                                // Therefore, for the first round of migration, we will not register the metrics for
-//                                // virtual maps.
-//                                UNAVAILABLE_METRICS.equals(metrics)
-//                                        ? virtualMap -> {}
-//                                        : virtualMap -> virtualMap.registerMetrics(metrics));
+                        //                        stateRoot.putServiceStateIfAbsent(
+                        //                                md,
+                        //                                () -> {
+                        //                                    // MAX_IN_MEMORY_HASHES (ramToDiskThreshold) = 8388608
+                        //                                    // PREFER_DISK_BASED_INDICES = false
+                        //                                    final MerkleDbConfig merkleDbConfig =
+                        //
+                        // platformConfiguration.getConfigData(MerkleDbConfig.class);
+                        //                                    final var tableConfig = new MerkleDbTableConfig(
+                        //                                            (short) 1,
+                        //                                            DigestType.SHA_384,
+                        //                                            def.maxKeysHint(),
+                        //                                            merkleDbConfig.hashesRamToDiskThreshold());
+                        //                                    final var label = StateUtils.computeLabel(serviceName,
+                        // stateKey);
+                        //                                    final var dsBuilder =
+                        //                                            new MerkleDbDataSourceBuilder(tableConfig,
+                        // platformConfiguration);
+                        //                                    return new VirtualMap(label, dsBuilder,
+                        // platformConfiguration);
+                        //                                },
+                        //                                // Register the metrics for the virtual map if they are
+                        // available.
+                        //                                // Early rounds of migration done by services such as
+                        // PlatformStateService,
+                        //                                // EntityIdService and RosterService will not have metrics
+                        // available yet, but their
+                        //                                // later rounds of migration will.
+                        //                                // Therefore, for the first round of migration, we will not
+                        // register the metrics for
+                        //                                // virtual maps.
+                        //                                UNAVAILABLE_METRICS.equals(metrics)
+                        //                                        ? virtualMap -> {}
+                        //                                        : virtualMap -> virtualMap.registerMetrics(metrics));
                     }
                 });
 

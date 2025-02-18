@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,8 @@ public class ListReadableQueueState<E> extends ReadableQueueStateBase<E> {
      * @param stateKey     The state key for this state
      * @param backingStore The backing store to use
      */
-    public ListReadableQueueState(@NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Queue<E> backingStore) {
+    public ListReadableQueueState(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Queue<E> backingStore) {
         super(stateKey, serviceName);
         this.backingStore = Objects.requireNonNull(backingStore);
     }
@@ -65,7 +66,8 @@ public class ListReadableQueueState<E> extends ReadableQueueStateBase<E> {
      * @return A {@link ListReadableQueueState.Builder} to be used for creating a {@link ListReadableQueueState}.
      */
     @NonNull
-    public static <E> ListReadableQueueState.Builder<E> builder(@NonNull final String serviceName, @NonNull final String stateKey) {
+    public static <E> ListReadableQueueState.Builder<E> builder(
+            @NonNull final String serviceName, @NonNull final String stateKey) {
         return new ListReadableQueueState.Builder<>(serviceName, stateKey);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,8 @@ class MerkleSerializationTests {
         final MerkleDataInputStream inputStream =
                 new MerkleDataInputStream(new ByteArrayInputStream(baseStream.toByteArray()));
 
-        final DummyMerkleNode deserializedTree = inputStream.readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
+        final DummyMerkleNode deserializedTree =
+                inputStream.readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
 
         if (root == null) {
             assertNull(deserializedTree, "tree should be null");
@@ -149,7 +150,8 @@ class MerkleSerializationTests {
 
         MerkleDataInputStream inputStream =
                 new MerkleDataInputStream(new ByteArrayInputStream(baseStream.toByteArray()));
-        final DummyMerkleNode deserialized = inputStream.readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
+        final DummyMerkleNode deserialized =
+                inputStream.readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
 
         assertTrue(areTreesEqual(tree, deserialized), "tree should match generated");
         assertTrue(isFullyInitialized(deserialized), "tree should be initialized");
@@ -448,7 +450,9 @@ class MerkleSerializationTests {
         final MerkleDataOutputStream out = new MerkleDataOutputStream(new ByteArrayOutputStream());
 
         assertThrows(
-                NullPointerException.class, () -> in.readMerkleTree(CONFIGURATION, null, 0), "null directory should not be permitted");
+                NullPointerException.class,
+                () -> in.readMerkleTree(CONFIGURATION, null, 0),
+                "null directory should not be permitted");
         assertThrows(
                 IllegalArgumentException.class,
                 () -> out.writeMerkleTree(null, null),

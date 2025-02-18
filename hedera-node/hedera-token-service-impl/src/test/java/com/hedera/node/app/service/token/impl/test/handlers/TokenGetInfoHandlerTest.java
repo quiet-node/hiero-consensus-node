@@ -109,7 +109,8 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
 
     @Test
     void validatesQueryIfInvalidToken() {
-        final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS).build();
+        final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS)
+                .build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
         final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
@@ -124,7 +125,8 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
 
     @Test
     void validatesQueryIfInvalidTokenInTrans() {
-        final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS).build();
+        final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS)
+                .build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
         final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 
@@ -159,7 +161,8 @@ class TokenGetInfoHandlerTest extends CryptoTokenHandlerTestBase {
 
     @Test
     void getsResponseIfInvalidToken() {
-        final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS).build();
+        final var state = MapReadableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS)
+                .build();
         given(readableStates.<TokenID, Token>get(TOKENS)).willReturn(state);
         final var store = new ReadableTokenStoreImpl(readableStates, readableEntityCounters);
 

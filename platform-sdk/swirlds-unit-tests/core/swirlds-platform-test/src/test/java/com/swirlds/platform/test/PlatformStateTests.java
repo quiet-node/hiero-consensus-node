@@ -94,7 +94,8 @@ class PlatformStateTests {
 
         io.startReading();
 
-        final MerkleStateRoot decodedState = io.getInput().readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
+        final MerkleStateRoot decodedState =
+                io.getInput().readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
 
         MerkleCryptoFactory.getInstance().digestTreeSync(root);
         MerkleCryptoFactory.getInstance().digestTreeSync(decodedState);

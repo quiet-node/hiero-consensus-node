@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.swirlds.state.test.fixtures;
 
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.WritableSingletonState;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -156,7 +155,8 @@ public class StateTestBase extends TestBase {
     @NonNull
     protected WritableSingletonState<String> writableSpaceState() {
         final AtomicReference<String> backingValue = new AtomicReference<>(ASTRONAUT);
-        return new FunctionWritableSingletonState<>(SPACE_SERVICE_NAME, SPACE_STATE_KEY, backingValue::get, backingValue::set);
+        return new FunctionWritableSingletonState<>(
+                SPACE_SERVICE_NAME, SPACE_STATE_KEY, backingValue::get, backingValue::set);
     }
 
     @NonNull
@@ -193,6 +193,7 @@ public class StateTestBase extends TestBase {
     @NonNull
     protected WritableSingletonState<String> writableCountryState() {
         final AtomicReference<String> backingValue = new AtomicReference<>(AUSTRALIA);
-        return new FunctionWritableSingletonState<>(COUNTRY_SERVICE_NAME, COUNTRY_STATE_KEY, backingValue::get, backingValue::set);
+        return new FunctionWritableSingletonState<>(
+                COUNTRY_SERVICE_NAME, COUNTRY_STATE_KEY, backingValue::get, backingValue::set);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package com.swirlds.state.spi;
 import static java.util.Objects.requireNonNull;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,7 +27,8 @@ import java.util.List;
  *
  * @param <T> The type
  */
-public abstract class WritableSingletonStateBase<T> extends ReadableSingletonStateBase<T> implements WritableSingletonState<T> {
+public abstract class WritableSingletonStateBase<T> extends ReadableSingletonStateBase<T>
+        implements WritableSingletonState<T> {
 
     /**
      * A sentinel value to represent null in the backing store.

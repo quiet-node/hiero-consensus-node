@@ -51,7 +51,8 @@ public class MapReadableKVState<K, V> extends ReadableKVStateBase<K, V> {
      * @param stateKey     The state key for this state
      * @param backingStore The backing store to use
      */
-    public MapReadableKVState(@NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Map<K, V> backingStore) {
+    public MapReadableKVState(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Map<K, V> backingStore) {
         super(stateKey, serviceName);
         this.backingStore = Objects.requireNonNull(backingStore);
     }

@@ -134,7 +134,8 @@ class V0570ScheduleSchemaTest extends ScheduleTestBase {
                 ScheduleList.newBuilder()
                         .schedules(List.of(scheduler1, otherScheduleInState))
                         .build());
-        readableSchedulesByExpirySec = new MapReadableKVState<>(ScheduleService.NAME, SCHEDULES_BY_EXPIRY_SEC_KEY, schedulesByExpirySec);
+        readableSchedulesByExpirySec =
+                new MapReadableKVState<>(ScheduleService.NAME, SCHEDULES_BY_EXPIRY_SEC_KEY, schedulesByExpirySec);
         writableScheduleCounts = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULED_COUNTS_KEY);
         writableScheduleOrders = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULED_ORDERS_KEY);
 
@@ -148,8 +149,10 @@ class V0570ScheduleSchemaTest extends ScheduleTestBase {
                 ScheduleList.newBuilder()
                         .schedules(List.of(otherScheduleInState))
                         .build());
-        readableSchedulesByEquality = new MapReadableKVState<>(ScheduleService.NAME, SCHEDULES_BY_EQUALITY_KEY, schedulesByEquality);
-        writableScheduleIdByEquality = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULE_ID_BY_EQUALITY_KEY, scheduleByEquality);
+        readableSchedulesByEquality =
+                new MapReadableKVState<>(ScheduleService.NAME, SCHEDULES_BY_EQUALITY_KEY, schedulesByEquality);
+        writableScheduleIdByEquality =
+                new MapWritableKVState<>(ScheduleService.NAME, SCHEDULE_ID_BY_EQUALITY_KEY, scheduleByEquality);
 
         writableStates = MapWritableStates.builder()
                 .state(writableScheduleIdByEquality)

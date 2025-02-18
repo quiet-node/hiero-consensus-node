@@ -70,8 +70,8 @@ class ReadableNodeStoreImplTest extends AddressBookTestBase {
     @Test
     void missingNodeIsNull() {
         readableNodeState.reset();
-        final var state =
-                MapReadableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY).build();
+        final var state = MapReadableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY)
+                .build();
         given(readableStates.<EntityNumber, Node>get(NODES_KEY)).willReturn(state);
         subject = new ReadableNodeStoreImpl(readableStates, readableEntityCounters);
 

@@ -481,7 +481,8 @@ public class ScheduleTestBase {
         scheduledUsages = new HashMap<>(0);
         accountsMapById = new HashMap<>(0);
         writableById = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULES_BY_ID_KEY, scheduleMapById);
-        writableByEquality = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULE_ID_BY_EQUALITY_KEY, scheduleMapByEquality);
+        writableByEquality =
+                new MapWritableKVState<>(ScheduleService.NAME, SCHEDULE_ID_BY_EQUALITY_KEY, scheduleMapByEquality);
         writableScheduledCounts = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULED_COUNTS_KEY, scheduledCounts);
         writableScheduledOrders = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULED_ORDERS_KEY, scheduledOrders);
         writableScheduledUsages = new MapWritableKVState<>(ScheduleService.NAME, SCHEDULED_USAGES_KEY, scheduledUsages);

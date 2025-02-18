@@ -378,8 +378,9 @@ class TokenUpdateNftsHandlerTest extends CryptoTokenHandlerTestBase {
                 .balance(10)
                 .build());
         writableNftStore = new WritableNftStore(
-                new MapWritableStates(
-                        Map.of("NFTS", MapWritableKVState.builder(TokenService.NAME, "NFTS").build())),
+                new MapWritableStates(Map.of(
+                        "NFTS",
+                        MapWritableKVState.builder(TokenService.NAME, "NFTS").build())),
                 writableEntityCounters);
 
         final var txn = new TokenUpdateNftBuilder()

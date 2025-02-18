@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2020-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,18 @@
 
 package com.swirlds.state.merkle.disk;
 
-import com.hedera.pbj.runtime.Codec;
-import com.swirlds.state.spi.WritableSingletonStateBase;
-import com.swirlds.virtualmap.VirtualMap;
-import edu.umd.cs.findbugs.annotations.NonNull;
-
-import java.util.Objects;
-
 import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKey;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRead;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRemove;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonWrite;
 import static java.util.Objects.requireNonNull;
+
+import com.hedera.pbj.runtime.Codec;
+import com.swirlds.state.spi.WritableSingletonStateBase;
+import com.swirlds.virtualmap.VirtualMap;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.Objects;
 
 public class OnDiskWritableSingletonState<T> extends WritableSingletonStateBase<T> {
 

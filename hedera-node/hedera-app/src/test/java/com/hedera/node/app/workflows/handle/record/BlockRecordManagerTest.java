@@ -57,7 +57,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.state.State;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
@@ -449,9 +448,11 @@ final class BlockRecordManagerTest extends AppTestBase {
             public ReadableStates getReadableStates(@NonNull final String serviceName) {
                 return new MapReadableStates(Map.of(
                         V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY,
-                        new FunctionReadableSingletonState<>(BlockRecordService.NAME, V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY, () -> blockInfo),
+                        new FunctionReadableSingletonState<>(
+                                BlockRecordService.NAME, V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY, () -> blockInfo),
                         RUNNING_HASHES_STATE_KEY,
-                        new FunctionReadableSingletonState<>(BlockRecordService.NAME, RUNNING_HASHES_STATE_KEY, () -> RunningHashes.DEFAULT)));
+                        new FunctionReadableSingletonState<>(
+                                BlockRecordService.NAME, RUNNING_HASHES_STATE_KEY, () -> RunningHashes.DEFAULT)));
             }
 
             @NonNull

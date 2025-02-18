@@ -100,7 +100,11 @@ public final class TestStoreFactory {
 
     private static Map<String, MapWritableKVState<?, ?>> writableAccountStates(final Account... accounts) {
         final var wrappingState = newAccountStateFromAccounts(accounts);
-        return Map.of(ACCOUNTS_KEY, wrappingState, ALIASES_KEY, new MapWritableKVState<>(TokenService.NAME, ALIASES_KEY, new HashMap<>()));
+        return Map.of(
+                ACCOUNTS_KEY,
+                wrappingState,
+                ALIASES_KEY,
+                new MapWritableKVState<>(TokenService.NAME, ALIASES_KEY, new HashMap<>()));
     }
 
     private static MapWritableKVState<AccountID, Account> newAccountStateFromAccounts(Account... accounts) {

@@ -35,11 +35,11 @@ import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.hapi.node.state.token.Account;
-import com.hedera.node.app.ids.EntityIdService;
-import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.app.hapi.utils.EntityType;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.ReadableEntityIdStoreImpl;
 import com.hedera.node.app.ids.WritableEntityIdStore;
+import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.app.service.addressbook.ReadableNodeStore;
 import com.hedera.node.app.service.addressbook.impl.ReadableNodeStoreImpl;
 import com.hedera.node.app.service.addressbook.impl.WritableNodeStore;
@@ -51,9 +51,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.system.address.Address;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
@@ -67,8 +65,6 @@ import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -196,14 +192,20 @@ public class AddressBookTestBase {
     protected void givenEntityCounters() {
         given(writableStates.getSingleton(ENTITY_ID_STATE_KEY))
                 .willReturn(new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}));
         given(writableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {}));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {}));
         given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
                 .willReturn(new FunctionReadableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder()
+                                .build()));
         given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new FunctionReadableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT));
+                .willReturn(new FunctionReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT));
         readableEntityCounters = new ReadableEntityIdStoreImpl(readableStates);
         writableEntityCounters = new WritableEntityIdStore(writableStates);
     }
@@ -211,18 +213,24 @@ public class AddressBookTestBase {
     protected void givenEntityCountersWithOneNodeInWritable() {
         given(writableStates.getSingleton(ENTITY_ID_STATE_KEY))
                 .willReturn(new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}));
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}));
         given(writableStates.getSingleton(ENTITY_COUNTS_KEY))
                 .willReturn(new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY,
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numNodes(1).build(),
                         c -> {}));
         given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
                 .willReturn(new FunctionReadableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder()
+                                .build()));
         given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
                 .willReturn(new FunctionReadableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY,
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numNodes(1).build()));
         readableEntityCounters = new ReadableEntityIdStoreImpl(readableStates);
         writableEntityCounters = new WritableEntityIdStore(writableStates);
@@ -258,7 +266,8 @@ public class AddressBookTestBase {
 
     @NonNull
     protected MapWritableKVState<EntityNumber, Node> emptyWritableNodeState() {
-        return MapWritableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY).build();
+        return MapWritableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY)
+                .build();
     }
 
     @NonNull

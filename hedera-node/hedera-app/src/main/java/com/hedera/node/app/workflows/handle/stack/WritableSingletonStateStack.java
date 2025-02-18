@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,9 @@ public class WritableSingletonStateStack<T> implements WritableSingletonState<T>
      * @throws NullPointerException if any of the arguments is {@code null}
      */
     public WritableSingletonStateStack(
-            @NonNull final WritableStatesStack writableStatesStack, @NonNull final String serviceName, @NonNull final String stateKey) {
+            @NonNull final WritableStatesStack writableStatesStack,
+            @NonNull final String serviceName,
+            @NonNull final String stateKey) {
         this.writableStatesStack = requireNonNull(writableStatesStack, "writableStatesStack must not be null");
         this.serviceName = requireNonNull(serviceName, "serviceName must not be null");
         this.stateKey = requireNonNull(stateKey, "stateKey must not be null");

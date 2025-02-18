@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,8 @@ public class ListWritableQueueState<E> extends WritableQueueStateBase<E> {
      * @param stateKey The state key for this state
      * @param backingStore The backing store to use
      */
-    public ListWritableQueueState(@NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Queue<E> backingStore) {
+    public ListWritableQueueState(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Queue<E> backingStore) {
         super(stateKey, serviceName);
         this.backingStore = Objects.requireNonNull(backingStore);
     }
@@ -68,7 +69,8 @@ public class ListWritableQueueState<E> extends WritableQueueStateBase<E> {
      * @return A {@link ListWritableQueueState.Builder} to be used for creating a {@link ListWritableQueueState}.
      */
     @NonNull
-    public static <E> ListWritableQueueState.Builder<E> builder(@NonNull final String serviceName, @NonNull final String stateKey) {
+    public static <E> ListWritableQueueState.Builder<E> builder(
+            @NonNull final String serviceName, @NonNull final String stateKey) {
         return new ListWritableQueueState.Builder<>(serviceName, stateKey);
     }
 

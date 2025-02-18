@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,8 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
 
         @Test
         void addOnEmptyIsVisibleWithPeek() {
-            final var subject = ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
+            final var subject =
+                    ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
             final var element = "Hydrology";
 
             subject.add(element);
@@ -88,7 +89,8 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
     class PeekTests {
         @Test
         void peekOnEmptyList() {
-            final var subject = ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
+            final var subject =
+                    ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
             assertThat(subject.peek()).isNull();
         }
 
@@ -128,7 +130,8 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
 
         @Test
         void peekAfterAddOnEmptyList() {
-            final var subject = ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
+            final var subject =
+                    ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
             subject.add("Hydrology");
             assertThat(subject.peek()).isSameAs("Hydrology");
         }
@@ -138,7 +141,8 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
     class PollTests {
         @Test
         void pollOnEmptyList() {
-            final var subject = ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
+            final var subject =
+                    ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
             assertThat(subject.poll()).isNull();
         }
 
@@ -193,7 +197,8 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
 
         @Test
         void pollAfterAddOnEmptyList() {
-            final var subject = ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
+            final var subject =
+                    ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
             subject.add("Hydrology");
             assertThat(subject.poll()).isSameAs("Hydrology");
         }
@@ -203,7 +208,8 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
     class RemoveIfTests {
         @Test
         void removeIfOnEmptyList() {
-            final var subject = ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
+            final var subject =
+                    ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
             assertThat(subject.removeIf(s -> true)).isNull();
         }
 
@@ -215,7 +221,8 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
 
         @Test
         void removeIfAfterAdd() {
-            final var subject = ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
+            final var subject =
+                    ListWritableQueueState.builder("FAKE_NAME", "FAKE_KEY").build();
             subject.add("Hydrology");
             assertThat(subject.removeIf(s -> true)).isSameAs("Hydrology");
         }

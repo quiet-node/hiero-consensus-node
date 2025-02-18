@@ -92,10 +92,12 @@ class V053AddressBookSchemaTest extends AddressBookTestBase {
             new MapWritableKVState<>(AddressBookService.NAME, ACCOUNTS_KEY, accounts);
 
     private final Map<EntityNumber, Node> nodes = new HashMap<>();
-    private final MapWritableKVState<EntityNumber, Node> writableNodes = new MapWritableKVState<>(AddressBookService.NAME, NODES_KEY, nodes);
+    private final MapWritableKVState<EntityNumber, Node> writableNodes =
+            new MapWritableKVState<>(AddressBookService.NAME, NODES_KEY, nodes);
 
     private final Map<FileID, File> files = new HashMap<>();
-    private final MapWritableKVState<FileID, File> writableFiles = new MapWritableKVState<>(AddressBookService.NAME, FILES_KEY, files);
+    private final MapWritableKVState<FileID, File> writableFiles =
+            new MapWritableKVState<>(AddressBookService.NAME, FILES_KEY, files);
 
     private MapWritableStates writableStates = null;
 

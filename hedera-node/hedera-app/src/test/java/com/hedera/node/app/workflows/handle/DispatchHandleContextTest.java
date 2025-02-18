@@ -553,7 +553,8 @@ public class DispatchHandleContextTest extends StateTestBase implements Scenario
 
         @BeforeEach
         void setup() {
-            final var baseKVState = new MapWritableKVState<>(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, new HashMap<>(BASE_DATA));
+            final var baseKVState =
+                    new MapWritableKVState<>(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, new HashMap<>(BASE_DATA));
             final var writableStates =
                     MapWritableStates.builder().state(baseKVState).build();
             final var readableStates = MapReadableStates.builder()
@@ -803,8 +804,10 @@ public class DispatchHandleContextTest extends StateTestBase implements Scenario
         lenient()
                 .when(stack.getWritableStates(TokenService.NAME))
                 .thenReturn(MapWritableStates.builder()
-                        .state(MapWritableKVState.builder(TokenService.NAME, "ACCOUNTS").build())
-                        .state(MapWritableKVState.builder(TokenService.NAME, "ALIASES").build())
+                        .state(MapWritableKVState.builder(TokenService.NAME, "ACCOUNTS")
+                                .build())
+                        .state(MapWritableKVState.builder(TokenService.NAME, "ALIASES")
+                                .build())
                         .build());
         lenient().when(writableStates.<EntityNumber>getSingleton(anyString())).thenReturn(entityNumberState);
         lenient().when(writableStates.<EntityCounts>getSingleton(anyString())).thenReturn(entityCountsState);

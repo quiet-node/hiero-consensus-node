@@ -160,7 +160,8 @@ public class TokenHandlerTestBase {
 
     @NonNull
     protected MapWritableKVState<TokenID, Token> emptyWritableTokenState() {
-        return MapWritableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS).build();
+        return MapWritableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS)
+                .build();
     }
 
     @NonNull

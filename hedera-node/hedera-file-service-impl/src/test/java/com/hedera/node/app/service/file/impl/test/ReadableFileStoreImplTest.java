@@ -55,7 +55,8 @@ class ReadableFileStoreImplTest extends FileTestBase {
     @Test
     void missingFileIsNull() {
         readableFileState.reset();
-        final var state = MapReadableKVState.<Long, File>builder(FileService.NAME, FILES).build();
+        final var state =
+                MapReadableKVState.<Long, File>builder(FileService.NAME, FILES).build();
         given(readableStates.<Long, File>get(FILES)).willReturn(state);
         subject = new ReadableFileStoreImpl(readableStates, readableEntityCounters);
 

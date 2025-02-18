@@ -28,7 +28,6 @@ import com.swirlds.state.spi.EmptyWritableStates;
 import com.swirlds.state.spi.KVChangeListener;
 import com.swirlds.state.spi.QueueChangeListener;
 import com.swirlds.state.spi.ReadableKVState;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableKVStateBase;
 import com.swirlds.state.spi.WritableQueueStateBase;
@@ -43,8 +42,6 @@ import com.swirlds.state.test.fixtures.MapReadableStates;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import org.jetbrains.annotations.NotNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -146,11 +143,13 @@ public class FakeState implements State {
                 if (state instanceof Queue<?> queue) {
                     data.put(
                             stateName,
-                            withAnyRegisteredListeners(serviceName, new ListWritableQueueState<>(serviceName, stateName, queue)));
+                            withAnyRegisteredListeners(
+                                    serviceName, new ListWritableQueueState<>(serviceName, stateName, queue)));
                 } else if (state instanceof Map<?, ?> map) {
                     data.put(
                             stateName,
-                            withAnyRegisteredListeners(serviceName, new MapWritableKVState<>(serviceName, stateName, map)));
+                            withAnyRegisteredListeners(
+                                    serviceName, new MapWritableKVState<>(serviceName, stateName, map)));
                 } else if (state instanceof AtomicReference<?> ref) {
                     data.put(stateName, withAnyRegisteredListeners(serviceName, stateName, ref));
                 }

@@ -49,7 +49,6 @@ import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import com.swirlds.state.spi.EmptyReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
@@ -57,7 +56,6 @@ import com.swirlds.state.test.fixtures.MapWritableStates;
 import java.util.HashMap;
 import java.util.stream.IntStream;
 import org.assertj.core.api.Assertions;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -99,10 +97,14 @@ final class V0490TokenSchemaTest {
 
         newStates = newStatesInstance(
                 accounts,
-                MapWritableKVState.<Bytes, AccountID>builder(TokenService.NAME, ALIASES_KEY).build(),
+                MapWritableKVState.<Bytes, AccountID>builder(TokenService.NAME, ALIASES_KEY)
+                        .build(),
                 newWritableEntityIdState(),
                 new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}));
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
+                        () -> EntityCounts.newBuilder().build(),
+                        c -> {}));
 
         entityIdStore = new WritableEntityIdStore(newStates);
 
@@ -119,10 +121,14 @@ final class V0490TokenSchemaTest {
                 .build();
         final var nonEmptyPrevStates = newStatesInstance(
                 accounts,
-                MapWritableKVState.<Bytes, AccountID>builder(TokenService.NAME, ALIASES_KEY).build(),
+                MapWritableKVState.<Bytes, AccountID>builder(TokenService.NAME, ALIASES_KEY)
+                        .build(),
                 newWritableEntityIdState(),
                 new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}));
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
+                        () -> EntityCounts.newBuilder().build(),
+                        c -> {}));
         final var schema = newSubjectWithAllExpected();
         final var migrationContext = new MigrationContextImpl(
                 nonEmptyPrevStates,
@@ -306,7 +312,10 @@ final class V0490TokenSchemaTest {
 
     private WritableSingletonState<EntityNumber> newWritableEntityIdState() {
         return new FunctionWritableSingletonState<>(
-                TokenService.NAME, V0490EntityIdSchema.ENTITY_ID_STATE_KEY, () -> new EntityNumber(BEGINNING_ENTITY_ID), c -> {});
+                TokenService.NAME,
+                V0490EntityIdSchema.ENTITY_ID_STATE_KEY,
+                () -> new EntityNumber(BEGINNING_ENTITY_ID),
+                c -> {});
     }
 
     private MapWritableStates newStatesInstance(
@@ -320,7 +329,8 @@ final class V0490TokenSchemaTest {
                 .state(aliases)
                 .state(MapWritableKVState.builder(TokenService.NAME, V0490TokenSchema.STAKING_INFO_KEY)
                         .build())
-                .state(new FunctionWritableSingletonState<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, () -> null, c -> {}))
+                .state(new FunctionWritableSingletonState<>(
+                        TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, () -> null, c -> {}))
                 .state(entityIdState)
                 .state(entityCountsState)
                 .build();

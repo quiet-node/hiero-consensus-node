@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
 
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import java.time.Duration;
 import java.util.SplittableRandom;
 import java.util.concurrent.CompletableFuture;
@@ -28,9 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
-
-import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
-import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -43,7 +41,8 @@ public class WritableSingletonStateBaseTest extends ReadableSingletonStateTest {
 
     @Override
     protected WritableSingletonStateBase<String> createState() {
-        return new FunctionWritableSingletonState<>(COUNTRY_STATE_KEY, COUNTRY_SERVICE_NAME, backingStore::get, backingStore::set);
+        return new FunctionWritableSingletonState<>(
+                COUNTRY_STATE_KEY, COUNTRY_SERVICE_NAME, backingStore::get, backingStore::set);
     }
 
     @Nested
@@ -61,7 +60,8 @@ public class WritableSingletonStateBaseTest extends ReadableSingletonStateTest {
         @DisplayName("Constructor throws NPE if stateKey is null")
         void nullStateKey() {
             //noinspection DataFlowIssue
-            assertThatThrownBy(() -> new FunctionWritableSingletonState<>(COUNTRY_STATE_KEY, null, () -> AUSTRALIA, null))
+            assertThatThrownBy(
+                            () -> new FunctionWritableSingletonState<>(COUNTRY_STATE_KEY, null, () -> AUSTRALIA, null))
                     .isInstanceOf(NullPointerException.class);
         }
     }

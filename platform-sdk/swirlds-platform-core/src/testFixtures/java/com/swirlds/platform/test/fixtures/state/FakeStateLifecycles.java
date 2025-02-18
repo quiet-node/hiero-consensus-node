@@ -28,13 +28,11 @@ import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
-import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
 import com.swirlds.platform.config.AddressBookConfig;
@@ -57,7 +55,6 @@ import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.merkle.StateMetadata;
-import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.merkle.singleton.StringLeaf;
 import com.swirlds.state.spi.CommittableWritableStates;
@@ -136,14 +133,14 @@ public enum FakeStateLifecycles implements StateLifecycles<PlatformMerkleStateRo
                     final var md = new StateMetadata<>(PlatformStateService.NAME, schema, def);
                     if (def.singleton()) {
                         // will be updated -- added for helping to solve compile issues
-//                        merkleStateRoot.putServiceStateIfAbsent(
-//                                md,
-//                                () -> new SingletonNode<>(
-//                                        md.serviceName(),
-//                                        md.stateDefinition().stateKey(),
-//                                        md.singletonClassId(),
-//                                        md.stateDefinition().valueCodec(),
-//                                        null));
+                        //                        merkleStateRoot.putServiceStateIfAbsent(
+                        //                                md,
+                        //                                () -> new SingletonNode<>(
+                        //                                        md.serviceName(),
+                        //                                        md.stateDefinition().stateKey(),
+                        //                                        md.singletonClassId(),
+                        //                                        md.stateDefinition().valueCodec(),
+                        //                                        null));
                     } else {
                         throw new IllegalStateException("PlatformStateService only expected to use singleton states");
                     }
@@ -167,24 +164,28 @@ public enum FakeStateLifecycles implements StateLifecycles<PlatformMerkleStateRo
                     final var md = new StateMetadata<>(RosterStateId.NAME, schema, def);
                     if (def.singleton()) {
                         // will be updated -- added for helping to solve compile issues
-//                        merkleStateRoot.putServiceStateIfAbsent(
-//                                md,
-//                                () -> new SingletonNode<>(
-//                                        md.serviceName(),
-//                                        md.stateDefinition().stateKey(),
-//                                        md.singletonClassId(),
-//                                        md.stateDefinition().valueCodec(),
-//                                        null));
+                        //                        merkleStateRoot.putServiceStateIfAbsent(
+                        //                                md,
+                        //                                () -> new SingletonNode<>(
+                        //                                        md.serviceName(),
+                        //                                        md.stateDefinition().stateKey(),
+                        //                                        md.singletonClassId(),
+                        //                                        md.stateDefinition().valueCodec(),
+                        //                                        null));
                     } else if (def.onDisk()) {
                         // will be updated -- added for helping to solve compile issues
-//                        merkleStateRoot.putServiceStateIfAbsent(md, () -> {
-//                            final var tableConfig =
-//                                    new MerkleDbTableConfig((short) 1, DigestType.SHA_384, def.maxKeysHint(), 16);
-//                            final var label = StateUtils.computeLabel(RosterStateId.NAME, def.stateKey());
-//                            final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
-//                            final var virtualMap = new VirtualMap(label, dsBuilder, CONFIGURATION);
-//                            return virtualMap;
-//                        });
+                        //                        merkleStateRoot.putServiceStateIfAbsent(md, () -> {
+                        //                            final var tableConfig =
+                        //                                    new MerkleDbTableConfig((short) 1, DigestType.SHA_384,
+                        // def.maxKeysHint(), 16);
+                        //                            final var label = StateUtils.computeLabel(RosterStateId.NAME,
+                        // def.stateKey());
+                        //                            final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig,
+                        // CONFIGURATION);
+                        //                            final var virtualMap = new VirtualMap(label, dsBuilder,
+                        // CONFIGURATION);
+                        //                            return virtualMap;
+                        //                        });
                     } else {
                         throw new IllegalStateException(
                                 "RosterService only expected to use singleton and onDisk virtual map states");

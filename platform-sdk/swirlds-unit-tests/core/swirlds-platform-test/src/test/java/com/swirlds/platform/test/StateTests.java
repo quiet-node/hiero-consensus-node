@@ -71,7 +71,8 @@ class StateTests {
 
         io.startReading();
 
-        final PlatformMerkleStateRoot decodedState = io.getInput().readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
+        final PlatformMerkleStateRoot decodedState =
+                io.getInput().readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
         MerkleCryptoFactory.getInstance().digestTreeSync(decodedState);
 
         assertEquals(merkleStateRoot.getHash(), decodedState.getHash(), "expected trees to be equal");

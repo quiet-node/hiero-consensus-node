@@ -163,7 +163,7 @@ public final class SignedStateFileWriter {
         final State state = signedState.getState();
         if (state instanceof MerkleStateRoot merkleStateRoot) {
             // temp to compile code
-//            merkleStateRoot.setTime(platformContext.getTime());
+            //            merkleStateRoot.setTime(platformContext.getTime());
         }
 
         state.createSnapshot(directory);

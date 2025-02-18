@@ -189,8 +189,8 @@ class ReadableFreezeUpgradeActionsTest {
         noiseFileLoc = zipOutputDir.toPath().resolve("forgotten.cfg");
         noiseSubFileLoc = zipOutputDir.toPath().resolve("edargpu");
 
-        final var readableNodeState =
-                MapReadableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY).build();
+        final var readableNodeState = MapReadableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY)
+                .build();
         given(readableStates.<EntityNumber, Node>get(NODES_KEY)).willReturn(readableNodeState);
         nodeStore = new ReadableNodeStoreImpl(readableStates, readableEntityCounters);
 

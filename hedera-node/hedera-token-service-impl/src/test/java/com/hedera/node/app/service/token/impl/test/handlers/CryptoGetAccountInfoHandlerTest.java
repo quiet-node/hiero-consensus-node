@@ -77,7 +77,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.utility.CommonUtils;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.spi.ReadableSingletonState;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
@@ -162,8 +161,8 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
     @Test
     @DisplayName("Empty account failed during validate")
     void validatesQueryIfEmptyAccount() {
-        final var state =
-                MapReadableKVState.<AccountID, Account>builder(TOKEN_SERVICE, ACCOUNTS_KEY).build();
+        final var state = MapReadableKVState.<AccountID, Account>builder(TOKEN_SERVICE, ACCOUNTS_KEY)
+                .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS_KEY)).willReturn(state);
         final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
 
@@ -180,8 +179,8 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
     @Test
     @DisplayName("Account Id is needed during validate")
     void validatesQueryIfInvalidAccount() {
-        final var state =
-                MapReadableKVState.<AccountID, Account>builder(TOKEN_SERVICE, ACCOUNTS_KEY).build();
+        final var state = MapReadableKVState.<AccountID, Account>builder(TOKEN_SERVICE, ACCOUNTS_KEY)
+                .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS_KEY)).willReturn(state);
         final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
 
@@ -459,7 +458,8 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
     }
 
     private void setupTokenRelationStore(TokenRelation... tokenRelations) {
-        final var readableTokenRel = MapReadableKVState.<EntityIDPair, TokenRelation>builder(TOKEN_SERVICE, TOKEN_RELS_KEY);
+        final var readableTokenRel =
+                MapReadableKVState.<EntityIDPair, TokenRelation>builder(TOKEN_SERVICE, TOKEN_RELS_KEY);
         for (TokenRelation tokenRelation : tokenRelations) {
             readableTokenRel.value(
                     EntityIDPair.newBuilder()
@@ -474,7 +474,8 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
     }
 
     private void setupStakingInfoStore() {
-        final var readableStakingNodes = MapReadableKVState.<AccountID, StakingNodeInfo>builder(TOKEN_SERVICE, STAKING_INFO_KEY)
+        final var readableStakingNodes = MapReadableKVState.<AccountID, StakingNodeInfo>builder(
+                        TOKEN_SERVICE, STAKING_INFO_KEY)
                 .value(id, stakingNodeInfo)
                 .build();
         given(readableStates4.<AccountID, StakingNodeInfo>get(STAKING_INFO_KEY)).willReturn(readableStakingNodes);
@@ -485,7 +486,8 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
     private void setupStakingRewardsStore() {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 100000L, 50000L, 1000L));
-        final var stakingRewardsState = new FunctionReadableSingletonState<>(TOKEN_SERVICE, NETWORK_REWARDS, backingValue::get);
+        final var stakingRewardsState =
+                new FunctionReadableSingletonState<>(TOKEN_SERVICE, NETWORK_REWARDS, backingValue::get);
         given(readableStates.getSingleton(NETWORK_REWARDS)).willReturn((ReadableSingletonState) stakingRewardsState);
         final var readableRewardsStore = new ReadableNetworkStakingRewardsStoreImpl(readableStates);
         when(context.createStore(ReadableNetworkStakingRewardsStore.class)).thenReturn(readableRewardsStore);

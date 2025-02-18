@@ -642,7 +642,8 @@ public final class StateUtils {
      * @return a {@link Bytes} object containing exactly 10 bytes in big‑endian order
      * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
      */
-    public static Bytes getVirtualMapKey(@NonNull final String serviceName, @NonNull final String stateKey, final long index) {
+    public static Bytes getVirtualMapKey(
+            @NonNull final String serviceName, @NonNull final String stateKey, final long index) {
         final int stateId = stateIdFor(serviceName, stateKey);
         if (stateId < 0 || stateId > 65535) {
             throw new IllegalArgumentException("State ID " + stateId + " must fit in [0..65535]");
@@ -673,8 +674,8 @@ public final class StateUtils {
      * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
      * @throws RuntimeException         if an {@link IOException} occurs during key serialization
      */
-    public static <K> Bytes getVirtualMapKey(@NonNull final String serviceName, @NonNull final String stateKey,
-                                             final K key, final Codec<K> keyCodec) {
+    public static <K> Bytes getVirtualMapKey(
+            @NonNull final String serviceName, @NonNull final String stateKey, final K key, final Codec<K> keyCodec) {
         final int stateId = stateIdFor(serviceName, stateKey);
         if (stateId < 0 || stateId > 65535) {
             throw new IllegalArgumentException("State ID " + stateId + " must fit in [0..65535]");

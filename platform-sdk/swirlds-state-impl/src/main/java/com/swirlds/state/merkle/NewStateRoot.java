@@ -1,4 +1,26 @@
+/*
+ * Copyright (C) 2025 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.swirlds.state.merkle;
+
+import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
+import static com.swirlds.state.StateChangeListener.StateType.MAP;
+import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
+import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
+import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.base.time.Time;
@@ -8,10 +30,10 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
-import com.swirlds.state.merkle.disk.OnDiskWritableKVState;
 import com.swirlds.state.merkle.disk.OnDiskReadableQueueState;
-import com.swirlds.state.merkle.disk.OnDiskWritableQueueState;
 import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
+import com.swirlds.state.merkle.disk.OnDiskWritableKVState;
+import com.swirlds.state.merkle.disk.OnDiskWritableQueueState;
 import com.swirlds.state.merkle.disk.OnDiskWritableSingletonState;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.EmptyReadableStates;
@@ -31,9 +53,6 @@ import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -45,13 +64,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-
-import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
-import static com.swirlds.state.StateChangeListener.StateType.MAP;
-import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
-import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
-import static java.util.Objects.requireNonNull;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class NewStateRoot implements State {
 
@@ -221,20 +235,20 @@ public class NewStateRoot implements State {
     @Override
     public MerkleStateRoot<?> loadSnapshot(@NonNull Path targetPath) throws IOException {
         requireNonNull(configuration);
-        return (MerkleStateRoot<?>)
-                MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath).stateRoot();
+        return (MerkleStateRoot<?>) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
+                .stateRoot();
     }
 
     // Getters and setters
 
-    // TODO: update two methods below (most likely after closing of https://github.com/hashgraph/hedera-services/issues/17357)
+    // TODO: update two methods below (most likely after closing of
+    // https://github.com/hashgraph/hedera-services/issues/17357)
 
     public @Nullable PlatformState getPlatformState() {
         ReadableStates readableStates = getReadableStates("PlatformStateService");
         return readableStates.isEmpty()
                 ? null
-                : (PlatformState)
-                readableStates.getSingleton("PLATFORM_STATE").get();
+                : (PlatformState) readableStates.getSingleton("PLATFORM_STATE").get();
     }
 
     /**
@@ -273,7 +287,6 @@ public class NewStateRoot implements State {
         }
     }
 
-
     // State API related ops
 
     // TODO: unify names of those three methods below: initializeState, unregisterService, removeServiceState
@@ -300,7 +313,6 @@ public class NewStateRoot implements State {
         readableStatesMap.put(serviceName, new NewStateRoot.MerkleReadableStates(stateMetadata));
         writableStatesMap.put(serviceName, new NewStateRoot.MerkleWritableStates(serviceName, stateMetadata));
     }
-
 
     /**
      * Unregister a service without removing its nodes from the state.
@@ -479,8 +491,7 @@ public class NewStateRoot implements State {
 
         @Override
         @NonNull
-        protected ReadableKVState<?, ?> createReadableKVState(
-                @NonNull final StateMetadata md) {
+        protected ReadableKVState<?, ?> createReadableKVState(@NonNull final StateMetadata md) {
             return new OnDiskReadableKVState<>(
                     md.serviceName(),
                     extractStateKey(md),
@@ -493,20 +504,14 @@ public class NewStateRoot implements State {
         @NonNull
         protected ReadableSingletonState<?> createReadableSingletonState(@NonNull final StateMetadata md) {
             return new OnDiskReadableSingletonState<>(
-                    md.serviceName(),
-                    extractStateKey(md),
-                    md.stateDefinition().valueCodec(),
-                    virtualMap);
+                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
         }
 
         @NonNull
         @Override
         protected ReadableQueueState createReadableQueueState(@NonNull StateMetadata md) {
             return new OnDiskReadableQueueState(
-                    md.serviceName(),
-                    extractStateKey(md),
-                    md.stateDefinition().valueCodec(),
-                    virtualMap);
+                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
         }
     }
 
@@ -587,10 +592,7 @@ public class NewStateRoot implements State {
         @NonNull
         protected WritableSingletonState<?> createReadableSingletonState(@NonNull final StateMetadata md) {
             final var state = new OnDiskWritableSingletonState<>(
-                    md.serviceName(),
-                    extractStateKey(md),
-                    md.stateDefinition().valueCodec(),
-                    virtualMap);
+                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(SINGLETON)) {
                     registerSingletonListener(md.serviceName(), state, listener);
@@ -603,10 +605,7 @@ public class NewStateRoot implements State {
         @Override
         protected WritableQueueState<?> createReadableQueueState(@NonNull final StateMetadata md) {
             final var state = new OnDiskWritableQueueState<>(
-                    md.serviceName(),
-                    extractStateKey(md),
-                    md.stateDefinition().valueCodec(),
-                    virtualMap);
+                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(QUEUE)) {
                     registerQueueListener(md.serviceName(), state, listener);

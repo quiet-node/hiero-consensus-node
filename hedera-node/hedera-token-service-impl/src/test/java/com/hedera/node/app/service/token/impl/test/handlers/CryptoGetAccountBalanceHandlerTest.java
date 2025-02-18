@@ -174,8 +174,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
     @Test
     @DisplayName("Empty account failed during validate")
     void validatesQueryIfEmptyAccount() throws Throwable {
-        final var state =
-                MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
+        final var state = MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS)
+                .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
         final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
         ;
@@ -193,8 +193,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
     @Test
     @DisplayName("Account Id is needed during validate")
     void validatesQueryIfInvalidAccount() throws Throwable {
-        final var state =
-                MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
+        final var state = MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS)
+                .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
         final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
         ;
@@ -211,8 +211,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
     @Test
     @DisplayName("Account Id with valid header is needed during validate")
     void validatesQueryIfInvalidAccountHeader() throws Throwable {
-        final var state =
-                MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
+        final var state = MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS)
+                .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
         final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
         final AccountID invalidRealmAccountId =
@@ -230,8 +230,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
     @Test
     @DisplayName("Contract Id is needed during validate")
     void validatesQueryIfInvalidContract() throws Throwable {
-        final var state =
-                MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS).build();
+        final var state = MapReadableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS)
+                .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(state);
         final var store = new ReadableAccountStoreImpl(readableStates, readableEntityCounters);
         ;
@@ -340,7 +340,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                 .nextToken(asToken(4L))
                 .previousToken(asToken(2L))
                 .build();
-        final var readableTokenRel = MapReadableKVState.<EntityIDPair, TokenRelation>builder(TokenService.NAME, TOKEN_RELS)
+        final var readableTokenRel = MapReadableKVState.<EntityIDPair, TokenRelation>builder(
+                        TokenService.NAME, TOKEN_RELS)
                 .value(
                         EntityIDPair.newBuilder()
                                 .accountId(id)
@@ -433,7 +434,8 @@ class CryptoGetAccountBalanceHandlerTest extends CryptoHandlerTestBase {
                 .nextToken(asToken(6L))
                 .previousToken(asToken(4L))
                 .build();
-        final var readableTokenRel = MapReadableKVState.<EntityIDPair, TokenRelation>builder(TokenService.NAME, TOKEN_RELS)
+        final var readableTokenRel = MapReadableKVState.<EntityIDPair, TokenRelation>builder(
+                        TokenService.NAME, TOKEN_RELS)
                 .value(
                         EntityIDPair.newBuilder()
                                 .accountId(id)

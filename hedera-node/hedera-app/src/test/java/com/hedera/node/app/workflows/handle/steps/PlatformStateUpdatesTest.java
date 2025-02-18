@@ -66,18 +66,15 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.WritableRosterStore;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-
-import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import org.assertj.core.api.Assertions;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -116,7 +113,10 @@ public class PlatformStateUpdatesTest implements TransactionFactory {
 
         when(writableStates.getSingleton(ENTITY_COUNTS_KEY))
                 .then(invocation -> new FunctionWritableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY, entityCountsBackingStore::get, entityCountsBackingStore::set));
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
+                        entityCountsBackingStore::get,
+                        entityCountsBackingStore::set));
 
         when(writableStates.getSingleton(FREEZE_TIME_KEY))
                 .then(invocation -> new FunctionWritableSingletonState<>(

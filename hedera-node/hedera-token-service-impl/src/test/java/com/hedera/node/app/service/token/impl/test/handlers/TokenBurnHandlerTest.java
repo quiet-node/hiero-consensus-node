@@ -528,8 +528,10 @@ class TokenBurnHandlerTest extends ParityTestBase {
                     .balance(10)
                     .build());
             writableNftStore = new WritableNftStore(
-                    new MapWritableStates(
-                            Map.of("NFTS", MapWritableKVState.builder(TokenService.NAME, "NFTS").build())),
+                    new MapWritableStates(Map.of(
+                            "NFTS",
+                            MapWritableKVState.builder(TokenService.NAME, "NFTS")
+                                    .build())),
                     mock(WritableEntityCounters.class));
 
             final var txn = newBurnTxn(TOKEN_123, 0, 1L);

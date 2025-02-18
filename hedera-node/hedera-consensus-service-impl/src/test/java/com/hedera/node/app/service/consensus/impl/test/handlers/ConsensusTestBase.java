@@ -207,7 +207,8 @@ public class ConsensusTestBase {
 
     @NonNull
     protected MapWritableKVState<TopicID, Topic> emptyWritableTopicState() {
-        return MapWritableKVState.<TopicID, Topic>builder(ConsensusService.NAME, TOPICS_KEY).build();
+        return MapWritableKVState.<TopicID, Topic>builder(ConsensusService.NAME, TOPICS_KEY)
+                .build();
     }
 
     @NonNull
@@ -226,7 +227,8 @@ public class ConsensusTestBase {
 
     @NonNull
     protected MapReadableKVState<TopicID, Topic> emptyReadableTopicState() {
-        return MapReadableKVState.<TopicID, Topic>builder(ConsensusService.NAME, TOPICS_KEY).build();
+        return MapReadableKVState.<TopicID, Topic>builder(ConsensusService.NAME, TOPICS_KEY)
+                .build();
     }
 
     protected void setUpStores(final HandleContext context) {

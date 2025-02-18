@@ -90,8 +90,8 @@ class ReadableHintsStoreTest {
         given(readableStates.getSingleton(CRS_STATE_KEY))
                 .willReturn(new FunctionReadableSingletonState<>(HintsService.NAME, CRS_STATE_KEY, () -> crsState));
         given(readableStates.getSingleton(NEXT_HINT_CONSTRUCTION_KEY))
-                .willReturn(
-                        new FunctionReadableSingletonState<>(HintsService.NAME, NEXT_HINT_CONSTRUCTION_KEY, () -> HintsConstruction.DEFAULT));
+                .willReturn(new FunctionReadableSingletonState<>(
+                        HintsService.NAME, NEXT_HINT_CONSTRUCTION_KEY, () -> HintsConstruction.DEFAULT));
         given(readableStates.getSingleton(ACTIVE_HINT_CONSTRUCTION_KEY))
                 .willReturn(new FunctionReadableSingletonState<>(
                         HintsService.NAME, ACTIVE_HINT_CONSTRUCTION_KEY, () -> HintsConstruction.DEFAULT));
@@ -106,7 +106,8 @@ class ReadableHintsStoreTest {
                 .newCrs(Bytes.wrap("pub1"))
                 .proof(Bytes.wrap("proof"))
                 .build();
-        final var state = MapReadableKVState.<NodeId, CrsPublicationTransactionBody>builder(HintsService.NAME, CRS_PUBLICATIONS_KEY)
+        final var state = MapReadableKVState.<NodeId, CrsPublicationTransactionBody>builder(
+                        HintsService.NAME, CRS_PUBLICATIONS_KEY)
                 .value(NodeId.DEFAULT, publication)
                 .value(NodeId.DEFAULT, publication)
                 .build();
@@ -116,7 +117,8 @@ class ReadableHintsStoreTest {
                 .willReturn(MapReadableKVState.<HintsPartyId, HintsKeySet>builder(HintsService.NAME, HINTS_KEY_SETS_KEY)
                         .build());
         given(readableStates.<PreprocessingVoteId, PreprocessingVote>get(PREPROCESSING_VOTES_KEY))
-                .willReturn(MapReadableKVState.<PreprocessingVoteId, PreprocessingVote>builder(HintsService.NAME, PREPROCESSING_VOTES_KEY)
+                .willReturn(MapReadableKVState.<PreprocessingVoteId, PreprocessingVote>builder(
+                                HintsService.NAME, PREPROCESSING_VOTES_KEY)
                         .build());
 
         subject = new ReadableHintsStoreImpl(readableStates);

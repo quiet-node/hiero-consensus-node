@@ -57,7 +57,6 @@ import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
@@ -66,8 +65,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
-
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -112,9 +109,11 @@ class TokenServiceApiImplTest {
             V0490TokenSchema.ALIASES_KEY, aliasesState));
     private final WritableStates entityWritableStates = new MapWritableStates(Map.of(
             ENTITY_ID_STATE_KEY,
-            new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.DEFAULT, c -> {}),
+            new FunctionWritableSingletonState<>(
+                    EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.DEFAULT, c -> {}),
             ENTITY_COUNTS_KEY,
-            new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {})));
+            new FunctionWritableSingletonState<>(
+                    EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, c -> {})));
     private WritableAccountStore accountStore;
 
     @Mock

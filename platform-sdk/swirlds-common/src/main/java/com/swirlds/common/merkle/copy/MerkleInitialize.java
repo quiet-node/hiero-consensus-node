@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2021-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -44,7 +43,9 @@ public final class MerkleInitialize {
      * @return the root of the tree, possibly different than original root if the root has been migrated
      */
     public static MerkleNode initializeAndMigrateTreeAfterDeserialization(
-            @NonNull final Configuration configuration, final MerkleNode root, final Map<Long /* class ID */, Integer /* version */> deserializationVersions) {
+            @NonNull final Configuration configuration,
+            final MerkleNode root,
+            final Map<Long /* class ID */, Integer /* version */> deserializationVersions) {
 
         if (root == null) {
             return null;

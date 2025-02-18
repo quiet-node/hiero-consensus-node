@@ -64,7 +64,6 @@ import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
@@ -72,8 +71,6 @@ import com.swirlds.state.test.fixtures.MapWritableStates;
 import com.swirlds.state.test.fixtures.TestBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.jetbrains.annotations.NotNull;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -128,7 +125,8 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
         aliasesState = new MapWritableKVState<>(TokenService.NAME, ALIASES_KEY);
 
         entityIdState = new FunctionWritableSingletonState<>(EntityIdService.NAME, "ENTITY_ID", () -> null, (a) -> {});
-        entityCountsState = new FunctionWritableSingletonState<>(EntityIdService.NAME, "ENTITY_COUNTS", () -> EntityCounts.DEFAULT, (a) -> {});
+        entityCountsState = new FunctionWritableSingletonState<>(
+                EntityIdService.NAME, "ENTITY_COUNTS", () -> EntityCounts.DEFAULT, (a) -> {});
         final var writableStates = MapWritableStates.builder()
                 .state(accountsState)
                 .state(aliasesState)

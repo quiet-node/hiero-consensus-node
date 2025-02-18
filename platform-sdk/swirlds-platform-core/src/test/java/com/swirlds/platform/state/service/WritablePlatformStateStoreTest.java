@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,12 +34,10 @@ import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.state.merkle.StateUtils;
-import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.merkle.disk.OnDiskWritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
-import java.time.Instant;
-
 import com.swirlds.virtualmap.VirtualMap;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,11 +59,8 @@ class WritablePlatformStateStoreTest {
         randotron = Randotron.create();
 
         final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final var tableConfig = new MerkleDbTableConfig(
-                (short) 1,
-                DigestType.SHA_384,
-                1,
-                merkleDbConfig.hashesRamToDiskThreshold());
+        final var tableConfig =
+                new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 1, merkleDbConfig.hashesRamToDiskThreshold());
         final var virtualMapLabel = "VirtualMap";
         final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
         final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, CONFIGURATION);
@@ -77,10 +72,7 @@ class WritablePlatformStateStoreTest {
 
         when(writableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
                 .thenReturn(new OnDiskWritableSingletonState<>(
-                        PlatformStateService.NAME,
-                        PLATFORM_STATE_KEY,
-                        PlatformState.PROTOBUF,
-                        virtualMap));
+                        PlatformStateService.NAME, PLATFORM_STATE_KEY, PlatformState.PROTOBUF, virtualMap));
         store = new WritablePlatformStateStore(writableStates, (version) -> new BasicSoftwareVersion(version.major()));
     }
 

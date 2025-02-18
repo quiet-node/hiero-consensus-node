@@ -127,7 +127,8 @@ class ConsensusGetTopicInfoTest extends ConsensusTestBase {
     @DisplayName("Topic Id is needed during validate")
     void validatesQueryIfInvalidTopic() {
         readableTopicState.reset();
-        final var state = MapReadableKVState.<Long, Topic>builder(ConsensusService.NAME, TOPICS_KEY).build();
+        final var state = MapReadableKVState.<Long, Topic>builder(ConsensusService.NAME, TOPICS_KEY)
+                .build();
         given(readableStates.<Long, Topic>get(TOPICS_KEY)).willReturn(state);
         final var store = new ReadableTopicStoreImpl(readableStates, entityCounters);
 
@@ -144,7 +145,8 @@ class ConsensusGetTopicInfoTest extends ConsensusTestBase {
     @DisplayName("Topic Id in transaction is needed during validate")
     void validatesQueryIfInvalidTopicInTrans() throws Throwable {
         readableTopicState.reset();
-        final var state = MapReadableKVState.<Long, Topic>builder(ConsensusService.NAME, TOPICS_KEY).build();
+        final var state = MapReadableKVState.<Long, Topic>builder(ConsensusService.NAME, TOPICS_KEY)
+                .build();
         given(readableStates.<Long, Topic>get(TOPICS_KEY)).willReturn(state);
         final var store = new ReadableTopicStoreImpl(readableStates, readableEntityCounters);
 

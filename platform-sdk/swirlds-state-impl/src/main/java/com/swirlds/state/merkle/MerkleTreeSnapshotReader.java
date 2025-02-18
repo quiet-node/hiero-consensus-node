@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,8 @@ public class MerkleTreeSnapshotReader {
      * @throws IOException if there is any problems with reading from a file
      */
     @NonNull
-    public static StateFileData readStateFileData(@NonNull final Configuration configuration, @NonNull final Path stateFile) throws IOException {
+    public static StateFileData readStateFileData(
+            @NonNull final Configuration configuration, @NonNull final Path stateFile) throws IOException {
         return deserializeAndDebugOnFailure(
                 () -> new BufferedInputStream(new FileInputStream(stateFile.toFile())),
                 (final MerkleDataInputStream in) -> {
@@ -91,7 +92,10 @@ public class MerkleTreeSnapshotReader {
      */
     @NonNull
     private static StateFileData readStateFileData(
-            @NonNull final Configuration configuration, @NonNull final Path stateFile, @NonNull final MerkleDataInputStream in, @NonNull final Path directory)
+            @NonNull final Configuration configuration,
+            @NonNull final Path stateFile,
+            @NonNull final MerkleDataInputStream in,
+            @NonNull final Path directory)
             throws IOException {
         try {
             final MerkleStateRoot<?> state = in.readMerkleTree(configuration, directory, MAX_MERKLE_NODES_IN_STATE);

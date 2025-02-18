@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,9 @@ import com.hedera.node.app.service.networkadmin.FreezeService;
 import com.hedera.node.app.service.networkadmin.impl.ReadableFreezeStoreImpl;
 import com.hedera.node.app.service.networkadmin.impl.WritableFreezeStore;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
-import org.jetbrains.annotations.NotNull;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -83,8 +80,8 @@ class WritableFreezeStoreTest {
     void testUpdateFileHash() {
         final AtomicReference<ProtoBytes> backingStore = new AtomicReference<>(null);
         when(writableStates.getSingleton(UPGRADE_FILE_HASH_KEY))
-                .then(invocation ->
-                        new FunctionWritableSingletonState<>(FreezeService.NAME, UPGRADE_FILE_HASH_KEY, backingStore::get, backingStore::set));
+                .then(invocation -> new FunctionWritableSingletonState<>(
+                        FreezeService.NAME, UPGRADE_FILE_HASH_KEY, backingStore::get, backingStore::set));
         final WritableFreezeStore store = new WritableFreezeStore(writableStates);
 
         // test with no file hash set

@@ -34,7 +34,6 @@ import com.swirlds.common.crypto.CryptographyFactory;
 import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
-import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
@@ -52,7 +51,6 @@ import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.MerkleTreeSnapshotReader;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
 import com.swirlds.state.merkle.disk.OnDiskWritableKVState;
 import com.swirlds.state.spi.ReadableKVState;
@@ -234,7 +232,7 @@ class SerializationTest extends MerkleTestBase {
 
         // temp commented so code compiles
 
-//        originalTree.init(context.getTime(), new NoOpMetrics(), merkleCryptography);
+        //        originalTree.init(context.getTime(), new NoOpMetrics(), merkleCryptography);
 
         // prepare the tree and create a snapshot
         originalTree.copy();
@@ -243,10 +241,10 @@ class SerializationTest extends MerkleTestBase {
 
         // Restore to a fresh MerkleDb instance
         MerkleDb.resetDefaultInstancePath();
-//        final MerkleStateRoot<?> state =
-//                originalTree.loadSnapshot(tempDir.resolve(MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME));
-//        initServices(schemaV1, state);
-//        assertTree(state);
+        //        final MerkleStateRoot<?> state =
+        //                originalTree.loadSnapshot(tempDir.resolve(MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME));
+        //        initServices(schemaV1, state);
+        //        assertTree(state);
     }
 
     /**

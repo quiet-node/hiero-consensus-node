@@ -28,11 +28,9 @@ import com.hedera.node.app.store.ServiceApiFactory;
 import com.hedera.node.app.workflows.handle.stack.SavepointStackImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,9 +68,11 @@ class ServiceApiFactoryTest {
         given(writableStates.get(any())).willReturn(new MapWritableKVState<>(TokenService.NAME, "ACCOUNTS"));
         given(stack.getWritableStates(EntityIdService.NAME)).willReturn(entityIdStates);
         given(entityIdStates.getSingleton("ENTITY_ID"))
-                .willReturn(new FunctionWritableSingletonState<>(EntityIdService.NAME, "ENTITY_ID", () -> null, (a) -> {}));
+                .willReturn(
+                        new FunctionWritableSingletonState<>(EntityIdService.NAME, "ENTITY_ID", () -> null, (a) -> {}));
         given(entityIdStates.getSingleton("ENTITY_COUNTS"))
-                .willReturn(new FunctionWritableSingletonState<>(EntityIdService.NAME, "ENTITY_COUNTS", () -> null, (a) -> {}));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME, "ENTITY_COUNTS", () -> null, (a) -> {}));
         assertNotNull(subject.getApi(TokenServiceApi.class));
     }
 

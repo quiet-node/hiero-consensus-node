@@ -16,6 +16,10 @@
 
 package com.swirlds.state.merkle;
 
+import static com.swirlds.logging.legacy.LogMarker.STARTUP;
+import static com.swirlds.state.merkle.StateUtils.decomposeLabel;
+import static com.swirlds.state.merkle.StateUtils.getVirtualMapKey;
+
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.constructable.ConstructableIgnored;
@@ -44,16 +48,11 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
-
-import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.state.merkle.StateUtils.decomposeLabel;
-import static com.swirlds.state.merkle.StateUtils.getVirtualMapKey;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * An implementation of {@link State}.
@@ -136,12 +135,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      */
     public abstract long getCurrentRound();
 
-
     // Migration things
     // TODO: double check assert usage
 
     // Config constants (TODO: move to config)
-    // Threads which iterate over the given Virtual Map, perform some operation and write into its own output queue/buffer
+    // Threads which iterate over the given Virtual Map, perform some operation and write into its own output
+    // queue/buffer
     private static final int THREAD_COUNT = 1;
     private static final long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
     private static final boolean VALIDATE_MIGRATION_FF = true;
@@ -154,10 +153,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
             final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
             final var tableConfig = new MerkleDbTableConfig(
-                    (short) 1,
-                    DigestType.SHA_384,
-                    MEGA_MAP_MAX_KEYS_HINT,
-                    merkleDbConfig.hashesRamToDiskThreshold());
+                    (short) 1, DigestType.SHA_384, MEGA_MAP_MAX_KEYS_HINT, merkleDbConfig.hashesRamToDiskThreshold());
             final var virtualMapLabel = "VirtualMap";
             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
             final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
@@ -170,7 +166,9 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
             // Migration
 
-            logger.info(STARTUP.getMarker(), "Migrating all of the states (Singleton, KV and Queue) to the one Virtual Map...");
+            logger.info(
+                    STARTUP.getMarker(),
+                    "Migrating all of the states (Singleton, KV and Queue) to the one Virtual Map...");
 
             migrateKVStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
             migrateQueueStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
@@ -200,7 +198,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 .filter(child -> child instanceof VirtualMap)
                 .map(child -> (VirtualMap) child)
                 .forEach(virtualMapToMigrate -> {
-
                     final var virtualMapLabel = virtualMapToMigrate.getLabel();
                     final var labelPair = decomposeLabel(virtualMapToMigrate.getLabel());
                     final var serviceName = labelPair.key();
@@ -208,18 +205,30 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     final var stateIdBytes = getVirtualMapKey(serviceName, stateKey);
 
                     // TODO: check possibilities for optimization
-                    InterruptableConsumer<Pair<Bytes, Bytes>> handler = pair ->
-                            virtualMap.putBytes(stateIdBytes.append(pair.key()), pair.value());
+                    InterruptableConsumer<Pair<Bytes, Bytes>> handler =
+                            pair -> virtualMap.putBytes(stateIdBytes.append(pair.key()), pair.value());
 
                     try {
-                        logger.info(STARTUP.getMarker(), "\nMigrating {} (size: {})...", virtualMapLabel, virtualMapToMigrate.size());
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "\nMigrating {} (size: {})...",
+                                virtualMapLabel,
+                                virtualMapToMigrate.size());
                         long migrationStartTime = System.currentTimeMillis();
 
                         // TODO: decide on method from VirtualMapMigration
-                        VirtualMapMigration.extractVirtualMapData(AdHocThreadManager.getStaticThreadManager(), virtualMapToMigrate, handler, THREAD_COUNT);
+                        VirtualMapMigration.extractVirtualMapData(
+                                AdHocThreadManager.getStaticThreadManager(),
+                                virtualMapToMigrate,
+                                handler,
+                                THREAD_COUNT);
 
                         long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
-                        logger.info(STARTUP.getMarker(), "Migration complete for {} took {} ms", virtualMapLabel, migrationTimeMs);
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "Migration complete for {} took {} ms",
+                                virtualMapLabel,
+                                migrationTimeMs);
                         logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMap.size());
                         kvMigrationStartTime.addAndGet(migrationTimeMs);
                         totalMigrationTimeMs.addAndGet(migrationTimeMs);
@@ -230,12 +239,19 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
                     if (VALIDATE_MIGRATION_FF) {
                         long validationStartTime = System.currentTimeMillis();
-                        logger.info(STARTUP.getMarker(), "Validating the new Virtual Map contains all data from the KV State {}", virtualMapToMigrate.getLabel());
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "Validating the new Virtual Map contains all data from the KV State {}",
+                                virtualMapToMigrate.getLabel());
 
                         validateKVStateMigrated(virtualMap, virtualMapToMigrate);
 
                         long validationTimeMs = System.currentTimeMillis() - validationStartTime;
-                        logger.info(STARTUP.getMarker(), "Validation complete for the KV State {} took {} ms", virtualMapToMigrate.getLabel(), validationTimeMs);
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "Validation complete for the KV State {} took {} ms",
+                                virtualMapToMigrate.getLabel(),
+                                validationTimeMs);
                         totalValidationTimeMs.addAndGet(validationTimeMs);
                     }
                 });
@@ -267,14 +283,14 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 .filter(child -> child instanceof QueueNode<?>)
                 .map(child -> (QueueNode<?>) child)
                 .forEach(queueNode -> {
-
                     final var queueNodeLabel = queueNode.getLabel();
                     final var labelPair = decomposeLabel(queueNodeLabel);
                     final var serviceName = labelPair.key();
                     final var stateKey = labelPair.value();
                     final FCQueue<ValueLeaf> originalStore = queueNode.getRight();
 
-                    logger.info(STARTUP.getMarker(), "\nMigrating {} (size: {})...", queueNodeLabel, originalStore.size());
+                    logger.info(
+                            STARTUP.getMarker(), "\nMigrating {} (size: {})...", queueNodeLabel, originalStore.size());
                     long migrationStartTime = System.currentTimeMillis();
 
                     // Migrate data
@@ -291,7 +307,11 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     virtualMap.put(getVirtualMapKey(serviceName, stateKey), queueState, QueueCodec.INSTANCE);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
-                    logger.info(STARTUP.getMarker(), "Migration complete for {} took {} ms", queueNodeLabel, migrationTimeMs);
+                    logger.info(
+                            STARTUP.getMarker(),
+                            "Migration complete for {} took {} ms",
+                            queueNodeLabel,
+                            migrationTimeMs);
                     logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMap.size());
                     queueMigrationStartTime.addAndGet(migrationTimeMs);
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
@@ -299,30 +319,34 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
                     if (VALIDATE_MIGRATION_FF) {
                         long validationStartTime = System.currentTimeMillis();
-                        logger.info(STARTUP.getMarker(), "Validating the new Virtual Map contains all data from the Queue State {}", queueNodeLabel);
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "Validating the new Virtual Map contains all data from the Queue State {}",
+                                queueNodeLabel);
 
                         validateQueueStateMigrated(virtualMap, queueNodeLabel, serviceName, head, tail);
 
                         long validationTimeMs = System.currentTimeMillis() - validationStartTime;
-                        logger.info(STARTUP.getMarker(), "Validation complete for the Queue State {} took {} ms", queueNodeLabel, validationTimeMs);
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "Validation complete for the Queue State {} took {} ms",
+                                queueNodeLabel,
+                                validationTimeMs);
                         totalValidationTimeMs.addAndGet(validationTimeMs);
                     }
                 });
 
-        logger.info(STARTUP.getMarker(), "Migration complete for Queue states, took {} ms", queueMigrationStartTime.get());
+        logger.info(
+                STARTUP.getMarker(), "Migration complete for Queue states, took {} ms", queueMigrationStartTime.get());
     }
 
     private static void validateQueueStateMigrated(
-            VirtualMap virtualMap,
-            String serviceName,
-            String stateKey,
-            long head,
-            long tail) {
+            VirtualMap virtualMap, String serviceName, String stateKey, long head, long tail) {
         // Validate Queue State object
         assert virtualMap.containsKey(getVirtualMapKey(serviceName, stateKey));
 
         // Validate Queue State values
-        for (long i = head; i < tail; i ++) {
+        for (long i = head; i < tail; i++) {
             assert virtualMap.containsKey(getVirtualMapKey(serviceName, stateKey, i));
         }
     }
@@ -340,7 +364,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 .filter(child -> child instanceof SingletonNode<?>)
                 .map(child -> (SingletonNode<?>) child)
                 .forEach(singletonNode -> {
-
                     final StringLeaf originalLabeled = singletonNode.getLeft();
                     final String singletonStateLabel = originalLabeled.getLabel();
                     final var labelPair = decomposeLabel(singletonStateLabel);
@@ -352,11 +375,16 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     long migrationStartTime = System.currentTimeMillis();
 
                     final var codec = originalStore.getCodec();
-                    final var value = Objects.requireNonNull(originalStore.getValue(), "Null value is not expected here");
+                    final var value =
+                            Objects.requireNonNull(originalStore.getValue(), "Null value is not expected here");
                     virtualMap.put(getVirtualMapKey(serviceName, stateKey), value, codec);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
-                    logger.info(STARTUP.getMarker(), "Migration complete for {} took {} ms", singletonStateLabel, migrationTimeMs);
+                    logger.info(
+                            STARTUP.getMarker(),
+                            "Migration complete for {} took {} ms",
+                            singletonStateLabel,
+                            migrationTimeMs);
                     logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMap.size());
                     singletonMigrationTimeMs.addAndGet(migrationTimeMs);
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
@@ -364,17 +392,25 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
                     if (VALIDATE_MIGRATION_FF) {
                         long validationStartTime = System.currentTimeMillis();
-                        logger.info(STARTUP.getMarker(), "Validating the new Virtual Map contains all data from the Singleton State {}", singletonStateLabel);
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "Validating the new Virtual Map contains all data from the Singleton State {}",
+                                singletonStateLabel);
 
                         validateSingletonStateMigrated(virtualMap, serviceName, stateKey);
 
                         final long validationTimeMs = System.currentTimeMillis() - validationStartTime;
-                        logger.info(STARTUP.getMarker(), "Validation complete for the Singleton State {} took {} ms", singletonStateLabel, validationTimeMs);
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "Validation complete for the Singleton State {} took {} ms",
+                                singletonStateLabel,
+                                validationTimeMs);
                         totalValidationTimeMs.addAndGet(validationTimeMs);
                     }
                 });
 
-        logger.info(STARTUP.getMarker(), "Migration complete for Singleton states, took {} ms", singletonMigrationTimeMs);
+        logger.info(
+                STARTUP.getMarker(), "Migration complete for Singleton states, took {} ms", singletonMigrationTimeMs);
     }
 
     private static void validateSingletonStateMigrated(VirtualMap virtualMap, String serviceName, String stateKey) {

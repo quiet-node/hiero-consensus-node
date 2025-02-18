@@ -55,7 +55,6 @@ import com.hedera.node.config.data.StakingConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.state.spi.WritableSingletonState;
-import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
@@ -66,8 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -185,8 +182,8 @@ public class EndOfStakingPeriodUpdaterTest {
 
         // Create staking reward store (with data)
         final var backingValue = new AtomicReference<>(new NetworkStakingRewards(true, totalStakeRewardStart, 0, 0));
-        WritableSingletonState<NetworkStakingRewards> stakingRewardsState =
-                new FunctionWritableSingletonState<>(TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, backingValue::get, backingValue::set);
+        WritableSingletonState<NetworkStakingRewards> stakingRewardsState = new FunctionWritableSingletonState<>(
+                TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, backingValue::get, backingValue::set);
         final var states = mock(WritableStates.class);
         given(states.getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn((WritableSingletonState) stakingRewardsState);

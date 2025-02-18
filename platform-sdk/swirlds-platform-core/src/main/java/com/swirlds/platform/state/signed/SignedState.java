@@ -222,7 +222,8 @@ public class SignedState implements SignedStateInfo {
 
     public void init(@NonNull PlatformContext platformContext) {
         // temp to compile code
-//        state.init(platformContext.getTime(), platformContext.getMetrics(), platformContext.getMerkleCryptography());
+        //        state.init(platformContext.getTime(), platformContext.getMetrics(),
+        // platformContext.getMerkleCryptography());
     }
 
     /**
