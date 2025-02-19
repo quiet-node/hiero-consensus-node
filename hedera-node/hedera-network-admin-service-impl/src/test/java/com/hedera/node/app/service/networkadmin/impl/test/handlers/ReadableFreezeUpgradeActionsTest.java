@@ -51,7 +51,7 @@ import com.hedera.node.app.service.networkadmin.impl.WritableFreezeStore;
 import com.hedera.node.app.service.networkadmin.impl.handlers.FreezeUpgradeActions;
 import com.hedera.node.app.service.networkadmin.impl.handlers.ReadableFreezeUpgradeActions;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
-import com.hedera.node.app.spi.fixtures.ids.EntityIdFactoryImpl;
+import com.hedera.node.app.spi.fixtures.ids.FakeEntityIdFactoryImpl;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
@@ -200,7 +200,7 @@ class ReadableFreezeUpgradeActionsTest {
                 upgradeFileStore,
                 nodeStore,
                 stakingInfoStore,
-                new EntityIdFactoryImpl(0, 0));
+                new FakeEntityIdFactoryImpl(0, 0));
 
         // set up test zip
         zipSourceDir = Files.createTempDirectory("zipSourceDir");
@@ -509,7 +509,7 @@ class ReadableFreezeUpgradeActionsTest {
                 upgradeFileStore,
                 nodeStore,
                 stakingInfoStore,
-                new EntityIdFactoryImpl(0, 0));
+                new FakeEntityIdFactoryImpl(0, 0));
         var stakingNodeInfo1 = mock(StakingNodeInfo.class);
         var stakingNodeInfo2 = mock(StakingNodeInfo.class);
         var stakingNodeInfo4 = mock(StakingNodeInfo.class);
@@ -640,7 +640,7 @@ class ReadableFreezeUpgradeActionsTest {
                 upgradeFileStore,
                 nodeStore,
                 stakingInfoStore,
-                new EntityIdFactoryImpl(0, 0));
+                new FakeEntityIdFactoryImpl(0, 0));
         var stakingNodeInfo1 = mock(StakingNodeInfo.class);
         var stakingNodeInfo2 = mock(StakingNodeInfo.class);
         var stakingNodeInfo3 = mock(StakingNodeInfo.class);

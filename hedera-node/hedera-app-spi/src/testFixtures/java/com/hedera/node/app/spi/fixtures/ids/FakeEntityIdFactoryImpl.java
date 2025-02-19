@@ -74,9 +74,4 @@ public class FakeEntityIdFactoryImpl implements EntityIdFactory {
                 .alias(alias)
                 .build();
     }
-
-    @Override
-    public FileID newFileId(long number) {
-        return new FileID(shard, realm, number);
-    }
 }
