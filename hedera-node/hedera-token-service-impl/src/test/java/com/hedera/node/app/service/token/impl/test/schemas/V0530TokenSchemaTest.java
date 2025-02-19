@@ -38,6 +38,7 @@ import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.state.token.AccountPendingAirdrop;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.node.app.ids.EntityIdService;
+import com.hedera.node.app.ids.AppEntityIdFactory;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.ids.schemas.V0490EntityIdSchema;
 import com.hedera.node.app.service.token.TokenService;
@@ -133,7 +134,8 @@ class V0530TokenSchemaTest {
                 null,
                 0L,
                 new HashMap<>(),
-                startupNetworks));
+                startupNetworks,
+                new AppEntityIdFactory(config)));
 
         final var updatedStates = newStates.get(STAKING_INFO_KEY);
         // sets minStake on all nodes to 0

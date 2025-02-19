@@ -27,7 +27,7 @@ import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.io.InputOutputStream;
 import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
-import com.swirlds.platform.state.PlatformMerkleStateRoot;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.BlockingState;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import java.io.IOException;
@@ -71,7 +71,7 @@ class StateTests {
 
         io.startReading();
 
-        final PlatformMerkleStateRoot decodedState =
+        final MerkleNodeState decodedState =
                 io.getInput().readMerkleTree(CONFIGURATION, testDirectory, Integer.MAX_VALUE);
         MerkleCryptoFactory.getInstance().digestTreeSync(decodedState);
 

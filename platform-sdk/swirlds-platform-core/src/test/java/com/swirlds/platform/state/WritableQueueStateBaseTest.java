@@ -19,6 +19,7 @@ package com.swirlds.platform.state;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.inOrder;
 
 import com.swirlds.state.spi.QueueChangeListener;
@@ -346,6 +347,23 @@ final class WritableQueueStateBaseTest<E> extends ReadableQueueStateBaseTest<E> 
             subject.peek();
             subject.commit();
             assertThat(backingList).containsExactly(CHEMISTRY);
+        }
+
+        @Test
+        void commitResetsIndex() {
+            final var backingList = new LinkedList<String>();
+            final var subject = new ListWritableQueueState<>(STEAM_STATE_KEY, backingList);
+            subject.add(ART);
+            subject.add(BIOLOGY);
+            subject.removeIf(s -> true);
+            assertEquals(BIOLOGY, subject.peek());
+            subject.removeIf(s -> true);
+            subject.commit();
+            assertThat(backingList).isEmpty();
+
+            subject.add(ART);
+            subject.add(ECOLOGY);
+            assertEquals(ART, subject.peek());
         }
 
         @Test

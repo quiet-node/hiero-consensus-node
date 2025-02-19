@@ -53,7 +53,6 @@ testModuleInfo {
     requires("com.swirlds.platform.core.test.fixtures")
     requires("com.swirlds.platform.test")
     requires("com.swirlds.config.extensions.test.fixtures")
-    requires("com.swirlds.platform.core.test.fixtures")
     requires("com.swirlds.state.api.test.fixtures")
     requires("com.swirlds.state.impl.test.fixtures")
     requires("jakarta.inject")

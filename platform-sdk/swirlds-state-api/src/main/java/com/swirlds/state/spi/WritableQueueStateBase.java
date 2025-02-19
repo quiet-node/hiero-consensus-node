@@ -123,6 +123,7 @@ public abstract class WritableQueueStateBase<E> implements WritableQueueState<E>
         addedElements.clear();
         peekedElement = null;
         dsIterator = null;
+        currentAddedElementIndex = 0;
     }
 
     @NonNull

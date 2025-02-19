@@ -78,7 +78,7 @@ public class AdapterUtils {
      */
     public static MapWritableKVState<ProtoBytes, AccountID> wellKnownAliasState() {
         final Map<ProtoBytes, AccountID> wellKnownAliases = Map.ofEntries(
-                Map.entry(new ProtoBytes(Bytes.wrap(CURRENTLY_UNUSED_ALIAS)), asAccount(0L)),
+                Map.entry(new ProtoBytes(Bytes.wrap(CURRENTLY_UNUSED_ALIAS)), asAccount(0L, 0L, 0L)),
                 Map.entry(new ProtoBytes(Bytes.wrap(NO_RECEIVER_SIG_ALIAS)), toPbj(NO_RECEIVER_SIG)),
                 Map.entry(new ProtoBytes(Bytes.wrap(RECEIVER_SIG_ALIAS)), toPbj(RECEIVER_SIG)),
                 Map.entry(
