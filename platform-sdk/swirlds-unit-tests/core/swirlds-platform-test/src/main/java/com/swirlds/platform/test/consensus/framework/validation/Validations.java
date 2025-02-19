@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2016-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,9 @@ import static com.swirlds.platform.test.consensus.framework.validation.Validatio
 import static com.swirlds.platform.test.consensus.framework.validation.Validations.ValidationType.DIFFERENT_ORDER;
 import static com.swirlds.platform.test.consensus.framework.validation.Validations.ValidationType.INPUTS_ARE_SAME;
 import static com.swirlds.platform.test.consensus.framework.validation.Validations.ValidationType.RATIOS;
+import static com.swirlds.platform.test.consensus.framework.validation.Validations.ValidationType.STATE_CREATION_TIMESTAMPS;
+import static com.swirlds.platform.test.consensus.framework.validation.Validations.ValidationType.STATE_IS_COMPLETE;
+import static com.swirlds.platform.test.consensus.framework.validation.Validations.ValidationType.STATE_IS_VERIFIABLE;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashMap;
@@ -33,6 +36,11 @@ public class Validations {
             DIFFERENT_ORDER, InputEventsValidation::validateEventsAreInDifferentOrder,
             CONSENSUS_EVENTS, ConsensusRoundValidation::validateConsensusRounds,
             CONSENSUS_TIMESTAMPS, TimestampChecker::validateConsensusTimestamps));
+
+    private final Map<ValidationType, StateValidation> consensusStateValidationsMap = new HashMap<>(Map.of(
+            STATE_IS_COMPLETE, SignedStateValidation::isComplete,
+            STATE_IS_VERIFIABLE, SignedStateValidation::isVerifiable,
+            STATE_CREATION_TIMESTAMPS, SignedStateValidation::isWithCorrectCreationTimestamp));
 
     public static @NonNull Validations standard() {
         return new Validations();
@@ -52,12 +60,19 @@ public class Validations {
         return map.values().stream().toList();
     }
 
+    public @NonNull List<StateValidation> getConsensusStateValidationsList() {
+        return consensusStateValidationsMap.values().stream().toList();
+    }
+
     public enum ValidationType {
         INPUTS_ARE_SAME,
         DIFFERENT_ORDER,
         CONSENSUS_EVENTS,
         CONSENSUS_TIMESTAMPS,
         RATIOS,
-        NO_EVENTS_LOST
+        NO_EVENTS_LOST,
+        STATE_IS_COMPLETE,
+        STATE_IS_VERIFIABLE,
+        STATE_CREATION_TIMESTAMPS
     }
 }

@@ -28,6 +28,8 @@ import com.swirlds.platform.state.PlatformMerkleStateRoot;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.address.AddressBook;
+import com.swirlds.platform.test.consensus.framework.validation.StateValidation;
+import com.swirlds.platform.test.consensus.framework.validation.Validations;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedNetwork;
 import com.swirlds.state.merkle.MerkleStateRoot;
@@ -227,14 +229,17 @@ public class Turtle {
     }
 
     public void validate() {
+        final Validations validations = Validations.standard();
+
         for (final TurtleNode node : nodes) {
             List<ReservedSignedState> reservedSignedStates =
                     node.getSignedStateHolder().getCollectedSignedStates();
 
+            for (final StateValidation validator : validations.getConsensusStateValidationsList()) {
+                validator.validate(reservedSignedStates);
+            }
+
             for (final ReservedSignedState reservedSignedState : reservedSignedStates) {
-                assertTrue(reservedSignedState.get().isComplete());
-                assertTrue(reservedSignedState.get().isVerifiable());
-                assertTrue(reservedSignedState.get().getCreationTimestamp().isBefore(Instant.now()));
                 assertTrue(reservedSignedState
                         .get()
                         .getSigSet()
