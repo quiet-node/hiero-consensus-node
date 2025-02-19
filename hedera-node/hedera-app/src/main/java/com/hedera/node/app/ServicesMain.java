@@ -1,4 +1,19 @@
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * Copyright (C) 2025 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app;
 
 import static com.swirlds.common.io.utility.FileUtils.getAbsolutePath;
@@ -204,6 +219,7 @@ public class ServicesMain implements SwirldMain {
      * @param args optionally, what node id to run; required if the address book is ambiguous
      */
     public static void main(final String... args) throws Exception {
+        initLogging();
         // --- Configure platform infrastructure and context from the command line and environment ---
         BootstrapUtils.setupConstructableRegistry();
         final var diskAddressBook = loadAddressBook(DEFAULT_CONFIG_FILE_NAME);
@@ -219,7 +235,7 @@ public class ServicesMain implements SwirldMain {
         final var selfId = ensureSingleNode(nodesToRun, commandLineArgs.localNodesToStart());
         final var platformConfig = buildPlatformConfig();
         BootstrapUtils.setupConstructableRegistryWithConfiguration(platformConfig);
-        final var networkKeysAndCerts = initNodeSecurity(diskAddressBook, platformConfig);
+        final var networkKeysAndCerts = initNodeSecurity(diskAddressBook, platformConfig, Set.copyOf(nodesToRun));
         final var keysAndCerts = networkKeysAndCerts.get(selfId);
         setupGlobalMetrics(platformConfig);
         metrics = getMetricsProvider().createPlatformMetrics(selfId);
@@ -245,8 +261,6 @@ public class ServicesMain implements SwirldMain {
         hedera = newHedera(selfId, metrics);
         final var version = hedera.getSoftwareVersion();
         final var isGenesis = new AtomicBoolean(false);
-        // We want to be able to see the schema migration logs, so init logging here
-        initLogging();
         logger.info("Starting node {} with version {}", selfId, version);
         final var reservedState = loadInitialState(
                 platformConfig,
