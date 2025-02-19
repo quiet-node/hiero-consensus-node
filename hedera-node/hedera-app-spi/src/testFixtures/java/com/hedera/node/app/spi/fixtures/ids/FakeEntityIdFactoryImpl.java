@@ -53,11 +53,6 @@ public class FakeEntityIdFactoryImpl implements EntityIdFactory {
     }
 
     @Override
-    public FileID newFileId(final long number) {
-        return new FileID(shard, realm, number);
-    }
-
-    @Override
     public AccountID newAccountId(long number) {
         return AccountID.newBuilder()
                 .shardNum(shard)
@@ -73,5 +68,10 @@ public class FakeEntityIdFactoryImpl implements EntityIdFactory {
                 .realmNum(realm)
                 .alias(alias)
                 .build();
+    }
+
+    @Override
+    public FileID newFileId(long number) {
+        return new FileID(shard, realm, number);
     }
 }
