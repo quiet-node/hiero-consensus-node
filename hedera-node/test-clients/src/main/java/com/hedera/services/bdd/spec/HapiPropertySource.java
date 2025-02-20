@@ -17,6 +17,8 @@
 package com.hedera.services.bdd.spec;
 
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.fromByteString;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil.asHeadlongAddress;
 import static com.hedera.services.bdd.suites.utils.sysfiles.BookEntryPojo.asOctets;
 import static java.lang.System.arraycopy;
@@ -58,9 +60,13 @@ import java.util.stream.Stream;
 public interface HapiPropertySource {
 
     String ENTITY_STRING = "%d.%d.%d";
-    // Default shard and realm static ID building and comparisons
-    int shard = 0;
-    long realm = 0;
+
+    // Default shard and realm for static ID building and comparisons
+    int shard = SHARD;
+    long realm = REALM;
+
+    String NODE_BLOCK_STREAM_DIR = String.format("block-%d.%d.3", SHARD, REALM);
+    String NODE_RECORD_STREAM_DIR = String.format("record%d.%d.3", SHARD, REALM);
 
     static byte[] explicitBytesOf(@NonNull final Address address) {
         var asBytes = address.value().toByteArray();
@@ -501,20 +507,33 @@ public interface HapiPropertySource {
     }
 
     static ContractID contractIdFromHexedMirrorAddress(final String hexedEvm) {
+        byte[] unhex = CommonUtils.unhex(hexedEvm);
         return ContractID.newBuilder()
-                .setContractNum(Longs.fromByteArray(Arrays.copyOfRange(CommonUtils.unhex(hexedEvm), 12, 20)))
+                .setShardNum(Ints.fromByteArray(Arrays.copyOfRange(unhex, 0, 4)))
+                .setRealmNum(Longs.fromByteArray(Arrays.copyOfRange(unhex, 4, 12)))
+                .setContractNum(Longs.fromByteArray(Arrays.copyOfRange(unhex, 12, 20)))
                 .build();
     }
 
     static AccountID accountIdFromHexedMirrorAddress(final String hexedEvm) {
+        byte[] unhex = CommonUtils.unhex(hexedEvm);
         return AccountID.newBuilder()
-                .setAccountNum(Longs.fromByteArray(Arrays.copyOfRange(CommonUtils.unhex(hexedEvm), 12, 20)))
+                .setShardNum(Ints.fromByteArray(Arrays.copyOfRange(unhex, 0, 4)))
+                .setRealmNum(Longs.fromByteArray(Arrays.copyOfRange(unhex, 4, 12)))
+                .setAccountNum(Longs.fromByteArray(Arrays.copyOfRange(unhex, 12, 20)))
                 .build();
     }
 
     static String literalIdFromHexedMirrorAddress(final String hexedEvm) {
+        byte[] unhex = CommonUtils.unhex(hexedEvm);
         return HapiPropertySource.asContractString(ContractID.newBuilder()
-                .setContractNum(Longs.fromByteArray(Arrays.copyOfRange(CommonUtils.unhex(hexedEvm), 12, 20)))
+                .setShardNum(Ints.fromByteArray(Arrays.copyOfRange(unhex, 0, 4)))
+                .setRealmNum(Longs.fromByteArray(Arrays.copyOfRange(unhex, 4, 12)))
+                .setContractNum(Longs.fromByteArray(Arrays.copyOfRange(unhex, 12, 20)))
                 .build());
+    }
+
+    static String asEntityString(final long num) {
+        return String.format(ENTITY_STRING, shard, realm, num);
     }
 }

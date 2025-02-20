@@ -40,6 +40,7 @@ import com.hedera.node.app.service.token.impl.handlers.transfer.NFTOwnersChangeS
 import com.hedera.node.app.service.token.impl.handlers.transfer.ReplaceAliasesWithIDsInOp;
 import com.hedera.node.app.service.token.impl.handlers.transfer.TransferContextImpl;
 import com.hedera.node.app.spi.workflows.WorkflowException;
+import com.hedera.node.app.spi.workflows.HandleContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -79,10 +80,11 @@ class NFTOwnersChangeStepTest extends StepsBase {
 
     @Test
     void changesNftOwners() {
-        final var receiver = asAccount(tokenReceiver);
+        final var receiver = asAccount(0L, 0L, tokenReceiver);
         given(handleContext.payer()).willReturn(spenderId);
         given(expiryValidator.expirationStatus(any(), anyBoolean(), anyLong())).willReturn(OK);
         given(handleContext.savepointStack()).willReturn(stack);
+        given(handleContext.dispatchMetadata()).willReturn(HandleContext.DispatchMetadata.EMPTY_METADATA);
         final var replacedOp = getReplacedOp();
         changeNFTOwnersStep = new NFTOwnersChangeStep(replacedOp.tokenTransfers(), payerId);
         final var nft = writableNftStore.get(nftIdSl1);
@@ -168,12 +170,13 @@ class NFTOwnersChangeStepTest extends StepsBase {
                 .build();
         givenTxn(body, spenderId);
         given(handleContext.savepointStack()).willReturn(stack);
+        given(handleContext.dispatchMetadata()).willReturn(HandleContext.DispatchMetadata.EMPTY_METADATA);
         ensureAliasesStep = new EnsureAliasesStep(body);
         replaceAliasesWithIDsInOp = new ReplaceAliasesWithIDsInOp();
         associateTokenRecepientsStep = new AssociateTokenRecipientsStep(body);
         transferContext = new TransferContextImpl(handleContext);
 
-        final var receiver = asAccount(tokenReceiver);
+        final var receiver = asAccount(0L, 0L, tokenReceiver);
         given(expiryValidator.expirationStatus(any(), anyBoolean(), anyLong())).willReturn(OK);
         final var replacedOp = getReplacedOp();
         changeNFTOwnersStep = new NFTOwnersChangeStep(replacedOp.tokenTransfers(), spenderId);
@@ -240,6 +243,7 @@ class NFTOwnersChangeStepTest extends StepsBase {
                 .build();
         givenTxn(body, spenderId);
         given(handleContext.savepointStack()).willReturn(stack);
+        given(handleContext.dispatchMetadata()).willReturn(HandleContext.DispatchMetadata.EMPTY_METADATA);
         ensureAliasesStep = new EnsureAliasesStep(body);
         replaceAliasesWithIDsInOp = new ReplaceAliasesWithIDsInOp();
         associateTokenRecepientsStep = new AssociateTokenRecipientsStep(body);

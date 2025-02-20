@@ -16,8 +16,10 @@
 
 package com.hedera.node.app.service.contract.impl.test.exec.systemcontracts;
 
+import static com.hedera.hapi.node.base.ResponseCodeEnum.CONTRACT_REVERT_EXECUTED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.FullResult.haltResult;
+import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.FullResult.revertResult;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.FullResult.successResult;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.HtsSystemContract.HTS_167_CONTRACT_ID;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.Call.PricedResult.gasOnly;
@@ -43,6 +45,8 @@ import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.EntityTyp
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import java.nio.ByteBuffer;
+
+import com.hedera.node.app.spi.workflows.WorkflowException;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
@@ -146,6 +150,19 @@ class HtsSystemContractTest {
         frameUtils.when(() -> contractsConfigOf(frame)).thenReturn(DEFAULT_CONTRACTS_CONFIG);
         final var expected = haltResult(ExceptionalHaltReason.INVALID_OPERATION, frame.getRemainingGas());
         final var result = subject.computeFully(HTS_167_CONTRACT_ID, Bytes.EMPTY, frame);
+        assertSamePrecompileResult(expected, result);
+    }
+
+    @Test
+    void testComputeFullyWithWorkflowExceptionFromSystemContract() {
+        givenValidCallAttempt();
+        frameUtils
+                .when(() -> callTypeOf(frame, EntityType.TOKEN))
+                .thenReturn(FrameUtils.CallType.DIRECT_OR_PROXY_REDIRECT);
+        frameUtils.when(() -> contractsConfigOf(frame)).thenReturn(DEFAULT_CONTRACTS_CONFIG);
+        given(attempt.asExecutableCall()).willThrow(new WorkflowException(CONTRACT_REVERT_EXECUTED));
+        final var expected = revertResult(CONTRACT_REVERT_EXECUTED, frame.getRemainingGas());
+        final var result = subject.computeFully(HTS_167_CONTRACT_ID, validInput, frame);
         assertSamePrecompileResult(expected, result);
     }
 

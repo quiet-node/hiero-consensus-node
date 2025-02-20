@@ -427,7 +427,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
     void preHandleRequiresAdminKeySigForNonAddressBookAdmin() {
         txn = new NodeUpdateBuilder()
                 .withNodeId(nodeId.number())
-                .withAccountId(asAccount(53))
+                .withAccountId(asAccount(0L, 0L, 53))
                 .withAdminKey(key)
                 .build();
         final var context = setupPreHandle(true, txn);
@@ -499,7 +499,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
         txn = new NodeUpdateBuilder()
                 .withNodeId(nodeId.number())
                 .withAdminKey(key)
-                .withAccountId(asAccount(53))
+                .withAccountId(asAccount(0L, 0L, 53))
                 .build();
         final var context = setupPreHandle(false, txn);
         assertThrowsPreCheck(() -> subject.preHandle(context), UPDATE_NODE_ACCOUNT_NOT_ALLOWED);

@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.builder;
 
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.getGlobalMetrics;
@@ -161,6 +146,8 @@ public class PlatformComponentBuilder {
     private TransactionHandler transactionHandler;
     private LatestCompleteStateNotifier latestCompleteStateNotifier;
 
+    private SwirldsPlatform swirldsPlatform;
+
     private boolean metricsDocumentationEnabled = true;
 
     /**
@@ -208,7 +195,8 @@ public class PlatformComponentBuilder {
         used = true;
 
         try (final ReservedSignedState initialState = blocks.initialState()) {
-            return new SwirldsPlatform(this);
+            swirldsPlatform = new SwirldsPlatform(this);
+            return swirldsPlatform;
         } finally {
             if (metricsDocumentationEnabled) {
                 // Future work: eliminate the static variables that require this code to exist
@@ -1084,7 +1072,8 @@ public class PlatformComponentBuilder {
                         () -> blocks.clearAllPipelinesForReconnectReference()
                                 .get()
                                 .run(),
-                        blocks.intakeEventCounter());
+                        blocks.intakeEventCounter(),
+                        blocks.platformStateFacade());
             } else {
                 gossip = new SyncGossip(
                         blocks.platformContext(),
@@ -1100,7 +1089,8 @@ public class PlatformComponentBuilder {
                         () -> blocks.clearAllPipelinesForReconnectReference()
                                 .get()
                                 .run(),
-                        blocks.intakeEventCounter());
+                        blocks.intakeEventCounter(),
+                        blocks.platformStateFacade());
             }
         }
         return gossip;
@@ -1169,7 +1159,11 @@ public class PlatformComponentBuilder {
             final String actualMainClassName = stateConfig.getMainClassName(blocks.mainClassName());
 
             stateSnapshotManager = new DefaultStateSnapshotManager(
-                    blocks.platformContext(), actualMainClassName, blocks.selfId(), blocks.swirldName());
+                    blocks.platformContext(),
+                    actualMainClassName,
+                    blocks.selfId(),
+                    blocks.swirldName(),
+                    blocks.platformStateFacade());
         }
         return stateSnapshotManager;
     }
@@ -1200,7 +1194,7 @@ public class PlatformComponentBuilder {
     @NonNull
     public HashLogger buildHashLogger() {
         if (hashLogger == null) {
-            hashLogger = new DefaultHashLogger(blocks.platformContext());
+            hashLogger = new DefaultHashLogger(blocks.platformContext(), blocks.platformStateFacade());
         }
         return hashLogger;
     }
@@ -1331,7 +1325,8 @@ public class PlatformComponentBuilder {
                     blocks.platformContext(),
                     blocks.swirldStateManager(),
                     blocks.statusActionSubmitterReference().get(),
-                    blocks.appVersion());
+                    blocks.appVersion(),
+                    blocks.platformStateFacade());
         }
         return transactionHandler;
     }

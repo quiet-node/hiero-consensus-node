@@ -62,6 +62,7 @@ import com.hedera.node.app.blocks.impl.NaiveStreamingTreeHasher;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.info.DiskStartupNetworks;
+import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
@@ -69,16 +70,17 @@ import com.hedera.services.bdd.junit.support.BlockStreamAccess;
 import com.hedera.services.bdd.junit.support.BlockStreamValidator;
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.utility.MerkleTreeVisualizer;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.platform.config.legacy.LegacyConfigPropertiesLoader;
 import com.swirlds.platform.crypto.CryptoStatic;
-import com.swirlds.platform.state.PlatformMerkleStateRoot;
+import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.state.lifecycle.Service;
-import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableSingletonState;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -103,7 +105,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Assertions;
 
 /**
- * A validator that asserts the state changes in the block stream, when applied directly to a {@link MerkleStateRoot}
+ * A validator that asserts the state changes in the block stream, when applied directly to a {@link MerkleNodeState}
  * initialized with the genesis {@link Service} schemas, result in the given root hash.
  */
 public class StateChangesValidator implements BlockStreamValidator {
@@ -130,7 +132,7 @@ public class StateChangesValidator implements BlockStreamValidator {
 
     private Instant lastStateChangesTime;
     private StateChanges lastStateChanges;
-    private PlatformMerkleStateRoot state;
+    private MerkleNodeState state;
 
     public static void main(String[] args) {
         final var node0Dir = Paths.get("hedera-node/test-clients")
@@ -219,8 +221,8 @@ public class StateChangesValidator implements BlockStreamValidator {
         final var servicesVersion = versionConfig.servicesVersion();
         final var addressBook = loadLegacyBookWithGeneratedCerts(pathToAddressBook);
         final var metrics = new NoOpMetrics();
-        final var hedera = ServicesMain.newHedera(metrics);
-        this.state = hedera.newMerkleStateRoot();
+        final var hedera = ServicesMain.newHedera(metrics, new PlatformStateFacade(ServicesSoftwareVersion::new));
+        this.state = hedera.newStateRoot();
         final var platformConfig = ServicesMain.buildPlatformConfig();
         hedera.initializeStatesApi(
                 state, GENESIS, DiskStartupNetworks.fromLegacyAddressBook(addressBook), platformConfig);
@@ -430,7 +432,7 @@ public class StateChangesValidator implements BlockStreamValidator {
         assertEquals(expectedSignature, proof.blockSignature(), "Signature mismatch for " + proof);
     }
 
-    private Map<String, String> hashesFor(@NonNull final MerkleStateRoot state) {
+    private Map<String, String> hashesFor(@NonNull final MerkleNode state) {
         final var sb = new StringBuilder();
         new MerkleTreeVisualizer(state).setDepth(VISUALIZATION_HASH_DEPTH).render(sb);
         logger.info("Replayed hashes:\n{}", sb);
@@ -696,6 +698,7 @@ public class StateChangesValidator implements BlockStreamValidator {
             case HINTS_CONSTRUCTION_VALUE -> singletonUpdateChange.hintsConstructionValueOrThrow();
             case ENTITY_COUNTS_VALUE -> singletonUpdateChange.entityCountsValueOrThrow();
             case HISTORY_PROOF_CONSTRUCTION_VALUE -> singletonUpdateChange.historyProofConstructionValueOrThrow();
+            case CRS_STATE_VALUE -> singletonUpdateChange.crsStateValueOrThrow();
         };
     }
 
@@ -762,6 +765,7 @@ public class StateChangesValidator implements BlockStreamValidator {
             case TSS_VOTE_VALUE -> mapChangeValue.tssVoteValueOrThrow();
             case HINTS_KEY_SET_VALUE -> mapChangeValue.hintsKeySetValueOrThrow();
             case PREPROCESSING_VOTE_VALUE -> mapChangeValue.preprocessingVoteValueOrThrow();
+            case CRS_PUBLICATION_VALUE -> mapChangeValue.crsPublicationValueOrThrow();
         };
     }
 

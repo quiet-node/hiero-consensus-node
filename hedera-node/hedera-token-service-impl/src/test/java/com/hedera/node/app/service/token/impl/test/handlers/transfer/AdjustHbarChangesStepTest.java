@@ -40,6 +40,7 @@ import com.hedera.node.app.service.token.impl.handlers.transfer.EnsureAliasesSte
 import com.hedera.node.app.service.token.impl.handlers.transfer.ReplaceAliasesWithIDsInOp;
 import com.hedera.node.app.service.token.impl.handlers.transfer.TransferContextImpl;
 import com.hedera.node.app.spi.workflows.WorkflowException;
+import com.hedera.node.app.spi.workflows.HandleContext;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,10 +68,11 @@ class AdjustHbarChangesStepTest extends StepsBase {
 
     @Test
     void doesHbarBalanceChangesWithoutAllowances() {
-        final var receiver = asAccount(hbarReceiver);
+        final var receiver = asAccount(0L, 0L, hbarReceiver);
         given(handleContext.payer()).willReturn(spenderId);
         given(expiryValidator.expirationStatus(any(), anyBoolean(), anyLong())).willReturn(OK);
         given(handleContext.savepointStack()).willReturn(stack);
+        given(handleContext.dispatchMetadata()).willReturn(HandleContext.DispatchMetadata.EMPTY_METADATA);
         final var replacedOp = getReplacedOp();
         adjustHbarChangesStep = new AdjustHbarChangesStep(replacedOp, payerId);
 
@@ -98,8 +100,9 @@ class AdjustHbarChangesStepTest extends StepsBase {
         associateTokenRecepientsStep = new AssociateTokenRecipientsStep(body);
         given(handleContext.body()).willReturn(txn);
         given(handleContext.savepointStack()).willReturn(stack);
+        given(handleContext.dispatchMetadata()).willReturn(HandleContext.DispatchMetadata.EMPTY_METADATA);
 
-        final var receiver = asAccount(hbarReceiver);
+        final var receiver = asAccount(0L, 0L, hbarReceiver);
         given(expiryValidator.expirationStatus(any(), anyBoolean(), anyLong())).willReturn(OK);
         final var replacedOp = getReplacedOp();
         adjustHbarChangesStep =
@@ -139,8 +142,9 @@ class AdjustHbarChangesStepTest extends StepsBase {
         replaceAliasesWithIDsInOp = new ReplaceAliasesWithIDsInOp();
         associateTokenRecepientsStep = new AssociateTokenRecipientsStep(body);
         given(handleContext.body()).willReturn(txn);
+        given(handleContext.dispatchMetadata()).willReturn(HandleContext.DispatchMetadata.EMPTY_METADATA);
 
-        final var receiver = asAccount(hbarReceiver);
+        final var receiver = asAccount(0L, 0L, hbarReceiver);
         given(expiryValidator.expirationStatus(any(), anyBoolean(), anyLong())).willReturn(OK);
         final var replacedOp = getReplacedOp();
         adjustHbarChangesStep =
@@ -170,8 +174,9 @@ class AdjustHbarChangesStepTest extends StepsBase {
         replaceAliasesWithIDsInOp = new ReplaceAliasesWithIDsInOp();
         associateTokenRecepientsStep = new AssociateTokenRecipientsStep(body);
         given(handleContext.body()).willReturn(txn);
+        given(handleContext.dispatchMetadata()).willReturn(HandleContext.DispatchMetadata.EMPTY_METADATA);
 
-        final var receiver = asAccount(hbarReceiver);
+        final var receiver = asAccount(0L, 0L, hbarReceiver);
         given(expiryValidator.expirationStatus(any(), anyBoolean(), anyLong())).willReturn(OK);
         final var replacedOp = getReplacedOp();
         adjustHbarChangesStep =

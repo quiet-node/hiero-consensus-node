@@ -78,8 +78,8 @@ class TokenCancelAirdropHandlerTest extends TokenHandlerTestBase {
     private WritableAirdropStore airdropStore;
     private WritableAccountStore writableAccountStore;
     protected Configuration testConfig;
-    private static final AccountID senderId = asAccount(1001);
-    private static final AccountID receiverId = asAccount(1010);
+    private static final AccountID senderId = asAccount(0L, 0L, 1001);
+    private static final AccountID receiverId = asAccount(0L, 0L, 1010);
     private static final TokenID fungibleTokenId = asToken(333);
     private static final NftID nftId =
             NftID.newBuilder().tokenId(fungibleTokenId).build();

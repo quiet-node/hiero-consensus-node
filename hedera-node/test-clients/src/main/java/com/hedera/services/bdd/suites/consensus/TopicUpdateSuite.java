@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2020-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,6 +96,32 @@ public class TopicUpdateSuite {
                 updateTopic("testTopic")
                         .autoRenewPeriod(Long.MAX_VALUE)
                         .hasKnownStatus(AUTORENEW_DURATION_NOT_IN_RANGE));
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> updatingAutoRenewAccountWithoutAdminFails() {
+        return hapiTest(
+                cryptoCreate("autoRenewAccount"),
+                cryptoCreate("payer"),
+                createTopic("testTopic").autoRenewAccountId("autoRenewAccount").payingWith("payer"),
+                updateTopic("testTopic").autoRenewAccountId("payer").hasKnownStatus(UNAUTHORIZED));
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> updatingAutoRenewAccountWithAdminWorks() {
+        return hapiTest(
+                cryptoCreate("autoRenewAccount"),
+                cryptoCreate("newAutoRenewAccount"),
+                cryptoCreate("payer"),
+                newKeyNamed("adminKey"),
+                createTopic("testTopic")
+                        .adminKeyName("adminKey")
+                        .autoRenewAccountId("autoRenewAccount")
+                        .payingWith("payer"),
+                updateTopic("testTopic")
+                        .payingWith("payer")
+                        .autoRenewAccountId("newAutoRenewAccount")
+                        .signedBy("payer", "adminKey", "newAutoRenewAccount"));
     }
 
     @HapiTest

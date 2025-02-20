@@ -16,7 +16,6 @@
 
 package com.hedera.node.app.service.consensus.impl.handlers;
 
-import static com.hedera.hapi.node.base.ResponseCodeEnum.AUTORENEW_ACCOUNT_NOT_ALLOWED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.AUTORENEW_DURATION_NOT_IN_RANGE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.BAD_ENCODING;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.CUSTOM_FEES_LIST_TOO_LONG;
@@ -36,7 +35,6 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.node.base.Duration;
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.SubType;
-import com.hedera.hapi.node.base.TopicID;
 import com.hedera.hapi.node.consensus.ConsensusCreateTopicTransactionBody;
 import com.hedera.hapi.node.state.consensus.Topic;
 import com.hedera.node.app.hapi.utils.CommonPbjConverters;
@@ -56,10 +54,10 @@ import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.PureChecksContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hedera.node.app.spi.workflows.WorkflowException;
-import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.TopicsConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hederahashgraph.api.proto.java.FeeData;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -69,16 +67,19 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class ConsensusCreateTopicHandler implements TransactionHandler {
+    private final EntityIdFactory idFactory;
     private final ConsensusCustomFeesValidator customFeesValidator;
 
     /**
      * Default constructor for injection.
+     * @param idFactory entity id factory
      * @param customFeesValidator custom fees validator
      */
     @Inject
-    public ConsensusCreateTopicHandler(@NonNull final ConsensusCustomFeesValidator customFeesValidator) {
-        requireNonNull(customFeesValidator);
-        this.customFeesValidator = customFeesValidator;
+    public ConsensusCreateTopicHandler(
+            @NonNull final EntityIdFactory idFactory, @NonNull final ConsensusCustomFeesValidator customFeesValidator) {
+        this.idFactory = requireNonNull(idFactory);
+        this.customFeesValidator = requireNonNull(customFeesValidator);
     }
 
     @Override
@@ -121,7 +122,6 @@ public class ConsensusCreateTopicHandler implements TransactionHandler {
 
         final var op = handleContext.body().consensusCreateTopicOrThrow();
         final var topicStore = handleContext.storeFactory().writableStore(WritableTopicStore.class);
-        final var hederaConfig = handleContext.configuration().getConfigData(HederaConfig.class);
 
         validateSemantics(op, handleContext);
 
@@ -150,22 +150,13 @@ public class ConsensusCreateTopicHandler implements TransactionHandler {
                     .expiryValidator()
                     .resolveCreationAttempt(false, entityExpiryMeta, HederaFunctionality.CONSENSUS_CREATE_TOPIC);
 
-            // HapiTest, TopicCreateSuite.signingRequirementsEnforced() expects error code from resolveCreationAttempt()
-            // before the following check
-            if (op.hasAutoRenewAccount()) {
-                validateTrue(op.hasAdminKey(), AUTORENEW_ACCOUNT_NOT_ALLOWED);
-            }
-
             builder.autoRenewPeriod(effectiveExpiryMeta.autoRenewPeriod());
             builder.expirationSecond(effectiveExpiryMeta.expiry());
             builder.autoRenewAccountId(effectiveExpiryMeta.autoRenewAccountId());
 
             /* --- Add topic id to topic builder --- */
-            builder.topicId(TopicID.newBuilder()
-                    .shardNum(hederaConfig.shard())
-                    .realmNum(hederaConfig.realm())
-                    .topicNum(handleContext.entityNumGenerator().newEntityNum())
-                    .build());
+            builder.topicId(
+                    idFactory.newTopicId(handleContext.entityNumGenerator().newEntityNum()));
 
             builder.runningHash(Bytes.wrap(new byte[RUNNING_HASH_BYTE_ARRAY_SIZE]));
 
