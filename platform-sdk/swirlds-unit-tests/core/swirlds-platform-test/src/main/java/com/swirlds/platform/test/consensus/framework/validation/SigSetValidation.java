@@ -24,5 +24,5 @@ import java.util.List;
 @FunctionalInterface
 public interface SigSetValidation {
 
-    void validate(@NonNull final List<ReservedSignedState> reservedSignedStates, @NonNull NodeId nodeId);
+    void validate(@NonNull final List<ReservedSignedState> reservedSignedStates, @NonNull final NodeId nodeId);
 }
