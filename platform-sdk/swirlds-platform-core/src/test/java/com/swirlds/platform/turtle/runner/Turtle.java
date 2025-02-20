@@ -16,8 +16,6 @@
 
 package com.swirlds.platform.turtle.runner;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
@@ -26,6 +24,7 @@ import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.address.AddressBook;
+import com.swirlds.platform.test.consensus.framework.validation.SigSetValidation;
 import com.swirlds.platform.test.consensus.framework.validation.StateValidation;
 import com.swirlds.platform.test.consensus.framework.validation.Validations;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
@@ -236,11 +235,8 @@ public class Turtle {
                 validator.validate(reservedSignedStates);
             }
 
-            for (final ReservedSignedState reservedSignedState : reservedSignedStates) {
-                assertTrue(reservedSignedState
-                        .get()
-                        .getSigSet()
-                        .hasSignature(node.getPlatform().getSelfId()));
+            for (final SigSetValidation validation : validations.getConsensusSigSetValidationsList()) {
+                validation.validate(reservedSignedStates, node.getPlatform().getSelfId());
             }
         }
     }

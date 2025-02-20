@@ -16,12 +16,13 @@
 
 package com.swirlds.platform.test.consensus.framework.validation;
 
+import com.swirlds.common.platform.NodeId;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 
 @FunctionalInterface
-public interface StateValidation {
+public interface SigSetValidation {
 
-    void validate(@NonNull final List<ReservedSignedState> reservedSignedStates);
+    void validate(@NonNull final List<ReservedSignedState> reservedSignedStates, @NonNull NodeId nodeId);
 }

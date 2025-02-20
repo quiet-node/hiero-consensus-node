@@ -16,12 +16,17 @@
 
 package com.swirlds.platform.test.consensus.framework.validation;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.swirlds.common.platform.NodeId;
 import com.swirlds.platform.state.signed.ReservedSignedState;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 
-@FunctionalInterface
-public interface StateValidation {
+public class SignatureSetValidation {
 
-    void validate(@NonNull final List<ReservedSignedState> reservedSignedStates);
+    public static void hasSignature(final List<ReservedSignedState> reservedSignedStates, NodeId nodeId) {
+        for (final ReservedSignedState reservedSignedState : reservedSignedStates) {
+            assertTrue(reservedSignedState.get().getSigSet().hasSignature(nodeId));
+        }
+    }
 }
