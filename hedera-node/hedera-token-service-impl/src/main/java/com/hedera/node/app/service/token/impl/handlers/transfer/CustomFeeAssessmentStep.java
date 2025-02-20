@@ -8,9 +8,9 @@ import static com.hedera.hapi.node.base.TokenType.FUNGIBLE_COMMON;
 import static com.hedera.node.app.service.token.impl.handlers.transfer.customfees.AssessmentResult.HBAR_TOKEN_ID;
 import static com.hedera.node.app.service.token.impl.util.TokenHandlerHelper.TokenValidations.PERMIT_PAUSED;
 import static com.hedera.node.app.service.token.impl.util.TokenHandlerHelper.getIfUsable;
+import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.Type.TRANSACTION_FIXED_FEE;
 import static com.hedera.node.app.spi.workflows.WorkflowException.validateFalse;
 import static com.hedera.node.app.spi.workflows.WorkflowException.validateTrue;
-import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.Type.TRANSACTION_FIXED_FEE;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 

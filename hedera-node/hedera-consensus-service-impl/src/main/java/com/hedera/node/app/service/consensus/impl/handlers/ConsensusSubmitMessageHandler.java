@@ -19,9 +19,9 @@ import static com.hedera.node.app.hapi.utils.fee.FeeBuilder.RECEIPT_STORAGE_TIME
 import static com.hedera.node.app.hapi.utils.fee.FeeBuilder.TX_HASH_SIZE;
 import static com.hedera.node.app.spi.validation.Validations.mustExist;
 import static com.hedera.node.app.spi.workflows.DispatchOptions.stepDispatch;
+import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.Type.TRANSACTION_FIXED_FEE;
 import static com.hedera.node.app.spi.workflows.WorkflowException.validateFalse;
 import static com.hedera.node.app.spi.workflows.WorkflowException.validateTrue;
-import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.Type.TRANSACTION_FIXED_FEE;
 import static com.hedera.node.app.spi.workflows.record.StreamBuilder.TransactionCustomizer.SUPPRESSING_TRANSACTION_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 

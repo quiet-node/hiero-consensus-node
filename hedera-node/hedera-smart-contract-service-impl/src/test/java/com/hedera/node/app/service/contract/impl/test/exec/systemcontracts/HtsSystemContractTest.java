@@ -29,9 +29,8 @@ import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.EntityType;
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
-import java.nio.ByteBuffer;
-
 import com.hedera.node.app.spi.workflows.WorkflowException;
+import java.nio.ByteBuffer;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;

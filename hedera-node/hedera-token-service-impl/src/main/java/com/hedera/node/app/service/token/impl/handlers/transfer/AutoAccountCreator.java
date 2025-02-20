@@ -9,8 +9,8 @@ import static com.hedera.node.app.service.token.impl.TokenServiceImpl.THREE_MONT
 import static com.hedera.node.app.service.token.impl.handlers.BaseTokenHandler.UNLIMITED_AUTOMATIC_ASSOCIATIONS;
 import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.spi.workflows.DispatchOptions.setupDispatch;
-import static com.hedera.node.app.spi.workflows.WorkflowException.validateTrue;
 import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.Type.CUSTOM_FEE_CHARGING;
+import static com.hedera.node.app.spi.workflows.WorkflowException.validateTrue;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;

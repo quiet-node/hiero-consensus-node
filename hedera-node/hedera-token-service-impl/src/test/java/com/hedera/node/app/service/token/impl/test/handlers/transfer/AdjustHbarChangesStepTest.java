@@ -24,8 +24,8 @@ import com.hedera.node.app.service.token.impl.handlers.transfer.AssociateTokenRe
 import com.hedera.node.app.service.token.impl.handlers.transfer.EnsureAliasesStep;
 import com.hedera.node.app.service.token.impl.handlers.transfer.ReplaceAliasesWithIDsInOp;
 import com.hedera.node.app.service.token.impl.handlers.transfer.TransferContextImpl;
-import com.hedera.node.app.spi.workflows.WorkflowException;
 import com.hedera.node.app.spi.workflows.HandleContext;
+import com.hedera.node.app.spi.workflows.WorkflowException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
