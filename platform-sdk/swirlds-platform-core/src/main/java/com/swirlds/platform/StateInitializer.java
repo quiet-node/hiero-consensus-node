@@ -89,7 +89,7 @@ public final class StateInitializer {
                 () -> {
                     try {
                         MerkleCryptoFactory.getInstance()
-                                .digestTreeAsync(initialState)
+                                .digestTreeAsync(initialState.getRoot())
                                 .get();
                     } catch (final ExecutionException e) {
                         throw new RuntimeException(e);

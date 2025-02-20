@@ -219,7 +219,7 @@ public class SwirldStateManager implements FreezePeriodChecker {
         if (currVal != null) {
             currVal.release();
         }
-        immutableState.reserve();
+        immutableState.getRoot().reserve();
         latestImmutableState.set(immutableState);
     }
 

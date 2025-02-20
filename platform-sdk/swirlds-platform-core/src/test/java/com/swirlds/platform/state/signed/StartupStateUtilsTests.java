@@ -221,7 +221,7 @@ public class StartupStateUtilsTests {
 
         assertEquals(latestState.getRound(), loadedState.getRound());
         assertEquals(latestState.getState().getHash(), loadedState.getState().getHash());
-        RandomSignedStateGenerator.releaseReservable(loadedState.getState());
+        RandomSignedStateGenerator.releaseReservable(loadedState.getState().getRoot());
     }
 
     @Test
@@ -309,7 +309,7 @@ public class StartupStateUtilsTests {
         }
 
         if (loadedState != null) {
-            RandomSignedStateGenerator.releaseReservable(loadedState.getState());
+            RandomSignedStateGenerator.releaseReservable(loadedState.getState().getRoot());
         }
 
         final Path savedStateDirectory = signedStateFilePath

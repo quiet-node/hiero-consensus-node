@@ -205,7 +205,7 @@ public class ReconnectLearner {
                 threadManager,
                 in,
                 out,
-                currentState,
+                currentState.getRoot(),
                 connection::disconnect,
                 reconnectConfig,
                 platformContext.getMetrics());

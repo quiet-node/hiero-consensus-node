@@ -39,7 +39,7 @@ public class StateEventHandlerManagerUtilsTests {
 
         final MerkleNodeState state = new TestMerkleStateRoot();
         FAKE_MERKLE_STATE_LIFECYCLES.initPlatformState(state);
-        state.reserve();
+        state.getRoot().reserve();
         final StateMetrics stats = mock(StateMetrics.class);
         final State result =
                 SwirldStateManagerUtils.fastCopy(state, stats, new BasicSoftwareVersion(1), TEST_PLATFORM_STATE_FACADE);
@@ -47,9 +47,11 @@ public class StateEventHandlerManagerUtilsTests {
         assertFalse(result.isImmutable(), "The copy state should be mutable.");
         assertEquals(
                 1,
-                state.getReservationCount(),
+                state.getRoot().getReservationCount(),
                 "Fast copy should not change the reference count of the state it copies.");
         assertEquals(
-                1, state.getReservationCount(), "Fast copy should return a new state with a reference count of 1.");
+                1,
+                state.getRoot().getReservationCount(),
+                "Fast copy should return a new state with a reference count of 1.");
     }
 }

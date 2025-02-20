@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.exceptions.ReferenceCountException;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.crypto.SignatureVerifier;
@@ -88,7 +89,7 @@ class SignedStateTests {
                         reserveCallback.run();
                         return null;
                     })
-                    .when(state)
+                    .when((MerkleNode) state)
                     .reserve();
         }
 

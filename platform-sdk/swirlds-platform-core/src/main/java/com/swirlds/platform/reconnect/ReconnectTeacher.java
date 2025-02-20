@@ -233,7 +233,7 @@ public class ReconnectTeacher {
                 threadManager,
                 new MerkleDataInputStream(connection.getDis()),
                 new MerkleDataOutputStream(connection.getDos()),
-                signedState.getState(),
+                signedState.getState().getRoot(),
                 connection::disconnect,
                 reconnectConfig);
 
