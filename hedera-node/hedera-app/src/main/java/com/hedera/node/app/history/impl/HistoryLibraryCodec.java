@@ -14,13 +14,13 @@ import java.util.Map;
 public interface HistoryLibraryCodec {
     /**
      * Encodes the given address book hash and metadata into a history record to be signed via
-     * {@link HistoryLibrary#signSchnorr(Bytes, Bytes)}.
+     * {@link HistoryLibrary#signSchnorr(byte[], byte[])}.
      *
      * @param history the history record to encode
      * @return the bytes for signing
      */
     @NonNull
-    Bytes encodeHistory(@NonNull History history);
+    byte[] encodeHistory(@NonNull History history);
 
     /**
      * Encodes the given roster and public keys into an address book for use with the {@link HistoryLibrary}.
@@ -30,7 +30,7 @@ public interface HistoryLibraryCodec {
      * @return the history address book
      */
     @NonNull
-    Bytes encodeAddressBook(@NonNull Map<Long, Long> weights, @NonNull Map<Long, Bytes> publicKeys);
+    byte[] encodeAddressBook(@NonNull Map<Long, Long> weights, @NonNull Map<Long, Bytes> publicKeys);
 
     /**
      * Encodes the given roster and public keys into an address book for use with the {@link HistoryLibrary}.
@@ -40,5 +40,5 @@ public interface HistoryLibraryCodec {
      * @return the history address book
      */
     @NonNull
-    Bytes encodeLedgerId(@NonNull Bytes addressBookHash, @NonNull Bytes snarkVerificationKey);
+    byte[] encodeLedgerId(@NonNull byte[] addressBookHash, @NonNull byte[] snarkVerificationKey);
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.history;
 
-import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Map;
@@ -15,12 +14,12 @@ public interface HistoryLibrary {
      * <p>
      * <b>Important:</b> If this changes, the ledger id must also change.
      */
-    Bytes snarkVerificationKey();
+    byte[] snarkVerificationKey();
 
     /**
      * Returns a new Schnorr key pair.
      */
-    Bytes newSchnorrKeyPair();
+    byte[] newSchnorrKeyPair();
 
     /**
      * Signs a message with a Schnorr private key. In Hiero TSS, this will always be the concatenation
@@ -30,7 +29,7 @@ public interface HistoryLibrary {
      * @param privateKey the private key
      * @return the signature
      */
-    Bytes signSchnorr(@NonNull Bytes message, @NonNull Bytes privateKey);
+    byte[] signSchnorr(@NonNull byte[] message, @NonNull byte[] privateKey);
 
     /**
      * Checks that a signature on a message verifies under a Schnorr public key.
@@ -40,14 +39,15 @@ public interface HistoryLibrary {
      * @param publicKey the public key
      * @return true if the signature is valid; false otherwise
      */
-    boolean verifySchnorr(@NonNull Bytes signature, @NonNull Bytes message, @NonNull Bytes publicKey);
+    boolean verifySchnorr(@NonNull byte[] signature, @NonNull byte[] message, @NonNull byte[] publicKey);
 
     /**
      * Computes the hash of the given address book with the same algorithm used by the SNARK circuit.
+     *
      * @param addressBook the address book
      * @return the hash of the address book
      */
-    Bytes hashAddressBook(@NonNull Bytes addressBook);
+    byte[] hashAddressBook(@NonNull byte[] addressBook);
 
     /**
      * Returns a SNARK recursively proving the target address book and associated metadata belong to the given ledger
@@ -63,13 +63,13 @@ public interface HistoryLibrary {
      * @return the SNARK proving the target address book and metadata belong to the ledger id's chain of trust
      */
     @NonNull
-    Bytes proveChainOfTrust(
-            @NonNull Bytes ledgerId,
-            @Nullable Bytes sourceProof,
-            @NonNull Bytes sourceAddressBook,
-            @NonNull Map<Long, Bytes> sourceSignatures,
-            @NonNull Bytes targetAddressBookHash,
-            @NonNull Bytes targetMetadata);
+    byte[] proveChainOfTrust(
+            @NonNull byte[] ledgerId,
+            @Nullable byte[] sourceProof,
+            @NonNull byte[] sourceAddressBook,
+            @NonNull Map<Long, byte[]> sourceSignatures,
+            @NonNull byte[] targetAddressBookHash,
+            @NonNull byte[] targetMetadata);
 
     /**
      * Verifies the given SNARK proves the given address book hash and associated metadata belong to the given
@@ -81,5 +81,5 @@ public interface HistoryLibrary {
      * @return true if the proof is valid; false otherwise
      */
     boolean verifyChainOfTrust(
-            @NonNull Bytes ledgerId, @NonNull Bytes addressBookHash, @NonNull Bytes metadata, @NonNull Bytes proof);
+            @NonNull byte[] ledgerId, @NonNull byte[] addressBookHash, @NonNull byte[] metadata, @NonNull byte[] proof);
 }

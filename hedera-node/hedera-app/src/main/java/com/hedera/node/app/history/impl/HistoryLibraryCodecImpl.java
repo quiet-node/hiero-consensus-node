@@ -15,13 +15,13 @@ public enum HistoryLibraryCodecImpl implements HistoryLibraryCodec {
     HISTORY_LIBRARY_CODEC;
 
     @Override
-    public @NonNull Bytes encodeHistory(@NonNull final History history) {
+    public @NonNull byte[] encodeHistory(@NonNull final History history) {
         requireNonNull(history);
         throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
-    public @NonNull Bytes encodeAddressBook(
+    public @NonNull byte[] encodeAddressBook(
             @NonNull final Map<Long, Long> weights, @NonNull final Map<Long, Bytes> publicKeys) {
         requireNonNull(weights);
         requireNonNull(publicKeys);
@@ -29,8 +29,8 @@ public enum HistoryLibraryCodecImpl implements HistoryLibraryCodec {
     }
 
     @Override
-    public @NonNull Bytes encodeLedgerId(
-            @NonNull final Bytes addressBookHash, @NonNull final Bytes snarkVerificationKey) {
+    public @NonNull byte[] encodeLedgerId(
+            @NonNull final byte[] addressBookHash, @NonNull final byte[] snarkVerificationKey) {
         requireNonNull(addressBookHash);
         requireNonNull(snarkVerificationKey);
         throw new UnsupportedOperationException("Not implemented");

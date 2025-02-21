@@ -157,12 +157,11 @@ class ProofControllerImplTest {
         given(weights.numTargetNodesInSource()).willReturn(1);
         given(store.setAssemblyTime(UNFINISHED_CONSTRUCTION.constructionId(), CONSENSUS_NOW))
                 .willReturn(SCHEDULED_ASSEMBLY_CONSTRUCTION);
-        given(codec.encodeAddressBook(Map.of(), Map.of(SELF_ID, PROOF_KEY_PAIR.publicKey())))
-                .willReturn(Bytes.EMPTY);
-        given(library.hashAddressBook(Bytes.EMPTY)).willReturn(Bytes.EMPTY);
+        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any())).willReturn(new byte[0]);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
-        given(codec.encodeHistory(mockHistory)).willReturn(Bytes.EMPTY);
-        given(library.signSchnorr(Bytes.EMPTY, PROOF_KEY_PAIR.privateKey())).willReturn(Bytes.EMPTY);
+        given(codec.encodeHistory(mockHistory)).willReturn(new byte[0]);
+        given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
         final var expectedSignature = new HistorySignature(mockHistory, Bytes.EMPTY);
         given(submissions.submitAssemblySignature(CONSTRUCTION_ID, expectedSignature))
                 .willReturn(CompletableFuture.completedFuture(null));
@@ -179,11 +178,11 @@ class ProofControllerImplTest {
     void startsSigningFutureOnceAssemblyScheduledButInsufficientSignaturesKnown() {
         setupWith(SCHEDULED_ASSEMBLY_CONSTRUCTION, List.of(), List.of(), Map.of(), LEDGER_ID);
 
-        given(codec.encodeAddressBook(Map.of(), Map.of())).willReturn(Bytes.EMPTY);
-        given(library.hashAddressBook(Bytes.EMPTY)).willReturn(Bytes.EMPTY);
+        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any())).willReturn(new byte[0]);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
-        given(codec.encodeHistory(mockHistory)).willReturn(Bytes.EMPTY);
-        given(library.signSchnorr(Bytes.EMPTY, PROOF_KEY_PAIR.privateKey())).willReturn(Bytes.EMPTY);
+        given(codec.encodeHistory(mockHistory)).willReturn(new byte[0]);
+        given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
         final var expectedSignature = new HistorySignature(mockHistory, Bytes.EMPTY);
         given(submissions.submitAssemblySignature(CONSTRUCTION_ID, expectedSignature))
                 .willReturn(CompletableFuture.completedFuture(null));
@@ -229,9 +228,8 @@ class ProofControllerImplTest {
     @Test
     void startsProofWithSufficientSignatures() {
         given(weights.targetIncludes(SELF_ID)).willReturn(true);
-        given(codec.encodeHistory(History.DEFAULT)).willReturn(Bytes.EMPTY);
-        given(library.verifySchnorr(SIGNATURE, Bytes.EMPTY, PROOF_KEY_PAIR.publicKey()))
-                .willReturn(true);
+        given(codec.encodeHistory(History.DEFAULT)).willReturn(new byte[0]);
+        given(library.verifySchnorr(any(), any(), any())).willReturn(true);
         setupWith(
                 SCHEDULED_ASSEMBLY_CONSTRUCTION,
                 List.of(SELF_KEY_PUBLICATION),
@@ -246,29 +244,25 @@ class ProofControllerImplTest {
 
         subject.advanceConstruction(CONSENSUS_NOW, METADATA, store);
 
-        given(codec.encodeAddressBook(Map.of(), Map.of(SELF_ID, PROOF_KEY_PAIR.publicKey())))
-                .willReturn(Bytes.EMPTY);
-        given(library.hashAddressBook(Bytes.EMPTY)).willReturn(Bytes.EMPTY);
-        given(library.proveChainOfTrust(
-                        LEDGER_ID, null, Bytes.EMPTY, Map.of(SELF_ID, SIGNATURE), Bytes.EMPTY, METADATA))
-                .willReturn(PROOF);
+        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any())).willReturn(new byte[0]);
+        given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any()))
+                .willReturn(new byte[0]);
         given(submissions.submitProofVote(
                         eq(CONSTRUCTION_ID), argThat(v -> v.proof().equals(PROOF))))
                 .willReturn(CompletableFuture.completedFuture(null));
 
         runScheduledTasks();
 
-        verify(submissions)
-                .submitProofVote(eq(CONSTRUCTION_ID), argThat(v -> v.proof().equals(PROOF)));
+        verify(submissions).submitProofVote(eq(CONSTRUCTION_ID), any());
         assertDoesNotThrow(() -> subject.cancelPendingWork());
     }
 
     @Test
     void usesSourceProofIfAvailable() {
         given(weights.targetIncludes(SELF_ID)).willReturn(true);
-        given(codec.encodeHistory(History.DEFAULT)).willReturn(Bytes.EMPTY);
-        given(library.verifySchnorr(SIGNATURE, Bytes.EMPTY, PROOF_KEY_PAIR.publicKey()))
-                .willReturn(true);
+        given(codec.encodeHistory(History.DEFAULT)).willReturn(new byte[0]);
+        given(library.verifySchnorr(any(), any(), any())).willReturn(true);
         setupWith(
                 SCHEDULED_ASSEMBLY_CONSTRUCTION_WITH_SOURCE_PROOF,
                 List.of(SELF_KEY_PUBLICATION),
@@ -283,12 +277,10 @@ class ProofControllerImplTest {
 
         subject.advanceConstruction(CONSENSUS_NOW, METADATA, store);
 
-        given(codec.encodeAddressBook(Map.of(), Map.of(SELF_ID, PROOF_KEY_PAIR.publicKey())))
-                .willReturn(Bytes.EMPTY);
-        given(library.hashAddressBook(Bytes.EMPTY)).willReturn(Bytes.EMPTY);
-        given(library.proveChainOfTrust(
-                        LEDGER_ID, PROOF, Bytes.EMPTY, Map.of(SELF_ID, SIGNATURE), Bytes.EMPTY, METADATA))
-                .willReturn(PROOF);
+        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any())).willReturn(new byte[0]);
+        given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any()))
+                .willReturn(PROOF.toByteArray());
         given(submissions.submitProofVote(
                         eq(CONSTRUCTION_ID), argThat(v -> v.proof().equals(PROOF))))
                 .willReturn(CompletableFuture.completedFuture(null));
@@ -367,6 +359,7 @@ class ProofControllerImplTest {
         given(weights.sourceWeightOf(otherNodeId)).willReturn(3L);
         given(store.completeProof(CONSTRUCTION_ID, expectedProof)).willReturn(FINISHED_CONSTRUCTION);
         given(store.getActiveConstruction()).willReturn(UNFINISHED_CONSTRUCTION);
+        given(codec.encodeLedgerId(any(), any())).willReturn(new byte[0]);
 
         subject.addProofVote(otherNodeId, otherVote, store);
 

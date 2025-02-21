@@ -23,6 +23,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
+import java.util.AbstractMap;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -244,8 +245,9 @@ public class ProofControllerImpl implements ProofController {
                 proofConsumer.accept(proof);
                 if (ledgerId == null) {
                     requireNonNull(targetMetadata);
-                    final var encodedId = codec.encodeLedgerId(proof.sourceAddressBookHash(), targetMetadata);
-                    historyStore.setLedgerId(encodedId);
+                    final var encodedId = codec.encodeLedgerId(
+                            proof.sourceAddressBookHash().toByteArray(), targetMetadata.toByteArray());
+                    historyStore.setLedgerId(Bytes.wrap(encodedId));
                 }
             }
         });
@@ -320,10 +322,11 @@ public class ProofControllerImpl implements ProofController {
                 () -> {
                     final var targetBook = codec.encodeAddressBook(weights.targetNodeWeights(), proofKeys);
                     final var targetHash = library.hashAddressBook(targetBook);
-                    final var history = new History(targetHash, targetMetadata);
+                    final var history = new History(Bytes.wrap(targetHash), targetMetadata);
                     final var message = codec.encodeHistory(history);
-                    final var signature = library.signSchnorr(message, schnorrKeyPair.privateKey());
-                    final var historySignature = new HistorySignature(history, signature);
+                    final var signature = library.signSchnorr(
+                            message, schnorrKeyPair.privateKey().toByteArray());
+                    final var historySignature = new HistorySignature(history, Bytes.wrap(signature));
                     submissions
                             .submitAssemblySignature(construction.constructionId(), historySignature)
                             .join();
@@ -358,17 +361,26 @@ public class ProofControllerImpl implements ProofController {
                     final var targetBook = codec.encodeAddressBook(weights.targetNodeWeights(), targetProofKeys);
                     final var targetHash = library.hashAddressBook(targetBook);
                     final var proof = library.proveChainOfTrust(
-                            Optional.ofNullable(ledgerId).orElseGet(() -> library.hashAddressBook(sourceBook)),
-                            sourceProof,
+                            Optional.ofNullable(ledgerId)
+                                    .map(Bytes::toByteArray)
+                                    .orElseGet(() -> library.hashAddressBook(sourceBook)),
+                            Optional.ofNullable(sourceProof)
+                                    .map(Bytes::toByteArray)
+                                    .orElse(null),
                             sourceBook,
-                            signatures,
+                            signatures.entrySet().stream()
+                                    .map(e -> new AbstractMap.SimpleImmutableEntry<>(
+                                            e.getKey(), e.getValue().toByteArray()))
+                                    .collect(toMap(
+                                            AbstractMap.SimpleImmutableEntry::getKey,
+                                            AbstractMap.SimpleImmutableEntry::getValue)),
                             targetHash,
-                            targetMetadata);
+                            targetMetadata.toByteArray());
                     final var metadataProof = HistoryProof.newBuilder()
-                            .sourceAddressBookHash(sourceHash)
+                            .sourceAddressBookHash(Bytes.wrap(sourceHash))
                             .targetProofKeys(proofKeyListFrom(targetProofKeys))
-                            .targetHistory(new History(targetHash, targetMetadata))
-                            .proof(proof)
+                            .targetHistory(new History(Bytes.wrap(targetHash), targetMetadata))
+                            .proof(Bytes.wrap(proof))
                             .build();
                     submissions
                             .submitProofVote(construction.constructionId(), metadataProof)
@@ -450,7 +462,8 @@ public class ProofControllerImpl implements ProofController {
                 () -> {
                     final var message = codec.encodeHistory(historySignature.historyOrThrow());
                     final var proofKey = requireNonNull(targetProofKeys.get(nodeId));
-                    final var isValid = library.verifySchnorr(historySignature.signature(), proofKey, message);
+                    final var isValid = library.verifySchnorr(
+                            historySignature.signature().toByteArray(), proofKey.toByteArray(), message);
                     return new Verification(nodeId, historySignature, isValid);
                 },
                 executor);
