@@ -3,30 +3,50 @@ package com.hedera.node.app.history.impl;
 
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.cryptography.rpm.HistoryLibraryBridge;
+import com.hedera.cryptography.rpm.ProvingAndVerifyingSnarkKeys;
+import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
 import com.hedera.node.app.history.HistoryLibrary;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.IOException;
 import java.util.Map;
+import java.util.SplittableRandom;
 
 /**
  * Default implementation of the {@link HistoryLibrary}.
  */
 public class HistoryLibraryImpl implements HistoryLibrary {
-    @Override
-    public byte[] snarkVerificationKey() {
-        throw new AssertionError("Not implemented");
+    private static final SplittableRandom RANDOM = new SplittableRandom();
+    private static final HistoryLibraryBridge BRIDGE = HistoryLibraryBridge.getInstance();
+    private static final ProvingAndVerifyingSnarkKeys SNARK_KEYS;
+
+    static {
+        try {
+            final var elf = HistoryLibraryBridge.loadAddressBookRotationProgram();
+            SNARK_KEYS = BRIDGE.snarkVerificationKey(elf);
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not load HistoryLibrary ELF", e);
+        }
     }
 
     @Override
-    public byte[] newSchnorrKeyPair() {
-        throw new AssertionError("Not implemented");
+    public byte[] snarkVerificationKey() {
+        return SNARK_KEYS.verifyingKey();
+    }
+
+    @Override
+    public SigningAndVerifyingSchnorrKeys newSchnorrKeyPair() {
+        final var bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return BRIDGE.newSchnorrKeyPair(bytes);
     }
 
     @Override
     public byte[] signSchnorr(@NonNull final byte[] message, @NonNull final byte[] privateKey) {
         requireNonNull(message);
         requireNonNull(privateKey);
-        throw new AssertionError("Not implemented");
+        return BRIDGE.signSchnorr(message, privateKey);
     }
 
     @Override
@@ -35,7 +55,7 @@ public class HistoryLibraryImpl implements HistoryLibrary {
         requireNonNull(signature);
         requireNonNull(message);
         requireNonNull(publicKey);
-        throw new AssertionError("Not implemented");
+        return BRIDGE.verifySchnorr(signature, message, publicKey);
     }
 
     @Override

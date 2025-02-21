@@ -158,6 +158,6 @@ dependencies.constraints {
         because("com.hedera.cryptography.rpm")
     }
     api("com.hedera.cryptography:hedera-cryptography-hinTS:$hederaCryptography") {
-        because("com.hedera.cryptography.hinTS")
+        because("com.hedera.cryptography.hints")
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.history;
 
+import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Map;
@@ -19,7 +20,7 @@ public interface HistoryLibrary {
     /**
      * Returns a new Schnorr key pair.
      */
-    byte[] newSchnorrKeyPair();
+    SigningAndVerifyingSchnorrKeys newSchnorrKeyPair();
 
     /**
      * Signs a message with a Schnorr private key. In Hiero TSS, this will always be the concatenation
