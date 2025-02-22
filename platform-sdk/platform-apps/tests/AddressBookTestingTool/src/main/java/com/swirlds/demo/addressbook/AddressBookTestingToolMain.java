@@ -135,7 +135,7 @@ public class AddressBookTestingToolMain implements SwirldMain<AddressBookTesting
     @Override
     @NonNull
     public StateLifecycles<AddressBookTestingToolState> newStateLifecycles() {
-        return new AddressBookTestingToolStateLifecycles(new PlatformStateFacade((v) -> getSoftwareVersion()));
+        return new AddressBookTestingToolStateLifecycles(new PlatformStateFacade(v -> new BasicSoftwareVersion(v.major())));
     }
 
     /**
