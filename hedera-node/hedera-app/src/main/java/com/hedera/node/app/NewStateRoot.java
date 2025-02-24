@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.swirlds.state.merkle;
+package com.hedera.node.app;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
@@ -27,8 +27,13 @@ import com.swirlds.base.time.Time;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.state.State;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.StateChangeListener;
+import com.swirlds.state.merkle.MerkleRootSnapshotMetrics;
+import com.swirlds.state.merkle.MerkleStateRoot;
+import com.swirlds.state.merkle.MerkleTreeSnapshotReader;
+import com.swirlds.state.merkle.MerkleTreeSnapshotWriter;
+import com.swirlds.state.merkle.StateMetadata;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
 import com.swirlds.state.merkle.disk.OnDiskReadableQueueState;
 import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
@@ -64,10 +69,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.LongSupplier;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class NewStateRoot implements State {
+public class NewStateRoot implements MerkleNodeState {
 
     private static final Logger logger = LogManager.getLogger(NewStateRoot.class);
 
@@ -110,7 +117,13 @@ public class NewStateRoot implements State {
 
     private Configuration configuration;
 
+    private LongSupplier roundSupplier;
+
     private VirtualMap virtualMap;
+
+    public NewStateRoot(VirtualMap virtualMap) {
+        this.virtualMap = virtualMap;
+    }
 
     // not sure if it is needed though!
     /**
@@ -130,12 +143,13 @@ public class NewStateRoot implements State {
     }
 
     // This is how MerkleStateRoot was init (except configuration) -- maybe need to work out new way here
-    public void init(Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography) {
+    public void init(@NonNull Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
         this.configuration = configuration;
         this.time = time;
         this.metrics = metrics;
         this.merkleCryptography = merkleCryptography;
-        snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.roundSupplier = roundSupplier;
     }
 
     // State interface impl

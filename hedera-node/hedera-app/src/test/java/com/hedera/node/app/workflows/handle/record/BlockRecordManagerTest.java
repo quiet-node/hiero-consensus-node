@@ -466,7 +466,7 @@ final class BlockRecordManagerTest extends AppTestBase {
 
             @Override
             public void init(
-                    Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
+                    com.swirlds.config.api.@NonNull Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
                 throw new UnsupportedOperationException("Shouldn't be needed for this test");
             }
 

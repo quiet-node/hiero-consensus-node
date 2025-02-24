@@ -27,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.util.HapiUtils;
+import com.hedera.node.app.NewStateRoot;
 import com.hedera.node.app.ids.AppEntityIdFactory;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.services.MigrationContextImpl;
@@ -35,9 +36,9 @@ import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.crypto.DigestType;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkle.map.MerkleMap;
-import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
-import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.config.MerkleDbConfig;
+//import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
+//import com.swirlds.merkledb.MerkleDbTableConfig;
+//import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -49,7 +50,6 @@ import com.swirlds.state.lifecycle.Service;
 import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
-import com.swirlds.state.merkle.MerkleStateRoot.MerkleWritableStates;
 import com.swirlds.state.merkle.StateMetadata;
 import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.queue.QueueNode;
@@ -279,7 +279,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                 schema.restart(migrationContext);
             }
             // Now commit all the service-specific changes made during this service's update or migration
-            if (writableStates instanceof MerkleWritableStates mws) {
+            if (writableStates instanceof NewStateRoot.MerkleWritableStates mws) {
                 mws.commit();
                 migrationStateChanges.trackCommit();
             }
@@ -335,32 +335,32 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                             return map;
                         });
                     } else {
-                        stateRoot.putServiceStateIfAbsent(
-                                md,
-                                () -> {
-                                    // MAX_IN_MEMORY_HASHES (ramToDiskThreshold) = 8388608
-                                    // PREFER_DISK_BASED_INDICES = false
-                                    final MerkleDbConfig merkleDbConfig =
-                                            platformConfiguration.getConfigData(MerkleDbConfig.class);
-                                    final var tableConfig = new MerkleDbTableConfig(
-                                            (short) 1,
-                                            DigestType.SHA_384,
-                                            def.maxKeysHint(),
-                                            merkleDbConfig.hashesRamToDiskThreshold());
-                                    final var label = StateUtils.computeLabel(serviceName, stateKey);
-                                    final var dsBuilder =
-                                            new MerkleDbDataSourceBuilder(tableConfig, platformConfiguration);
-                                    return new VirtualMap(label, dsBuilder, platformConfiguration);
-                                },
-                                // Register the metrics for the virtual map if they are available.
-                                // Early rounds of migration done by services such as PlatformStateService,
-                                // EntityIdService and RosterService will not have metrics available yet, but their
-                                // later rounds of migration will.
-                                // Therefore, for the first round of migration, we will not register the metrics for
-                                // virtual maps.
-                                UNAVAILABLE_METRICS.equals(metrics)
-                                        ? virtualMap -> {}
-                                        : virtualMap -> virtualMap.registerMetrics(metrics));
+//                        stateRoot.putServiceStateIfAbsent(
+//                                md,
+//                                () -> {
+//                                    // MAX_IN_MEMORY_HASHES (ramToDiskThreshold) = 8388608
+//                                    // PREFER_DISK_BASED_INDICES = false
+//                                    final MerkleDbConfig merkleDbConfig =
+//                                            platformConfiguration.getConfigData(MerkleDbConfig.class);
+//                                    final var tableConfig = new MerkleDbTableConfig(
+//                                            (short) 1,
+//                                            DigestType.SHA_384,
+//                                            def.maxKeysHint(),
+//                                            merkleDbConfig.hashesRamToDiskThreshold());
+//                                    final var label = StateUtils.computeLabel(serviceName, stateKey);
+//                                    final var dsBuilder =
+//                                            new MerkleDbDataSourceBuilder(tableConfig, platformConfiguration);
+//                                    return new VirtualMap(label, dsBuilder, platformConfiguration);
+//                                },
+//                                // Register the metrics for the virtual map if they are available.
+//                                // Early rounds of migration done by services such as PlatformStateService,
+//                                // EntityIdService and RosterService will not have metrics available yet, but their
+//                                // later rounds of migration will.
+//                                // Therefore, for the first round of migration, we will not register the metrics for
+//                                // virtual maps.
+//                                UNAVAILABLE_METRICS.equals(metrics)
+//                                        ? virtualMap -> {}
+//                                        : virtualMap -> virtualMap.registerMetrics(metrics));
                     }
                 });
 

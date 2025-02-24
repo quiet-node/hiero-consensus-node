@@ -90,7 +90,7 @@ class MerkleStateRootTest extends MerkleTestBase {
         FakeStateLifecycles.registerMerkleStateRootClassIds();
         setupFruitMerkleMap();
         stateRoot = new TestMerkleStateRoot();
-        stateRoot.init(new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
+        stateRoot.init(, new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
     }
 
     /** Looks for a merkle node with the given label */
@@ -852,7 +852,7 @@ class MerkleStateRootTest extends MerkleTestBase {
                             .withConfigDataType(CryptoConfig.class)
                             .build(),
                     CryptographyFactory.create());
-            stateRoot.init(new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
+            stateRoot.init(, new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
         }
 
         @Test

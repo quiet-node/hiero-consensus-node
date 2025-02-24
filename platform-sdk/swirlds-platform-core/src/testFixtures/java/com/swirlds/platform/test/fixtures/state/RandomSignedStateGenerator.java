@@ -19,17 +19,20 @@ package com.swirlds.platform.test.fixtures.state;
 import static com.swirlds.common.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static com.swirlds.common.test.fixtures.RandomUtils.randomHash;
 import static com.swirlds.common.test.fixtures.RandomUtils.randomSignature;
+import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
 import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.registerMerkleStateRootClassIds;
 import static org.mockito.Mockito.spy;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
+import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.Reservable;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.crypto.Signature;
 import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.RandomUtils;
 import com.swirlds.config.api.Configuration;
@@ -161,10 +164,10 @@ public class RandomSignedStateGenerator {
                 stateInstance = new TestMerkleStateRoot();
             }
             stateInstance.init(
+                    CONFIGURATION,
                     Time.getCurrent(),
                     new NoOpMetrics(),
-                    MerkleCryptoFactory.getInstance(),
-                    () -> platformStateFacade.roundOf(stateInstance));
+                    MerkleCryptoFactory.getInstance(), () -> platformStateFacade.roundOf(stateInstance));
         } else {
             stateInstance = state;
         }

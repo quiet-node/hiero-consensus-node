@@ -222,11 +222,10 @@ public class SignedState implements SignedStateInfo {
     }
 
     public void init(@NonNull PlatformContext platformContext) {
-        state.init(
+        state.init(platformContext.getConfiguration(),
                 platformContext.getTime(),
                 platformContext.getMetrics(),
-                platformContext.getMerkleCryptography(),
-                () -> {
+                platformContext.getMerkleCryptography(), () -> {
                     final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(state);
                     return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
                 });

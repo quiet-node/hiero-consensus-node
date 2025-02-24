@@ -157,7 +157,7 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
 
             @Override
             public void init(
-                    Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
+                    @NonNull Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
                 // no-op
             }
 
