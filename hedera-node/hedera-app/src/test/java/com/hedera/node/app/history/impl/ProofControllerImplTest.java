@@ -157,8 +157,7 @@ class ProofControllerImplTest {
         given(weights.numTargetNodesInSource()).willReturn(1);
         given(store.setAssemblyTime(UNFINISHED_CONSTRUCTION.constructionId(), CONSENSUS_NOW))
                 .willReturn(SCHEDULED_ASSEMBLY_CONSTRUCTION);
-        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
-        given(library.hashAddressBook(any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
         given(codec.encodeHistory(mockHistory)).willReturn(new byte[0]);
         given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
@@ -178,8 +177,7 @@ class ProofControllerImplTest {
     void startsSigningFutureOnceAssemblyScheduledButInsufficientSignaturesKnown() {
         setupWith(SCHEDULED_ASSEMBLY_CONSTRUCTION, List.of(), List.of(), Map.of(), LEDGER_ID);
 
-        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
-        given(library.hashAddressBook(any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
         given(codec.encodeHistory(mockHistory)).willReturn(new byte[0]);
         given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
@@ -244,9 +242,8 @@ class ProofControllerImplTest {
 
         subject.advanceConstruction(CONSENSUS_NOW, METADATA, store);
 
-        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
-        given(library.hashAddressBook(any())).willReturn(new byte[0]);
-        given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any()))
+        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any(), any(), any()))
                 .willReturn(new byte[0]);
         given(submissions.submitProofVote(
                         eq(CONSTRUCTION_ID), argThat(v -> v.proof().equals(PROOF))))
@@ -277,9 +274,8 @@ class ProofControllerImplTest {
 
         subject.advanceConstruction(CONSENSUS_NOW, METADATA, store);
 
-        given(codec.encodeAddressBook(any(), any())).willReturn(new byte[0]);
-        given(library.hashAddressBook(any())).willReturn(new byte[0]);
-        given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any()))
+        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any(), any(), any()))
                 .willReturn(PROOF.toByteArray());
         given(submissions.submitProofVote(
                         eq(CONSTRUCTION_ID), argThat(v -> v.proof().equals(PROOF))))

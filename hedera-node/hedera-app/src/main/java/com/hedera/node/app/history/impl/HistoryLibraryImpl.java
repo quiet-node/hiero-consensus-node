@@ -7,6 +7,7 @@ import com.hedera.cryptography.rpm.HistoryLibraryBridge;
 import com.hedera.cryptography.rpm.ProvingAndVerifyingSnarkKeys;
 import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
 import com.hedera.node.app.history.HistoryLibrary;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -59,9 +60,10 @@ public class HistoryLibraryImpl implements HistoryLibrary {
     }
 
     @Override
-    public byte[] hashAddressBook(@NonNull final byte[] addressBook) {
-        requireNonNull(addressBook);
-        throw new AssertionError("Not implemented");
+    public byte[] hashAddressBook(@NonNull long[] weights, @NonNull byte[][] publicKeys) {
+        requireNonNull(weights);
+        requireNonNull(publicKeys);
+        return BRIDGE.hashAddressBook(publicKeys, weights);
     }
 
     @NonNull
@@ -69,16 +71,33 @@ public class HistoryLibraryImpl implements HistoryLibrary {
     public byte[] proveChainOfTrust(
             @NonNull final byte[] ledgerId,
             @Nullable final byte[] sourceProof,
-            @NonNull final byte[] sourceAddressBook,
+            @NonNull final long[] currentAddressBookWeights,
+            @NonNull final byte[][] currentAddressBookVerifyingKeys,
+            @NonNull final long[] nextAddressBookWeights,
+            @NonNull final byte[][] nextAddressBookVerifyingKeys,
             @NonNull Map<Long, byte[]> sourceSignatures,
-            @NonNull final byte[] targetAddressBookHash,
             @NonNull final byte[] targetMetadata) {
         requireNonNull(ledgerId);
-        requireNonNull(sourceAddressBook);
+        requireNonNull(currentAddressBookWeights);
+        requireNonNull(currentAddressBookVerifyingKeys);
+        requireNonNull(nextAddressBookWeights);
+        requireNonNull(nextAddressBookVerifyingKeys);
         requireNonNull(sourceSignatures);
-        requireNonNull(targetAddressBookHash);
         requireNonNull(targetMetadata);
-        throw new AssertionError("Not implemented");
+
+        final var genesisAddressBookHash = Bytes.wrap(ledgerId).slice(0, 48).toByteArray();
+        final var verifyingSignatures = sourceSignatures.values().toArray(byte[][]::new);
+        return BRIDGE.proveChainOfTrust(
+                SNARK_KEYS.provingKey(),
+                SNARK_KEYS.verifyingKey(),
+                genesisAddressBookHash,
+                currentAddressBookVerifyingKeys,
+                currentAddressBookWeights,
+                nextAddressBookVerifyingKeys,
+                nextAddressBookWeights,
+                sourceProof,
+                targetMetadata,
+                verifyingSignatures);
     }
 
     @Override

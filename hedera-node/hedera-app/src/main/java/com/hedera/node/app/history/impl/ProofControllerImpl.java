@@ -36,12 +36,14 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link ProofController}.
  */
 public class ProofControllerImpl implements ProofController {
     private static final Comparator<ProofKey> PROOF_KEY_COMPARATOR = Comparator.comparingLong(ProofKey::nodeId);
+    private static final Bytes EMPTY_PUBLIC_KEY = Bytes.wrap(new byte[32]);
 
     private final long selfId;
 
@@ -318,10 +320,15 @@ public class ProofControllerImpl implements ProofController {
     private CompletableFuture<Void> startSigningFuture() {
         requireNonNull(targetMetadata);
         final var proofKeys = Map.copyOf(targetProofKeys);
+        final var targetWeights = weights.targetNodeWeights().values().stream()
+                .mapToLong(Long::longValue)
+                .toArray();
+        final var proofKeysArray = weights.targetNodeWeights().keySet().stream()
+                .map(id -> proofKeys.getOrDefault(id, EMPTY_PUBLIC_KEY).toByteArray())
+                .toArray(byte[][]::new);
         return CompletableFuture.runAsync(
                 () -> {
-                    final var targetBook = codec.encodeAddressBook(weights.targetNodeWeights(), proofKeys);
-                    final var targetHash = library.hashAddressBook(targetBook);
+                    final var targetHash = library.hashAddressBook(targetWeights, proofKeysArray);
                     final var history = new History(Bytes.wrap(targetHash), targetMetadata);
                     final var message = codec.encodeHistory(history);
                     final var signature = library.signSchnorr(
@@ -354,27 +361,40 @@ public class ProofControllerImpl implements ProofController {
             sourceProofKeys = Map.copyOf(targetProofKeys);
         }
         final var targetMetadata = requireNonNull(this.targetMetadata);
+        final var sourceWeights = weights.sourceNodeWeights().values().stream()
+                .mapToLong(Long::longValue)
+                .toArray();
+        final var targetWeights = weights.targetNodeWeights().values().stream()
+                .mapToLong(Long::longValue)
+                .toArray();
+        final var sourceProofKeysArray = weights.sourceNodeWeights().keySet().stream()
+                .map(id -> sourceProofKeys.getOrDefault(id, EMPTY_PUBLIC_KEY).toByteArray())
+                .toArray(byte[][]::new);
+        final var targetProofKeysArray = weights.targetNodeWeights().keySet().stream()
+                .map(id -> targetProofKeys.getOrDefault(id, EMPTY_PUBLIC_KEY).toByteArray())
+                .toArray(byte[][]::new);
         return CompletableFuture.runAsync(
                 () -> {
-                    final var sourceBook = codec.encodeAddressBook(weights.sourceNodeWeights(), sourceProofKeys);
-                    final var sourceHash = library.hashAddressBook(sourceBook);
-                    final var targetBook = codec.encodeAddressBook(weights.targetNodeWeights(), targetProofKeys);
-                    final var targetHash = library.hashAddressBook(targetBook);
+                    final var sourceHash = library.hashAddressBook(sourceWeights, sourceProofKeysArray);
+                    final var targetHash = library.hashAddressBook(targetWeights, targetProofKeysArray);
+                    final var sourceSignatures = signatures.entrySet().stream()
+                            .map(e -> new AbstractMap.SimpleImmutableEntry<>(
+                                    e.getKey(), e.getValue().toByteArray()))
+                            .collect(Collectors.toMap(
+                                    AbstractMap.SimpleImmutableEntry::getKey,
+                                    AbstractMap.SimpleImmutableEntry::getValue));
                     final var proof = library.proveChainOfTrust(
                             Optional.ofNullable(ledgerId)
                                     .map(Bytes::toByteArray)
-                                    .orElseGet(() -> library.hashAddressBook(sourceBook)),
+                                    .orElse(sourceHash),
                             Optional.ofNullable(sourceProof)
                                     .map(Bytes::toByteArray)
                                     .orElse(null),
-                            sourceBook,
-                            signatures.entrySet().stream()
-                                    .map(e -> new AbstractMap.SimpleImmutableEntry<>(
-                                            e.getKey(), e.getValue().toByteArray()))
-                                    .collect(toMap(
-                                            AbstractMap.SimpleImmutableEntry::getKey,
-                                            AbstractMap.SimpleImmutableEntry::getValue)),
-                            targetHash,
+                            sourceWeights,
+                            sourceProofKeysArray,
+                            targetWeights,
+                            targetProofKeysArray,
+                            sourceSignatures,
                             targetMetadata.toByteArray());
                     final var metadataProof = HistoryProof.newBuilder()
                             .sourceAddressBookHash(Bytes.wrap(sourceHash))

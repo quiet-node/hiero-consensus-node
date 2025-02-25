@@ -45,10 +45,10 @@ public interface HistoryLibrary {
     /**
      * Computes the hash of the given address book with the same algorithm used by the SNARK circuit.
      *
-     * @param addressBook the address book
-     * @return the hash of the address book
+     * @param weights the node weights in the roster
+     * @param publicKeys the available Schnorr public keys for the nodes in the roster
      */
-    byte[] hashAddressBook(@NonNull byte[] addressBook);
+    byte[] hashAddressBook(@NonNull long[] weights, @NonNull byte[][] publicKeys);
 
     /**
      * Returns a SNARK recursively proving the target address book and associated metadata belong to the given ledger
@@ -57,9 +57,12 @@ public interface HistoryLibrary {
      *
      * @param ledgerId the ledger id, the concatenation of the genesis address book hash and the SNARK verification key
      * @param sourceProof if not null, the proof the source address book is in the ledger id's chain of trust
-     * @param sourceAddressBook the source roster
+     * @param currentAddressBookVerifyingKeys the verifying keys of the current address book, indexed by node index in the roster
+     *                                        the same order as the weights
+     * @param currentAddressBookWeights the weights of the current address book, indexed by node index in the roster
+     * @param  nextAddressBookVerifyingKeys the verifying keys of the next address book, indexed by node index in the roster
+     * @param nextAddressBookWeights the weights of the next address book, indexed by node index in the roster
      * @param sourceSignatures the source address book signatures on the target address book hash and its metadata
-     * @param targetAddressBookHash the hash of the target address book
      * @param targetMetadata the metadata of the target address book
      * @return the SNARK proving the target address book and metadata belong to the ledger id's chain of trust
      */
@@ -67,9 +70,11 @@ public interface HistoryLibrary {
     byte[] proveChainOfTrust(
             @NonNull byte[] ledgerId,
             @Nullable byte[] sourceProof,
-            @NonNull byte[] sourceAddressBook,
+            @NonNull final long[] currentAddressBookWeights,
+            @NonNull final byte[][] currentAddressBookVerifyingKeys,
+            @NonNull final long[] nextAddressBookWeights,
+            @NonNull final byte[][] nextAddressBookVerifyingKeys,
             @NonNull Map<Long, byte[]> sourceSignatures,
-            @NonNull byte[] targetAddressBookHash,
             @NonNull byte[] targetMetadata);
 
     /**

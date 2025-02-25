@@ -3,9 +3,7 @@ package com.hedera.node.app.history.impl;
 
 import com.hedera.hapi.node.state.history.History;
 import com.hedera.node.app.history.HistoryLibrary;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.Map;
 
 /**
  * Utility to extract information from byte arrays returned by the {@link HistoryLibrary}, encode protobuf
@@ -21,16 +19,6 @@ public interface HistoryLibraryCodec {
      */
     @NonNull
     byte[] encodeHistory(@NonNull History history);
-
-    /**
-     * Encodes the given roster and public keys into an address book for use with the {@link HistoryLibrary}.
-     *
-     * @param weights the roster
-     * @param publicKeys the available Schnorr public keys for the nodes in the roster
-     * @return the history address book
-     */
-    @NonNull
-    byte[] encodeAddressBook(@NonNull Map<Long, Long> weights, @NonNull Map<Long, Bytes> publicKeys);
 
     /**
      * Encodes the given roster and public keys into an address book for use with the {@link HistoryLibrary}.
