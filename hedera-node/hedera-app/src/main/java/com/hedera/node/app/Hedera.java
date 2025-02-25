@@ -133,7 +133,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadablePlatformStateStore;
 import com.swirlds.platform.state.service.ReadableRosterStore;
-import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.Round;
@@ -147,10 +146,7 @@ import com.swirlds.platform.system.transaction.Transaction;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StartupNetworks;
-import com.swirlds.state.lifecycle.StateDefinition;
-import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
-import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -159,7 +155,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.InstantSource;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -634,12 +629,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             @NonNull final Configuration platformConfig) {
         requireNonNull(state);
         requireNonNull(platformConfig);
-
-        if (trigger != GENESIS) {
-            // FIXME: remove?
-            registerPlatformService(state);
-        }
-
         this.configProvider = new ConfigProviderImpl(trigger == GENESIS, metrics);
         final var deserializedVersion = platformStateFacade.creationSemanticVersionOf(state);
         logger.info(
@@ -677,23 +666,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 platformStateFacade.lastFrozenTimeOf(state));
     }
 
-    public static void registerPlatformService(@NonNull final MerkleNodeState state) {
-        V0540PlatformStateSchema schema = new V0540PlatformStateSchema();
-        schema.statesToCreate().stream()
-                .sorted(Comparator.comparing(StateDefinition::stateKey))
-                .forEach(def -> {
-                    final var md = new StateMetadata<>(PlatformStateService.NAME, schema, def);
-                    state.putServiceStateIfAbsent(
-                            md,
-                            () -> new SingletonNode<>(
-                                    md.serviceName(),
-                                    md.stateDefinition().stateKey(),
-                                    md.singletonClassId(),
-                                    md.stateDefinition().valueCodec(),
-                                    null));
-                });
-    }
-
     /**
      * Invoked by the platform when the state should be initialized. This happens <b>BEFORE</b>
      * {@link SwirldMain#init(Platform, NodeId)} and after {@link #newStateRoot()}.
@@ -711,7 +683,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             throw new IllegalStateException("Platform should never change once set");
         }
         this.platform = requireNonNull(platform);
-        if (state.getReadableStates(PlatformStateService.NAME).isEmpty()) {
+        if (state.getReadableStates(EntityIdService.NAME).isEmpty()) {
             initializeStatesApi(state, trigger, null, platform.getContext().getConfiguration());
         }
         // With the States API grounded in the working state, we can create the object graph from it
