@@ -7,8 +7,10 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
+import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -18,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 public class BlockNodeConnection {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     private final BlockNodeConfig node;
     private final GrpcServiceClient grpcServiceClient;
@@ -58,6 +61,8 @@ public class BlockNodeConnection {
                         handleStreamFailure();
                     }
                 });
+
+        return null;
     }
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
@@ -101,5 +106,25 @@ public class BlockNodeConnection {
 
     public BlockNodeConfig getNodeConfig() {
         return node;
+    }
+
+    public <T> void retry(Supplier<T> action, Duration initialDelay, int maxAttempts) throws Exception {
+        int attempts = 0;
+        Duration delay = initialDelay;
+
+        while (attempts < maxAttempts) {
+            try {
+                action.get();
+                return;
+            } catch (Exception e) {
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    throw new Exception("Max retry attempts reached", e);
+                }
+                logger.info("Failed to execute action, retrying in {} ms", delay.toMillis());
+                Thread.sleep(delay.toMillis());
+                delay = delay.multipliedBy(RETRY_BACKOFF_MULTIPLIER);
+            }
+        }
     }
 }
