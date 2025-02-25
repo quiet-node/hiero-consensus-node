@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2021-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.internal.cache;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyDoesNotThrow;
@@ -2064,8 +2049,7 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache1.seal();
         cache0.merge();
         // A is added in version 0 and deleted in version 1. It should not be in deleted leaves
-        validateDeletedLeaves(
-                cache1.deletedLeaves().collect(Collectors.toList()), Set.of(B_KEY, D_KEY), "cache1");
+        validateDeletedLeaves(cache1.deletedLeaves().collect(Collectors.toList()), Set.of(B_KEY, D_KEY), "cache1");
 
         cache2.seal();
         cache1.merge();
@@ -2075,8 +2059,7 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache3.seal();
         cache2.merge();
         // B and C are added, removed, re-added, removed again. They should not be in deleted leaves
-        validateDeletedLeaves(
-                cache3.deletedLeaves().collect(Collectors.toList()), Set.of(), "cache3");
+        validateDeletedLeaves(cache3.deletedLeaves().collect(Collectors.toList()), Set.of(), "cache3");
 
         map0.release();
         map1.release();

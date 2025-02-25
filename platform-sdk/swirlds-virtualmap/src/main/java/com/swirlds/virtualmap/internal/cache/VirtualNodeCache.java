@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2021-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.internal.cache;
 
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
@@ -1379,11 +1364,19 @@ public final class VirtualNodeCache<K extends VirtualKey, V extends VirtualValue
                         // Already removed for a more recent mutation
                         return null;
                     }
-                    for (Mutation<K, V> m = mutation; m.next != null; m = m.next) {
-                        if (element.equals(m.next)) {
+                    Mutation<K, V> m = mutation;
+                    // Use a local variable, since the list of mutations may be processed in
+                    // another thread in filterMutations(). This should not be a problem. Even
+                    // if this thread captures m.next, while filterMutations() sets m.next to
+                    // null, the loop below still works fine
+                    Mutation<K, V> next = m.next;
+                    while (next != null) {
+                        if (element.equals(next)) {
                             m.next = null;
                             break;
                         }
+                        m = next;
+                        next = m.next;
                     }
                     return mutation;
                 }));
