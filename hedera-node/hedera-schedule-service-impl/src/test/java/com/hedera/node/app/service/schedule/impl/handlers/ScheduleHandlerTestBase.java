@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.schedule.impl.handlers;
 
 import static com.hedera.node.app.signature.impl.SignatureVerificationImpl.failedVerification;
@@ -34,7 +19,6 @@ import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.node.base.ScheduleID;
 import com.hedera.hapi.node.base.Timestamp;
-import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.schedule.Schedule;
 import com.hedera.node.app.service.schedule.ReadableScheduleStore;
 import com.hedera.node.app.service.schedule.ScheduleStreamBuilder;
@@ -101,8 +85,7 @@ class ScheduleHandlerTestBase extends ScheduleTestBase {
                 .hasFieldOrPropertyWithValue("status", expectedError);
     }
 
-    protected void verifyHandleSucceededAndExecuted(
-            final Schedule next, final TransactionID parentId, final int startCount) {
+    protected void verifyHandleSucceededAndExecuted(final Schedule next, final int startCount) {
         commit(writableById); // commit changes so we can inspect the underlying map
         // should be a new schedule in the map
         assertThat(scheduleMapById).hasSize(startCount + 1);
@@ -110,7 +93,7 @@ class ScheduleHandlerTestBase extends ScheduleTestBase {
         final Schedule wrongSchedule = writableSchedules.get(next.scheduleId());
         assertThat(wrongSchedule).isNull(); // shard and realm *should not* match here
         // get a corrected schedule ID.
-        final ScheduleID correctedId = adjustRealmShardForPayer(next, parentId);
+        final ScheduleID correctedId = adjustRealmShard(next);
         final Schedule resultSchedule = writableSchedules.get(correctedId);
         // verify the schedule was created ready for sign transactions
         assertThat(resultSchedule).isNotNull(); // shard and realm *should* match here
@@ -149,12 +132,8 @@ class ScheduleHandlerTestBase extends ScheduleTestBase {
         assertThat(signedSchedule.resolutionTime()).isNull();
     }
 
-    protected static ScheduleID adjustRealmShardForPayer(final Schedule next, final TransactionID parentId) {
-        long correctRealm = parentId.accountID().realmNum();
-        long correctShard = parentId.accountID().shardNum();
-        final ScheduleID.Builder correctedBuilder = next.scheduleId().copyBuilder();
-        correctedBuilder.realmNum(correctRealm).shardNum(correctShard);
-        return correctedBuilder.build();
+    protected static ScheduleID adjustRealmShard(final Schedule next) {
+        return next.scheduleId().copyBuilder().shardNum(SHARD).realmNum(REALM).build();
     }
 
     protected Timestamp timestampFrom(final Instant valueToConvert) {
