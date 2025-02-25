@@ -30,11 +30,10 @@ public class BlockNodeConnection {
         this.node = nodeConfig;
         this.grpcServiceClient = grpcServiceClient;
         this.manager = manager;
-        establishStream();
         logger.info("BlockNodeConnection INITIALIZED");
     }
 
-    private void establishStream() {
+    public Void establishStream() {
         requestObserver =
                 grpcServiceClient.bidi(manager.getGrpcEndPoint(), new StreamObserver<PublishStreamResponse>() {
                     @Override
