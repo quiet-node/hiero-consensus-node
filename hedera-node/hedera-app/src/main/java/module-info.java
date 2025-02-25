@@ -40,6 +40,7 @@ module com.hedera.node.app {
     requires transitive com.swirlds.platform.core;
     requires transitive com.swirlds.state.api;
     requires transitive com.swirlds.state.impl;
+    requires transitive com.swirlds.virtualmap;
     requires transitive dagger;
     requires transitive io.grpc.stub;
     requires transitive javax.inject;
@@ -65,10 +66,10 @@ module com.hedera.node.app {
     requires io.netty.transport.classes.epoll;
     requires io.netty.transport;
     requires org.apache.commons.lang3;
-    requires org.jetbrains.annotations; // javax.annotation.processing.Generated
     requires static com.github.spotbugs.annotations;
     requires static com.google.auto.service;
     requires static java.compiler;
+    requires static org.jetbrains.annotations; // javax.annotation.processing.Generated
 
     exports com.hedera.node.app;
     exports com.hedera.node.app.state;
