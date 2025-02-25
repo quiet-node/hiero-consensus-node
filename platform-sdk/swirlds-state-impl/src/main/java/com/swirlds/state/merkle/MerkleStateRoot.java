@@ -55,8 +55,6 @@ import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.disk.BackedReadableKVState;
 import com.swirlds.state.merkle.disk.BackedWritableKVState;
-import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
-import com.swirlds.state.merkle.disk.OnDiskWritableKVState;
 import com.swirlds.state.merkle.memory.InMemoryReadableKVState;
 import com.swirlds.state.merkle.memory.InMemoryWritableKVState;
 import com.swirlds.state.merkle.queue.BackedReadableQueueState;
@@ -88,7 +86,6 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -189,7 +186,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
     }
 
-    public void init(@NonNull Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
+    public void init(
+            @NonNull Configuration configuration,
+            Time time,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier) {
         this.configuration = configuration;
         this.time = time;
         this.metrics = metrics;
@@ -273,7 +275,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         registryRecord.release();
     }
 
-
     /**
      * {@inheritDoc}
      */
@@ -324,7 +325,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     }
 
     protected abstract T copyingConstructor();
-
 
     /**
      * Puts the defined service state and its associated node into the merkle tree. The precondition
@@ -939,11 +939,11 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @Override
     public T loadSnapshot(@NonNull Path targetPath) throws IOException {
         requireNonNull(configuration);
-        return (T) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath).stateRoot();
+        return (T) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
+                .stateRoot();
     }
 
     // END * MOSTLY * DEPRECATED CODE
-
 
     // START MIGRATION CODE
 

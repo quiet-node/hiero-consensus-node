@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package com.swirlds.state.merkle.queue;
 
-import com.swirlds.state.spi.WritableQueueStateBase;
-import edu.umd.cs.findbugs.annotations.NonNull;
-
-import java.util.Iterator;
-
 import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static com.swirlds.state.merkle.logging.StateLogger.logQueueAdd;
 import static com.swirlds.state.merkle.logging.StateLogger.logQueueRemove;
 import static java.util.Objects.requireNonNull;
+
+import com.swirlds.state.spi.WritableQueueStateBase;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.Iterator;
 
 /**
  * An implementation of {@link com.swirlds.state.spi.WritableQueueState} based on {@link QueueNode}.
@@ -34,7 +33,8 @@ public class BackedWritableQueueState<E> extends WritableQueueStateBase<E> {
 
     private final QueueNode<E> dataSource;
 
-    public BackedWritableQueueState(@NonNull final String serviceName, @NonNull final String stateKey, @NonNull final QueueNode<E> node) {
+    public BackedWritableQueueState(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final QueueNode<E> node) {
         super(serviceName, stateKey);
         this.dataSource = requireNonNull(node);
     }

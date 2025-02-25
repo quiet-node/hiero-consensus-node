@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2020-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,20 @@
 
 package com.swirlds.state.merkle.singleton;
 
-import com.swirlds.state.spi.WritableSingletonStateBase;
-import edu.umd.cs.findbugs.annotations.NonNull;
-
 import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRead;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRemove;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonWrite;
 
+import com.swirlds.state.spi.WritableSingletonStateBase;
+import edu.umd.cs.findbugs.annotations.NonNull;
+
 public class BackedWritableSingletonState<T> extends WritableSingletonStateBase<T> {
 
     private final SingletonNode<T> backingStore;
 
-    public BackedWritableSingletonState(@NonNull final String serviceName, @NonNull final String stateKey, @NonNull final SingletonNode<T> node) {
+    public BackedWritableSingletonState(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final SingletonNode<T> node) {
         super(serviceName, stateKey);
         this.backingStore = node;
     }
@@ -45,7 +46,7 @@ public class BackedWritableSingletonState<T> extends WritableSingletonStateBase<
     /** {@inheritDoc} */
     @Override
     protected void putIntoDataSource(@NonNull T value) {
-       backingStore.setValue(value);
+        backingStore.setValue(value);
         // Log to transaction state log, what was put
         logSingletonWrite(computeLabel(serviceName, stateKey), value);
     }

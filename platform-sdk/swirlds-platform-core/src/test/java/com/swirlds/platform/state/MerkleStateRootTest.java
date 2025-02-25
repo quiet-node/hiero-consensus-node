@@ -90,7 +90,8 @@ class MerkleStateRootTest extends MerkleTestBase {
         FakeStateLifecycles.registerMerkleStateRootClassIds();
         setupFruitMerkleMap();
         stateRoot = new TestMerkleStateRoot();
-        stateRoot.init(CONFIGURATION, new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
+        stateRoot.init(
+                CONFIGURATION, new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
     }
 
     /** Looks for a merkle node with the given label */
@@ -817,7 +818,8 @@ class MerkleStateRootTest extends MerkleTestBase {
         @Test
         @DisplayName("Migration from previous versions is not supported")
         void migration_not_supported() {
-            assertThrows(UnsupportedOperationException.class, () -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1));
+            assertThrows(
+                    UnsupportedOperationException.class, () -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1));
         }
     }
 

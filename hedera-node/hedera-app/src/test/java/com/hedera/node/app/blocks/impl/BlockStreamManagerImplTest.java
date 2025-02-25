@@ -642,11 +642,13 @@ class BlockStreamManagerImplTest {
         given(state.getReadableStates(PlatformStateService.NAME)).willReturn(readableStates);
         infoRef.set(blockStreamInfo);
         stateRef.set(platformState);
-        blockStreamInfoState = new FunctionWritableSingletonState<>(BLOCK_STREAM_INFO_SERVICE, BLOCK_STREAM_INFO_KEY, infoRef::get, infoRef::set);
+        blockStreamInfoState = new FunctionWritableSingletonState<>(
+                BLOCK_STREAM_INFO_SERVICE, BLOCK_STREAM_INFO_KEY, infoRef::get, infoRef::set);
         given(readableStates.<BlockStreamInfo>getSingleton(BLOCK_STREAM_INFO_KEY))
                 .willReturn(blockStreamInfoState);
         given(readableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
-                .willReturn(new FunctionWritableSingletonState<>(PlatformStateService.NAME, PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        PlatformStateService.NAME, PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
     }
 
     private void givenEndOfRoundSetup() {

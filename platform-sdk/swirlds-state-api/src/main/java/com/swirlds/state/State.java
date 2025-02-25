@@ -50,7 +50,12 @@ public interface State extends FastCopyable, Hashable {
      * @param merkleCryptography The merkle cryptography provider.
      * @param roundSupplier      The round supplier.
      */
-    void init(@NonNull final Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier);
+    void init(
+            @NonNull final Configuration configuration,
+            Time time,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier);
 
     /**
      * Returns a {@link ReadableStates} for the given named service. If such a service doesn't

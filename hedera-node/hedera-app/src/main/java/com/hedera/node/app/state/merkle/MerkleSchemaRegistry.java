@@ -1,4 +1,19 @@
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * Copyright (C) 2025 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.state.merkle.SchemaApplicationType.MIGRATION;
@@ -18,7 +33,6 @@ import com.hedera.node.app.services.MigrationContextImpl;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.state.lifecycle.MigrationContext;
@@ -221,8 +235,8 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                                 && previousVersion != null
                                 && alreadyIncludesStateDefs(previousVersion, s.getVersion()))
                         .toList();
-                final var redefinedWritableStates = applyStateDefinitions(
-                        schema, schemasAlreadyInState, appConfig, stateRoot);
+                final var redefinedWritableStates =
+                        applyStateDefinitions(schema, schemasAlreadyInState, appConfig, stateRoot);
                 writableStates = redefinedWritableStates.beforeStates();
                 newStates = redefinedWritableStates.afterStates();
             } else {

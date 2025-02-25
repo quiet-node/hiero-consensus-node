@@ -168,7 +168,8 @@ public class RandomSignedStateGenerator {
                     CONFIGURATION,
                     Time.getCurrent(),
                     new NoOpMetrics(),
-                    MerkleCryptoFactory.getInstance(), () -> platformStateFacade.roundOf(stateInstance));
+                    MerkleCryptoFactory.getInstance(),
+                    () -> platformStateFacade.roundOf(stateInstance));
         } else {
             stateInstance = state;
         }

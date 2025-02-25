@@ -216,7 +216,12 @@ public class SavepointStackImpl extends MerkleNodeStateAdapter implements Handle
     }
 
     @Override
-    public void init(@NonNull final Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
+    public void init(
+            @NonNull final Configuration configuration,
+            Time time,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier) {
         state.init(configuration, time, metrics, merkleCryptography, roundSupplier);
     }
 

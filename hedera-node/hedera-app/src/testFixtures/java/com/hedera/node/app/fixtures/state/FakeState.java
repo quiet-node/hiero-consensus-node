@@ -273,7 +273,12 @@ public class FakeState implements MerkleNodeState {
     }
 
     @Override
-    public void init(@NonNull Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
+    public void init(
+            @NonNull Configuration configuration,
+            Time time,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier) {
         // no-op
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
+ * Copyright (C) 2023-2025 Hedera Hashgraph, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,15 @@
 
 package com.swirlds.state.merkle.queue;
 
+import static com.swirlds.state.merkle.StateUtils.computeLabel;
+import static com.swirlds.state.merkle.logging.StateLogger.logQueuePeek;
+import static java.util.Objects.requireNonNull;
+
 import com.swirlds.state.spi.ReadableQueueState;
 import com.swirlds.state.spi.ReadableQueueStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.util.Iterator;
-
-import static com.swirlds.state.merkle.StateUtils.computeLabel;
-import static com.swirlds.state.merkle.logging.StateLogger.logQueuePeek;
-import static java.util.Objects.requireNonNull;
 
 /**
  * An implementation of {@link ReadableQueueState} that uses a merkle {@link QueueNode} as the backing store.
@@ -36,7 +35,8 @@ public class BackedReadableQueueState<E> extends ReadableQueueStateBase<E> {
     private final QueueNode<E> dataSource;
 
     /** Create a new instance */
-    public BackedReadableQueueState(@NonNull final String serviceName, @NonNull final String stateKey, @NonNull final QueueNode<E> node) {
+    public BackedReadableQueueState(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final QueueNode<E> node) {
         super(serviceName, stateKey);
         this.dataSource = requireNonNull(node);
     }

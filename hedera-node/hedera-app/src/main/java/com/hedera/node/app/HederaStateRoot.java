@@ -37,7 +37,8 @@ public class HederaStateRoot extends MerkleStateRoot<HederaStateRoot> implements
         // empty
     }
 
-    protected HederaStateRoot(@NonNull HederaStateRoot from) {super(from);
+    protected HederaStateRoot(@NonNull HederaStateRoot from) {
+        super(from);
     }
 
     /**

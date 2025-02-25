@@ -17,12 +17,12 @@
 module com.swirlds.platform.core.test.fixtures {
     requires transitive com.swirlds.common.test.fixtures;
     requires transitive com.swirlds.state.impl.test.fixtures;
+    requires com.hedera.node.app;
     requires com.swirlds.config.extensions.test.fixtures;
     requires com.swirlds.merkledb;
     requires com.swirlds.state.api.test.fixtures;
     requires org.junit.jupiter.api;
     requires org.mockito;
-    requires com.hedera.node.app;
 
     exports com.swirlds.platform.test.fixtures;
     exports com.swirlds.platform.test.fixtures.stream;
