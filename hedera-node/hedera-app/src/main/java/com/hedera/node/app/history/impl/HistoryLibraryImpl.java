@@ -7,7 +7,6 @@ import com.hedera.cryptography.rpm.HistoryLibraryBridge;
 import com.hedera.cryptography.rpm.ProvingAndVerifyingSnarkKeys;
 import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
 import com.hedera.node.app.history.HistoryLibrary;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -66,6 +65,11 @@ public class HistoryLibraryImpl implements HistoryLibrary {
         return BRIDGE.hashAddressBook(publicKeys, weights);
     }
 
+    @Override
+    public byte[] hashHintsVerificationKey(@NonNull final byte[] hintsVerificationKey) {
+        return BRIDGE.hashHintsVerificationKey(hintsVerificationKey);
+    }
+
     @NonNull
     @Override
     public byte[] proveChainOfTrust(
@@ -85,12 +89,11 @@ public class HistoryLibraryImpl implements HistoryLibrary {
         requireNonNull(sourceSignatures);
         requireNonNull(targetMetadata);
 
-        final var genesisAddressBookHash = Bytes.wrap(ledgerId).slice(0, 48).toByteArray();
         final var verifyingSignatures = sourceSignatures.values().toArray(byte[][]::new);
         return BRIDGE.proveChainOfTrust(
                 SNARK_KEYS.provingKey(),
                 SNARK_KEYS.verifyingKey(),
-                genesisAddressBookHash,
+                ledgerId,
                 currentAddressBookVerifyingKeys,
                 currentAddressBookWeights,
                 nextAddressBookVerifyingKeys,

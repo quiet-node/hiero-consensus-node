@@ -51,6 +51,13 @@ public interface HistoryLibrary {
     byte[] hashAddressBook(@NonNull long[] weights, @NonNull byte[][] publicKeys);
 
     /**
+     * Computes the hash of the given hints verification key.
+     * @param hintsVerificationKey the hints verification key
+     * @return the hash of the hints verification key
+     */
+    byte[] hashHintsVerificationKey(@NonNull byte[] hintsVerificationKey);
+
+    /**
      * Returns a SNARK recursively proving the target address book and associated metadata belong to the given ledger
      * id's chain of trust that includes the given source address book, based on its own proof of belonging. (Unless the
      * source address book hash <i>is</i> the ledger id, which is the base case of the recursion).

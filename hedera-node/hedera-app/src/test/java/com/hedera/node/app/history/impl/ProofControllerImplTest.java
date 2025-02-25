@@ -83,9 +83,6 @@ class ProofControllerImplTest {
     private HistoryLibrary library;
 
     @Mock
-    private HistoryLibraryCodec codec;
-
-    @Mock
     private HistorySubmissions submissions;
 
     @Mock
@@ -159,7 +156,6 @@ class ProofControllerImplTest {
                 .willReturn(SCHEDULED_ASSEMBLY_CONSTRUCTION);
         given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
-        given(codec.encodeHistory(mockHistory)).willReturn(new byte[0]);
         given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
         final var expectedSignature = new HistorySignature(mockHistory, Bytes.EMPTY);
         given(submissions.submitAssemblySignature(CONSTRUCTION_ID, expectedSignature))
@@ -179,7 +175,6 @@ class ProofControllerImplTest {
 
         given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
-        given(codec.encodeHistory(mockHistory)).willReturn(new byte[0]);
         given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
         final var expectedSignature = new HistorySignature(mockHistory, Bytes.EMPTY);
         given(submissions.submitAssemblySignature(CONSTRUCTION_ID, expectedSignature))
@@ -226,7 +221,6 @@ class ProofControllerImplTest {
     @Test
     void startsProofWithSufficientSignatures() {
         given(weights.targetIncludes(SELF_ID)).willReturn(true);
-        given(codec.encodeHistory(History.DEFAULT)).willReturn(new byte[0]);
         given(library.verifySchnorr(any(), any(), any())).willReturn(true);
         setupWith(
                 SCHEDULED_ASSEMBLY_CONSTRUCTION,
@@ -258,7 +252,6 @@ class ProofControllerImplTest {
     @Test
     void usesSourceProofIfAvailable() {
         given(weights.targetIncludes(SELF_ID)).willReturn(true);
-        given(codec.encodeHistory(History.DEFAULT)).willReturn(new byte[0]);
         given(library.verifySchnorr(any(), any(), any())).willReturn(true);
         setupWith(
                 SCHEDULED_ASSEMBLY_CONSTRUCTION_WITH_SOURCE_PROOF,
@@ -355,7 +348,6 @@ class ProofControllerImplTest {
         given(weights.sourceWeightOf(otherNodeId)).willReturn(3L);
         given(store.completeProof(CONSTRUCTION_ID, expectedProof)).willReturn(FINISHED_CONSTRUCTION);
         given(store.getActiveConstruction()).willReturn(UNFINISHED_CONSTRUCTION);
-        given(codec.encodeLedgerId(any(), any())).willReturn(new byte[0]);
 
         subject.addProofVote(otherNodeId, otherVote, store);
 
@@ -380,7 +372,6 @@ class ProofControllerImplTest {
                 weights,
                 scheduledTasks::offer,
                 library,
-                codec,
                 submissions,
                 proofKeyPublications,
                 signaturePublications,

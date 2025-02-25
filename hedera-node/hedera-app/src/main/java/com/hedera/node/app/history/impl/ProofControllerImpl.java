@@ -56,7 +56,6 @@ public class ProofControllerImpl implements ProofController {
     private final Executor executor;
     private final TssKeyPair schnorrKeyPair;
     private final HistoryLibrary library;
-    private final HistoryLibraryCodec codec;
     private final HistorySubmissions submissions;
     private final RosterTransitionWeights weights;
     private final Consumer<HistoryProof> proofConsumer;
@@ -98,9 +97,9 @@ public class ProofControllerImpl implements ProofController {
     /**
      * A party's verified signature on a new piece of {@code (address book hash, metadata)} history.
      *
-     * @param nodeId the node's id
+     * @param nodeId           the node's id
      * @param historySignature its history signature
-     * @param isValid whether the signature is valid
+     * @param isValid          whether the signature is valid
      */
     private record Verification(long nodeId, @NonNull HistorySignature historySignature, boolean isValid) {
         public @NonNull History history() {
@@ -112,7 +111,7 @@ public class ProofControllerImpl implements ProofController {
      * A summary of the signatures to be used in a proof.
      *
      * @param history the assembly with the signatures
-     * @param cutoff the time at which the signatures were sufficient
+     * @param cutoff  the time at which the signatures were sufficient
      */
     private record Signatures(@NonNull History history, @NonNull Instant cutoff) {}
 
@@ -124,7 +123,6 @@ public class ProofControllerImpl implements ProofController {
             @NonNull final RosterTransitionWeights weights,
             @NonNull final Executor executor,
             @NonNull final HistoryLibrary library,
-            @NonNull final HistoryLibraryCodec codec,
             @NonNull final HistorySubmissions submissions,
             @NonNull final List<ProofKeyPublication> keyPublications,
             @NonNull final List<HistorySignaturePublication> signaturePublications,
@@ -132,7 +130,6 @@ public class ProofControllerImpl implements ProofController {
             @NonNull final Consumer<HistoryProof> proofConsumer) {
         this.selfId = selfId;
         this.ledgerId = ledgerId;
-        this.codec = requireNonNull(codec);
         this.executor = requireNonNull(executor);
         this.library = requireNonNull(library);
         this.submissions = requireNonNull(submissions);
@@ -247,8 +244,8 @@ public class ProofControllerImpl implements ProofController {
                 proofConsumer.accept(proof);
                 if (ledgerId == null) {
                     requireNonNull(targetMetadata);
-                    final var encodedId = codec.encodeLedgerId(
-                            proof.sourceAddressBookHash().toByteArray(), targetMetadata.toByteArray());
+                    final var encodedId =
+                            encodeLedgerId(proof.sourceAddressBookHash().toByteArray(), targetMetadata.toByteArray());
                     historyStore.setLedgerId(Bytes.wrap(encodedId));
                 }
             }
@@ -303,6 +300,7 @@ public class ProofControllerImpl implements ProofController {
 
     /**
      * If the given publication was for a node in the target roster, updates the target proof keys.
+     *
      * @param publication the publication
      */
     private void maybeUpdateForProofKey(@NonNull final ProofKeyPublication publication) {
@@ -330,7 +328,7 @@ public class ProofControllerImpl implements ProofController {
                 () -> {
                     final var targetHash = library.hashAddressBook(targetWeights, proofKeysArray);
                     final var history = new History(Bytes.wrap(targetHash), targetMetadata);
-                    final var message = codec.encodeHistory(history);
+                    final var message = encodeHistory(history);
                     final var signature = library.signSchnorr(
                             message, schnorrKeyPair.privateKey().toByteArray());
                     final var historySignature = new HistorySignature(history, Bytes.wrap(signature));
@@ -480,12 +478,27 @@ public class ProofControllerImpl implements ProofController {
             final long nodeId, @NonNull final HistorySignature historySignature) {
         return CompletableFuture.supplyAsync(
                 () -> {
-                    final var message = codec.encodeHistory(historySignature.historyOrThrow());
+                    final var message = encodeHistory(historySignature.historyOrThrow());
                     final var proofKey = requireNonNull(targetProofKeys.get(nodeId));
                     final var isValid = library.verifySchnorr(
                             historySignature.signature().toByteArray(), proofKey.toByteArray(), message);
                     return new Verification(nodeId, historySignature, isValid);
                 },
                 executor);
+    }
+
+    private @NonNull byte[] encodeLedgerId(
+            @NonNull final byte[] addressBookHash, @NonNull final byte[] snarkVerificationKey) {
+        requireNonNull(addressBookHash);
+        requireNonNull(snarkVerificationKey);
+        final byte[] arr = new byte[addressBookHash.length + snarkVerificationKey.length];
+        System.arraycopy(addressBookHash, 0, arr, 0, addressBookHash.length);
+        System.arraycopy(snarkVerificationKey, 0, arr, addressBookHash.length, snarkVerificationKey.length);
+        return arr;
+    }
+
+    private @NonNull byte[] encodeHistory(@NonNull final History history) {
+        requireNonNull(history);
+        throw new UnsupportedOperationException("Not implemented");
     }
 }

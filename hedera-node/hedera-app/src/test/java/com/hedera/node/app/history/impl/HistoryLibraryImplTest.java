@@ -3,12 +3,10 @@ package com.hedera.node.app.history.impl;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.google.common.primitives.Bytes;
 import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Test;
 
 class HistoryLibraryImplTest {
@@ -41,7 +39,7 @@ class HistoryLibraryImplTest {
 
     @Test
     void verifiesProofOfTrust() {
-        final List<KeyPairAndWeight> sourceAddresses = buildSomeAddresses(4);
+        final List<KeyPairAndWeight> sourceAddresses = buildSomeAddresses(3);
         final var sourceKeys =
                 sourceAddresses.stream().map(k -> k.keys.verifyingKey()).toArray(byte[][]::new);
         final var sourceWeights = sourceAddresses.stream()
@@ -49,7 +47,7 @@ class HistoryLibraryImplTest {
                 .mapToLong(Long::longValue)
                 .toArray();
 
-        final List<KeyPairAndWeight> targetAddresses = buildSomeAddresses(3);
+        final List<KeyPairAndWeight> targetAddresses = buildSomeAddresses(2);
         final var targetKeys =
                 targetAddresses.stream().map(k -> k.keys.verifyingKey()).toArray(byte[][]::new);
         final var targetWeights = targetAddresses.stream()
@@ -58,17 +56,36 @@ class HistoryLibraryImplTest {
                 .toArray();
 
         final byte[] genesisAddressBookHash = subject.hashAddressBook(sourceWeights, sourceKeys);
-        final var snarkVerificationKey = subject.snarkVerificationKey();
-        final var ledgerId = Bytes.concat(genesisAddressBookHash, snarkVerificationKey);
+        final byte[] nextAddressBookHash = subject.hashAddressBook(targetWeights, targetKeys);
+        final byte[] metadata =
+                com.hedera.pbj.runtime.io.buffer.Bytes.wrap("test metadata").toByteArray();
+        final var hashedMetadata = subject.hashHintsVerificationKey(metadata);
 
-        final var message = "Hello, world!".getBytes();
-        final Map<Long, byte[]> signatures = sourceAddresses.stream()
-                .map(kp -> Pair.of(kp.weight, subject.signSchnorr(message, kp.keys.signingKey())))
-                .collect(Collectors.toMap(Pair::getLeft, Pair::getRight));
+        final var message = concatMessages(nextAddressBookHash, hashedMetadata);
+
+        final Map<Long, byte[]> signatures = new LinkedHashMap<>();
+
+        for (var entry : sourceAddresses) {
+            signatures.put(entry.weight(), subject.signSchnorr(message, entry.keys.signingKey()));
+        }
 
         final var snarkProof = subject.proveChainOfTrust(
-                ledgerId, null, sourceWeights, sourceKeys, targetWeights, targetKeys, signatures, message);
+                genesisAddressBookHash,
+                null,
+                sourceWeights,
+                sourceKeys,
+                targetWeights,
+                targetKeys,
+                signatures,
+                hashedMetadata);
         assertNotNull(snarkProof);
+    }
+
+    public static byte[] concatMessages(final byte[] nextAddressBookHash, final byte[] hintsVerificationKeyHash) {
+        final byte[] arr = new byte[nextAddressBookHash.length + hintsVerificationKeyHash.length];
+        System.arraycopy(nextAddressBookHash, 0, arr, 0, nextAddressBookHash.length);
+        System.arraycopy(hintsVerificationKeyHash, 0, arr, nextAddressBookHash.length, hintsVerificationKeyHash.length);
+        return arr;
     }
 
     private record KeyPairAndWeight(SigningAndVerifyingSchnorrKeys keys, long weight) {}
