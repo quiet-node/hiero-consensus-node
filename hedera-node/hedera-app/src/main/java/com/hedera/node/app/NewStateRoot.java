@@ -23,11 +23,16 @@ import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static java.util.Objects.requireNonNull;
 
 import com.swirlds.base.time.Time;
+import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotWriter;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
+import com.swirlds.merkledb.MerkleDbTableConfig;
+import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.StateChangeListener;
@@ -117,6 +122,19 @@ public class NewStateRoot implements MerkleNodeState {
     private LongSupplier roundSupplier;
 
     private VirtualMap virtualMap;
+
+    public NewStateRoot() {
+        // Config constant (TODO: move to config)
+        long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
+
+        final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
+        final var tableConfig = new MerkleDbTableConfig(
+                (short) 1, DigestType.SHA_384, MEGA_MAP_MAX_KEYS_HINT, merkleDbConfig.hashesRamToDiskThreshold());
+        final var virtualMapLabel = "VirtualMap";
+        final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
+
+        this.virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
+    }
 
     public NewStateRoot(VirtualMap virtualMap) {
         this.virtualMap = virtualMap;
@@ -264,6 +282,11 @@ public class NewStateRoot implements MerkleNodeState {
     }
 
     // Getters and setters
+
+    @Override
+    public MerkleNode getRoot() {
+        return virtualMap;
+    }
 
     /**
      * Sets the time for this state.

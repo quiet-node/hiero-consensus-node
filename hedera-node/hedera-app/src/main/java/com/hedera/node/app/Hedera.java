@@ -537,7 +537,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .forEach(servicesRegistry::register);
         try {
             stateLifecycles = new StateLifecyclesImpl(this);
-            final Supplier<MerkleNodeState> baseSupplier = HederaStateRoot::new;
+            final Supplier<MerkleNodeState> baseSupplier = NewStateRoot::new;
             final var blockStreamsEnabled = isBlockStreamEnabled();
             stateRootSupplier = blockStreamsEnabled ? () -> withListeners(baseSupplier.get()) : baseSupplier;
             onSealConsensusRound = blockStreamsEnabled ? this::manageBlockEndRound : (round, state) -> {};
