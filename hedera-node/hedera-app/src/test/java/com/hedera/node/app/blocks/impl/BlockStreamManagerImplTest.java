@@ -521,6 +521,9 @@ class BlockStreamManagerImplTest {
         // End the round
         subject.endRound(state, ROUND_NO);
 
+        // Wait for the block proof future to complete
+        subject.getBlockProofFuture().join();
+
         verify(aWriter).openBlock(N_BLOCK_NO);
 
         // Assert the internal state of the subject has changed as expected and the writer has been closed
@@ -682,6 +685,9 @@ class BlockStreamManagerImplTest {
         subject.startRound(round, state);
         subject.endRound(state, ROUND_NO);
 
+        // Wait for the block proof future to complete
+        subject.getBlockProofFuture().join();
+
         // Then block should be closed
         verify(aWriter).closeBlock();
     }
@@ -791,6 +797,10 @@ class BlockStreamManagerImplTest {
         given(round.getRoundNum()).willReturn(2L);
         subject.startRound(round, state);
         subject.endRound(state, 2L);
+
+        // Wait for the block proof future to complete
+        subject.getBlockProofFuture().join();
+
         verify(aWriter).closeBlock();
     }
 
