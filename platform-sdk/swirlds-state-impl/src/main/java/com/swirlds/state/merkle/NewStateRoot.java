@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.base.time.Time;
+import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
@@ -64,6 +65,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.LongSupplier;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -130,7 +133,7 @@ public class NewStateRoot implements State {
     }
 
     // This is how MerkleStateRoot was init (except configuration) -- maybe need to work out new way here
-    public void init(Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography) {
+    public void init(Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier longSupplier) {
         this.configuration = configuration;
         this.time = time;
         this.metrics = metrics;
@@ -267,6 +270,11 @@ public class NewStateRoot implements State {
      */
     public void setTime(final Time time) {
         this.time = time;
+    }
+
+    @Override
+    public void setHash(Hash hash) {
+        virtualMap.setHash(hash);
     }
 
     public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
