@@ -44,6 +44,8 @@ public interface EventSource {
      */
     EventSource setNodeId(@NonNull NodeId nodeId);
 
+    void setEventVersion(@NonNull SemanticVersion eventVersion);
+
     /**
      * Get the probabilistic weight that this node will create the next new event. A node with a weight of 1 will
      * create new events half as often as a node with a weight of 2.0. A node with a weight of 0 will

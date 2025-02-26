@@ -161,4 +161,6 @@ public interface GraphGenerator {
      * @param nodeId the node to remove
      */
     void removeNode(@NonNull final NodeId nodeId);
+
+    void setEventVersion(@NonNull SemanticVersion eventVersion);
 }
