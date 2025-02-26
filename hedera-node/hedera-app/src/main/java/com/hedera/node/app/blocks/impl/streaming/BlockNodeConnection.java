@@ -18,6 +18,8 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnection {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
+    private static final int MAX_RETRY_ATTEMPTS = 5;
+    private static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     private final BlockNodeConfig node;
@@ -25,7 +27,7 @@ public class BlockNodeConnection {
     private final BlockNodeConnectionManager manager;
     private final ExecutorService retryExecutor;
     private StreamObserver<PublishStreamRequest> requestObserver;
-    private volatile boolean isActive = true;
+    private volatile boolean isActive = false;
 
     public BlockNodeConnection(
             BlockNodeConfig nodeConfig,
@@ -56,6 +58,7 @@ public class BlockNodeConnection {
                         Status status = Status.fromThrowable(t);
                         logger.error("Error in block node stream {}:{}: {}", node.address(), node.port(), status, t);
                         handleStreamFailure();
+                        scheduleReconnect();
                     }
 
                     @Override
@@ -65,6 +68,7 @@ public class BlockNodeConnection {
                     }
                 });
 
+        isActive = true;
         return null;
     }
 
@@ -127,6 +131,8 @@ public class BlockNodeConnection {
 
         while (attempts < maxAttempts) {
             try {
+                logger.info("Retrying in {} ms", delay.toMillis());
+                Thread.sleep(delay.toMillis());
                 action.get();
                 return;
             } catch (Exception e) {
@@ -134,8 +140,6 @@ public class BlockNodeConnection {
                 if (attempts >= maxAttempts) {
                     throw new Exception("Max retry attempts reached", e);
                 }
-                logger.info("Failed to execute action, retrying in {} ms", delay.toMillis());
-                Thread.sleep(delay.toMillis());
                 delay = delay.multipliedBy(RETRY_BACKOFF_MULTIPLIER);
             }
         }
