@@ -352,9 +352,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var blockStreamInfo = blockStreamInfoFrom(state);
 
             // Wait for previous block's proof to complete to ensure lastBlockHash is updated
-            System.out.println("DEBUG: Waiting for previous block proof to complete for block " + blockNumber);
             blockProofFuture.join();
-            System.out.println("DEBUG: Previous block proof completed for block " + blockNumber);
 
             // Capture values needed for async block proof creation
             final var capturedBlockNumber = blockNumber;
@@ -366,42 +364,39 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var capturedBlockStreamInfo = blockStreamInfo;
 
             // Start async block completion, chained with previous block's proof
-            blockProofFuture = blockProofFuture.thenRunAsync(() -> {
-                System.out.println("DEBUG: Starting async block proof creation for block " + capturedBlockNumber);
-                // Compute block hash
-                final var outputHash = capturedOutputTreeHasher.rootHash().join();
-                final var leftParent = combine(capturedLastBlockHash, capturedInputHash);
-                final var rightParent = combine(outputHash, capturedBlockStartStateHash);
-                final var blockHash = combine(leftParent, rightParent);
-                final var pendingProof = BlockProof.newBuilder()
-                        .block(capturedBlockNumber)
-                        .previousBlockRootHash(capturedLastBlockHash)
-                        .startOfBlockStateRootHash(capturedBlockStartStateHash);
+            blockProofFuture = blockProofFuture.thenRunAsync(
+                    () -> {
+                        // Compute block hash
+                        final var outputHash =
+                                capturedOutputTreeHasher.rootHash().join();
+                        final var leftParent = combine(capturedLastBlockHash, capturedInputHash);
+                        final var rightParent = combine(outputHash, capturedBlockStartStateHash);
+                        final var blockHash = combine(leftParent, rightParent);
+                        final var pendingProof = BlockProof.newBuilder()
+                                .block(capturedBlockNumber)
+                                .previousBlockRootHash(capturedLastBlockHash)
+                                .startOfBlockStateRootHash(capturedBlockStartStateHash);
 
-                // Append block hash to trailing hashes
-                blockHashManager.appendBlockHash(capturedBlockStreamInfo, blockHash);
+                        // Append block hash to trailing hashes
+                        blockHashManager.appendBlockHash(capturedBlockStreamInfo, blockHash);
 
-                // Create and add pending block
-                pendingBlocks.add(new PendingBlock(
-                        capturedBlockNumber,
-                        blockHash,
-                        pendingProof,
-                        capturedWriter,
-                        new MerkleSiblingHash(false, capturedInputHash),
-                        new MerkleSiblingHash(false, rightParent)));
+                        // Create and add pending block
+                        pendingBlocks.add(new PendingBlock(
+                                capturedBlockNumber,
+                                blockHash,
+                                pendingProof,
+                                capturedWriter,
+                                new MerkleSiblingHash(false, capturedInputHash),
+                                new MerkleSiblingHash(false, rightParent)));
 
-                System.out.println("DEBUG: Requesting signature for block " + capturedBlockNumber + " hash");
-                blockHashSigner
-                        .signFuture(blockHash)
-                        .thenAcceptAsync(signature -> {
-                            System.out.println("DEBUG: Received signature for block " + capturedBlockNumber + " hash, finishing proof");
+                        blockHashSigner.signFuture(blockHash).thenAcceptAsync(signature -> {
                             finishProofWithSignature(blockHash, signature);
                         });
 
-                // Update in-memory state for the next block
-                lastBlockHash = blockHash;
-                System.out.println("DEBUG: Completed async block proof creation for block " + capturedBlockNumber);
-            }, executor);
+                        // Update in-memory state for the next block
+                        lastBlockHash = blockHash;
+                    },
+                    executor);
 
             // Reset state for next block
             writer = null;
@@ -486,14 +481,11 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             impliesIndirectProof = true;
         }
         if (blockNumber == Long.MIN_VALUE) {
-            System.out.println("DEBUG: Ignoring signature on already proven block hash '" + blockHash + "'");
             return;
         }
-        System.out.println("DEBUG: Starting to write proofs for blocks up to block " + blockNumber);
         // Write proofs for all pending blocks up to and including the signed block number
         while (!pendingBlocks.isEmpty() && pendingBlocks.peek().number() <= blockNumber) {
             final var block = pendingBlocks.poll();
-            System.out.println("DEBUG: Writing proof for block " + block.number());
             final var proof = block.proofBuilder()
                     .blockSignature(blockSignature)
                     .siblingHashes(siblingHashes.stream().flatMap(List::stream).toList());
@@ -502,14 +494,12 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             if (streamWriterType == BlockStreamWriterMode.FILE
                     || streamWriterType == BlockStreamWriterMode.GRPC
                     || streamWriterType == BlockStreamWriterMode.FILE_AND_GRPC) {
-                System.out.println("DEBUG: Closing block " + block.number());
                 block.writer().closeBlock();
             }
             if (block.number() != blockNumber) {
                 siblingHashes.removeFirst();
             }
         }
-        System.out.println("DEBUG: Completed writing proofs for blocks up to block " + blockNumber);
     }
 
     /**
