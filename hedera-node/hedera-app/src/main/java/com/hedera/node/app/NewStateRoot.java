@@ -73,6 +73,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.LongSupplier;
+
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -123,7 +125,9 @@ public class NewStateRoot implements MerkleNodeState {
 
     private VirtualMap virtualMap;
 
-    public NewStateRoot() {
+    // remove configuration from init method if this is working
+    public NewStateRoot(Configuration configuration) {
+        this.configuration = configuration;
         // Config constant (TODO: move to config)
         long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
 
@@ -194,7 +198,7 @@ public class NewStateRoot implements MerkleNodeState {
     @Override
     @NonNull
     public WritableStates getWritableStates(@NonNull final String serviceName) {
-        throwIfImmutable();
+        virtualMap.throwIfImmutable();
         return writableStatesMap.computeIfAbsent(serviceName, s -> {
             final var stateMetadata = services.getOrDefault(s, Map.of());
             return new NewStateRoot.MerkleWritableStates(serviceName, stateMetadata);
@@ -229,8 +233,19 @@ public class NewStateRoot implements MerkleNodeState {
     }
 
     @Override
+    @Nullable
+    public Hash getHash() {
+        return virtualMap.getHash();
+    }
+
+    @Override
     public void setHash(Hash hash) {
         virtualMap.setHash(hash);
+    }
+
+    @Override
+    public boolean isImmutable() {
+        return virtualMap.isImmutable();
     }
 
     /**
@@ -241,8 +256,8 @@ public class NewStateRoot implements MerkleNodeState {
         requireNonNull(
                 merkleCryptography,
                 "MerkleStateRoot has to be initialized before hashing. merkleCryptography is not set.");
-        throwIfMutable("Hashing should only be done on immutable states");
-        throwIfDestroyed("Hashing should not be done on destroyed states");
+        virtualMap.throwIfMutable("Hashing should only be done on immutable states");
+        virtualMap.throwIfDestroyed("Hashing should not be done on destroyed states");
         if (getHash() != null) {
             return;
         }
@@ -263,8 +278,8 @@ public class NewStateRoot implements MerkleNodeState {
     public void createSnapshot(@NonNull final Path targetPath) {
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
-        throwIfMutable();
-        throwIfDestroyed();
+        virtualMap.throwIfMutable();
+        virtualMap.throwIfDestroyed();
         final long startTime = time.currentTimeMillis();
         MerkleTreeSnapshotWriter.createSnapshot(
                 virtualMap, targetPath, roundSupplier.getAsLong()); // TODO: double check
@@ -325,7 +340,7 @@ public class NewStateRoot implements MerkleNodeState {
      */
     public void initializeState(@NonNull final StateMetadata<?, ?> md) {
         // Validate the inputs
-        throwIfImmutable();
+        virtualMap.throwIfImmutable();
         requireNonNull(md);
 
         // Put this metadata into the map
@@ -379,7 +394,7 @@ public class NewStateRoot implements MerkleNodeState {
      * @param stateKey The state key
      */
     public void removeServiceState(@NonNull final String serviceName, @NonNull final String stateKey) {
-        throwIfImmutable();
+        virtualMap.throwIfImmutable();
         requireNonNull(serviceName);
         requireNonNull(stateKey);
 

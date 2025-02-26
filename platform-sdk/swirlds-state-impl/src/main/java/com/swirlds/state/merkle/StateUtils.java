@@ -108,14 +108,17 @@ import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.IntFunction;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /** Utility class for working with states. */
 public final class StateUtils {
 
-    private static final Logger logger = LogManager.getLogger(StateUtils.class);
     private static final int UNKNOWN_STATE_ID = -1;
+    private static final IntFunction<String> UPGRADE_DATA_FILE_FORMAT =
+            n -> String.format("UPGRADE_DATA\\[FileID\\[shardNum=\\d, realmNum=\\d, fileNum=%s]]", n);
 
     /** Prevent instantiation */
     private StateUtils() {}
@@ -300,31 +303,35 @@ public final class StateUtils {
                         case "MIDNIGHT_RATES" -> STATE_ID_MIDNIGHT_RATES.protoOrdinal();
                         default -> UNKNOWN_STATE_ID;
                     };
-                    case "FileService" -> switch (stateKey) {
-                        case "FILES" -> STATE_ID_FILES.protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=150]]" -> STATE_ID_UPGRADE_DATA_150
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=151]]" -> STATE_ID_UPGRADE_DATA_151
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=152]]" -> STATE_ID_UPGRADE_DATA_152
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=153]]" -> STATE_ID_UPGRADE_DATA_153
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=154]]" -> STATE_ID_UPGRADE_DATA_154
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=155]]" -> STATE_ID_UPGRADE_DATA_155
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=156]]" -> STATE_ID_UPGRADE_DATA_156
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=157]]" -> STATE_ID_UPGRADE_DATA_157
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=158]]" -> STATE_ID_UPGRADE_DATA_158
-                                .protoOrdinal();
-                        case "UPGRADE_DATA[FileID[shardNum=0, realmNum=0, fileNum=159]]" -> STATE_ID_UPGRADE_DATA_159
-                                .protoOrdinal();
-                        case "UPGRADE_FILE" -> STATE_ID_UPGRADE_FILE.protoOrdinal();
-                        default -> UNKNOWN_STATE_ID;
-                    };
+                    case "FileService" -> {
+                        if ("FILES".equals(stateKey)) {
+                            yield STATE_ID_FILES.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(150))) {
+                            yield STATE_ID_UPGRADE_DATA_150.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(151))) {
+                            yield STATE_ID_UPGRADE_DATA_151.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(152))) {
+                            yield STATE_ID_UPGRADE_DATA_152.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(153))) {
+                            yield STATE_ID_UPGRADE_DATA_153.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(154))) {
+                            yield STATE_ID_UPGRADE_DATA_154.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(155))) {
+                            yield STATE_ID_UPGRADE_DATA_155.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(156))) {
+                            yield STATE_ID_UPGRADE_DATA_156.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(157))) {
+                            yield STATE_ID_UPGRADE_DATA_157.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(158))) {
+                            yield STATE_ID_UPGRADE_DATA_158.protoOrdinal();
+                        } else if (stateKey.matches(UPGRADE_DATA_FILE_FORMAT.apply(159))) {
+                            yield STATE_ID_UPGRADE_DATA_159.protoOrdinal();
+                        } else if ("UPGRADE_FILE".equals(stateKey)) {
+                            yield STATE_ID_UPGRADE_FILE.protoOrdinal();
+                        } else {
+                            yield UNKNOWN_STATE_ID;
+                        }
+                    }
                     case "FreezeService" -> switch (stateKey) {
                         case "FREEZE_TIME" -> STATE_ID_FREEZE_TIME.protoOrdinal();
                         case "UPGRADE_FILE_HASH" -> STATE_ID_UPGRADE_FILE_HASH.protoOrdinal();
@@ -336,6 +343,8 @@ public final class StateUtils {
                     };
                     case "RecordCache" -> switch (stateKey) {
                         case "TransactionReceiptQueue" -> STATE_ID_TRANSACTION_RECEIPTS_QUEUE.protoOrdinal();
+                        // There is no such queue, but this needed for V0540RecordCacheSchema schema migration
+                        case "TransactionRecordQueue" -> STATE_ID_TRANSACTION_RECEIPTS_QUEUE.protoOrdinal();
                         default -> UNKNOWN_STATE_ID;
                     };
                     case "RosterService" -> switch (stateKey) {

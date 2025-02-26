@@ -83,7 +83,7 @@ public final class BackedReadableKVState<K, V> extends ReadableKVStateBase<K, V>
     protected Iterator<K> iterateFromDataSource() {
         // Log to transaction state log, what was iterated
         logMapIterate(getStateKey(), virtualMap, keyCodec);
-        return new OnDiskIterator<>(virtualMap, keyCodec);
+        return new BackedOnDiskIterator<>(virtualMap, keyCodec);
     }
 
     /** {@inheritDoc} */

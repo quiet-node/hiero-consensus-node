@@ -129,7 +129,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     private static final long CLASS_ID = 0x8e300b0dfdafbb1bL;
 
     // Migrates from `PlatformState` to State API singleton
-    public static final int CURRENT_VERSION = 32;
+    public static final int CURRENT_VERSION = 31;
 
     // This is a temporary fix to deal with the inefficient implementation of findNodeIndex(). It caches looked up
     // indices globally, assuming these indices do not change that often. We need to re-think index lookup,
@@ -235,12 +235,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
     @Override
     public int getVersion() {
-        return CURRENT_VERSION;
+        return 32;
     }
 
     @Override
     public int getMinimumSupportedVersion() {
-        return CURRENT_VERSION;
+        return 31;
     }
 
     /**
@@ -981,9 +981,9 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     STARTUP.getMarker(),
                     "Migrating all of the states (Singleton, KV and Queue) to the one Virtual Map...");
 
-            migrateKVStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
-            migrateQueueStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
             migrateSingletonStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
+            migrateQueueStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
+            migrateKVStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
 
             // Validate all states migrated to the Virtual Map
             if (VALIDATE_MIGRATION_FF) {
@@ -1016,8 +1016,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     final var stateIdBytes = getVirtualMapKey(serviceName, stateKey);
 
                     // TODO: check possibilities for optimization
+
+                    // copies
+                    // latest vm should point on latest copy
+                    // vm should be as reference + add counter
                     InterruptableConsumer<Pair<Bytes, Bytes>> handler =
-                            pair -> virtualMap.putBytes(stateIdBytes.append(pair.key()), pair.value());
+                            pair -> {virtualMap.putBytes(stateIdBytes.append(pair.key()), pair.value());
 
                     try {
                         logger.info(

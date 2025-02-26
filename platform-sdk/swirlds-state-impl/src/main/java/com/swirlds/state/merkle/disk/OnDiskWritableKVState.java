@@ -87,7 +87,7 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
     protected Iterator<K> iterateFromDataSource() {
         // Log to transaction state log, what was iterated
         logMapIterate(computeLabel(serviceName, stateKey), virtualMap, keyCodec);
-        return new OnDiskIterator<>(virtualMap, keyCodec);
+        return new OnDiskIterator<>(virtualMap, keyCodec, getVirtualMapKey(serviceName, stateKey));
     }
 
     /** {@inheritDoc} */
