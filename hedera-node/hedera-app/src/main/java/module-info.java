@@ -25,7 +25,6 @@ module com.hedera.node.app {
     requires transitive com.swirlds.platform.core;
     requires transitive com.swirlds.state.api;
     requires transitive com.swirlds.state.impl;
-    requires transitive com.swirlds.virtualmap;
     requires transitive dagger;
     requires transitive io.grpc.stub;
     requires transitive io.helidon.webclient.grpc;
@@ -44,6 +43,7 @@ module com.hedera.node.app {
     requires com.swirlds.logging;
     requires com.swirlds.merkle;
     requires com.swirlds.merkledb;
+    requires com.swirlds.virtualmap;
     requires com.google.common;
     requires io.grpc.netty;
     requires io.grpc;
