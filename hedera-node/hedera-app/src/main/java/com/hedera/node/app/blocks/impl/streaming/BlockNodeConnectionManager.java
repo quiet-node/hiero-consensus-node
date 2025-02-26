@@ -101,7 +101,8 @@ public class BlockNodeConnectionManager {
                                     .build())
                     .build());
 
-            BlockNodeConnection connection = new BlockNodeConnection(node, grpcServiceClient, this);
+            BlockNodeConnection connection =
+                    new BlockNodeConnection(node, grpcServiceClient, this, Executors.newSingleThreadExecutor());
             connection.establishStream();
             synchronized (connectionLock) {
                 activeConnections.put(node, connection);

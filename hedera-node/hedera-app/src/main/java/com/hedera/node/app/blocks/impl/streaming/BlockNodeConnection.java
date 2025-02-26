@@ -8,8 +8,7 @@ import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
 import java.time.Duration;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,20 +18,24 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnection {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     private final BlockNodeConfig node;
     private final GrpcServiceClient grpcServiceClient;
     private final BlockNodeConnectionManager manager;
+    private final ExecutorService retryExecutor;
     private StreamObserver<PublishStreamRequest> requestObserver;
     private volatile boolean isActive = true;
 
     public BlockNodeConnection(
-            BlockNodeConfig nodeConfig, GrpcServiceClient grpcServiceClient, BlockNodeConnectionManager manager) {
+            BlockNodeConfig nodeConfig,
+            GrpcServiceClient grpcServiceClient,
+            BlockNodeConnectionManager manager,
+            ExecutorService retryExecutor) {
         this.node = nodeConfig;
         this.grpcServiceClient = grpcServiceClient;
         this.manager = manager;
+        this.retryExecutor = retryExecutor;
         logger.info("BlockNodeConnection INITIALIZED");
     }
 
@@ -73,6 +76,11 @@ public class BlockNodeConnection {
         }
     }
 
+    private void handleStreamFailure() {
+        isActive = false;
+        removeFromActiveConnections(node);
+    }
+
     private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
         logger.info("Error returned from block node at block number {}: {}", endOfStream.getBlockNumber(), endOfStream);
     }
@@ -81,9 +89,14 @@ public class BlockNodeConnection {
         manager.handleConnectionError(node);
     }
 
-    public void handleStreamFailure() {
-        isActive = false;
-        removeFromActiveConnections(node);
+    private void scheduleReconnect() {
+        retryExecutor.execute(() -> {
+            try {
+                retry(this::establishStream, INITIAL_RETRY_DELAY, MAX_RETRY_ATTEMPTS);
+            } catch (Exception e) {
+                logger.error("Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
+            }
+        });
     }
 
     public void sendRequest(PublishStreamRequest request) {
@@ -96,7 +109,7 @@ public class BlockNodeConnection {
         if (isActive) {
             isActive = false;
             requestObserver.onCompleted();
-            scheduler.shutdown();
+            retryExecutor.shutdown();
         }
     }
 
