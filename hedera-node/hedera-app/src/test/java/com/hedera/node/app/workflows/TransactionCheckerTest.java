@@ -161,8 +161,11 @@ final class TransactionCheckerTest extends AppTestBase {
                         .getOrCreateConfig(),
                 1);
 
+        final var config = HederaTestConfigBuilder.createConfig();
+        final ConfigProvider configProvider = () -> new VersionedConfigImpl(config, 1);
+
         // And create the checker itself
-        checker = new TransactionChecker(MAX_TX_SIZE, nodeSelfAccountId, props, metrics);
+        checker = new TransactionChecker(nodeSelfAccountId, configProvider, metrics);
     }
 
     @Nested
@@ -172,15 +175,18 @@ final class TransactionCheckerTest extends AppTestBase {
         @SuppressWarnings("ConstantConditions")
         @DisplayName("Constructor throws on illegal arguments")
         void testConstructorWithIllegalArguments() {
-            assertThatThrownBy(() -> new TransactionChecker(-1, nodeSelfAccountId, props, metrics))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> new TransactionChecker(0, nodeSelfAccountId, props, metrics))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> new TransactionChecker(MAX_TX_SIZE, null, props, metrics))
+            final var config = HederaTestConfigBuilder.createConfig();
+            final ConfigProvider configProvider = () -> new VersionedConfigImpl(config, 1);
+            // todo override transaction size limit in config
+            //            assertThatThrownBy(() -> new TransactionChecker(-1, nodeSelfAccountId, props, metrics))
+            //                    .isInstanceOf(IllegalArgumentException.class);
+            //            assertThatThrownBy(() -> new TransactionChecker(0, nodeSelfAccountId, props, metrics))
+            //                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new TransactionChecker(null, configProvider, metrics))
                     .isInstanceOf(NullPointerException.class);
-            assertThatThrownBy(() -> new TransactionChecker(MAX_TX_SIZE, nodeSelfAccountId, null, metrics))
+            assertThatThrownBy(() -> new TransactionChecker(nodeSelfAccountId, null, metrics))
                     .isInstanceOf(NullPointerException.class);
-            assertThatThrownBy(() -> new TransactionChecker(MAX_TX_SIZE, nodeSelfAccountId, props, null))
+            assertThatThrownBy(() -> new TransactionChecker(nodeSelfAccountId, configProvider, null))
                     .isInstanceOf(NullPointerException.class);
         }
     }

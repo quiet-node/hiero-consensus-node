@@ -7,6 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.hedera.node.app.utils.TestUtils;
 import com.hedera.node.app.workflows.ingest.IngestWorkflow;
 import com.hedera.node.app.workflows.query.QueryWorkflow;
+import com.hedera.node.config.ConfigProvider;
+import com.hedera.node.config.VersionedConfigImpl;
+import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.metrics.api.Metrics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,23 +31,31 @@ final class GrpcServiceBuilderTest {
     private GrpcServiceBuilder builder;
     private final Metrics metrics = TestUtils.metrics();
 
+    private ConfigProvider configProvider;
+
     @BeforeEach
     void setUp() {
-        builder = new GrpcServiceBuilder(SERVICE_NAME, ingestWorkflow, queryWorkflow);
+        final var config = HederaTestConfigBuilder.createConfig();
+        this.configProvider = () -> new VersionedConfigImpl(config, 1);
+        builder = new GrpcServiceBuilder(configProvider, SERVICE_NAME, ingestWorkflow, queryWorkflow);
     }
 
     @Test
     @DisplayName("The queryWorkflow cannot be null")
     void queryWorkflowIsNull() {
         //noinspection ConstantConditions
-        assertThrows(NullPointerException.class, () -> new GrpcServiceBuilder(SERVICE_NAME, ingestWorkflow, null));
+        assertThrows(
+                NullPointerException.class,
+                () -> new GrpcServiceBuilder(configProvider, SERVICE_NAME, ingestWorkflow, null));
     }
 
     @Test
     @DisplayName("The 'service' cannot be null")
     void serviceIsNull() {
         //noinspection ConstantConditions
-        assertThrows(NullPointerException.class, () -> new GrpcServiceBuilder(null, ingestWorkflow, queryWorkflow));
+        assertThrows(
+                NullPointerException.class,
+                () -> new GrpcServiceBuilder(configProvider, null, ingestWorkflow, queryWorkflow));
     }
 
     @ParameterizedTest()
@@ -52,7 +63,8 @@ final class GrpcServiceBuilderTest {
     @DisplayName("The 'service' cannot be blank")
     void serviceIsBlank(final String value) {
         assertThrows(
-                IllegalArgumentException.class, () -> new GrpcServiceBuilder(value, ingestWorkflow, queryWorkflow));
+                IllegalArgumentException.class,
+                () -> new GrpcServiceBuilder(configProvider, value, ingestWorkflow, queryWorkflow));
     }
 
     @Test

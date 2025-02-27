@@ -51,7 +51,6 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.status.PlatformStatus;
 import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
@@ -139,8 +138,6 @@ class IngestComponentTest {
                 .platform(platform)
                 .crypto(CryptographyHolder.get())
                 .self(selfNodeInfo)
-                .maxSignedTxnSize(1024)
-                .currentPlatformStatus(() -> PlatformStatus.ACTIVE)
                 .servicesRegistry(mock(ServicesRegistry.class))
                 .instantSource(InstantSource.system())
                 .softwareVersion(mock(SemanticVersion.class))
