@@ -38,9 +38,6 @@ public class ExceptionConditions {
             if (e instanceof WorkflowException exception) {
                 return exception.getStatus() == responseCode;
             }
-            if (e instanceof WorkflowException exception) {
-                return exception.getStatus() == responseCode;
-            }
             return false;
         };
     }

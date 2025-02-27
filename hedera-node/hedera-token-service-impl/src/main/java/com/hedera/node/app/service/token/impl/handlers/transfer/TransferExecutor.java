@@ -248,11 +248,7 @@ public class TransferExecutor extends BaseTokenHandler {
         // replace all aliases with its account ids, so it will be easier to process in next steps
         final var replacedOp = new ReplaceAliasesWithIDsInOp().replaceAliasesWithIds(op, transferContext);
         // re-run pure checks on this op to see if there are no duplicates
-        try {
-            validator.pureChecks(replacedOp);
-        } catch (WorkflowException e) {
-            throw new WorkflowException(e.getStatus());
-        }
+        validator.pureChecks(replacedOp);
         return replacedOp;
     }
 

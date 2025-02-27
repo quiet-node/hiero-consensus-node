@@ -109,14 +109,10 @@ public class ScheduleDeleteHandler extends AbstractScheduleHandler implements Tr
             throws WorkflowException {
         requireNonNull(scheduleId);
         requireNonNull(scheduleStore);
-        try {
-            final var schedule = getValidated(scheduleId, scheduleStore, isLongTermEnabled);
-            validateFalse(schedule.deleted(), SCHEDULE_ALREADY_DELETED);
-            validateFalse(schedule.executed(), SCHEDULE_ALREADY_EXECUTED);
-            return schedule;
-        } catch (final WorkflowException e) {
-            throw new WorkflowException(e.getStatus());
-        }
+        final var schedule = getValidated(scheduleId, scheduleStore, isLongTermEnabled);
+        validateFalse(schedule.deleted(), SCHEDULE_ALREADY_DELETED);
+        validateFalse(schedule.executed(), SCHEDULE_ALREADY_EXECUTED);
+        return schedule;
     }
 
     @NonNull

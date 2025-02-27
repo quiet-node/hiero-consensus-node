@@ -79,11 +79,7 @@ public abstract class AbstractScheduleHandler {
             @NonNull final Schedule schedule, @NonNull final TransactionKeysFn fn) throws WorkflowException {
         requireNonNull(schedule);
         requireNonNull(fn);
-        try {
-            return getRequiredKeys(schedule, fn);
-        } catch (final WorkflowException e) {
-            throw new WorkflowException(e.getStatus());
-        }
+        return getRequiredKeys(schedule, fn);
     }
 
     /**
