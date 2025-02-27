@@ -19,7 +19,6 @@ import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.node.base.ResponseHeader;
 import com.hedera.hapi.node.base.ResponseType;
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.transaction.Query;
 import com.hedera.hapi.node.transaction.Response;
 import com.hedera.hapi.node.transaction.TransactionBody;
@@ -37,6 +36,7 @@ import com.hedera.node.app.spi.workflows.QueryHandler;
 import com.hedera.node.app.spi.workflows.WorkflowException;
 import com.hedera.node.app.store.ReadableStoreFactory;
 import com.hedera.node.app.throttle.SynchronizedThrottleAccumulator;
+import com.hedera.node.app.util.ProtobufUtils;
 import com.hedera.node.app.workflows.OpWorkflowMetrics;
 import com.hedera.node.app.workflows.ingest.IngestChecker;
 import com.hedera.node.app.workflows.ingest.SubmissionManager;
@@ -189,15 +189,14 @@ public final class QueryWorkflowImpl implements QueryWorkflow {
                 final var paymentRequired = handler.requiresNodePayment(responseType);
                 final var feeCalculator = feeManager.createFeeCalculator(function, consensusTime, storeFactory);
                 final QueryContext context;
-                Transaction allegedPayment;
                 TransactionBody txBody;
                 AccountID payerID = null;
                 if (shouldCharge && paymentRequired) {
-                    allegedPayment = queryHeader.paymentOrElse(Transaction.DEFAULT);
                     final var configuration = configProvider.getConfiguration();
+                    final var paymentBytes = ProtobufUtils.extractPaymentBytes(requestBuffer);
 
                     // 3.i Ingest checks
-                    final var transactionInfo = ingestChecker.runAllChecks(state, allegedPayment, configuration);
+                    final var transactionInfo = ingestChecker.runAllChecks(state, paymentBytes, configuration);
                     txBody = transactionInfo.txBody();
 
                     // get payer
@@ -218,7 +217,7 @@ public final class QueryWorkflowImpl implements QueryWorkflow {
                         ingestChecker.verifyReadyForTransactions();
 
                         // 3.ii Validate CryptoTransfer
-                        queryChecker.validateCryptoTransfer(transactionInfo, configuration);
+                        queryChecker.validateCryptoTransfer(transactionInfo);
 
                         // 3.iii Check permissions
                         queryChecker.checkPermissions(payerID, function);
@@ -240,8 +239,7 @@ public final class QueryWorkflowImpl implements QueryWorkflow {
                         queryChecker.validateAccountBalances(accountStore, transactionInfo, payer, queryFees, txFees);
 
                         // 3.vi Submit payment to platform
-                        final var txBytes = Transaction.PROTOBUF.toBytes(allegedPayment);
-                        submissionManager.submit(txBody, txBytes);
+                        submissionManager.submit(txBody, transactionInfo.serializedTransaction());
                     }
                 } else {
                     if (RESTRICTED_FUNCTIONALITIES.contains(function)) {

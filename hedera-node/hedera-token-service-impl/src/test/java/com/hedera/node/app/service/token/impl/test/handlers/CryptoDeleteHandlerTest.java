@@ -54,8 +54,6 @@ import com.hedera.node.app.spi.validation.ExpiryValidator;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.PureChecksContext;
 import com.hedera.node.app.spi.workflows.WorkflowException;
-import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
-import com.swirlds.config.api.Configuration;
 import com.swirlds.state.spi.WritableStates;
 import java.util.List;
 import java.util.Map;
@@ -96,14 +94,11 @@ class CryptoDeleteHandlerTest extends CryptoHandlerTestBase {
     @Mock
     private PureChecksContext pureChecksContext;
 
-    private Configuration configuration;
-
     private CryptoDeleteHandler subject = new CryptoDeleteHandler();
 
     @BeforeEach
     public void setUp() {
         super.setUp();
-        configuration = HederaTestConfigBuilder.createConfig();
         updateReadableStore(
                 Map.of(accountNum, account, deleteAccountNum, deleteAccount, transferAccountNum, transferAccount));
         updateWritableStore(
@@ -409,7 +404,7 @@ class CryptoDeleteHandlerTest extends CryptoHandlerTestBase {
     private void updateReadableStore(Map<Long, Account> accountsToAdd) {
         final var emptyStateBuilder = emptyReadableAccountStateBuilder();
         for (final var entry : accountsToAdd.entrySet()) {
-            emptyStateBuilder.value(accountID(entry.getKey()), entry.getValue());
+            emptyStateBuilder.value(idFactory.newAccountId(entry.getKey()), entry.getValue());
         }
         readableAccounts = emptyStateBuilder.build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(readableAccounts);
@@ -419,7 +414,7 @@ class CryptoDeleteHandlerTest extends CryptoHandlerTestBase {
     private void updateWritableStore(Map<Long, Account> accountsToAdd) {
         final var emptyStateBuilder = emptyWritableAccountStateBuilder();
         for (final var entry : accountsToAdd.entrySet()) {
-            emptyStateBuilder.value(accountID(entry.getKey()), entry.getValue());
+            emptyStateBuilder.value(idFactory.newAccountId(entry.getKey()), entry.getValue());
         }
         writableAccounts = emptyStateBuilder.build();
         given(writableStates.<AccountID, Account>get(ACCOUNTS)).willReturn(writableAccounts);

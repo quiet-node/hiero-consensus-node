@@ -46,6 +46,7 @@ import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.StakingConfig;
 import com.hedera.node.config.data.TokensConfig;
 import com.hederahashgraph.api.proto.java.FeeData;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Optional;
@@ -58,6 +59,7 @@ import javax.inject.Singleton;
 @Singleton
 public class ContractUpdateHandler implements TransactionHandler {
     private final SmartContractFeeBuilder usageEstimator = new SmartContractFeeBuilder();
+    private final EntityIdFactory entityIdFactory;
 
     /**
      * The value for unlimited automatic associations
@@ -68,8 +70,8 @@ public class ContractUpdateHandler implements TransactionHandler {
      * Default constructor for injection.
      */
     @Inject
-    public ContractUpdateHandler() {
-        // Exists for injection
+    public ContractUpdateHandler(@NonNull final EntityIdFactory entityIdFactory) {
+        this.entityIdFactory = requireNonNull(entityIdFactory);
     }
 
     @Override
@@ -133,9 +135,8 @@ public class ContractUpdateHandler implements TransactionHandler {
         context.storeFactory().serviceApi(TokenServiceApi.class).updateContract(changed);
         context.savepointStack()
                 .getBaseBuilder(ContractUpdateStreamBuilder.class)
-                .contractID(ContractID.newBuilder()
-                        .contractNum(toBeUpdated.accountIdOrThrow().accountNumOrThrow())
-                        .build());
+                .contractID(entityIdFactory.newContractId(
+                        toBeUpdated.accountIdOrThrow().accountNumOrThrow()));
     }
 
     private void validateSemantics(

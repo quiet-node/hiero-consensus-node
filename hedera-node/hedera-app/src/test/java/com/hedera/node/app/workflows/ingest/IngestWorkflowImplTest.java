@@ -120,15 +120,14 @@ class IngestWorkflowImplTest extends AppTestBase {
 
         // Mock out the onset to always return a valid parsed object
         transaction = Transaction.newBuilder().body(transactionBody).build();
-        when(transactionChecker.parse(requestBuffer)).thenReturn(transaction);
         final var transactionInfo = new TransactionInfo(
                 transaction,
                 transactionBody,
                 SignatureMap.newBuilder().build(),
                 randomBytes(100), // Not used in this test, so random bytes is OK
                 HederaFunctionality.CONSENSUS_CREATE_TOPIC,
-                null);
-        when(ingestChecker.runAllChecks(state, transaction, configuration)).thenReturn(transactionInfo);
+                requestBuffer);
+        when(ingestChecker.runAllChecks(state, requestBuffer, configuration)).thenReturn(transactionInfo);
 
         // Create the workflow we are going to test with
         workflow = new IngestWorkflowImpl(
@@ -220,7 +219,7 @@ class IngestWorkflowImplTest extends AppTestBase {
         @DisplayName("If the transaction fails WorkflowOnset, a failure response is returned with the right error")
         void onsetFailsWithWorkflowException(ResponseCodeEnum failureReason) throws ParseException {
             // Given a WorkflowOnset that will throw a WorkflowException with the given failure reason
-            when(transactionChecker.parse(any())).thenThrow(new WorkflowException(failureReason));
+            when(ingestChecker.runAllChecks(any(), any(), any())).thenThrow(new WorkflowException(failureReason));
 
             // When the transaction is submitted
             workflow.submitTransaction(requestBuffer, responseBuffer);
@@ -235,10 +234,11 @@ class IngestWorkflowImplTest extends AppTestBase {
         }
 
         @Test
-        @DisplayName("If some random exception is thrown from TransactionChecker, the exception is bubbled up")
+        @DisplayName("If some random exception is thrown from IngestChecker, the exception is bubbled up")
         void randomException() throws ParseException {
             // Given a WorkflowOnset that will throw a RuntimeException
-            when(transactionChecker.parse(any())).thenThrow(new RuntimeException("parseAndCheck exception"));
+            when(ingestChecker.runAllChecks(any(), any(), any()))
+                    .thenThrow(new RuntimeException("parseAndCheck exception"));
 
             // When the transaction is submitted
             workflow.submitTransaction(requestBuffer, responseBuffer);
@@ -269,7 +269,7 @@ class IngestWorkflowImplTest extends AppTestBase {
         @DisplayName("When ingest checks fail, the transaction should be rejected")
         void testIngestChecksFail(ResponseCodeEnum failureReason) throws ParseException {
             // Given a throttle on CONSENSUS_CREATE_TOPIC transactions (i.e. it is time to throttle)
-            when(ingestChecker.runAllChecks(state, transaction, configuration))
+            when(ingestChecker.runAllChecks(state, requestBuffer, configuration))
                     .thenThrow(new WorkflowException(failureReason));
 
             // When the transaction is submitted
@@ -288,7 +288,7 @@ class IngestWorkflowImplTest extends AppTestBase {
         @DisplayName("If some random exception is thrown from IngestChecker, the exception is bubbled up")
         void randomException() throws ParseException {
             // Given a ThrottleAccumulator that will throw a RuntimeException
-            when(ingestChecker.runAllChecks(state, transaction, configuration))
+            when(ingestChecker.runAllChecks(state, requestBuffer, configuration))
                     .thenThrow(new RuntimeException("runAllChecks exception"));
 
             // When the transaction is submitted

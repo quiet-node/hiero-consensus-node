@@ -31,6 +31,7 @@ import com.hedera.node.app.spi.workflows.WorkflowException;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.types.LongPair;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.time.Instant;
@@ -54,6 +55,7 @@ public class FreezeHandler implements TransactionHandler {
     private static final int UPDATE_FILE_HASH_LEN = 48;
 
     private final Executor freezeExecutor;
+    private final EntityIdFactory entityIdFactory;
 
     /**
      * Constructs a {@link FreezeHandler} with the provided {@link Executor}.
@@ -61,8 +63,11 @@ public class FreezeHandler implements TransactionHandler {
      * @param freezeExecutor the {@link Executor} to use for handling freeze transactions
      */
     @Inject
-    public FreezeHandler(@NonNull @Named("FreezeService") final Executor freezeExecutor) {
+    public FreezeHandler(
+            @NonNull @Named("FreezeService") final Executor freezeExecutor,
+            @NonNull final EntityIdFactory entityIdFactory) {
         this.freezeExecutor = requireNonNull(freezeExecutor);
+        this.entityIdFactory = requireNonNull(entityIdFactory);
     }
 
     /**
@@ -159,7 +164,13 @@ public class FreezeHandler implements TransactionHandler {
         final var filesConfig = context.configuration().getConfigData(FilesConfig.class);
 
         final FreezeUpgradeActions upgradeActions = new FreezeUpgradeActions(
-                context.configuration(), freezeStore, freezeExecutor, upgradeFileStore, nodeStore, stakingInfoStore);
+                context.configuration(),
+                freezeStore,
+                freezeExecutor,
+                upgradeFileStore,
+                nodeStore,
+                stakingInfoStore,
+                entityIdFactory);
         final Timestamp freezeStartTime = freezeTxn.startTime(); // may be null for some freeze types
 
         switch (freezeTxn.freezeType()) {

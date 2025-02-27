@@ -460,8 +460,8 @@ public class PreHandleContextImpl implements PreHandleContext {
     @NonNull
     @Override
     public TransactionKeys allKeysForTransaction(@NonNull TransactionBody body, @NonNull final AccountID payerId) {
-        // Throws WorkflowException if the transaction body is structurally invalid
-        final var pureChecksContext = new PureChecksContextImpl(body, configuration, dispatcher, transactionChecker);
+        // Throws PreCheckException if the transaction body is structurally invalid
+        final var pureChecksContext = new PureChecksContextImpl(body, dispatcher);
         dispatcher.dispatchPureChecks(pureChecksContext);
         // Throws WorkflowException if the payer account does not exist
         final var context =

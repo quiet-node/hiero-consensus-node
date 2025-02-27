@@ -32,6 +32,7 @@ import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.PureChecksContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
 import com.hedera.node.app.spi.workflows.WorkflowException;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import javax.inject.Inject;
@@ -43,13 +44,13 @@ import javax.inject.Singleton;
 @Singleton
 public class ContractDeleteHandler implements TransactionHandler {
     private final SmartContractFeeBuilder usageEstimator = new SmartContractFeeBuilder();
-
+    private final EntityIdFactory entityIdFactory;
     /**
      * Default constructor for injection.
      */
     @Inject
-    public ContractDeleteHandler() {
-        // Exists for injection
+    public ContractDeleteHandler(@NonNull final EntityIdFactory entityIdFactory) {
+        this.entityIdFactory = entityIdFactory;
     }
 
     @Override
@@ -109,7 +110,7 @@ public class ContractDeleteHandler implements TransactionHandler {
                         context.expiryValidator(),
                         recordBuilder,
                         FreeAliasOnDeletion.YES);
-        recordBuilder.contractID(asNumericContractId(deletedId));
+        recordBuilder.contractID(asNumericContractId(entityIdFactory, deletedId));
     }
 
     private @Nullable Account getObtainer(
