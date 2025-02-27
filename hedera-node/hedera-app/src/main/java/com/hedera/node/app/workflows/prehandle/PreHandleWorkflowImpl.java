@@ -302,7 +302,7 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
         try {
             // Check batch key on non-inner transactions,
             if (innerTransaction == InnerTransaction.NO && txInfo.txBody().hasBatchKey()) {
-                throw new PreCheckException(BATCH_KEY_SET_ON_NON_INNER_TRANSACTION);
+                throw new WorkflowException(BATCH_KEY_SET_ON_NON_INNER_TRANSACTION);
             }
             // First, perform semantic checks on the transaction
             final var pureChecksContext = new PureChecksContextImpl(txBody, dispatcher);
