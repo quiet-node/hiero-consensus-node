@@ -21,6 +21,11 @@ public record HederaConfig(
                 long transactionMaxValidDuration,
         @ConfigProperty(value = "transaction.minValidDuration", defaultValue = "15") @NetworkProperty
                 long transactionMinValidDuration,
+        @ConfigProperty(value = "transaction.jumboIsEnabled", defaultValue = "true") @NetworkProperty
+                boolean jumboTransactionIsEnabled,
+        @ConfigProperty(value = "transaction.maxSize", defaultValue = "6144") @NetworkProperty long transactionMaxSize,
+        @ConfigProperty(value = "transaction.jumboSize", defaultValue = "133120") @NetworkProperty
+                long transactionJumboSize,
         @ConfigProperty(value = "transaction.minValidityBufferSecs", defaultValue = "10") @NetworkProperty
                 int transactionMinValidityBufferSecs,
         @ConfigProperty(value = "allowances.maxTransactionLimit", defaultValue = "20") @NetworkProperty

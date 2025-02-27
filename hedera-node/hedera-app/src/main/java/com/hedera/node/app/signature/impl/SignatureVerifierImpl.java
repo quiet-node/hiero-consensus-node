@@ -122,7 +122,7 @@ public final class SignatureVerifierImpl implements SignatureVerifier {
         // signatures would still be less than 6K. This array wants to be large enough to not need any copies as it is
         // being built, but small enough to not waste too much space. 10K seems like it will fit the bill. In the off
         // chance that it *is* too small, an array copy will be made to enlarge it.
-        private static final int DEFAULT_SIZE = 10 * 1024;
+        private static final int DEFAULT_SIZE = 130 * 1024; // TODO use smaller size for non jumbo transactions?
         private final int signedBytesLength;
         private final SignatureType signatureType;
         private byte[] content = new byte[DEFAULT_SIZE];

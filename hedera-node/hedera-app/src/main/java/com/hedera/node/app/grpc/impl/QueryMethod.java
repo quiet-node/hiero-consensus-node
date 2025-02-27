@@ -47,8 +47,9 @@ public final class QueryMethod extends MethodBase {
             @NonNull final String serviceName,
             @NonNull final String methodName,
             @NonNull final QueryWorkflow workflow,
-            @NonNull final Metrics metrics) {
-        super(serviceName, methodName, metrics);
+            @NonNull final Metrics metrics,
+            final long bufferSize) {
+        super(serviceName, methodName, metrics, bufferSize);
         this.workflow = requireNonNull(workflow);
         this.queriesAnsweredCounter = counter(metrics, COUNTER_ANSWERED_NAME_TPL, COUNTER_ANSWERED_DESC_TPL);
         this.queriesAnsweredSpeedometer =

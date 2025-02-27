@@ -6,7 +6,6 @@ import static com.hedera.node.app.workflows.standalone.impl.NoopVerificationStra
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.hedera.node.app.Hedera;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
 import com.hedera.node.app.config.ConfigProviderImpl;
 import com.hedera.node.app.hints.impl.HintsLibraryImpl;
@@ -37,7 +36,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicReference;
@@ -271,9 +269,6 @@ public enum TransactionExecutors {
                 .hintsService(hintsService)
                 .metrics(NO_OP_METRICS)
                 .throttleFactory(appContext.throttleFactory())
-                .maxSignedTxnSize(Optional.ofNullable(properties.get(MAX_SIGNED_TXN_SIZE_PROPERTY))
-                        .map(Integer::parseInt)
-                        .orElse(Hedera.MAX_SIGNED_TXN_SIZE))
                 .build();
         componentRef.set(component);
         return component;

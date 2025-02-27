@@ -30,8 +30,9 @@ public final class TransactionMethod extends MethodBase {
             @NonNull final String serviceName,
             @NonNull final String methodName,
             @NonNull final IngestWorkflow workflow,
-            @NonNull final Metrics metrics) {
-        super(serviceName, methodName, metrics);
+            @NonNull final Metrics metrics,
+            final long bufferSize) {
+        super(serviceName, methodName, metrics, bufferSize);
         this.workflow = Objects.requireNonNull(workflow);
     }
 

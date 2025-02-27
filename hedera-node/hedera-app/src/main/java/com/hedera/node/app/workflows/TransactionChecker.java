@@ -15,7 +15,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.PAYER_ACCOUNT_NOT_FOUND
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_EXPIRED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_HAS_UNKNOWN_FIELDS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_ID_FIELD_NOT_ALLOWED;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_OVERSIZE;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -32,7 +31,6 @@ import com.hedera.hapi.node.transaction.SignedTransaction;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.util.HapiUtils;
 import com.hedera.hapi.util.UnknownHederaFunctionality;
-import com.hedera.node.app.annotations.MaxSignedTxnSize;
 import com.hedera.node.app.annotations.NodeSelfId;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.util.ProtobufUtils;
@@ -85,7 +83,7 @@ public class TransactionChecker {
             "number of super-deprecated txns (body, sigs) received";
 
     /** The maximum number of bytes that can exist in the transaction */
-    private final int maxSignedTxnSize;
+    private final long maxSignedTxnSize;
     /** The {@link ConfigProvider} used to get properties needed for these checks. */
     private final ConfigProvider props;
     /** The {@link Counter} used to track the number of deprecated transactions (bodyBytes, sigMap) received. */
@@ -102,7 +100,6 @@ public class TransactionChecker {
     /**
      * Create a new {@link TransactionChecker}
      *
-     * @param maxSignedTxnSize the maximum transaction size
      * @param configProvider access to configuration
      * @param metrics metrics related to workflows
      * @throws NullPointerException if one of the arguments is {@code null}
@@ -110,16 +107,17 @@ public class TransactionChecker {
      */
     @Inject
     public TransactionChecker(
-            @MaxSignedTxnSize final int maxSignedTxnSize,
             @NodeSelfId @NonNull final AccountID nodeAccount,
             @NonNull final ConfigProvider configProvider,
             @NonNull final Metrics metrics) {
-        if (maxSignedTxnSize <= 0) {
+
+        final var hederaConfig = configProvider.getConfiguration().getConfigData(HederaConfig.class);
+        if (hederaConfig.transactionMaxSize() <= 0) {
             throw new IllegalArgumentException("maxSignedTxnSize must be > 0");
         }
 
         this.nodeAccount = requireNonNull(nodeAccount);
-        this.maxSignedTxnSize = maxSignedTxnSize;
+        this.maxSignedTxnSize = hederaConfig.transactionMaxSize();
         this.props = requireNonNull(configProvider);
         this.deprecatedCounter = metrics.getOrCreate(new Counter.Config("app", COUNTER_DEPRECATED_TXNS_NAME)
                 .withDescription(COUNTER_RECEIVED_DEPRECATED_DESC));
@@ -138,7 +136,8 @@ public class TransactionChecker {
     public TransactionInfo parseAndCheck(@NonNull final Bytes buffer) throws PreCheckException {
         // Fail fast if there are too many transaction bytes
         if (buffer.length() > maxSignedTxnSize) {
-            throw new PreCheckException(TRANSACTION_OVERSIZE);
+            // check the size after parsing the transaction, so we can allow jumbo transactions
+            // throw new PreCheckException(TRANSACTION_OVERSIZE);
         }
 
         final var tx = parseStrict(buffer.toReadableSequentialData(), Transaction.PROTOBUF, INVALID_TRANSACTION);

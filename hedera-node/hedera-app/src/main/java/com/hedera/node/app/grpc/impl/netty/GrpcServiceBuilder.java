@@ -10,6 +10,8 @@ import com.hedera.node.app.grpc.impl.QueryMethod;
 import com.hedera.node.app.grpc.impl.TransactionMethod;
 import com.hedera.node.app.workflows.ingest.IngestWorkflow;
 import com.hedera.node.app.workflows.query.QueryWorkflow;
+import com.hedera.node.config.ConfigProvider;
+import com.hedera.node.config.data.HederaConfig;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.swirlds.metrics.api.Metrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -52,7 +54,9 @@ final class GrpcServiceBuilder {
      * Create a single JVM-wide Marshaller instance that simply reads/writes byte arrays to/from
      * {@link InputStream}s. This class is thread safe.
      */
-    private static final DataBufferMarshaller MARSHALLER = new DataBufferMarshaller();
+    private final DataBufferMarshaller MARSHALLER;
+
+    private final DataBufferMarshaller JUMBO_MARSHALLER;
 
     /** The name of the service we are building. For example, the TokenService. */
     private final String serviceName;
@@ -89,6 +93,8 @@ final class GrpcServiceBuilder {
      */
     private final Set<String> queryMethodNames = new HashSet<>();
 
+    private final HederaConfig hederaConfig;
+
     /**
      * Creates a new builder. Typically only a single builder instance is created per service.
      *
@@ -99,6 +105,7 @@ final class GrpcServiceBuilder {
      * @throws IllegalArgumentException if the serviceName is blank
      */
     public GrpcServiceBuilder(
+            @NonNull final ConfigProvider configProvider,
             @NonNull final String serviceName,
             @NonNull final IngestWorkflow ingestWorkflow,
             @NonNull final QueryWorkflow queryWorkflow) {
@@ -108,6 +115,9 @@ final class GrpcServiceBuilder {
         if (serviceName.isBlank()) {
             throw new IllegalArgumentException("serviceName cannot be blank");
         }
+        this.hederaConfig = configProvider.getConfiguration().getConfigData(HederaConfig.class);
+        this.MARSHALLER = new DataBufferMarshaller(hederaConfig.transactionMaxSize());
+        this.JUMBO_MARSHALLER = new DataBufferMarshaller(hederaConfig.transactionJumboSize());
     }
 
     /**
@@ -157,12 +167,20 @@ final class GrpcServiceBuilder {
         final var builder = ServerServiceDefinition.builder(serviceName);
         txMethodNames.forEach(methodName -> {
             logger.debug("Registering gRPC transaction method {}.{}", serviceName, methodName);
-            final var method = new TransactionMethod(serviceName, methodName, ingestWorkflow, metrics);
+
+            // check if method should be a jumbo transaction
+            final var method = (hederaConfig.jumboTransactionIsEnabled() && methodName.equals("callEthereum"))
+                    ? new TransactionMethod(
+                            serviceName, methodName, ingestWorkflow, metrics, hederaConfig.transactionJumboSize())
+                    : new TransactionMethod(
+                            serviceName, methodName, ingestWorkflow, metrics, hederaConfig.transactionMaxSize());
+
             addMethod(builder, serviceName, methodName, method);
         });
         queryMethodNames.forEach(methodName -> {
             logger.debug("Registering gRPC query method {}.{}", serviceName, methodName);
-            final var method = new QueryMethod(serviceName, methodName, queryWorkflow, metrics);
+            final var method =
+                    new QueryMethod(serviceName, methodName, queryWorkflow, metrics, hederaConfig.transactionMaxSize());
             addMethod(builder, serviceName, methodName, method);
         });
         return builder.build();
@@ -180,12 +198,23 @@ final class GrpcServiceBuilder {
         requireNonNull(methodName);
         requireNonNull(method);
 
-        final var methodDescriptor = MethodDescriptor.<BufferedData, BufferedData>newBuilder()
-                .setType(MethodType.UNARY)
-                .setFullMethodName(serviceName + "/" + methodName)
-                .setRequestMarshaller(MARSHALLER)
-                .setResponseMarshaller(MARSHALLER)
-                .build();
+        MethodDescriptor<BufferedData, BufferedData> methodDescriptor;
+
+        if (hederaConfig.jumboTransactionIsEnabled() && methodName.equals("callEthereum")) {
+            methodDescriptor = MethodDescriptor.<BufferedData, BufferedData>newBuilder()
+                    .setType(MethodType.UNARY)
+                    .setFullMethodName(serviceName + "/" + methodName)
+                    .setRequestMarshaller(JUMBO_MARSHALLER)
+                    .setResponseMarshaller(JUMBO_MARSHALLER)
+                    .build();
+        } else {
+            methodDescriptor = MethodDescriptor.<BufferedData, BufferedData>newBuilder()
+                    .setType(MethodType.UNARY)
+                    .setFullMethodName(serviceName + "/" + methodName)
+                    .setRequestMarshaller(MARSHALLER)
+                    .setResponseMarshaller(MARSHALLER)
+                    .build();
+        }
 
         builder.addMethod(
                 ServerMethodDefinition.create(methodDescriptor, (call, ignored) -> new ListenerImpl(call, method)));

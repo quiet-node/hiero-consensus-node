@@ -410,7 +410,8 @@ public final class NettyGrpcServerManager implements GrpcServerManager {
         return rpcServiceDefinitions
                 .get()
                 .map(d -> {
-                    final var builder = new GrpcServiceBuilder(d.basePath(), ingestWorkflow, queryWorkflow);
+                    final var builder =
+                            new GrpcServiceBuilder(configProvider, d.basePath(), ingestWorkflow, queryWorkflow);
                     d.methods().stream().filter(methodFilter).forEach(m -> {
                         if (Transaction.class.equals(m.requestType())) {
                             builder.transaction(m.path());

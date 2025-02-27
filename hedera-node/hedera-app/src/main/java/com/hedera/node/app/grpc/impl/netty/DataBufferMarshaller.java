@@ -3,7 +3,6 @@ package com.hedera.node.app.grpc.impl.netty;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.node.app.Hedera;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.MethodDescriptor;
@@ -16,11 +15,6 @@ import java.io.InputStream;
  */
 /*@ThreadSafe*/
 final class DataBufferMarshaller implements MethodDescriptor.Marshaller<BufferedData> {
-    // NOTE: This needs to come from config, but because of the thread local, has to be
-    //       static. See Issue #4294
-    private static final int MAX_MESSAGE_SIZE = Hedera.MAX_SIGNED_TXN_SIZE;
-    private static final int TOO_BIG_MESSAGE_SIZE = MAX_MESSAGE_SIZE + 1;
-
     /**
      * Per-thread shared ByteBuffer for reading. We store these in a thread local, because we do not
      * have control over the thread pool used by the underlying gRPC server.
@@ -29,11 +23,15 @@ final class DataBufferMarshaller implements MethodDescriptor.Marshaller<Buffered
             "java:S5164") // looks like a false positive ("ThreadLocal" variables should be cleaned up when no longer
     // used), but these threads are long-lived and the lifetime of the thread local is the same as
     // the application
-    private static final ThreadLocal<BufferedData> BUFFER_THREAD_LOCAL =
-            ThreadLocal.withInitial(() -> BufferedData.allocate(TOO_BIG_MESSAGE_SIZE));
+    private final ThreadLocal<BufferedData> BUFFER_THREAD_LOCAL;
+
+    private final long bufferSize;
 
     /** Constructs a new {@link DataBufferMarshaller}. Only called by {@link GrpcServiceBuilder}. */
-    DataBufferMarshaller() {}
+    DataBufferMarshaller(long bufferSize) {
+        this.bufferSize = bufferSize;
+        BUFFER_THREAD_LOCAL = ThreadLocal.withInitial(() -> BufferedData.allocate((int) bufferSize + 1));
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -63,7 +61,7 @@ final class DataBufferMarshaller implements MethodDescriptor.Marshaller<Buffered
         // want to do for bad input from the user. Also note that if the user sent us way too many
         // bytes, this method will only read up to TOO_BIG_MESSAGE_SIZE, so there is no risk of
         // the user overwhelming the server with a huge message.
-        buffer.writeBytes(stream, TOO_BIG_MESSAGE_SIZE);
+        buffer.writeBytes(stream, (int) bufferSize + 1);
 
         // We read some bytes into the buffer, so reset the position and limit accordingly to
         // prepare for reading the data
