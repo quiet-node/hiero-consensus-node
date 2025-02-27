@@ -182,7 +182,7 @@ through their inheritance structure. If the latter, they provide an implementati
 ### pureChecks
 
 The ```pureChecks``` method is responsible for performing checks that are independent of state or context.
-It takes a TransactionBody as an argument and throws a PreCheckException if any of the checks fail.
+It takes a TransactionBody as an argument and throws a WorkflowException if any of the checks fail.
 In the context of ```ScheduleCreateHandler```, this method checks if the transaction ID is valid and if the
 scheduled transaction is valid for long term scheduling.
 
@@ -190,7 +190,7 @@ scheduled transaction is valid for long term scheduling.
 
 The ```preHandle``` method in ```ScheduleCreateHandler``` and other handlers is called during the pre-handle workflow.
 It determines the signatures needed for creating a schedule. It takes a PreHandleContext as an argument,
-which collects all information, and throws a ```PreCheckException``` if any issue happens on the pre-handle
+which collects all information, and throws a ```WorkflowException``` if any issue happens on the pre-handle
 level. This method validates the scheduleID and checks if the schedule signatures are waived.
 If not, it validates and adds the required keys.
 
@@ -210,8 +210,7 @@ the effective lifetime of the schedule.
 
 ## Network Response Messages
 
-Specific network response messages (```ResponseCodeEnum```) are wrapped by ```WorkflowException``` or
-```PreCheckException``` and the codes relevant to the Schedule Service are:
+Specific network response messages (```ResponseCodeEnum```) are wrapped by ```WorkflowException``` and the codes relevant to the Schedule Service are:
 
 - ```INVALID_SCHEDULE_ID```: The Scheduled entity does not exist; or has now expired, been deleted, or been executed
 - ```SCHEDULE_IS_IMMUTABLE```: The Scheduled entity cannot be modified. Admin key was not set during the creation of the Scheduled entity.

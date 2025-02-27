@@ -256,7 +256,7 @@ The `handle` method contains a switch statement that executes different logic ba
 
 ## Network Response Messages
 
-Specific network response messages (```ResponseCodeEnum```) are wrapped by ```WorkflowException``` or ```PreCheckException```
+Specific network response messages (```ResponseCodeEnum```) are wrapped by ```WorkflowException```
 and the codes relevant to the Network and Freeze Service are:
 
 - `INVALID_FREEZE_TRANSACTION_BODY`: FreezeTransactionBody is invalid

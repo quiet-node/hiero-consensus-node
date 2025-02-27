@@ -160,17 +160,17 @@ through their inheritance structure. If the latter, they provide an implementati
 
 The ```pureChecks``` method is responsible for performing checks that are independent
 of state or context.
-It takes a ```TransactionBody``` as an argument and throws a ```PreCheckException``` if any
+It takes a ```TransactionBody``` as an argument and throws a ```WorkflowException``` if any
 of the checks fail. In the context of the FileAppendHandler, this method checks
 if the fileID in the FileAppendTransactionBody is null. If it is,
-a PreCheckException with the INVALID_FILE_ID response code is thrown.
+a WorkflowException with the INVALID_FILE_ID response code is thrown.
 
 ### preHandle
 
 The ```preHandle``` method is called during the pre-handle workflow.
 It determines the signatures needed for appending a file. It takes
 a ```PreHandleContext``` as an argument, which collects all information,
-and throws a ```PreCheckException``` if any issue happens on the pre-handle
+and throws a ```WorkflowException``` if any issue happens on the pre-handle
 level. This method validates the fileID and checks if the file
 signatures are waived. If not, it validates and adds the required keys.
 
