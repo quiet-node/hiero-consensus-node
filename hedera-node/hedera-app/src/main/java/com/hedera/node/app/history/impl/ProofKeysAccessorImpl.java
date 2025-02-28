@@ -26,7 +26,7 @@ public class ProofKeysAccessorImpl implements ProofKeysAccessor {
 
     @Override
     public Bytes sign(final long constructionId, @NonNull final Bytes message) {
-        return Bytes.wrap(library.signSchnorr(message.toByteArray(), FAKE_SCHNORR_PRIVATE_KEY.toByteArray()));
+        return library.signSchnorr(message, FAKE_SCHNORR_PRIVATE_KEY);
     }
 
     @Override

@@ -2,6 +2,7 @@
 package com.hedera.node.app.history;
 
 import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Map;
@@ -15,7 +16,7 @@ public interface HistoryLibrary {
      * <p>
      * <b>Important:</b> If this changes, the ledger id must also change.
      */
-    byte[] snarkVerificationKey();
+    Bytes snarkVerificationKey();
 
     /**
      * Returns a new Schnorr key pair.
@@ -30,7 +31,7 @@ public interface HistoryLibrary {
      * @param privateKey the private key
      * @return the signature
      */
-    byte[] signSchnorr(@NonNull byte[] message, @NonNull byte[] privateKey);
+    Bytes signSchnorr(@NonNull Bytes message, @NonNull Bytes privateKey);
 
     /**
      * Checks that a signature on a message verifies under a Schnorr public key.
@@ -40,7 +41,7 @@ public interface HistoryLibrary {
      * @param publicKey the public key
      * @return true if the signature is valid; false otherwise
      */
-    boolean verifySchnorr(@NonNull byte[] signature, @NonNull byte[] message, @NonNull byte[] publicKey);
+    boolean verifySchnorr(@NonNull Bytes signature, @NonNull Bytes message, @NonNull Bytes publicKey);
 
     /**
      * Computes the hash of the given address book with the same algorithm used by the SNARK circuit.
@@ -48,14 +49,14 @@ public interface HistoryLibrary {
      * @param weights the node weights in the roster
      * @param publicKeys the available Schnorr public keys for the nodes in the roster
      */
-    byte[] hashAddressBook(@NonNull long[] weights, @NonNull byte[][] publicKeys);
+    Bytes hashAddressBook(@NonNull long[] weights, @NonNull byte[][] publicKeys);
 
     /**
      * Computes the hash of the given hints verification key.
      * @param hintsVerificationKey the hints verification key
      * @return the hash of the hints verification key
      */
-    byte[] hashHintsVerificationKey(@NonNull byte[] hintsVerificationKey);
+    Bytes hashHintsVerificationKey(@NonNull Bytes hintsVerificationKey);
 
     /**
      * Returns a SNARK recursively proving the target address book and associated metadata belong to the given ledger
@@ -74,15 +75,15 @@ public interface HistoryLibrary {
      * @return the SNARK proving the target address book and metadata belong to the ledger id's chain of trust
      */
     @NonNull
-    byte[] proveChainOfTrust(
-            @NonNull byte[] ledgerId,
-            @Nullable byte[] sourceProof,
+    Bytes proveChainOfTrust(
+            @NonNull Bytes ledgerId,
+            @Nullable Bytes sourceProof,
             @NonNull final long[] currentAddressBookWeights,
             @NonNull final byte[][] currentAddressBookVerifyingKeys,
             @NonNull final long[] nextAddressBookWeights,
             @NonNull final byte[][] nextAddressBookVerifyingKeys,
-            @NonNull Map<Long, byte[]> sourceSignatures,
-            @NonNull byte[] targetMetadata);
+            @NonNull Map<Long, Bytes> sourceSignatures,
+            @NonNull Bytes targetMetadata);
 
     /**
      * Verifies the given SNARK proves the given address book hash and associated metadata belong to the given
@@ -94,5 +95,5 @@ public interface HistoryLibrary {
      * @return true if the proof is valid; false otherwise
      */
     boolean verifyChainOfTrust(
-            @NonNull byte[] ledgerId, @NonNull byte[] addressBookHash, @NonNull byte[] metadata, @NonNull byte[] proof);
+            @NonNull Bytes ledgerId, @NonNull Bytes addressBookHash, @NonNull Bytes metadata, @NonNull Bytes proof);
 }

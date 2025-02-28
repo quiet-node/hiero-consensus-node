@@ -7,6 +7,7 @@ import com.hedera.cryptography.rpm.HistoryLibraryBridge;
 import com.hedera.cryptography.rpm.ProvingAndVerifyingSnarkKeys;
 import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
 import com.hedera.node.app.history.HistoryLibrary;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -31,8 +32,8 @@ public class HistoryLibraryImpl implements HistoryLibrary {
     }
 
     @Override
-    public byte[] snarkVerificationKey() {
-        return SNARK_KEYS.verifyingKey();
+    public Bytes snarkVerificationKey() {
+        return Bytes.wrap(SNARK_KEYS.verifyingKey());
     }
 
     @Override
@@ -43,44 +44,44 @@ public class HistoryLibraryImpl implements HistoryLibrary {
     }
 
     @Override
-    public byte[] signSchnorr(@NonNull final byte[] message, @NonNull final byte[] privateKey) {
+    public Bytes signSchnorr(@NonNull final Bytes message, @NonNull final Bytes privateKey) {
         requireNonNull(message);
         requireNonNull(privateKey);
-        return BRIDGE.signSchnorr(message, privateKey);
+        return Bytes.wrap(BRIDGE.signSchnorr(message.toByteArray(), privateKey.toByteArray()));
     }
 
     @Override
     public boolean verifySchnorr(
-            @NonNull final byte[] signature, @NonNull final byte[] message, @NonNull final byte[] publicKey) {
+            @NonNull final Bytes signature, @NonNull final Bytes message, @NonNull final Bytes publicKey) {
         requireNonNull(signature);
         requireNonNull(message);
         requireNonNull(publicKey);
-        return BRIDGE.verifySchnorr(signature, message, publicKey);
+        return BRIDGE.verifySchnorr(signature.toByteArray(), message.toByteArray(), publicKey.toByteArray());
     }
 
     @Override
-    public byte[] hashAddressBook(@NonNull long[] weights, @NonNull byte[][] publicKeys) {
+    public Bytes hashAddressBook(@NonNull long[] weights, @NonNull byte[][] publicKeys) {
         requireNonNull(weights);
         requireNonNull(publicKeys);
-        return BRIDGE.hashAddressBook(publicKeys, weights);
+        return Bytes.wrap(BRIDGE.hashAddressBook(publicKeys, weights));
     }
 
     @Override
-    public byte[] hashHintsVerificationKey(@NonNull final byte[] hintsVerificationKey) {
-        return BRIDGE.hashHintsVerificationKey(hintsVerificationKey);
+    public Bytes hashHintsVerificationKey(@NonNull final Bytes hintsVerificationKey) {
+        return Bytes.wrap(BRIDGE.hashHintsVerificationKey(hintsVerificationKey.toByteArray()));
     }
 
     @NonNull
     @Override
-    public byte[] proveChainOfTrust(
-            @NonNull final byte[] ledgerId,
-            @Nullable final byte[] sourceProof,
+    public Bytes proveChainOfTrust(
+            @NonNull final Bytes ledgerId,
+            @Nullable final Bytes sourceProof,
             @NonNull final long[] currentAddressBookWeights,
             @NonNull final byte[][] currentAddressBookVerifyingKeys,
             @NonNull final long[] nextAddressBookWeights,
             @NonNull final byte[][] nextAddressBookVerifyingKeys,
-            @NonNull Map<Long, byte[]> sourceSignatures,
-            @NonNull final byte[] targetMetadata) {
+            @NonNull Map<Long, Bytes> sourceSignatures,
+            @NonNull final Bytes targetMetadata) {
         requireNonNull(ledgerId);
         requireNonNull(currentAddressBookWeights);
         requireNonNull(currentAddressBookVerifyingKeys);
@@ -90,29 +91,29 @@ public class HistoryLibraryImpl implements HistoryLibrary {
         requireNonNull(targetMetadata);
 
         final var verifyingSignatures = sourceSignatures.values().toArray(byte[][]::new);
-        return BRIDGE.proveChainOfTrust(
+        return Bytes.wrap(BRIDGE.proveChainOfTrust(
                 SNARK_KEYS.provingKey(),
                 SNARK_KEYS.verifyingKey(),
-                ledgerId,
+                ledgerId.toByteArray(),
                 currentAddressBookVerifyingKeys,
                 currentAddressBookWeights,
                 nextAddressBookVerifyingKeys,
                 nextAddressBookWeights,
-                sourceProof,
-                targetMetadata,
-                verifyingSignatures);
+                sourceProof.toByteArray(),
+                targetMetadata.toByteArray(),
+                verifyingSignatures));
     }
 
     @Override
     public boolean verifyChainOfTrust(
-            @NonNull final byte[] ledgerId,
-            @NonNull final byte[] addressBookHash,
-            @NonNull final byte[] metadata,
-            @NonNull final byte[] proof) {
+            @NonNull final Bytes ledgerId,
+            @NonNull final Bytes addressBookHash,
+            @NonNull final Bytes metadata,
+            @NonNull final Bytes proof) {
         requireNonNull(ledgerId);
         requireNonNull(addressBookHash);
         requireNonNull(metadata);
         requireNonNull(proof);
-        return BRIDGE.verifyChainOfTrust(SNARK_KEYS.verifyingKey(), proof);
+        return BRIDGE.verifyChainOfTrust(SNARK_KEYS.verifyingKey(), proof.toByteArray());
     }
 }

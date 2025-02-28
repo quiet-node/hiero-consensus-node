@@ -4,6 +4,7 @@ package com.hedera.node.app.history.impl;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.hedera.cryptography.rpm.SigningAndVerifyingSchnorrKeys;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,9 +21,9 @@ class HistoryLibraryImplTest {
     @Test
     void generatesValidSchnorrKeys() {
         final var keys = subject.newSchnorrKeyPair();
-        final var message = "Hello, world!".getBytes();
-        final var signature = subject.signSchnorr(message, keys.signingKey());
-        assertTrue(subject.verifySchnorr(signature, message, keys.verifyingKey()));
+        final var message = Bytes.wrap("Hello, world!".getBytes());
+        final var signature = subject.signSchnorr(message, Bytes.wrap(keys.signingKey()));
+        assertTrue(subject.verifySchnorr(signature, message, Bytes.wrap(keys.verifyingKey())));
     }
 
     @Test
@@ -55,18 +56,18 @@ class HistoryLibraryImplTest {
                 .mapToLong(Long::longValue)
                 .toArray();
 
-        final byte[] genesisAddressBookHash = subject.hashAddressBook(sourceWeights, sourceKeys);
-        final byte[] nextAddressBookHash = subject.hashAddressBook(targetWeights, targetKeys);
-        final byte[] metadata =
-                com.hedera.pbj.runtime.io.buffer.Bytes.wrap("test metadata").toByteArray();
+        final Bytes genesisAddressBookHash = subject.hashAddressBook(sourceWeights, sourceKeys);
+        final Bytes nextAddressBookHash = subject.hashAddressBook(targetWeights, targetKeys);
+        final Bytes metadata = com.hedera.pbj.runtime.io.buffer.Bytes.wrap("test metadata");
         final var hashedMetadata = subject.hashHintsVerificationKey(metadata);
 
-        final var message = concatMessages(nextAddressBookHash, hashedMetadata);
+        final var message = concatMessages(nextAddressBookHash.toByteArray(), hashedMetadata.toByteArray());
 
-        final Map<Long, byte[]> signatures = new LinkedHashMap<>();
+        final Map<Long, Bytes> signatures = new LinkedHashMap<>();
 
         for (var entry : sourceAddresses) {
-            signatures.put(entry.weight(), subject.signSchnorr(message, entry.keys.signingKey()));
+            signatures.put(
+                    entry.weight(), subject.signSchnorr(Bytes.wrap(message), Bytes.wrap(entry.keys.signingKey())));
         }
 
         final var snarkProof = subject.proveChainOfTrust(

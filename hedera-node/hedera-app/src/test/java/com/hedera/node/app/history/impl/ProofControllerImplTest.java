@@ -154,9 +154,9 @@ class ProofControllerImplTest {
         given(weights.numTargetNodesInSource()).willReturn(1);
         given(store.setAssemblyTime(UNFINISHED_CONSTRUCTION.constructionId(), CONSENSUS_NOW))
                 .willReturn(SCHEDULED_ASSEMBLY_CONSTRUCTION);
-        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any(), any())).willReturn(Bytes.EMPTY);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
-        given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
+        given(library.signSchnorr(any(), any())).willReturn(Bytes.EMPTY);
         final var expectedSignature = new HistorySignature(mockHistory, Bytes.EMPTY);
         given(submissions.submitAssemblySignature(CONSTRUCTION_ID, expectedSignature))
                 .willReturn(CompletableFuture.completedFuture(null));
@@ -173,9 +173,9 @@ class ProofControllerImplTest {
     void startsSigningFutureOnceAssemblyScheduledButInsufficientSignaturesKnown() {
         setupWith(SCHEDULED_ASSEMBLY_CONSTRUCTION, List.of(), List.of(), Map.of(), LEDGER_ID);
 
-        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any(), any())).willReturn(Bytes.EMPTY);
         final var mockHistory = new History(Bytes.EMPTY, METADATA);
-        given(library.signSchnorr(any(), any())).willReturn(new byte[0]);
+        given(library.signSchnorr(any(), any())).willReturn(Bytes.EMPTY);
         final var expectedSignature = new HistorySignature(mockHistory, Bytes.EMPTY);
         given(submissions.submitAssemblySignature(CONSTRUCTION_ID, expectedSignature))
                 .willReturn(CompletableFuture.completedFuture(null));
@@ -236,9 +236,9 @@ class ProofControllerImplTest {
 
         subject.advanceConstruction(CONSENSUS_NOW, METADATA, store);
 
-        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any(), any())).willReturn(Bytes.EMPTY);
         given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any(), any(), any()))
-                .willReturn(new byte[0]);
+                .willReturn(Bytes.EMPTY);
         given(submissions.submitProofVote(
                         eq(CONSTRUCTION_ID), argThat(v -> v.proof().equals(PROOF))))
                 .willReturn(CompletableFuture.completedFuture(null));
@@ -267,9 +267,9 @@ class ProofControllerImplTest {
 
         subject.advanceConstruction(CONSENSUS_NOW, METADATA, store);
 
-        given(library.hashAddressBook(any(), any())).willReturn(new byte[0]);
+        given(library.hashAddressBook(any(), any())).willReturn(Bytes.EMPTY);
         given(library.proveChainOfTrust(any(), any(), any(), any(), any(), any(), any(), any()))
-                .willReturn(PROOF.toByteArray());
+                .willReturn(PROOF);
         given(submissions.submitProofVote(
                         eq(CONSTRUCTION_ID), argThat(v -> v.proof().equals(PROOF))))
                 .willReturn(CompletableFuture.completedFuture(null));

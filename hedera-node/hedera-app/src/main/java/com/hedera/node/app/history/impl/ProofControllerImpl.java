@@ -327,11 +327,10 @@ public class ProofControllerImpl implements ProofController {
         return CompletableFuture.runAsync(
                 () -> {
                     final var targetHash = library.hashAddressBook(targetWeights, proofKeysArray);
-                    final var history = new History(Bytes.wrap(targetHash), targetMetadata);
+                    final var history = new History(targetHash, targetMetadata);
                     final var message = encodeHistory(history);
-                    final var signature = library.signSchnorr(
-                            message, schnorrKeyPair.privateKey().toByteArray());
-                    final var historySignature = new HistorySignature(history, Bytes.wrap(signature));
+                    final var signature = library.signSchnorr(message, schnorrKeyPair.privateKey());
+                    final var historySignature = new HistorySignature(history, signature);
                     submissions
                             .submitAssemblySignature(construction.constructionId(), historySignature)
                             .join();
@@ -376,29 +375,24 @@ public class ProofControllerImpl implements ProofController {
                     final var sourceHash = library.hashAddressBook(sourceWeights, sourceProofKeysArray);
                     final var targetHash = library.hashAddressBook(targetWeights, targetProofKeysArray);
                     final var sourceSignatures = signatures.entrySet().stream()
-                            .map(e -> new AbstractMap.SimpleImmutableEntry<>(
-                                    e.getKey(), e.getValue().toByteArray()))
+                            .map(e -> new AbstractMap.SimpleImmutableEntry<>(e.getKey(), e.getValue()))
                             .collect(Collectors.toMap(
                                     AbstractMap.SimpleImmutableEntry::getKey,
                                     AbstractMap.SimpleImmutableEntry::getValue));
                     final var proof = library.proveChainOfTrust(
-                            Optional.ofNullable(ledgerId)
-                                    .map(Bytes::toByteArray)
-                                    .orElse(sourceHash),
-                            Optional.ofNullable(sourceProof)
-                                    .map(Bytes::toByteArray)
-                                    .orElse(null),
+                            Optional.ofNullable(ledgerId).orElse(sourceHash),
+                            Optional.ofNullable(sourceProof).orElse(null),
                             sourceWeights,
                             sourceProofKeysArray,
                             targetWeights,
                             targetProofKeysArray,
                             sourceSignatures,
-                            targetMetadata.toByteArray());
+                            targetMetadata);
                     final var metadataProof = HistoryProof.newBuilder()
-                            .sourceAddressBookHash(Bytes.wrap(sourceHash))
+                            .sourceAddressBookHash(sourceHash)
                             .targetProofKeys(proofKeyListFrom(targetProofKeys))
-                            .targetHistory(new History(Bytes.wrap(targetHash), targetMetadata))
-                            .proof(Bytes.wrap(proof))
+                            .targetHistory(new History(targetHash, targetMetadata))
+                            .proof(proof)
                             .build();
                     submissions
                             .submitProofVote(construction.constructionId(), metadataProof)
@@ -480,8 +474,7 @@ public class ProofControllerImpl implements ProofController {
                 () -> {
                     final var message = encodeHistory(historySignature.historyOrThrow());
                     final var proofKey = requireNonNull(targetProofKeys.get(nodeId));
-                    final var isValid = library.verifySchnorr(
-                            historySignature.signature().toByteArray(), proofKey.toByteArray(), message);
+                    final var isValid = library.verifySchnorr(historySignature.signature(), proofKey, message);
                     return new Verification(nodeId, historySignature, isValid);
                 },
                 executor);
@@ -497,7 +490,7 @@ public class ProofControllerImpl implements ProofController {
         return Bytes.wrap(arr);
     }
 
-    private @NonNull byte[] encodeHistory(@NonNull final History history) {
+    private @NonNull Bytes encodeHistory(@NonNull final History history) {
         requireNonNull(history);
         throw new UnsupportedOperationException("Not implemented");
     }
