@@ -7,6 +7,7 @@ import com.hedera.hapi.block.protoc.BlockItemSet;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
+import com.hedera.hapi.block.stream.protoc.BlockItem;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
@@ -25,8 +26,11 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -34,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -56,6 +61,9 @@ public class BlockNodeConnectionManager {
     private final ExecutorService streamingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService retryExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
+    private final ExecutorService connectionExecutor;
+    private final int maxSimultaneousConnections;
+
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
      * @param configProvider the configuration provider
@@ -66,10 +74,14 @@ public class BlockNodeConnectionManager {
 
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
         if (!blockStreamConfig.streamToBlockNodes()) {
+            maxSimultaneousConnections = 0;
+            connectionExecutor = Executors.newFixedThreadPool(1);
             return;
         }
         final var blockNodeConfig = configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
         this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockNodeConfig.blockNodeConnectionFileDir());
+        this.maxSimultaneousConnections = blockNodeConfigurations.getMaxNumberOfSimultaneousConnections();
+        this.connectionExecutor = Executors.newFixedThreadPool(maxSimultaneousConnections);
     }
 
     /**
@@ -77,12 +89,29 @@ public class BlockNodeConnectionManager {
      */
     private void establishConnections() {
         logger.info("Establishing connections to block nodes");
+        List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
 
-        List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes().stream()
-                .filter(node -> !activeConnections.containsKey(node))
-                .toList();
+        Map<Integer, List<BlockNodeConfig>> priorityGroups =
+                availableNodes.stream().collect(Collectors.groupingBy(BlockNodeConfig::priority));
 
-        availableNodes.forEach(this::connectToNode);
+        List<Integer> sortedPriorities = new ArrayList<>(priorityGroups.keySet());
+        sortedPriorities.sort(Integer::compare);
+
+        Set<BlockNodeConfig> selectedNodes = new HashSet<>();
+        for (Integer priority : sortedPriorities) {
+            List<BlockNodeConfig> nodesInGroup = new ArrayList<>(priorityGroups.get(priority));
+            Collections.shuffle(nodesInGroup);
+            for (BlockNodeConfig node : nodesInGroup) {
+                if (selectedNodes.size() >= maxSimultaneousConnections) {
+                    break;
+                }
+                selectedNodes.add(node);
+            }
+            if (selectedNodes.size() >= maxSimultaneousConnections) {
+                break;
+            }
+        }
+        selectedNodes.forEach(this::connectToNode);
     }
 
     private void connectToNode(@NonNull BlockNodeConfig node) {
@@ -152,11 +181,10 @@ public class BlockNodeConnectionManager {
         for (int i = 0; i < block.itemBytes().size(); i += blockItemBatchSize) {
             int end = Math.min(i + blockItemBatchSize, block.itemBytes().size());
             List<Bytes> batch = block.itemBytes().subList(i, end);
-            List<com.hedera.hapi.block.stream.protoc.BlockItem> protocBlockItems = new ArrayList<>();
+            List<BlockItem> protocBlockItems = new ArrayList<>();
             batch.forEach(batchItem -> {
                 try {
-                    protocBlockItems.add(
-                            com.hedera.hapi.block.stream.protoc.BlockItem.parseFrom(batchItem.toByteArray()));
+                    protocBlockItems.add(BlockItem.parseFrom(batchItem.toByteArray()));
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -255,20 +283,17 @@ public class BlockNodeConnectionManager {
      * Shuts down the connection manager, closing all active connections.
      */
     public void shutdown() {
-        scheduler.shutdown();
-        retryExecutor.shutdown();
+        connectionExecutor.shutdown();
         try {
-            boolean awaitTermination = streamingExecutor.awaitTermination(10, TimeUnit.SECONDS);
-            if (!awaitTermination) {
-                logger.error("Failed to shut down streaming executor within 10 seconds");
-            } else {
-                logger.info("Successfully shut down streaming executor");
+            if (!connectionExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                logger.error("Failed to shut down connection executor within timeout");
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        for (BlockNodeConfig node : new ArrayList<>(activeConnections.keySet())) {
-            disconnectFromNode(node);
+        synchronized (connectionLock) {
+            activeConnections.values().forEach(BlockNodeConnection::close);
+            activeConnections.clear();
         }
     }
 
