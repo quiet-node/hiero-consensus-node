@@ -81,8 +81,9 @@ val prCheckTags =
         "hapiTestSmartContract" to "SMART_CONTRACT",
         "hapiTestNDReconnect" to "ND_RECONNECT",
         "hapiTestTimeConsuming" to "LONG_RUNNING",
+        "hapiTestBlockNodeSimulator" to "BLOCK_NODE_SIM",
         "hapiTestMisc" to
-            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING)",
+            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING|BLOCK_NODE_SIM)",
     )
 val prCheckStartPorts =
     mapOf(
@@ -93,7 +94,8 @@ val prCheckStartPorts =
         "hapiTestSmartContract" to "29000",
         "hapiTestNDReconnect" to "30000",
         "hapiTestTimeConsuming" to "31000",
-        "hapiTestMisc" to "32000",
+        "hapiTestBlockNodeSimulator" to "32000",
+        "hapiTestMisc" to "33000",
     )
 
 tasks {

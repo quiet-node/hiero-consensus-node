@@ -34,6 +34,7 @@ import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.HederaNode;
 import com.hedera.services.bdd.junit.hedera.NodeSelector;
 import com.hedera.services.bdd.junit.hedera.containers.BlockNodeContainer;
+import com.hedera.services.bdd.junit.hedera.simulator.BlockNodeSimulatorController;
 import com.hedera.services.bdd.junit.hedera.simulator.SimulatedBlockNodeServer;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNode.ReassignPorts;
 import com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils;
@@ -112,6 +113,22 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     public void setBlockNodeMode(BlockNodeMode mode) {
         log.info("Setting block node mode from {} to {}", this.blockNodeMode, mode);
         this.blockNodeMode = mode;
+    }
+
+    /**
+     * Get the list of simulated block node servers.
+     * @return the list of simulated block node servers
+     */
+    public List<SimulatedBlockNodeServer> getSimulatedBlockNodes() {
+        return Collections.unmodifiableList(simulatedBlockNodes);
+    }
+
+    /**
+     * Get a controller for the simulated block nodes.
+     * @return a controller for the simulated block nodes
+     */
+    public BlockNodeSimulatorController getBlockNodeSimulatorController() {
+        return new BlockNodeSimulatorController(this);
     }
 
     /**

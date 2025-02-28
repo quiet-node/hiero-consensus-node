@@ -5,38 +5,62 @@ import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.PublishStreamResponse.Acknowledgement;
+import com.hedera.hapi.block.protoc.PublishStreamResponse.EndOfStream;
+import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.hapi.block.stream.protoc.BlockItem;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
  * A simulated block node server that implements the block streaming gRPC service.
- * This server simply logs received blocks and acknowledges them.
+ * This server can be configured to respond with different response codes and simulate
+ * various error conditions for testing purposes.
  */
 public class SimulatedBlockNodeServer {
     private static final Logger log = LogManager.getLogger(SimulatedBlockNodeServer.class);
 
     private final Server server;
     private final int port;
+    private final BlockStreamServiceImpl serviceImpl;
 
+    // Configuration for EndOfStream responses
+    private final AtomicReference<EndOfStreamConfig> endOfStreamConfig = new AtomicReference<>();
+
+    /**
+     * Creates a new simulated block node server on the specified port.
+     *
+     * @param port the port to listen on
+     */
     public SimulatedBlockNodeServer(int port) {
         this.port = port;
+        this.serviceImpl = new BlockStreamServiceImpl();
         this.server = ServerBuilder.forPort(port)
-                .addService(new BlockStreamServiceImpl())
+                .addService(serviceImpl)
                 .build();
     }
 
+    /**
+     * Starts the server.
+     *
+     * @throws IOException if the server cannot be started
+     */
     public void start() throws IOException {
         server.start();
         log.info("Simulated block node server started on port {}", port);
     }
 
+    /**
+     * Stops the server with a grace period for shutdown.
+     */
     public void stop() {
         if (server != null) {
             try {
@@ -49,17 +73,85 @@ public class SimulatedBlockNodeServer {
         }
     }
 
+    /**
+     * Gets the port this server is listening on.
+     *
+     * @return the port
+     */
     public int getPort() {
         return port;
     }
 
     /**
-     * Implementation of the BlockStreamService that logs received blocks and sends acknowledgements.
+     * Configure the server to respond with a specific EndOfStream response code
+     * on the next block item.
+     *
+     * @param responseCode the response code to send
+     * @param blockNumber the block number to include in the response
      */
-    private static class BlockStreamServiceImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
+    public void setEndOfStreamResponse(PublishStreamResponseCode responseCode, long blockNumber) {
+        endOfStreamConfig.set(new EndOfStreamConfig(responseCode, blockNumber));
+        log.info("Set EndOfStream response to {} for block {} on port {}", responseCode, blockNumber, port);
+    }
+
+    /**
+     * Send an EndOfStream response immediately to all active streams.
+     * This will end all active streams with the specified response code.
+     *
+     * @param responseCode the response code to send
+     * @param blockNumber the block number to include in the response
+     */
+    public void sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
+        serviceImpl.sendEndOfStreamToAllStreams(responseCode, blockNumber);
+        log.info("Sent immediate EndOfStream response with code {} for block {} on port {}",
+                responseCode, blockNumber, port);
+    }
+
+    /**
+     * Reset all configured responses to default behavior.
+     */
+    public void resetResponses() {
+        endOfStreamConfig.set(null);
+        log.info("Reset all responses to default behavior on port {}", port);
+    }
+
+    /**
+     * Configuration for EndOfStream responses.
+     */
+    private static class EndOfStreamConfig {
+        private final PublishStreamResponseCode responseCode;
+        private final long blockNumber;
+
+        public EndOfStreamConfig(PublishStreamResponseCode responseCode, long blockNumber) {
+            this.responseCode = responseCode;
+            this.blockNumber = blockNumber;
+        }
+
+        public PublishStreamResponseCode getResponseCode() {
+            return responseCode;
+        }
+
+        public long getBlockNumber() {
+            return blockNumber;
+        }
+    }
+
+    /**
+     * Implementation of the BlockStreamService that can be configured to respond
+     * with different response codes.
+     */
+    private class BlockStreamServiceImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
+        // Keep track of all active stream observers so we can send immediate responses
+        private final List<StreamObserver<PublishStreamResponse>> activeStreams = new CopyOnWriteArrayList<>();
+
         @Override
         public StreamObserver<PublishStreamRequest> publishBlockStream(
                 StreamObserver<PublishStreamResponse> responseObserver) {
+            // Add the stream to active streams as soon as the connection is established
+            activeStreams.add(responseObserver);
+            log.info("New block stream connection established on port {}. Active streams: {}",
+                    port, activeStreams.size());
+
             return new StreamObserver<>() {
                 @Override
                 public void onNext(PublishStreamRequest request) {
@@ -67,6 +159,14 @@ public class SimulatedBlockNodeServer {
                             "Received block stream request with {} block items",
                             request.getBlockItems().getBlockItemsCount());
 
+                    // Check if we should send an EndOfStream response
+                    EndOfStreamConfig config = endOfStreamConfig.get();
+                    if (config != null) {
+                        sendEndOfStream(responseObserver, config.getResponseCode(), config.getBlockNumber());
+                        return;
+                    }
+
+                    // Default behavior: acknowledge block proofs
                     if (request.getBlockItems().getBlockItemsList().stream().anyMatch(BlockItem::hasBlockProof)) {
                         List<BlockItem> blockProofs = request.getBlockItems().getBlockItemsList().stream()
                                 .filter(BlockItem::hasBlockProof)
@@ -100,14 +200,68 @@ public class SimulatedBlockNodeServer {
 
                 @Override
                 public void onError(Throwable t) {
-                    log.error("Error in block stream", t);
+                    log.error("Error in block stream on port {}", port, t);
+                    activeStreams.remove(responseObserver);
                 }
 
                 @Override
                 public void onCompleted() {
+                    log.info("Block stream completed on port {}", port);
                     responseObserver.onCompleted();
+                    activeStreams.remove(responseObserver);
                 }
             };
+        }
+
+        /**
+         * Send an EndOfStream response to all active streams.
+         *
+         * @param responseCode the response code to send
+         * @param blockNumber the block number to include in the response
+         */
+        public void sendEndOfStreamToAllStreams(PublishStreamResponseCode responseCode, long blockNumber) {
+            List<StreamObserver<PublishStreamResponse>> streams = new ArrayList<>(activeStreams);
+            log.info("Sending EndOfStream with code {} for block {} to {} active streams on port {}",
+                    responseCode, blockNumber, streams.size(), port);
+
+            for (StreamObserver<PublishStreamResponse> observer : streams) {
+                sendEndOfStream(observer, responseCode, blockNumber);
+            }
+        }
+
+        /**
+         * Send an EndOfStream response to a specific stream observer.
+         *
+         * @param observer the stream observer to send the response to
+         * @param responseCode the response code to send
+         * @param blockNumber the block number to include in the response
+         */
+        private void sendEndOfStream(
+                StreamObserver<PublishStreamResponse> observer,
+                PublishStreamResponseCode responseCode,
+                long blockNumber) {
+            try {
+                // Build and send the EndOfStream response
+                EndOfStream endOfStream = EndOfStream.newBuilder()
+                        .setStatus(responseCode)
+                        .setBlockNumber(blockNumber)
+                        .build();
+
+                observer.onNext(PublishStreamResponse.newBuilder()
+                        .setStatus(endOfStream)
+                        .build());
+
+                // Complete the stream after sending EndOfStream
+                observer.onCompleted();
+
+                // Remove from active streams
+                activeStreams.remove(observer);
+
+                log.info("Sent EndOfStream with code {} for block {} on port {}",
+                        responseCode, blockNumber, port);
+            } catch (Exception e) {
+                log.error("Error sending EndOfStream on port {}", port, e);
+            }
         }
     }
 }
