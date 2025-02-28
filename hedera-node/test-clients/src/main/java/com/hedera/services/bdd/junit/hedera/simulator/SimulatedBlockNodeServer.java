@@ -35,6 +35,9 @@ public class SimulatedBlockNodeServer {
     // Configuration for EndOfStream responses
     private final AtomicReference<EndOfStreamConfig> endOfStreamConfig = new AtomicReference<>();
 
+    // Track the last verified block number
+    private final AtomicReference<Long> lastVerifiedBlockNumber = new AtomicReference<>(0L);
+
     /**
      * Creates a new simulated block node server on the specified port.
      *
@@ -98,14 +101,25 @@ public class SimulatedBlockNodeServer {
      *
      * @param responseCode the response code to send
      * @param blockNumber the block number to include in the response
+     * @return the last verified block number
      */
-    public void sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
+    public long sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
         serviceImpl.sendEndOfStreamToAllStreams(responseCode, blockNumber);
         log.info(
                 "Sent immediate EndOfStream response with code {} for block {} on port {}",
                 responseCode,
                 blockNumber,
                 port);
+        return lastVerifiedBlockNumber.get();
+    }
+
+    /**
+     * Gets the last verified block number.
+     *
+     * @return the last verified block number
+     */
+    public long getLastVerifiedBlockNumber() {
+        return lastVerifiedBlockNumber.get();
     }
 
     /**
@@ -158,10 +172,6 @@ public class SimulatedBlockNodeServer {
             return new StreamObserver<>() {
                 @Override
                 public void onNext(PublishStreamRequest request) {
-                    log.info(
-                            "Received block stream request with {} block items",
-                            request.getBlockItems().getBlockItemsCount());
-
                     // Check if we should send an EndOfStream response
                     EndOfStreamConfig config = endOfStreamConfig.get();
                     if (config != null) {
@@ -182,6 +192,9 @@ public class SimulatedBlockNodeServer {
                                 "Received block proof for block {} with signature {}",
                                 blockProof.getBlockProof().getBlock(),
                                 blockProof.getBlockProof().getBlockSignature());
+
+                        // Update the last verified block number
+                        lastVerifiedBlockNumber.set(blockProof.getBlockProof().getBlock());
 
                         com.hedera.hapi.block.protoc.PublishStreamResponse.BlockAcknowledgement.Builder
                                 blockAcknowledgement =

@@ -71,19 +71,13 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                                     SubProcessNetwork.newSharedNetwork(CLASSIC_HAPI_TEST_NETWORK_SIZE);
 
                             // Check test classes for WithBlockNodes annotation
-                            log.info("Checking test classes for WithBlockNodes annotation...");
-
                             Set<TestIdentifier> allIdentifiers = new HashSet<>();
                             testPlan.getRoots().forEach(root -> {
-                                log.info("Found root: {}", root.getDisplayName());
                                 allIdentifiers.add(root);
-                                root.getSource().ifPresent(source -> log.info("Root source: {}", source));
 
                                 // Get all descendants of this root
                                 testPlan.getChildren(root.getUniqueId()).forEach(child -> {
-                                    log.info("Found child: {}", child.getDisplayName());
                                     allIdentifiers.add(child);
-                                    child.getSource().ifPresent(source -> log.info("Child source: {}", source));
                                 });
                             });
 
@@ -97,10 +91,6 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                                     .findFirst()
                                     .ifPresent(clazz -> {
                                         WithBlockNodes annotation = clazz.getAnnotation(WithBlockNodes.class);
-                                        log.info(
-                                                "Found @WithBlockNodes on class {} with mode: {}",
-                                                clazz.getName(),
-                                                annotation.value());
                                         subProcessNetwork.setBlockNodeMode(annotation.value());
                                     });
 

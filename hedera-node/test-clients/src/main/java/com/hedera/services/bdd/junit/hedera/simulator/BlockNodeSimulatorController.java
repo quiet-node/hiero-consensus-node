@@ -71,15 +71,23 @@ public class BlockNodeSimulatorController {
      *
      * @param responseCode the response code to send
      * @param blockNumber the block number to include in the response
+     * @return the last verified block number from the first simulator
      */
-    public void sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
-        for (SimulatedBlockNodeServer server : simulatedBlockNodes) {
-            server.sendEndOfStreamImmediately(responseCode, blockNumber);
+    public long sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
+        long lastVerifiedBlockNumber = 0L;
+        for (int i = 0; i < simulatedBlockNodes.size(); i++) {
+            SimulatedBlockNodeServer server = simulatedBlockNodes.get(i);
+            long serverLastVerified = server.sendEndOfStreamImmediately(responseCode, blockNumber);
+            if (i == 0) {
+                lastVerifiedBlockNumber = serverLastVerified;
+            }
         }
         log.info(
-                "Sent immediate EndOfStream response with code {} for block {} on all simulators",
+                "Sent immediate EndOfStream response with code {} for block {} on all simulators, last verified block: {}",
                 responseCode,
-                blockNumber);
+                blockNumber,
+                lastVerifiedBlockNumber);
+        return lastVerifiedBlockNumber;
     }
 
     /**
@@ -89,18 +97,23 @@ public class BlockNodeSimulatorController {
      * @param index the index of the simulated block node (0-based)
      * @param responseCode the response code to send
      * @param blockNumber the block number to include in the response
+     * @return the last verified block number from the simulator, or 0 if the index is invalid
      */
-    public void sendEndOfStreamImmediately(int index, PublishStreamResponseCode responseCode, long blockNumber) {
+    public long sendEndOfStreamImmediately(int index, PublishStreamResponseCode responseCode, long blockNumber) {
+        long lastVerifiedBlockNumber = 0L;
         if (index >= 0 && index < simulatedBlockNodes.size()) {
-            simulatedBlockNodes.get(index).sendEndOfStreamImmediately(responseCode, blockNumber);
+            SimulatedBlockNodeServer server = simulatedBlockNodes.get(index);
+            lastVerifiedBlockNumber = server.sendEndOfStreamImmediately(responseCode, blockNumber);
             log.info(
-                    "Sent immediate EndOfStream response with code {} for block {} on simulator {}",
+                    "Sent immediate EndOfStream response with code {} for block {} on simulator {}, last verified block: {}",
                     responseCode,
                     blockNumber,
-                    index);
+                    index,
+                    lastVerifiedBlockNumber);
         } else {
             log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
         }
+        return lastVerifiedBlockNumber;
     }
 
     /**
@@ -232,6 +245,21 @@ public class BlockNodeSimulatorController {
             log.info("Restarted simulator {} on port {}", index, port);
         } else {
             log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
+        }
+    }
+
+    /**
+     * Get the last verified block number from a specific simulated block node.
+     *
+     * @param index the index of the simulated block node (0-based)
+     * @return the last verified block number, or 0 if the index is invalid
+     */
+    public long getLastVerifiedBlockNumber(int index) {
+        if (index >= 0 && index < simulatedBlockNodes.size()) {
+            return simulatedBlockNodes.get(index).getLastVerifiedBlockNumber();
+        } else {
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
+            return 0L;
         }
     }
 }
