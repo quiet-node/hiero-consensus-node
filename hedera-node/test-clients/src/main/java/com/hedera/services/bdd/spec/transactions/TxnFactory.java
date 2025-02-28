@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2020-2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.transactions;
 
 import static com.hedera.services.bdd.spec.HapiSpec.UTF8Mode.TRUE;
@@ -26,6 +11,7 @@ import com.hedera.hapi.platform.event.legacy.StateSignatureTransaction;
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.HapiSpecSetup;
 import com.hedera.services.bdd.spec.utilops.mod.BodyMutation;
+import com.hederahashgraph.api.proto.java.AtomicBatchTransactionBody;
 import com.hederahashgraph.api.proto.java.ConsensusCreateTopicTransactionBody;
 import com.hederahashgraph.api.proto.java.ConsensusDeleteTopicTransactionBody;
 import com.hederahashgraph.api.proto.java.ConsensusSubmitMessageTransactionBody;
@@ -469,6 +455,10 @@ public class TxnFactory {
     }
 
     public Consumer<TokenAirdropTransactionBody.Builder> defaultDefTokenAirdropTransactionBody() {
+        return builder -> {};
+    }
+
+    public Consumer<AtomicBatchTransactionBody.Builder> defaultDefAtomicBatchTransactionBody() {
         return builder -> {};
     }
 }
