@@ -239,14 +239,14 @@ class BlockNodeConnectionTest {
     }
 
     @Test
-    void testRetry_SuccessOnFirstAttempt() throws Exception {
+    void testRetry_SuccessOnFirstAttempt() {
         blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(1)).get();
     }
 
     @Test
-    void testRetry_SuccessOnRetry() throws Exception {
+    void testRetry_SuccessOnRetry() {
         when(mockSupplier.get())
                 .thenThrow(new RuntimeException("First attempt failed"))
                 .thenReturn(null);
