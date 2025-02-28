@@ -19,50 +19,50 @@ public class HintsLibraryImpl implements HintsLibrary {
     private static final HintsLibraryBridge BRIDGE = HintsLibraryBridge.getInstance();
 
     @Override
-    public byte[] newCrs(final int n) {
-        return BRIDGE.initCRS(n);
+    public Bytes newCrs(final int n) {
+        return Bytes.wrap(BRIDGE.initCRS(n));
     }
 
     @Override
-    public byte[] updateCrs(@NonNull final byte[] crs, @NonNull final byte[] entropy) {
+    public Bytes updateCrs(@NonNull final Bytes crs, @NonNull final Bytes entropy) {
         requireNonNull(crs);
         requireNonNull(entropy);
-        return BRIDGE.updateCRS(crs, entropy);
+        return Bytes.wrap(BRIDGE.updateCRS(crs.toByteArray(), entropy.toByteArray()));
     }
 
     @Override
-    public boolean verifyCrsUpdate(@NonNull byte[] oldCrs, @NonNull byte[] newCrs, @NonNull byte[] proof) {
+    public boolean verifyCrsUpdate(@NonNull Bytes oldCrs, @NonNull Bytes newCrs, @NonNull Bytes proof) {
         requireNonNull(oldCrs);
         requireNonNull(newCrs);
         requireNonNull(proof);
-        return BRIDGE.verifyCRS(oldCrs, newCrs, proof);
+        return BRIDGE.verifyCRS(oldCrs.toByteArray(), newCrs.toByteArray(), proof.toByteArray());
     }
 
     @Override
-    public byte[] newBlsKeyPair() {
+    public Bytes newBlsKeyPair() {
         final byte[] randomBytes = new byte[32];
         RANDOM.nextBytes(randomBytes);
-        return BRIDGE.generateSecretKey(randomBytes);
+        return Bytes.wrap(BRIDGE.generateSecretKey(randomBytes));
     }
 
     @Override
-    public byte[] computeHints(
-            @NonNull final byte[] crs, @NonNull final byte[] blsPrivateKey, final int partyId, final int n) {
+    public Bytes computeHints(
+            @NonNull final Bytes crs, @NonNull final Bytes blsPrivateKey, final int partyId, final int n) {
         requireNonNull(blsPrivateKey);
-        return BRIDGE.computeHints(crs, blsPrivateKey, partyId, n);
+        return Bytes.wrap(BRIDGE.computeHints(crs.toByteArray(), blsPrivateKey.toByteArray(), partyId, n));
     }
 
     @Override
     public boolean validateHintsKey(
-            @NonNull final byte[] crs, @NonNull final byte[] hintsKey, final int partyId, final int n) {
+            @NonNull final Bytes crs, @NonNull final Bytes hintsKey, final int partyId, final int n) {
         requireNonNull(crs);
         requireNonNull(hintsKey);
-        return BRIDGE.validateHintsKey(crs, hintsKey, partyId, n);
+        return BRIDGE.validateHintsKey(crs.toByteArray(), hintsKey.toByteArray(), partyId, n);
     }
 
     @Override
     public AggregationAndVerificationKeys preprocess(
-            @NonNull final byte[] crs,
+            @NonNull final Bytes crs,
             @NonNull final Map<Integer, Bytes> hintsKeys,
             @NonNull final Map<Integer, Long> weights,
             final int n) {
@@ -75,51 +75,54 @@ public class HintsLibraryImpl implements HintsLibrary {
                 hintsKeys.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
         final long[] weightsArray =
                 weights.values().stream().mapToLong(Long::longValue).toArray();
-        return BRIDGE.preprocess(crs, parties, hintsPublicKeys, weightsArray, n);
+        return BRIDGE.preprocess(crs.toByteArray(), parties, hintsPublicKeys, weightsArray, n);
     }
 
     @Override
-    public byte[] signBls(@NonNull final byte[] message, @NonNull final byte[] privateKey) {
+    public Bytes signBls(@NonNull final Bytes message, @NonNull final Bytes privateKey) {
         requireNonNull(message);
         requireNonNull(privateKey);
-        return BRIDGE.signBls(message, privateKey);
+        return Bytes.wrap(BRIDGE.signBls(message.toByteArray(), privateKey.toByteArray()));
     }
 
     @Override
     public boolean verifyBls(
-            @NonNull final byte[] crs,
-            @NonNull final byte[] signature,
-            @NonNull final byte[] message,
-            @NonNull final byte[] publicKey) {
+            @NonNull final Bytes crs,
+            @NonNull final Bytes signature,
+            @NonNull final Bytes message,
+            @NonNull final Bytes publicKey) {
         requireNonNull(crs);
         requireNonNull(signature);
         requireNonNull(message);
         requireNonNull(publicKey);
-        return BRIDGE.verifyBls(crs, signature, message, publicKey);
+        return BRIDGE.verifyBls(
+                crs.toByteArray(), signature.toByteArray(), message.toByteArray(), publicKey.toByteArray());
     }
 
     @Override
-    public byte[] aggregateSignatures(
-            @NonNull final byte[] crs,
-            @NonNull final byte[] aggregationKey,
-            @NonNull final byte[] verificationKey,
-            @NonNull final Map<Integer, byte[]> partialSignatures) {
+    public Bytes aggregateSignatures(
+            @NonNull final Bytes crs,
+            @NonNull final Bytes aggregationKey,
+            @NonNull final Bytes verificationKey,
+            @NonNull final Map<Integer, Bytes> partialSignatures) {
         requireNonNull(crs);
         requireNonNull(aggregationKey);
         requireNonNull(verificationKey);
         requireNonNull(partialSignatures);
         final int[] parties =
                 partialSignatures.keySet().stream().mapToInt(Integer::intValue).toArray();
-        final byte[][] signatures = partialSignatures.values().toArray(byte[][]::new);
-        return BRIDGE.aggregateSignatures(crs, aggregationKey, verificationKey, parties, signatures);
+        final byte[][] signatures =
+                partialSignatures.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
+        return Bytes.wrap(BRIDGE.aggregateSignatures(
+                crs.toByteArray(), aggregationKey.toByteArray(), verificationKey.toByteArray(), parties, signatures));
     }
 
     @Override
     public boolean verifyAggregate(
-            @NonNull final byte[] crs,
-            @NonNull final byte[] signature,
-            @NonNull final byte[] message,
-            @NonNull final byte[] verificationKey,
+            @NonNull final Bytes crs,
+            @NonNull final Bytes signature,
+            @NonNull final Bytes message,
+            @NonNull final Bytes verificationKey,
             final long thresholdNumerator,
             long thresholdDenominator) {
         requireNonNull(crs);
@@ -127,6 +130,11 @@ public class HintsLibraryImpl implements HintsLibrary {
         requireNonNull(message);
         requireNonNull(verificationKey);
         return BRIDGE.verifyAggregate(
-                crs, signature, message, verificationKey, thresholdNumerator, thresholdDenominator);
+                crs.toByteArray(),
+                signature.toByteArray(),
+                message.toByteArray(),
+                verificationKey.toByteArray(),
+                thresholdNumerator,
+                thresholdDenominator);
     }
 }

@@ -24,7 +24,7 @@ public class HintsLibraryCodec {
     }
 
     /**
-     * A structured representation of the output of {@link HintsLibrary#updateCrs(byte[], byte[])}.
+     * A structured representation of the output of {@link HintsLibrary#updateCrs(Bytes, Bytes)}.
      * @param crs the updated CRS
      * @param proof the proof of the update
      */
@@ -36,13 +36,13 @@ public class HintsLibraryCodec {
     }
 
     /**
-     * Decodes the output of {@link HintsLibrary#updateCrs(byte[], byte[])} into a
+     * Decodes the output of {@link HintsLibrary#updateCrs(Bytes, Bytes)} into a
      * {@link CrsUpdateOutput}.
      *
-     * @param output the output of the {@link HintsLibrary#updateCrs(byte[], byte[])}
+     * @param output the output of the {@link HintsLibrary#updateCrs(Bytes, Bytes)}
      * @return the hinTS key
      */
-    public CrsUpdateOutput decodeCrsUpdate(@NonNull final byte[] output) {
+    public CrsUpdateOutput decodeCrsUpdate(@NonNull final Bytes output) {
         requireNonNull(output);
         throw new UnsupportedOperationException("Not implemented");
     }
@@ -54,7 +54,7 @@ public class HintsLibraryCodec {
      * @param hints the hints for the corresponding BLS private key
      * @return the hinTS key
      */
-    public Bytes encodeHintsKey(@NonNull final byte[] blsPublicKey, @NonNull final byte[] hints) {
+    public Bytes encodeHintsKey(@NonNull final Bytes blsPublicKey, @NonNull final Bytes hints) {
         requireNonNull(blsPublicKey);
         requireNonNull(hints);
         throw new UnsupportedOperationException("Not implemented");

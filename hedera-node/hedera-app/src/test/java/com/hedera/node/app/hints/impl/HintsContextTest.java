@@ -33,7 +33,7 @@ class HintsContextTest {
             .hintsScheme(new HintsScheme(
                     PREPROCESSED_KEYS, List.of(A_NODE_PARTY_ID, B_NODE_PARTY_ID, C_NODE_PARTY_ID, D_NODE_PARTY_ID)))
             .build();
-    private static final byte[] CRS = Bytes.wrap("CRS").toByteArray();
+    private static final Bytes CRS = Bytes.wrap("CRS");
 
     @Mock
     private HintsLibrary library;
@@ -42,7 +42,7 @@ class HintsContextTest {
     private HintsLibraryCodec codec;
 
     @Mock
-    private byte[] signature;
+    private Bytes signature;
 
     @Mock
     private Bytes badKey;
@@ -81,20 +81,18 @@ class HintsContextTest {
                 .willReturn(goodKey);
         given(codec.extractPublicKey(AGGREGATION_KEY, D_NODE_PARTY_ID.partyId()))
                 .willReturn(goodKey);
-        given(library.verifyBls(CRS, signature, BLOCK_HASH.toByteArray(), badKey.toByteArray()))
-                .willReturn(false);
-        given(library.verifyBls(CRS, signature, BLOCK_HASH.toByteArray(), goodKey.toByteArray()))
-                .willReturn(true);
+        given(library.verifyBls(CRS, signature, BLOCK_HASH, badKey)).willReturn(false);
+        given(library.verifyBls(CRS, signature, BLOCK_HASH, goodKey)).willReturn(true);
         final long cWeight = 1L;
         final long dWeight = 2L;
         given(codec.extractTotalWeight(VERIFICATION_KEY)).willReturn(3 * (cWeight + dWeight));
         given(codec.extractWeight(AGGREGATION_KEY, C_NODE_PARTY_ID.partyId())).willReturn(cWeight);
         given(codec.extractWeight(AGGREGATION_KEY, D_NODE_PARTY_ID.partyId())).willReturn(dWeight);
-        final Map<Integer, byte[]> expectedSignatures =
-                Map.of(C_NODE_PARTY_ID.partyId(), signature, D_NODE_PARTY_ID.partyId(), signature);
-        final var aggregateSignature = Bytes.wrap("AS").toByteArray();
-        given(library.aggregateSignatures(
-                        CRS, AGGREGATION_KEY.toByteArray(), VERIFICATION_KEY.toByteArray(), expectedSignatures))
+        final Map<Integer, Bytes> expectedSignatures = Map.of(
+                C_NODE_PARTY_ID.partyId(), signature,
+                D_NODE_PARTY_ID.partyId(), signature);
+        final var aggregateSignature = Bytes.wrap("AS");
+        given(library.aggregateSignatures(CRS, AGGREGATION_KEY, VERIFICATION_KEY, expectedSignatures))
                 .willReturn(aggregateSignature);
 
         subject.setConstruction(CONSTRUCTION);

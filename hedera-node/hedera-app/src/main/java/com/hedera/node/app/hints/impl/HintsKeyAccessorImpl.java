@@ -25,7 +25,7 @@ public class HintsKeyAccessorImpl implements HintsKeyAccessor {
 
     @Override
     public Bytes signWithBlsPrivateKey(final long constructionId, @NonNull final Bytes message) {
-        return Bytes.wrap(library.signBls(message.toByteArray(), FAKE_BLS_PRIVATE_KEY.toByteArray()));
+        return library.signBls(message, FAKE_BLS_PRIVATE_KEY);
     }
 
     @Override

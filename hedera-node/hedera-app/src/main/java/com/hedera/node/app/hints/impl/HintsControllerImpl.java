@@ -338,7 +338,7 @@ public class HintsControllerImpl implements HintsController {
         final var oldCRS = hintsStore.getCrsState().crs();
         crsPublicationFuture = CompletableFuture.runAsync(
                 () -> {
-                    final var updatedCRS = library.updateCrs(oldCRS.toByteArray(), generateEntropy());
+                    final var updatedCRS = library.updateCrs(oldCRS, generateEntropy());
                     final var newCRS = codec.decodeCrsUpdate(updatedCRS);
                     submissions.submitUpdateCRS(newCRS.crs(), newCRS.proof());
                 },
@@ -365,10 +365,10 @@ public class HintsControllerImpl implements HintsController {
     /**
      * Generates secure 256-bit entropy.
      */
-    public byte[] generateEntropy() {
+    public Bytes generateEntropy() {
         byte[] entropyBytes = new byte[32];
         SECURE_RANDOM.nextBytes(entropyBytes);
-        return entropyBytes;
+        return Bytes.wrap(entropyBytes);
     }
 
     @Override
@@ -464,9 +464,7 @@ public class HintsControllerImpl implements HintsController {
             finalUpdatedCrsFuture = CompletableFuture.supplyAsync(
                     () -> {
                         final var isValid = library.verifyCrsUpdate(
-                                requireNonNull(initialCrs).toByteArray(),
-                                publication.newCrs().toByteArray(),
-                                publication.proof().toByteArray());
+                                requireNonNull(initialCrs), publication.newCrs(), publication.proof());
                         if (isValid) {
                             return publication.newCrs();
                         }
@@ -476,10 +474,8 @@ public class HintsControllerImpl implements HintsController {
         } else {
             finalUpdatedCrsFuture = finalUpdatedCrsFuture.thenApplyAsync(
                     previousCrs -> {
-                        final var isValid = library.verifyCrsUpdate(
-                                previousCrs.toByteArray(),
-                                publication.newCrs().toByteArray(),
-                                publication.proof().toByteArray());
+                        final var isValid =
+                                library.verifyCrsUpdate(previousCrs, publication.newCrs(), publication.proof());
                         if (isValid) {
                             return publication.newCrs();
                         }
@@ -576,8 +572,7 @@ public class HintsControllerImpl implements HintsController {
             final Bytes crs, final int partyId, @NonNull final Bytes hintsKey) {
         return CompletableFuture.supplyAsync(
                 () -> {
-                    final var isValid =
-                            library.validateHintsKey(crs.toByteArray(), hintsKey.toByteArray(), partyId, numParties);
+                    final var isValid = library.validateHintsKey(crs, hintsKey, partyId, numParties);
                     return new Validation(partyId, hintsKey, isValid);
                 },
                 executor);
@@ -609,10 +604,8 @@ public class HintsControllerImpl implements HintsController {
             final int selfPartyId = expectedPartyId(selfId);
             publicationFuture = CompletableFuture.runAsync(
                     () -> {
-                        final var hints = library.computeHints(
-                                crs.toByteArray(), blsKeyPair.privateKey().toByteArray(), selfPartyId, numParties);
-                        final var hintsKey =
-                                codec.encodeHintsKey(blsKeyPair.publicKey().toByteArray(), hints);
+                        final var hints = library.computeHints(crs, blsKeyPair.privateKey(), selfPartyId, numParties);
+                        final var hintsKey = codec.encodeHintsKey(blsKeyPair.publicKey(), hints);
                         submissions
                                 .submitHintsKey(selfPartyId, numParties, hintsKey)
                                 .join();
@@ -639,7 +632,7 @@ public class HintsControllerImpl implements HintsController {
                     final var aggregatedWeights = nodePartyIds.entrySet().stream()
                             .filter(entry -> hintKeys.containsKey(entry.getValue()))
                             .collect(toMap(Map.Entry::getValue, entry -> weights.targetWeightOf(entry.getKey())));
-                    final var output = library.preprocess(crs.toByteArray(), hintKeys, aggregatedWeights, numParties);
+                    final var output = library.preprocess(crs, hintKeys, aggregatedWeights, numParties);
                     final var preprocessedKeys = codec.decodePreprocessedKeys(output);
                     // Prefer to vote for a congruent node's preprocessed keys if one exists
                     long congruentNodeId = -1;

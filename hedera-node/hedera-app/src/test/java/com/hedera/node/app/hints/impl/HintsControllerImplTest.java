@@ -166,8 +166,8 @@ class HintsControllerImplTest {
         task.run();
         verify(library)
                 .validateHintsKey(
-                        INITIAL_CRS.toByteArray(),
-                        EXPECTED_NODE_ONE_PUBLICATION.hintsKey().toByteArray(),
+                        INITIAL_CRS,
+                        EXPECTED_NODE_ONE_PUBLICATION.hintsKey(),
                         EXPECTED_NODE_ONE_PUBLICATION.partyId(),
                         EXPECTED_PARTY_SIZE);
         assertEquals(OptionalInt.empty(), subject.partyIdOf(1L));
@@ -188,7 +188,7 @@ class HintsControllerImplTest {
         runScheduledTasks();
 
         given(library.preprocess(
-                        INITIAL_CRS.toByteArray(),
+                        INITIAL_CRS,
                         Map.of(0, EXPECTED_NODE_ONE_PUBLICATION.hintsKey()),
                         Map.of(0, TARGET_NODE_WEIGHTS.get(1L)),
                         EXPECTED_PARTY_SIZE))
@@ -258,10 +258,9 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         final var hints = Bytes.wrap("HINTS");
         final var hintsKey = Bytes.wrap("HK");
-        given(library.computeHints(any(), BLS_KEY_PAIR.privateKey().toByteArray(), 0, EXPECTED_PARTY_SIZE))
-                .willReturn(hints.toByteArray());
-        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey().toByteArray(), hints.toByteArray()))
-                .willReturn(hintsKey);
+        given(library.computeHints(INITIAL_CRS, BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
+                .willReturn(hints);
+        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints)).willReturn(hintsKey);
         given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
@@ -286,11 +285,9 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         final var hints = Bytes.wrap("HINTS");
         final var hintsKey = Bytes.wrap("HK");
-        given(library.computeHints(
-                        INITIAL_CRS.toByteArray(), BLS_KEY_PAIR.privateKey().toByteArray(), 0, EXPECTED_PARTY_SIZE))
-                .willReturn(hints.toByteArray());
-        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey().toByteArray(), hints.toByteArray()))
-                .willReturn(hintsKey);
+        given(library.computeHints(INITIAL_CRS, BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
+                .willReturn(hints);
+        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints)).willReturn(hintsKey);
         given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
@@ -359,7 +356,7 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();
 
-        verify(library).verifyCrsUpdate(eq(INITIAL_CRS.toByteArray()), any(), any());
+        verify(library).verifyCrsUpdate(eq(INITIAL_CRS), any(), any());
     }
 
     @Test
@@ -369,7 +366,7 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();
 
-        verify(library).verifyCrsUpdate(eq(INITIAL_CRS.toByteArray()), any(), any());
+        verify(library).verifyCrsUpdate(eq(INITIAL_CRS), any(), any());
     }
 
     @Test
@@ -379,7 +376,7 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();
 
-        verify(library).verifyCrsUpdate(eq(INITIAL_CRS.toByteArray()), any(), any());
+        verify(library).verifyCrsUpdate(eq(INITIAL_CRS), any(), any());
         subject.addCrsPublication(
                 CrsPublicationTransactionBody.newBuilder()
                         .newCrs(NEW_CRS)
@@ -390,7 +387,7 @@ class HintsControllerImplTest {
 
         final var task1 = requireNonNull(scheduledTasks.poll());
         task1.run();
-        verify(library).verifyCrsUpdate(any(), eq(NEW_CRS.toByteArray()), eq(PROOF.toByteArray()));
+        verify(library).verifyCrsUpdate(any(), eq(NEW_CRS), eq(PROOF));
     }
 
     @Test
@@ -521,7 +518,7 @@ class HintsControllerImplTest {
         final var task1 = requireNonNull(scheduledTasks.poll());
         task1.run();
 
-        verify(library).updateCrs(eq(INITIAL_CRS.toByteArray()), any());
+        verify(library).updateCrs(eq(INITIAL_CRS), any());
         verify(submissions).submitUpdateCRS(NEW_CRS, PROOF);
     }
 

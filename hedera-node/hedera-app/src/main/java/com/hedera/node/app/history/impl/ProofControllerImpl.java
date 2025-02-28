@@ -246,7 +246,7 @@ public class ProofControllerImpl implements ProofController {
                     requireNonNull(targetMetadata);
                     final var encodedId =
                             encodeLedgerId(proof.sourceAddressBookHash().toByteArray(), targetMetadata.toByteArray());
-                    historyStore.setLedgerId(Bytes.wrap(encodedId));
+                    historyStore.setLedgerId(encodedId);
                 }
             }
         });
@@ -487,14 +487,14 @@ public class ProofControllerImpl implements ProofController {
                 executor);
     }
 
-    private @NonNull byte[] encodeLedgerId(
+    private @NonNull Bytes encodeLedgerId(
             @NonNull final byte[] addressBookHash, @NonNull final byte[] snarkVerificationKey) {
         requireNonNull(addressBookHash);
         requireNonNull(snarkVerificationKey);
         final byte[] arr = new byte[addressBookHash.length + snarkVerificationKey.length];
         System.arraycopy(addressBookHash, 0, arr, 0, addressBookHash.length);
         System.arraycopy(snarkVerificationKey, 0, arr, addressBookHash.length, snarkVerificationKey.length);
-        return arr;
+        return Bytes.wrap(arr);
     }
 
     private @NonNull byte[] encodeHistory(@NonNull final History history) {

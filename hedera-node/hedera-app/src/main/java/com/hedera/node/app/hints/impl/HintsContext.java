@@ -138,7 +138,7 @@ public class HintsContext {
         private final Bytes verificationKey;
         private final Map<Long, Integer> partyIds;
         private final CompletableFuture<Bytes> future = new CompletableFuture<>();
-        private final ConcurrentMap<Integer, byte[]> signatures = new ConcurrentHashMap<>();
+        private final ConcurrentMap<Integer, Bytes> signatures = new ConcurrentHashMap<>();
         private final AtomicLong weightOfSignatures = new AtomicLong();
 
         public Signing(
@@ -175,21 +175,19 @@ public class HintsContext {
          * @param signature the partial signature
          */
         public void incorporate(
-                @NonNull final byte[] crs,
+                @NonNull final Bytes crs,
                 final long constructionId,
                 final long nodeId,
-                @NonNull final byte[] signature) {
+                @NonNull final Bytes signature) {
             requireNonNull(signature);
             if (this.constructionId == constructionId && partyIds.containsKey(nodeId)) {
                 final int partyId = partyIds.get(nodeId);
                 final var publicKey = codec.extractPublicKey(aggregationKey, partyId);
-                if (publicKey != null
-                        && library.verifyBls(crs, signature, message.toByteArray(), publicKey.toByteArray())) {
+                if (publicKey != null && library.verifyBls(crs, signature, message, publicKey)) {
                     signatures.put(partyId, signature);
                     final var weight = codec.extractWeight(aggregationKey, partyId);
                     if (weightOfSignatures.addAndGet(weight) >= thresholdWeight) {
-                        future.complete(Bytes.wrap(library.aggregateSignatures(
-                                crs, aggregationKey.toByteArray(), verificationKey.toByteArray(), signatures)));
+                        future.complete(library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures));
                     }
                 }
             }
