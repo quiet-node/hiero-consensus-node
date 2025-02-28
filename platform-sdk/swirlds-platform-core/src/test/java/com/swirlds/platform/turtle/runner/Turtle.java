@@ -209,6 +209,7 @@ public class Turtle {
         }
     }
 
+    // TODO: adapt after consensus events validations are merged
     public void validate() {
         final Validations validations = Validations.standard();
 
