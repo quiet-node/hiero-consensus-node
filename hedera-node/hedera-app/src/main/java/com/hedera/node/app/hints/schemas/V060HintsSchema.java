@@ -59,7 +59,7 @@ public class V060HintsSchema extends Schema {
                     .put(CRSState.newBuilder()
                             .stage(CRSStage.GATHERING_CONTRIBUTIONS)
                             .nextContributingNodeId(0L)
-                            .crs(initialCrs)
+                            .crs(Bytes.wrap(initialCrs))
                             .build());
         }
     }

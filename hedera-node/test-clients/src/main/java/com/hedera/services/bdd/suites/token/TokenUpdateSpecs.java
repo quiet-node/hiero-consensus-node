@@ -123,7 +123,7 @@ public class TokenUpdateSpecs {
                                 .treasury(TOKEN_TREASURY)
                                 .initialSupply(500)
                                 .decimals(1)
-                                .adminKey("adminKey")
+                                .autoRenewAccount(civilian)
                                 .freezeKey("freezeKey")
                                 .kycKey("kycKey")
                                 .supplyKey("supplyKey")

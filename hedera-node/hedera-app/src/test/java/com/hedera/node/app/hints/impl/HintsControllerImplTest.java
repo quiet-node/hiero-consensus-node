@@ -14,6 +14,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import com.hedera.cryptography.hints.AggregationAndVerificationKeys;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.hints.CRSStage;
 import com.hedera.hapi.node.state.hints.CRSState;
@@ -53,9 +54,10 @@ class HintsControllerImplTest {
     private static final long CONSTRUCTION_ID = 123L;
     private static final Instant CONSENSUS_NOW = Instant.ofEpochSecond(1_234_567L, 890);
     private static final Instant PREPROCESSING_START_TIME = Instant.ofEpochSecond(1_111_111L, 222);
-    private static final Bytes ENCODED_PREPROCESSED_KEYS = Bytes.wrap("EPK");
+    private static final AggregationAndVerificationKeys ENCODED_PREPROCESSED_KEYS =
+            new AggregationAndVerificationKeys(Bytes.wrap("ENCODED").toByteArray(), Bytes.wrap("ENCODED").toByteArray());
     private static final PreprocessedKeys PREPROCESSED_KEYS = new PreprocessedKeys(Bytes.wrap("AK"), Bytes.wrap("VK"));
-    private static final TssKeyPair BLS_KEY_PAIR = new TssKeyPair(Bytes.EMPTY, Bytes.EMPTY);
+    private static final TssKeyPair BLS_KEY_PAIR = new TssKeyPair(new byte[0], new byte[0]);
     private static final HintsConstruction UNFINISHED_CONSTRUCTION = HintsConstruction.newBuilder()
             .constructionId(CONSTRUCTION_ID)
             .gracePeriodEndTime(asTimestamp(CONSENSUS_NOW.plusSeconds(1)))
@@ -163,10 +165,9 @@ class HintsControllerImplTest {
         assertNotNull(task);
         task.run();
         verify(library)
-                .validateHintsKey(
-                        EXPECTED_NODE_ONE_PUBLICATION.hintsKey(),
-                        EXPECTED_NODE_ONE_PUBLICATION.partyId(),
-                        EXPECTED_PARTY_SIZE);
+                .validateHintsKey(INITIAL_CRS.toByteArray(),
+                        EXPECTED_NODE_ONE_PUBLICATION.hintsKey().toByteArray(),
+                        EXPECTED_NODE_ONE_PUBLICATION.partyId(), EXPECTED_PARTY_SIZE);
         assertEquals(OptionalInt.empty(), subject.partyIdOf(1L));
         given(weights.targetIncludes(1L)).willReturn(true);
         assertEquals(OptionalInt.of(0), subject.partyIdOf(1L));
@@ -181,13 +182,12 @@ class HintsControllerImplTest {
                 CONSTRUCTION_WITH_START_TIME,
                 List.of(EXPECTED_NODE_ONE_PUBLICATION, TARDY_NODE_TWO_PUBLICATION),
                 CRSState.DEFAULT);
-        given(library.validateHintsKey(any(), anyInt(), anyInt())).willReturn(true);
+        given(library.validateHintsKey(any(), any(), anyInt(), anyInt())).willReturn(true);
         runScheduledTasks();
 
-        given(library.preprocess(
-                        Map.of(0, EXPECTED_NODE_ONE_PUBLICATION.hintsKey()),
-                        Map.of(0, TARGET_NODE_WEIGHTS.get(1L)),
-                        EXPECTED_PARTY_SIZE))
+        given(library.preprocess(INITIAL_CRS.toByteArray(),
+                Map.of(0, EXPECTED_NODE_ONE_PUBLICATION.hintsKey()),
+                Map.of(0, TARGET_NODE_WEIGHTS.get(1L)), EXPECTED_PARTY_SIZE))
                 .willReturn(ENCODED_PREPROCESSED_KEYS);
         given(codec.decodePreprocessedKeys(ENCODED_PREPROCESSED_KEYS)).willReturn(PREPROCESSED_KEYS);
         given(submissions.submitHintsVote(CONSTRUCTION_ID, PREPROCESSED_KEYS))
@@ -218,7 +218,7 @@ class HintsControllerImplTest {
 
         subject.addHintsKeyPublication(EXPECTED_NODE_ONE_PUBLICATION);
         subject.addHintsKeyPublication(TARDY_NODE_TWO_PUBLICATION);
-        given(library.validateHintsKey(any(), anyInt(), anyInt())).willReturn(true);
+        given(library.validateHintsKey(any(), any(), anyInt(), anyInt())).willReturn(true);
         runScheduledTasks();
 
         subject.advanceConstruction(PREPROCESSING_START_TIME, store);
@@ -228,7 +228,7 @@ class HintsControllerImplTest {
         final Map<Integer, Bytes> expectedHintsKeys =
                 Map.of(EXPECTED_NODE_ONE_PUBLICATION.partyId(), EXPECTED_NODE_ONE_PUBLICATION.hintsKey());
         final Map<Integer, Long> expectedWeights = Map.of(EXPECTED_NODE_ONE_PUBLICATION.partyId(), 8L);
-        given(library.preprocess(expectedHintsKeys, expectedWeights, EXPECTED_PARTY_SIZE))
+        given(library.preprocess(any(), expectedHintsKeys, expectedWeights, EXPECTED_PARTY_SIZE))
                 .willReturn(ENCODED_PREPROCESSED_KEYS);
         given(codec.decodePreprocessedKeys(ENCODED_PREPROCESSED_KEYS)).willReturn(PREPROCESSED_KEYS);
         given(submissions.submitHintsVote(CONSTRUCTION_ID, PREPROCESSED_KEYS))
@@ -254,9 +254,9 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         final var hints = Bytes.wrap("HINTS");
         final var hintsKey = Bytes.wrap("HK");
-        given(library.computeHints(BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
-                .willReturn(hints);
-        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints)).willReturn(hintsKey);
+        given(library.computeHints(any(), BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
+                .willReturn(hints.toByteArray());
+        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints.toByteArray())).willReturn(hintsKey);
         given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
@@ -281,9 +281,9 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         final var hints = Bytes.wrap("HINTS");
         final var hintsKey = Bytes.wrap("HK");
-        given(library.computeHints(BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
-                .willReturn(hints);
-        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints)).willReturn(hintsKey);
+        given(library.computeHints(INITIAL_CRS.toByteArray(), BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
+                .willReturn(hints.toByteArray());
+        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints.toByteArray())).willReturn(hintsKey);
         given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
@@ -352,7 +352,7 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();
 
-        verify(library).verifyCrsUpdate(eq(INITIAL_CRS), any(), any());
+        verify(library).verifyCrsUpdate(eq(INITIAL_CRS.toByteArray()), any(), any());
     }
 
     @Test
@@ -362,7 +362,7 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();
 
-        verify(library).verifyCrsUpdate(eq(INITIAL_CRS), any(), any());
+        verify(library).verifyCrsUpdate(eq(INITIAL_CRS.toByteArray()), any(), any());
     }
 
     @Test
@@ -372,7 +372,7 @@ class HintsControllerImplTest {
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();
 
-        verify(library).verifyCrsUpdate(eq(INITIAL_CRS), any(), any());
+        verify(library).verifyCrsUpdate(eq(INITIAL_CRS.toByteArray()), any(), any());
         subject.addCrsPublication(
                 CrsPublicationTransactionBody.newBuilder()
                         .newCrs(NEW_CRS)
@@ -383,7 +383,7 @@ class HintsControllerImplTest {
 
         final var task1 = requireNonNull(scheduledTasks.poll());
         task1.run();
-        verify(library).verifyCrsUpdate(any(), eq(NEW_CRS), eq(PROOF));
+        verify(library).verifyCrsUpdate(any(), eq(NEW_CRS.toByteArray()), eq(PROOF.toByteArray()));
     }
 
     @Test
@@ -514,7 +514,7 @@ class HintsControllerImplTest {
         final var task1 = requireNonNull(scheduledTasks.poll());
         task1.run();
 
-        verify(library).updateCrs(eq(INITIAL_CRS), any());
+        verify(library).updateCrs(eq(INITIAL_CRS.toByteArray()), any());
         verify(submissions).submitUpdateCRS(NEW_CRS, PROOF);
     }
 

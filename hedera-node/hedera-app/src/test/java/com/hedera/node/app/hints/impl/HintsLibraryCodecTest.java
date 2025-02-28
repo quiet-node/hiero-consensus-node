@@ -11,7 +11,7 @@ class HintsLibraryCodecTest {
 
     @Test
     void nothingSupportedYet() {
-        assertThrows(UnsupportedOperationException.class, () -> subject.decodeCrsUpdate(Bytes.EMPTY));
+        assertThrows(UnsupportedOperationException.class, () -> subject.decodeCrsUpdate(new byte[0]));
         assertThrows(UnsupportedOperationException.class, () -> subject.encodeHintsKey(Bytes.EMPTY, Bytes.EMPTY));
         assertThrows(UnsupportedOperationException.class, () -> subject.extractAggregationKey(Bytes.EMPTY));
         assertThrows(UnsupportedOperationException.class, () -> subject.extractVerificationKey(Bytes.EMPTY));

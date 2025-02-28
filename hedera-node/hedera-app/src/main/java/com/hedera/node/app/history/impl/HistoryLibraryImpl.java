@@ -113,6 +113,6 @@ public class HistoryLibraryImpl implements HistoryLibrary {
         requireNonNull(addressBookHash);
         requireNonNull(metadata);
         requireNonNull(proof);
-        throw new AssertionError("Not implemented");
+        return BRIDGE.verifyChainOfTrust(SNARK_KEYS.verifyingKey(), proof);
     }
 }
