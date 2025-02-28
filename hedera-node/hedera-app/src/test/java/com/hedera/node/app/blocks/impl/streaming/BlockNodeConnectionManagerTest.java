@@ -88,7 +88,7 @@ class BlockNodeConnectionManagerTest {
         verifyNoInteractions(mockConnection); // there should be no immediate attempt to establish a stream
 
         Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
-        
+
         assertThat(logCaptor.infoLogs()).contains("Retrying in 1000 ms");
         verify(mockConnection, times(1)).establishStream();
     }
