@@ -14,8 +14,7 @@ import javax.inject.Singleton;
 public class HintsKeyAccessorImpl implements HintsKeyAccessor {
     private static final Bytes FAKE_BLS_PRIVATE_KEY = Bytes.wrap("FAKE_BLS_PRIVATE_KEY");
     private static final Bytes FAKE_BLS_PUBLIC_KEY = Bytes.wrap("FAKE_BLS_PUBLIC_KEY");
-    private static final TssKeyPair FAKE_BLS_KEY_PAIR = new TssKeyPair(FAKE_BLS_PRIVATE_KEY,
-            FAKE_BLS_PUBLIC_KEY);
+    private static final TssKeyPair FAKE_BLS_KEY_PAIR = new TssKeyPair(FAKE_BLS_PRIVATE_KEY, FAKE_BLS_PUBLIC_KEY);
 
     private final HintsLibrary library;
 

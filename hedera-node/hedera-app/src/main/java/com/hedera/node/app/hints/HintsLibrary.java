@@ -99,7 +99,8 @@ public interface HintsLibrary {
      * @param n         the number of parties
      * @return the preprocessed keys
      */
-    AggregationAndVerificationKeys preprocess(final byte[] crs, @NonNull Map<Integer, Bytes> hintsKeys, @NonNull Map<Integer, Long> weights, int n);
+    AggregationAndVerificationKeys preprocess(
+            final byte[] crs, @NonNull Map<Integer, Bytes> hintsKeys, @NonNull Map<Integer, Long> weights, int n);
 
     /**
      * Signs a message with a BLS private key.
@@ -131,7 +132,8 @@ public interface HintsLibrary {
      * @return the aggregated signature
      */
     byte[] aggregateSignatures(
-            final byte[] crs, @NonNull byte[] aggregationKey,
+            final byte[] crs,
+            @NonNull byte[] aggregationKey,
             @NonNull byte[] verificationKey,
             @NonNull Map<Integer, Bytes> partialSignatures);
 
@@ -149,7 +151,8 @@ public interface HintsLibrary {
      * @return true if the signature is valid; false otherwise
      */
     boolean verifyAggregate(
-            final byte[] crs, @NonNull byte[] signature,
+            final byte[] crs,
+            @NonNull byte[] signature,
             @NonNull byte[] message,
             @NonNull byte[] verificationKey,
             long thresholdNumerator,

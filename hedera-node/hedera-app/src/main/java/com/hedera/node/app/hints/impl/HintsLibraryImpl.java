@@ -8,7 +8,6 @@ import com.hedera.cryptography.hints.HintsLibraryBridge;
 import com.hedera.node.app.hints.HintsLibrary;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -47,35 +46,35 @@ public class HintsLibraryImpl implements HintsLibrary {
     }
 
     @Override
-    public byte[] computeHints(@NonNull final byte[] crs,
-                               @NonNull final byte[] blsPrivateKey,
-                               final int partyId,
-                               final int n) {
+    public byte[] computeHints(
+            @NonNull final byte[] crs, @NonNull final byte[] blsPrivateKey, final int partyId, final int n) {
         requireNonNull(blsPrivateKey);
         return BRIDGE.computeHints(crs, blsPrivateKey, partyId, n);
     }
 
     @Override
-    public boolean validateHintsKey(@NonNull final byte[] crs,
-                                    @NonNull final byte[] hintsKey,
-                                    final int partyId,
-                                    final int n) {
+    public boolean validateHintsKey(
+            @NonNull final byte[] crs, @NonNull final byte[] hintsKey, final int partyId, final int n) {
         requireNonNull(crs);
         requireNonNull(hintsKey);
         return BRIDGE.validateHintsKey(crs, hintsKey, partyId, n);
     }
 
     @Override
-    public AggregationAndVerificationKeys preprocess(@NonNull final byte[] crs,
-                                                     @NonNull final Map<Integer, Bytes> hintsKeys,
-                                                     @NonNull final Map<Integer, Long> weights,
-                                                     final int n) {
+    public AggregationAndVerificationKeys preprocess(
+            @NonNull final byte[] crs,
+            @NonNull final Map<Integer, Bytes> hintsKeys,
+            @NonNull final Map<Integer, Long> weights,
+            final int n) {
         requireNonNull(crs);
         requireNonNull(hintsKeys);
         requireNonNull(weights);
-        final int[] parties = hintsKeys.keySet().stream().mapToInt(Integer::intValue).toArray();
-        final byte[][] hintsPublicKeys = hintsKeys.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
-        final long[] weightsArray = weights.values().stream().mapToLong(Long::longValue).toArray();
+        final int[] parties =
+                hintsKeys.keySet().stream().mapToInt(Integer::intValue).toArray();
+        final byte[][] hintsPublicKeys =
+                hintsKeys.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
+        final long[] weightsArray =
+                weights.values().stream().mapToLong(Long::longValue).toArray();
         return BRIDGE.preprocess(crs, parties, hintsPublicKeys, weightsArray, n);
     }
 
@@ -87,10 +86,11 @@ public class HintsLibraryImpl implements HintsLibrary {
     }
 
     @Override
-    public boolean verifyBls(@NonNull final byte[] crs,
-                             @NonNull final byte[] signature,
-                             @NonNull final byte[] message,
-                             @NonNull final byte[] publicKey) {
+    public boolean verifyBls(
+            @NonNull final byte[] crs,
+            @NonNull final byte[] signature,
+            @NonNull final byte[] message,
+            @NonNull final byte[] publicKey) {
         requireNonNull(crs);
         requireNonNull(signature);
         requireNonNull(message);
@@ -108,8 +108,10 @@ public class HintsLibraryImpl implements HintsLibrary {
         requireNonNull(aggregationKey);
         requireNonNull(verificationKey);
         requireNonNull(partialSignatures);
-        final int[] parties = partialSignatures.keySet().stream().mapToInt(Integer::intValue).toArray();
-        final byte[][] signatures = partialSignatures.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
+        final int[] parties =
+                partialSignatures.keySet().stream().mapToInt(Integer::intValue).toArray();
+        final byte[][] signatures =
+                partialSignatures.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
         return BRIDGE.aggregateSignatures(crs, aggregationKey, verificationKey, parties, signatures);
     }
 
@@ -125,6 +127,7 @@ public class HintsLibraryImpl implements HintsLibrary {
         requireNonNull(signature);
         requireNonNull(message);
         requireNonNull(verificationKey);
-        return BRIDGE.verifyAggregate(crs, signature, message, verificationKey, thresholdNumerator, thresholdDenominator);
+        return BRIDGE.verifyAggregate(
+                crs, signature, message, verificationKey, thresholdNumerator, thresholdDenominator);
     }
 }
