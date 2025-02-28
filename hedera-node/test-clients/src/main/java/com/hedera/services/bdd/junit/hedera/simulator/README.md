@@ -92,4 +92,4 @@ The following response codes are available from `PublishStreamResponseCode`:
 
 ## Example Test
 
-See `BlockNodeSimulatorTest` for a complete example of how to use the block node simulator in tests. 
+See `BlockNodeSimulatorTest` for a complete example of how to use the block node simulator in tests.

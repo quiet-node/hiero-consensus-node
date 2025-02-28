@@ -3,14 +3,13 @@ package com.hedera.services.bdd.junit.hedera.simulator;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * A utility class to control simulated block node servers in a SubProcessNetwork.
@@ -60,11 +59,9 @@ public class BlockNodeSimulatorController {
     public void setEndOfStreamResponse(int index, PublishStreamResponseCode responseCode, long blockNumber) {
         if (index >= 0 && index < simulatedBlockNodes.size()) {
             simulatedBlockNodes.get(index).setEndOfStreamResponse(responseCode, blockNumber);
-            log.info("Set EndOfStream response code {} for block {} on simulator {}",
-                    responseCode, blockNumber, index);
+            log.info("Set EndOfStream response code {} for block {} on simulator {}", responseCode, blockNumber, index);
         } else {
-            log.error("Invalid simulator index: {}, valid range is 0-{}",
-                    index, simulatedBlockNodes.size() - 1);
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
         }
     }
 
@@ -79,8 +76,10 @@ public class BlockNodeSimulatorController {
         for (SimulatedBlockNodeServer server : simulatedBlockNodes) {
             server.sendEndOfStreamImmediately(responseCode, blockNumber);
         }
-        log.info("Sent immediate EndOfStream response with code {} for block {} on all simulators",
-                responseCode, blockNumber);
+        log.info(
+                "Sent immediate EndOfStream response with code {} for block {} on all simulators",
+                responseCode,
+                blockNumber);
     }
 
     /**
@@ -94,11 +93,13 @@ public class BlockNodeSimulatorController {
     public void sendEndOfStreamImmediately(int index, PublishStreamResponseCode responseCode, long blockNumber) {
         if (index >= 0 && index < simulatedBlockNodes.size()) {
             simulatedBlockNodes.get(index).sendEndOfStreamImmediately(responseCode, blockNumber);
-            log.info("Sent immediate EndOfStream response with code {} for block {} on simulator {}",
-                    responseCode, blockNumber, index);
+            log.info(
+                    "Sent immediate EndOfStream response with code {} for block {} on simulator {}",
+                    responseCode,
+                    blockNumber,
+                    index);
         } else {
-            log.error("Invalid simulator index: {}, valid range is 0-{}",
-                    index, simulatedBlockNodes.size() - 1);
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
         }
     }
 
@@ -122,8 +123,7 @@ public class BlockNodeSimulatorController {
             simulatedBlockNodes.get(index).resetResponses();
             log.info("Reset all responses on simulator {} to default behavior", index);
         } else {
-            log.error("Invalid simulator index: {}, valid range is 0-{}",
-                    index, simulatedBlockNodes.size() - 1);
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
         }
     }
 
@@ -165,8 +165,7 @@ public class BlockNodeSimulatorController {
             server.stop();
             log.info("Shutdown simulator {} on port {} to simulate connection drop", index, port);
         } else {
-            log.error("Invalid simulator index: {}, valid range is 0-{}",
-                    index, simulatedBlockNodes.size() - 1);
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
         }
     }
 
@@ -232,8 +231,7 @@ public class BlockNodeSimulatorController {
 
             log.info("Restarted simulator {} on port {}", index, port);
         } else {
-            log.error("Invalid simulator index: {}, valid range is 0-{}",
-                    index, simulatedBlockNodes.size() - 1);
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
         }
     }
-} 
+}

@@ -43,9 +43,7 @@ public class SimulatedBlockNodeServer {
     public SimulatedBlockNodeServer(int port) {
         this.port = port;
         this.serviceImpl = new BlockStreamServiceImpl();
-        this.server = ServerBuilder.forPort(port)
-                .addService(serviceImpl)
-                .build();
+        this.server = ServerBuilder.forPort(port).addService(serviceImpl).build();
     }
 
     /**
@@ -103,8 +101,11 @@ public class SimulatedBlockNodeServer {
      */
     public void sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
         serviceImpl.sendEndOfStreamToAllStreams(responseCode, blockNumber);
-        log.info("Sent immediate EndOfStream response with code {} for block {} on port {}",
-                responseCode, blockNumber, port);
+        log.info(
+                "Sent immediate EndOfStream response with code {} for block {} on port {}",
+                responseCode,
+                blockNumber,
+                port);
     }
 
     /**
@@ -149,8 +150,10 @@ public class SimulatedBlockNodeServer {
                 StreamObserver<PublishStreamResponse> responseObserver) {
             // Add the stream to active streams as soon as the connection is established
             activeStreams.add(responseObserver);
-            log.info("New block stream connection established on port {}. Active streams: {}",
-                    port, activeStreams.size());
+            log.info(
+                    "New block stream connection established on port {}. Active streams: {}",
+                    port,
+                    activeStreams.size());
 
             return new StreamObserver<>() {
                 @Override
@@ -221,8 +224,12 @@ public class SimulatedBlockNodeServer {
          */
         public void sendEndOfStreamToAllStreams(PublishStreamResponseCode responseCode, long blockNumber) {
             List<StreamObserver<PublishStreamResponse>> streams = new ArrayList<>(activeStreams);
-            log.info("Sending EndOfStream with code {} for block {} to {} active streams on port {}",
-                    responseCode, blockNumber, streams.size(), port);
+            log.info(
+                    "Sending EndOfStream with code {} for block {} to {} active streams on port {}",
+                    responseCode,
+                    blockNumber,
+                    streams.size(),
+                    port);
 
             for (StreamObserver<PublishStreamResponse> observer : streams) {
                 sendEndOfStream(observer, responseCode, blockNumber);
@@ -257,8 +264,7 @@ public class SimulatedBlockNodeServer {
                 // Remove from active streams
                 activeStreams.remove(observer);
 
-                log.info("Sent EndOfStream with code {} for block {} on port {}",
-                        responseCode, blockNumber, port);
+                log.info("Sent EndOfStream with code {} for block {} on port {}", responseCode, blockNumber, port);
             } catch (Exception e) {
                 log.error("Error sending EndOfStream on port {}", port, e);
             }

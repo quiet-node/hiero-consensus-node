@@ -304,40 +304,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             Files.writeString(configPath, BlockNodeConnectionInfo.JSON.toJSON(connectionInfo));
 
             // Update application.properties with block stream settings
-            Path appPropertiesPath = node.getExternalPath(APPLICATION_PROPERTIES);
-            log.info(
-                    "Attempting to update application.properties at path {} for node {}",
-                    appPropertiesPath,
-                    node.getNodeId());
-
-            // First check if file exists and log current content
-            if (Files.exists(appPropertiesPath)) {
-                String currentContent = Files.readString(appPropertiesPath);
-                log.info("Current application.properties content for node {}: {}", node.getNodeId(), currentContent);
-            } else {
-                log.info(
-                        "application.properties does not exist yet for node {}, will create new file",
-                        node.getNodeId());
-            }
-
-            String blockStreamConfig =
-                    """
-                    # Block stream configuration
-                    blockStream.writerMode=FILE_AND_GRPC
-                    blockStream.shutdownNodeOnNoBlockNodes=true
-                    """;
-
-            // Write the properties with CREATE and APPEND options
-            Files.writeString(
-                    appPropertiesPath, blockStreamConfig, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-
-            // Verify the file was updated
-            String updatedContent = Files.readString(appPropertiesPath);
-            log.info(
-                    "Verified application.properties content after update for node {}: {}",
-                    node.getNodeId(),
-                    updatedContent);
-
+            updateApplicationPropertiesWithGrpcStreaming(node);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to update block node configuration for node " + node.getNodeId(), e);
         }
@@ -384,9 +351,45 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                     "Updated block node configuration for node {} with {} simulator servers",
                     node.getNodeId(),
                     simulatedBlockNodes.size());
+
+            // Update application.properties with block stream settings
+            updateApplicationPropertiesWithGrpcStreaming(node);
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to update block node configuration for node " + node.getNodeId(), e);
         }
+    }
+
+    private static void updateApplicationPropertiesWithGrpcStreaming(HederaNode node) throws IOException {
+        Path appPropertiesPath = node.getExternalPath(APPLICATION_PROPERTIES);
+        log.info(
+                "Attempting to update application.properties at path {} for node {}",
+                appPropertiesPath,
+                node.getNodeId());
+
+        // First check if file exists and log current content
+        if (Files.exists(appPropertiesPath)) {
+            String currentContent = Files.readString(appPropertiesPath);
+            log.info("Current application.properties content for node {}: {}", node.getNodeId(), currentContent);
+        } else {
+            log.info("application.properties does not exist yet for node {}, will create new file", node.getNodeId());
+        }
+
+        String blockStreamConfig =
+                """
+                # Block stream configuration
+                blockStream.writerMode=FILE_AND_GRPC
+                blockStream.shutdownNodeOnNoBlockNodes=true
+                """;
+
+        // Write the properties with CREATE and APPEND options
+        Files.writeString(appPropertiesPath, blockStreamConfig, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+        // Verify the file was updated
+        String updatedContent = Files.readString(appPropertiesPath);
+        log.info(
+                "Verified application.properties content after update for node {}: {}",
+                node.getNodeId(),
+                updatedContent);
     }
 
     /**
