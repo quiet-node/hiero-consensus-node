@@ -22,7 +22,6 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnection {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
-    private static final int MAX_RETRY_ATTEMPTS = 5;
     private static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
@@ -109,7 +108,7 @@ public class BlockNodeConnection {
     private void scheduleReconnect() {
         retryExecutor.execute(() -> {
             try {
-                retry(this::establishStream, INITIAL_RETRY_DELAY, MAX_RETRY_ATTEMPTS);
+                retry(this::establishStream, INITIAL_RETRY_DELAY);
             } catch (Exception e) {
                 logger.error("Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
             }
@@ -162,29 +161,20 @@ public class BlockNodeConnection {
      *
      * @param action the action to retry
      * @param initialDelay the initial delay before the first retry
-     * @param maxAttempts the maximum number of attempts
      * @param <T> the return type of the action
-     * @throws Exception if the action fails after the maximum number of attempts
      */
-    public <T> void retry(@NonNull final Supplier<T> action, @NonNull final Duration initialDelay, int maxAttempts)
-            throws Exception {
+    public <T> void retry(@NonNull final Supplier<T> action, @NonNull final Duration initialDelay) {
         requireNonNull(action);
         requireNonNull(initialDelay);
 
-        int attempts = 0;
         Duration delay = initialDelay;
-
-        while (attempts < maxAttempts) {
+        while (true) {
             try {
                 logger.info("Retrying in {} ms", delay.toMillis());
                 Thread.sleep(delay.toMillis());
                 action.get();
                 return;
             } catch (Exception e) {
-                attempts++;
-                if (attempts >= maxAttempts) {
-                    throw new Exception("Max retry attempts reached", e);
-                }
                 delay = delay.multipliedBy(RETRY_BACKOFF_MULTIPLIER);
             }
         }

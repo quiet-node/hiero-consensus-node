@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -40,7 +39,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith({MockitoExtension.class, LogCaptureExtension.class})
 class BlockNodeConnectionTest {
     private static final Duration INITIAL_DELAY = Duration.ofMillis(10);
-    private static final int MAX_ATTEMPTS = 5;
 
     @LoggingSubject
     private BlockNodeConnection blockNodeConnection;
@@ -242,7 +240,7 @@ class BlockNodeConnectionTest {
 
     @Test
     void testRetry_SuccessOnFirstAttempt() throws Exception {
-        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY, MAX_ATTEMPTS);
+        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(1)).get();
     }
@@ -253,30 +251,8 @@ class BlockNodeConnectionTest {
                 .thenThrow(new RuntimeException("First attempt failed"))
                 .thenReturn(null);
 
-        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY, MAX_ATTEMPTS);
+        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(2)).get();
-    }
-
-    @Test
-    void testRetry_FailureAfterMaxAttempts() {
-        when(mockSupplier.get()).thenThrow(new RuntimeException("Fail every time"));
-
-        Exception exception = assertThrows(Exception.class, () -> {
-            blockNodeConnection.retry(mockSupplier, INITIAL_DELAY, MAX_ATTEMPTS);
-        });
-
-        assertEquals("Max retry attempts reached", exception.getMessage());
-        assertEquals("Fail every time", exception.getCause().getMessage());
-        verify(mockSupplier, times(MAX_ATTEMPTS)).get();
-
-        assertThat(logCaptor.infoLogs())
-                .contains(
-                        "BlockNodeConnection INITIALIZED",
-                        "Retrying in 10 ms",
-                        "Retrying in 20 ms",
-                        "Retrying in 40 ms",
-                        "Retrying in 80 ms",
-                        "Retrying in 160 ms");
     }
 }
