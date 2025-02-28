@@ -189,8 +189,7 @@ public class HintsControllerImpl implements HintsController {
             final var crs = hintsStore.getCrsState().crs();
             if (!votes.containsKey(selfId) && preprocessingVoteFuture == null) {
                 preprocessingVoteFuture =
-                        startPreprocessingVoteFuture(asInstant(construction.preprocessingStartTimeOrThrow()),
-                                crs);
+                        startPreprocessingVoteFuture(asInstant(construction.preprocessingStartTimeOrThrow()), crs);
             }
         } else {
             final var crs = hintsStore.getCrsState().crs();
@@ -480,10 +479,10 @@ public class HintsControllerImpl implements HintsController {
         } else {
             finalUpdatedCrsFuture = finalUpdatedCrsFuture.thenApplyAsync(
                     previousCrs -> {
-                        final var isValid =
-                                library.verifyCrsUpdate(previousCrs.toByteArray(),
-                                        publication.newCrs().toByteArray(),
-                                        publication.proof().toByteArray());
+                        final var isValid = library.verifyCrsUpdate(
+                                previousCrs.toByteArray(),
+                                publication.newCrs().toByteArray(),
+                                publication.proof().toByteArray());
                         if (isValid) {
                             return publication.newCrs();
                         }
@@ -525,7 +524,8 @@ public class HintsControllerImpl implements HintsController {
         if (partyId == expectedPartyId(nodeId)) {
             nodePartyIds.put(nodeId, partyId);
             partyNodeIds.put(partyId, nodeId);
-            validationFutures.put(publication.adoptionTime(), validationFuture(initialCrs, partyId, publication.hintsKey()));
+            validationFutures.put(
+                    publication.adoptionTime(), validationFuture(initialCrs, partyId, publication.hintsKey()));
         }
     }
 
@@ -575,10 +575,12 @@ public class HintsControllerImpl implements HintsController {
      * @param hintsKey   the hints key
      * @return the future
      */
-    private CompletableFuture<Validation> validationFuture(final Bytes crs, final int partyId, @NonNull final Bytes hintsKey) {
+    private CompletableFuture<Validation> validationFuture(
+            final Bytes crs, final int partyId, @NonNull final Bytes hintsKey) {
         return CompletableFuture.supplyAsync(
                 () -> {
-                    final var isValid = library.validateHintsKey(crs.toByteArray(), hintsKey.toByteArray(), partyId, numParties);
+                    final var isValid =
+                            library.validateHintsKey(crs.toByteArray(), hintsKey.toByteArray(), partyId, numParties);
                     return new Validation(partyId, hintsKey, isValid);
                 },
                 executor);
@@ -610,9 +612,10 @@ public class HintsControllerImpl implements HintsController {
             final int selfPartyId = expectedPartyId(selfId);
             publicationFuture = CompletableFuture.runAsync(
                     () -> {
-                        final var hints = library.computeHints(crs.toByteArray(),
-                                blsKeyPair.privateKey(), selfPartyId, numParties);
-                        final var hintsKey = codec.encodeHintsKey(blsKeyPair.publicKey(), hints);
+                        final var hints = library.computeHints(
+                                crs.toByteArray(), blsKeyPair.privateKey().toByteArray(), selfPartyId, numParties);
+                        final var hintsKey =
+                                codec.encodeHintsKey(blsKeyPair.publicKey().toByteArray(), hints);
                         submissions
                                 .submitHintsKey(selfPartyId, numParties, hintsKey)
                                 .join();
