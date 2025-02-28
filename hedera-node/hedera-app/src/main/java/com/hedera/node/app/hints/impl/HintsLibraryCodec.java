@@ -61,28 +61,6 @@ public class HintsLibraryCodec {
     }
 
     /**
-     * Extracts the aggregation key from the given preprocessed keys.
-     *
-     * @param preprocessedKeys the preprocessed keys
-     * @return the aggregation key
-     */
-    public Bytes extractAggregationKey(@NonNull final Bytes preprocessedKeys) {
-        requireNonNull(preprocessedKeys);
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    /**
-     * Extracts the verification key from the given preprocessed keys.
-     *
-     * @param preprocessedKeys the preprocessed keys
-     * @return the verification key
-     */
-    public Bytes extractVerificationKey(@NonNull final Bytes preprocessedKeys) {
-        requireNonNull(preprocessedKeys);
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    /**
      * Extracts the public key for the given party id from the given aggregation key.
      *
      * @param aggregationKey the aggregation key

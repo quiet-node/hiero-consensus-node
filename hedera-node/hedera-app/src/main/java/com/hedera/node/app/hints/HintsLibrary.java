@@ -40,7 +40,7 @@ public interface HintsLibrary {
     /**
      * Updates the given CRS with the given 256 bits of entropy and returns the concatenation of the
      * updated CRS and a proof of the contribution.
-     * @param crs the CRS
+     * @param crs the base CRS used to update the CRS
      * @param entropy the 256-bit entropy
      * @return the updated CRS and proof
      */
@@ -64,7 +64,7 @@ public interface HintsLibrary {
     /**
      * Computes the hints for the given public key and number of parties.
      *
-     * @param crs
+     * @param crs the final CRS used by the network
      * @param blsPrivateKey the private key
      * @param partyId       the party id
      * @param n             the number of parties
@@ -75,7 +75,7 @@ public interface HintsLibrary {
     /**
      * Validates the hinTS public key for the given number of parties.
      *
-     * @param crs
+     * @param crs the final CRS used by the network
      * @param hintsKey the hinTS key
      * @param partyId  the party id
      * @param n        the number of parties
@@ -93,7 +93,7 @@ public interface HintsLibrary {
      * </ol>
      * Both maps given must have the same key set; in particular, a subset of {@code [0, n)}.
      *
-     * @param crs
+     * @param crs the final CRS used by the network
      * @param hintsKeys the valid hinTS keys by party id
      * @param weights   the weights by party id
      * @param n         the number of parties
@@ -114,7 +114,7 @@ public interface HintsLibrary {
     /**
      * Checks that a signature on a message verifies under a BLS public key.
      *
-     * @param crs
+     * @param crs the final CRS used by the network
      * @param signature the signature
      * @param message   the message
      * @param publicKey the public key
@@ -125,7 +125,7 @@ public interface HintsLibrary {
     /**
      * Aggregates the signatures for party ids using hinTS aggregation and verification keys.
      *
-     * @param crs
+     * @param crs the final CRS used by the network
      * @param aggregationKey    the aggregation key
      * @param verificationKey   the verification key
      * @param partialSignatures the partial signatures by party id
@@ -142,7 +142,7 @@ public interface HintsLibrary {
      * this is only true if the aggregate signature has weight exceeding the specified threshold
      * or total weight stipulated in the verification key.
      *
-     * @param crs
+     * @param crs the final CRS used by the network
      * @param signature            the aggregate signature
      * @param message              the message
      * @param verificationKey      the verification key
