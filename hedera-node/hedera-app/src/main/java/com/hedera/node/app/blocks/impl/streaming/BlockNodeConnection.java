@@ -10,25 +10,18 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
-import java.time.Duration;
-import java.util.concurrent.ExecutorService;
-import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
  * Represents a single connection to a block node. Each connection is responsible for connecting to configured block nodes.
- * It is also responsible for retrying with exponential backoff if the connection fails.
  */
 public class BlockNodeConnection {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
-    private static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
-    private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     private final BlockNodeConfig node;
     private final GrpcServiceClient grpcServiceClient;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
-    private final ExecutorService retryExecutor;
     private StreamObserver<PublishStreamRequest> requestObserver;
     private volatile boolean isActive = false;
 
@@ -38,18 +31,15 @@ public class BlockNodeConnection {
      * @param nodeConfig the configuration for the block node
      * @param grpcServiceClient the gRPC service client
      * @param blockNodeConnectionManager the connection manager for block node connections
-     * @param retryExecutor the executor for retrying this connection
      */
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final GrpcServiceClient grpcServiceClient,
-            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
-            @NonNull final ExecutorService retryExecutor) {
+            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager) {
         this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
-        this.retryExecutor = requireNonNull(retryExecutor, "retryExecutor must not be null");
         logger.info("BlockNodeConnection INITIALIZED");
     }
 
@@ -106,13 +96,7 @@ public class BlockNodeConnection {
     }
 
     private void scheduleReconnect() {
-        retryExecutor.execute(() -> {
-            try {
-                retry(this::establishStream, INITIAL_RETRY_DELAY);
-            } catch (Exception e) {
-                logger.error("Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
-            }
-        });
+        blockNodeConnectionManager.scheduleReconnect(this);
     }
 
     /**
@@ -134,7 +118,6 @@ public class BlockNodeConnection {
         if (isActive) {
             isActive = false;
             requestObserver.onCompleted();
-            retryExecutor.shutdown();
         }
     }
 
@@ -154,29 +137,5 @@ public class BlockNodeConnection {
      */
     public BlockNodeConfig getNodeConfig() {
         return node;
-    }
-
-    /**
-     * Retries the given action with exponential backoff.
-     *
-     * @param action the action to retry
-     * @param initialDelay the initial delay before the first retry
-     * @param <T> the return type of the action
-     */
-    public <T> void retry(@NonNull final Supplier<T> action, @NonNull final Duration initialDelay) {
-        requireNonNull(action);
-        requireNonNull(initialDelay);
-
-        Duration delay = initialDelay;
-        while (true) {
-            try {
-                logger.info("Retrying in {} ms", delay.toMillis());
-                Thread.sleep(delay.toMillis());
-                action.get();
-                return;
-            } catch (Exception e) {
-                delay = delay.multipliedBy(RETRY_BACKOFF_MULTIPLIER);
-            }
-        }
     }
 }

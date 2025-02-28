@@ -26,8 +26,6 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
-import java.time.Duration;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,8 +36,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith({MockitoExtension.class, LogCaptureExtension.class})
 class BlockNodeConnectionTest {
-    private static final Duration INITIAL_DELAY = Duration.ofMillis(10);
-
     @LoggingSubject
     private BlockNodeConnection blockNodeConnection;
 
@@ -56,9 +52,6 @@ class BlockNodeConnectionTest {
     BlockNodeConnectionManager blockNodeConnectionManager;
 
     @Mock
-    ExecutorService retryExecutor;
-
-    @Mock
     private Supplier<Void> mockSupplier;
 
     @Mock
@@ -66,8 +59,7 @@ class BlockNodeConnectionTest {
 
     @BeforeEach
     public void setUp() {
-        blockNodeConnection =
-                new BlockNodeConnection(nodeConfig, grpcServiceClient, blockNodeConnectionManager, retryExecutor);
+        blockNodeConnection = new BlockNodeConnection(nodeConfig, grpcServiceClient, blockNodeConnectionManager);
     }
 
     @Test
@@ -235,24 +227,23 @@ class BlockNodeConnectionTest {
                                         "Error in block node stream localhost:12345: Status{code=ABORTED, description=null, cause=null} io.grpc.StatusRuntimeException: ABORTED"));
         assertFalse(blockNodeConnection.isActive());
         verify(blockNodeConnectionManager, times(1)).handleConnectionError(nodeConfig);
-        verify(retryExecutor, times(1)).execute(any());
     }
 
-    @Test
-    void testRetry_SuccessOnFirstAttempt() {
-        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
-
-        verify(mockSupplier, times(1)).get();
-    }
-
-    @Test
-    void testRetry_SuccessOnRetry() {
-        when(mockSupplier.get())
-                .thenThrow(new RuntimeException("First attempt failed"))
-                .thenReturn(null);
-
-        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
-
-        verify(mockSupplier, times(2)).get();
-    }
+    //    @Test
+    //    void testRetry_SuccessOnFirstAttempt() {
+    //        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
+    //
+    //        verify(mockSupplier, times(1)).get();
+    //    }
+    //
+    //    @Test
+    //    void testRetry_SuccessOnRetry() {
+    //        when(mockSupplier.get())
+    //                .thenThrow(new RuntimeException("First attempt failed"))
+    //                .thenReturn(null);
+    //
+    //        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
+    //
+    //        verify(mockSupplier, times(2)).get();
+    //    }
 }
