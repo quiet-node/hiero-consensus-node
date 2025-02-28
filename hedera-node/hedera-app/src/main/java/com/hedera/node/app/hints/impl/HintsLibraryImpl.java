@@ -103,15 +103,14 @@ public class HintsLibraryImpl implements HintsLibrary {
             @NonNull final byte[] crs,
             @NonNull final byte[] aggregationKey,
             @NonNull final byte[] verificationKey,
-            @NonNull final Map<Integer, Bytes> partialSignatures) {
+            @NonNull final Map<Integer, byte[]> partialSignatures) {
         requireNonNull(crs);
         requireNonNull(aggregationKey);
         requireNonNull(verificationKey);
         requireNonNull(partialSignatures);
         final int[] parties =
                 partialSignatures.keySet().stream().mapToInt(Integer::intValue).toArray();
-        final byte[][] signatures =
-                partialSignatures.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
+        final byte[][] signatures = partialSignatures.values().toArray(byte[][]::new);
         return BRIDGE.aggregateSignatures(crs, aggregationKey, verificationKey, parties, signatures);
     }
 

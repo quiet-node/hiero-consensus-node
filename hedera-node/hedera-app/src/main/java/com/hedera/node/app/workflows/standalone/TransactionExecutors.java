@@ -261,12 +261,7 @@ public enum TransactionExecutors {
         final var hintsService = new HintsServiceImpl(
                 NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HintsLibraryImpl(), bootstrapConfig);
         final var historyService = new HistoryServiceImpl(
-                NO_OP_METRICS,
-                ForkJoinPool.commonPool(),
-                appContext,
-                new HistoryLibraryImpl(),
-                HISTORY_LIBRARY_CODEC,
-                bootstrapConfig);
+                NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HistoryLibraryImpl(), bootstrapConfig);
         final var component = DaggerExecutorComponent.builder()
                 .appContext(appContext)
                 .configProviderImpl(configProvider)

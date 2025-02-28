@@ -135,7 +135,7 @@ public interface HintsLibrary {
             final byte[] crs,
             @NonNull byte[] aggregationKey,
             @NonNull byte[] verificationKey,
-            @NonNull Map<Integer, Bytes> partialSignatures);
+            @NonNull Map<Integer, byte[]> partialSignatures);
 
     /**
      * Checks an aggregate signature on a message verifies under a hinTS verification key, where

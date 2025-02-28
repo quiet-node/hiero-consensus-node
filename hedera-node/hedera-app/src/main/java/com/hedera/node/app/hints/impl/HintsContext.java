@@ -65,6 +65,7 @@ public class HintsContext {
 
     /**
      * Returns true if the signing context is ready.
+     * @return true if the context is ready
      */
     public boolean isReady() {
         return construction != null && construction.hasHintsScheme();
@@ -72,6 +73,7 @@ public class HintsContext {
 
     /**
      * Returns the active verification key, or throws if the context is not ready.
+     * @return the verification key
      */
     public Bytes verificationKeyOrThrow() {
         throwIfNotReady();
@@ -136,7 +138,7 @@ public class HintsContext {
         private final Bytes verificationKey;
         private final Map<Long, Integer> partyIds;
         private final CompletableFuture<Bytes> future = new CompletableFuture<>();
-        private final ConcurrentMap<Integer, Bytes> signatures = new ConcurrentHashMap<>();
+        private final ConcurrentMap<Integer, byte[]> signatures = new ConcurrentHashMap<>();
         private final AtomicLong weightOfSignatures = new AtomicLong();
 
         public Signing(
@@ -156,6 +158,7 @@ public class HintsContext {
 
         /**
          * The future that will complete when sufficient partial signatures have been aggregated.
+         * @return the future
          */
         public CompletableFuture<Bytes> future() {
             return future;
@@ -166,19 +169,23 @@ public class HintsContext {
          * including this node's weight passes the required threshold, completes the future returned from
          * {@link #future()} with the aggregated signature.
          *
+         * @param crs the final CRS used by the network
          * @param constructionId the construction ID
          * @param nodeId the node ID
          * @param signature the partial signature
          */
         public void incorporate(
-                final byte[] crs, final long constructionId, final long nodeId, @NonNull final byte[] signature) {
+                @NonNull final byte[] crs,
+                final long constructionId,
+                final long nodeId,
+                @NonNull final byte[] signature) {
             requireNonNull(signature);
             if (this.constructionId == constructionId && partyIds.containsKey(nodeId)) {
                 final int partyId = partyIds.get(nodeId);
                 final var publicKey = codec.extractPublicKey(aggregationKey, partyId);
                 if (publicKey != null
                         && library.verifyBls(crs, signature, message.toByteArray(), publicKey.toByteArray())) {
-                    signatures.put(partyId, Bytes.wrap(signature));
+                    signatures.put(partyId, signature);
                     final var weight = codec.extractWeight(aggregationKey, partyId);
                     if (weightOfSignatures.addAndGet(weight) >= thresholdWeight) {
                         future.complete(Bytes.wrap(library.aggregateSignatures(
