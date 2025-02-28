@@ -98,6 +98,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -954,6 +955,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     // queue/buffer
     private static final int THREAD_COUNT = 1;
     private static final long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
+    private static final int DATA_PER_COPY = 10_213;
     private static final boolean VALIDATE_MIGRATION_FF = true;
 
     @Override
@@ -969,6 +971,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
             final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
 
+
             // Initialize migration metrics
 
             AtomicLong totalMigratedObjects = new AtomicLong(0);
@@ -982,22 +985,27 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     "Migrating all of the states (Singleton, KV and Queue) to the one Virtual Map...");
 
             migrateSingletonStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
-            migrateQueueStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
-            migrateKVStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
+
+            final AtomicReference<VirtualMap> virtualMapRef = new AtomicReference<>(virtualMap);
+            migrateQueueStates(virtualMapRef, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
+            migrateKVStates(virtualMapRef, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
+
+            logger.info(STARTUP.getMarker(), "Total migration time {} ms", totalMigrationTimeMs.get());
 
             // Validate all states migrated to the Virtual Map
             if (VALIDATE_MIGRATION_FF) {
-                assert virtualMap.size() == totalMigratedObjects.get();
+                assert virtualMapRef.get().size() == totalMigratedObjects.get();
+                logger.info(STARTUP.getMarker(), "Total validation time {} ms", totalValidationTimeMs.get());
             }
 
-            return virtualMap;
+            return virtualMapRef.get();
         }
 
         return this;
     }
 
     private void migrateKVStates(
-            VirtualMap virtualMap,
+            final AtomicReference<VirtualMap> virtualMapRef,
             AtomicLong totalMigratedObjects,
             AtomicLong totalMigrationTimeMs,
             AtomicLong totalValidationTimeMs) {
@@ -1016,12 +1024,17 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     final var stateIdBytes = getVirtualMapKey(serviceName, stateKey);
 
                     // TODO: check possibilities for optimization
-
-                    // copies
-                    // latest vm should point on latest copy
-                    // vm should be as reference + add counter
                     InterruptableConsumer<Pair<Bytes, Bytes>> handler =
-                            pair -> {virtualMap.putBytes(stateIdBytes.append(pair.key()), pair.value());
+                            (pair) -> {
+                                VirtualMap currentMap = virtualMapRef.get();
+                                if (currentMap.size() % DATA_PER_COPY == 0) {
+                                    VirtualMap older = currentMap;
+                                    currentMap = currentMap.copy();
+                                    older.release();
+                                    virtualMapRef.set(currentMap);
+                                }
+                                virtualMapRef.get().putBytes(stateIdBytes.append(pair.key()), pair.value());
+                            };
 
                     try {
                         logger.info(
@@ -1044,7 +1057,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                                 "Migration complete for {} took {} ms",
                                 virtualMapLabel,
                                 migrationTimeMs);
-                        logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMap.size());
+                        logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMapRef.get().size());
                         kvMigrationStartTime.addAndGet(migrationTimeMs);
                         totalMigrationTimeMs.addAndGet(migrationTimeMs);
                         totalMigratedObjects.addAndGet(virtualMapToMigrate.size());
@@ -1059,7 +1072,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                                 "Validating the new Virtual Map contains all data from the KV State {}",
                                 virtualMapToMigrate.getLabel());
 
-                        validateKVStateMigrated(virtualMap, virtualMapToMigrate);
+                        validateKVStateMigrated(virtualMapRef.get(), virtualMapToMigrate);
 
                         long validationTimeMs = System.currentTimeMillis() - validationStartTime;
                         logger.info(
@@ -1086,7 +1099,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     }
 
     private void migrateQueueStates(
-            VirtualMap virtualMap,
+            final AtomicReference<VirtualMap> virtualMapRef,
             AtomicLong totalMigratedObjects,
             AtomicLong totalMigrationTimeMs,
             AtomicLong totalValidationTimeMs) {
@@ -1115,11 +1128,19 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     for (ValueLeaf leaf : originalStore) {
                         final var codec = leaf.getCodec();
                         final var value = Objects.requireNonNull(leaf.getValue(), "Null value is not expected here");
-                        virtualMap.put(getVirtualMapKey(serviceName, stateKey, tail++), value, codec);
+
+                        VirtualMap currentMap = virtualMapRef.get();
+                        if (currentMap.size() % DATA_PER_COPY == 0) {
+                            VirtualMap older = currentMap;
+                            currentMap = currentMap.copy();
+                            older.release();
+                            virtualMapRef.set(currentMap);
+                        }
+                        virtualMapRef.get().put(getVirtualMapKey(serviceName, stateKey, tail++), value, codec);
                     }
 
                     final var queueState = new QueueState(head, tail);
-                    virtualMap.put(getVirtualMapKey(serviceName, stateKey), queueState, QueueCodec.INSTANCE);
+                    virtualMapRef.get().put(getVirtualMapKey(serviceName, stateKey), queueState, QueueCodec.INSTANCE);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
                     logger.info(
@@ -1127,7 +1148,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             "Migration complete for {} took {} ms",
                             queueNodeLabel,
                             migrationTimeMs);
-                    logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMap.size());
+                    logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMapRef.get().size());
                     queueMigrationStartTime.addAndGet(migrationTimeMs);
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
                     totalMigratedObjects.addAndGet(originalStore.size());
@@ -1139,7 +1160,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                                 "Validating the new Virtual Map contains all data from the Queue State {}",
                                 queueNodeLabel);
 
-                        validateQueueStateMigrated(virtualMap, queueNodeLabel, serviceName, head, tail);
+                        validateQueueStateMigrated(virtualMapRef.get(), queueNodeLabel, serviceName, head, tail);
 
                         long validationTimeMs = System.currentTimeMillis() - validationStartTime;
                         logger.info(

@@ -100,6 +100,7 @@ import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.util.BootstrapUtils;
 import com.swirlds.state.State;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.InstantSource;
 import java.util.List;
@@ -107,6 +108,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
@@ -170,6 +172,11 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
     @Override
     public @NonNull MerkleNodeState newStateRoot() {
         return hederaOrThrow().newStateRoot();
+    }
+
+    @Override
+    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap() {
+        return hederaOrThrow().stateRootFromVirtualMap();
     }
 
     /**
@@ -330,6 +337,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                     hedera.initializeStatesApi(genesisState, GENESIS, genesisNetwork, platformConfig);
                     return genesisState;
                 },
+                hedera.stateRootFromVirtualMap(),
                 Hedera.APP_NAME,
                 Hedera.SWIRLD_NAME,
                 selfId,
@@ -510,6 +518,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
             @NonNull final RecycleBin recycleBin,
             @NonNull final SoftwareVersion softwareVersion,
             @NonNull final Supplier<MerkleNodeState> stateRootSupplier,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final String mainClassName,
             @NonNull final String swirldName,
             @NonNull final NodeId selfId,
@@ -521,6 +530,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 selfId,
                 mainClassName,
                 swirldName,
+                stateRootFunction,
                 softwareVersion,
                 platformStateFacade,
                 platformContext);

@@ -20,6 +20,7 @@ import static com.swirlds.common.io.streams.StreamDebugUtils.deserializeAndDebug
 
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.impl.PartialNaryMerkleInternal;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -60,7 +61,7 @@ public class MerkleTreeSnapshotReader {
      * @param stateRoot the root of Merkle tree state
      * @param hash the hash of the state
      */
-    public record StateFileData(@NonNull PartialNaryMerkleInternal stateRoot, @NonNull Hash hash) {}
+    public record StateFileData(@NonNull MerkleNode stateRoot, @NonNull Hash hash) {}
 
     /**
      * Reads a state file from disk
@@ -98,7 +99,7 @@ public class MerkleTreeSnapshotReader {
             @NonNull final Path directory)
             throws IOException {
         try {
-            final PartialNaryMerkleInternal state =
+            final MerkleNode state =
                     in.readMerkleTree(configuration, directory, MAX_MERKLE_NODES_IN_STATE);
             final Hash hash = in.readSerializable();
             return new StateFileData(state, hash);

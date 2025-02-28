@@ -46,11 +46,13 @@ import com.swirlds.metrics.api.Metric.ValueType;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Browser;
 import com.swirlds.platform.ParameterProvider;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.NoOpStateLifecycles;
 import com.swirlds.platform.state.StateLifecycles;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -60,6 +62,7 @@ import java.util.IllegalFormatException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.function.Function;
 
 /**
  * This demo collects statistics on the running of the network and consensus systems. It writes them to the
@@ -321,6 +324,12 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
         final StatsDemoState state = new StatsDemoState();
         FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
         return state;
+    }
+
+    // TODO: GitHub issue TBD
+    @Override
+    public Function<VirtualMap, StatsDemoState> stateRootFromVirtualMap() {
+        throw new UnsupportedOperationException();
     }
 
     @NonNull

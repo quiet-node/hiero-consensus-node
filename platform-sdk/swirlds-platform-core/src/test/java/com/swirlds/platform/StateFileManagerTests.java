@@ -164,7 +164,10 @@ class StateFileManagerTests {
         Configuration configuration =
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
-                configuration, stateFile, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
+                configuration, stateFile,
+                // FIXME
+                (virtualMap) -> {throw new UnsupportedOperationException();},
+                TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
         MerkleCryptoFactory.getInstance()
                 .digestTreeSync(deserializedSignedState
                         .reservedSignedState()
@@ -370,6 +373,8 @@ class StateFileManagerTests {
                             () -> SignedStateFileReader.readStateFile(
                                             configuration,
                                             savedStateInfo.stateFile(),
+                                            // FIXME
+                                            (virtualMap) -> {throw new UnsupportedOperationException();},
                                             TEST_PLATFORM_STATE_FACADE,
                                             PlatformContext.create(configuration))
                                     .reservedSignedState()

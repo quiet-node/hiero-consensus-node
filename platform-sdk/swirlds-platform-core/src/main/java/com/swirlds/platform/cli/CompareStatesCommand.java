@@ -137,7 +137,10 @@ public final class CompareStatesCommand extends AbstractCommand {
         logger.info(LogMarker.CLI.getMarker(), "Loading state from {}", statePath);
 
         final ReservedSignedState signedState = SignedStateFileReader.readStateFile(
-                        platformContext.getConfiguration(), statePath, DEFAULT_PLATFORM_STATE_FACADE, platformContext)
+                        platformContext.getConfiguration(), statePath,
+                        // FIXME
+                        (virtualMap) -> {throw new UnsupportedOperationException();},
+                        DEFAULT_PLATFORM_STATE_FACADE, platformContext)
                 .reservedSignedState();
         logger.info(LogMarker.CLI.getMarker(), "Hashing state");
         try {

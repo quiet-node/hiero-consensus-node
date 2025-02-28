@@ -24,6 +24,7 @@ import static java.nio.file.Files.exists;
 import com.swirlds.common.RosterStateId;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.crypto.CryptoStatic;
@@ -37,6 +38,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.lifecycle.StateMetadata;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -46,6 +48,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Utility methods for reading a signed state from disk.
@@ -64,6 +67,7 @@ public final class SignedStateFileReader {
     public static @NonNull DeserializedSignedState readStateFile(
             @NonNull final Configuration configuration,
             @NonNull final Path stateFile,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final PlatformStateFacade stateFacade,
             @NonNull final PlatformContext platformContext)
             throws IOException {
@@ -84,10 +88,20 @@ public final class SignedStateFileReader {
                     return in.readSerializable();
                 });
 
+        MerkleNode stateRoot = data.stateRoot();
+        MerkleNodeState merkleNodeState;
+
+        // TODO: add comments
+        if (stateRoot instanceof VirtualMap virtualMap) {
+            merkleNodeState = stateRootFunction.apply(virtualMap);
+        } else {
+            merkleNodeState = (MerkleNodeState) stateRoot;
+        }
+
         final SignedState newSignedState = new SignedState(
                 configuration,
                 CryptoStatic::verifySignature,
-                (MerkleNodeState) data.stateRoot(),
+                merkleNodeState,
                 "SignedStateFileReader.readStateFile()",
                 false,
                 false,

@@ -68,7 +68,10 @@ public class StateEditor {
         platformContext = PlatformContext.create(configuration);
 
         final DeserializedSignedState deserializedSignedState = SignedStateFileReader.readStateFile(
-                configuration, statePath, DEFAULT_PLATFORM_STATE_FACADE, platformContext);
+                configuration, statePath,
+                // FIXME
+                (virtualMap) -> {throw new UnsupportedOperationException();},
+                DEFAULT_PLATFORM_STATE_FACADE, platformContext);
 
         try (final ReservedSignedState reservedSignedState = deserializedSignedState.reservedSignedState()) {
             System.out.println("\nLoading state from " + statePath);

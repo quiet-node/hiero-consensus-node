@@ -27,6 +27,7 @@ import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.io.utility.RecycleBin;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
@@ -45,12 +46,14 @@ import com.swirlds.platform.state.snapshot.SignedStateFilePath;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.state.State;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -86,6 +89,7 @@ public final class StartupStateUtils {
             @NonNull final RecycleBin recycleBin,
             @NonNull final SoftwareVersion softwareVersion,
             @NonNull final Supplier<MerkleNodeState> genesisStateBuilder,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final String mainClassName,
             @NonNull final String swirldName,
             @NonNull final NodeId selfId,
@@ -106,6 +110,7 @@ public final class StartupStateUtils {
                 selfId,
                 mainClassName,
                 swirldName,
+                stateRootFunction,
                 softwareVersion,
                 platformStateFacade,
                 platformContext);
@@ -153,6 +158,7 @@ public final class StartupStateUtils {
             @NonNull final NodeId selfId,
             @NonNull final String mainClassName,
             @NonNull final String swirldName,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final SoftwareVersion currentSoftwareVersion,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final PlatformContext platformContext) {
@@ -175,6 +181,7 @@ public final class StartupStateUtils {
                 recycleBin,
                 currentSoftwareVersion,
                 savedStateFiles,
+                stateRootFunction,
                 platformStateFacade,
                 platformContext);
         return state;
@@ -245,6 +252,7 @@ public final class StartupStateUtils {
             @NonNull final RecycleBin recycleBin,
             @NonNull final SoftwareVersion currentSoftwareVersion,
             @NonNull final List<SavedStateInfo> savedStateFiles,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final PlatformContext platformContext)
             throws SignedStateLoadingException {
@@ -257,6 +265,7 @@ public final class StartupStateUtils {
                     recycleBin,
                     currentSoftwareVersion,
                     savedStateFile,
+                    stateRootFunction,
                     platformStateFacade,
                     platformContext);
             if (state != null) {
@@ -281,6 +290,7 @@ public final class StartupStateUtils {
             @NonNull final RecycleBin recycleBin,
             @NonNull final SoftwareVersion currentSoftwareVersion,
             @NonNull final SavedStateInfo savedStateFile,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final PlatformContext platformContext)
             throws SignedStateLoadingException {
@@ -290,7 +300,7 @@ public final class StartupStateUtils {
         final DeserializedSignedState deserializedSignedState;
         try {
             deserializedSignedState =
-                    readStateFile(configuration, savedStateFile.stateFile(), platformStateFacade, platformContext);
+                    readStateFile(configuration, savedStateFile.stateFile(), stateRootFunction, platformStateFacade, platformContext);
         } catch (final IOException e) {
             logger.error(EXCEPTION.getMarker(), "unable to load state file {}", savedStateFile.stateFile(), e);
 

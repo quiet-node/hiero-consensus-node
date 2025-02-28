@@ -48,8 +48,10 @@ import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.system.status.PlatformStatus;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 
 /**
  * This HelloSwirld creates a single transaction, consisting of the string "Hello Swirld", and then goes
@@ -134,6 +136,12 @@ public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
         final HelloSwirldDemoState state = new HelloSwirldDemoState();
         FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
         return state;
+    }
+
+    // TODO: GitHub issue TBD
+    @Override
+    public Function<VirtualMap, HelloSwirldDemoState> stateRootFromVirtualMap() {
+        throw new UnsupportedOperationException();
     }
 
     @NonNull
