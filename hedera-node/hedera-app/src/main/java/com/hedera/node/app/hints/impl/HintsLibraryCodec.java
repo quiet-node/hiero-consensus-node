@@ -18,6 +18,10 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class HintsLibraryCodec {
+
+    private static final int CRS_LENGTH = 1456;
+    private static final int CONTRIBUTION_PROOF_LENGTH = 128;
+
     @Inject
     public HintsLibraryCodec() {
         // Dagger2
@@ -44,7 +48,15 @@ public class HintsLibraryCodec {
      */
     public CrsUpdateOutput decodeCrsUpdate(@NonNull final Bytes output) {
         requireNonNull(output);
-        throw new UnsupportedOperationException("Not implemented");
+        requireNonNull(output);
+        final int expectedLength = CRS_LENGTH + CONTRIBUTION_PROOF_LENGTH;
+        if (output.length() != expectedLength) {
+            throw new IllegalArgumentException(
+                    "Invalid output length: expected " + expectedLength + " but got " + output.length());
+        }
+        final Bytes crs = output.slice(0, CRS_LENGTH);
+        final Bytes proof = output.slice(CRS_LENGTH, CONTRIBUTION_PROOF_LENGTH);
+        return new CrsUpdateOutput(crs, proof);
     }
 
     /**
