@@ -1,30 +1,48 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.node.app.spi.fixtures.util.LogCaptor;
+import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
+import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
+import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
-import com.hedera.node.config.VersionedConfiguration;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
+import java.time.Duration;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith({MockitoExtension.class})
+@ExtendWith({MockitoExtension.class, LogCaptureExtension.class})
 class BlockNodeConnectionManagerTest {
+    private static final Duration INITIAL_DELAY = Duration.ofMillis(10);
 
+    @LoggingSubject
     BlockNodeConnectionManager blockNodeConnectionManager;
+
+    @LoggingTarget
+    private LogCaptor logCaptor;
 
     @Mock
     ConfigProvider mockConfigProvider;
 
     @Mock
-    VersionedConfiguration mockVersionedConfiguration;
+    private Supplier<Void> mockSupplier;
+
+    @Mock
+    BlockNodeConnection mockConnection;
 
     @BeforeEach
     public void setUp() {
@@ -41,5 +59,37 @@ class BlockNodeConnectionManagerTest {
         final var expectedGrpcEndpoint =
                 BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
         assertEquals(expectedGrpcEndpoint, blockNodeConnectionManager.getGrpcEndPoint());
+    }
+
+    @Test
+    void testRetry_SuccessOnFirstAttempt() {
+        blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
+
+        verify(mockSupplier, times(1)).get();
+        assertThat(logCaptor.infoLogs()).contains("Retrying in 10 ms");
+    }
+
+    @Test
+    void testRetry_SuccessOnRetry() {
+        when(mockSupplier.get())
+                .thenThrow(new RuntimeException("First attempt failed"))
+                .thenReturn(null);
+
+        blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
+
+        verify(mockSupplier, times(2)).get();
+        assertThat(logCaptor.infoLogs()).contains("Retrying in 10 ms", "Retrying in 20 ms");
+    }
+
+    @Test
+    void testScheduleReconnect() throws InterruptedException {
+        blockNodeConnectionManager.scheduleReconnect(mockConnection);
+
+        verifyNoInteractions(mockConnection); // there should be no immediate attempt to establish a stream
+
+        Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
+        
+        assertThat(logCaptor.infoLogs()).contains("Retrying in 1000 ms");
+        verify(mockConnection, times(1)).establishStream();
     }
 }

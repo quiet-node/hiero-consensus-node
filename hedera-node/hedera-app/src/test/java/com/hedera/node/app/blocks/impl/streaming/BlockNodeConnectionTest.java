@@ -26,7 +26,6 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
-import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,9 +49,6 @@ class BlockNodeConnectionTest {
 
     @Mock
     BlockNodeConnectionManager blockNodeConnectionManager;
-
-    @Mock
-    private Supplier<Void> mockSupplier;
 
     @Mock
     private StreamObserver<PublishStreamRequest> requestObserver;
@@ -105,7 +101,6 @@ class BlockNodeConnectionTest {
 
         blockNodeConnection.close();
 
-        verify(requestObserver, times(1)).onCompleted();
         verify(requestObserver, times(1)).onCompleted();
         assertFalse(blockNodeConnection.isActive());
     }
@@ -227,23 +222,6 @@ class BlockNodeConnectionTest {
                                         "Error in block node stream localhost:12345: Status{code=ABORTED, description=null, cause=null} io.grpc.StatusRuntimeException: ABORTED"));
         assertFalse(blockNodeConnection.isActive());
         verify(blockNodeConnectionManager, times(1)).handleConnectionError(nodeConfig);
+        verify(blockNodeConnectionManager, times(1)).scheduleReconnect(blockNodeConnection);
     }
-
-    //    @Test
-    //    void testRetry_SuccessOnFirstAttempt() {
-    //        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
-    //
-    //        verify(mockSupplier, times(1)).get();
-    //    }
-    //
-    //    @Test
-    //    void testRetry_SuccessOnRetry() {
-    //        when(mockSupplier.get())
-    //                .thenThrow(new RuntimeException("First attempt failed"))
-    //                .thenReturn(null);
-    //
-    //        blockNodeConnection.retry(mockSupplier, INITIAL_DELAY);
-    //
-    //        verify(mockSupplier, times(2)).get();
-    //    }
 }

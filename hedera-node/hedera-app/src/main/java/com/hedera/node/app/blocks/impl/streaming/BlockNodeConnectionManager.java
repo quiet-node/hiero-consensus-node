@@ -41,10 +41,10 @@ import org.apache.logging.log4j.Logger;
  * It is also responsible for retrying with exponential backoff if a connection fails.
  */
 public class BlockNodeConnectionManager {
+    public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
     private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
     private static final String GRPC_END_POINT =
             BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
-    private static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     private final Map<BlockNodeConfig, BlockNodeConnection> activeConnections;
@@ -213,6 +213,8 @@ public class BlockNodeConnectionManager {
     }
 
     public void scheduleReconnect(@NonNull final BlockNodeConnection connection) {
+        requireNonNull(connection);
+
         retryExecutor.execute(() -> {
             try {
                 retry(connection::establishStream, INITIAL_RETRY_DELAY);
