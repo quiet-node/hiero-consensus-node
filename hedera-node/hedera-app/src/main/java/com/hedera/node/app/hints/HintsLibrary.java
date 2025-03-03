@@ -2,7 +2,6 @@
 package com.hedera.node.app.hints;
 
 import com.hedera.cryptography.hints.AggregationAndVerificationKeys;
-import com.hedera.node.app.hints.impl.HintsLibraryCodec;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Map;
@@ -20,11 +19,9 @@ import java.util.Map;
  *   to select the hinTS keys to use as input to {@link HintsLibrary#preprocess(Bytes, Map, Map, int)}.</li>
  *   <li><b>Partial signatures</b> ({@code Sign}) - Implemented by {@link HintsLibrary#signBls(Bytes, Bytes)}.</li>
  *   <li><b>Verifying partial signatures</b> ({@code PartialVerify}) - Implemented by using
- *   {@link HintsLibrary#verifyBls(Bytes, Bytes, Bytes, Bytes)} with public keys extracted from the
- *   aggregation key in the active hinTS scheme via {@link HintsLibraryCodec#extractPublicKey(Bytes, int)}.</li>
+ *   {@link HintsLibrary#verifyBls(Bytes, Bytes, Bytes, Bytes)}.</li>
  *   <li><b>Signature aggregation</b> ({@code SignAggr}) - Implemented by {@link HintsLibrary#aggregateSignatures(Bytes, Bytes, Bytes, Map)}
- *   with partial signatures verified as above with weights extracted from the aggregation key in the active hinTS
- *   scheme via {@link HintsLibraryCodec#extractWeight(Bytes, int)} and {@link HintsLibraryCodec#extractTotalWeight(Bytes)}.</li>
+ *   with partial signatures verified as above with weights extracted from the current roster.</li>
  *   <li><b>Verifying aggregate signatures</b> ({@code Verify}) - Implemented by
  *   {@link HintsLibrary#verifyAggregate(Bytes, Bytes, Bytes, Bytes, long, long)}.</li>
  * </ul>

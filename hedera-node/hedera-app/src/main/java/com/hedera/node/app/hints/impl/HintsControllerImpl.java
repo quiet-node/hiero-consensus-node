@@ -60,7 +60,6 @@ public class HintsControllerImpl implements HintsController {
     private final Executor executor;
     private final TssKeyPair blsKeyPair;
     private final HintsLibrary library;
-    private final HintsLibraryCodec codec;
     private final HintsSubmissions submissions;
     private final HintsContext context;
     private final Map<Long, Integer> nodePartyIds = new HashMap<>();
@@ -120,7 +119,6 @@ public class HintsControllerImpl implements HintsController {
             @NonNull final RosterTransitionWeights weights,
             @NonNull final Executor executor,
             @NonNull final HintsLibrary library,
-            @NonNull final HintsLibraryCodec codec,
             @NonNull final Map<Long, PreprocessingVote> votes,
             @NonNull final List<HintsKeyPublication> publications,
             @NonNull final HintsSubmissions submissions,
@@ -135,7 +133,6 @@ public class HintsControllerImpl implements HintsController {
         this.context = requireNonNull(context);
         this.submissions = requireNonNull(submissions);
         this.library = requireNonNull(library);
-        this.codec = requireNonNull(codec);
         this.construction = requireNonNull(construction);
         this.votes.putAll(votes);
         this.configurationSupplier = requireNonNull(configuration);
@@ -340,7 +337,7 @@ public class HintsControllerImpl implements HintsController {
         crsPublicationFuture = CompletableFuture.runAsync(
                 () -> {
                     final var updatedCRS = library.updateCrs(oldCRS, generateEntropy());
-                    final var newCRS = codec.decodeCrsUpdate(oldCRS.length(), updatedCRS);
+                    final var newCRS = decodeCrsUpdate(oldCRS.length(), updatedCRS);
                     submissions.submitUpdateCRS(newCRS.crs(), newCRS.proof());
                 },
                 executor);
@@ -606,9 +603,8 @@ public class HintsControllerImpl implements HintsController {
             publicationFuture = CompletableFuture.runAsync(
                     () -> {
                         final var hints = library.computeHints(crs, blsKeyPair.privateKey(), selfPartyId, numParties);
-                        final var hintsKey = codec.encodeHintsKey(blsKeyPair.publicKey(), hints);
                         submissions
-                                .submitHintsKey(selfPartyId, numParties, hintsKey)
+                                .submitHintsKey(selfPartyId, numParties, hints)
                                 .join();
                     },
                     executor);
@@ -663,4 +659,27 @@ public class HintsControllerImpl implements HintsController {
     public void setFinalUpdatedCrsFuture(@Nullable final CompletableFuture<Bytes> finalUpdatedCrsFuture) {
         this.finalUpdatedCrsFuture = finalUpdatedCrsFuture;
     }
+
+    /**
+     * Decodes the output of {@link HintsLibrary#updateCrs(Bytes, Bytes)} into a
+     * {@link CrsUpdateOutput}.
+     *
+     * @param oldCRSLength the length of the old CRS
+     * @param output the output of the {@link HintsLibrary#updateCrs(Bytes, Bytes)}
+     * @return the hinTS key
+     */
+    public static CrsUpdateOutput decodeCrsUpdate(final long oldCRSLength, @NonNull final Bytes output) {
+        requireNonNull(output);
+        requireNonNull(output);
+        final Bytes crs = output.slice(0, oldCRSLength);
+        final Bytes proof = output.slice(oldCRSLength, output.length() - oldCRSLength);
+        return new CrsUpdateOutput(crs, proof);
+    }
+
+    /**
+     * A structured representation of the output of {@link HintsLibrary#updateCrs(Bytes, Bytes)}.
+     * @param crs the updated CRS
+     * @param proof the proof of the update
+     */
+    public record CrsUpdateOutput(@NonNull Bytes crs, @NonNull Bytes proof) {}
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.hints.impl;
 
+import static com.hedera.node.app.hints.impl.HintsControllerImpl.decodeCrsUpdate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -14,7 +15,6 @@ import org.junit.jupiter.api.Test;
 class HintsLibraryImplTest {
     private static final SplittableRandom RANDOM = new SplittableRandom();
     private final HintsLibraryImpl subject = new HintsLibraryImpl();
-    private final HintsLibraryCodec codec = new HintsLibraryCodec();
 
     @Test
     void generatesNewCrs() {
@@ -37,7 +37,7 @@ class HintsLibraryImplTest {
         byte[] entropyBytes = new byte[32];
         RANDOM.nextBytes(entropyBytes);
         final var newCrs = subject.updateCrs(oldCrs, Bytes.wrap(entropyBytes));
-        final var decodedCrsUpdate = codec.decodeCrsUpdate(oldCrs.length(), newCrs);
+        final var decodedCrsUpdate = decodeCrsUpdate(oldCrs.length(), newCrs);
         final var isValid = subject.verifyCrsUpdate(oldCrs, newCrs, decodedCrsUpdate.proof());
         assertTrue(isValid);
     }
@@ -65,7 +65,7 @@ class HintsLibraryImplTest {
         byte[] entropyBytes = new byte[32];
         RANDOM.nextBytes(entropyBytes);
         final var newCrs = subject.updateCrs(crs, Bytes.wrap(entropyBytes));
-        final var decodedCrsUpdate = codec.decodeCrsUpdate(crs.length(), newCrs);
+        final var decodedCrsUpdate = decodeCrsUpdate(crs.length(), newCrs);
 
         final var newCrsBytes = decodedCrsUpdate.crs();
         final var blsPrivateKey = subject.newBlsKeyPair();

@@ -7,6 +7,8 @@ import static java.util.stream.Collectors.toMap;
 
 import com.hedera.hapi.node.state.hints.HintsConstruction;
 import com.hedera.hapi.node.state.hints.NodePartyId;
+import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.node.app.hints.HintsLibrary;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -28,7 +30,6 @@ import javax.inject.Singleton;
 @Singleton
 public class HintsContext {
     private final HintsLibrary library;
-    private final HintsLibraryCodec codec;
 
     @Nullable
     private HintsConstruction construction;
@@ -37,9 +38,8 @@ public class HintsContext {
     private Map<Long, Integer> nodePartyIds;
 
     @Inject
-    public HintsContext(@NonNull final HintsLibrary library, @NonNull final HintsLibraryCodec codec) {
+    public HintsContext(@NonNull final HintsLibrary library) {
         this.library = requireNonNull(library);
-        this.codec = requireNonNull(codec);
     }
 
     /**
@@ -90,23 +90,28 @@ public class HintsContext {
 
     /**
      * Creates a new asynchronous signing process for the given block hash.
-     * @param blockHash the block hash
+     *
+     * @param blockHash     the block hash
+     * @param currentRoster the current roster
      * @return the signing process
      */
-    public @NonNull Signing newSigning(@NonNull final Bytes blockHash) {
+    public @NonNull Signing newSigning(@NonNull final Bytes blockHash, final Roster currentRoster) {
         requireNonNull(blockHash);
         throwIfNotReady();
         final var preprocessedKeys =
                 requireNonNull(construction).hintsSchemeOrThrow().preprocessedKeysOrThrow();
         final var verificationKey = preprocessedKeys.verificationKey();
-        final long totalWeight = codec.extractTotalWeight(verificationKey);
+        final long totalWeight = currentRoster.rosterEntries().stream()
+                .mapToLong(RosterEntry::weight)
+                .sum();
         return new Signing(
                 construction.constructionId(),
                 atLeastOneThirdOfTotal(totalWeight),
                 blockHash,
                 preprocessedKeys.aggregationKey(),
                 requireNonNull(nodePartyIds),
-                verificationKey);
+                verificationKey,
+                currentRoster);
     }
 
     /**
@@ -140,6 +145,7 @@ public class HintsContext {
         private final CompletableFuture<Bytes> future = new CompletableFuture<>();
         private final ConcurrentMap<Integer, Bytes> signatures = new ConcurrentHashMap<>();
         private final AtomicLong weightOfSignatures = new AtomicLong();
+        private final Roster currentRoster;
 
         public Signing(
                 final long constructionId,
@@ -147,13 +153,15 @@ public class HintsContext {
                 @NonNull final Bytes message,
                 @NonNull final Bytes aggregationKey,
                 @NonNull final Map<Long, Integer> partyIds,
-                @NonNull final Bytes verificationKey) {
+                @NonNull final Bytes verificationKey,
+                final Roster currentRoster) {
             this.constructionId = constructionId;
             this.thresholdWeight = thresholdWeight;
             this.message = requireNonNull(message);
             this.aggregationKey = requireNonNull(aggregationKey);
             this.partyIds = requireNonNull(partyIds);
             this.verificationKey = requireNonNull(verificationKey);
+            this.currentRoster = requireNonNull(currentRoster);
         }
 
         /**
@@ -182,15 +190,31 @@ public class HintsContext {
             requireNonNull(signature);
             if (this.constructionId == constructionId && partyIds.containsKey(nodeId)) {
                 final int partyId = partyIds.get(nodeId);
-                final var publicKey = codec.extractPublicKey(aggregationKey, partyId);
+                final var publicKey = extractPublicKey(aggregationKey, partyId);
                 if (publicKey != null && library.verifyBls(crs, signature, message, publicKey)) {
                     signatures.put(partyId, signature);
-                    final var weight = codec.extractWeight(aggregationKey, partyId);
+                    final var weight = currentRoster.rosterEntries().stream()
+                            .filter(e -> e.nodeId() == nodeId)
+                            .mapToLong(RosterEntry::weight)
+                            .findFirst()
+                            .orElse(0L);
                     if (weightOfSignatures.addAndGet(weight) >= thresholdWeight) {
                         future.complete(library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures));
                     }
                 }
             }
+        }
+        /**
+         * Extracts the public key for the given party id from the given aggregation key.
+         *
+         * @param aggregationKey the aggregation key
+         * @param partyId the party id
+         * @return the public key, or null if the party id is not present
+         */
+        // TODO: Use a different API instead of this
+        private Bytes extractPublicKey(@NonNull final Bytes aggregationKey, final int partyId) {
+            requireNonNull(aggregationKey);
+            return Bytes.EMPTY;
         }
     }
 }

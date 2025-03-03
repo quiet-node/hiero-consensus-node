@@ -7,7 +7,6 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
@@ -87,9 +86,6 @@ class HintsControllerImplTest {
 
     @Mock
     private HintsLibrary library;
-
-    @Mock
-    private HintsLibraryCodec codec;
 
     @Mock
     private HintsSubmissions submissions;
@@ -260,7 +256,6 @@ class HintsControllerImplTest {
         final var hintsKey = Bytes.wrap("HK");
         given(library.computeHints(INITIAL_CRS, BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
                 .willReturn(hints);
-        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints)).willReturn(hintsKey);
         given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
@@ -287,7 +282,6 @@ class HintsControllerImplTest {
         final var hintsKey = Bytes.wrap("HK");
         given(library.computeHints(INITIAL_CRS, BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
                 .willReturn(hints);
-        given(codec.encodeHintsKey(BLS_KEY_PAIR.publicKey(), hints)).willReturn(hintsKey);
         given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
@@ -507,8 +501,6 @@ class HintsControllerImplTest {
                         .crs(INITIAL_CRS)
                         .build());
         given(submissions.submitUpdateCRS(any(), any())).willReturn(CompletableFuture.completedFuture(null));
-        given(codec.decodeCrsUpdate(anyLong(), any()))
-                .willReturn(new HintsLibraryCodec.CrsUpdateOutput(NEW_CRS, PROOF));
 
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();
@@ -555,7 +547,6 @@ class HintsControllerImplTest {
                 weights,
                 scheduledTasks::offer,
                 library,
-                codec,
                 Map.of(),
                 publications,
                 submissions,

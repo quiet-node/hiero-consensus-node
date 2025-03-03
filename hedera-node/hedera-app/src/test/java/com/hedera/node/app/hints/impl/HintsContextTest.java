@@ -8,6 +8,8 @@ import com.hedera.hapi.node.state.hints.HintsConstruction;
 import com.hedera.hapi.node.state.hints.HintsScheme;
 import com.hedera.hapi.node.state.hints.NodePartyId;
 import com.hedera.hapi.node.state.hints.PreprocessedKeys;
+import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.node.app.hints.HintsLibrary;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.util.List;
@@ -39,9 +41,6 @@ class HintsContextTest {
     private HintsLibrary library;
 
     @Mock
-    private HintsLibraryCodec codec;
-
-    @Mock
     private Bytes signature;
 
     @Mock
@@ -54,7 +53,7 @@ class HintsContextTest {
 
     @BeforeEach
     void setUp() {
-        subject = new HintsContext(library, codec);
+        subject = new HintsContext(library);
     }
 
     @Test
@@ -73,21 +72,20 @@ class HintsContextTest {
 
     @Test
     void signingWorksAsExpectedFor() {
-        given(codec.extractPublicKey(AGGREGATION_KEY, A_NODE_PARTY_ID.partyId()))
-                .willReturn(badKey);
-        given(codec.extractPublicKey(AGGREGATION_KEY, B_NODE_PARTY_ID.partyId()))
-                .willReturn(null);
-        given(codec.extractPublicKey(AGGREGATION_KEY, C_NODE_PARTY_ID.partyId()))
-                .willReturn(goodKey);
-        given(codec.extractPublicKey(AGGREGATION_KEY, D_NODE_PARTY_ID.partyId()))
-                .willReturn(goodKey);
         given(library.verifyBls(CRS, signature, BLOCK_HASH, badKey)).willReturn(false);
         given(library.verifyBls(CRS, signature, BLOCK_HASH, goodKey)).willReturn(true);
         final long cWeight = 1L;
         final long dWeight = 2L;
-        given(codec.extractTotalWeight(VERIFICATION_KEY)).willReturn(3 * (cWeight + dWeight));
-        given(codec.extractWeight(AGGREGATION_KEY, C_NODE_PARTY_ID.partyId())).willReturn(cWeight);
-        given(codec.extractWeight(AGGREGATION_KEY, D_NODE_PARTY_ID.partyId())).willReturn(dWeight);
+        final var currentRoster = Roster.newBuilder()
+                .rosterEntries(RosterEntry.newBuilder()
+                        .nodeId(C_NODE_PARTY_ID.partyId())
+                        .weight(cWeight)
+                        .build())
+                .rosterEntries(RosterEntry.newBuilder()
+                        .nodeId(D_NODE_PARTY_ID.partyId())
+                        .weight(dWeight)
+                        .build())
+                .build();
         final Map<Integer, Bytes> expectedSignatures = Map.of(
                 C_NODE_PARTY_ID.partyId(), signature,
                 D_NODE_PARTY_ID.partyId(), signature);
@@ -97,7 +95,7 @@ class HintsContextTest {
 
         subject.setConstruction(CONSTRUCTION);
 
-        final var signing = subject.newSigning(BLOCK_HASH);
+        final var signing = subject.newSigning(BLOCK_HASH, currentRoster);
         final var future = signing.future();
 
         signing.incorporate(CRS, CONSTRUCTION.constructionId() + 1, 0L, signature);
