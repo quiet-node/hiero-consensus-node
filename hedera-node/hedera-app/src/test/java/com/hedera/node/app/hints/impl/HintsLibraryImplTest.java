@@ -37,7 +37,7 @@ class HintsLibraryImplTest {
         byte[] entropyBytes = new byte[32];
         RANDOM.nextBytes(entropyBytes);
         final var newCrs = subject.updateCrs(oldCrs, Bytes.wrap(entropyBytes));
-        final var decodedCrsUpdate = codec.decodeCrsUpdate(newCrs);
+        final var decodedCrsUpdate = codec.decodeCrsUpdate(oldCrs.length(), newCrs);
         final var isValid = subject.verifyCrsUpdate(oldCrs, newCrs, decodedCrsUpdate.proof());
         assertTrue(isValid);
     }
@@ -65,7 +65,7 @@ class HintsLibraryImplTest {
         byte[] entropyBytes = new byte[32];
         RANDOM.nextBytes(entropyBytes);
         final var newCrs = subject.updateCrs(crs, Bytes.wrap(entropyBytes));
-        final var decodedCrsUpdate = codec.decodeCrsUpdate(newCrs);
+        final var decodedCrsUpdate = codec.decodeCrsUpdate(crs.length(), newCrs);
 
         final var newCrsBytes = decodedCrsUpdate.crs();
         final var blsPrivateKey = subject.newBlsKeyPair();

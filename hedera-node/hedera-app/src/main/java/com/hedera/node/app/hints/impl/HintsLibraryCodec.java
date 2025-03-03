@@ -16,8 +16,6 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class HintsLibraryCodec {
-
-    private static final int CRS_LENGTH = 1456;
     private static final int CONTRIBUTION_PROOF_LENGTH = 128;
 
     @Inject
@@ -41,19 +39,15 @@ public class HintsLibraryCodec {
      * Decodes the output of {@link HintsLibrary#updateCrs(Bytes, Bytes)} into a
      * {@link CrsUpdateOutput}.
      *
+     * @param oldCRSLength the length of the old CRS
      * @param output the output of the {@link HintsLibrary#updateCrs(Bytes, Bytes)}
      * @return the hinTS key
      */
-    public CrsUpdateOutput decodeCrsUpdate(@NonNull final Bytes output) {
+    public CrsUpdateOutput decodeCrsUpdate(final long oldCRSLength, @NonNull final Bytes output) {
         requireNonNull(output);
         requireNonNull(output);
-        final int expectedLength = CRS_LENGTH + CONTRIBUTION_PROOF_LENGTH;
-        if (output.length() != expectedLength) {
-            throw new IllegalArgumentException(
-                    "Invalid output length: expected " + expectedLength + " but got " + output.length());
-        }
-        final Bytes crs = output.slice(0, CRS_LENGTH);
-        final Bytes proof = output.slice(CRS_LENGTH, CONTRIBUTION_PROOF_LENGTH);
+        final Bytes crs = output.slice(0, oldCRSLength);
+        final Bytes proof = output.slice(oldCRSLength, output.length() - oldCRSLength);
         return new CrsUpdateOutput(crs, proof);
     }
 

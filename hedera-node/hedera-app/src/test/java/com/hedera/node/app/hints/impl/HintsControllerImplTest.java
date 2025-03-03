@@ -7,6 +7,7 @@ import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
@@ -82,6 +83,7 @@ class HintsControllerImplTest {
     private static final Bytes INITIAL_CRS = Bytes.wrap("CRS");
     private static final Bytes NEW_CRS = Bytes.wrap("newCRS");
     private static final Bytes PROOF = Bytes.wrap("proof");
+    private static final int CRS_LENGTH = 1456;
 
     @Mock
     private HintsLibrary library;
@@ -505,7 +507,8 @@ class HintsControllerImplTest {
                         .crs(INITIAL_CRS)
                         .build());
         given(submissions.submitUpdateCRS(any(), any())).willReturn(CompletableFuture.completedFuture(null));
-        given(codec.decodeCrsUpdate(any())).willReturn(new HintsLibraryCodec.CrsUpdateOutput(NEW_CRS, PROOF));
+        given(codec.decodeCrsUpdate(anyLong(), any()))
+                .willReturn(new HintsLibraryCodec.CrsUpdateOutput(NEW_CRS, PROOF));
 
         final var task = requireNonNull(scheduledTasks.poll());
         task.run();

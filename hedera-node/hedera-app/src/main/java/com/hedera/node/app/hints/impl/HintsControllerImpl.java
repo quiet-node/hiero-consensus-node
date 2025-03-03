@@ -340,7 +340,7 @@ public class HintsControllerImpl implements HintsController {
         crsPublicationFuture = CompletableFuture.runAsync(
                 () -> {
                     final var updatedCRS = library.updateCrs(oldCRS, generateEntropy());
-                    final var newCRS = codec.decodeCrsUpdate(updatedCRS);
+                    final var newCRS = codec.decodeCrsUpdate(oldCRS.length(), updatedCRS);
                     submissions.submitUpdateCRS(newCRS.crs(), newCRS.proof());
                 },
                 executor);
