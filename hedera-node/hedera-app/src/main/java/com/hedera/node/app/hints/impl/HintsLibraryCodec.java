@@ -107,15 +107,4 @@ public class HintsLibraryCodec {
         requireNonNull(verificationKey);
         throw new UnsupportedOperationException("Not implemented");
     }
-
-    /**
-     * Decodes the given preprocessed keys into a {@link PreprocessedKeys} object.
-     *
-     * @param preprocessedKeys the preprocessed keys, encoded by the library
-     * @return the decoded preprocessed keys
-     */
-    public PreprocessedKeys decodePreprocessedKeys(@NonNull final AggregationAndVerificationKeys preprocessedKeys) {
-        requireNonNull(preprocessedKeys);
-        throw new UnsupportedOperationException("Not implemented");
-    }
 }
