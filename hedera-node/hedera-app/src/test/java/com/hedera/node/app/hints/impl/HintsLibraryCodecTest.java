@@ -3,7 +3,6 @@ package com.hedera.node.app.hints.impl;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.hedera.cryptography.hints.AggregationAndVerificationKeys;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import org.junit.jupiter.api.Test;
 
