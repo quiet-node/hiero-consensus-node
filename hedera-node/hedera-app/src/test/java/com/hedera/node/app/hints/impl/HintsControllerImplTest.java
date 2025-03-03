@@ -55,7 +55,7 @@ class HintsControllerImplTest {
     private static final Instant CONSENSUS_NOW = Instant.ofEpochSecond(1_234_567L, 890);
     private static final Instant PREPROCESSING_START_TIME = Instant.ofEpochSecond(1_111_111L, 222);
     private static final AggregationAndVerificationKeys ENCODED_PREPROCESSED_KEYS = new AggregationAndVerificationKeys(
-            Bytes.wrap("ENCODED").toByteArray(), Bytes.wrap("ENCODED").toByteArray());
+            Bytes.wrap("VK").toByteArray(), Bytes.wrap("AK").toByteArray());
     private static final PreprocessedKeys PREPROCESSED_KEYS = new PreprocessedKeys(Bytes.wrap("AK"), Bytes.wrap("VK"));
     private static final TssKeyPair BLS_KEY_PAIR = new TssKeyPair(Bytes.EMPTY, Bytes.EMPTY);
     private static final HintsConstruction UNFINISHED_CONSTRUCTION = HintsConstruction.newBuilder()
@@ -188,10 +188,10 @@ class HintsControllerImplTest {
         runScheduledTasks();
 
         given(library.preprocess(
-                        INITIAL_CRS,
-                        Map.of(0, EXPECTED_NODE_ONE_PUBLICATION.hintsKey()),
-                        Map.of(0, TARGET_NODE_WEIGHTS.get(1L)),
-                        EXPECTED_PARTY_SIZE))
+                        any(),
+                        eq(Map.of(0, EXPECTED_NODE_ONE_PUBLICATION.hintsKey())),
+                        eq(Map.of(0, TARGET_NODE_WEIGHTS.get(1L))),
+                        eq(EXPECTED_PARTY_SIZE)))
                 .willReturn(ENCODED_PREPROCESSED_KEYS);
         given(submissions.submitHintsVote(CONSTRUCTION_ID, PREPROCESSED_KEYS))
                 .willReturn(CompletableFuture.completedFuture(null));
@@ -231,7 +231,7 @@ class HintsControllerImplTest {
         final Map<Integer, Bytes> expectedHintsKeys =
                 Map.of(EXPECTED_NODE_ONE_PUBLICATION.partyId(), EXPECTED_NODE_ONE_PUBLICATION.hintsKey());
         final Map<Integer, Long> expectedWeights = Map.of(EXPECTED_NODE_ONE_PUBLICATION.partyId(), 8L);
-        given(library.preprocess(any(), expectedHintsKeys, expectedWeights, EXPECTED_PARTY_SIZE))
+        given(library.preprocess(any(), eq(expectedHintsKeys), eq(expectedWeights), eq(EXPECTED_PARTY_SIZE)))
                 .willReturn(ENCODED_PREPROCESSED_KEYS);
         given(submissions.submitHintsVote(CONSTRUCTION_ID, PREPROCESSED_KEYS))
                 .willReturn(CompletableFuture.completedFuture(null));

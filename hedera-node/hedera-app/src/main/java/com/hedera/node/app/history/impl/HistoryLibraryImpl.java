@@ -90,7 +90,8 @@ public class HistoryLibraryImpl implements HistoryLibrary {
         requireNonNull(sourceSignatures);
         requireNonNull(targetMetadata);
 
-        final var verifyingSignatures = sourceSignatures.values().toArray(byte[][]::new);
+        final var verifyingSignatures =
+                sourceSignatures.values().stream().map(Bytes::toByteArray).toArray(byte[][]::new);
         return Bytes.wrap(BRIDGE.proveChainOfTrust(
                 SNARK_KEYS.provingKey(),
                 SNARK_KEYS.verifyingKey(),
@@ -99,7 +100,7 @@ public class HistoryLibraryImpl implements HistoryLibrary {
                 currentAddressBookWeights,
                 nextAddressBookVerifyingKeys,
                 nextAddressBookWeights,
-                sourceProof.toByteArray(),
+                sourceProof == null ? null : sourceProof.toByteArray(),
                 targetMetadata.toByteArray(),
                 verifyingSignatures));
     }

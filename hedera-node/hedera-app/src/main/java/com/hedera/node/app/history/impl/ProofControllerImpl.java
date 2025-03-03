@@ -492,6 +492,7 @@ public class ProofControllerImpl implements ProofController {
 
     private @NonNull Bytes encodeHistory(@NonNull final History history) {
         requireNonNull(history);
-        throw new UnsupportedOperationException("Not implemented");
+        return encodeLedgerId(
+                history.addressBookHash().toByteArray(), history.metadata().toByteArray());
     }
 }
