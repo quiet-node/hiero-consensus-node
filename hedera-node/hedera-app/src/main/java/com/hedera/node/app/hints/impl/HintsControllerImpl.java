@@ -17,6 +17,7 @@ import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.hints.CRSStage;
 import com.hedera.hapi.node.state.hints.CRSState;
 import com.hedera.hapi.node.state.hints.HintsConstruction;
+import com.hedera.hapi.node.state.hints.PreprocessedKeys;
 import com.hedera.hapi.node.state.hints.PreprocessingVote;
 import com.hedera.hapi.services.auxiliary.hints.CrsPublicationTransactionBody;
 import com.hedera.node.app.hints.HintsLibrary;
@@ -633,7 +634,10 @@ public class HintsControllerImpl implements HintsController {
                             .filter(entry -> hintKeys.containsKey(entry.getValue()))
                             .collect(toMap(Map.Entry::getValue, entry -> weights.targetWeightOf(entry.getKey())));
                     final var output = library.preprocess(crs, hintKeys, aggregatedWeights, numParties);
-                    final var preprocessedKeys = codec.decodePreprocessedKeys(output);
+                    final var preprocessedKeys = PreprocessedKeys.newBuilder()
+                            .verificationKey(Bytes.wrap(output.verificationKey()))
+                            .aggregationKey(Bytes.wrap(output.aggregationKey()))
+                            .build();
                     // Prefer to vote for a congruent node's preprocessed keys if one exists
                     long congruentNodeId = -1;
                     for (final var entry : votes.entrySet()) {

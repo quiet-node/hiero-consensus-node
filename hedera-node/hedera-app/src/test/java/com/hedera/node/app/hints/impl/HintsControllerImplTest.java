@@ -193,7 +193,6 @@ class HintsControllerImplTest {
                         Map.of(0, TARGET_NODE_WEIGHTS.get(1L)),
                         EXPECTED_PARTY_SIZE))
                 .willReturn(ENCODED_PREPROCESSED_KEYS);
-        given(codec.decodePreprocessedKeys(ENCODED_PREPROCESSED_KEYS)).willReturn(PREPROCESSED_KEYS);
         given(submissions.submitHintsVote(CONSTRUCTION_ID, PREPROCESSED_KEYS))
                 .willReturn(CompletableFuture.completedFuture(null));
 
@@ -234,7 +233,6 @@ class HintsControllerImplTest {
         final Map<Integer, Long> expectedWeights = Map.of(EXPECTED_NODE_ONE_PUBLICATION.partyId(), 8L);
         given(library.preprocess(any(), expectedHintsKeys, expectedWeights, EXPECTED_PARTY_SIZE))
                 .willReturn(ENCODED_PREPROCESSED_KEYS);
-        given(codec.decodePreprocessedKeys(ENCODED_PREPROCESSED_KEYS)).willReturn(PREPROCESSED_KEYS);
         given(submissions.submitHintsVote(CONSTRUCTION_ID, PREPROCESSED_KEYS))
                 .willReturn(CompletableFuture.completedFuture(null));
         given(weights.targetWeightOf(1L)).willReturn(TARGET_NODE_WEIGHTS.get(1L));
