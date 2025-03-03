@@ -4,6 +4,11 @@ package com.hedera.node.app.store;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.node.app.history.HistoryService;
+import com.hedera.node.app.history.ReadableHistoryStore;
+import com.hedera.node.app.history.WritableHistoryStore;
+import com.hedera.node.app.history.impl.ReadableHistoryStoreImpl;
+import com.hedera.node.app.history.impl.WritableHistoryStoreImpl;
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.ReadableEntityIdStoreImpl;
 import com.hedera.node.app.records.BlockRecordService;
@@ -125,6 +130,11 @@ public class ReadableStoreFactory {
                 ReadableEntityIdStore.class,
                 new StoreEntry(
                         EntityIdService.NAME, (states, entityCounters) -> new ReadableEntityIdStoreImpl(states)));
+        newMap.put(
+                ReadableHistoryStore.class,
+                new StoreEntry(
+                        HistoryService.NAME, (states, entityCounters) -> new ReadableHistoryStoreImpl(states) {
+                }));
         return Collections.unmodifiableMap(newMap);
     }
 

@@ -19,9 +19,13 @@ import com.hedera.node.app.history.ReadableHistoryStore.ProofKeyPublication;
 import com.hedera.node.app.history.WritableHistoryStore;
 import com.hedera.node.app.roster.RosterTransitionWeights;
 import com.hedera.node.app.tss.TssKeyPair;
+import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.Comparator;
@@ -42,6 +46,7 @@ import java.util.stream.Collectors;
  * Default implementation of {@link ProofController}.
  */
 public class ProofControllerImpl implements ProofController {
+    private static final Logger log = LogManager.getLogger(ProofControllerImpl.class);
     private static final Comparator<ProofKey> PROOF_KEY_COMPARATOR = Comparator.comparingLong(ProofKey::nodeId);
     private static final Bytes EMPTY_PUBLIC_KEY = Bytes.wrap(new byte[32]);
 
@@ -113,7 +118,8 @@ public class ProofControllerImpl implements ProofController {
      * @param history the assembly with the signatures
      * @param cutoff  the time at which the signatures were sufficient
      */
-    private record Signatures(@NonNull History history, @NonNull Instant cutoff) {}
+    private record Signatures(@NonNull History history, @NonNull Instant cutoff) {
+    }
 
     public ProofControllerImpl(
             final long selfId,
@@ -176,12 +182,15 @@ public class ProofControllerImpl implements ProofController {
             if (!votes.containsKey(selfId) && proofFuture == null) {
                 if (hasSufficientSignatures()) {
                     proofFuture = startProofFuture();
+                    log.info("Started proof future for construction {}", construction.constructionId());
                 } else if (!signingNodeIds.contains(selfId) && signingFuture == null) {
                     signingFuture = startSigningFuture();
+                    log.info("Started signing future for construction {}", construction.constructionId());
                 }
             }
         } else {
             if (shouldAssemble(now)) {
+                log.info("Starting assembly time for construction {} as {}", construction.constructionId(), now);
                 construction = historyStore.setAssemblyTime(construction.constructionId(), now);
                 signingFuture = startSigningFuture();
             } else {
@@ -247,6 +256,7 @@ public class ProofControllerImpl implements ProofController {
                     final var encodedId =
                             encodeLedgerId(proof.sourceAddressBookHash().toByteArray(), targetMetadata.toByteArray());
                     historyStore.setLedgerId(encodedId);
+                    log.info("Set Ledger ID to {}", encodedId);
                 }
             }
         });
@@ -290,6 +300,7 @@ public class ProofControllerImpl implements ProofController {
      */
     private void ensureProofKeyPublished() {
         if (publicationFuture == null && weights.targetIncludes(selfId) && !targetProofKeys.containsKey(selfId)) {
+            log.info(" Publishing schnorr key for construction {}", construction.constructionId());
             publicationFuture = CompletableFuture.runAsync(
                     () -> submissions
                             .submitProofKeyPublication(schnorrKeyPair.publicKey())
@@ -381,7 +392,7 @@ public class ProofControllerImpl implements ProofController {
                                     AbstractMap.SimpleImmutableEntry::getValue));
                     final var proof = library.proveChainOfTrust(
                             Optional.ofNullable(ledgerId).orElse(sourceHash),
-                            Optional.ofNullable(sourceProof).orElse(null),
+                            sourceProof,
                             sourceWeights,
                             sourceProofKeysArray,
                             targetWeights,
