@@ -109,8 +109,7 @@ public class WritableStoreFactory {
                 new StoreEntry(HintsService.NAME, (states, entityCounters) -> new WritableHintsStoreImpl(states)));
         newMap.put(
                 WritableHistoryStore.class,
-                new StoreEntry(
-                        HistoryService.NAME, (states, entityCounters) -> new WritableHistoryStoreImpl(states)));
+                new StoreEntry(HistoryService.NAME, (states, entityCounters) -> new WritableHistoryStoreImpl(states)));
         return Collections.unmodifiableMap(newMap);
     }
 

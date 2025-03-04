@@ -82,7 +82,7 @@ public interface HistoryLibrary {
             @NonNull final byte[][] currentAddressBookVerifyingKeys,
             @NonNull final long[] nextAddressBookWeights,
             @NonNull final byte[][] nextAddressBookVerifyingKeys,
-            @NonNull Map<Long, Bytes> sourceSignatures,
+            @NonNull byte[][] sourceSignatures,
             @NonNull Bytes targetMetadata);
 
     /**

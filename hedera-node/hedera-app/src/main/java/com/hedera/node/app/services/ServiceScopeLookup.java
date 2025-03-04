@@ -108,8 +108,10 @@ public class ServiceScopeLookup {
 
             case NODE_CREATE, NODE_DELETE, NODE_UPDATE -> AddressBookService.NAME;
             case HISTORY_PROOF_KEY_PUBLICATION, HISTORY_PROOF_SIGNATURE, HISTORY_PROOF_VOTE -> HistoryService.NAME;
-            case HINTS_KEY_PUBLICATION, HINTS_PARTIAL_SIGNATURE, HINTS_PREPROCESSING_VOTE, CRS_PUBLICATION ->
-                    HintsService.NAME;
+            case HINTS_KEY_PUBLICATION,
+                    HINTS_PARTIAL_SIGNATURE,
+                    HINTS_PREPROCESSING_VOTE,
+                    CRS_PUBLICATION -> HintsService.NAME;
 
             default -> NON_EXISTING_SERVICE;
         };

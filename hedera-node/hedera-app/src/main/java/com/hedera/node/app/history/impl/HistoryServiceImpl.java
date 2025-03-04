@@ -76,8 +76,6 @@ public class HistoryServiceImpl implements HistoryService, Consumer<HistoryProof
         requireNonNull(historyStore);
         requireNonNull(now);
         requireNonNull(tssConfig);
-        System.out.println("HistoryServiceImpl.reconcile" + activeRosters.phase());
-        log.info("Reconciling history for active rosters {} at {}", activeRosters, now);
         switch (activeRosters.phase()) {
             case BOOTSTRAP, TRANSITION -> {
                 final var construction = historyStore.getOrCreateConstruction(activeRosters, now, tssConfig);

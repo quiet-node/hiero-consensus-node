@@ -8,7 +8,6 @@ import com.hedera.node.app.history.HistoryLibrary;
 import com.hedera.node.app.tss.TssKeyPair;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -30,8 +29,6 @@ public class ProofKeysAccessorImpl implements ProofKeysAccessor {
     @Override
     public TssKeyPair getOrCreateSchnorrKeyPair(final long constructionId) {
         schnorrKeyPair = library.newSchnorrKeyPair();
-        return new TssKeyPair(
-                Bytes.wrap(schnorrKeyPair.signingKey()),
-                Bytes.wrap(schnorrKeyPair.verifyingKey()));
+        return new TssKeyPair(Bytes.wrap(schnorrKeyPair.signingKey()), Bytes.wrap(schnorrKeyPair.verifyingKey()));
     }
 }

@@ -138,9 +138,7 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
 
     @Override
     public CompletableFuture<Void> logFuture(@NonNull final String pattern) {
-        return conditionFuture(
-                () -> applicationLogContains(pattern) ? REACHED : PENDING,
-                () -> LOG_SCAN_BACKOFF_MS);
+        return conditionFuture(() -> applicationLogContains(pattern) ? REACHED : PENDING, () -> LOG_SCAN_BACKOFF_MS);
     }
 
     @Override

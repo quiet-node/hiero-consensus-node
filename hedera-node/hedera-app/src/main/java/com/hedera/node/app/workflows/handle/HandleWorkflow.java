@@ -915,12 +915,9 @@ public class HandleWorkflow {
                 final Bytes currentMetadata = tssConfig.hintsEnabled()
                         ? new ReadableHintsStoreImpl(state.getReadableStates(HintsService.NAME))
                                 .getActiveVerificationKey()
-                        : Bytes.EMPTY;
-                logger.info("currentMetadata {}", currentMetadata);
+                        : Bytes.wrap(new byte[32]);
                 final var historyWritableStates = state.getWritableStates(HistoryService.NAME);
-                logger.info("historyWritableStates {}", historyWritableStates);
                 final var historyStore = new WritableHistoryStoreImpl(historyWritableStates);
-                logger.info("historyStore {}", historyStore);
                 doStreamingKVChanges(
                         historyWritableStates,
                         null,
