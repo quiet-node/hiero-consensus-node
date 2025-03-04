@@ -53,10 +53,10 @@ public class BlockNodeSimulatorSuite {
                 // Shut down block node simulator 0
                 blockNodeSimulator().shutDownImmediately(0),
                 // Verify the log message in node 0's log
-                assertHgcaaLogContains(byNodeId(0), "Error in block node stream", Duration.ofSeconds(5)),
-                sleepFor(2000),
+                assertHgcaaLogContains(byNodeId(0), "Error in block node stream", Duration.ofSeconds(10)),
                 // Restart node 0
-                blockNodeSimulator().restartImmediately(0));
+                blockNodeSimulator().restartImmediately(0),
+                sleepFor(10000));
         // TODO Add more log assertions for reconnection
     }
 

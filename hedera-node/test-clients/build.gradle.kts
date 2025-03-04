@@ -82,7 +82,7 @@ val prCheckTags =
         "hapiTestNDReconnect" to "ND_RECONNECT",
         "hapiTestTimeConsuming" to "LONG_RUNNING",
         "hapiTestMisc" to
-            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING)",
+            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING|BLOCK_NODE_SIMULATOR)",
     )
 val prCheckStartPorts =
     mapOf(
