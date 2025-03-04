@@ -226,8 +226,9 @@ public class BlockNodeSimulatorOp extends UtilOp {
 
     /**
      * Builder for sending an immediate EndOfStream response to a block node simulator.
+     * This builder also implements UtilOp so it can be used directly in HapiSpec without calling build().
      */
-    public static class SendEndOfStreamBuilder {
+    public static class SendEndOfStreamBuilder extends UtilOp {
         private final int nodeIndex;
         private final PublishStreamResponseCode responseCode;
         private long blockNumber = 0;
@@ -286,12 +287,17 @@ public class BlockNodeSimulatorOp extends UtilOp {
                     lastVerifiedBlockNumber,
                     lastVerifiedBlockConsumer);
         }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
     }
 
     /**
      * Builder for shutting down a specific block node simulator.
      */
-    public static class ShutdownBuilder {
+    public static class ShutdownBuilder extends UtilOp {
         private final int nodeIndex;
 
         private ShutdownBuilder(int nodeIndex) {
@@ -307,12 +313,17 @@ public class BlockNodeSimulatorOp extends UtilOp {
             return new BlockNodeSimulatorOp(
                     nodeIndex, BlockNodeSimulatorAction.SHUTDOWN_SIMULATOR, null, 0, null, null);
         }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
     }
 
     /**
      * Builder for shutting down all block node simulators.
      */
-    public static class ShutdownAllBuilder {
+    public static class ShutdownAllBuilder extends UtilOp {
         /**
          * Builds the operation.
          *
@@ -321,12 +332,17 @@ public class BlockNodeSimulatorOp extends UtilOp {
         public BlockNodeSimulatorOp build() {
             return new BlockNodeSimulatorOp(-1, BlockNodeSimulatorAction.SHUTDOWN_ALL_SIMULATORS, null, 0, null, null);
         }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
     }
 
     /**
      * Builder for restarting a specific block node simulator.
      */
-    public static class RestartBuilder {
+    public static class RestartBuilder extends UtilOp {
         private final int nodeIndex;
 
         private RestartBuilder(int nodeIndex) {
@@ -341,12 +357,17 @@ public class BlockNodeSimulatorOp extends UtilOp {
         public BlockNodeSimulatorOp build() {
             return new BlockNodeSimulatorOp(nodeIndex, BlockNodeSimulatorAction.RESTART_SIMULATOR, null, 0, null, null);
         }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
     }
 
     /**
      * Builder for restarting all previously shutdown block node simulators.
      */
-    public static class RestartAllBuilder {
+    public static class RestartAllBuilder extends UtilOp {
         /**
          * Builds the operation.
          *
@@ -355,16 +376,21 @@ public class BlockNodeSimulatorOp extends UtilOp {
         public BlockNodeSimulatorOp build() {
             return new BlockNodeSimulatorOp(-1, BlockNodeSimulatorAction.RESTART_ALL_SIMULATORS, null, 0, null, null);
         }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
     }
 
     /**
      * Builder for asserting that a specific block has been received by a block node simulator.
      */
-    public static class AssertBlockReceivedBuilder {
+    public static class AssertBlockReceivedBuilder extends UtilOp {
         private final int nodeIndex;
         private final long blockNumber;
 
-        private AssertBlockReceivedBuilder(int nodeIndex, long blockNumber) {
+        AssertBlockReceivedBuilder(int nodeIndex, long blockNumber) {
             this.nodeIndex = nodeIndex;
             this.blockNumber = blockNumber;
         }
@@ -378,17 +404,22 @@ public class BlockNodeSimulatorOp extends UtilOp {
             return new BlockNodeSimulatorOp(
                     nodeIndex, BlockNodeSimulatorAction.ASSERT_BLOCK_RECEIVED, null, blockNumber, null, null);
         }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
     }
 
     /**
      * Builder for getting the last verified block number from a block node simulator.
      */
-    public static class GetLastVerifiedBlockBuilder {
+    public static class GetLastVerifiedBlockBuilder extends UtilOp {
         private final int nodeIndex;
         private AtomicLong lastVerifiedBlockNumber;
         private Consumer<Long> lastVerifiedBlockConsumer;
 
-        private GetLastVerifiedBlockBuilder(int nodeIndex) {
+        GetLastVerifiedBlockBuilder(int nodeIndex) {
             this.nodeIndex = nodeIndex;
         }
 
@@ -427,6 +458,11 @@ public class BlockNodeSimulatorOp extends UtilOp {
                     0,
                     lastVerifiedBlockNumber,
                     lastVerifiedBlockConsumer);
+        }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
         }
     }
 }

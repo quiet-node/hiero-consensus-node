@@ -45,8 +45,7 @@ public class BlockNodeSimulatorSuite {
                 blockNodeSimulator()
                         .sendEndOfStreamImmediately(0, PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
                         .withBlockNumber(123456L)
-                        .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
-                        .build(),
+                        .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 // Verify the log message in node 0's log
                 // TODO This is a temporary solution. Behaviors could be verified through log statements that occur
                 // on the consensus node. In addition, the lastVerifiedBlockNumber could be used in the log verification
@@ -59,26 +58,18 @@ public class BlockNodeSimulatorSuite {
     final Stream<DynamicTest> node0BlockNodeShutsDownAndRestarts() {
         return hapiTest(
                 // Shut down block node simulator 0
-                blockNodeSimulator()
-                        .shutDownImmediately(0)
-                        .build(),
+                blockNodeSimulator().shutDownImmediately(0),
                 // Verify the log message in node 0's log
-                assertHgcaaLogContains(
-                        byNodeId(0), "Error in block node stream", Duration.ofSeconds(5)),
+                assertHgcaaLogContains(byNodeId(0), "Error in block node stream", Duration.ofSeconds(5)),
                 sleepFor(2000),
                 // Restart node 0
-                blockNodeSimulator()
-                        .restartImmediately(0)
-                        .build());
-                // TODO Add more log assretions for reconnection
+                blockNodeSimulator().restartImmediately(0));
+        // TODO Add more log assretions for reconnection
     }
 
     @HapiTest
     final Stream<DynamicTest> assertGenesisBlockReceivedBySimulator() {
-        return hapiTest(
-                blockNodeSimulator()
-                        .assertBlockReceived(0, 0)
-                        .build());
+        return hapiTest(blockNodeSimulator().assertBlockReceived(0, 0));
     }
 
     @HapiTest
@@ -99,6 +90,6 @@ public class BlockNodeSimulatorSuite {
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
                         .build(),
                 // Assert that the block has been received by the simulator
-                blockNodeSimulator().assertBlockReceived(0, lastVerifiedBlockNumber.get()).build());
+                blockNodeSimulator().assertBlockReceived(0, lastVerifiedBlockNumber.get()));
     }
 }
