@@ -10,9 +10,11 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.RECEIVE
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.asHeadlongAddress;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.entityIdFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 import com.esaulpaugh.headlong.abi.Tuple;
+import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.has.HasCallAttempt;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.has.hederaaccountnumalias.HederaAccountNumAliasCall;
@@ -42,7 +44,7 @@ public class HederaAccountNumAliasCallTest extends CallTestBase {
         // Arrange to use an account that has an alias
         given(nativeOperations.resolveAlias(0, 0, RECEIVER_ADDRESS))
                 .willReturn(ALIASED_RECEIVER.accountId().accountNumOrThrow());
-        given(nativeOperations.getAccount(RECEIVER_ID.accountNumOrThrow())).willReturn(ALIASED_RECEIVER);
+        given(nativeOperations.getAccount(any(AccountID.class))).willReturn(ALIASED_RECEIVER);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
         given(nativeOperations.configuration()).willReturn(HederaTestConfigBuilder.createConfig());
 
@@ -67,7 +69,7 @@ public class HederaAccountNumAliasCallTest extends CallTestBase {
 
         given(nativeOperations.resolveAlias(0, 0, RECEIVER_ADDRESS))
                 .willReturn(ALIASED_RECEIVER.accountId().accountNumOrThrow());
-        given(nativeOperations.getAccount(RECEIVER_ID.accountNumOrThrow())).willReturn(null);
+        given(nativeOperations.getAccount(any(AccountID.class))).willReturn(null);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
         given(nativeOperations.configuration()).willReturn(HederaTestConfigBuilder.createConfig());
         subject = new HederaAccountNumAliasCall(attempt, asHeadlongAddress(RECEIVER_ADDRESS.toByteArray()));

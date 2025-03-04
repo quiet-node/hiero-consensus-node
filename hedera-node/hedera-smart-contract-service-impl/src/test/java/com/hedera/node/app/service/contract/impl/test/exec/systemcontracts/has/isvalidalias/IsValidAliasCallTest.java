@@ -14,9 +14,11 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.realm;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.shard;
 import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.asEvmAddress;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
 import com.esaulpaugh.headlong.abi.Tuple;
+import com.hedera.hapi.node.base.AccountID;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.has.HasCallAttempt;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.has.isvalidalias.IsValidAliasCall;
 import com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.common.CallTestBase;
@@ -45,7 +47,7 @@ public class IsValidAliasCallTest extends CallTestBase {
         // Arrange to use an account that has an alias
         given(nativeOperations.resolveAlias(0, 0, RECEIVER_ADDRESS))
                 .willReturn(ALIASED_RECEIVER.accountId().accountNumOrThrow());
-        given(nativeOperations.getAccount(RECEIVER_ID.accountNumOrThrow())).willReturn(ALIASED_RECEIVER);
+        given(nativeOperations.getAccount(any(AccountID.class))).willReturn(ALIASED_RECEIVER);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
         given(nativeOperations.configuration()).willReturn(HederaTestConfigBuilder.createConfig());
         subject = new IsValidAliasCall(attempt, asHeadlongAddress(RECEIVER_ADDRESS.toByteArray()));
@@ -64,7 +66,7 @@ public class IsValidAliasCallTest extends CallTestBase {
     void successfulCallWithValidLongZeroWithAlias() {
         given(attempt.systemContractGasCalculator()).willReturn(gasCalculator);
         given(attempt.enhancement()).willReturn(mockEnhancement());
-        given(nativeOperations.getAccount(RECEIVER_ID.accountNumOrThrow())).willReturn(ALIASED_RECEIVER);
+        given(nativeOperations.getAccount(any(AccountID.class))).willReturn(ALIASED_RECEIVER);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
 
         subject = new IsValidAliasCall(
@@ -84,7 +86,7 @@ public class IsValidAliasCallTest extends CallTestBase {
     void successfulCallWithValidLongZeroWithoutAlias() {
         given(attempt.systemContractGasCalculator()).willReturn(gasCalculator);
         given(attempt.enhancement()).willReturn(mockEnhancement());
-        given(nativeOperations.getAccount(RECEIVER_ID.accountNumOrThrow())).willReturn(UNALIASED_RECEIVER);
+        given(nativeOperations.getAccount(any(AccountID.class))).willReturn(UNALIASED_RECEIVER);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
 
         subject = new IsValidAliasCall(
@@ -107,7 +109,7 @@ public class IsValidAliasCallTest extends CallTestBase {
 
         given(nativeOperations.resolveAlias(0, 0, RECEIVER_ADDRESS))
                 .willReturn(ALIASED_RECEIVER.accountId().accountNumOrThrow());
-        given(nativeOperations.getAccount(RECEIVER_ID.accountNumOrThrow())).willReturn(null);
+        given(nativeOperations.getAccount(any(AccountID.class))).willReturn(null);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
         given(nativeOperations.configuration()).willReturn(HederaTestConfigBuilder.createConfig());
         subject = new IsValidAliasCall(attempt, asHeadlongAddress(RECEIVER_ADDRESS.toByteArray()));

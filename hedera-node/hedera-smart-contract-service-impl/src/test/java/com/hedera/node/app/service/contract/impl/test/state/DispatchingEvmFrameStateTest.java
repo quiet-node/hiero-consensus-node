@@ -36,6 +36,7 @@ import com.hedera.hapi.node.base.ContractID;
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.KeyList;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.hapi.node.base.TokenID;
 import com.hedera.hapi.node.state.contract.Bytecode;
 import com.hedera.hapi.node.state.contract.SlotKey;
 import com.hedera.hapi.node.state.contract.SlotValue;
@@ -470,7 +471,8 @@ class DispatchingEvmFrameStateTest {
 
     @Test
     void throwsIfAccountMissing() {
-        assertThrows(IllegalArgumentException.class, () -> subject.getAddress(ACCOUNT_NUM));
+        assertThrows(
+                IllegalArgumentException.class, () -> subject.getAddress(entityIdFactory.newAccountId(ACCOUNT_NUM)));
     }
 
     @Test
@@ -862,12 +864,12 @@ class DispatchingEvmFrameStateTest {
     }
 
     private void givenWellKnownToken() {
-        given(nativeOperations.getToken(TOKEN_NUM))
+        given(nativeOperations.getToken(any(TokenID.class)))
                 .willReturn(Token.newBuilder().build());
     }
 
     private void givenWellKnownSchedule() {
-        given(nativeOperations.getSchedule(SCHEDULE_NUM))
+        given(nativeOperations.getSchedule(entityIdFactory.newScheduleId(SCHEDULE_NUM)))
                 .willReturn(Schedule.newBuilder().build());
     }
 

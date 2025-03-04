@@ -383,8 +383,9 @@ public class DispatchingEvmFrameState implements EvmFrameState {
                     ? asLongZeroAddress(nativeOperations.entityIdFactory(), number)
                     : pbjToBesuAddress(evmAddress);
         }
-        final var token = nativeOperations.getToken(number);
-        final var schedule = nativeOperations.getSchedule(number);
+        final var token = nativeOperations.getToken(entityIdFactory().newTokenId(number));
+        final var schedule =
+                nativeOperations.getSchedule(nativeOperations.entityIdFactory().newScheduleId(number));
         if (token != null || schedule != null) {
             // If the token or schedule  is deleted or expired, the system contract executed by the redirect
             // bytecode will fail with a more meaningful error message, so don't check that here
@@ -558,7 +559,7 @@ public class DispatchingEvmFrameState implements EvmFrameState {
         if (number == MISSING_ENTITY_NUMBER) {
             return null;
         }
-        final AccountID accountID = AccountID.newBuilder().accountNum(number).build();
+        final AccountID accountID = entityIdFactory().newAccountId(number);
         final var account = nativeOperations.getAccount(accountID);
         if (account != null) {
             if (account.deleted() || account.expiredAndPendingRemoval() || isNotPriority(address, account)) {
@@ -570,13 +571,14 @@ public class DispatchingEvmFrameState implements EvmFrameState {
                 return new ProxyEvmAccount(account.accountId(), this);
             }
         }
-        final var token = nativeOperations.getToken(number);
+        final var token = nativeOperations.getToken(entityIdFactory().newTokenId(number));
         if (token != null) {
             // If the token is deleted or expired, the system contract executed by the redirect
             // bytecode will fail with a more meaningful error message, so don't check that here
             return new TokenEvmAccount(address, this);
         }
-        final var schedule = nativeOperations.getSchedule(number);
+        final var schedule =
+                nativeOperations.getSchedule(nativeOperations.entityIdFactory().newScheduleId(number));
         if (schedule != null) {
             // If the schedule is deleted or expired, the system contract executed by the redirect
             // bytecode will fail with a more meaningful error message, so don't check that here
