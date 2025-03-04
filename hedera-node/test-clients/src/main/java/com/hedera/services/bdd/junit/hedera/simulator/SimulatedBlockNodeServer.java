@@ -282,7 +282,7 @@ public class SimulatedBlockNodeServer {
             try {
                 observer.onNext(PublishStreamResponse.newBuilder()
                         .setStatus(EndOfStream.newBuilder()
-                                .setResponseCode(responseCode)
+                                .setStatus(responseCode)
                                 .setBlockNumber(blockNumber)
                                 .build())
                         .build());

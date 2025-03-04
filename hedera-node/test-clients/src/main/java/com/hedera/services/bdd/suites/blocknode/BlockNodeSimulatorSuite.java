@@ -13,7 +13,6 @@ import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.hedera.BlockNodeMode;
-import com.hedera.services.bdd.junit.hedera.WithBlockNodes;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
@@ -22,15 +21,17 @@ import org.junit.jupiter.api.Tag;
 
 /**
  * This suite is for testing with the block node simulator.
+ * 
+ * <p>Note: This suite requires the block node simulator to be enabled.
+ * Use the system property "hapi.spec.blocknode.mode=SIM" to enable it.
+ * The hapiTestBlockNodeSimulator task automatically sets this property.
  */
 @Tag(BLOCK_NODE_SIMULATOR)
-@WithBlockNodes(BlockNodeMode.SIMULATOR)
 public class BlockNodeSimulatorSuite {
 
     @HapiTest
     final Stream<DynamicTest> node0BlockNodeInternalError() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
-
         return hapiTest(
                 // Block node simulator 0 respond with internal error
                 blockNodeSimulator()
