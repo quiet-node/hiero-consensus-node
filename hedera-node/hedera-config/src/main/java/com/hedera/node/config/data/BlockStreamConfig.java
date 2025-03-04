@@ -40,7 +40,7 @@ public record BlockStreamConfig(
         @ConfigProperty(defaultValue = "2") @NetworkProperty long waitPeriodForActiveConnection,
         @ConfigProperty(defaultValue = "localhost") String grpcAddress,
         @ConfigProperty(defaultValue = "8080") @Min(0) @Max(65535) int grpcPort,
-        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean streamBlockHeaderSeparately){
+        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean streamBlockHeaderSeparately) {
 
     /**
      * Whether to stream to block nodes.
