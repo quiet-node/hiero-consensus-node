@@ -152,7 +152,9 @@ public class HasCallAttempt extends AbstractCallAttempt<HasCallAttempt> {
                             config.shard(),
                             config.realm(),
                             com.hedera.pbj.runtime.io.buffer.Bytes.wrap(accountAddress.toArray()));
-            return enhancement.nativeOperations().getAccount(nativeOperations().entityIdFactory().newAccountId(addressNum));
+            return enhancement
+                    .nativeOperations()
+                    .getAccount(nativeOperations().entityIdFactory().newAccountId(addressNum));
         }
     }
 
