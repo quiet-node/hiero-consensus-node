@@ -94,7 +94,10 @@ class HintsLibraryImplTest {
         final var signature = subject.signBls(Bytes.wrap(message), blsPrivateKey);
         assertNotNull(signature);
 
-        final var isValid = subject.verifyBls(crs, signature, Bytes.wrap(message), extendedPublicKey);
+        final var keys = subject.preprocess(crs, Map.of(1, extendedPublicKey), Map.of(1, 200L), 4);
+
+        final var isValid =
+                subject.verifyBls(crs, signature, Bytes.wrap(message), Bytes.wrap(keys.aggregationKey()), 1);
         assertTrue(isValid);
     }
 

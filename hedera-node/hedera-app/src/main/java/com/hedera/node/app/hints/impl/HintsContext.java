@@ -191,7 +191,7 @@ public class HintsContext {
             if (this.constructionId == constructionId && partyIds.containsKey(nodeId)) {
                 final int partyId = partyIds.get(nodeId);
                 final var publicKey = extractPublicKey(aggregationKey, partyId);
-                if (publicKey != null && library.verifyBls(crs, signature, message, publicKey)) {
+                if (publicKey != null && library.verifyBls(crs, signature, message, aggregationKey, partyId)) {
                     signatures.put(partyId, signature);
                     final var weight = currentRoster.rosterEntries().stream()
                             .filter(e -> e.nodeId() == nodeId)

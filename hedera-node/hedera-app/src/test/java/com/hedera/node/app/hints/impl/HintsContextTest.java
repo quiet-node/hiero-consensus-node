@@ -3,6 +3,7 @@ package com.hedera.node.app.hints.impl;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
@@ -74,7 +75,8 @@ class HintsContextTest {
 
     @Test
     void signingWorksAsExpectedFor() {
-        given(library.verifyBls(eq(CRS), eq(signature), eq(BLOCK_HASH), any())).willReturn(true);
+        given(library.verifyBls(eq(CRS), eq(signature), eq(BLOCK_HASH), any(), anyInt()))
+                .willReturn(true);
         final long cWeight = 1L;
         final long dWeight = 2L;
         final var currentRoster = Roster.newBuilder()
