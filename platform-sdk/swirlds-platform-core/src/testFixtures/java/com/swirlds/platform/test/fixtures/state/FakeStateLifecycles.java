@@ -39,9 +39,8 @@ import com.swirlds.platform.system.events.Event;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.StateMetadata;
-import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.merkle.singleton.StringLeaf;
 import com.swirlds.state.spi.CommittableWritableStates;
@@ -145,7 +144,7 @@ public enum FakeStateLifecycles implements StateLifecycles<MerkleNodeState> {
                 .forEach(def -> {
                     final var md = new StateMetadata<>(RosterStateId.NAME, schema, def);
                     if (def.singleton()) {
-                        merkleStateRoot.putServiceStateIfAbsent(
+                        state.putServiceStateIfAbsent(
                                 md,
                                 () -> new SingletonNode<>(
                                         md.serviceName(),
@@ -154,10 +153,10 @@ public enum FakeStateLifecycles implements StateLifecycles<MerkleNodeState> {
                                         md.stateDefinition().valueCodec(),
                                         null));
                     } else if (def.onDisk()) {
-                        merkleStateRoot.putServiceStateIfAbsent(md, () -> {
+                        state.putServiceStateIfAbsent(md, () -> {
                             final var tableConfig =
                                     new MerkleDbTableConfig((short) 1, DigestType.SHA_384, def.maxKeysHint(), 16);
-                            final var label = StateUtils.computeLabel(RosterStateId.NAME, def.stateKey());
+                            final var label = StateMetadata.computeLabel(RosterStateId.NAME, def.stateKey());
                             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
                             final var virtualMap = new VirtualMap(label, dsBuilder, CONFIGURATION);
                             return virtualMap;
