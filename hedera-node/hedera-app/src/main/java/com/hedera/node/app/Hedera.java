@@ -1355,7 +1355,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         }
 
         logger.info("Initializing block node connections with timeout {}", timeout);
-        boolean connected = daggerApp.blockNodeConnectionManager().waitForConnection(timeout);
+        boolean connected = daggerApp.blockNodeConnectionManager().waitForConnections(timeout);
         final var blockNodeConnectionConfig =
                 configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
         if (blockNodeConnectionConfig.shutdownNodeOnNoBlockNodes() && !connected) {

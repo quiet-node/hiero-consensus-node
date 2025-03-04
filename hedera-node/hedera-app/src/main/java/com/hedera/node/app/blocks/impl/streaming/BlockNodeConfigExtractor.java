@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,7 +18,6 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConfigExtractor {
     private static final Logger logger = LogManager.getLogger(BlockNodeConfigExtractor.class);
-    private final Map<Integer, List<BlockNodeConfig>> nodesByPriority = Map.of();
     private final int maxNumberOfSimultaneousConnections;
     private final List<BlockNodeConfig> allNodes;
     private final int blockItemBatchSize;
@@ -40,11 +38,11 @@ public class BlockNodeConfigExtractor {
                     .collect(Collectors.toList());
 
             this.blockItemBatchSize = protoConfig.blockItemBatchSize();
-            this.maxNumberOfSimultaneousConnections =
-                    protoConfig.maxNumberOfSimultaneousConnections(); // ✅ Corrected this
+            this.maxNumberOfSimultaneousConnections = protoConfig.maxNumberOfSimultaneousConnections();
 
             logger.info("Loaded block node configuration from {}", configPath);
             logger.info("Block node configuration: {}", allNodes);
+            logger.info("Block item batch size: {}", blockItemBatchSize);
             logger.info("Max simultaneous connections: {}", maxNumberOfSimultaneousConnections);
 
         } catch (IOException | ParseException e) {

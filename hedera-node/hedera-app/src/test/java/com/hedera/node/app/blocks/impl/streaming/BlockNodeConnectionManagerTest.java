@@ -16,8 +16,11 @@ import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
+import com.hedera.node.config.data.BlockNodeConnectionConfig;
+import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import java.time.Duration;
+import java.util.List;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,11 +32,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BlockNodeConnectionManagerTest {
     private static final Duration INITIAL_DELAY = Duration.ofMillis(10);
 
-    @LoggingSubject
-    BlockNodeConnectionManager blockNodeConnectionManager;
-
     @LoggingTarget
     private LogCaptor logCaptor;
+
+    @LoggingSubject
+    BlockNodeConnectionManager blockNodeConnectionManager;
 
     @Mock
     ConfigProvider mockConfigProvider;
@@ -44,11 +47,21 @@ class BlockNodeConnectionManagerTest {
     @Mock
     BlockNodeConnection mockConnection;
 
+    @Mock
+    private BlockNodeConnectionConfig mockBlockNodeConnectionConfig;
+
+    @Mock
+    private BlockStreamConfig mockBlockStreamConfig;
+
+    @Mock
+    private BlockNodeConfigExtractor mockNodeConfigExtractor;
+
     @BeforeEach
     public void setUp() {
         final var config = HederaTestConfigBuilder.create()
+                .withConfigDataType(BlockStreamConfig.class)
                 .withValue("blockStream.writerMode", "FILE_AND_GRPC")
-                .withValue("blockStream.blockNodeConnectionFileDir", "./src/test/resources/bootstrap")
+                .withValue("blockNode.blockNodeConnectionFileDir", "./src/test/resources/bootstrap")
                 .getOrCreateConfig();
         given(mockConfigProvider.getConfiguration()).willReturn(new VersionedConfigImpl(config, 1));
         blockNodeConnectionManager = new BlockNodeConnectionManager(mockConfigProvider);
@@ -91,5 +104,24 @@ class BlockNodeConnectionManagerTest {
 
         assertThat(logCaptor.infoLogs()).contains("Retrying in 1000 ms");
         verify(mockConnection, times(1)).establishStream();
+    }
+
+    @Test
+    void testEstablishConnections_PrioritizesNodes() {
+
+        // Establishing connections indirectly via waitForConnections
+        blockNodeConnectionManager.waitForConnections(Duration.ofSeconds(5));
+
+        List<String> infoLogs = logCaptor.infoLogs();
+        assertThat(infoLogs.get(0)).contains("Establishing connections to block nodes");
+
+        // Verify the order of connection attempts: The high priority node should be the first
+        assertThat(infoLogs.get(1)).contains("Connecting to block node localhost:8080");
+
+        // The lower priority nodes (any of node2, node3, node4) should come after that
+        assertThat(infoLogs.get(2))
+                .matches(log -> log.contains("Connecting to block node node2.example.com:8080")
+                        || log.contains("Connecting to block node node3.example.com:8081")
+                        || log.contains("Connecting to block node node4.example.com:8081"));
     }
 }

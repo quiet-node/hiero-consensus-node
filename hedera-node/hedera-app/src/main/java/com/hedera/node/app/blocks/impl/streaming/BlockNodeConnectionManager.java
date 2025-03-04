@@ -27,10 +27,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -60,8 +58,7 @@ public class BlockNodeConnectionManager {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final ExecutorService streamingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService retryExecutor = Executors.newVirtualThreadPerTaskExecutor();
-
-    private final ExecutorService connectionExecutor;
+    private final ScheduledExecutorService connectionExecutor;
     private final int maxSimultaneousConnections;
 
     /**
@@ -75,13 +72,14 @@ public class BlockNodeConnectionManager {
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
         if (!blockStreamConfig.streamToBlockNodes()) {
             maxSimultaneousConnections = 0;
-            connectionExecutor = Executors.newFixedThreadPool(1);
+            connectionExecutor = Executors.newScheduledThreadPool(1);
+
             return;
         }
         final var blockNodeConfig = configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
         this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockNodeConfig.blockNodeConnectionFileDir());
         this.maxSimultaneousConnections = blockNodeConfigurations.getMaxNumberOfSimultaneousConnections();
-        this.connectionExecutor = Executors.newFixedThreadPool(maxSimultaneousConnections);
+        this.connectionExecutor = Executors.newScheduledThreadPool(maxSimultaneousConnections);
     }
 
     /**
@@ -97,7 +95,8 @@ public class BlockNodeConnectionManager {
         List<Integer> sortedPriorities = new ArrayList<>(priorityGroups.keySet());
         sortedPriorities.sort(Integer::compare);
 
-        Set<BlockNodeConfig> selectedNodes = new HashSet<>();
+        // Ensure priority-based order of insertion
+        List<BlockNodeConfig> selectedNodes = new ArrayList<>();
         for (Integer priority : sortedPriorities) {
             List<BlockNodeConfig> nodesInGroup = new ArrayList<>(priorityGroups.get(priority));
             Collections.shuffle(nodesInGroup);
@@ -114,7 +113,7 @@ public class BlockNodeConnectionManager {
         selectedNodes.forEach(this::connectToNode);
     }
 
-    private void connectToNode(@NonNull BlockNodeConfig node) {
+    void connectToNode(@NonNull BlockNodeConfig node) {
         logger.info("Connecting to block node {}:{}", node.address(), node.port());
         try {
             GrpcClient client = GrpcClient.builder()
@@ -302,15 +301,17 @@ public class BlockNodeConnectionManager {
      * @param timeout maximum time to wait
      * @return true if at least one connection was established, false if timeout occurred
      */
-    public boolean waitForConnection(Duration timeout) {
+    public boolean waitForConnections(Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         establishConnections();
 
-        scheduler.scheduleAtFixedRate(
+        Instant deadline = Instant.now().plus(timeout);
+
+        connectionExecutor.scheduleAtFixedRate(
                 () -> {
-                    if (!activeConnections.isEmpty()) {
+                    if (activeConnections.size() >= maxSimultaneousConnections) {
                         future.complete(true);
-                    } else if (Instant.now().isAfter(Instant.now().plus(timeout))) {
+                    } else if (Instant.now().isAfter(deadline)) {
                         future.complete(false);
                     }
                 },
