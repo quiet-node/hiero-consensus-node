@@ -3,6 +3,7 @@ package com.swirlds.merkledb.files.hashmap;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.logging.legacy.LogMarker.MERKLE_DB;
+import static com.swirlds.merkledb.files.DataFileCommon.dataLocationToString;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
@@ -607,6 +608,16 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
                 // Read from bytes
                 bucket.readFrom(bucketData);
                 if (bucketIndex != bucket.getBucketIndex()) {
+                    logger.error(MERKLE_DB.getMarker(), "Bucket index integrity error");
+                    logger.error(MERKLE_DB.getMarker(), "Expected bucket index: {}", bucketIndex);
+                    logger.error(MERKLE_DB.getMarker(), "Actual bucket index: {}", bucket.getBucketIndex());
+                    logger.error(MERKLE_DB.getMarker(), "Bucket from disk: {}", bucket);
+                    logger.error(MERKLE_DB.getMarker(), "File location ({}): {}", bucketIndex, dataLocationToString(bucketIndexToBucketLocation.get(bucketIndex)));
+                    logger.error(MERKLE_DB.getMarker(), "File location ({}): {}", bucket.getBucketIndex(), dataLocationToString(bucketIndexToBucketLocation.get(bucket.getBucketIndex())));
+                    logger.error(MERKLE_DB.getMarker(), "File list");
+                    fileCollection.dataFiles.get().stream().forEach(r -> {
+                        logger.error(MERKLE_DB.getMarker(), "Data file: index={} path={} completed={} size={}", r.getIndex(), r.getPath(), r.isFileCompleted(), r.getSize());
+                    });
                     throw new RuntimeException(
                             "Bucket index integrity check " + bucketIndex + " != " + bucket.getBucketIndex());
                 }

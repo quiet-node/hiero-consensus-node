@@ -132,7 +132,7 @@ public class DataFileCollection implements Snapshotable {
      * compaction file is flushed to disk, and compaction is put on hold using {@link
      * DataFileCompactor#pauseCompaction()} and then resumed after snapshot is complete.
      */
-    private final AtomicReference<ImmutableIndexedObjectList<DataFileReader>> dataFiles = new AtomicReference<>();
+    public final AtomicReference<ImmutableIndexedObjectList<DataFileReader>> dataFiles = new AtomicReference<>();
 
     /**
      * The current open file writer, if we are in the middle of writing a new file during flush, or
