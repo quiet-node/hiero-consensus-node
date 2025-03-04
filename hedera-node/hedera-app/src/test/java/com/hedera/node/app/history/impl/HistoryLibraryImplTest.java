@@ -40,7 +40,7 @@ class HistoryLibraryImplTest {
 
     @Test
     void verifiesProofOfTrust() {
-        final List<KeyPairAndWeight> sourceAddresses = buildSomeAddresses(3);
+        final List<KeyPairAndWeight> sourceAddresses = buildSomeAddresses(4);
         final var sourceKeys =
                 sourceAddresses.stream().map(k -> k.keys.verifyingKey()).toArray(byte[][]::new);
         final var sourceWeights = sourceAddresses.stream()
@@ -48,7 +48,7 @@ class HistoryLibraryImplTest {
                 .mapToLong(Long::longValue)
                 .toArray();
 
-        final List<KeyPairAndWeight> targetAddresses = buildSomeAddresses(2);
+        final List<KeyPairAndWeight> targetAddresses = buildSomeAddresses(4);
         final var targetKeys =
                 targetAddresses.stream().map(k -> k.keys.verifyingKey()).toArray(byte[][]::new);
         final var targetWeights = targetAddresses.stream()
@@ -101,7 +101,7 @@ class HistoryLibraryImplTest {
     }
 
     private List<KeyPairAndWeight> buildSomeAddresses(final int num) {
-        return List.of(fromRandom(111), fromRandom(222), fromRandom(333), fromRandom(444))
+        return List.of(fromRandom(111), fromRandom(222), fromRandom(333), fromRandom(444), fromRandom(555))
                 .subList(0, num);
     }
 }

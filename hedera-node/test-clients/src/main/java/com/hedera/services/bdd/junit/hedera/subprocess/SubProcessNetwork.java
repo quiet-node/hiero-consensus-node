@@ -432,7 +432,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 // Block until all nodes are ACTIVE
                 nodes.forEach(node -> awaitStatus(node, ACTIVE, Duration.between(Instant.now(), deadline)));
                 nodes.forEach(node -> node.logFuture("Ledger ID to")
-                        .orTimeout(10, TimeUnit.MINUTES)
+                        .orTimeout(20, TimeUnit.MINUTES)
                         .join());
                 this.clients = HapiClients.clientsFor(this);
             });

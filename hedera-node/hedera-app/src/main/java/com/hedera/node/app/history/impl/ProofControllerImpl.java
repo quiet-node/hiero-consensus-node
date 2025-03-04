@@ -251,8 +251,11 @@ public class ProofControllerImpl implements ProofController {
                 .map(Map.Entry::getKey)
                 .findFirst();
         maybeWinningProof.ifPresent(proof -> {
+            log.info("maybeWinningProof {}", proof);
             construction = historyStore.completeProof(construction.constructionId(), proof);
+            log.info("completeProof {} StoreConstId{}, constId {}", construction, historyStore.getActiveConstruction().constructionId(), construction.constructionId());
             if (historyStore.getActiveConstruction().constructionId() == construction.constructionId()) {
+                log.info("ledgerId {}", ledgerId);
                 proofConsumer.accept(proof);
                 if (ledgerId == null) {
                     requireNonNull(targetMetadata);
@@ -432,6 +435,7 @@ public class ProofControllerImpl implements ProofController {
                             targetProofKeysArray,
                             verifyingSignatures,
                             targetMetadata);
+                    log.info("proveChainOfTrust {}", proof);
                     final var metadataProof = HistoryProof.newBuilder()
                             .sourceAddressBookHash(sourceHash)
                             .targetProofKeys(proofKeyListFrom(targetProofKeys))
