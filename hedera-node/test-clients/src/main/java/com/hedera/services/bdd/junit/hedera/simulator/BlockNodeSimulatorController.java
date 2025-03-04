@@ -262,4 +262,23 @@ public class BlockNodeSimulatorController {
             return 0L;
         }
     }
+
+    /**
+     * Check if a specific simulator has been shut down.
+     *
+     * @param index the index of the simulated block node (0-based)
+     * @return true if the simulator has been shut down, false otherwise
+     */
+    public boolean isSimulatorShutdown(int index) {
+        return shutdownSimulatorPorts.containsKey(index);
+    }
+
+    /**
+     * Check if any simulators have been shut down.
+     *
+     * @return true if any simulators have been shut down, false otherwise
+     */
+    public boolean areAnySimulatorsShutdown() {
+        return !shutdownSimulatorPorts.isEmpty();
+    }
 }

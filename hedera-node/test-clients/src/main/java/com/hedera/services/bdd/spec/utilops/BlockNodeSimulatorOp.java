@@ -78,11 +78,32 @@ public class BlockNodeSimulatorOp extends UtilOp {
                 log.info("Shutdown simulator {} to simulate connection drop", nodeIndex);
                 break;
             case RESTART_SIMULATOR:
+                if (!controller.isSimulatorShutdown(nodeIndex)) {
+                    log.error("Cannot restart simulator {} because it has not been shut down", nodeIndex);
+                    return false;
+                }
                 try {
                     controller.restartSimulator(nodeIndex);
                     log.info("Restarted simulator {}", nodeIndex);
                 } catch (IOException e) {
                     log.error("Failed to restart simulator {}", nodeIndex, e);
+                    return false;
+                }
+                break;
+            case SHUTDOWN_ALL_SIMULATORS:
+                controller.shutdownAllSimulators();
+                log.info("Shutdown all simulators to simulate connection drops");
+                break;
+            case RESTART_ALL_SIMULATORS:
+                if (!controller.areAnySimulatorsShutdown()) {
+                    log.error("Cannot restart simulators because none have been shut down");
+                    return false;
+                }
+                try {
+                    controller.restartAllSimulators();
+                    log.info("Restarted all previously shutdown simulators");
+                } catch (IOException e) {
+                    log.error("Failed to restart simulators", e);
                     return false;
                 }
                 break;
@@ -107,7 +128,9 @@ public class BlockNodeSimulatorOp extends UtilOp {
         SET_END_OF_STREAM_RESPONSE,
         RESET_RESPONSES,
         SHUTDOWN_SIMULATOR,
-        RESTART_SIMULATOR
+        RESTART_SIMULATOR,
+        SHUTDOWN_ALL_SIMULATORS,
+        RESTART_ALL_SIMULATORS
     }
 
     /**
@@ -120,6 +143,44 @@ public class BlockNodeSimulatorOp extends UtilOp {
     public static SendEndOfStreamBuilder sendEndOfStreamImmediately(
             int nodeIndex, PublishStreamResponseCode responseCode) {
         return new SendEndOfStreamBuilder(nodeIndex, responseCode);
+    }
+
+    /**
+     * Creates a builder for shutting down a specific block node simulator immediately.
+     *
+     * @param nodeIndex the index of the block node simulator (0-based)
+     * @return a builder for the operation
+     */
+    public static ShutdownBuilder shutdownImmediately(int nodeIndex) {
+        return new ShutdownBuilder(nodeIndex);
+    }
+
+    /**
+     * Creates a builder for shutting down all block node simulators immediately.
+     *
+     * @return a builder for the operation
+     */
+    public static ShutdownAllBuilder shutdownAll() {
+        return new ShutdownAllBuilder();
+    }
+
+    /**
+     * Creates a builder for restarting a specific block node simulator immediately.
+     *
+     * @param nodeIndex the index of the block node simulator (0-based)
+     * @return a builder for the operation
+     */
+    public static RestartBuilder restartImmediately(int nodeIndex) {
+        return new RestartBuilder(nodeIndex);
+    }
+
+    /**
+     * Creates a builder for restarting all previously shutdown block node simulators.
+     *
+     * @return a builder for the operation
+     */
+    public static RestartAllBuilder restartAll() {
+        return new RestartAllBuilder();
     }
 
     /**
@@ -183,6 +244,98 @@ public class BlockNodeSimulatorOp extends UtilOp {
                     blockNumber,
                     lastVerifiedBlockNumber,
                     lastVerifiedBlockConsumer);
+        }
+    }
+
+    /**
+     * Builder for shutting down a specific block node simulator.
+     */
+    public static class ShutdownBuilder {
+        private final int nodeIndex;
+
+        private ShutdownBuilder(int nodeIndex) {
+            this.nodeIndex = nodeIndex;
+        }
+
+        /**
+         * Builds the operation.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp build() {
+            return new BlockNodeSimulatorOp(
+                    nodeIndex,
+                    BlockNodeSimulatorAction.SHUTDOWN_SIMULATOR,
+                    null,
+                    0,
+                    null,
+                    null);
+        }
+    }
+
+    /**
+     * Builder for shutting down all block node simulators.
+     */
+    public static class ShutdownAllBuilder {
+        /**
+         * Builds the operation.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp build() {
+            return new BlockNodeSimulatorOp(
+                    -1,
+                    BlockNodeSimulatorAction.SHUTDOWN_ALL_SIMULATORS,
+                    null,
+                    0,
+                    null,
+                    null);
+        }
+    }
+
+    /**
+     * Builder for restarting a specific block node simulator.
+     */
+    public static class RestartBuilder {
+        private final int nodeIndex;
+
+        private RestartBuilder(int nodeIndex) {
+            this.nodeIndex = nodeIndex;
+        }
+
+        /**
+         * Builds the operation.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp build() {
+            return new BlockNodeSimulatorOp(
+                    nodeIndex,
+                    BlockNodeSimulatorAction.RESTART_SIMULATOR,
+                    null,
+                    0,
+                    null,
+                    null);
+        }
+    }
+
+    /**
+     * Builder for restarting all previously shutdown block node simulators.
+     */
+    public static class RestartAllBuilder {
+        /**
+         * Builds the operation.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp build() {
+            return new BlockNodeSimulatorOp(
+                    -1,
+                    BlockNodeSimulatorAction.RESTART_ALL_SIMULATORS,
+                    null,
+                    0,
+                    null,
+                    null);
         }
     }
 }

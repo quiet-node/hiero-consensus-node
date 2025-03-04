@@ -7,6 +7,7 @@ import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.utilops.BlockNodeSimulatorVerbs.blockNodeSimulator;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogContains;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
@@ -25,14 +26,6 @@ import org.junit.jupiter.api.Tag;
 @Tag(BLOCK_NODE_SIMULATOR)
 @WithBlockNodes(BlockNodeMode.SIMULATOR)
 public class BlockNodeSimulatorSuite {
-
-    @HapiTest
-    final Stream<DynamicTest> simulatorsAsExpected() {
-        return hapiTest(cryptoCreate("simpleAccount")
-                .balance(ONE_HUNDRED_HBARS)
-                .declinedReward(true)
-                .stakedNodeId(0));
-    }
 
     @HapiTest
     final Stream<DynamicTest> node0BlockNodeInternalError() {
@@ -60,5 +53,24 @@ public class BlockNodeSimulatorSuite {
                 // below.
                 assertHgcaaLogContains(
                         byNodeId(0), "Error returned from block node at block number 123456", Duration.ofSeconds(5)));
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> node0BlockNodeShutsDown() {
+        return hapiTest(
+                // Use the simulator controller to shut down node 0
+                blockNodeSimulator()
+                        .shutDownImmediately(0)
+                        .build(),
+                // Verify the log message in node 0's log
+                // The consensus node should log an error when the block node connection is lost
+                assertHgcaaLogContains(
+                        byNodeId(0), "Error in block node stream", Duration.ofSeconds(10)),
+                // Restart node 0
+                blockNodeSimulator()
+                        .restartImmediately(0)
+                        .build(),
+                // TODO Make assertion that the consensus node reconnects to the block node
+                sleepFor(10000));
     }
 }
