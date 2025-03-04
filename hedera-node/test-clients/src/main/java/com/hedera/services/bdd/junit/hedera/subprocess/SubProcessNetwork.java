@@ -236,7 +236,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         log.info("Starting network with block node mode: {}", blockNodeMode);
 
         // First start block nodes if needed
-        if (blockNodeMode == BlockNodeMode.CONTAINERS) {
+        if (blockNodeMode == BlockNodeMode.REAL) {
             log.info("Starting block node containers for {} nodes", nodes.size());
             for (HederaNode node : nodes) {
                 // Start a block node container for this network node
@@ -276,7 +276,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             node.initWorkingDir(configTxt);
 
             // Write block node config if needed
-            if (blockNodeMode == BlockNodeMode.CONTAINERS) {
+            if (blockNodeMode == BlockNodeMode.REAL) {
                 BlockNodeContainer container = blockNodeContainers.get(i);
                 updateBlockNodesConfigForNode(node, container);
                 log.info(

@@ -49,9 +49,9 @@ public class BlockNodeSimulatorOp extends UtilOp {
         // Check if block node mode is set to SIMULATOR
         if (network.getBlockNodeMode() != BlockNodeMode.SIMULATOR) {
             throw new IllegalStateException(
-                    "Block node simulator operations require BlockNodeMode.SIMULATOR to be set. " +
-                    "Current mode: " + network.getBlockNodeMode() + ". " +
-                    "Set system property 'hapi.spec.blocknode.mode=SIM' to enable simulator mode.");
+                    "Block node simulator operations require BlockNodeMode.SIMULATOR to be set. " + "Current mode: "
+                            + network.getBlockNodeMode() + ". "
+                            + "Set system property 'hapi.spec.blocknode.mode=SIM' to enable simulator mode.");
         }
 
         BlockNodeSimulatorController controller = network.getBlockNodeSimulatorController();

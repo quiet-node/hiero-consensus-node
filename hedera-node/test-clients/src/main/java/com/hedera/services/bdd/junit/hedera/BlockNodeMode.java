@@ -3,7 +3,7 @@ package com.hedera.services.bdd.junit.hedera;
 
 /**
  * Defines the different modes for block node operation in tests.
- * 
+ *
  * <p>The block node mode can be set using the system property "hapi.spec.blocknode.mode" with the following values:
  * <ul>
  *   <li>"SIM" - Use simulated block nodes (maps to SIMULATOR)</li>
@@ -14,7 +14,7 @@ package com.hedera.services.bdd.junit.hedera;
  */
 public enum BlockNodeMode {
     /** Use Docker containers for block nodes */
-    CONTAINERS,
+    REAL,
 
     /** Use a simulated block node */
     SIMULATOR,

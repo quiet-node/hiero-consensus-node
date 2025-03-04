@@ -74,13 +74,15 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                                         subProcessNetwork.setBlockNodeMode(BlockNodeMode.SIMULATOR);
                                         break;
                                     case "REAL":
-                                        subProcessNetwork.setBlockNodeMode(BlockNodeMode.CONTAINERS);
+                                        subProcessNetwork.setBlockNodeMode(BlockNodeMode.REAL);
                                         break;
                                     case "LOCAL":
                                         subProcessNetwork.setBlockNodeMode(BlockNodeMode.LOCAL_NODE);
                                         break;
                                     default:
-                                        log.warn("Invalid hapi.spec.blocknode.mode value: {}. Using NONE.", blockNodeModeProperty);
+                                        log.warn(
+                                                "Invalid hapi.spec.blocknode.mode value: {}. Using NONE.",
+                                                blockNodeModeProperty);
                                         subProcessNetwork.setBlockNodeMode(BlockNodeMode.NONE);
                                 }
                             } else {

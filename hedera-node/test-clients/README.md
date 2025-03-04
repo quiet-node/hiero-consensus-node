@@ -185,6 +185,7 @@ The following predefined tasks are available for running tests with the block no
 - `testSubprocessWithBlockNodeSimulator` - Runs subprocess tests with block node simulator
 
 Example:
+
 ```bash
 # Run all block node simulator tests
 ./gradlew hapiTestBlockNodeSimulator
