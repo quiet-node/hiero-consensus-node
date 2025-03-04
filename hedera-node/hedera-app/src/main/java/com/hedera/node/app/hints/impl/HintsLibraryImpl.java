@@ -90,13 +90,18 @@ public class HintsLibraryImpl implements HintsLibrary {
             @NonNull final Bytes crs,
             @NonNull final Bytes signature,
             @NonNull final Bytes message,
-            @NonNull final Bytes publicKey) {
+            @NonNull final Bytes aggregationKey,
+            int partyId) {
         requireNonNull(crs);
         requireNonNull(signature);
         requireNonNull(message);
-        requireNonNull(publicKey);
+        requireNonNull(aggregationKey);
         return BRIDGE.verifyBls(
-                crs.toByteArray(), signature.toByteArray(), message.toByteArray(), publicKey.toByteArray());
+                crs.toByteArray(),
+                signature.toByteArray(),
+                message.toByteArray(),
+                aggregationKey.toByteArray(),
+                partyId);
     }
 
     @Override

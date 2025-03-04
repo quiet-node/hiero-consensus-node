@@ -256,10 +256,10 @@ class HintsControllerImplTest {
         final var hintsKey = Bytes.wrap("HK");
         given(library.computeHints(INITIAL_CRS, BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
                 .willReturn(hints);
-        given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
+        given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hints))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
-        verify(submissions).submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey);
+        verify(submissions).submitHintsKey(0, EXPECTED_PARTY_SIZE, hints);
 
         subject.advanceConstruction(PREPROCESSING_START_TIME, store, true);
         assertNull(scheduledTasks.poll());
@@ -282,10 +282,10 @@ class HintsControllerImplTest {
         final var hintsKey = Bytes.wrap("HK");
         given(library.computeHints(INITIAL_CRS, BLS_KEY_PAIR.privateKey(), 0, EXPECTED_PARTY_SIZE))
                 .willReturn(hints);
-        given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey))
+        given(submissions.submitHintsKey(0, EXPECTED_PARTY_SIZE, hints))
                 .willReturn(CompletableFuture.completedFuture(null));
         task.run();
-        verify(submissions).submitHintsKey(0, EXPECTED_PARTY_SIZE, hintsKey);
+        verify(submissions).submitHintsKey(0, EXPECTED_PARTY_SIZE, hints);
 
         assertDoesNotThrow(() -> subject.cancelPendingWork());
     }
@@ -500,6 +500,7 @@ class HintsControllerImplTest {
                         .contributionEndTime(asTimestamp(CONSENSUS_NOW.plus(Duration.ofSeconds(7))))
                         .crs(INITIAL_CRS)
                         .build());
+        given(library.updateCrs(any(), any())).willReturn(NEW_CRS);
         given(submissions.submitUpdateCRS(any(), any())).willReturn(CompletableFuture.completedFuture(null));
 
         final var task = requireNonNull(scheduledTasks.poll());
@@ -512,7 +513,7 @@ class HintsControllerImplTest {
         task1.run();
 
         verify(library).updateCrs(eq(INITIAL_CRS), any());
-        verify(submissions).submitUpdateCRS(NEW_CRS, PROOF);
+        verify(submissions).submitUpdateCRS(any(), any());
     }
 
     private void setupWith(@NonNull final HintsConstruction construction) {

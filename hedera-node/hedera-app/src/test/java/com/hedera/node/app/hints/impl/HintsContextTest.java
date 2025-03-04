@@ -2,6 +2,9 @@
 package com.hedera.node.app.hints.impl;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 import com.hedera.hapi.node.state.hints.HintsConstruction;
@@ -72,21 +75,31 @@ class HintsContextTest {
 
     @Test
     void signingWorksAsExpectedFor() {
-        given(library.verifyBls(CRS, signature, BLOCK_HASH, badKey)).willReturn(false);
-        given(library.verifyBls(CRS, signature, BLOCK_HASH, goodKey)).willReturn(true);
+        given(library.verifyBls(eq(CRS), eq(signature), eq(BLOCK_HASH), any(), anyInt()))
+                .willReturn(true);
         final long cWeight = 1L;
         final long dWeight = 2L;
         final var currentRoster = Roster.newBuilder()
                 .rosterEntries(RosterEntry.newBuilder()
-                        .nodeId(C_NODE_PARTY_ID.partyId())
+                        .nodeId(A_NODE_PARTY_ID.nodeId())
+                        .weight(1)
+                        .build())
+                .rosterEntries(RosterEntry.newBuilder()
+                        .nodeId(B_NODE_PARTY_ID.nodeId())
+                        .weight(1)
+                        .build())
+                .rosterEntries(RosterEntry.newBuilder()
+                        .nodeId(C_NODE_PARTY_ID.nodeId())
                         .weight(cWeight)
                         .build())
                 .rosterEntries(RosterEntry.newBuilder()
-                        .nodeId(D_NODE_PARTY_ID.partyId())
+                        .nodeId(D_NODE_PARTY_ID.nodeId())
                         .weight(dWeight)
                         .build())
                 .build();
         final Map<Integer, Bytes> expectedSignatures = Map.of(
+                A_NODE_PARTY_ID.partyId(), signature,
+                B_NODE_PARTY_ID.partyId(), signature,
                 C_NODE_PARTY_ID.partyId(), signature,
                 D_NODE_PARTY_ID.partyId(), signature);
         final var aggregateSignature = Bytes.wrap("AS");

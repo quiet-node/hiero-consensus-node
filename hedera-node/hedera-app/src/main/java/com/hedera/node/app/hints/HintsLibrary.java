@@ -117,11 +117,16 @@ public interface HintsLibrary {
      * @param crs the final CRS used by the network
      * @param signature the signature
      * @param message the message
-     * @param publicKey the public key
+     * @param aggregationKey the aggregation public key
+     * @param partyId                      the party id of the signer
      * @return true if the signature is valid; false otherwise
      */
     boolean verifyBls(
-            @NonNull final Bytes crs, @NonNull Bytes signature, @NonNull Bytes message, @NonNull Bytes publicKey);
+            @NonNull final Bytes crs,
+            @NonNull Bytes signature,
+            @NonNull Bytes message,
+            @NonNull final Bytes aggregationKey,
+            int partyId);
 
     /**
      * Aggregates the signatures for party ids using hinTS aggregation and verification keys.
