@@ -19,6 +19,9 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.time.Instant;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -27,6 +30,7 @@ import java.util.function.Consumer;
  * Default implementation of the {@link HistoryService}.
  */
 public class HistoryServiceImpl implements HistoryService, Consumer<HistoryProof> {
+    private static final Logger log = LogManager.getLogger(HistoryServiceImpl.class);
     @Deprecated
     private final Configuration bootstrapConfig;
 
@@ -71,6 +75,8 @@ public class HistoryServiceImpl implements HistoryService, Consumer<HistoryProof
         requireNonNull(historyStore);
         requireNonNull(now);
         requireNonNull(tssConfig);
+        System.out.println("HistoryServiceImpl.reconcile"+ activeRosters.phase());
+        log.info("Reconciling history for active rosters {} at {}", activeRosters, now);
         switch (activeRosters.phase()) {
             case BOOTSTRAP, TRANSITION -> {
                 final var construction = historyStore.getOrCreateConstruction(activeRosters, now, tssConfig);

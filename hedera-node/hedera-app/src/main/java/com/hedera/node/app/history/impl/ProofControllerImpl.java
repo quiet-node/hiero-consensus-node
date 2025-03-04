@@ -172,6 +172,7 @@ public class ProofControllerImpl implements ProofController {
             @NonNull final Instant now,
             @Nullable final Bytes metadata,
             @NonNull final WritableHistoryStore historyStore) {
+        System.out.println("ProofControllerImpl.advanceConstruction" + metadata + " " + construction);
         if (construction.hasTargetProof()) {
             return;
         }
@@ -285,12 +286,17 @@ public class ProofControllerImpl implements ProofController {
     private boolean shouldAssemble(@NonNull final Instant now) {
         // If every active node in the target roster has published a proof key,
         // assemble the new history now; there is nothing else to wait for
+        log.info("Should Assemble targetProofKeys {}, weights {} ", targetProofKeys.size(), weights.numTargetNodesInSource());
         if (targetProofKeys.size() == weights.numTargetNodesInSource()) {
+            log.info("All target nodes have published proof keys for construction {}",
+                    construction.constructionId());
             return true;
         }
+        log.info("Should Assemble gracePeriodEndTime {}, now {} ", construction.gracePeriodEndTimeOrThrow(), now);
         if (now.isBefore(asInstant(construction.gracePeriodEndTimeOrThrow()))) {
             return false;
         } else {
+            log.info("Should Assemble publishedWeight {}, weights.targetWeightThreshold {} ", publishedWeight(), weights.targetWeightThreshold());
             return publishedWeight() >= weights.targetWeightThreshold();
         }
     }
@@ -300,7 +306,7 @@ public class ProofControllerImpl implements ProofController {
      */
     private void ensureProofKeyPublished() {
         if (publicationFuture == null && weights.targetIncludes(selfId) && !targetProofKeys.containsKey(selfId)) {
-            log.info(" Publishing schnorr key for construction {}", construction.constructionId());
+            log.info("Publishing schnorr key for construction {}", construction.constructionId());
             publicationFuture = CompletableFuture.runAsync(
                     () -> submissions
                             .submitProofKeyPublication(schnorrKeyPair.publicKey())
@@ -329,6 +335,7 @@ public class ProofControllerImpl implements ProofController {
     private CompletableFuture<Void> startSigningFuture() {
         requireNonNull(targetMetadata);
         final var proofKeys = Map.copyOf(targetProofKeys);
+        log.info("startSigningFuture targetProofKeys {}", targetProofKeys);
         final var targetWeights = weights.targetNodeWeights().values().stream()
                 .mapToLong(Long::longValue)
                 .toArray();
@@ -338,9 +345,12 @@ public class ProofControllerImpl implements ProofController {
         return CompletableFuture.runAsync(
                 () -> {
                     final var targetHash = library.hashAddressBook(targetWeights, proofKeysArray);
+                    log.info("hashAddressBook {}", targetHash);
                     final var history = new History(targetHash, targetMetadata);
                     final var message = encodeHistory(history);
+                    log.info("schnorrKeyPair.privateKey() {}", schnorrKeyPair.privateKey());
                     final var signature = library.signSchnorr(message, schnorrKeyPair.privateKey());
+                    log.info("signSchnorr {}", signature);
                     final var historySignature = new HistorySignature(history, signature);
                     submissions
                             .submitAssemblySignature(construction.constructionId(), historySignature)

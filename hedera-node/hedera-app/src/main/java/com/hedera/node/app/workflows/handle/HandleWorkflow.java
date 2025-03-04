@@ -906,15 +906,14 @@ public class HandleWorkflow {
                         () -> hintsService.reconcile(activeRosters, hintsStore, now, tssConfig));
             }
             if (tssConfig.historyEnabled()) {
-                final Bytes currentMetadata;
-                if (tssConfig.hintsEnabled()) {
-                    final var hintsStore = new ReadableHintsStoreImpl(state.getReadableStates(HintsService.NAME));
-                    currentMetadata = hintsStore.getActiveVerificationKey();
-                } else {
-                    currentMetadata = null;
-                }
+                final Bytes currentMetadata = tssConfig.hintsEnabled() ?
+                        new ReadableHintsStoreImpl(state.getReadableStates(HintsService.NAME)).getActiveVerificationKey()
+                        : Bytes.EMPTY;
+                logger.info("currentMetadata {}", currentMetadata);
                 final var historyWritableStates = state.getWritableStates(HistoryService.NAME);
+                logger.info("historyWritableStates {}", historyWritableStates);
                 final var historyStore = new WritableHistoryStoreImpl(historyWritableStates);
+                logger.info("historyStore {}", historyStore);
                 doStreamingKVChanges(
                         historyWritableStates,
                         null,
