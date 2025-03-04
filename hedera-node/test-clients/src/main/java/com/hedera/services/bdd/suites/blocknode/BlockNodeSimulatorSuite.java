@@ -32,16 +32,7 @@ public class BlockNodeSimulatorSuite {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
 
         return hapiTest(
-                // Create a couple of crypto accounts
-                cryptoCreate("account1")
-                        .balance(ONE_HUNDRED_HBARS)
-                        .declinedReward(true)
-                        .stakedNodeId(0),
-                cryptoCreate("account2")
-                        .balance(ONE_HUNDRED_HBARS)
-                        .declinedReward(true)
-                        .stakedNodeId(0),
-                // Use the simulator controller to make node 0 respond with internal error
+                // Block node simulator 0 respond with internal error
                 blockNodeSimulator()
                         .sendEndOfStreamImmediately(0, PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
                         .withBlockNumber(123456L)
@@ -64,7 +55,7 @@ public class BlockNodeSimulatorSuite {
                 sleepFor(2000),
                 // Restart node 0
                 blockNodeSimulator().restartImmediately(0));
-        // TODO Add more log assretions for reconnection
+                // TODO Add more log assertions for reconnection
     }
 
     @HapiTest
