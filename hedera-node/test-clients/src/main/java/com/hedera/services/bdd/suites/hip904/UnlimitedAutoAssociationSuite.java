@@ -86,7 +86,7 @@ public class UnlimitedAutoAssociationSuite {
 
     @LeakyHapiTest(overrides = {"contracts.maxRefundPercentOfGasLimit"})
     @DisplayName("auto-association through HTS system contract changes gas cost")
-    final Stream<DynamicTest> autoAssociationThroughSystemContractChangesGasCost2(
+    final Stream<DynamicTest> autoAssociationThroughSystemContractChangesGasCost(
             @Contract(contract = "HTSCalls", creationGas = 4_000_000) SpecContract htsCallsContract,
             @NonFungibleToken(numPreMints = 2) SpecNonFungibleToken token,
             @Account SpecAccount preAssociated,

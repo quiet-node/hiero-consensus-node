@@ -4,6 +4,7 @@ package com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.has.
 import static com.hedera.node.app.service.contract.impl.exec.scope.HederaNativeOperations.MISSING_ENTITY_NUMBER;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.has.isvalidalias.IsValidAliasTranslator.IS_VALID_ALIAS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.ALIASED_RECEIVER;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT_HEDERA_CONFIG;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.OWNER_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.RECEIVER_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.RECEIVER_ID;
@@ -45,7 +46,8 @@ public class IsValidAliasCallTest extends CallTestBase {
         given(attempt.enhancement()).willReturn(mockEnhancement());
 
         // Arrange to use an account that has an alias
-        given(nativeOperations.resolveAlias(0, 0, RECEIVER_ADDRESS))
+        given(nativeOperations.resolveAlias(
+                        DEFAULT_HEDERA_CONFIG.shard(), DEFAULT_HEDERA_CONFIG.realm(), RECEIVER_ADDRESS))
                 .willReturn(ALIASED_RECEIVER.accountId().accountNumOrThrow());
         given(nativeOperations.getAccount(any(AccountID.class))).willReturn(ALIASED_RECEIVER);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
@@ -107,7 +109,8 @@ public class IsValidAliasCallTest extends CallTestBase {
         given(attempt.systemContractGasCalculator()).willReturn(gasCalculator);
         given(attempt.enhancement()).willReturn(mockEnhancement());
 
-        given(nativeOperations.resolveAlias(0, 0, RECEIVER_ADDRESS))
+        given(nativeOperations.resolveAlias(
+                        DEFAULT_HEDERA_CONFIG.shard(), DEFAULT_HEDERA_CONFIG.realm(), RECEIVER_ADDRESS))
                 .willReturn(ALIASED_RECEIVER.accountId().accountNumOrThrow());
         given(nativeOperations.getAccount(any(AccountID.class))).willReturn(null);
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
@@ -130,7 +133,9 @@ public class IsValidAliasCallTest extends CallTestBase {
         given(attempt.enhancement()).willReturn(mockEnhancement());
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
         given(nativeOperations.configuration()).willReturn(HederaTestConfigBuilder.createConfig());
-        given(nativeOperations.resolveAlias(0, 0, OWNER_ADDRESS)).willReturn(MISSING_ENTITY_NUMBER);
+        given(nativeOperations.resolveAlias(
+                        DEFAULT_HEDERA_CONFIG.shard(), DEFAULT_HEDERA_CONFIG.realm(), OWNER_ADDRESS))
+                .willReturn(MISSING_ENTITY_NUMBER);
 
         subject = new IsValidAliasCall(attempt, asHeadlongAddress(OWNER_ADDRESS.toByteArray()));
         final var result = subject.execute(frame).fullResult().result();

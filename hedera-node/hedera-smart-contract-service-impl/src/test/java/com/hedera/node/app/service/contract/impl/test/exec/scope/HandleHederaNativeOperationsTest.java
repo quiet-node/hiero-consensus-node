@@ -11,6 +11,8 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.A_NEW_A
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.A_SECP256K1_KEY;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CANONICAL_ALIAS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CIVILIAN_OWNED_NFT;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT_CONFIG;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT_HEDERA_CONFIG;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.EIP_1014_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.FUNGIBLE_TOKEN;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.FUNGIBLE_TOKEN_ID;
@@ -210,9 +212,10 @@ class HandleHederaNativeOperationsTest {
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.serviceApi(TokenServiceApi.class)).willReturn(tokenServiceApi);
         given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
-        given(accountStore.getAccountIDByAlias(0, 0, CANONICAL_ALIAS)).willReturn(A_NEW_ACCOUNT_ID);
-        given(context.configuration())
-                .willReturn(HederaTestConfigBuilder.create().getOrCreateConfig());
+        given(accountStore.getAccountIDByAlias(
+                        DEFAULT_HEDERA_CONFIG.shard(), DEFAULT_HEDERA_CONFIG.realm(), CANONICAL_ALIAS))
+                .willReturn(A_NEW_ACCOUNT_ID);
+        given(context.configuration()).willReturn(DEFAULT_CONFIG);
 
         subject.finalizeHollowAccountAsContract(CANONICAL_ALIAS);
 
