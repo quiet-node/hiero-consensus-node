@@ -370,34 +370,6 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      * {@inheritDoc}
      */
     @Override
-    public @Nullable Address getAddress(final long number) {
-        final AccountID accountID = AccountID.newBuilder().accountNum(number).build();
-        final var account = nativeOperations.getAccount(accountID);
-        if (account != null) {
-            if (account.deleted()) {
-                return null;
-            }
-
-            final var evmAddress = extractEvmAddress(account.alias());
-            return evmAddress == null
-                    ? asLongZeroAddress(nativeOperations.entityIdFactory(), number)
-                    : pbjToBesuAddress(evmAddress);
-        }
-        final var token = nativeOperations.getToken(entityIdFactory().newTokenId(number));
-        final var schedule =
-                nativeOperations.getSchedule(nativeOperations.entityIdFactory().newScheduleId(number));
-        if (token != null || schedule != null) {
-            // If the token or schedule  is deleted or expired, the system contract executed by the redirect
-            // bytecode will fail with a more meaningful error message, so don't check that here
-            return asLongZeroAddress(nativeOperations.entityIdFactory(), number);
-        }
-        throw new IllegalArgumentException("No account, token or schedule has number " + number);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public @Nullable Address getAddress(final AccountID accountID) {
         final var account = nativeOperations.getAccount(accountID);
         if (account == null) {

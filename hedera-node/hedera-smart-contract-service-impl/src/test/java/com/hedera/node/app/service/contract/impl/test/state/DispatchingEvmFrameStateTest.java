@@ -439,7 +439,7 @@ class DispatchingEvmFrameStateTest {
     void returnsLongZeroAddressWithoutAnAlias() {
         givenWellKnownAccount(contractWith(A_ACCOUNT_ID));
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
-        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(ACCOUNT_NUM));
+        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(A_ACCOUNT_ID));
     }
 
     @Test
@@ -453,20 +453,20 @@ class DispatchingEvmFrameStateTest {
     @Test
     void returnsNullWithDeletedAccount() {
         givenWellKnownAccount(contractWith(A_ACCOUNT_ID).deleted(true));
-        assertNull(subject.getAddress(ACCOUNT_NUM));
+        assertNull(subject.getAddress(A_ACCOUNT_ID));
     }
 
     @Test
     void returnsLongZeroAddressWithNonAddressAlias() {
         givenWellKnownAccount(accountWith(A_ACCOUNT_ID, SOME_OTHER_ALIAS));
         given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
-        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(ACCOUNT_NUM));
+        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(A_ACCOUNT_ID));
     }
 
     @Test
     void returnsAliasIfPresent() {
         givenWellKnownAccount(accountWith(A_ACCOUNT_ID, Bytes.wrap(EVM_ADDRESS.toArrayUnsafe())));
-        assertEquals(EVM_ADDRESS, subject.getAddress(ACCOUNT_NUM));
+        assertEquals(EVM_ADDRESS, subject.getAddress(A_ACCOUNT_ID));
     }
 
     @Test
