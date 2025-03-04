@@ -56,21 +56,49 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    final Stream<DynamicTest> node0BlockNodeShutsDown() {
+    final Stream<DynamicTest> node0BlockNodeShutsDownAndRestarts() {
         return hapiTest(
-                // Use the simulator controller to shut down node 0
+                // Shut down block node simulator 0
                 blockNodeSimulator()
                         .shutDownImmediately(0)
                         .build(),
                 // Verify the log message in node 0's log
-                // The consensus node should log an error when the block node connection is lost
                 assertHgcaaLogContains(
-                        byNodeId(0), "Error in block node stream", Duration.ofSeconds(10)),
+                        byNodeId(0), "Error in block node stream", Duration.ofSeconds(5)),
+                sleepFor(2000),
                 // Restart node 0
                 blockNodeSimulator()
                         .restartImmediately(0)
+                        .build());
+                // TODO Add more log assretions for reconnection
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> assertGenesisBlockReceivedBySimulator() {
+        return hapiTest(
+                blockNodeSimulator()
+                        .assertBlockReceived(0, 0)
+                        .build());
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> getLastVerifiedBlockFromSimulator() {
+        AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
+
+        return hapiTest(
+                // Create a crypto account to generate some blocks
+                cryptoCreate("account1")
+                        .balance(ONE_HUNDRED_HBARS)
+                        .declinedReward(true)
+                        .stakedNodeId(0),
+                // Wait a bit to ensure the block is processed
+                sleepFor(2000),
+                // Get the last verified block number using the fluent API
+                blockNodeSimulator()
+                        .getLastVerifiedBlock(0)
+                        .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
                         .build(),
-                // TODO Make assertion that the consensus node reconnects to the block node
-                sleepFor(10000));
+                // Assert that the block has been received by the simulator
+                blockNodeSimulator().assertBlockReceived(0, lastVerifiedBlockNumber.get()).build());
     }
 }

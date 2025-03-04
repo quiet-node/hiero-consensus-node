@@ -74,5 +74,26 @@ public class BlockNodeSimulatorVerbs {
         public BlockNodeSimulatorOp.RestartAllBuilder restartAll() {
             return BlockNodeSimulatorOp.restartAll();
         }
+
+        /**
+         * Creates a builder for asserting that a specific block has been received by a block node simulator.
+         *
+         * @param nodeIndex the index of the block node simulator (0-based)
+         * @param blockNumber the block number to check
+         * @return a builder for the operation
+         */
+        public BlockNodeSimulatorOp.AssertBlockReceivedBuilder assertBlockReceived(int nodeIndex, long blockNumber) {
+            return BlockNodeSimulatorOp.assertBlockReceived(nodeIndex, blockNumber);
+        }
+
+        /**
+         * Creates a builder for getting the last verified block number from a block node simulator.
+         *
+         * @param nodeIndex the index of the block node simulator (0-based)
+         * @return a builder for the operation
+         */
+        public BlockNodeSimulatorOp.GetLastVerifiedBlockBuilder getLastVerifiedBlock(int nodeIndex) {
+            return BlockNodeSimulatorOp.getLastVerifiedBlock(nodeIndex);
+        }
     }
 }

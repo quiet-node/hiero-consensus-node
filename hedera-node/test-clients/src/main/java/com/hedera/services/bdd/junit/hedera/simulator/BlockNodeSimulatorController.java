@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -261,6 +262,56 @@ public class BlockNodeSimulatorController {
             log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
             return 0L;
         }
+    }
+
+    /**
+     * Check if a specific block number has been received by a specific simulator.
+     *
+     * @param index the index of the simulated block node (0-based)
+     * @param blockNumber the block number to check
+     * @return true if the block has been received, false otherwise
+     * @throws IllegalArgumentException if the simulator index is invalid
+     */
+    public boolean hasReceivedBlock(int index, long blockNumber) {
+        if (index < 0 || index >= simulatedBlockNodes.size()) {
+            throw new IllegalArgumentException(
+                    "Invalid simulator index: " + index + ", valid range is 0-" + (simulatedBlockNodes.size() - 1));
+        }
+
+        SimulatedBlockNodeServer server = simulatedBlockNodes.get(index);
+        return server.hasReceivedBlock(blockNumber);
+    }
+
+    /**
+     * Check if a specific block number has been received by any simulator.
+     *
+     * @param blockNumber the block number to check
+     * @return true if the block has been received by any simulator, false otherwise
+     */
+    public boolean hasAnyReceivedBlock(long blockNumber) {
+        for (SimulatedBlockNodeServer server : simulatedBlockNodes) {
+            if (server.hasReceivedBlock(blockNumber)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get all block numbers that have been received by a specific simulator.
+     *
+     * @param index the index of the simulated block node (0-based)
+     * @return a set of all received block numbers
+     * @throws IllegalArgumentException if the simulator index is invalid
+     */
+    public Set<Long> getReceivedBlockNumbers(int index) {
+        if (index < 0 || index >= simulatedBlockNodes.size()) {
+            throw new IllegalArgumentException(
+                    "Invalid simulator index: " + index + ", valid range is 0-" + (simulatedBlockNodes.size() - 1));
+        }
+
+        SimulatedBlockNodeServer server = simulatedBlockNodes.get(index);
+        return server.getReceivedBlockNumbers();
     }
 
     /**

@@ -14,6 +14,8 @@ import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,6 +39,9 @@ public class SimulatedBlockNodeServer {
 
     // Track the last verified block number
     private final AtomicReference<Long> lastVerifiedBlockNumber = new AtomicReference<>(0L);
+
+    // Track all received block numbers
+    private final Set<Long> receivedBlockNumbers = ConcurrentHashMap.newKeySet();
 
     /**
      * Creates a new simulated block node server on the specified port.
@@ -123,6 +128,25 @@ public class SimulatedBlockNodeServer {
     }
 
     /**
+     * Checks if a specific block number has been received by this server.
+     *
+     * @param blockNumber the block number to check
+     * @return true if the block has been received, false otherwise
+     */
+    public boolean hasReceivedBlock(long blockNumber) {
+        return receivedBlockNumbers.contains(blockNumber);
+    }
+
+    /**
+     * Gets all block numbers that have been received by this server.
+     *
+     * @return a set of all received block numbers
+     */
+    public Set<Long> getReceivedBlockNumbers() {
+        return Set.copyOf(receivedBlockNumbers);
+    }
+
+    /**
      * Reset all configured responses to default behavior.
      */
     public void resetResponses() {
@@ -188,21 +212,23 @@ public class SimulatedBlockNodeServer {
                             log.error("Received more than one block proof in a single request. This is not expected.");
                         }
                         BlockItem blockProof = blockProofs.getFirst();
+                        long blockNumber = blockProof.getBlockProof().getBlock();
                         log.info(
                                 "Received block proof for block {} with signature {}",
-                                blockProof.getBlockProof().getBlock(),
+                                blockNumber,
                                 blockProof.getBlockProof().getBlockSignature());
 
                         // Update the last verified block number
-                        lastVerifiedBlockNumber.set(blockProof.getBlockProof().getBlock());
+                        lastVerifiedBlockNumber.set(blockNumber);
+
+                        // Add to the set of received block numbers
+                        receivedBlockNumbers.add(blockNumber);
 
                         com.hedera.hapi.block.protoc.PublishStreamResponse.BlockAcknowledgement.Builder
                                 blockAcknowledgement =
                                         com.hedera.hapi.block.protoc.PublishStreamResponse.BlockAcknowledgement
                                                 .newBuilder()
-                                                .setBlockNumber(blockProof
-                                                        .getBlockProof()
-                                                        .getBlock())
+                                                .setBlockNumber(blockNumber)
                                                 .setBlockAlreadyExists(false);
 
                         // If this request contains a block proof, send an acknowledgement
@@ -249,37 +275,21 @@ public class SimulatedBlockNodeServer {
             }
         }
 
-        /**
-         * Send an EndOfStream response to a specific stream observer.
-         *
-         * @param observer the stream observer to send the response to
-         * @param responseCode the response code to send
-         * @param blockNumber the block number to include in the response
-         */
         private void sendEndOfStream(
                 StreamObserver<PublishStreamResponse> observer,
                 PublishStreamResponseCode responseCode,
                 long blockNumber) {
             try {
-                // Build and send the EndOfStream response
-                EndOfStream endOfStream = EndOfStream.newBuilder()
-                        .setStatus(responseCode)
-                        .setBlockNumber(blockNumber)
-                        .build();
-
                 observer.onNext(PublishStreamResponse.newBuilder()
-                        .setStatus(endOfStream)
+                        .setStatus(EndOfStream.newBuilder()
+                                .setResponseCode(responseCode)
+                                .setBlockNumber(blockNumber)
+                                .build())
                         .build());
-
-                // Complete the stream after sending EndOfStream
                 observer.onCompleted();
-
-                // Remove from active streams
                 activeStreams.remove(observer);
-
-                log.info("Sent EndOfStream with code {} for block {} on port {}", responseCode, blockNumber, port);
             } catch (Exception e) {
-                log.error("Error sending EndOfStream on port {}", port, e);
+                log.error("Error sending EndOfStream response on port {}", port, e);
             }
         }
     }
