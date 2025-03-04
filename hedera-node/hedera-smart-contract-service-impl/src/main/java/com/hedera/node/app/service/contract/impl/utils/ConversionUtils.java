@@ -400,7 +400,8 @@ public class ConversionUtils {
             final var account = nativeOperations.getAccount(number);
             if (account == null) {
                 return MISSING_ENTITY_NUMBER;
-            } else if (!Arrays.equals(explicit, explicitAddressOf(account))) {
+            } else if (!Arrays.equals(explicit, explicitAddressOf(account))
+                    && !Arrays.equals(explicit, fromHeadlongAddress(address).toArray())) {
                 return NON_CANONICAL_REFERENCE_NUMBER;
             }
             return number;
