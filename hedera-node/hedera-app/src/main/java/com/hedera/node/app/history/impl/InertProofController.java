@@ -33,7 +33,8 @@ public class InertProofController implements ProofController {
     public void advanceConstruction(
             @NonNull final Instant now,
             @Nullable final Bytes metadata,
-            @NonNull final WritableHistoryStore historyStore) {
+            @NonNull final WritableHistoryStore historyStore,
+            final boolean currentPlatformStatus) {
         requireNonNull(now);
         requireNonNull(historyStore);
         // No-op

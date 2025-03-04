@@ -19,13 +19,9 @@ import com.hedera.node.app.history.ReadableHistoryStore.ProofKeyPublication;
 import com.hedera.node.app.history.WritableHistoryStore;
 import com.hedera.node.app.roster.RosterTransitionWeights;
 import com.hedera.node.app.tss.TssKeyPair;
-import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.time.Instant;
 import java.util.AbstractMap;
 import java.util.Comparator;
@@ -41,6 +37,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Default implementation of {@link ProofController}.
@@ -118,8 +116,7 @@ public class ProofControllerImpl implements ProofController {
      * @param history the assembly with the signatures
      * @param cutoff  the time at which the signatures were sufficient
      */
-    private record Signatures(@NonNull History history, @NonNull Instant cutoff) {
-    }
+    private record Signatures(@NonNull History history, @NonNull Instant cutoff) {}
 
     public ProofControllerImpl(
             final long selfId,
@@ -171,15 +168,15 @@ public class ProofControllerImpl implements ProofController {
     public void advanceConstruction(
             @NonNull final Instant now,
             @Nullable final Bytes metadata,
-            @NonNull final WritableHistoryStore historyStore) {
-        System.out.println("ProofControllerImpl.advanceConstruction" + metadata + " " + construction);
+            @NonNull final WritableHistoryStore historyStore,
+            final boolean isActive) {
         if (construction.hasTargetProof()) {
             return;
         }
         targetMetadata = metadata;
-        if (targetMetadata == null) {
+        if (targetMetadata == null && isActive) {
             ensureProofKeyPublished();
-        } else if (construction.hasAssemblyStartTime()) {
+        } else if (construction.hasAssemblyStartTime() && isActive) {
             if (!votes.containsKey(selfId) && proofFuture == null) {
                 if (hasSufficientSignatures()) {
                     proofFuture = startProofFuture();
@@ -193,8 +190,10 @@ public class ProofControllerImpl implements ProofController {
             if (shouldAssemble(now)) {
                 log.info("Starting assembly time for construction {} as {}", construction.constructionId(), now);
                 construction = historyStore.setAssemblyTime(construction.constructionId(), now);
-                signingFuture = startSigningFuture();
-            } else {
+                if (isActive) {
+                    signingFuture = startSigningFuture();
+                }
+            } else if (isActive) {
                 ensureProofKeyPublished();
             }
         }
@@ -286,17 +285,22 @@ public class ProofControllerImpl implements ProofController {
     private boolean shouldAssemble(@NonNull final Instant now) {
         // If every active node in the target roster has published a proof key,
         // assemble the new history now; there is nothing else to wait for
-        log.info("Should Assemble targetProofKeys {}, weights {} ", targetProofKeys.size(), weights.numTargetNodesInSource());
+        log.info(
+                "shouldAssemble targetProofKeys {}, weights {} ",
+                targetProofKeys.size(),
+                weights.numTargetNodesInSource());
         if (targetProofKeys.size() == weights.numTargetNodesInSource()) {
-            log.info("All target nodes have published proof keys for construction {}",
-                    construction.constructionId());
+            log.info("All target nodes have published proof keys for construction {}", construction.constructionId());
             return true;
         }
-        log.info("Should Assemble gracePeriodEndTime {}, now {} ", construction.gracePeriodEndTimeOrThrow(), now);
+        log.info("shouldAssemble gracePeriodEndTime {}, now {} ", construction.gracePeriodEndTimeOrThrow(), now);
         if (now.isBefore(asInstant(construction.gracePeriodEndTimeOrThrow()))) {
             return false;
         } else {
-            log.info("Should Assemble publishedWeight {}, weights.targetWeightThreshold {} ", publishedWeight(), weights.targetWeightThreshold());
+            log.info(
+                    "shouldAssemble publishedWeight {}, weights.targetWeightThreshold {} ",
+                    publishedWeight(),
+                    weights.targetWeightThreshold());
             return publishedWeight() >= weights.targetWeightThreshold();
         }
     }

@@ -172,14 +172,15 @@ public class HintsControllerImpl implements HintsController {
     }
 
     @Override
-    public void advanceConstruction(@NonNull final Instant now, @NonNull final WritableHintsStore hintsStore) {
+    public void advanceConstruction(
+            @NonNull final Instant now, @NonNull final WritableHintsStore hintsStore, final boolean isActive) {
         requireNonNull(now);
         requireNonNull(hintsStore);
 
         if (construction.hasHintsScheme()) {
             return;
         }
-        if (construction.hasPreprocessingStartTime()) {
+        if (construction.hasPreprocessingStartTime() && isActive) {
             final var crs = hintsStore.getCrsState().crs();
             if (!votes.containsKey(selfId) && preprocessingVoteFuture == null) {
                 preprocessingVoteFuture =
@@ -189,8 +190,10 @@ public class HintsControllerImpl implements HintsController {
             final var crs = hintsStore.getCrsState().crs();
             if (shouldStartPreprocessing(now)) {
                 construction = hintsStore.setPreprocessingStartTime(construction.constructionId(), now);
-                preprocessingVoteFuture = startPreprocessingVoteFuture(now, crs);
-            } else {
+                if (isActive) {
+                    preprocessingVoteFuture = startPreprocessingVoteFuture(now, crs);
+                }
+            } else if (isActive) {
                 ensureHintsKeyPublished(crs);
             }
         }
@@ -206,11 +209,13 @@ public class HintsControllerImpl implements HintsController {
      * an updated CRS and submit it</li>
      * </ul>
      *
-     * @param now        the current consensus time
-     * @param hintsStore the writable hints store
+     * @param now                   the current consensus time
+     * @param hintsStore            the writable hints store
+     * @param isActive
      */
     @Override
-    public void advanceCRSWork(@NonNull final Instant now, @NonNull final WritableHintsStore hintsStore) {
+    public void advanceCRSWork(
+            @NonNull final Instant now, @NonNull final WritableHintsStore hintsStore, final boolean isActive) {
         final var crsState = hintsStore.getCrsState();
         final var tssConfig = configurationSupplier.get().getConfigData(TssConfig.class);
         if (!crsState.hasNextContributingNodeId()) {
@@ -218,7 +223,7 @@ public class HintsControllerImpl implements HintsController {
         } else if (crsState.contributionEndTime() != null
                 && now.isAfter(asInstant(crsState.contributionEndTimeOrThrow()))) {
             moveToNextNode(now, hintsStore);
-        } else if (crsState.nextContributingNodeIdOrThrow() == selfId && crsPublicationFuture == null) {
+        } else if (crsState.nextContributingNodeIdOrThrow() == selfId && crsPublicationFuture == null && isActive) {
             submitUpdatedCRS(hintsStore);
         }
     }
@@ -561,9 +566,9 @@ public class HintsControllerImpl implements HintsController {
     /**
      * Returns a future that completes to a validation of the given hints key.
      *
-     * @param crs        the initial CRS
-     * @param partyId    the party ID
-     * @param hintsKey   the hints key
+     * @param crs      the initial CRS
+     * @param partyId  the party ID
+     * @param hintsKey the hints key
      * @return the future
      */
     private CompletableFuture<Validation> validationFuture(
@@ -665,7 +670,7 @@ public class HintsControllerImpl implements HintsController {
      * {@link CrsUpdateOutput}.
      *
      * @param oldCRSLength the length of the old CRS
-     * @param output the output of the {@link HintsLibrary#updateCrs(Bytes, Bytes)}
+     * @param output       the output of the {@link HintsLibrary#updateCrs(Bytes, Bytes)}
      * @return the hinTS key
      */
     public static CrsUpdateOutput decodeCrsUpdate(final long oldCRSLength, @NonNull final Bytes output) {
@@ -678,7 +683,8 @@ public class HintsControllerImpl implements HintsController {
 
     /**
      * A structured representation of the output of {@link HintsLibrary#updateCrs(Bytes, Bytes)}.
-     * @param crs the updated CRS
+     *
+     * @param crs   the updated CRS
      * @param proof the proof of the update
      */
     public record CrsUpdateOutput(@NonNull Bytes crs, @NonNull Bytes proof) {}
