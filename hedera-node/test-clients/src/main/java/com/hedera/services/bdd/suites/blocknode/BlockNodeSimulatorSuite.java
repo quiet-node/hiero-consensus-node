@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Tag;
  *
  * <p>Note: This suite requires the block node simulator to be enabled.
  * Use the system property "hapi.spec.blocknode.mode=SIM" to enable it.
- * The hapiTestBlockNodeSimulator task automatically sets this property.
+ * The testSubprocessWithBlockNodeSimulator task automatically sets this property.
  */
 @Tag(BLOCK_NODE_SIMULATOR)
 @OrderedInIsolation
