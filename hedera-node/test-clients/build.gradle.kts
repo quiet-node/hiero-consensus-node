@@ -106,12 +106,6 @@ tasks.register<Test>("testSubprocessWithBlockNodeSimulator") {
     testClassesDirs = sourceSets.main.get().output.classesDirs
     classpath = sourceSets.main.get().runtimeClasspath
 
-    // Set the block node mode to simulator
-    systemProperty("hapi.spec.blocknode.mode", "SIM")
-
-    // Use the same configuration as testSubprocess
-    useJUnitPlatform { includeTags("!(EMBEDDED|REPEATABLE)") }
-
     // Choose a different initial port for each test task if running as PR check
     val initialPort =
         gradle.startParameter.taskNames
@@ -122,10 +116,37 @@ tasks.register<Test>("testSubprocessWithBlockNodeSimulator") {
             .orElse("")
     systemProperty("hapi.spec.initial.port", initialPort)
 
-    // Other standard properties
-    systemProperty("hapi.spec.quiet.mode", System.getProperty("hapi.spec.quiet.mode") ?: "false")
+    val ciTagExpression =
+        gradle.startParameter.taskNames
+            .stream()
+            .map { prCheckTags[it] ?: "" }
+            .filter { it.isNotBlank() }
+            .toList()
+            .joinToString("|")
+    // Use the same configuration as testSubprocess
+    useJUnitPlatform {
+        includeTags(
+            if (ciTagExpression.isBlank()) "none()|!(EMBEDDED|REPEATABLE)"
+            else "(${ciTagExpression}|STREAM_VALIDATION|LOG_VALIDATION)&!(EMBEDDED|REPEATABLE)"
+        )
+    }
+
+    // Set the block node mode to simulator
+    systemProperty("hapi.spec.blocknode.mode", "SIM")
+
+    // Default quiet mode is "false" unless we are running in CI or set it explicitly to "true"
+    systemProperty(
+        "hapi.spec.quiet.mode",
+        System.getProperty("hapi.spec.quiet.mode")
+            ?: if (ciTagExpression.isNotBlank()) "true" else "false",
+    )
     systemProperty("junit.jupiter.execution.parallel.enabled", true)
     systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+    // Surprisingly, the Gradle JUnitPlatformTestExecutionListener fails to gather result
+    // correctly if test classes run in parallel (concurrent execution WITHIN a test class
+    // is fine). So we need to force the test classes to run in the same thread. Luckily this
+    // is not a huge limitation, as our test classes generally have enough non-leaky tests to
+    // get a material speed up. See https://github.com/gradle/gradle/issues/6453.
     systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "same_thread")
     systemProperty(
         "junit.jupiter.testclass.order.default",
