@@ -172,7 +172,7 @@ The following block node modes are available:
 
 - `SIM` - Use simulated block nodes
 - `REAL` - Use Docker containers for block nodes
-- `LOCAL` - Use a local block node
+- `LOCAL` - Use a local block node for SubProcessNode 0
 - If not specified, no block nodes will be used
 
 ### Running Tests with Block Node Simulator
@@ -181,15 +181,11 @@ The following block node modes are available:
 
 The following predefined tasks are available for running tests with the block node simulator:
 
-- `hapiTestBlockNodeSimulator` - Runs tests tagged with `BLOCK_NODE_SIMULATOR`
-- `testSubprocessWithBlockNodeSimulator` - Runs subprocess tests with block node simulator
+- `testSubprocessWithBlockNodeSimulator` - Runs subprocess tests with block node simulators
 
 Example:
 
 ```bash
-# Run all block node simulator tests
-./gradlew hapiTestBlockNodeSimulator
-
 # Run subprocess tests with block node simulator
 ./gradlew testSubprocessWithBlockNodeSimulator
 
