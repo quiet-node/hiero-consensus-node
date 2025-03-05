@@ -44,7 +44,11 @@ public class HistoryProofVoteHandler implements TransactionHandler {
         requireNonNull(context);
         final var op = context.body().historyProofVoteOrThrow();
         final long constructionId = op.constructionId();
-        log.info("Received proof vote for construction {}", constructionId);
+        log.info(
+                "Received proof vote from {} (congruent? {}) for construction {}",
+                context.creatorInfo().nodeId(),
+                op.voteOrElse(HistoryProofVote.DEFAULT).hasCongruentNodeId(),
+                constructionId);
         controllers.getInProgressById(constructionId).ifPresent(controller -> {
             final long nodeId = context.creatorInfo().nodeId();
             final var historyStore = context.storeFactory().writableStore(WritableHistoryStore.class);

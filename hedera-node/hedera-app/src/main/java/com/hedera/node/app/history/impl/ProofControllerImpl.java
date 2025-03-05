@@ -20,11 +20,10 @@ import com.hedera.node.app.history.WritableHistoryStore;
 import com.hedera.node.app.roster.RosterTransitionWeights;
 import com.hedera.node.app.tss.TssKeyPair;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.common.utility.CommonUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.time.Instant;
-import java.util.AbstractMap;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,8 +36,6 @@ import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -118,8 +115,7 @@ public class ProofControllerImpl implements ProofController {
      * @param history the assembly with the signatures
      * @param cutoff  the time at which the signatures were sufficient
      */
-    private record Signatures(@NonNull History history, @NonNull Instant cutoff) {
-    }
+    private record Signatures(@NonNull History history, @NonNull Instant cutoff) {}
 
     public ProofControllerImpl(
             final long selfId,
@@ -246,16 +242,24 @@ public class ProofControllerImpl implements ProofController {
                 .collect(groupingBy(
                         entry -> entry.getValue().proofOrThrow(),
                         summingLong(entry -> weights.sourceWeightOf(entry.getKey()))));
+        log.info(
+                "proofWeights now (threshold={}): {}",
+                weights.sourceWeightThreshold(),
+                proofWeights.entrySet().stream()
+                        .map(e -> List.of(
+                                e.getValue(),
+                                CommonUtils.hex(com.hedera.node.app.hapi.utils.CommonUtils.noThrowSha384HashOf(
+                                                e.getKey().proof())
+                                        .toByteArray())))
+                        .toList());
         final var maybeWinningProof = proofWeights.entrySet().stream()
                 .filter(entry -> entry.getValue() >= weights.sourceWeightThreshold())
                 .map(Map.Entry::getKey)
                 .findFirst();
         maybeWinningProof.ifPresent(proof -> {
-            log.info("maybeWinningProof {}", proof);
+            log.info("maybeWinningProof found!");
             construction = historyStore.completeProof(construction.constructionId(), proof);
-            log.info("completeProof {} StoreConstId{}, constId {}", construction, historyStore.getActiveConstruction().constructionId(), construction.constructionId());
             if (historyStore.getActiveConstruction().constructionId() == construction.constructionId()) {
-                log.info("ledgerId {}", ledgerId);
                 proofConsumer.accept(proof);
                 if (ledgerId == null) {
                     requireNonNull(targetMetadata);
@@ -389,8 +393,7 @@ public class ProofControllerImpl implements ProofController {
             sourceProofKeys = Map.copyOf(targetProofKeys);
         }
         final var targetMetadata = requireNonNull(this.targetMetadata);
-        final var sourceWeights = weights.sourceNodeWeights().values()
-                .stream()
+        final var sourceWeights = weights.sourceNodeWeights().values().stream()
                 .mapToLong(Long::longValue)
                 .toArray();
         final var targetWeights = weights.targetNodeWeights().values().stream()
@@ -406,19 +409,22 @@ public class ProofControllerImpl implements ProofController {
                 () -> {
                     final var sourceHash = library.hashAddressBook(sourceWeights, sourceProofKeysArray);
                     final var targetHash = library.hashAddressBook(targetWeights, targetProofKeysArray);
-                    // Note that sourceWeights, sourceProofKeysArray and verifyingSignatures should have same length arrays.
+                    // Note that sourceWeights, sourceProofKeysArray and verifyingSignatures should have same length
+                    // arrays.
                     // Any node that has not submitted signature will have null in verifyingSignatures.
                     final var verifyingSignatures = weights.sourceNodeWeights().keySet().stream()
-                            .map(id -> Optional.ofNullable(signatures.get(id)).map(Bytes::toByteArray).orElse(null))
+                            .map(id -> Optional.ofNullable(signatures.get(id))
+                                    .map(Bytes::toByteArray)
+                                    .orElse(null))
                             .toArray(byte[][]::new);
                     // log all the fields
-                    log.info("targetMetadata {}, " +
-                                    "sourceProof {}, " +
-                                    "sourceWeights {}, " +
-                                    "sourceProofKeysArray {}, " +
-                                    "targetWeights {}, " +
-                                    "targetProofKeysArray {}, " +
-                                    "verifyingSignatures {}",
+                    log.info(
+                            "targetMetadata {}, " + "sourceProof {}, "
+                                    + "sourceWeights {}, "
+                                    + "sourceProofKeysArray {}, "
+                                    + "targetWeights {}, "
+                                    + "targetProofKeysArray {}, "
+                                    + "verifyingSignatures {}",
                             targetMetadata,
                             sourceProof,
                             sourceWeights.length,
@@ -435,7 +441,7 @@ public class ProofControllerImpl implements ProofController {
                             targetProofKeysArray,
                             verifyingSignatures,
                             targetMetadata);
-                    log.info("proveChainOfTrust {}", proof);
+                    log.info("proveChainOfTrust FINISHED");
                     final var metadataProof = HistoryProof.newBuilder()
                             .sourceAddressBookHash(sourceHash)
                             .targetProofKeys(proofKeyListFrom(targetProofKeys))
@@ -472,7 +478,10 @@ public class ProofControllerImpl implements ProofController {
                 final long weight = historyWeights.merge(
                         verification.history(), weights.sourceWeightOf(verification.nodeId()), Long::sum);
                 if (weight >= weights.sourceWeightThreshold()) {
-                    log.info("firstSufficientSignatures weight {}, sourceWeightThreshold {}", weight, weights.sourceWeightThreshold());
+                    log.info(
+                            "firstSufficientSignatures weight {}, sourceWeightThreshold {}",
+                            weight,
+                            weights.sourceWeightThreshold());
                     return new Signatures(verification.history(), entry.getKey());
                 }
             }

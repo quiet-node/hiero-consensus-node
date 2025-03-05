@@ -12,7 +12,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.platform.state.service.ReadableRosterStore;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.util.Map;
 import java.util.Optional;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -211,8 +210,7 @@ public class ActiveRosters {
     }
 
     private static @NonNull SortedMap<Long, Long> weightsFrom(@NonNull final Roster roster) {
-        return requireNonNull(roster).rosterEntries().stream().collect(toMap(RosterEntry::nodeId,
-                RosterEntry::weight,
-                (a, b) -> a, TreeMap::new));
+        return requireNonNull(roster).rosterEntries().stream()
+                .collect(toMap(RosterEntry::nodeId, RosterEntry::weight, (a, b) -> a, TreeMap::new));
     }
 }

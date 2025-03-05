@@ -25,7 +25,8 @@ public record RosterTransitionWeights(
         long targetWeightThreshold) {
 
     public RosterTransitionWeights(
-            @NonNull final SortedMap<Long, Long> sourceNodeWeights, @NonNull final SortedMap<Long, Long> targetNodeWeights) {
+            @NonNull final SortedMap<Long, Long> sourceNodeWeights,
+            @NonNull final SortedMap<Long, Long> targetNodeWeights) {
         this(
                 requireNonNull(sourceNodeWeights),
                 requireNonNull(targetNodeWeights),

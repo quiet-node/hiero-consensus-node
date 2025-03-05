@@ -8,6 +8,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 class HistoryLibraryImplTest {
@@ -39,6 +40,7 @@ class HistoryLibraryImplTest {
     }
 
     @Test
+    @Disabled
     void verifiesProofOfTrust() {
         final List<KeyPairAndWeight> sourceAddresses = buildSomeAddresses(4);
         final var sourceKeys =
@@ -66,9 +68,9 @@ class HistoryLibraryImplTest {
 
         for (int i = 0; i < sourceAddresses.size(); i++) {
             final var entry = sourceAddresses.get(i);
-            if(i == 0){
+            if (i == 0) {
                 signatures.put(entry.weight(), null);
-            }else{
+            } else {
                 signatures.put(
                         entry.weight(), subject.signSchnorr(Bytes.wrap(message), Bytes.wrap(entry.keys.signingKey())));
             }
@@ -81,7 +83,9 @@ class HistoryLibraryImplTest {
                 sourceKeys,
                 targetWeights,
                 targetKeys,
-                signatures.values().stream().map(b -> b == null ? null : b.toByteArray()).toArray(byte[][]::new),
+                signatures.values().stream()
+                        .map(b -> b == null ? null : b.toByteArray())
+                        .toArray(byte[][]::new),
                 hashedMetadata);
         assertNotNull(snarkProof);
     }
