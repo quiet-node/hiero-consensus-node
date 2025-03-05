@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.queries.crypto;
 
+import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
+import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
 import static com.hedera.services.bdd.spec.queries.QueryUtils.answerCostHeader;
 import static com.hedera.services.bdd.spec.queries.QueryUtils.answerHeader;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.asTokenId;
@@ -316,6 +318,8 @@ public class HapiGetAccountBalance extends HapiQueryOp<HapiGetAccountBalance> {
             config = b -> b.setContractID(TxnUtils.asContractId(account, spec));
         } else if (referenceType == ReferenceType.HEXED_CONTRACT_ALIAS) {
             final var cid = ContractID.newBuilder()
+                    .setShardNum(shard)
+                    .setRealmNum(realm)
                     .setEvmAddress(ByteString.copyFrom(CommonUtils.unhex(literalHexedAlias)))
                     .build();
             config = b -> b.setContractID(cid);
@@ -324,7 +328,11 @@ public class HapiGetAccountBalance extends HapiQueryOp<HapiGetAccountBalance> {
             if (referenceType == ReferenceType.REGISTRY_NAME) {
                 id = TxnUtils.asId(account, spec);
             } else if (referenceType == ReferenceType.LITERAL_ACCOUNT_ALIAS) {
-                id = AccountID.newBuilder().setAlias(rawAlias).build();
+                id = AccountID.newBuilder()
+                        .setShardNum(shard)
+                        .setRealmNum(realm)
+                        .setAlias(rawAlias)
+                        .build();
             } else {
                 id = spec.registry().keyAliasIdFor(aliasKeySource);
             }
