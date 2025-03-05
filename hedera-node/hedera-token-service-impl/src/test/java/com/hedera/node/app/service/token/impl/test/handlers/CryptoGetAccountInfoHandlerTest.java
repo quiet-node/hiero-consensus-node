@@ -47,6 +47,7 @@ import com.hedera.node.app.service.token.ReadableNetworkStakingRewardsStore;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
 import com.hedera.node.app.service.token.ReadableTokenRelationStore;
 import com.hedera.node.app.service.token.ReadableTokenStore;
+import com.hedera.node.app.service.token.api.AccountSummariesApi;
 import com.hedera.node.app.service.token.impl.ReadableAccountStoreImpl;
 import com.hedera.node.app.service.token.impl.ReadableNetworkStakingRewardsStoreImpl;
 import com.hedera.node.app.service.token.impl.ReadableStakingInfoStoreImpl;
@@ -501,7 +502,7 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
                 .maxAutomaticTokenAssociations(10)
                 .ethereumNonce(0)
                 .alias(alias.alias())
-                .contractAccountID(idFactory.hexLongZero(3))
+                .contractAccountID(AccountSummariesApi.hexedEvmAddressOf(account))
                 .stakingInfo(getExpectedStakingInfo());
         if (balancesInQueriesEnabled) {
             builder.tokenRelationships(getExpectedTokenRelationship());
@@ -524,7 +525,7 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
                 .maxAutomaticTokenAssociations(10)
                 .ethereumNonce(0)
                 .alias(alias.alias())
-                .contractAccountID(idFactory.hexLongZero(3))
+                .contractAccountID(AccountSummariesApi.hexedEvmAddressOf(account))
                 .stakingInfo(getExpectedStakingInfo2());
         if (balancesInQueriesEnabled) {
             builder.tokenRelationships(getExpectedTokenRelationship());
@@ -569,7 +570,8 @@ class CryptoGetAccountInfoHandlerTest extends CryptoHandlerTestBase {
                 .maxAutomaticTokenAssociations(10)
                 .ethereumNonce(0)
                 .alias(alias.alias())
-                .contractAccountID(idFactory.hexLongZero(3L)) // "00000005000000000000000a0000000000000003")
+                .contractAccountID(
+                        AccountSummariesApi.hexedEvmAddressOf(account)) // "00000005000000000000000a0000000000000003")
                 .stakingInfo(getExpectedStakingInfo());
         if (balancesInQueriesEnabled) {
             builder.tokenRelationships(getExpectedTokenRelationships());

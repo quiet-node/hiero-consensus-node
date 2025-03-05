@@ -18,7 +18,7 @@ import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
-import com.swirlds.state.merkle.StateUtils;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
 import com.swirlds.state.merkle.disk.OnDiskWritableKVState;
 import com.swirlds.virtualmap.VirtualMap;
@@ -66,7 +66,8 @@ class OnDiskTest extends MerkleTestBase {
         final var tableConfig = new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 100, 0);
 
         final var builder = new MerkleDbDataSourceBuilder(storageDir, tableConfig, CONFIGURATION);
-        virtualMap = new VirtualMap(StateUtils.computeLabel(SERVICE_NAME, ACCOUNT_STATE_KEY), builder, CONFIGURATION);
+        virtualMap =
+                new VirtualMap(StateMetadata.computeLabel(SERVICE_NAME, ACCOUNT_STATE_KEY), builder, CONFIGURATION);
 
         Configuration config = mock(Configuration.class);
         final var hederaConfig = mock(HederaConfig.class);

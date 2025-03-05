@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.test.fixtures.merkle;
 
-import static com.swirlds.state.merkle.StateUtils.computeClassId;
+import static com.swirlds.state.lifecycle.StateMetadata.computeClassId;
 import static com.swirlds.virtualmap.constructable.ConstructableUtils.registerVirtualMapConstructables;
 
-import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.pbj.runtime.Codec;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.constructable.ClassConstructorPair;
@@ -25,12 +24,13 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
-import com.swirlds.state.merkle.StateUtils;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.memory.InMemoryKey;
 import com.swirlds.state.merkle.memory.InMemoryValue;
 import com.swirlds.state.merkle.queue.QueueNode;
 import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.test.fixtures.StateTestBase;
+import com.swirlds.state.test.fixtures.TestArgumentUtils;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -75,17 +75,10 @@ public class MerkleTestBase extends StateTestBase {
             .withConfigDataType(FileSystemManagerConfig.class)
             .build();
 
-    public static final String FIRST_SERVICE = "First-Service";
-    public static final String SECOND_SERVICE = "Second-Service";
-    public static final String UNKNOWN_SERVICE = "Bogus-Service";
-
     /** A TEST ONLY {@link Codec} to be used with String data types */
     public static final Codec<String> STRING_CODEC = TestStringCodec.SINGLETON;
     /** A TEST ONLY {@link Codec} to be used with Long data types */
     public static final Codec<Long> LONG_CODEC = TestLongCodec.SINGLETON;
-
-    public static final SemanticVersion TEST_VERSION =
-            SemanticVersion.newBuilder().major(1).build();
 
     private static final String ON_DISK_KEY_CLASS_ID_SUFFIX = "OnDiskKey";
     private static final String ON_DISK_VALUE_CLASS_ID_SUFFIX = "OnDiskValue";
@@ -143,13 +136,13 @@ public class MerkleTestBase extends StateTestBase {
 
     /** Sets up the "Fruit" merkle map, label, and metadata. */
     protected void setupFruitMerkleMap() {
-        fruitLabel = StateUtils.computeLabel(FIRST_SERVICE, FRUIT_STATE_KEY);
+        fruitLabel = StateMetadata.computeLabel(FIRST_SERVICE, FRUIT_STATE_KEY);
         fruitMerkleMap = createMerkleMap(fruitLabel);
     }
 
     /** Sets up the "Fruit" virtual map, label, and metadata. */
     protected void setupFruitVirtualMap() {
-        fruitVirtualLabel = StateUtils.computeLabel(FIRST_SERVICE, FRUIT_STATE_KEY);
+        fruitVirtualLabel = StateMetadata.computeLabel(FIRST_SERVICE, FRUIT_STATE_KEY);
         fruitVirtualMap = createVirtualMap(fruitVirtualLabel);
     }
 
@@ -167,18 +160,18 @@ public class MerkleTestBase extends StateTestBase {
 
     /** Sets up the "Animal" merkle map, label, and metadata. */
     protected void setupAnimalMerkleMap() {
-        animalLabel = StateUtils.computeLabel(FIRST_SERVICE, ANIMAL_STATE_KEY);
+        animalLabel = StateMetadata.computeLabel(FIRST_SERVICE, ANIMAL_STATE_KEY);
         animalMerkleMap = createMerkleMap(animalLabel);
     }
 
     /** Sets up the "Space" merkle map, label, and metadata. */
     protected void setupSpaceMerkleMap() {
-        spaceLabel = StateUtils.computeLabel(SECOND_SERVICE, SPACE_STATE_KEY);
+        spaceLabel = StateMetadata.computeLabel(SECOND_SERVICE, SPACE_STATE_KEY);
         spaceMerkleMap = createMerkleMap(spaceLabel);
     }
 
     protected void setupSingletonCountry() {
-        countryLabel = StateUtils.computeLabel(FIRST_SERVICE, COUNTRY_STATE_KEY);
+        countryLabel = StateMetadata.computeLabel(FIRST_SERVICE, COUNTRY_STATE_KEY);
         countrySingleton = new SingletonNode<>(
                 FIRST_SERVICE,
                 COUNTRY_STATE_KEY,
@@ -188,7 +181,7 @@ public class MerkleTestBase extends StateTestBase {
     }
 
     protected void setupSteamQueue() {
-        steamLabel = StateUtils.computeLabel(FIRST_SERVICE, STEAM_STATE_KEY);
+        steamLabel = StateMetadata.computeLabel(FIRST_SERVICE, STEAM_STATE_KEY);
         steamQueue = new QueueNode<>(
                 FIRST_SERVICE,
                 STEAM_STATE_KEY,
@@ -237,11 +230,6 @@ public class MerkleTestBase extends StateTestBase {
         final var merkleDbTableConfig = new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 100, 0);
         final var builder = new MerkleDbDataSourceBuilder(virtualDbPath, merkleDbTableConfig, CONFIGURATION);
         return new VirtualMap(label, builder, CONFIGURATION);
-    }
-
-    /** A convenience method for creating {@link SemanticVersion}. */
-    protected SemanticVersion version(int major, int minor, int patch) {
-        return new SemanticVersion(major, minor, patch, null, null);
     }
 
     /** A convenience method for adding a k/v pair to a merkle map */

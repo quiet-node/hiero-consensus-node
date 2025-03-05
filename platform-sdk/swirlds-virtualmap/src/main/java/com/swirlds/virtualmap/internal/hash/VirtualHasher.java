@@ -8,7 +8,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.swirlds.common.concurrent.AbstractTask;
 import com.swirlds.common.crypto.Cryptography;
-import com.swirlds.common.crypto.CryptographyHolder;
+import com.swirlds.common.crypto.CryptographyFactory;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.crypto.HashBuilder;
 import com.swirlds.virtualmap.VirtualMap;
@@ -58,6 +58,16 @@ public final class VirtualHasher {
      * avoid passing it as an arg to every hashing task.
      */
     private VirtualHashListener listener;
+
+    /**
+     * An instance of {@link Cryptography} used to hash leaves. This should be a static final
+     * field, but it doesn't work very well as platform configs aren't loaded at the time when
+     * this class is initialized. It would result in a cryptography instance with default (and
+     * possibly wrong) configs be used by the hasher. Instead, this field is initialized in
+     * the {@link #hash(LongFunction, Iterator, long, long, VirtualMapConfig)} method and used by all hashing
+     * tasks.
+     */
+    private static final Cryptography CRYPTOGRAPHY = CryptographyFactory.create();
 
     /**
      * Tracks if this virtual hasher has been shut down. If true (indicating that the hasher
@@ -267,7 +277,7 @@ public final class VirtualHasher {
 
         this.hashReader = hashReader;
         this.listener = listener;
-        final Hash NULL_HASH = CryptographyHolder.get().getNullHash();
+        final Hash NULL_HASH = CRYPTOGRAPHY.getNullHash();
 
         // Algo v6. This version is task based, where every task is responsible for hashing a small
         // chunk of the tree. Tasks are running in a fork-join pool, which is shared across all
@@ -476,7 +486,7 @@ public final class VirtualHasher {
     }
 
     public Hash emptyRootHash() {
-        final Hash NULL_HASH = CryptographyHolder.get().getNullHash();
+        final Hash NULL_HASH = CRYPTOGRAPHY.getNullHash();
         return ChunkHashTask.hash(NULL_HASH, NULL_HASH);
     }
 }
