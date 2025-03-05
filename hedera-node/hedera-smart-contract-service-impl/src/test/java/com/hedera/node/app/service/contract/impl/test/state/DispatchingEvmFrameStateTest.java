@@ -441,7 +441,8 @@ class DispatchingEvmFrameStateTest {
     @Test
     void returnsLongZeroAddressWithoutAnAlias() {
         givenWellKnownAccount(contractWith(A_ACCOUNT_ID));
-        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(A_ACCOUNT_ID));
+        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
+        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(ACCOUNT_NUM));
     }
 
     @Test
@@ -455,25 +456,28 @@ class DispatchingEvmFrameStateTest {
     @Test
     void returnsNullWithDeletedAccount() {
         givenWellKnownAccount(contractWith(A_ACCOUNT_ID).deleted(true));
-        assertNull(subject.getAddress(A_ACCOUNT_ID));
+        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
+        assertNull(subject.getAddress(ACCOUNT_NUM));
     }
 
     @Test
     void returnsLongZeroAddressWithNonAddressAlias() {
         givenWellKnownAccount(accountWith(A_ACCOUNT_ID, SOME_OTHER_ALIAS));
-        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(A_ACCOUNT_ID));
+        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
+        assertEquals(LONG_ZERO_ADDRESS, subject.getAddress(ACCOUNT_NUM));
     }
 
     @Test
     void returnsAliasIfPresent() {
         givenWellKnownAccount(accountWith(A_ACCOUNT_ID, Bytes.wrap(EVM_ADDRESS.toArrayUnsafe())));
-        assertEquals(EVM_ADDRESS, subject.getAddress(A_ACCOUNT_ID));
+        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
+        assertEquals(EVM_ADDRESS, subject.getAddress(ACCOUNT_NUM));
     }
 
     @Test
     void throwsIfAccountMissing() {
-        assertThrows(
-                IllegalArgumentException.class, () -> subject.getAddress(entityIdFactory.newAccountId(ACCOUNT_NUM)));
+        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
+        assertThrows(IllegalArgumentException.class, () -> subject.getAddress(ACCOUNT_NUM));
     }
 
     @Test

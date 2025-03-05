@@ -904,17 +904,17 @@ public class ConversionUtils {
      * Given a {@link ContractID} return the corresponding Besu {@link Address}
      * Importantly, this method does NOT check for the existence of the contract in the ledger
      *
+     * @param entityIdFactory the entity id factory
      * @param contractId the contract id
      * @return the equivalent Besu address
      */
-    public static @NonNull Address contractIDToBesuAddress(final ContractID contractId) {
+    public static @NonNull Address contractIDToBesuAddress(
+            @NonNull final EntityIdFactory entityIdFactory, @NonNull final ContractID contractId) {
         if (contractId.hasEvmAddress()) {
             return pbjToBesuAddress(contractId.evmAddressOrThrow());
         } else {
             // OrElse(0) is needed, as an UNSET contract OneOf has null number
-            return asLongZeroAddress(AccountID.newBuilder()
-                    .accountNum(contractId.contractNumOrElse(0L))
-                    .build());
+            return asLongZeroAddress(entityIdFactory.newAccountId(contractId.contractNumOrElse(0L)));
         }
     }
 

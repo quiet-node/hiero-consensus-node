@@ -145,8 +145,7 @@ class ProxyWorldUpdaterTest {
         final var num = ADDRESS_6.toBigInteger().longValueExact();
         final var numericId = ContractID.newBuilder().contractNum(num).build();
         given(hederaOperations.shardAndRealmValidated(numericId)).willReturn(numericId);
-        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
-        given(evmFrameState.getAddress(ACCOUNT_ID_6)).willReturn(ADDRESS_6);
+        given(evmFrameState.getAddress(num)).willReturn(ADDRESS_6);
         given(evmFrameState.getAccount(ADDRESS_6)).willReturn(proxyEvmContract);
         assertSame(proxyEvmContract, subject.getHederaAccount(numericId));
     }
@@ -164,8 +163,7 @@ class ProxyWorldUpdaterTest {
         final var num = ADDRESS_6.toBigInteger().longValueExact();
         final var numericId = ContractID.newBuilder().contractNum(num).build();
         given(hederaOperations.shardAndRealmValidated(numericId)).willReturn(numericId);
-        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
-        doThrow(IllegalArgumentException.class).when(evmFrameState).getAddress(ACCOUNT_ID_6);
+        doThrow(IllegalArgumentException.class).when(evmFrameState).getAddress(num);
         assertNull(subject.getHederaAccount(numericId));
     }
 
@@ -477,15 +475,9 @@ class ProxyWorldUpdaterTest {
     @Test
     void onlyReturnsNonDeletedAccountsAsTouched() {
         given(hederaOperations.getModifiedAccountNumbers()).willReturn(List.of(NUMBER, NEXT_NUMBER, NUMBER_OF_DELETED));
-        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
-        given(evmFrameState.getAddress(AccountID.newBuilder().accountNum(NUMBER).build()))
-                .willReturn(asLongZeroAddress(entityIdFactory, NUMBER));
-        given(evmFrameState.getAddress(
-                        AccountID.newBuilder().accountNum(NEXT_NUMBER).build()))
-                .willReturn(SOME_EVM_ADDRESS);
-        given(evmFrameState.getAddress(
-                        AccountID.newBuilder().accountNum(NUMBER_OF_DELETED).build()))
-                .willReturn(null);
+        given(evmFrameState.getAddress(NUMBER)).willReturn(asLongZeroAddress(entityIdFactory, NUMBER));
+        given(evmFrameState.getAddress(NEXT_NUMBER)).willReturn(SOME_EVM_ADDRESS);
+        given(evmFrameState.getAddress(NUMBER_OF_DELETED)).willReturn(null);
         given(evmFrameState.getAccount(asLongZeroAddress(entityIdFactory, NUMBER)))
                 .willReturn(anImmutableAccount);
         given(evmFrameState.getAccount(SOME_EVM_ADDRESS)).willReturn(anotherImmutableAccount);

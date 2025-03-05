@@ -82,7 +82,7 @@ class ConversionUtilsTest {
 
     @Test
     void besuAddressIsZeroForDefaultContractId() {
-        assertEquals(Address.ZERO, contractIDToBesuAddress(ContractID.DEFAULT));
+        assertEquals(Address.ZERO, contractIDToBesuAddress(entityIdFactory, ContractID.DEFAULT));
     }
 
     @Test
@@ -245,10 +245,10 @@ class ConversionUtilsTest {
 
     @Test
     void convertContractIdToBesuAddressTest() {
-        final var actual = ConversionUtils.contractIDToBesuAddress(CALLED_CONTRACT_ID);
+        final var actual = ConversionUtils.contractIDToBesuAddress(entityIdFactory, CALLED_CONTRACT_ID);
         assertEquals(actual, asLongZeroAddress(entityIdFactory, CALLED_CONTRACT_ID.contractNum()));
 
-        final var actual2 = ConversionUtils.contractIDToBesuAddress(VALID_CONTRACT_ADDRESS);
+        final var actual2 = ConversionUtils.contractIDToBesuAddress(entityIdFactory, VALID_CONTRACT_ADDRESS);
         assertEquals(actual2, pbjToBesuAddress(VALID_CONTRACT_ADDRESS.evmAddress()));
     }
 
