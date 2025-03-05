@@ -956,7 +956,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
             final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
 
-
             // Initialize migration metrics
 
             AtomicLong totalMigratedObjects = new AtomicLong(0);
@@ -1009,17 +1008,16 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     final var stateIdBytes = getVirtualMapKey(serviceName, stateKey);
 
                     // TODO: check possibilities for optimization
-                    InterruptableConsumer<Pair<Bytes, Bytes>> handler =
-                            (pair) -> {
-                                VirtualMap currentMap = virtualMapRef.get();
-                                if (currentMap.size() % DATA_PER_COPY == 0) {
-                                    VirtualMap older = currentMap;
-                                    currentMap = currentMap.copy();
-                                    older.release();
-                                    virtualMapRef.set(currentMap);
-                                }
-                                virtualMapRef.get().putBytes(stateIdBytes.append(pair.key()), pair.value());
-                            };
+                    InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
+                        VirtualMap currentMap = virtualMapRef.get();
+                        if (currentMap.size() % DATA_PER_COPY == 0) {
+                            VirtualMap older = currentMap;
+                            currentMap = currentMap.copy();
+                            older.release();
+                            virtualMapRef.set(currentMap);
+                        }
+                        virtualMapRef.get().putBytes(stateIdBytes.append(pair.key()), pair.value());
+                    };
 
                     try {
                         logger.info(
@@ -1042,7 +1040,10 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                                 "Migration complete for {} took {} ms",
                                 virtualMapLabel,
                                 migrationTimeMs);
-                        logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMapRef.get().size());
+                        logger.info(
+                                STARTUP.getMarker(),
+                                "New Virtual Map size: {}",
+                                virtualMapRef.get().size());
                         kvMigrationStartTime.addAndGet(migrationTimeMs);
                         totalMigrationTimeMs.addAndGet(migrationTimeMs);
                         totalMigratedObjects.addAndGet(virtualMapToMigrate.size());
@@ -1133,7 +1134,10 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             "Migration complete for {} took {} ms",
                             queueNodeLabel,
                             migrationTimeMs);
-                    logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMapRef.get().size());
+                    logger.info(
+                            STARTUP.getMarker(),
+                            "New Virtual Map size: {}",
+                            virtualMapRef.get().size());
                     queueMigrationStartTime.addAndGet(migrationTimeMs);
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
                     totalMigratedObjects.addAndGet(originalStore.size());

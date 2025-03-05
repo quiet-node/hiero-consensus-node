@@ -12,7 +12,6 @@ import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.io.utility.RecycleBin;
-import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
@@ -89,9 +88,14 @@ public final class StartupStateUtils {
         requireNonNull(platformContext.getConfiguration());
 
         final ReservedSignedState loadedState = StartupStateUtils.loadStateFile(
-                recycleBin, selfId, mainClassName, swirldName,stateRootFunction,
+                recycleBin,
+                selfId,
+                mainClassName,
+                swirldName,
+                stateRootFunction,
                 softwareVersion,
-                platformStateFacade, platformContext);
+                platformStateFacade,
+                platformContext);
 
         try (loadedState) {
             if (loadedState.isNotNull()) {
@@ -149,8 +153,12 @@ public final class StartupStateUtils {
         }
 
         final ReservedSignedState state = loadLatestState(
-                recycleBin, currentSoftwareVersion, savedStateFiles,stateRootFunction,
-                platformStateFacade, platformContext);
+                recycleBin,
+                currentSoftwareVersion,
+                savedStateFiles,
+                stateRootFunction,
+                platformStateFacade,
+                platformContext);
         return state;
     }
 
@@ -226,8 +234,12 @@ public final class StartupStateUtils {
 
         for (final SavedStateInfo savedStateFile : savedStateFiles) {
             final ReservedSignedState state = loadStateFile(
-                    recycleBin, currentSoftwareVersion, savedStateFile,stateRootFunction,
-                    platformStateFacade, platformContext);
+                    recycleBin,
+                    currentSoftwareVersion,
+                    savedStateFile,
+                    stateRootFunction,
+                    platformStateFacade,
+                    platformContext);
             if (state != null) {
                 return state;
             }

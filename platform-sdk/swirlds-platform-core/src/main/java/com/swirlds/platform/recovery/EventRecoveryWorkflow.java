@@ -140,8 +140,11 @@ public final class EventRecoveryWorkflow {
         try (final ReservedSignedState initialState = SignedStateFileReader.readStateFile(
                         signedStateFile,
                         // FIXME
-                        (virtualMap) -> {throw new UnsupportedOperationException();},
-                        platformStateFacade, platformContext)
+                        (virtualMap) -> {
+                            throw new UnsupportedOperationException();
+                        },
+                        platformStateFacade,
+                        platformContext)
                 .reservedSignedState()) {
             logger.info(
                     STARTUP.getMarker(),

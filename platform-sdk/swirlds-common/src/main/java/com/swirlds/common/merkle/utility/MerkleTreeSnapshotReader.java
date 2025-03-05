@@ -6,7 +6,6 @@ import static com.swirlds.common.io.streams.StreamDebugUtils.deserializeAndDebug
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.merkle.MerkleNode;
-import com.swirlds.common.merkle.impl.PartialNaryMerkleInternal;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedInputStream;
@@ -84,8 +83,7 @@ public class MerkleTreeSnapshotReader {
             @NonNull final Path directory)
             throws IOException {
         try {
-            final MerkleNode state =
-                    in.readMerkleTree(configuration, directory, MAX_MERKLE_NODES_IN_STATE);
+            final MerkleNode state = in.readMerkleTree(configuration, directory, MAX_MERKLE_NODES_IN_STATE);
             final Hash hash = in.readSerializable();
             return new StateFileData(state, hash);
 

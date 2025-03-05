@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2025 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle;
 
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_ACCOUNTS;
@@ -109,9 +94,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.IntFunction;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /** Utility class for working with states. */
 public final class StateUtils {
@@ -343,7 +325,7 @@ public final class StateUtils {
                     };
                     case "RecordCache" -> switch (stateKey) {
                         case "TransactionReceiptQueue" -> STATE_ID_TRANSACTION_RECEIPTS_QUEUE.protoOrdinal();
-                        // There is no such queue, but this needed for V0540RecordCacheSchema schema migration
+                            // There is no such queue, but this needed for V0540RecordCacheSchema schema migration
                         case "TransactionRecordQueue" -> STATE_ID_TRANSACTION_RECEIPTS_QUEUE.protoOrdinal();
                         default -> UNKNOWN_STATE_ID;
                     };

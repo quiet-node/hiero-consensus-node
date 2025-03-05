@@ -398,7 +398,9 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * @return the {@link Hedera} instance
      */
     public static Hedera newHedera(
-            @NonNull final Metrics metrics, @NonNull final PlatformStateFacade platformStateFacade, @NonNull Configuration platformConfig) {
+            @NonNull final Metrics metrics,
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull Configuration platformConfig) {
         requireNonNull(metrics);
         return new Hedera(
                 ConstructableRegistry.getInstance(),
@@ -545,8 +547,6 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         signedState.init(platformContext);
         final var reservedSignedState = signedState.reserve("initial reservation on genesis state");
         try (reservedSignedState) {
-            return copyInitialSignedState(
-                    configuration, reservedSignedState.get(), platformStateFacade, platformContext);
             return copyInitialSignedState(reservedSignedState.get(), platformStateFacade, platformContext);
         }
     }

@@ -167,7 +167,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         // FIXME
-                        (virtualMap) -> {throw new UnsupportedOperationException();},
+                        (virtualMap) -> {
+                            throw new UnsupportedOperationException();
+                        },
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -199,7 +201,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         // FIXME
-                        (virtualMap) -> {throw new UnsupportedOperationException();},
+                        (virtualMap) -> {
+                            throw new UnsupportedOperationException();
+                        },
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -235,7 +239,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         // FIXME
-                        (virtualMap) -> {throw new UnsupportedOperationException();},
+                        (virtualMap) -> {
+                            throw new UnsupportedOperationException();
+                        },
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -283,7 +289,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         // FIXME
-                        (virtualMap) -> {throw new UnsupportedOperationException();},
+                        (virtualMap) -> {
+                            throw new UnsupportedOperationException();
+                        },
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)

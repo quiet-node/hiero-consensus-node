@@ -38,7 +38,8 @@ public abstract class WritableKVStateBase<K, V> extends ReadableKVStateBase<K, V
      * @param stateKey The state key. Cannot be null.
      * @param modifications A map that is used to init the cache.
      */
-    protected WritableKVStateBase(@NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Map<K, V> modifications) {
+    protected WritableKVStateBase(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Map<K, V> modifications) {
         super(serviceName, stateKey);
         this.modifications = Objects.requireNonNull(modifications);
     }

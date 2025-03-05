@@ -33,7 +33,6 @@ import com.swirlds.platform.Browser;
 import com.swirlds.platform.ParameterProvider;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.NoOpConsensusStateEventHandler;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;

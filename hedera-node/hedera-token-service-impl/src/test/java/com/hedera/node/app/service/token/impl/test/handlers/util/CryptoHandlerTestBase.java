@@ -43,7 +43,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.utility.CommonUtils;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.lifecycle.EntityIdFactory;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;

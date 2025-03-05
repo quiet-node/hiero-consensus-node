@@ -146,8 +146,8 @@ import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
-import com.swirlds.state.merkle.NewStateRoot;
 import com.swirlds.state.spi.WritableSingletonStateBase;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.charset.Charset;
@@ -162,6 +162,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -523,8 +524,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             onSealConsensusRound = blockStreamsEnabled ? this::manageBlockEndRound : (round, state) -> true;
             // And the factory for the MerkleStateRoot class id must be our constructor
             // TODO: revisit
-            constructableRegistry.registerConstructable(new ClassConstructorPair(
-                    HederaStateRoot.class, () -> new HederaStateRoot()));
+            constructableRegistry.registerConstructable(
+                    new ClassConstructorPair(HederaStateRoot.class, () -> new HederaStateRoot()));
         } catch (final ConstructableRegistryException e) {
             logger.error("Failed to register " + HederaStateRoot.class + " factory with ConstructableRegistry", e);
             throw new IllegalStateException(e);

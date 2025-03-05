@@ -24,7 +24,6 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

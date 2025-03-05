@@ -122,7 +122,9 @@ public class TurtleNode {
                 version,
                 TurtleTestingToolState::getStateRootNode,
                 // TODO: GH issue
-                (virtualMap) -> {throw new UnsupportedOperationException();},
+                (virtualMap) -> {
+                    throw new UnsupportedOperationException();
+                },
                 "foo",
                 "bar",
                 nodeId,

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle.disk;
 
+import static java.util.Objects.requireNonNull;
+
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -9,11 +11,7 @@ import com.swirlds.common.merkle.iterators.MerkleIterator;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
-import java.util.Iterator;
 import java.util.NoSuchElementException;
-
-import static java.util.Objects.requireNonNull;
 
 public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
 
@@ -22,7 +20,8 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
     private K next = null;
 
     // add state prefix
-    public OnDiskIterator(@NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec, @NonNull final Bytes stateId) {
+    public OnDiskIterator(
+            @NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec, @NonNull final Bytes stateId) {
         super(virtualMap, keyCodec);
         this.stateId = requireNonNull(stateId);
         itr = requireNonNull(virtualMap).treeIterator();

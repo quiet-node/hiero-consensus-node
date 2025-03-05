@@ -13,7 +13,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.PlatformStateModifier;

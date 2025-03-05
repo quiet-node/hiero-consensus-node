@@ -23,8 +23,8 @@ import com.swirlds.platform.state.signed.SigSet;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateMetadata;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -63,8 +62,7 @@ public final class SignedStateFileReader {
         checkSignedStatePath(stateFile);
 
         final DeserializedSignedState returnState;
-        final MerkleTreeSnapshotReader.StateFileData data =
-                MerkleTreeSnapshotReader.readStateFileData(configuration, stateFile);
+        final MerkleTreeSnapshotReader.StateFileData data = MerkleTreeSnapshotReader.readStateFileData(conf, stateFile);
         final File sigSetFile =
                 stateFile.getParent().resolve(SIGNATURE_SET_FILE_NAME).toFile();
         final SigSet sigSet = deserializeAndDebugOnFailure(

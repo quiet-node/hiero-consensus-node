@@ -59,9 +59,12 @@ public class ValidateAddressBookStateCommand extends AbstractCommand {
 
         System.out.printf("Reading state from %s %n", statePath.toAbsolutePath());
         final DeserializedSignedState deserializedSignedState = SignedStateFileReader.readStateFile(
-                statePath,// FIXME
-                (virtualMap) -> {throw new UnsupportedOperationException();},
-                DEFAULT_PLATFORM_STATE_FACADE, platformContext);
+                statePath, // FIXME
+                (virtualMap) -> {
+                    throw new UnsupportedOperationException();
+                },
+                DEFAULT_PLATFORM_STATE_FACADE,
+                platformContext);
 
         System.out.printf("Reading address book from %s %n", addressBookPath.toAbsolutePath());
         final String addressBookString = Files.readString(addressBookPath);

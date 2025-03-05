@@ -17,13 +17,20 @@ module com.hedera.node.app {
     requires transitive com.hedera.node.app.spi;
     requires transitive com.hedera.node.config;
     requires transitive com.hedera.node.hapi;
+    requires transitive com.hedera.pbj.runtime;
+    requires transitive com.swirlds.base;
+    requires transitive com.swirlds.common;
+    requires transitive com.swirlds.config.api;
+    requires transitive com.swirlds.metrics.api;
     requires transitive com.swirlds.platform.core;
     requires transitive com.swirlds.state.api;
     requires transitive com.swirlds.state.impl;
+    requires transitive com.swirlds.virtualmap;
     requires transitive dagger;
     requires transitive io.grpc.stub;
     requires transitive io.helidon.webclient.grpc;
     requires transitive javax.inject;
+    requires transitive org.apache.logging.log4j;
     requires transitive org.hyperledger.besu.datatypes;
     requires transitive org.hyperledger.besu.evm;
     requires com.hedera.node.app.hapi.fees;
@@ -33,6 +40,9 @@ module com.hedera.node.app {
     requires com.hedera.node.app.service.file;
     requires com.hedera.node.app.service.network.admin;
     requires com.hedera.node.app.service.util;
+    requires com.swirlds.config.extensions;
+    requires com.swirlds.logging;
+    requires com.swirlds.merkledb;
     requires com.google.common;
     requires io.grpc.netty;
     requires io.grpc;
@@ -42,7 +52,6 @@ module com.hedera.node.app {
     requires io.netty.transport.classes.epoll;
     requires io.netty.transport;
     requires org.apache.commons.lang3;
-    requires com.swirlds.merkledb;
     requires static com.github.spotbugs.annotations;
     requires static com.google.auto.service;
     requires static java.compiler;
