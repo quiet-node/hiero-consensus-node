@@ -35,19 +35,18 @@ public class Version038AddressChecks extends Version030AddressChecks {
 
     @Override
     public boolean isSystemAccount(@NonNull final Address address) {
-        if (!isLongZero(entityIdFactory, address)) {
-            return false;
+        if (address.numberOfLeadingZeroBytes() >= 18 && address.getInt(16) <= ProcessorModule.NUM_SYSTEM_ACCOUNTS) {
+            return true;
         }
-        final var num = numberOfLongZero(address.toArray());
-        return num <= ProcessorModule.NUM_SYSTEM_ACCOUNTS && num >= 0;
+        return isLongZero(entityIdFactory, address)
+                && numberOfLongZero(address.toArray()) <= ProcessorModule.NUM_SYSTEM_ACCOUNTS;
     }
 
     @Override
     public boolean isNonUserAccount(@NonNull final Address address) {
-        if (!isLongZero(entityIdFactory, address)) {
-            return false;
+        if (address.numberOfLeadingZeroBytes() >= 18 && address.getInt(16) < FIRST_USER_ACCOUNT) {
+            return true;
         }
-        final var num = numberOfLongZero(address.toArray());
-        return num < FIRST_USER_ACCOUNT && num >= 0;
+        return isLongZero(entityIdFactory, address) && numberOfLongZero(address.toArray()) < FIRST_USER_ACCOUNT;
     }
 }
