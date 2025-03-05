@@ -299,7 +299,7 @@ public class SerializableDataOutputStream extends AugmentedDataOutputStream {
      * @throws IOException
      * 		thrown if any IO problems occur
      */
-    public <T extends Record> void writePbjRecord(@NonNull final T record, @NonNull final Codec<T> codec)
+    public <T> void writePbjRecord(@NonNull final T record, @NonNull final Codec<T> codec)
             throws IOException {
         writeInt(codec.measureRecord(record));
         codec.write(record, writableSequentialData);

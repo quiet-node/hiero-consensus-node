@@ -50,7 +50,13 @@ public class OnDiskReadableSingletonState<T> extends ReadableSingletonStateBase<
      */
     @Override
     protected T readFromDataSource() {
-        final var value = virtualMap.get(getVirtualMapKey(serviceName, stateKey), valueCodec);
+        final var key = getVirtualMapKey(serviceName, stateKey);
+        var value = virtualMap.get(key, valueCodec);
+
+        if (value == null && virtualMap.containsKey(key)) {
+            value = valueCodec.getDefaultInstance();
+        }
+
         // Log to transaction state log, what was read
         logSingletonRead(computeLabel(serviceName, stateKey), value);
         return value;

@@ -167,18 +167,20 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
                 executorService,
                 new PlatformMetricsFactoryImpl(metricsConfig),
                 metricsConfig);
-        hedera = new Hedera(
-                ConstructableRegistry.getInstance(),
-                FakeServicesRegistry.FACTORY,
-                new FakeServiceMigrator(),
-                this::now,
-                DiskStartupNetworks::new,
-                (appContext, bootstrapConfig) -> this.hintsService = new FakeHintsService(appContext, bootstrapConfig),
-                (appContext, bootstrapConfig) -> this.historyService = new FakeHistoryService(),
-                (hints, history, configProvider) ->
-                        this.blockHashSigner = new LapsingBlockHashSigner(hints, history, configProvider),
-                metrics,
-                new PlatformStateFacade(ServicesSoftwareVersion::new), platformConfig);
+        hedera = null;
+        // FIXME
+//        new Hedera(
+//                ConstructableRegistry.getInstance(),
+//                FakeServicesRegistry.FACTORY,
+//                new FakeServiceMigrator(),
+//                this::now,
+//                DiskStartupNetworks::new,
+//                (appContext, bootstrapConfig) -> this.hintsService = new FakeHintsService(appContext, bootstrapConfig),
+//                (appContext, bootstrapConfig) -> this.historyService = new FakeHistoryService(),
+//                (hints, history, configProvider) ->
+//                        this.blockHashSigner = new LapsingBlockHashSigner(hints, history, configProvider),
+//                metrics,
+//                new PlatformStateFacade(ServicesSoftwareVersion::new));
         version = (ServicesSoftwareVersion) hedera.getSoftwareVersion();
         blockStreamEnabled = hedera.isBlockStreamEnabled();
         Runtime.getRuntime().addShutdownHook(new Thread(executorService::shutdownNow));

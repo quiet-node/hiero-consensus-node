@@ -55,4 +55,9 @@ public class SmartContractByteCodeMapValueCodec implements Codec<SmartContractBy
         final SmartContractByteCodeMapValue other = parse(in);
         return value.equals(other);
     }
+
+    @Override
+    public SmartContractByteCodeMapValue getDefaultInstance() {
+        return new SmartContractByteCodeMapValue();
+    }
 }

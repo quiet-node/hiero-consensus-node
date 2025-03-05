@@ -500,7 +500,7 @@ public class TransactionChecker {
      * @throws PreCheckException if the data is malformed or contains unknown fields.
      */
     @NonNull
-    private <T extends Record> T parseStrict(
+    private <T> T parseStrict(
             @NonNull ReadableSequentialData data, Codec<T> codec, ResponseCodeEnum parseErrorCode)
             throws PreCheckException {
         try {

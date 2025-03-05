@@ -71,4 +71,9 @@ public class TestLongCodec implements Codec<Long> {
         Objects.requireNonNull(input);
         return value.equals(parse(input));
     }
+
+    @Override
+    public Long getDefaultInstance() {
+        return 0L;
+    }
 }

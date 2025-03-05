@@ -200,7 +200,7 @@ public class NewStateRoot implements MerkleNodeState {
     public WritableStates getWritableStates(@NonNull final String serviceName) {
         virtualMap.throwIfImmutable();
         return writableStatesMap.computeIfAbsent(serviceName, s -> {
-            final var stateMetadata = services.getOrDefault(s, Map.of());
+            final var stateMetadata = services.getOrDefault(s, new HashMap<>());
             return new NewStateRoot.MerkleWritableStates(serviceName, stateMetadata);
         });
     }
