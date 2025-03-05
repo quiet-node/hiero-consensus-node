@@ -31,13 +31,9 @@ import com.hedera.node.app.service.file.impl.ReadableFileStoreImpl;
 import com.hedera.node.app.service.file.impl.handlers.FileGetContentsHandler;
 import com.hedera.node.app.service.file.impl.schemas.V0490FileSchema;
 import com.hedera.node.app.service.file.impl.test.FileTestBase;
-import com.hedera.node.app.spi.fixtures.ids.FakeEntityIdFactoryImpl;
 import com.hedera.node.app.spi.workflows.QueryContext;
 import com.hedera.node.config.data.FilesConfig;
-import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.config.api.Configuration;
-import com.swirlds.state.lifecycle.EntityIdFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,7 +42,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class FileGetContentsHandlerTest extends FileTestBase {
-    private EntityIdFactory idFactory;
 
     @Mock
     private QueryContext context;
@@ -59,19 +54,8 @@ class FileGetContentsHandlerTest extends FileTestBase {
 
     private FileGetContentsHandler subject;
 
-    private Configuration config;
-
     @BeforeEach
     void setUp() {
-        config = HederaTestConfigBuilder.create()
-                .withValue("cryptoCreateWithAlias.enabled", true)
-                .withValue("ledger.maxAutoAssociations", 5000)
-                .withValue("entities.limitTokenAssociations", false)
-                .withValue("tokens.maxPerAccount", 1000)
-                .withValue("hedera.shard", 5L)
-                .withValue("hedera.realm", 10L)
-                .getOrCreateConfig();
-        idFactory = new FakeEntityIdFactoryImpl(5, 10);
         subject = new FileGetContentsHandler(usageEstimator, genesisSchema);
     }
 
@@ -197,7 +181,7 @@ class FileGetContentsHandlerTest extends FileTestBase {
                 .nodeTransactionPrecheckCode(ResponseCodeEnum.OK)
                 .build();
         final var expectedContent = getExpectedContent();
-        given(handleContext.configuration()).willReturn(config);
+        given(context.configuration()).willReturn(DEFAULT_CONFIG);
         final var query = createGetFileContentQueryFromEntityId(fileId.fileNum());
         when(context.query()).thenReturn(query);
         when(context.createStore(ReadableFileStore.class)).thenReturn(readableStore);
