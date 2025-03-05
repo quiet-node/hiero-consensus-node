@@ -481,8 +481,6 @@ public class Utils {
     /**
      * Converts a long-zero address to a {@link ScheduleID} with id number instead of alias.
      *
-     * @param shard the shard of the Hedera network
-     * @param realm the realm of the Hedera network
      * @param address the EVM address
      * @return the {@link ScheduleID}
      */
