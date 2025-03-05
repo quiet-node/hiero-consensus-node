@@ -804,6 +804,7 @@ public class ThrottleAccumulator {
      * Rebuilds the throttle requirements based on the given throttle definitions.
      *
      * @param defs the throttle definitions to rebuild the throttle requirements based on
+     * @return error message if the rebuild failed, null otherwise
      */
     public String rebuildFor(@NonNull final ThrottleDefinitions defs) {
         List<DeterministicThrottle> newActiveThrottles = new ArrayList<>();
