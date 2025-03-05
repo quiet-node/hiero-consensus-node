@@ -47,9 +47,6 @@ class FileBlockItemWriterTest {
     private BlockStreamConfig blockStreamConfig;
 
     @Mock
-    private BlockNodeConnectionConfig blockNodeConnectionConfig;
-
-    @Mock
     private VersionedConfiguration versionedConfiguration;
 
     @Mock
@@ -60,7 +57,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
@@ -84,7 +81,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
@@ -103,7 +100,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
@@ -117,7 +114,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
@@ -159,7 +156,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
@@ -176,7 +173,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
@@ -204,7 +201,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
@@ -218,7 +215,7 @@ class FileBlockItemWriterTest {
         when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
         when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
         when(blockStreamConfig.compressFilesOnCreation()).thenReturn(true);
-        when(blockNodeConnectionConfig.blockFileDir()).thenReturn("N/A");
+        when(blockStreamConfig.blockFileDir()).thenReturn("N/A");
         when(fileSystem.getPath(anyString())).thenReturn(tempDir);
 
         FileBlockItemWriter fileBlockItemWriter = new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);

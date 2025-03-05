@@ -42,9 +42,6 @@ public class BlockNodeConfigExtractor {
 
             logger.info("Loaded block node configuration from {}", configPath);
             logger.info("Block node configuration: {}", allNodes);
-            logger.info("Block item batch size: {}", blockItemBatchSize);
-            logger.info("Max simultaneous connections: {}", maxNumberOfSimultaneousConnections);
-
         } catch (IOException | ParseException e) {
             logger.error("Failed to read block node configuration from {}", configPath, e);
             throw new RuntimeException("Failed to read block node configuration from " + configPath, e);

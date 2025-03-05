@@ -55,7 +55,6 @@ public class BlockNodeConnectionManager {
     private BlockNodeConfigExtractor blockNodeConfigurations;
 
     private final Object connectionLock = new Object();
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final ExecutorService streamingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService retryExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final ScheduledExecutorService connectionExecutor;
@@ -102,6 +101,7 @@ public class BlockNodeConnectionManager {
             Collections.shuffle(nodesInGroup);
             for (BlockNodeConfig node : nodesInGroup) {
                 if (selectedNodes.size() >= maxSimultaneousConnections) {
+                    logger.info("Max simultaneous connections {} reached with selected nodes {}", maxSimultaneousConnections, selectedNodes);
                     break;
                 }
                 selectedNodes.add(node);
@@ -246,7 +246,13 @@ public class BlockNodeConnectionManager {
 
         retryExecutor.execute(() -> {
             try {
-                retry(connection::establishStream, INITIAL_RETRY_DELAY);
+                retry(() -> {
+                    connection.establishStream(); // Attempt to re-establish the connection
+                    synchronized (connectionLock) {
+                        activeConnections.put(connection.getNodeConfig(), connection);
+                    }
+                    return true;
+                }, INITIAL_RETRY_DELAY);
             } catch (Exception e) {
                 final var node = connection.getNodeConfig();
                 logger.error("Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);

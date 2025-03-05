@@ -84,8 +84,7 @@ public class FileBlockItemWriter implements BlockItemWriter {
         this.compressFiles = blockStreamConfig.compressFilesOnCreation();
 
         // Compute directory for block files
-        final var blockNodeConnectionConfig = config.getConfigData(BlockNodeConnectionConfig.class);
-        final Path blockDir = fileSystem.getPath(blockNodeConnectionConfig.blockFileDir());
+        final Path blockDir = fileSystem.getPath(blockStreamConfig.blockFileDir());
         nodeScopedBlockDir = blockDir.resolve("block-" + asAccountString(nodeInfo.accountId()));
     }
 
