@@ -27,6 +27,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
@@ -40,8 +41,22 @@ public class BookEntryPojo {
         private String ipAddressV4;
         private Integer port;
 
+        public String getDomainName() {
+            return domainName;
+        }
+
+        public void setDomainName(String domainName) {
+            this.domainName = domainName;
+        }
+
+        private String domainName;
+
         @SuppressWarnings("java:S5960")
         private static String asReadableIp(final ByteString octets) {
+            Objects.requireNonNull(octets);
+            if (octets.size() < 4) {
+                throw new IllegalArgumentException("Octets must be 4 bytes long!");
+            }
             final byte[] raw = octets.toByteArray();
             final var sb = new StringBuilder();
             for (int i = 0; i < 4; i++) {
@@ -72,8 +87,13 @@ public class BookEntryPojo {
         @SuppressWarnings("java:S5960")
         static EndpointPojo fromGrpc(final ServiceEndpoint proto) {
             final var pojo = new EndpointPojo();
-            pojo.setIpAddressV4(asReadableIp(proto.getIpAddressV4()));
+            try{
+                pojo.setIpAddressV4(asReadableIp(proto.getIpAddressV4()));
+            }catch(Exception e){
+                System.out.println("Exception: " + e); // continue to write out the address book so that the contents can be seen
+            }
             pojo.setPort(proto.getPort());
+            pojo.setDomainName(proto.getDomainName());
             Assertions.assertNotEquals(0, pojo.getPort().intValue(), "A port is a positive integer!");
             return pojo;
         }
@@ -82,6 +102,7 @@ public class BookEntryPojo {
             return ServiceEndpoint.newBuilder()
                     .setIpAddressV4(asOctets(ipAddressV4))
                     .setPort(port)
+                    .setDomainName(domainName)
                     .build();
         }
     }
