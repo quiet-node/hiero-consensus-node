@@ -9,8 +9,8 @@ contract SendInternalAndDelegate {
     receive() external payable {}
 
     function sendRepeatedlyTo(
-        uint64 just_send_num,
-        uint64 account_num,
+        uint160 just_send_num,
+        uint160 account_num,
         uint64 value
     ) public payable {
         /* First send "normally" */

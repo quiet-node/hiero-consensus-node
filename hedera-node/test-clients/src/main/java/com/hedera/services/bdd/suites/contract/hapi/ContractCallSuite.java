@@ -11,6 +11,7 @@ import static com.hedera.services.bdd.spec.HapiPropertySource.contractIdFromHexe
 import static com.hedera.services.bdd.spec.HapiPropertySource.idAsHeadlongAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
 import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD_AND_REALM;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.changeFromSnapshot;
 import static com.hedera.services.bdd.spec.assertions.AssertUtils.inOrder;
@@ -286,7 +287,7 @@ public class ContractCallSuite {
     final Stream<DynamicTest> lowLevelEcrecCallBehavior() {
         final var TEST_CONTRACT = "TestContract";
         final var somebody = "somebody";
-        final var account = SHARD + "." + REALM + "." + "1";
+        final var account = SHARD_AND_REALM + "1";
         return hapiTest(
                 uploadInitCode(TEST_CONTRACT),
                 contractCreate(

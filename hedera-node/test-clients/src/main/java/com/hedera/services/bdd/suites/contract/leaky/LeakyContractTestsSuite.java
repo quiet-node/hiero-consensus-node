@@ -9,8 +9,8 @@ import static com.hedera.services.bdd.spec.HapiPropertySource.asContract;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asHexedSolidityAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
-import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
-import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountDetailsAsserts.accountDetailsWith;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
@@ -270,7 +270,7 @@ public class LeakyContractTestsSuite {
                         .adminKey(adminKey)
                         .entityMemo(ENTITY_MEMO)
                         .via(CREATE_2_TXN)
-                        .exposingNumTo(num -> factoryEvmAddress.set(asHexedSolidityAddress(shard, realm, num))),
+                        .exposingNumTo(num -> factoryEvmAddress.set(asHexedSolidityAddress(SHARD, REALM, num))),
                 sourcing(() -> contractCallLocal(
                                 contract, GET_BYTECODE, asHeadlongAddress(factoryEvmAddress.get()), salt)
                         .exposingTypedResultsTo(results -> {
@@ -530,7 +530,7 @@ public class LeakyContractTestsSuite {
                 cryptoCreate(longLivedPayer).autoRenewSecs(longLifetime - 12345),
                 uploadInitCode(toyMaker, createIndirectly),
                 contractCreate(toyMaker)
-                        .exposingNumTo(num -> toyMakerMirror.set(asHexedSolidityAddress(shard, realm, num))),
+                        .exposingNumTo(num -> toyMakerMirror.set(asHexedSolidityAddress(SHARD, REALM, num))),
                 sourcing(() -> contractCreate(createIndirectly)
                         .autoRenewSecs(longLifetime - 12345)
                         .payingWith(GENESIS)),
@@ -744,15 +744,15 @@ public class LeakyContractTestsSuite {
                     final var expectedGrandChildContractAddress = contractAddress(expectedChildContractAddress, 1L);
 
                     final var childId = ContractID.newBuilder()
-                            .setShardNum(shard)
-                            .setRealmNum(realm)
+                            .setShardNum(SHARD)
+                            .setRealmNum(REALM)
                             .setContractNum(parentNum.getContractNum() + 1L)
                             .build();
                     childLiteralId.set(HapiPropertySource.asContractString(childId));
                     expectedChildAddress.set(ByteString.copyFrom(expectedChildContractAddress.toArray()));
                     final var grandChildId = ContractID.newBuilder()
-                            .setShardNum(shard)
-                            .setRealmNum(realm)
+                            .setShardNum(SHARD)
+                            .setRealmNum(REALM)
                             .setContractNum(parentNum.getContractNum() + 2L)
                             .build();
                     grandChildLiteralId.set(HapiPropertySource.asContractString(grandChildId));
@@ -1116,7 +1116,7 @@ public class LeakyContractTestsSuite {
                         .adminKey(DEFAULT_PAYER)
                         .exposingNumTo(num -> {
                             whitelistedCalleeMirrorNum.set(num);
-                            whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(shard, realm, num));
+                            whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(SHARD, REALM, num));
                         }),
                 tokenAssociate(PRETEND_PAIR, FUNGIBLE_TOKEN),
                 tokenAssociate(DELEGATE_PRECOMPILE_CALLEE, FUNGIBLE_TOKEN),
@@ -1162,14 +1162,14 @@ public class LeakyContractTestsSuite {
                 uploadInitCode(DELEGATE_ERC_CALLEE),
                 contractCreate(DELEGATE_ERC_CALLEE).adminKey(DEFAULT_PAYER).exposingNumTo(num -> {
                     whitelistedCalleeMirrorNum.set(num);
-                    whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(shard, realm, num));
+                    whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(SHARD, REALM, num));
                 }),
                 uploadInitCode(DELEGATE_PRECOMPILE_CALLEE),
                 contractCreate(DELEGATE_PRECOMPILE_CALLEE)
                         .adminKey(DEFAULT_PAYER)
                         .exposingNumTo(num -> {
                             unlistedCalleeMirrorNum.set(num);
-                            unListedCalleeMirrorAddr.set(asHexedSolidityAddress(shard, realm, num));
+                            unListedCalleeMirrorAddr.set(asHexedSolidityAddress(SHARD, REALM, num));
                         }),
                 tokenAssociate(PRETEND_PAIR, FUNGIBLE_TOKEN),
                 tokenAssociate(DELEGATE_ERC_CALLEE, FUNGIBLE_TOKEN),
