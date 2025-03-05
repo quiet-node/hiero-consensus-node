@@ -62,8 +62,10 @@ import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.schemas.SyntheticAccountCreator;
 import com.hedera.node.app.service.token.records.GenesisAccountStreamBuilder;
 import com.hedera.node.app.service.token.records.TokenContext;
+import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.SystemContext;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
+import com.hedera.node.app.throttle.ThrottleServiceManager;
 import com.hedera.node.app.workflows.handle.Dispatch;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.FilesConfig;
@@ -129,6 +131,7 @@ public class SystemSetup {
     private final FileServiceImpl fileService;
     private final SyntheticAccountCreator syntheticAccountCreator;
     private final SyntheticNodeCreator syntheticNodeCreator;
+    private final ThrottleServiceManager throttleServiceManager;
 
     /**
      * Constructs a new {@link SystemSetup}.
@@ -137,10 +140,12 @@ public class SystemSetup {
     public SystemSetup(
             @NonNull final FileServiceImpl fileService,
             @NonNull final SyntheticAccountCreator syntheticAccountCreator,
-            @NonNull final SyntheticNodeCreator syntheticNodeCreator) {
+            @NonNull final SyntheticNodeCreator syntheticNodeCreator,
+            @NonNull final ThrottleServiceManager throttleServiceManager) {
         this.fileService = requireNonNull(fileService);
         this.syntheticAccountCreator = requireNonNull(syntheticAccountCreator);
         this.syntheticNodeCreator = requireNonNull(syntheticNodeCreator);
+        this.throttleServiceManager = requireNonNull(throttleServiceManager);
     }
 
     /**
@@ -151,7 +156,7 @@ public class SystemSetup {
     public void doGenesisSetup(@NonNull final Dispatch dispatch) {
         final var systemContext = systemContextFor(dispatch);
         final var nodeStore = dispatch.handleContext().storeFactory().readableStore(ReadableNodeStore.class);
-        fileService.createSystemEntities(systemContext, nodeStore);
+        fileService.createSystemEntities(systemContext, nodeStore, validatedThrottle(throttleServiceManager));
     }
 
     /**
@@ -647,6 +652,16 @@ public class SystemSetup {
             return V053AddressBookSchema.parseEd25519NodeAdminKeys(json);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    private static Function<Bytes, ResponseCodeEnum> validatedThrottle(
+            @NonNull final ThrottleServiceManager throttleServiceManager) {
+        try {
+            return throttleServiceManager::recreateThrottles;
+        } catch (HandleException e) {
+            log.error("Failed to validate throttles", e);
+            throw e;
         }
     }
 }
