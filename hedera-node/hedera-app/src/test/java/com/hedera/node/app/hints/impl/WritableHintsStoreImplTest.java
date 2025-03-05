@@ -469,7 +469,6 @@ class WritableHintsStoreImplTest {
                 new ConfigProviderImpl().getConfiguration(),
                 DEFAULT_CONFIG,
                 networkInfo,
-                NO_OP_METRICS,
                 startupNetworks,
                 storeMetricsService,
                 configProvider,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.swirlds.state.merkle;
+package com.hedera.node.app;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
@@ -22,14 +22,22 @@ import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.base.time.Time;
+import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
+import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
+import com.swirlds.common.merkle.utility.MerkleTreeSnapshotWriter;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
+import com.swirlds.merkledb.MerkleDbTableConfig;
+import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.state.State;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.StateChangeListener;
+import com.swirlds.state.lifecycle.StateMetadata;
+import com.swirlds.state.merkle.MerkleRootSnapshotMetrics;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
 import com.swirlds.state.merkle.disk.OnDiskReadableQueueState;
 import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
@@ -53,7 +61,6 @@ import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -67,10 +74,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.LongSupplier;
 
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class NewStateRoot implements State {
+public class NewStateRoot implements MerkleNodeState {
 
     private static final Logger logger = LogManager.getLogger(NewStateRoot.class);
 
@@ -113,7 +121,28 @@ public class NewStateRoot implements State {
 
     private Configuration configuration;
 
+    private LongSupplier roundSupplier;
+
     private VirtualMap virtualMap;
+
+    // remove configuration from init method if this is working
+    public NewStateRoot(Configuration configuration) {
+        this.configuration = configuration;
+        // Config constant (TODO: move to config)
+        long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
+
+        final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
+        final var tableConfig = new MerkleDbTableConfig(
+                (short) 1, DigestType.SHA_384, MEGA_MAP_MAX_KEYS_HINT, merkleDbConfig.hashesRamToDiskThreshold());
+        final var virtualMapLabel = "VirtualMap";
+        final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
+
+        this.virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
+    }
+
+    public NewStateRoot(VirtualMap virtualMap) {
+        this.virtualMap = virtualMap;
+    }
 
     // not sure if it is needed though!
     /**
@@ -124,6 +153,8 @@ public class NewStateRoot implements State {
     protected NewStateRoot(@NonNull final NewStateRoot from) {
         this.virtualMap = from.virtualMap.copy(); // not sure in this
 
+        this.roundSupplier = from.roundSupplier;
+
         this.listeners.addAll(from.listeners);
 
         // Copy over the metadata
@@ -133,12 +164,18 @@ public class NewStateRoot implements State {
     }
 
     // This is how MerkleStateRoot was init (except configuration) -- maybe need to work out new way here
-    public void init(Configuration configuration, Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier longSupplier) {
+    public void init(
+            @NonNull Configuration configuration,
+            Time time,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier) {
         this.configuration = configuration;
         this.time = time;
         this.metrics = metrics;
         this.merkleCryptography = merkleCryptography;
-        snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.roundSupplier = roundSupplier;
     }
 
     // State interface impl
@@ -161,9 +198,9 @@ public class NewStateRoot implements State {
     @Override
     @NonNull
     public WritableStates getWritableStates(@NonNull final String serviceName) {
-        throwIfImmutable();
+        virtualMap.throwIfImmutable();
         return writableStatesMap.computeIfAbsent(serviceName, s -> {
-            final var stateMetadata = services.getOrDefault(s, Map.of());
+            final var stateMetadata = services.getOrDefault(s, new HashMap<>());
             return new NewStateRoot.MerkleWritableStates(serviceName, stateMetadata);
         });
     }
@@ -195,6 +232,22 @@ public class NewStateRoot implements State {
         return new NewStateRoot(this);
     }
 
+    @Override
+    @Nullable
+    public Hash getHash() {
+        return virtualMap.getHash();
+    }
+
+    @Override
+    public void setHash(Hash hash) {
+        virtualMap.setHash(hash);
+    }
+
+    @Override
+    public boolean isImmutable() {
+        return virtualMap.isImmutable();
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -203,8 +256,8 @@ public class NewStateRoot implements State {
         requireNonNull(
                 merkleCryptography,
                 "MerkleStateRoot has to be initialized before hashing. merkleCryptography is not set.");
-        throwIfMutable("Hashing should only be done on immutable states");
-        throwIfDestroyed("Hashing should not be done on destroyed states");
+        virtualMap.throwIfMutable("Hashing should only be done on immutable states");
+        virtualMap.throwIfDestroyed("Hashing should not be done on destroyed states");
         if (getHash() != null) {
             return;
         }
@@ -225,10 +278,11 @@ public class NewStateRoot implements State {
     public void createSnapshot(@NonNull final Path targetPath) {
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
-        throwIfMutable();
-        throwIfDestroyed();
+        virtualMap.throwIfMutable();
+        virtualMap.throwIfDestroyed();
         final long startTime = time.currentTimeMillis();
-        MerkleTreeSnapshotWriter.createSnapshot(virtualMap, targetPath, getCurrentRound()); // TODO: double check
+        MerkleTreeSnapshotWriter.createSnapshot(
+                virtualMap, targetPath, roundSupplier.getAsLong()); // TODO: double check
         snapshotMetrics.updateWriteStateToDiskTimeMetric(time.currentTimeMillis() - startTime);
     }
 
@@ -236,31 +290,17 @@ public class NewStateRoot implements State {
      * {@inheritDoc}
      */
     @Override
-    public MerkleStateRoot<?> loadSnapshot(@NonNull Path targetPath) throws IOException {
+    public MerkleNodeState loadSnapshot(@NonNull Path targetPath) throws IOException {
         requireNonNull(configuration);
-        return (MerkleStateRoot<?>) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
+        return (MerkleNodeState) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
                 .stateRoot();
     }
 
     // Getters and setters
 
-    // TODO: update two methods below (most likely after closing of
-    // https://github.com/hashgraph/hedera-services/issues/17357)
-
-    public @Nullable PlatformState getPlatformState() {
-        ReadableStates readableStates = getReadableStates("PlatformStateService");
-        return readableStates.isEmpty()
-                ? null
-                : (PlatformState) readableStates.getSingleton("PLATFORM_STATE").get();
-    }
-
-    /**
-     * Returns the round number from the consensus snapshot, or the genesis round if there is no consensus snapshot.
-     */
-    public long getCurrentRound() {
-        return (getPlatformState() == null || getPlatformState().consensusSnapshot() == null)
-                ? 0
-                : getPlatformState().consensusSnapshot().round();
+    @Override
+    public MerkleNode getRoot() {
+        return virtualMap;
     }
 
     /**
@@ -270,11 +310,6 @@ public class NewStateRoot implements State {
      */
     public void setTime(final Time time) {
         this.time = time;
-    }
-
-    @Override
-    public void setHash(Hash hash) {
-        virtualMap.setHash(hash);
     }
 
     public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
@@ -297,8 +332,6 @@ public class NewStateRoot implements State {
 
     // State API related ops
 
-    // TODO: unify names of those three methods below: initializeState, unregisterService, removeServiceState
-
     /**
      * Initializes the defined service state.
      *
@@ -307,7 +340,7 @@ public class NewStateRoot implements State {
      */
     public void initializeState(@NonNull final StateMetadata<?, ?> md) {
         // Validate the inputs
-        throwIfImmutable();
+        virtualMap.throwIfImmutable();
         requireNonNull(md);
 
         // Put this metadata into the map
@@ -361,7 +394,7 @@ public class NewStateRoot implements State {
      * @param stateKey The state key
      */
     public void removeServiceState(@NonNull final String serviceName, @NonNull final String stateKey) {
-        throwIfImmutable();
+        virtualMap.throwIfImmutable();
         requireNonNull(serviceName);
         requireNonNull(stateKey);
 

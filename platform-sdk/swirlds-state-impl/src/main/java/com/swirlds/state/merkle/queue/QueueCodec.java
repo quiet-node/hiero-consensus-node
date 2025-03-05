@@ -92,4 +92,9 @@ public class QueueCodec implements Codec<QueueState> {
     public boolean fastEquals(@NonNull QueueState item, @NonNull ReadableSequentialData input) throws ParseException {
         return item.equals(parse(input));
     }
+
+    @Override
+    public QueueState getDefaultInstance() {
+        return new QueueState();
+    }
 }

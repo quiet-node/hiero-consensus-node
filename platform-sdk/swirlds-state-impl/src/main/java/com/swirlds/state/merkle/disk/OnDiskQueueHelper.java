@@ -110,11 +110,16 @@ public final class OnDiskQueueHelper<E> {
     @NonNull
     public Iterator<E> iterateOnDataSource() {
         final QueueState state = getState();
-        final QueueIterator it = new QueueIterator(state.getHead(), state.getTail());
-        // Log to transaction state log, what was iterated
-        logQueueIterate(computeLabel(serviceName, stateKey), state.getTail() - state.getHead(), it);
-        it.reset();
-        return it;
+        if (state == null) {
+            // TODO: create const for empty iterator
+            return new QueueIterator(0, 0);
+        } else {
+            final QueueIterator it = new QueueIterator(state.getHead(), state.getTail());
+            // Log to transaction state log, what was iterated
+            logQueueIterate(computeLabel(serviceName, stateKey), state.getTail() - state.getHead(), it);
+            it.reset();
+            return it;
+        }
     }
 
     /**

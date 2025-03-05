@@ -1,5 +1,22 @@
-// SPDX-License-Identifier: Apache-2.0
+/*
+ * Copyright (C) 2024-2025 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.swirlds.state.merkle.disk;
+
+import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
@@ -9,23 +26,18 @@ import com.swirlds.common.merkle.iterators.MerkleIterator;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import static java.util.Objects.requireNonNull;
+public class BackedOnDiskIterator<K, V> implements Iterator<K> {
 
-public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
-
-    private final Bytes stateId;
+    protected final Codec<K> keyCodec;
     private final MerkleIterator<MerkleNode> itr;
     private K next = null;
 
-    // add state prefix
-    public OnDiskIterator(@NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec, @NonNull final Bytes stateId) {
-        super(virtualMap, keyCodec);
-        this.stateId = requireNonNull(stateId);
+    public BackedOnDiskIterator(@NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec) {
         itr = requireNonNull(virtualMap).treeIterator();
+        this.keyCodec = requireNonNull(keyCodec);
     }
 
     @Override
@@ -37,13 +49,11 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
             final var merkleNode = itr.next();
             if (merkleNode instanceof VirtualLeafNode leaf) {
                 final var k = leaf.getKey();
-                if (checkKey(k)) {
-                    try {
-                        this.next = keyCodec.parse(k.getBytes(2, k.length() - 2));
-                        return true;
-                    } catch (final ParseException e) {
-                        throw new RuntimeException("Failed to parse a key", e);
-                    }
+                try {
+                    this.next = keyCodec.parse(k);
+                    return true;
+                } catch (final ParseException e) {
+                    throw new RuntimeException("Failed to parse a key", e);
                 }
             }
         }
@@ -59,10 +69,5 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
         final var k = next;
         next = null;
         return k;
-    }
-
-    private boolean checkKey(final Bytes key) {
-        final Bytes stateIdFromKey = key.getBytes(0, 2);
-        return stateIdFromKey.equals(this.stateId);
     }
 }

@@ -121,6 +121,8 @@ public class TurtleNode {
                 recycleBin,
                 version,
                 TurtleTestingToolState::getStateRootNode,
+                // TODO: GH issue
+                (virtualMap) -> {throw new UnsupportedOperationException();},
                 "foo",
                 "bar",
                 nodeId,

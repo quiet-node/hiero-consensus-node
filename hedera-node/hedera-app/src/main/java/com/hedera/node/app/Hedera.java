@@ -416,6 +416,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * @param blockHashSignerFactory the factory for the block hash signer
      * @param metrics                the metrics object to use for reporting
      * @param platformStateFacade    the facade object to access platform state
+     * @param platformConfig         the platform config
      */
     public Hedera(
             @NonNull final ConstructableRegistry constructableRegistry,
@@ -427,7 +428,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             @NonNull final HistoryServiceFactory historyServiceFactory,
             @NonNull final BlockHashSignerFactory blockHashSignerFactory,
             @NonNull final Metrics metrics,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final Configuration platformConfig) {
         requireNonNull(registryFactory);
         requireNonNull(constructableRegistry);
         requireNonNull(hintsServiceFactory);
@@ -515,13 +517,14 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .forEach(servicesRegistry::register);
         try {
             consensusStateEventHandler = new ConsensusStateEventHandlerImpl(this);
-            final Supplier<MerkleNodeState> baseSupplier = HederaStateRoot::new;
+            final Supplier<MerkleNodeState> baseSupplier = () -> new NewStateRoot(platformConfig);
             final var blockStreamsEnabled = isBlockStreamEnabled();
             stateRootSupplier = blockStreamsEnabled ? () -> withListeners(baseSupplier.get()) : baseSupplier;
             onSealConsensusRound = blockStreamsEnabled ? this::manageBlockEndRound : (round, state) -> true;
             // And the factory for the MerkleStateRoot class id must be our constructor
+            // TODO: revisit
             constructableRegistry.registerConstructable(new ClassConstructorPair(
-                    HederaStateRoot.class, () -> stateRootSupplier.get().getRoot()));
+                    HederaStateRoot.class, () -> new HederaStateRoot()));
         } catch (final ConstructableRegistryException e) {
             logger.error("Failed to register " + HederaStateRoot.class + " factory with ConstructableRegistry", e);
             throw new IllegalStateException(e);
@@ -559,6 +562,11 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     @NonNull
     public MerkleNodeState newStateRoot() {
         return stateRootSupplier.get();
+    }
+
+    @Override
+    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap() {
+        return NewStateRoot::new;
     }
 
     /**
@@ -650,7 +658,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             throw new IllegalStateException("Cannot downgrade from " + savedStateVersion + " to " + version);
         }
         try {
-            migrateSchemas(state, savedStateVersion, trigger, metrics, genesisNetwork, platformConfig);
+            migrateSchemas(state, savedStateVersion, trigger, genesisNetwork, platformConfig);
             logConfiguration();
         } catch (final Throwable t) {
             logger.fatal("Critical failure during schema migration", t);
@@ -713,7 +721,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             @NonNull final MerkleNodeState state,
             @Nullable final ServicesSoftwareVersion deserializedVersion,
             @NonNull final InitTrigger trigger,
-            @NonNull final Metrics metrics,
             @Nullable final Network genesisNetwork,
             @NonNull final Configuration platformConfig) {
         final var previousVersion = deserializedVersion == null ? null : deserializedVersion.getPbjSemanticVersion();
@@ -748,7 +755,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 configProvider.getConfiguration(),
                 platformConfig,
                 genesisNetworkInfo,
-                metrics,
                 startupNetworks,
                 storeMetricsService,
                 configProvider,

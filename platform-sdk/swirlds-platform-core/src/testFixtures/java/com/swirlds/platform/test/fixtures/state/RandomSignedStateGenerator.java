@@ -151,6 +151,7 @@ public class RandomSignedStateGenerator {
                 stateInstance = new TestMerkleStateRoot();
             }
             stateInstance.init(
+                    CONFIGURATION,
                     Time.getCurrent(),
                     new NoOpMetrics(),
                     MerkleCryptoFactory.getInstance(),

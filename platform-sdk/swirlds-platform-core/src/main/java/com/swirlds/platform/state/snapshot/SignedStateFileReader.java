@@ -10,6 +10,7 @@ import static java.util.Objects.requireNonNull;
 import com.swirlds.common.RosterStateId;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.crypto.CryptoStatic;
@@ -22,6 +23,7 @@ import com.swirlds.platform.state.signed.SigSet;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateMetadata;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedInputStream;
@@ -31,6 +33,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.Objects;
+import java.util.function.Function;
 
 /**
  * Utility methods for reading a signed state from disk.
@@ -47,6 +51,7 @@ public final class SignedStateFileReader {
      */
     public static @NonNull DeserializedSignedState readStateFile(
             @NonNull final Path stateFile,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final PlatformStateFacade stateFacade,
             @NonNull final PlatformContext platformContext)
             throws IOException {
@@ -68,10 +73,20 @@ public final class SignedStateFileReader {
                     return in.readSerializable();
                 });
 
+        MerkleNode stateRoot = data.stateRoot();
+        MerkleNodeState merkleNodeState;
+
+        // TODO: add comments
+        if (stateRoot instanceof VirtualMap virtualMap) {
+            merkleNodeState = stateRootFunction.apply(virtualMap);
+        } else {
+            merkleNodeState = (MerkleNodeState) stateRoot;
+        }
+
         final SignedState newSignedState = new SignedState(
                 conf,
                 CryptoStatic::verifySignature,
-                (MerkleNodeState) data.stateRoot(),
+                merkleNodeState,
                 "SignedStateFileReader.readStateFile()",
                 false,
                 false,
@@ -158,11 +173,7 @@ public final class SignedStateFileReader {
                 .forEach(def -> {
                     final var md = new StateMetadata<>(name, schema, def);
                     if (def.singleton() || def.onDisk()) {
-                        state.putServiceStateIfAbsent(md, () -> {
-                            throw new IllegalStateException(
-                                    "State nodes " + md.stateDefinition().stateKey() + " for service " + name
-                                            + " are supposed to exist in the state snapshot already.");
-                        });
+                        state.initializeState(md);
                     } else {
                         throw new IllegalStateException(
                                 "Only singletons and onDisk virtual maps are supported as stub states");

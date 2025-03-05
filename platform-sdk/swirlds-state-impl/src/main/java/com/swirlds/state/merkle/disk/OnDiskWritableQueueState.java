@@ -71,11 +71,11 @@ public class OnDiskWritableQueueState<E> extends WritableQueueStateBase<E> {
     protected void removeFromDataSource() {
         final QueueState state = queueHelper.getState();
         if (!state.isEmpty()) {
-            final var valueToRemove =
+            final var removedValue =
                     virtualMap.remove(getVirtualMapKey(serviceName, stateKey, state.getHeadAndIncrement()), valueCodec);
             queueHelper.updateState(state);
             // Log to transaction state log, what was added
-            logQueueRemove(computeLabel(serviceName, stateKey), valueToRemove);
+            logQueueRemove(computeLabel(serviceName, stateKey), removedValue);
         } else {
             // TODO: double check, this is according to the logic in `15090-D-fcqueue-to-virtualmap`
             // Log to transaction state log, what was added

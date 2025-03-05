@@ -43,9 +43,12 @@ import com.hedera.node.app.workflows.handle.stack.savepoints.FirstRootSavepoint;
 import com.hedera.node.app.workflows.handle.stack.savepoints.FollowingSavepoint;
 import com.hedera.node.config.types.StreamMode;
 import com.swirlds.base.time.Time;
-import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
+import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.MerkleNodeStateAdapter;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
@@ -67,8 +70,9 @@ import java.util.function.LongSupplier;
  * the savepoint was created and all the changes made to the state from the time savepoint was created, along with all
  * the stream builders created in the savepoint.
  */
-public class SavepointStackImpl implements HandleContext.SavepointStack, State {
-    private final State state;
+@ConstructableIgnored
+public class SavepointStackImpl extends MerkleNodeStateAdapter implements HandleContext.SavepointStack {
+    private final MerkleNodeState state;
     private final Deque<Savepoint> stack = new ArrayDeque<>();
     private final Map<String, WritableStatesStack> writableStatesMap = new HashMap<>();
     /**
@@ -104,7 +108,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
      * @return the root {@link SavepointStackImpl}
      */
     public static SavepointStackImpl newRootStack(
-            @NonNull final State state,
+            @NonNull final MerkleNodeState state,
             final int maxBuildersBeforeUser,
             final int maxBuildersAfterUser,
             @NonNull final BoundaryStateChangeListener boundaryStateChangeListener,
@@ -150,12 +154,13 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
      * @param streamMode               the stream mode
      */
     private SavepointStackImpl(
-            @NonNull final State state,
+            @NonNull final MerkleNodeState state,
             final int maxBuildersBeforeUser,
             final int maxBuildersAfterUser,
             @NonNull final BoundaryStateChangeListener roundStateChangeListener,
             @NonNull final KVStateChangeListener kvStateChangeListener,
             @NonNull final StreamMode streamMode) {
+        super(state);
         this.state = requireNonNull(state);
         this.kvStateChangeListener = requireNonNull(kvStateChangeListener);
         this.roundStateChangeListener = requireNonNull(roundStateChangeListener);
@@ -183,6 +188,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             @NonNull final TransactionCategory category,
             @NonNull final StreamBuilder.TransactionCustomizer customizer,
             @NonNull final StreamMode streamMode) {
+        super(parent.state);
         requireNonNull(reversingBehavior);
         requireNonNull(customizer);
         requireNonNull(category);
@@ -197,8 +203,13 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
     }
 
     @Override
-    public void init(Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
-        state.init(time, metrics, merkleCryptography, roundSupplier);
+    public void init(
+            @NonNull final Configuration configuration,
+            Time time,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier) {
+        state.init(configuration, time, metrics, merkleCryptography, roundSupplier);
     }
 
     @Override
@@ -622,10 +633,5 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
         } else {
             stack.push(new FirstRootSavepoint(new WrappedState(state), requireNonNull(builderSink)));
         }
-    }
-
-    @Override
-    public void setHash(Hash hash) {
-        state.setHash(hash);
     }
 }
