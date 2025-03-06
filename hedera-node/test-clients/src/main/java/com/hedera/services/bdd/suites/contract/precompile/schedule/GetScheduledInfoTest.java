@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.contract.precompile.schedule;
 
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.ContractFnResultAsserts.resultWith;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
@@ -73,15 +75,17 @@ public class GetScheduledInfoTest {
     @Order(1)
     @DisplayName("Cannot get scheduled info for non-existent fungible create schedule")
     public Stream<DynamicTest> cannotGetScheduledInfoForNonExistentFungibleCreateSchedule() {
-        return hapiTest(contract.call("getFungibleCreateTokenInfo", asHeadlongAddress("0x1234"))
-                .andAssert(txn -> txn.hasKnownStatuses(CONTRACT_REVERT_EXECUTED, RECORD_NOT_FOUND)));
+        return hapiTest(
+                contract.call("getFungibleCreateTokenInfo", asHeadlongAddress(generateAddressWithShardAndRealm("1234")))
+                        .andAssert(txn -> txn.hasKnownStatuses(CONTRACT_REVERT_EXECUTED, RECORD_NOT_FOUND)));
     }
 
     @HapiTest
     @Order(2)
     @DisplayName("Cannot get scheduled info for non-existent NFT create schedule")
     public Stream<DynamicTest> cannotGetScheduledInfoForNonExistentNonFungibleCreateSchedule() {
-        return hapiTest(contract.call("getNonFungibleCreateTokenInfo", asHeadlongAddress("0x1234"))
+        return hapiTest(contract.call(
+                        "getNonFungibleCreateTokenInfo", asHeadlongAddress(generateAddressWithShardAndRealm("1234")))
                 .andAssert(txn -> txn.hasKnownStatuses(CONTRACT_REVERT_EXECUTED, RECORD_NOT_FOUND)));
     }
 
@@ -246,5 +250,18 @@ public class GetScheduledInfoTest {
                                                                     .build())
                                                             .build())))));
         }));
+    }
+
+    // Generate an address with the shard, realm and passed number. All the values are padded till the required length.
+    private String generateAddressWithShardAndRealm(String number) {
+        String shardHex = Integer.toHexString(SHARD);
+        shardHex = "000000".substring(0, 6 - shardHex.length()) + shardHex;
+
+        String realmHex = Long.toHexString(REALM);
+        realmHex = "0000000000000000".substring(0, 16 - realmHex.length()) + realmHex;
+
+        number = "0000000000000000".substring(0, 16 - number.length()) + number;
+
+        return "0x00" + shardHex + realmHex + number;
     }
 }

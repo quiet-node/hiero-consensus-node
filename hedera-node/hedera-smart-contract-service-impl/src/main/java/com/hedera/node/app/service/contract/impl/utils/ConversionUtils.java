@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.utils;
 
+import static com.esaulpaugh.headlong.abi.Address.toChecksumAddress;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.node.app.service.contract.impl.exec.scope.HederaNativeOperations.MISSING_ENTITY_NUMBER;
 import static com.hedera.node.app.service.contract.impl.exec.scope.HederaNativeOperations.NON_CANONICAL_REFERENCE_NUMBER;
@@ -255,8 +256,7 @@ public class ConversionUtils {
     public static com.esaulpaugh.headlong.abi.Address asHeadlongAddress(@NonNull final byte[] explicit) {
         requireNonNull(explicit);
         final var integralAddress = Bytes.wrap(explicit).toUnsignedBigInteger();
-        return com.esaulpaugh.headlong.abi.Address.wrap(
-                com.esaulpaugh.headlong.abi.Address.toChecksumAddress(integralAddress));
+        return com.esaulpaugh.headlong.abi.Address.wrap(toChecksumAddress(integralAddress));
     }
 
     /**
@@ -578,7 +578,12 @@ public class ConversionUtils {
         if (!isLongZero(entityIdFactory, address)) {
             throw new IllegalArgumentException("Cannot extract id number from address " + address);
         }
-        return entityIdFactory.newScheduleId(address.value().longValueExact());
+
+        // Get the last 16 characters of the address. We need only the schedule number skipping the shard and realm
+        var addressHex = toChecksumAddress(address.value());
+        var scheduleNum = addressHex.substring(26, 42);
+
+        return entityIdFactory.newScheduleId(new BigInteger(scheduleNum, 16).longValue());
     }
 
     /**
