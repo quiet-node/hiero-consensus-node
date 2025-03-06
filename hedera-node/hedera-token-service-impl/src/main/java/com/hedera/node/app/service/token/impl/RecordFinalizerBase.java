@@ -161,7 +161,7 @@ public class RecordFinalizerBase {
                         netAdjustment = addExactOrThrowReason(netAdjustment, aa.amount(), FAIL_INVALID);
                     }
                     if (netAdjustment != 0L) {
-                        throw new HandleException(FAIL_INVALID);
+                        throw new WorkflowException(FAIL_INVALID);
                     }
                 }
                 fungibleTokenTransferLists.add(TokenTransferList.newBuilder()
