@@ -6,5 +6,5 @@
     { "address": "node4.example.com", "port": 8081, "priority": 2 }
   ],
   "blockItemBatchSize": 256,
-  "maxNumberOfSimultaneousConnections": 2
+  "maxSimultaneousConnections": 2
 }

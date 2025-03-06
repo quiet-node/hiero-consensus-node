@@ -18,7 +18,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConfigExtractor {
     private static final Logger logger = LogManager.getLogger(BlockNodeConfigExtractor.class);
-    private final int maxNumberOfSimultaneousConnections;
+    private final int maxSimultaneousConnections;
     private final List<BlockNodeConfig> allNodes;
     private final int blockItemBatchSize;
 
@@ -38,7 +38,7 @@ public class BlockNodeConfigExtractor {
                     .collect(Collectors.toList());
 
             this.blockItemBatchSize = protoConfig.blockItemBatchSize();
-            this.maxNumberOfSimultaneousConnections = protoConfig.maxNumberOfSimultaneousConnections();
+            this.maxSimultaneousConnections = protoConfig.maxSimultaneousConnections();
 
             logger.info("Loaded block node configuration from {}", configPath);
             logger.info("Block node configuration: {}", allNodes);
@@ -65,7 +65,7 @@ public class BlockNodeConfigExtractor {
     /**
      * @return the maximum number of simultaneous connections to block nodes
      */
-    public int getMaxNumberOfSimultaneousConnections() {
-        return maxNumberOfSimultaneousConnections;
+    public int getMaxSimultaneousConnections() {
+        return maxSimultaneousConnections;
     }
 }

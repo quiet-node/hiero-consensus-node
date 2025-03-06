@@ -82,7 +82,7 @@ public class BlockNodeConnectionManager {
         }
         final var blockNodeConfig = configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
         this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockNodeConfig.blockNodeConnectionFileDir());
-        this.maxSimultaneousConnections = blockNodeConfigurations.getMaxNumberOfSimultaneousConnections();
+        this.maxSimultaneousConnections = blockNodeConfigurations.getMaxSimultaneousConnections();
         this.connectionExecutor = Executors.newScheduledThreadPool(maxSimultaneousConnections);
     }
 

@@ -74,5 +74,5 @@ message BlockNodeConnectionInfo {
      * The maximum number of simultaneous connections allowed.<br/>
      * If greater than 1, multiple nodes can be connected concurrently.
      */
-    int32 max_number_of_simultaneous_connections = 3;
+    int32 max_simultaneous_connections = 3;
 }
