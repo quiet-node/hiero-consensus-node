@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.contract.precompile.token;
 
+import static com.hedera.node.app.hapi.utils.EthSigsUtils.recoverAddressFromPubKey;
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
-import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoApproveAllowance;
@@ -45,7 +45,6 @@ import com.hedera.services.bdd.spec.dsl.annotations.FungibleToken;
 import com.hedera.services.bdd.spec.dsl.entities.SpecAccount;
 import com.hedera.services.bdd.spec.dsl.entities.SpecContract;
 import com.hedera.services.bdd.spec.dsl.entities.SpecFungibleToken;
-import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.math.BigInteger;
@@ -165,6 +164,7 @@ public class TransferTokenTest {
 
     @Order(3)
     @HapiTest
+    @DisplayName("Should transfer to the same account by long zero address and by EVM address")
     final Stream<DynamicTest> tryTransferTokenToAlias() {
         return hapiTest(
                 newKeyNamed(ECDSA_KEY).shape(SECP_256K1_SHAPE),
@@ -194,19 +194,30 @@ public class TransferTokenTest {
                             asHeadlongAddress(asAddress(spec.registry().getTokenID(FUNGIBLE_TOKEN)));
                     final var sender =
                             asHeadlongAddress(asAddress(spec.registry().getAccountID(ACCOUNT)));
-                    final var ecdsaAddress = asHeadlongAddress(
-                            asAddress(AccountID.newBuilder().setAccountNum(1001).build()));
+                    final var ecdsaLongZeroAddress =
+                            asHeadlongAddress(asAddress(spec.registry().getAccountID(ECDSA_KEY)));
                     final var ecdsaKey = spec.registry().getKey(ECDSA_KEY);
                     final var tmp = ecdsaKey.getECDSASecp256K1().toByteArray();
-                    //                    final var ecdsaAddress = asHeadlongAddress(recoverAddressFromPubKey(tmp));
+                    final var ecdsaAddress = asHeadlongAddress(recoverAddressFromPubKey(tmp));
 
+                    allRunFor(
+                            spec,
+                            contractCall(
+                                            TOKEN_TRANSFERS_CONTRACT,
+                                            TRANSFER_TOKEN,
+                                            token,
+                                            sender,
+                                            ecdsaLongZeroAddress,
+                                            2L)
+                                    .payingWith(DEFAULT_PAYER)
+                                    .gas(GAS_TO_OFFER)
+                                    .via("transferToLongZeroTxn"));
                     allRunFor(
                             spec,
                             contractCall(TOKEN_TRANSFERS_CONTRACT, TRANSFER_TOKEN, token, sender, ecdsaAddress, 2L)
                                     .payingWith(DEFAULT_PAYER)
                                     .gas(GAS_TO_OFFER)
-                                    .via("transferTxn"),
-                            getTxnRecord("transferTxn").logged());
+                                    .via("transferToEVMAddressTxn"));
                 }));
     }
 }
