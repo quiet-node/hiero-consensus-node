@@ -88,6 +88,11 @@ public class Utils {
         return ByteString.copyFrom(Bytes32.fromHexStringLenient(hexString).toArray());
     }
 
+    public static ByteString parsedToByteString(long n) {
+        return ByteString.copyFrom(
+                Bytes32.fromHexStringLenient(Long.toHexString(n)).toArray());
+    }
+
     public static String asHexedAddress(final TokenID id) {
         return Bytes.wrap(asSolidityAddress((int) id.getShardNum(), id.getRealmNum(), id.getTokenNum()))
                 .toHexString();
