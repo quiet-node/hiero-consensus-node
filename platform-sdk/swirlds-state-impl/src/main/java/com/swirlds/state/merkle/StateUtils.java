@@ -90,9 +90,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.IntFunction;
 
 /** Utility class for working with states. */
@@ -392,7 +392,7 @@ public final class StateUtils {
     /**
      * A static cache to store and retrieve pre-computed labels for specific service states.
      */
-    private static final Map<String, String> LABEL_CACHE = new HashMap<>();
+    private static final Map<String, String> LABEL_CACHE = new ConcurrentHashMap<>();
 
     /**
      * Computes the label for a Merkle node given the service name and state key.
