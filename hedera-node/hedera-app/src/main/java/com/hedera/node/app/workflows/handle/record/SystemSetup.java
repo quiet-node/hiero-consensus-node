@@ -185,22 +185,26 @@ public class SystemSetup {
                         (ctx, bytes) ->
                                 dispatchSynthFileUpdate(ctx, createFileID(filesConfig.feeSchedules(), config), bytes),
                         adminConfig.upgradeFeeSchedulesFile(),
-                        SystemSetup::parseFeeSchedules),
-                new AutoEntityUpdate<>(
-                        (ctx, bytes) -> dispatchSynthFileUpdate(
-                                ctx, createFileID(filesConfig.throttleDefinitions(), config), bytes),
-                        adminConfig.upgradeThrottlesFile(),
-                        SystemSetup::parseThrottles),
+                        SystemSetup::parseFeeSchedules,
+                        null),
                 new AutoEntityUpdate<>(
                         (ctx, bytes) -> dispatchSynthFileUpdate(
                                 ctx, createFileID(filesConfig.networkProperties(), config), bytes),
                         adminConfig.upgradePropertyOverridesFile(),
-                        in -> parseConfig("override network properties", in)),
+                        in -> parseConfig("override network properties", in),
+                        null),
+                new AutoEntityUpdate<>(
+                        (ctx, bytes) -> dispatchSynthFileUpdate(
+                                ctx, createFileID(filesConfig.throttleDefinitions(), config), bytes),
+                        adminConfig.upgradeThrottlesFile(),
+                        SystemSetup::parseThrottles,
+                        throttleServiceManager::recreateThrottles),
                 new AutoEntityUpdate<>(
                         (ctx, bytes) -> dispatchSynthFileUpdate(
                                 ctx, createFileID(filesConfig.hapiPermissions(), config), bytes),
                         adminConfig.upgradePermissionOverridesFile(),
-                        in -> parseConfig("override HAPI permissions", in)));
+                        in -> parseConfig("override HAPI permissions", in),
+                        null));
         autoSysFileUpdates.forEach(update -> {
             if (update.tryIfPresent(adminConfig.upgradeSysFilesLoc(), systemContext)) {
                 dispatch.stack().commitFullStack();
@@ -213,7 +217,8 @@ public class SystemSetup {
                                 .adminKey(key)
                                 .build()))),
                 adminConfig.upgradeNodeAdminKeysFile(),
-                SystemSetup::parseNodeAdminKeys);
+                SystemSetup::parseNodeAdminKeys,
+                null);
         if (autoNodeAdminKeyUpdates.tryIfPresent(adminConfig.upgradeSysFilesLoc(), systemContext)) {
             dispatch.stack().commitFullStack();
         }
@@ -325,12 +330,14 @@ public class SystemSetup {
      *
      * @param updateFileName the name of the upgrade file
      * @param updateParser   the function to parse the upgrade file
+     * @param validateThrottles    the function to validate the throttles file
      * @param <T>            the type of the update representation
      */
     private record AutoEntityUpdate<T>(
             @NonNull AutoUpdate<T> autoUpdate,
             @NonNull String updateFileName,
-            @NonNull Function<InputStream, T> updateParser) {
+            @NonNull Function<InputStream, T> updateParser,
+            @Nullable Function<Bytes, ResponseCodeEnum> validateThrottles) {
         /**
          * Attempts to update the system file using the given system context if the corresponding upgrade file is
          * present at the given location and can be parsed with this update's parser.
@@ -352,6 +359,20 @@ public class SystemSetup {
                     log.error("Failed to parse update file at {}", path.toAbsolutePath(), e);
                     return false;
                 }
+
+                if (validateThrottles != null) {
+                    try {
+                        final var status = validateThrottles.apply((Bytes) update);
+                        if (status != SUCCESS) {
+                            log.error("Failed to validate update file at {} - {}", path.toAbsolutePath(), status);
+                            return false;
+                        }
+                    } catch (HandleException e) {
+                        log.error("Failed to validate update file at {}", path.toAbsolutePath(), e);
+                        return false;
+                    }
+                }
+
                 log.info("Dispatching synthetic update based on contents of {}", path.toAbsolutePath());
                 autoUpdate.doUpdate(systemContext, update);
                 return true;
