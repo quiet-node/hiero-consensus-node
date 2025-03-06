@@ -76,7 +76,7 @@ public class SyntheticIds {
 
             // References to missing addresses are synthesized as ids of the zero address
             if (address.equals(ZERO_ADDRESS)) {
-                return nativeOperations.entityIdFactory().newAccountId(numberOfLongZero(explicit));
+                return AccountID.newBuilder().accountNum(0L).build();
             }
             if (isLongZero(nativeOperations.entityIdFactory(), address)) {
                 // References to missing long-zero addresses are synthesized as aliases for
