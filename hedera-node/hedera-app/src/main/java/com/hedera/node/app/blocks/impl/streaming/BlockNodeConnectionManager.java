@@ -62,7 +62,7 @@ public class BlockNodeConnectionManager {
     private final ExecutorService streamingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService retryExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final ScheduledExecutorService connectionExecutor;
-    private final int maxSimultaneousConnections;
+    private int maxSimultaneousConnections;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -77,9 +77,13 @@ public class BlockNodeConnectionManager {
         if (!blockStreamConfig.streamToBlockNodes()) {
             maxSimultaneousConnections = 0;
             connectionExecutor = Executors.newScheduledThreadPool(1);
-
             return;
         }
+        // Ensure maxSimultaneousConnections is at least 1 if streaming to block nodes
+        if (this.maxSimultaneousConnections <= 0) {
+            this.maxSimultaneousConnections = 1;
+        }
+
         final var blockNodeConfig = configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
         this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockNodeConfig.blockNodeConnectionFileDir());
         this.maxSimultaneousConnections = blockNodeConfigurations.getMaxSimultaneousConnections();
@@ -105,21 +109,15 @@ public class BlockNodeConnectionManager {
         // Find the current lowest priority of active connections
         int currentMinPriority = getCurrentMinPriority();
 
-        // Ensure priority-based order of insertion
         List<BlockNodeConfig> selectedNodes = new ArrayList<>();
         for (Integer priority : sortedPriorities) {
-
-            // Only consider nodes that have a higher priority than current active connections
             if (priority >= currentMinPriority) continue;
 
             List<BlockNodeConfig> nodesInGroup = new ArrayList<>(priorityGroups.get(priority));
             Collections.shuffle(nodesInGroup);
+
             for (BlockNodeConfig node : nodesInGroup) {
                 if (selectedNodes.size() >= maxSimultaneousConnections) {
-                    logger.info(
-                            "Max simultaneous connections {} reached with selected nodes {}",
-                            maxSimultaneousConnections,
-                            selectedNodes);
                     break;
                 }
                 selectedNodes.add(node);
@@ -128,6 +126,15 @@ public class BlockNodeConnectionManager {
                 break;
             }
         }
+
+        if (selectedNodes.size() > maxSimultaneousConnections) {
+            logger.warn(
+                    "Selected more nodes ({}) than allowed ({}), trimming excess",
+                    selectedNodes.size(),
+                    maxSimultaneousConnections);
+            selectedNodes = selectedNodes.subList(0, maxSimultaneousConnections);
+        }
+
         selectedNodes.forEach(this::connectToNode);
     }
 
