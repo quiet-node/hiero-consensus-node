@@ -162,6 +162,7 @@ public class TransferTokenTest {
         }
     }
 
+    @Order(3)
     @HapiTest
     final Stream<DynamicTest> tryTransferTokenToAlias() {
         return hapiTest(
