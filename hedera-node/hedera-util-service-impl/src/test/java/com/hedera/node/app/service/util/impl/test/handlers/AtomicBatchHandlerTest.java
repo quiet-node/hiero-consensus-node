@@ -3,7 +3,7 @@ package com.hedera.node.app.service.util.impl.test.handlers;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.BATCH_LIST_CONTAINS_DUPLICATES;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.BATCH_LIST_EMPTY;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.BATCH_TRANSACTION_NOT_IN_WHITELIST;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.BATCH_TRANSACTION_IN_BLACKLIST;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INNER_TRANSACTION_FAILED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_BATCH_KEY;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_NODE_ACCOUNT_ID;
@@ -132,7 +132,7 @@ class AtomicBatchHandlerTest {
         final var txnBody = newAtomicBatch(payerId1, consensusTimestamp, transaction);
         given(preHandleContext.body()).willReturn(txnBody);
         final var msg = assertThrows(WorkflowException.class, () -> subject.preHandle(preHandleContext));
-        assertEquals(BATCH_TRANSACTION_NOT_IN_WHITELIST, msg.getStatus());
+        assertEquals(BATCH_TRANSACTION_IN_BLACKLIST, msg.getStatus());
     }
 
     @Test
@@ -146,7 +146,7 @@ class AtomicBatchHandlerTest {
         final var txnBody = newAtomicBatch(payerId1, consensusTimestamp, transaction);
         given(preHandleContext.body()).willReturn(txnBody);
         final var msg = assertThrows(WorkflowException.class, () -> subject.preHandle(preHandleContext));
-        assertEquals(BATCH_TRANSACTION_NOT_IN_WHITELIST, msg.getStatus());
+        assertEquals(BATCH_TRANSACTION_IN_BLACKLIST, msg.getStatus());
     }
 
     @Test
@@ -243,7 +243,7 @@ class AtomicBatchHandlerTest {
         final var txnBody = newAtomicBatch(payerId1, consensusTimestamp, transaction1, transaction2);
         given(preHandleContext.body()).willReturn(txnBody);
         final var msg = assertThrows(WorkflowException.class, () -> subject.preHandle(preHandleContext));
-        assertEquals(BATCH_TRANSACTION_NOT_IN_WHITELIST, msg.getStatus());
+        assertEquals(BATCH_TRANSACTION_IN_BLACKLIST, msg.getStatus());
     }
 
     @Test
@@ -257,7 +257,7 @@ class AtomicBatchHandlerTest {
         final var txnBody = newAtomicBatch(payerId1, consensusTimestamp, transaction1, transaction2);
         given(preHandleContext.body()).willReturn(txnBody);
         final var msg = assertThrows(WorkflowException.class, () -> subject.preHandle(preHandleContext));
-        assertEquals(BATCH_TRANSACTION_NOT_IN_WHITELIST, msg.getStatus());
+        assertEquals(BATCH_TRANSACTION_IN_BLACKLIST, msg.getStatus());
     }
 
     @Test
