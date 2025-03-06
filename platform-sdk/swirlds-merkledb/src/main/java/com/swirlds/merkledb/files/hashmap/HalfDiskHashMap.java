@@ -3,6 +3,7 @@ package com.swirlds.merkledb.files.hashmap;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.logging.legacy.LogMarker.MERKLE_DB;
+import com.swirlds.merkledb.collections.AbstractLongList;
 import static com.swirlds.merkledb.files.DataFileCommon.dataLocationToString;
 import static java.util.Objects.requireNonNull;
 
@@ -85,7 +86,7 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
      * Long list used for mapping bucketIndex(index into list) to disk location for latest copy of
      * bucket
      */
-    private final LongList bucketIndexToBucketLocation;
+    private final AbstractLongList bucketIndexToBucketLocation;
     /** DataFileCollection manages the files storing the buckets on disk */
     private final DataFileCollection fileCollection;
 
@@ -611,9 +612,16 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
                     logger.error(MERKLE_DB.getMarker(), "Bucket index integrity error");
                     logger.error(MERKLE_DB.getMarker(), "Expected bucket index: {}", bucketIndex);
                     logger.error(MERKLE_DB.getMarker(), "Actual bucket index: {}", bucket.getBucketIndex());
+                    logger.error(MERKLE_DB.getMarker(), "bucketIndexToBucketLocation: {}", bucketIndexToBucketLocation);
+                    logger.error(MERKLE_DB.getMarker(), "Bucket index chunk expected: {}", bucketIndexToBucketLocation.getChunk(bucketIndex));
+                    logger.error(MERKLE_DB.getMarker(), "Bucket index chunk actual: {}", bucketIndexToBucketLocation.getChunk(bucket.getBucketIndex()));
                     logger.error(MERKLE_DB.getMarker(), "Bucket from disk: {}", bucket);
                     logger.error(MERKLE_DB.getMarker(), "File location ({}): {}", bucketIndex, dataLocationToString(bucketIndexToBucketLocation.get(bucketIndex)));
                     logger.error(MERKLE_DB.getMarker(), "File location ({}): {}", bucket.getBucketIndex(), dataLocationToString(bucketIndexToBucketLocation.get(bucket.getBucketIndex())));
+                    final Bucket b = bucketPool.getBucket();
+                    b.readFrom(fileCollection.readDataItemUsingIndex(bucketIndexToBucketLocation, bucket.getBucketIndex()));
+                    logger.error(MERKLE_DB.getMarker(), "Bucket index 2: {}", b.getBucketIndex());
+                    logger.error(MERKLE_DB.getMarker(), "Bucket from disk 2: {}", b);
                     logger.error(MERKLE_DB.getMarker(), "File list");
                     fileCollection.dataFiles.get().stream().forEach(r -> {
                         logger.error(MERKLE_DB.getMarker(), "Data file: index={} path={} completed={} size={}", r.getIndex(), r.getPath(), r.isFileCompleted(), r.getSize());
@@ -676,6 +684,14 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
                     final long bucketLocation = fileCollection.storeDataItem(bucket::writeTo, bucket.sizeInBytes());
                     // update bucketIndexToBucketLocation
                     bucketIndexToBucketLocation.put(bucketIndex, bucketLocation);
+                    final long storedLocation = bucketIndexToBucketLocation.get(bucketIndex);
+                    if (bucketLocation != storedLocation) {
+                        logger.error(MERKLE_DB.getMarker(), "Bucket location integrity error");
+                        logger.error(MERKLE_DB.getMarker(), "Bucket index: {}", bucketIndex);
+                        logger.error(MERKLE_DB.getMarker(), "Bucket: {}", bucket);
+                        logger.error(MERKLE_DB.getMarker(), "Bucket location: {}", bucketLocation);
+                        logger.error(MERKLE_DB.getMarker(), "Stored location: {}", storedLocation);
+                    }
                 }
                 next.send();
                 return true;

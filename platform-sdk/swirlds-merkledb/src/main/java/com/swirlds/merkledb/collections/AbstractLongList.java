@@ -2,6 +2,8 @@
 package com.swirlds.merkledb.collections;
 
 import static com.swirlds.base.units.UnitConstants.MEBIBYTES_TO_BYTES;
+import static com.swirlds.logging.legacy.LogMarker.MERKLE_DB;
+import com.swirlds.merkledb.files.hashmap.HalfDiskHashMap;
 import static com.swirlds.merkledb.utilities.MerkleDbFileUtils.readFromFileChannel;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -23,6 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.stream.LongStream;
 import java.util.stream.StreamSupport;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Common parent class for long list implementations. It takes care of loading a snapshot from disk,
@@ -31,6 +35,8 @@ import java.util.stream.StreamSupport;
  * @param <C> a type that represents a chunk (byte buffer, array or long that represents an offset of the chunk)
  */
 public abstract class AbstractLongList<C> implements LongList {
+
+    private static final Logger logger = LogManager.getLogger(LongList.class);
 
     public static final String MAX_CHUNKS_EXCEEDED_MSG = "The maximum number of memory chunks should not exceed %s. "
             + "Either increase numLongsPerChunk or decrease maxLongs";
@@ -362,6 +368,11 @@ public abstract class AbstractLongList<C> implements LongList {
         return presentValue == IMPERMISSIBLE_VALUE ? defaultValue : presentValue;
     }
 
+    public C getChunk(final long index) {
+        final int chunkIndex = toIntExact(index / numLongsPerChunk);
+        return chunkList.get(chunkIndex);
+    }
+
     /**
      * Stores a long in the list at the given index.
      *
@@ -585,7 +596,7 @@ public abstract class AbstractLongList<C> implements LongList {
      *
      * @param newIndex the index of the new item we would like to add to storage
      */
-    protected C createOrGetChunk(final long newIndex) {
+    public C createOrGetChunk(final long newIndex) {
         size.getAndUpdate(oldSize -> newIndex >= oldSize ? (newIndex + 1) : oldSize);
         final int chunkIndex = toIntExact(newIndex / numLongsPerChunk);
         final C result = chunkList.get(chunkIndex);
@@ -595,8 +606,10 @@ public abstract class AbstractLongList<C> implements LongList {
             // and use the one from the list
             final C oldChunk = chunkList.compareAndExchange(chunkIndex, null, newChunk);
             if (oldChunk == null) {
+                logger.info(MERKLE_DB.getMarker(), "Index chunk created list={} chunkIndex={} chunk={}", this, chunkIndex, newChunk);
                 return newChunk;
             } else {
+                logger.info(MERKLE_DB.getMarker(), "Index chunk already created list={} chunkIndex={} chunk={}", this, chunkIndex, oldChunk);
                 closeChunk(newChunk);
                 return oldChunk;
             }
