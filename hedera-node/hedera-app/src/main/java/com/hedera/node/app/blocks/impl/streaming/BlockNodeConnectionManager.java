@@ -31,10 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -52,6 +55,7 @@ public class BlockNodeConnectionManager {
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     private final Map<BlockNodeConfig, BlockNodeConnection> activeConnections;
+    private final Map<BlockNodeConfig, BlockNodeConnection> connectionsInRetry;
     private BlockNodeConfigExtractor blockNodeConfigurations;
 
     private final Object connectionLock = new Object();
@@ -67,6 +71,7 @@ public class BlockNodeConnectionManager {
     public BlockNodeConnectionManager(@NonNull final ConfigProvider configProvider) {
         requireNonNull(configProvider);
         this.activeConnections = new ConcurrentHashMap<>();
+        this.connectionsInRetry = new ConcurrentHashMap<>();
 
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
         if (!blockStreamConfig.streamToBlockNodes()) {
@@ -88,20 +93,33 @@ public class BlockNodeConnectionManager {
         logger.info("Establishing connections to block nodes");
         List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
 
+        // Exclude nodes currently in retry
+        availableNodes.removeIf(connectionsInRetry::containsKey);
+
         Map<Integer, List<BlockNodeConfig>> priorityGroups =
                 availableNodes.stream().collect(Collectors.groupingBy(BlockNodeConfig::priority));
 
         List<Integer> sortedPriorities = new ArrayList<>(priorityGroups.keySet());
         sortedPriorities.sort(Integer::compare);
 
+        // Find the current lowest priority of active connections
+        int currentMinPriority = getCurrentMinPriority();
+
         // Ensure priority-based order of insertion
         List<BlockNodeConfig> selectedNodes = new ArrayList<>();
         for (Integer priority : sortedPriorities) {
+
+            // Only consider nodes that have a higher priority than current active connections
+            if (priority >= currentMinPriority) continue;
+
             List<BlockNodeConfig> nodesInGroup = new ArrayList<>(priorityGroups.get(priority));
             Collections.shuffle(nodesInGroup);
             for (BlockNodeConfig node : nodesInGroup) {
                 if (selectedNodes.size() >= maxSimultaneousConnections) {
-                    logger.info("Max simultaneous connections {} reached with selected nodes {}", maxSimultaneousConnections, selectedNodes);
+                    logger.info(
+                            "Max simultaneous connections {} reached with selected nodes {}",
+                            maxSimultaneousConnections,
+                            selectedNodes);
                     break;
                 }
                 selectedNodes.add(node);
@@ -111,6 +129,21 @@ public class BlockNodeConnectionManager {
             }
         }
         selectedNodes.forEach(this::connectToNode);
+    }
+
+    private boolean isHigherPriorityNodeAvailable() {
+        return blockNodeConfigurations.getAllNodes().stream()
+                .anyMatch(node -> !activeConnections.containsKey(node)
+                        && !connectionsInRetry.containsKey(node)
+                        && // Check retrying nodes
+                        node.priority() < getCurrentMinPriority());
+    }
+
+    private int getCurrentMinPriority() {
+        return activeConnections.keySet().stream()
+                .mapToInt(BlockNodeConfig::priority)
+                .min()
+                .orElse(Integer.MAX_VALUE); // If no active connections, return a high value
     }
 
     void connectToNode(@NonNull BlockNodeConfig node) {
@@ -140,6 +173,7 @@ public class BlockNodeConnectionManager {
             connection.establishStream();
             synchronized (connectionLock) {
                 activeConnections.put(node, connection);
+                connectionsInRetry.remove(node);
             }
             logger.info("Successfully connected to block node {}:{}", node.address(), node.port());
         } catch (URISyntaxException | RuntimeException e) {
@@ -244,15 +278,38 @@ public class BlockNodeConnectionManager {
     public void scheduleReconnect(@NonNull final BlockNodeConnection connection) {
         requireNonNull(connection);
 
+        // Avoid duplicate retry attempts
+        if (connectionsInRetry.containsKey(connection.getNodeConfig())) {
+            logger.info(
+                    "Skipping reconnect, already in retry: {}:{}",
+                    connection.getNodeConfig().address(),
+                    connection.getNodeConfig().port());
+            return;
+        }
+
+        connectionsInRetry.put(connection.getNodeConfig(), connection);
+
         retryExecutor.execute(() -> {
             try {
-                retry(() -> {
-                    connection.establishStream(); // Attempt to re-establish the connection
-                    synchronized (connectionLock) {
-                        activeConnections.put(connection.getNodeConfig(), connection);
-                    }
-                    return true;
-                }, INITIAL_RETRY_DELAY);
+                retry(
+                        () -> {
+                            if (isHigherPriorityNodeAvailable()) {
+                                logger.info(
+                                        "Higher-priority node found, skipping retry for {}:{}",
+                                        connection.getNodeConfig().address(),
+                                        connection.getNodeConfig().port());
+                                connectionsInRetry.remove(connection.getNodeConfig());
+                                return false;
+                            }
+
+                            connection.establishStream();
+                            synchronized (connectionLock) {
+                                activeConnections.put(connection.getNodeConfig(), connection);
+                                connectionsInRetry.remove(connection.getNodeConfig());
+                            }
+                            return true;
+                        },
+                        INITIAL_RETRY_DELAY);
             } catch (Exception e) {
                 final var node = connection.getNodeConfig();
                 logger.error("Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
@@ -313,19 +370,26 @@ public class BlockNodeConnectionManager {
 
         Instant deadline = Instant.now().plus(timeout);
 
-        connectionExecutor.scheduleAtFixedRate(
+        ScheduledFuture<?> scheduledTask = connectionExecutor.scheduleAtFixedRate(
                 () -> {
                     if (activeConnections.size() >= maxSimultaneousConnections) {
-                        future.complete(true);
+                        future.complete(true); // Ensure future completed
                     } else if (Instant.now().isAfter(deadline)) {
-                        future.complete(false);
+                        future.complete(false); // Handle timeout
                     }
                 },
                 0,
-                1,
-                TimeUnit.SECONDS);
+                100,
+                TimeUnit.MILLISECONDS);
 
-        return future.join();
+        try {
+            return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS); // Avoid indefinite blocking
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } finally {
+            scheduledTask.cancel(true);
+        }
     }
 
     /**

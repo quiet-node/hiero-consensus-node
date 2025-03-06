@@ -5,8 +5,6 @@ import com.hedera.node.config.NetworkProperty;
 import com.hedera.node.config.NodeProperty;
 import com.swirlds.config.api.ConfigData;
 import com.swirlds.config.api.ConfigProperty;
-import com.swirlds.config.api.validation.annotation.Min;
-import java.time.Duration;
 
 /**
  * Configuration for Connecting to Block Nodes.
