@@ -3,6 +3,7 @@ package com.hedera.services.bdd.suites.contract.precompile.token;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
+import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoApproveAllowance;
@@ -204,7 +205,8 @@ public class TransferTokenTest {
                             contractCall(TOKEN_TRANSFERS_CONTRACT, TRANSFER_TOKEN, token, sender, ecdsaAddress, 2L)
                                     .payingWith(DEFAULT_PAYER)
                                     .gas(GAS_TO_OFFER)
-                                    .via("transferTxn"));
+                                    .via("transferTxn"),
+                            getTxnRecord("transferTxn").logged());
                 }));
     }
 }
