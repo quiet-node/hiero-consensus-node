@@ -2,6 +2,9 @@
 package com.hedera.node.app.workflows;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.CONSENSUS_SUBMIT_MESSAGE;
+import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CALL;
+import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CREATE;
+import static com.hedera.hapi.node.base.HederaFunctionality.ETHEREUM_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INSUFFICIENT_TX_FEE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TRANSACTION_BODY;
@@ -15,6 +18,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.PAYER_ACCOUNT_NOT_FOUND
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_EXPIRED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_HAS_UNKNOWN_FIELDS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_ID_FIELD_NOT_ALLOWED;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_OVERSIZE;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -84,6 +88,10 @@ public class TransactionChecker {
 
     /** The maximum number of bytes that can exist in the transaction */
     private final long maxSignedTxnSize;
+
+    private final long maxSignedJumboTxnSize;
+    private final boolean jumboTransactionsEnabled;
+    private final List<HederaFunctionality> jumboFunctionalities;
     /** The {@link ConfigProvider} used to get properties needed for these checks. */
     private final ConfigProvider props;
     /** The {@link Counter} used to track the number of deprecated transactions (bodyBytes, sigMap) received. */
@@ -118,6 +126,11 @@ public class TransactionChecker {
 
         this.nodeAccount = requireNonNull(nodeAccount);
         this.maxSignedTxnSize = hederaConfig.transactionMaxSize();
+        this.maxSignedJumboTxnSize = hederaConfig.transactionJumboSize();
+        this.jumboTransactionsEnabled = hederaConfig.jumboTransactionIsEnabled();
+        // todo obtain jumbo functionalities from config
+        this.jumboFunctionalities = List.of(ETHEREUM_TRANSACTION, CONTRACT_CREATE, CONTRACT_CALL);
+
         this.props = requireNonNull(configProvider);
         this.deprecatedCounter = metrics.getOrCreate(new Counter.Config("app", COUNTER_DEPRECATED_TXNS_NAME)
                 .withDescription(COUNTER_RECEIVED_DEPRECATED_DESC));
@@ -135,9 +148,9 @@ public class TransactionChecker {
     @NonNull
     public TransactionInfo parseAndCheck(@NonNull final Bytes buffer) throws PreCheckException {
         // Fail fast if there are too many transaction bytes
-        if (buffer.length() > maxSignedTxnSize) {
-            // check the size after parsing the transaction, so we can allow jumbo transactions
-            // throw new PreCheckException(TRANSACTION_OVERSIZE);
+        final var maxSize = jumboTransactionsEnabled ? maxSignedJumboTxnSize : maxSignedTxnSize;
+        if (buffer.length() > maxSize) {
+            throw new PreCheckException(TRANSACTION_OVERSIZE);
         }
 
         final var tx = parseStrict(buffer.toReadableSequentialData(), Transaction.PROTOBUF, INVALID_TRANSACTION);
@@ -223,6 +236,13 @@ public class TransactionChecker {
         } catch (UnknownHederaFunctionality e) {
             throw new PreCheckException(INVALID_TRANSACTION_BODY);
         }
+        // TODO: get jumbo functionality from config
+        if (!jumboFunctionalities.contains(functionality)) {
+            if (serializedTx.length() > maxSignedTxnSize) {
+                throw new PreCheckException(TRANSACTION_OVERSIZE);
+            }
+        }
+
         if (!txBody.hasTransactionID()) {
             throw new PreCheckException(INVALID_TRANSACTION_ID);
         } else {
