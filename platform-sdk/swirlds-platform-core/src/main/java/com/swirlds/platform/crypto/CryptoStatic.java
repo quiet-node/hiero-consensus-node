@@ -547,22 +547,30 @@ public final class CryptoStatic {
         Objects.requireNonNull(configuration, "configuration must not be null");
         Objects.requireNonNull(localNodes, LOCAL_NODES_MUST_NOT_BE_NULL);
 
+        System.out.println("initNodeSecurity: 1");
         final PathsConfig pathsConfig = configuration.getConfigData(PathsConfig.class);
+        System.out.println("initNodeSecurity: 2");
         final CryptoConfig cryptoConfig = configuration.getConfigData(CryptoConfig.class);
+        System.out.println("initNodeSecurity: 3");
         final BasicConfig basicConfig = configuration.getConfigData(BasicConfig.class);
 
         final Map<NodeId, KeysAndCerts> keysAndCerts;
         try {
+            System.out.println("initNodeSecurity: 4");
             if (basicConfig.loadKeysFromPfxFiles()) {
+                System.out.println("initNodeSecurity: 5");
                 try (final Stream<Path> list = Files.list(pathsConfig.getKeysDirPath())) {
+                    System.out.println("initNodeSecurity: 6");
                     CommonUtils.tellUserConsole("Reading crypto keys from the files here:   "
                             + Arrays.toString(list.map(p -> p.getFileName().toString())
                                     .filter(fileName -> fileName.endsWith("pfx") || fileName.endsWith("pem"))
                                     .toArray()));
                 }
 
+                System.out.println("initNodeSecurity: 7");
                 logger.debug(STARTUP.getMarker(), "About to start loading keys");
                 if (cryptoConfig.enableNewKeyStoreModel()) {
+                    System.out.println("initNodeSecurity: 8");
                     logger.debug(STARTUP.getMarker(), "Reading keys using the enhanced key loader");
                     keysAndCerts = EnhancedKeyStoreLoader.using(addressBook, configuration, localNodes)
                             .migrate()
@@ -571,7 +579,9 @@ public final class CryptoStatic {
                             .verify()
                             .injectInAddressBook()
                             .keysAndCerts();
+                    System.out.println("initNodeSecurity: 9");
                 } else {
+                    System.out.println("initNodeSecurity: 10");
                     logger.debug(STARTUP.getMarker(), "Reading keys using the legacy key loader");
                     keysAndCerts = loadKeysAndCerts(
                             addressBook,
@@ -581,10 +591,12 @@ public final class CryptoStatic {
                 }
                 logger.debug(STARTUP.getMarker(), "Done loading keys");
             } else {
+                System.out.println("initNodeSecurity: 11");
                 // if there are no keys on the disk, then create our own keys
                 CommonUtils.tellUserConsole(
                         "Creating keys, because there are no files in " + pathsConfig.getKeysDirPath());
                 logger.debug(STARTUP.getMarker(), "About to start creating generating keys");
+                System.out.println("initNodeSecurity: 12");
                 keysAndCerts = generateKeysAndCerts(addressBook);
                 logger.debug(STARTUP.getMarker(), "Done generating keys");
             }
@@ -597,6 +609,16 @@ public final class CryptoStatic {
                 | IOException
                 | KeyGeneratingException
                 | NoSuchProviderException e) {
+            System.out.println("initNodeSecurity: 13, "+e.getClass().getName()+", "+e.getMessage());
+            for (StackTraceElement ste : e.getStackTrace()) {
+                System.out.println("initNodeSecurity: 14, "+ste.toString());
+            }
+            if (e.getCause() != null) {
+                System.out.println("initNodeSecurity: 15, "+e.getCause().getClass().getName()+", "+e.getCause().getMessage());
+                for (StackTraceElement ste : e.getCause().getStackTrace()) {
+                    System.out.println("initNodeSecurity: 16, "+ste.toString());
+                }
+            }
             logger.error(EXCEPTION.getMarker(), "Exception while loading/generating keys", e);
             if (Utilities.isRootCauseSuppliedType(e, NoSuchAlgorithmException.class)
                     || Utilities.isRootCauseSuppliedType(e, NoSuchProviderException.class)) {
