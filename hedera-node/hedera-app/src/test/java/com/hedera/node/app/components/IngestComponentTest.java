@@ -2,7 +2,6 @@
 package com.hedera.node.app.components;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
-import static com.hedera.node.app.history.impl.HistoryLibraryCodecImpl.HISTORY_LIBRARY_CODEC;
 import static com.hedera.node.app.service.token.impl.handlers.BaseCryptoHandler.asAccount;
 import static com.hedera.node.app.spi.AppContext.Gossip.UNAVAILABLE_GOSSIP;
 import static com.hedera.node.app.spi.fees.NoopFeeCharging.NOOP_FEE_CHARGING;
@@ -44,7 +43,6 @@ import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.CryptographyHolder;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
@@ -110,7 +108,7 @@ class IngestComponentTest {
                 new AppSignatureVerifier(
                         DEFAULT_CONFIG.getConfigData(HederaConfig.class),
                         new SignatureExpanderImpl(),
-                        new SignatureVerifierImpl(CryptographyHolder.get())),
+                        new SignatureVerifierImpl()),
                 UNAVAILABLE_GOSSIP,
                 () -> configuration,
                 () -> DEFAULT_NODE_INFO,
@@ -121,12 +119,7 @@ class IngestComponentTest {
         final var hintsService = new HintsServiceImpl(
                 NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HintsLibraryImpl(), configuration);
         final var historyService = new HistoryServiceImpl(
-                NO_OP_METRICS,
-                ForkJoinPool.commonPool(),
-                appContext,
-                new HistoryLibraryImpl(),
-                HISTORY_LIBRARY_CODEC,
-                DEFAULT_CONFIG);
+                NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HistoryLibraryImpl(), DEFAULT_CONFIG);
         app = DaggerHederaInjectionComponent.builder()
                 .appContext(appContext)
                 .configProviderImpl(configProvider)
@@ -136,7 +129,6 @@ class IngestComponentTest {
                 .scheduleService(new ScheduleServiceImpl(appContext))
                 .initTrigger(InitTrigger.GENESIS)
                 .platform(platform)
-                .crypto(CryptographyHolder.get())
                 .self(selfNodeInfo)
                 .servicesRegistry(mock(ServicesRegistry.class))
                 .instantSource(InstantSource.system())
