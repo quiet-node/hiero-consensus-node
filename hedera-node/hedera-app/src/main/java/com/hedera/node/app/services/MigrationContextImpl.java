@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.node.app.NewStateRoot;
+import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.lifecycle.EntityIdFactory;
@@ -55,6 +56,12 @@ public record MigrationContextImpl(
     public long newEntityNumForAccount() {
         return requireNonNull(writableEntityIdStore, "Entity ID store needs to exist first")
                 .incrementAndGet();
+    }
+
+    @Override
+    public void adjustCountsForNode(int delta) {
+        requireNonNull(writableEntityIdStore, "Entity ID store needs to exist first")
+                .adjustEntityCount(EntityType.NODE, delta);
     }
 
     @Override
