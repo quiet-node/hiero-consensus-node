@@ -2,6 +2,7 @@
 package com.swirlds.merkledb.collections;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
+import static com.swirlds.logging.legacy.LogMarker.MERKLE_DB;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNullElse;
 
@@ -75,6 +76,7 @@ public final class LongListOffHeap extends AbstractLongList<ByteBuffer> implemen
     protected ByteBuffer readChunkData(FileChannel fileChannel, int chunkIndex, int startIndex, int endIndex)
             throws IOException {
         ByteBuffer chunk = createChunk();
+        logger.info(MERKLE_DB.getMarker(), "OffHeap chunk created list={} chunkIndex={} chunk={}", this, chunkIndex, Integer.toHexString(System.identityHashCode(chunk)));
         readDataIntoBuffer(fileChannel, chunkIndex, startIndex, endIndex, chunk);
         // All chunks (byte buffers) in LongListOffHeap are stored with position == 0 and
         // limit == capacity. When this list is written to a file, the first and the last

@@ -606,10 +606,10 @@ public abstract class AbstractLongList<C> implements LongList {
             // and use the one from the list
             final C oldChunk = chunkList.compareAndExchange(chunkIndex, null, newChunk);
             if (oldChunk == null) {
-                logger.info(MERKLE_DB.getMarker(), "Index chunk created list={} chunkIndex={} chunk={}", this, chunkIndex, newChunk);
+                logger.info(MERKLE_DB.getMarker(), "Index chunk created list={} chunkIndex={} chunk={}", this, chunkIndex, Integer.toHexString(System.identityHashCode(newChunk)));
                 return newChunk;
             } else {
-                logger.info(MERKLE_DB.getMarker(), "Index chunk already created list={} chunkIndex={} chunk={}", this, chunkIndex, oldChunk);
+                logger.info(MERKLE_DB.getMarker(), "Index chunk already created list={} chunkIndex={} chunk={}", this, chunkIndex, Integer.toHexString(System.identityHashCode(newChunk)));
                 closeChunk(newChunk);
                 return oldChunk;
             }

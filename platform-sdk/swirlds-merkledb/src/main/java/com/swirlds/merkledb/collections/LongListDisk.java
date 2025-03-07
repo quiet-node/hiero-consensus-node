@@ -95,6 +95,7 @@ public class LongListDisk extends AbstractLongList<Long> {
             tempFile = createTempFile(DEFAULT_FILE_NAME, configuration);
             currentFileChannel = FileChannel.open(
                     tempFile, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
+            assert currentFileChannel != null;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -123,6 +124,7 @@ public class LongListDisk extends AbstractLongList<Long> {
         if (tempFile == null) {
             throw new IllegalStateException("The temp file is not initialized");
         }
+        assert currentFileChannel != null;
     }
 
     /**
@@ -132,6 +134,8 @@ public class LongListDisk extends AbstractLongList<Long> {
     @Override
     protected void onEmptyOrAbsentSourceFile(final Path path) throws IOException {
         tempFile = createTempFile(path.toFile().getName(), configuration);
+        currentFileChannel = FileChannel.open(
+                tempFile, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
     }
 
     /** {@inheritDoc} */
@@ -292,7 +296,11 @@ public class LongListDisk extends AbstractLongList<Long> {
                     transferBuffer.limit(memoryChunkSize);
                 }
                 int currentPosition = transferBuffer.position();
-                MerkleDbFileUtils.completelyRead(currentFileChannel, transferBuffer, chunkOffset);
+                final int toRead = transferBuffer.remaining();
+                final int read = MerkleDbFileUtils.completelyRead(currentFileChannel, transferBuffer, chunkOffset);
+                if (toRead != read) {
+                    throw new IOException("Failed to read a chunk from the file, offset=" + chunkOffset + ", toRead=" + toRead + ", read=" + read + ", file size=" + currentFileChannel.size());
+                }
                 transferBuffer.position(currentPosition);
             } else {
                 fillBufferWithZeroes(transferBuffer);
@@ -397,7 +405,15 @@ public class LongListDisk extends AbstractLongList<Long> {
                 Long currentOffset = chunkList.get(i);
                 maxOffset = Math.max(maxOffset, currentOffset == null ? -1 : currentOffset);
             }
-            return maxOffset == -1 ? 0 : maxOffset + memoryChunkSize;
+            final long chunk = maxOffset == -1 ? 0 : maxOffset + memoryChunkSize;
+            try {
+                final ByteBuffer tmp = initOrGetTransferBuffer();
+                fillBufferWithZeroes(tmp);
+                MerkleDbFileUtils.completelyWrite(currentFileChannel, tmp, chunk);
+            } catch (final IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            return chunk;
         } else {
             return chunkOffset;
         }
