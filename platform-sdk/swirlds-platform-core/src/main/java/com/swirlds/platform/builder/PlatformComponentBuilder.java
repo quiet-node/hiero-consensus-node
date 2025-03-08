@@ -946,7 +946,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
                     .useModularizedGossip();
 
             if (useModularizedGossip) {
-                gossip = new SyncGossipModular<T>(
+                gossip = new SyncGossipModular(
                         blocks.platformContext(),
                         AdHocThreadManager.getStaticThreadManager(),
                         blocks.keysAndCerts(),

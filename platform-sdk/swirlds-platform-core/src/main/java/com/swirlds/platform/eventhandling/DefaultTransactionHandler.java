@@ -208,7 +208,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
             return null;
         }
 
-        T mutableState = stateLifecycleManager.getMutableState();
+        final T mutableState = stateLifecycleManager.getMutableState();
         if (PlatformStateFacade.isInFreezePeriod(
                 consensusRound.getConsensusTimestamp(),
                 platformStateFacade.freezeTimeOf(mutableState),

@@ -5,26 +5,25 @@ import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_MICROSECONDS;
 import static java.util.Objects.requireNonNull;
 
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.lifecycle.StateLifecycleMetrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * This is a default implementation of {@link StateLifecycleManager} that manages the lifecycle of a state object.
+ * This class is thread-safe.
+ *
+ * @param <T> the type of the state object
+ */
 public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements StateLifecycleManager<T> {
     /**
      * reference to the state that reflects all known consensus transactions
      */
-    private final AtomicReference<T> stateRef = new AtomicReference<>();
-
-    /**
-     * The most recent immutable state. No value until the first fast copy is created.
-     */
-    private final AtomicReference<T> latestImmutableState = new AtomicReference<>();
+    private T currentState;
 
     private final StateLifecycleMetrics stateLifecycleMetrics;
 
-    public StateLifecycleManagerImpl(Metrics metrics) {
+    public StateLifecycleManagerImpl(final Metrics metrics) {
         this.stateLifecycleMetrics = new StateLifecycleMetrics(metrics);
     }
 
@@ -32,7 +31,7 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
      * {@inheritDoc}
      */
     @Override
-    public void setInitialState(@NonNull T state) {
+    public synchronized void setInitialState(@NonNull final T state) {
         setInitialState(state, false);
     }
 
@@ -40,22 +39,20 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
      * {@inheritDoc}
      */
     @Override
-    public void overwriteExistingState(@NonNull T state) {
+    public synchronized void overwriteExistingState(@NonNull final T state) {
         setInitialState(state, true);
     }
 
-    private void setInitialState(@NonNull T state, boolean overwrite) {
+    private void setInitialState(@NonNull final T state, final boolean overwrite) {
         requireNonNull(state);
 
-        if (!overwrite && stateRef.get() != null) {
+        if (!overwrite && currentState != null) {
             throw new IllegalStateException("Attempt to set initial state when there is already a state reference.");
         }
 
         state.throwIfDestroyed("state must not be destroyed");
         state.throwIfImmutable("state must be mutable");
 
-        // Create a fast copy so there is always an immutable state to
-        // invoke handleTransaction on for pre-consensus transactions
         fastCopyAndUpdateRefs(state);
     }
 
@@ -71,19 +68,7 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
 
         stateLifecycleMetrics.stateCopyMicros((copyEnd - copyStart) * NANOSECONDS_TO_MICROSECONDS);
 
-        // Set latest immutable first to prevent the newly immutable stateRoot from being deleted between setting the
-        // stateRef and the latestImmutableState
-        setLatestImmutableState(state);
         setState(copy);
-    }
-
-    private void setLatestImmutableState(final T immutableState) {
-        final State currVal = latestImmutableState.get();
-        if (currVal != null) {
-            currVal.release();
-        }
-        immutableState.reserve();
-        latestImmutableState.set(immutableState);
     }
 
     /**
@@ -92,29 +77,30 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
      * @param state a new mutable state
      */
     private void setState(final T state) {
-        final var currVal = stateRef.get();
-        if (currVal != null) {
-            currVal.release();
+        if (currentState != null) {
+            currentState.release();
         }
         // Do not increment the reference count because the state provided already has a reference count of at least
         // one to represent this reference and to prevent it from being deleted before this reference is set.
-        stateRef.set(state);
+        this.currentState = state;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public T getMutableState() {
-        return stateRef.get();
+    public synchronized T getMutableState() {
+        return currentState;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public T copyMutableState() {
-        fastCopyAndUpdateRefs(stateRef.get());
-        return latestImmutableState.get();
+    public synchronized T copyMutableState() {
+        T currentState = this.currentState;
+        fastCopyAndUpdateRefs(currentState);
+        // returning the original state that became immutable
+        return currentState;
     }
 }

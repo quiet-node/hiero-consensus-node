@@ -99,6 +99,8 @@ public class ReconnectProtocol implements Protocol {
      * @param clearAllPipelinesForReconnect this method should be called to clear all pipelines prior to a reconnect
      * @param selfId                this node's ID
      * @param gossipController      way to pause/resume gossip while reconnect is in progress
+     * @param platformStateFacade  the platform state facade to access platform state
+     * @param stateLifecycleManager an object containing the latest mutable and immutable state
      * @return constructed ReconnectProtocol
      */
     public static ReconnectProtocol create(

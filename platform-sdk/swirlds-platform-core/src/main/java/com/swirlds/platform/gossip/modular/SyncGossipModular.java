@@ -56,7 +56,7 @@ import org.apache.logging.log4j.Logger;
 /**
  * Utility class used during refactoring; with time, it should disappear, as all things will move to main wiring as all shared state is resolved
  */
-public class SyncGossipModular<T extends MerkleNodeState> implements Gossip {
+public class SyncGossipModular implements Gossip {
 
     private static final Logger logger = LogManager.getLogger(SyncGossipModular.class);
 

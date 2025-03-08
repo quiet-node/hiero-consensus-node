@@ -8,6 +8,9 @@ import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.State;
 
+/**
+ * Metrics to track the state lifecycle events
+ */
 public class StateLifecycleMetrics {
 
     private final RunningAverageMetric avgStateCopyMicros;
