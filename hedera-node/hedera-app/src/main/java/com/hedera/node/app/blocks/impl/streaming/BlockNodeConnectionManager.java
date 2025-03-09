@@ -45,6 +45,7 @@ public class BlockNodeConnectionManager {
 
     private final Map<BlockNodeConfig, BlockNodeConnection> activeConnections;
     private BlockNodeConfigExtractor blockNodeConfigurations;
+    private final BlockStreamStateManager blockStreamStateManager;
 
     private final Object connectionLock = new Object();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -53,10 +54,15 @@ public class BlockNodeConnectionManager {
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
      * @param configProvider the configuration provider
+     * @param blockStreamStateManager the block stream state manager
      */
-    public BlockNodeConnectionManager(@NonNull final ConfigProvider configProvider) {
+    public BlockNodeConnectionManager(
+            @NonNull final ConfigProvider configProvider,
+            @NonNull final BlockStreamStateManager blockStreamStateManager) {
         requireNonNull(configProvider);
+        requireNonNull(blockStreamStateManager);
         this.activeConnections = new ConcurrentHashMap<>();
+        this.blockStreamStateManager = blockStreamStateManager;
 
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
         if (!blockStreamConfig.streamToBlockNodes()) {
@@ -101,9 +107,13 @@ public class BlockNodeConnectionManager {
                                     .build())
                     .build());
 
-            BlockNodeConnection connection = new BlockNodeConnection(node, grpcServiceClient, this);
+            BlockNodeConnection connection = new BlockNodeConnection(node, grpcServiceClient, this, blockStreamStateManager);
             synchronized (connectionLock) {
-                activeConnections.put(node, connection);
+                connection.getIsActiveLock().lock();
+                if (connection.isActive()) {
+                    activeConnections.put(node, connection);
+                }
+                connection.getIsActiveLock().unlock();
             }
             logger.info("Successfully connected to block node {}:{}", node.address(), node.port());
         } catch (URISyntaxException | RuntimeException e) {
@@ -119,79 +129,6 @@ public class BlockNodeConnectionManager {
                 logger.info("Disconnected from block node {}:{}", node.address(), node.port());
             }
         }
-    }
-
-    private void streamBlockToConnections(@NonNull BlockState block) {
-        long blockNumber = block.blockNumber();
-        // Get currently active connections
-        List<BlockNodeConnection> connectionsToStream;
-        synchronized (connectionLock) {
-            connectionsToStream = activeConnections.values().stream()
-                    .filter(BlockNodeConnection::isActive)
-                    .toList();
-        }
-
-        if (connectionsToStream.isEmpty()) {
-            logger.info("No active connections to stream block {}", blockNumber);
-            return;
-        }
-
-        logger.info("Streaming block {} to {} active connections", blockNumber, connectionsToStream.size());
-
-        // Create all batches once
-        List<PublishStreamRequest> batchRequests = new ArrayList<>();
-        final int blockItemBatchSize = blockNodeConfigurations.getBlockItemBatchSize();
-        for (int i = 0; i < block.itemBytes().size(); i += blockItemBatchSize) {
-            int end = Math.min(i + blockItemBatchSize, block.itemBytes().size());
-            List<Bytes> batch = block.itemBytes().subList(i, end);
-            List<com.hedera.hapi.block.stream.protoc.BlockItem> protocBlockItems = new ArrayList<>();
-            batch.forEach(batchItem -> {
-                try {
-                    protocBlockItems.add(
-                            com.hedera.hapi.block.stream.protoc.BlockItem.parseFrom(batchItem.toByteArray()));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-
-            // Create BlockItemSet by adding all items at once
-            BlockItemSet itemSet =
-                    BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
-
-            batchRequests.add(
-                    PublishStreamRequest.newBuilder().setBlockItems(itemSet).build());
-        }
-
-        // Stream prepared batches to each connection
-        for (BlockNodeConnection connection : connectionsToStream) {
-            final var connectionNodeConfig = connection.getNodeConfig();
-            try {
-                for (PublishStreamRequest request : batchRequests) {
-                    connection.sendRequest(request);
-                }
-                logger.info(
-                        "Successfully streamed block {} to {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port());
-            } catch (Exception e) {
-                logger.error(
-                        "Failed to stream block {} to {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port(),
-                        e);
-            }
-        }
-    }
-
-    /**
-     * Initiates the streaming of a block to all active connections.
-     *
-     * @param block the block to be streamed
-     */
-    public void startStreamingBlock(@NonNull BlockState block) {
-        streamingExecutor.execute(() -> streamBlockToConnections(block));
     }
 
     /**
@@ -251,7 +188,9 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * @return the gRPC endpoint for publish block stream
+     * Returns the gRPC endpoint for the block stream service.
+     *
+     * @return the gRPC endpoint
      */
     public String getGrpcEndPoint() {
         return GRPC_END_POINT;

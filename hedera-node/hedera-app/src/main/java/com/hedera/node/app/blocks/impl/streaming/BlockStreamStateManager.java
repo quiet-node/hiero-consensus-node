@@ -14,6 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -28,6 +31,14 @@ public class BlockStreamStateManager {
     private final Map<Long, BlockState> blockStates = new ConcurrentHashMap<>();
     private volatile BlockState currentBlock;
     private final int blockItemBatchSize;
+    
+    // Lock and condition variables for thread synchronization
+    private final Lock lock = new ReentrantLock();
+    private final Condition newBlockAvailable = lock.newCondition();
+    private final Condition newRequestAvailable = lock.newCondition();
+    
+    // Reference to the connection manager for notifications
+    private BlockNodeConnectionManager blockNodeConnectionManager;
 
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
@@ -42,6 +53,16 @@ public class BlockStreamStateManager {
                 new BlockNodeConfigExtractor(blockStreamConfig.blockNodeConnectionFileDir());
         this.blockItemBatchSize = blockNodeConfigurations.getBlockItemBatchSize();
     }
+    
+    /**
+     * Sets the block node connection manager for notifications.
+     * 
+     * @param blockNodeConnectionManager the block node connection manager
+     */
+    public void setBlockNodeConnectionManager(@NonNull BlockNodeConnectionManager blockNodeConnectionManager) {
+        requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
+        this.blockNodeConnectionManager = blockNodeConnectionManager;
+    }
 
     /**
      * Opens a new block with the given block number.
@@ -55,6 +76,9 @@ public class BlockStreamStateManager {
         currentBlock = BlockState.from(blockNumber);
         blockStates.put(blockNumber, currentBlock);
         logger.info("Started new block in BlockStreamStateManager {}", blockNumber);
+
+        // Signal that a new block is available
+        signalNewBlockAvailable();
     }
 
     /**
@@ -69,9 +93,9 @@ public class BlockStreamStateManager {
         if (currentBlock == null) {
             throw new IllegalStateException("Received block item before opening block");
         }
-        
+
         currentBlock.itemBytes().add(bytes);
-        
+
         // If we have enough items, create a new request
         if (currentBlock.itemBytes().size() >= blockItemBatchSize) {
             createRequestFromCurrentItems();
@@ -106,6 +130,9 @@ public class BlockStreamStateManager {
         
         // Clear the item bytes list
         currentBlock.itemBytes().clear();
+        
+        // Signal that a new request is available
+        signalNewRequestAvailable();
     }
 
     /**
@@ -119,27 +146,26 @@ public class BlockStreamStateManager {
         }
         
         final long blockNumber = currentBlock.blockNumber();
-        
-        try {
-            BlockState block = blockStates.get(blockNumber);
-            if (block == null) {
-                logger.error("Could not find block state for block {}", blockNumber);
-                return;
-            }
-            
-            // Create a final request from any remaining items
-            if (!block.itemBytes().isEmpty()) {
-                createRequestFromCurrentItems();
-            }
-            
-            // Mark the block as complete
-            block.setComplete();
-            
-            logger.info("Closed block in BlockStreamStateManager {}", blockNumber);
-            currentBlock = null;
-        } finally {
-            // We don't remove the block state here as it might still be needed by the connection manager
+
+        BlockState block = blockStates.get(blockNumber);
+        if (block == null) {
+            logger.error("Could not find block state for block {}", blockNumber);
+            return;
         }
+
+        // Create a final request from any remaining items
+        if (!block.itemBytes().isEmpty()) {
+            createRequestFromCurrentItems();
+        }
+
+        // Mark the block as complete
+        block.setComplete();
+
+        logger.info("Closed block in BlockStreamStateManager {}", blockNumber);
+        currentBlock = null;
+
+        // Signal that the block is complete
+        signalNewRequestAvailable();
     }
 
     /**
@@ -168,5 +194,50 @@ public class BlockStreamStateManager {
      */
     public List<Long> getAllBlockNumbers() {
         return new ArrayList<>(blockStates.keySet());
+    }
+    
+    /**
+     * Gets the lock used for synchronization.
+     * 
+     * @return the lock
+     */
+    public Lock getLock() {
+        return lock;
+    }
+    
+    /**
+     * Gets the condition variable for signaling when a new block is available.
+     * 
+     * @return the condition variable
+     */
+    public Condition getNewBlockAvailableCondition() {
+        return newBlockAvailable;
+    }
+    
+    /**
+     * Gets the condition variable for signaling when a new request is available.
+     * 
+     * @return the condition variable
+     */
+    public Condition getNewRequestAvailableCondition() {
+        return newRequestAvailable;
+    }
+    
+    /**
+     * Signals that a new block is available.
+     * This method must be called with the lock held.
+     */
+    public void signalNewBlockAvailable() {
+        logger.info("Signaling new block available");
+        newBlockAvailable.signalAll();
+    }
+    
+    /**
+     * Signals that new requests are available.
+     * This method must be called with the lock held.
+     */
+    public void signalNewRequestAvailable() {
+        logger.info("Signaling new request available");
+        newRequestAvailable.signalAll();
     }
 } 
