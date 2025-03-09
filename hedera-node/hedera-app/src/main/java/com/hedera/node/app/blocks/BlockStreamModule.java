@@ -3,6 +3,7 @@ package com.hedera.node.app.blocks;
 
 import com.hedera.node.app.blocks.impl.BlockStreamManagerImpl;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager;
+import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager;
 import com.hedera.node.app.blocks.impl.streaming.FileAndGrpcBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.GrpcBlockItemWriter;
@@ -18,6 +19,12 @@ import javax.inject.Singleton;
 
 @Module
 public class BlockStreamModule {
+
+    @Provides
+    @Singleton
+    public BlockStreamStateManager provideBlockStreamStateManager(ConfigProvider configProvider) {
+        return new BlockStreamStateManager(configProvider);
+    }
 
     @Provides
     @Singleton
@@ -37,14 +44,15 @@ public class BlockStreamModule {
             @NonNull final ConfigProvider configProvider,
             @NonNull final NodeInfo selfNodeInfo,
             @NonNull final FileSystem fileSystem,
-            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager) {
+            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
+            @NonNull final BlockStreamStateManager blockStreamStateManager) {
         final var config = configProvider.getConfiguration();
         final var blockStreamConfig = config.getConfigData(BlockStreamConfig.class);
         return switch (blockStreamConfig.writerMode()) {
             case FILE -> () -> new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
-            case GRPC -> () -> new GrpcBlockItemWriter(blockNodeConnectionManager);
+            case GRPC -> () -> new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
             case FILE_AND_GRPC -> () -> new FileAndGrpcBlockItemWriter(
-                    configProvider, selfNodeInfo, fileSystem, blockNodeConnectionManager);
+                    configProvider, selfNodeInfo, fileSystem, blockNodeConnectionManager, blockStreamStateManager);
         };
     }
 }
