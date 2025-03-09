@@ -50,9 +50,9 @@ public class BlockStreamModule {
         final var blockStreamConfig = config.getConfigData(BlockStreamConfig.class);
         return switch (blockStreamConfig.writerMode()) {
             case FILE -> () -> new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
-            case GRPC -> () -> new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
+            case GRPC -> () -> new GrpcBlockItemWriter(blockStreamStateManager);
             case FILE_AND_GRPC -> () -> new FileAndGrpcBlockItemWriter(
-                    configProvider, selfNodeInfo, fileSystem, blockNodeConnectionManager, blockStreamStateManager);
+                    configProvider, selfNodeInfo, fileSystem, blockStreamStateManager);
         };
     }
 }

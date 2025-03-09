@@ -14,19 +14,15 @@ import org.apache.logging.log4j.Logger;
  */
 public class GrpcBlockItemWriter implements BlockItemWriter {
     private static final Logger logger = LogManager.getLogger(GrpcBlockItemWriter.class);
-    private final BlockNodeConnectionManager connectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
 
     /**
      * Construct a new GrpcBlockItemWriter.
      *
-     * @param connectionManager the connection manager for the gRPC block stream service
      * @param blockStreamStateManager the block stream state manager
      */
     public GrpcBlockItemWriter(
-            @NonNull final BlockNodeConnectionManager connectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
-        this.connectionManager = requireNonNull(connectionManager, "connectionManager must not be null");
         this.blockStreamStateManager = requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
     }
 
