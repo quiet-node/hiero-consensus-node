@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform;
 
-import static com.swirlds.logging.legacy.LogMarker.CONSENSUS_VOTING;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.platform.consensus.ConsensusConstants.FIRST_CONSENSUS_NUMBER;
 
@@ -40,6 +39,7 @@ import com.swirlds.platform.system.events.EventConstants;
 import com.swirlds.platform.util.MarkerFileWriter;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -530,6 +530,8 @@ public class ConsensusImpl implements Consensus {
             if (isCoinRound(diff)) {
                 // a coin round. Don't decide.
                 coinVote(votingWitness, candidateWitness, countingVote);
+
+                logger.error(LogMarker.ERROR.getMarker(), "We are in coin round with diff: {}", diff);
                 logVote(
                         votingWitness,
                         candidateWitness,
@@ -597,6 +599,14 @@ public class ConsensusImpl implements Consensus {
         final boolean superMajority = Threshold.SUPER_MAJORITY.isSatisfiedBy(yesWeight, rosterTotalWeight)
                 || Threshold.SUPER_MAJORITY.isSatisfiedBy(noWeight, rosterTotalWeight);
         final boolean countingVote = yesWeight >= noWeight;
+        logger.error(
+                LogMarker.ERROR.getMarker(),
+                "Counting vote: {} with Stake for yes: {}, Stake for no: {} with rosterTotalWeight: {} with minimal threshold: {}",
+                countingVote,
+                yesWeight,
+                noWeight,
+                rosterTotalWeight,
+                new BigDecimal(0.66 * rosterTotalWeight));
 
         return CountingVote.get(countingVote, superMajority);
     }
@@ -642,16 +652,16 @@ public class ConsensusImpl implements Consensus {
             @NonNull final CandidateWitness candidateWitness,
             @NonNull final String votingType,
             final long diff) {
-        if (logger.isDebugEnabled(CONSENSUS_VOTING.getMarker())) {
-            logger.debug(
-                    CONSENSUS_VOTING.getMarker(),
-                    "Witness {} voted on {}. vote:{} type:{} diff:{}",
-                    votingWitness.shortString(),
-                    candidateWitness.getWitness().shortString(),
-                    votingWitness.getVote(candidateWitness),
-                    votingType,
-                    diff);
-        }
+        //        if (logger.isDebugEnabled(CONSENSUS_VOTING.getMarker())) {
+        logger.error(
+                LogMarker.ERROR.getMarker(),
+                "Witness {} voted on {}. vote:{} type:{} diff:{}",
+                votingWitness.shortString(),
+                candidateWitness.getWitness().shortString(),
+                votingWitness.getVote(candidateWitness),
+                votingType,
+                diff);
+        //        }
     }
 
     private boolean firstVote(@NonNull final EventImpl voting, @NonNull final EventImpl votedOn) {

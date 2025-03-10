@@ -59,6 +59,12 @@ public class TestGuiSource {
         }
     }
 
+    public void generateEvents(final List<PlatformEvent> events) {
+        for (final PlatformEvent event : events) {
+            eventStorage.handlePreconsensusEvent(event);
+        }
+    }
+
     public @NonNull JPanel controls() {
         // Fame decided below
         final JLabel fameDecidedBelow = new JLabel("N/A");
