@@ -129,4 +129,9 @@ public class QueueState {
     public boolean isEmpty() {
         return head == tail;
     }
+
+    @Override
+    public String toString() {
+        return "QueueState{" + "head=" + head + ", tail=" + tail + '}';
+    }
 }

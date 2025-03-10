@@ -129,7 +129,12 @@ public final class OnDiskQueueHelper<E> {
      * @return The current state of the queue.
      */
     public QueueState getState() {
-        return virtualMap.get(getVirtualMapKey(serviceName, stateKey), QueueCodec.INSTANCE);
+        final QueueState state = virtualMap.get(getVirtualMapKey(serviceName, stateKey), QueueCodec.INSTANCE);
+        if (state == null) {
+            return null;
+        }
+        // FUTURE WORK: performance
+        return new QueueState(state.getHead(), state.getTail());
     }
 
     /**

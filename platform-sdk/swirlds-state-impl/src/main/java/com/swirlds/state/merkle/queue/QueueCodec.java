@@ -17,6 +17,7 @@ import java.io.IOException;
  * For example: The {@link com.swirlds.state.merkle.disk.OnDiskQueueHelper} uses it to persist and retrieve
  * the {@link QueueState} for defining boundaries and metadata of a queue.
  */
+// TODO: rename to QueueStateCodec
 public class QueueCodec implements Codec<QueueState> {
 
     /**
