@@ -221,6 +221,7 @@ public class BlockNodeConnection {
         isActive = false;
         isActiveLock.unlock();
         removeFromActiveConnections(node);
+        // TODO Could interrupt request worker here
     }
 
     public void sendRequest(PublishStreamRequest request) {
