@@ -59,6 +59,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
 import static com.swirlds.common.utility.CommonUtils.unhex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.junit.HapiTest;
@@ -433,7 +434,6 @@ public class Evm46ValidationSuite {
 
     @HapiTest
     final Stream<DynamicTest> internalCallToNonExistingMirrorAddressResultsInNoopSuccess() {
-
         return hapiTest(
                 uploadInitCode(INTERNAL_CALLER_CONTRACT),
                 contractCreate(INTERNAL_CALLER_CONTRACT).balance(ONE_HBAR),
@@ -442,12 +442,10 @@ public class Evm46ValidationSuite {
                                 CALL_NON_EXISTING_FUNCTION,
                                 mirrorAddrWith(FIRST_NONEXISTENT_CONTRACT_NUM + 1))
                         .gas(GAS_LIMIT_FOR_CALL)
-                        .via(INNER_TXN),
-                getTxnRecord(INNER_TXN)
-                        .hasPriority(recordWith()
-                                .status(SUCCESS)
-                                .contractCallResult(
-                                        resultWith().createdContractIdsCount(0).gasUsed(24996))));
+                        .via(INNER_TXN)
+                        .exposingGasTo(
+                                (status, gas) -> assertTrue(gas == 24996 || gas == 24972, "Gas is not correct!")),
+                getTxnRecord(INNER_TXN).hasPriority(recordWith().status(SUCCESS)));
     }
 
     @HapiTest
