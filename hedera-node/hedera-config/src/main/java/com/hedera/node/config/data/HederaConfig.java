@@ -3,9 +3,11 @@ package com.hedera.node.config.data;
 
 import com.hedera.node.config.NetworkProperty;
 import com.hedera.node.config.NodeProperty;
+import com.hedera.node.config.types.HederaFunctionalitySet;
 import com.hedera.node.config.types.Profile;
 import com.swirlds.config.api.ConfigData;
 import com.swirlds.config.api.ConfigProperty;
+import java.util.List;
 
 @ConfigData("hedera")
 public record HederaConfig(
@@ -27,6 +29,12 @@ public record HederaConfig(
         @ConfigProperty(value = "transaction.maxSize", defaultValue = "6144") @NetworkProperty long transactionMaxSize,
         @ConfigProperty(value = "transaction.jumboSize", defaultValue = "133120") @NetworkProperty
                 long transactionJumboSize,
+        @ConfigProperty(defaultValue = "callEthereum,createContract,contractCallMethod,contractCallLocalMethod")
+                @NodeProperty
+                List<String> jumboGrpcMethodNames,
+        @ConfigProperty(defaultValue = "EthereumTransaction,ContractCall,ContractCreate,ContractCallLocal")
+                @NetworkProperty
+                HederaFunctionalitySet jumboFunctionalitySet,
         @ConfigProperty(value = "transaction.minValidityBufferSecs", defaultValue = "10") @NetworkProperty
                 int transactionMinValidityBufferSecs,
         @ConfigProperty(value = "allowances.maxTransactionLimit", defaultValue = "20") @NetworkProperty

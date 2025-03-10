@@ -165,11 +165,12 @@ final class GrpcServiceBuilder {
     @NonNull
     public ServerServiceDefinition build(@NonNull final Metrics metrics) {
         final var builder = ServerServiceDefinition.builder(serviceName);
+        final var jumboMethodNames = hederaConfig.jumboGrpcMethodNames();
         txMethodNames.forEach(methodName -> {
             logger.debug("Registering gRPC transaction method {}.{}", serviceName, methodName);
 
             // check if method should be a jumbo transaction
-            final var method = (hederaConfig.jumboTransactionIsEnabled() && methodName.equals("callEthereum"))
+            final var method = (hederaConfig.jumboTransactionIsEnabled() && jumboMethodNames.contains(methodName))
                     ? new TransactionMethod(
                             serviceName, methodName, ingestWorkflow, metrics, hederaConfig.transactionJumboSize())
                     : new TransactionMethod(
@@ -179,6 +180,7 @@ final class GrpcServiceBuilder {
         });
         queryMethodNames.forEach(methodName -> {
             logger.debug("Registering gRPC query method {}.{}", serviceName, methodName);
+            // TODO add jumbo query support for contract call local
             final var method =
                     new QueryMethod(serviceName, methodName, queryWorkflow, metrics, hederaConfig.transactionMaxSize());
             addMethod(builder, serviceName, methodName, method);
