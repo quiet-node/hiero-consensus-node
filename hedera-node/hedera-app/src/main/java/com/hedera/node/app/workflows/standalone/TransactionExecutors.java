@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.standalone;
 
-import static com.hedera.node.app.history.impl.HistoryLibraryCodecImpl.HISTORY_LIBRARY_CODEC;
 import static com.hedera.node.app.spi.AppContext.Gossip.UNAVAILABLE_GOSSIP;
 import static com.hedera.node.app.workflows.standalone.impl.NoopVerificationStrategies.NOOP_VERIFICATION_STRATEGIES;
 import static java.util.Objects.requireNonNull;
@@ -26,7 +25,6 @@ import com.hedera.node.app.throttle.AppThrottleFactory;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.crypto.CryptographyHolder;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.system.SoftwareVersion;
@@ -242,7 +240,7 @@ public enum TransactionExecutors {
                 new AppSignatureVerifier(
                         bootstrapConfig.getConfigData(HederaConfig.class),
                         new SignatureExpanderImpl(),
-                        new SignatureVerifierImpl(CryptographyHolder.get())),
+                        new SignatureVerifierImpl()),
                 UNAVAILABLE_GOSSIP,
                 bootstrapConfigProvider::getConfiguration,
                 () -> defaultNodeInfo,
@@ -262,12 +260,7 @@ public enum TransactionExecutors {
         final var hintsService = new HintsServiceImpl(
                 NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HintsLibraryImpl(), bootstrapConfig);
         final var historyService = new HistoryServiceImpl(
-                NO_OP_METRICS,
-                ForkJoinPool.commonPool(),
-                appContext,
-                new HistoryLibraryImpl(),
-                HISTORY_LIBRARY_CODEC,
-                bootstrapConfig);
+                NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HistoryLibraryImpl(), bootstrapConfig);
         final var component = DaggerExecutorComponent.builder()
                 .appContext(appContext)
                 .configProviderImpl(configProvider)
