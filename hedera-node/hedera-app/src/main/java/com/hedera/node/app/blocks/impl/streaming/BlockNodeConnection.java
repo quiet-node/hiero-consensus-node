@@ -7,10 +7,6 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,6 +27,8 @@ public class BlockNodeConnection {
     private volatile boolean isActive = true;
     
     // Variables for tracking the current block and request index
+    private final Object newBlockAvailable = new Object();
+    private final Object newRequestAvailable = new Object();
     private long currentBlockNumber = -1;
     private int currentRequestIndex = 0;
     
@@ -52,33 +50,41 @@ public class BlockNodeConnection {
     }
 
     private void establishStream() {
-        requestObserver =
-                grpcServiceClient.bidi(manager.getGrpcEndPoint(), new StreamObserver<PublishStreamResponse>() {
-                    @Override
-                    public void onNext(PublishStreamResponse response) {
-                        if (response.hasAcknowledgement()) {
-                            handleAcknowledgement(response.getAcknowledgement());
-                        } else if (response.hasEndStream()) {
-                            handleEndOfStream(response.getEndStream());
+        logger.info("Establishing stream to block node {}:{}", node.address(), node.port());
+        try {
+            requestObserver =
+                    grpcServiceClient.bidi(manager.getGrpcEndPoint(), new StreamObserver<PublishStreamResponse>() {
+                        @Override
+                        public void onNext(PublishStreamResponse response) {
+                            logger.info("Received response from block node {}:{}", node.address(), node.port());
+                            if (response.hasAcknowledgement()) {
+                                handleAcknowledgement(response.getAcknowledgement());
+                            } else if (response.hasEndStream()) {
+                                handleEndOfStream(response.getEndStream());
+                            }
                         }
-                    }
 
-                    @Override
-                    public void onError(Throwable t) {
-                        Status status = Status.fromThrowable(t);
-                        logger.error("Error in block node stream {}:{}: {}", node.address(), node.port(), status, t);
-                        handleStreamFailure();
-                    }
+                        @Override
+                        public void onError(Throwable t) {
+                            Status status = Status.fromThrowable(t);
+                            logger.error("Error in block node stream {}:{}: {}", node.address(), node.port(), status, t);
+                            handleStreamFailure();
+                        }
 
-                    @Override
-                    public void onCompleted() {
-                        logger.info("Stream completed for block node {}:{}", node.address(), node.port());
-                        handleStreamFailure();
-                    }
-                });
-        isActiveLock.lock();
-        isActive = true;
-        isActiveLock.unlock();
+                        @Override
+                        public void onCompleted() {
+                            logger.info("Stream completed for block node {}:{}", node.address(), node.port());
+                            handleStreamFailure();
+                        }
+                    });
+            isActiveLock.lock();
+            isActive = true;
+            isActiveLock.unlock();
+            logger.info("Successfully established stream to block node {}:{}", node.address(), node.port());
+        } catch (Exception e) {
+            logger.error("Failed to establish stream to block node {}:{}", node.address(), node.port(), e);
+            handleStreamFailure();
+        }
     }
     
     private void startRequestWorker() {
@@ -92,11 +98,13 @@ public class BlockNodeConnection {
         while (isActive) {
             try {
                 // Wait for a block to be available if we don't have one yet
-                while (isActive && (currentBlockNumber == -1||
-                        blockStreamStateManager.getBlockState(currentBlockNumber) == null ||
-                        blockStreamStateManager.getBlockState(currentBlockNumber).isComplete())) {
+                if (currentBlockNumber == -1 || 
+                        blockStreamStateManager.getBlockState(currentBlockNumber) == null) {
                     logger.info("Waiting for new block to be available for node {}:{}", node.address(), node.port());
-                    blockStreamStateManager.getNewBlockAvailableCondition().await();
+                    synchronized (newBlockAvailable) {
+                        newBlockAvailable.wait();
+                    }
+                    continue;
                 }
 
                 // Check if we should exit the loop
@@ -113,28 +121,55 @@ public class BlockNodeConnection {
                     continue;
                 }
 
-                // Wait if we've caught up to the available requests
-                while (isActive && currentRequestIndex > blockState.requests().size() && !blockState.isComplete()) {
-                    logger.info("Waiting for new requests to be available for block {} on node {}:{}",
-                            currentBlockNumber, node.address(), node.port());
-                    blockStreamStateManager.getNewRequestAvailableCondition().await();
-                }
-
-                // Check if we should exit the loop
-                if (!isActive) {
-                    break;
-                }
-
+                logger.info("Processing block {} for node {}:{}, isComplete: {}, requests: {}",
+                        currentBlockNumber, node.address(), node.port(), 
+                        blockState.isComplete(), blockState.requests().size());
+                
                 // Process available requests
-                while (isActive && currentRequestIndex < blockState.requests().size()) {
+                int requestsSize = blockState.requests().size();
+                // If there are no requests yet, wait for some to be added
+                if (requestsSize == 0 && !blockState.isComplete()) {
+                    logger.info("No requests available for block {} on node {}:{}, waiting...",
+                            currentBlockNumber, node.address(), node.port());
+                    synchronized (newRequestAvailable) {
+                        newRequestAvailable.wait();
+                    }
+                    // Refresh the block state and requests size after waiting
+                    blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
+                    if (blockState == null) {
+                        continue;
+                    }
+                    requestsSize = blockState.requests().size();
+                }
+                
+                // If we've processed all available requests but the block isn't complete,
+                // wait for more requests to be added
+                if (currentRequestIndex >= requestsSize && !blockState.isComplete()) {
+                    logger.info("Waiting for new requests to be available for block {} on node {}:{}, " +
+                            "currentRequestIndex: {}, requestsSize: {}",
+                            currentBlockNumber, node.address(), node.port(), 
+                            currentRequestIndex, requestsSize);
+                    synchronized (newRequestAvailable) {
+                        newRequestAvailable.wait();
+                    }
+                    // Refresh the block state and requests size after waiting
+                    blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
+                    if (blockState == null) {
+                        continue;
+                    }
+                    requestsSize = blockState.requests().size();
+                    logger.info("After wait - Block: {}, currentRequestIndex: {}, requestsSize: {}, isComplete: {}", 
+                            currentBlockNumber, currentRequestIndex, requestsSize, blockState.isComplete());
+                }
+                
+                // Process any available requests
+                while (currentRequestIndex < requestsSize) {
                     PublishStreamRequest request = blockState.requests().get(currentRequestIndex);
+                    logger.info("Sending request for block {} request index {} to node {}:{}, items: {}",
+                            currentBlockNumber, currentRequestIndex, node.address(), node.port(),
+                            request.getBlockItems().getBlockItemsCount());
                     sendRequest(request);
                     currentRequestIndex++;
-                }
-
-                // Check if we should exit the loop
-                if (!isActive) {
-                    break;
                 }
 
                 // If the block is complete and we've sent all requests, move to the next block
@@ -152,6 +187,16 @@ public class BlockNodeConnection {
                 break;
             } catch (Exception e) {
                 logger.error("Error in request worker thread for node {}:{}", node.address(), node.port(), e);
+                // If we get an IndexOutOfBoundsException, reset the request index to a safe value
+                if (e instanceof IndexOutOfBoundsException) {
+                    BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
+                    if (blockState != null) {
+                        int safeIndex = Math.min(blockState.requests().size(), currentRequestIndex);
+                        logger.info("Resetting request index from {} to {} for block {}", 
+                                currentRequestIndex, safeIndex, currentBlockNumber);
+                        currentRequestIndex = safeIndex;
+                    }
+                }
             }
         }
         logger.info("Request worker thread exiting for node {}:{}", node.address(), node.port());
@@ -175,20 +220,23 @@ public class BlockNodeConnection {
         isActiveLock.lock();
         isActive = false;
         isActiveLock.unlock();
-        blockStreamStateManager.getLock().lock();
-        try {
-            // Signal any waiting threads to check the isActive flag
-            blockStreamStateManager.getNewBlockAvailableCondition().signalAll();
-            blockStreamStateManager.getNewRequestAvailableCondition().signalAll();
-        } finally {
-            blockStreamStateManager.getLock().unlock();
-        }
         removeFromActiveConnections(node);
     }
 
     public void sendRequest(PublishStreamRequest request) {
         if (isActive) {
-            requestObserver.onNext(request);
+            try {
+                logger.info("Sending request to node {}:{}: {}", node.address(), node.port(), 
+                        request.getBlockItems().getBlockItemsCount());
+                requestObserver.onNext(request);
+                logger.info("Successfully sent request to node {}:{}", node.address(), node.port());
+            } catch (Exception e) {
+                logger.error("Failed to send request to node {}:{}", node.address(), node.port(), e);
+                handleStreamFailure();
+            }
+        } else {
+            logger.warn("Attempted to send request to inactive connection for node {}:{}", 
+                    node.address(), node.port());
         }
     }
 
@@ -197,30 +245,17 @@ public class BlockNodeConnection {
             isActiveLock.lock();
             isActive = false;
             isActiveLock.unlock();
-            try {
-                blockStreamStateManager.getLock().lock();
-                // Signal any waiting threads to check the isActive flag
-                blockStreamStateManager.getNewBlockAvailableCondition().signalAll();
-                blockStreamStateManager.getNewRequestAvailableCondition().signalAll();
-            } finally {
-                blockStreamStateManager.getLock().unlock();
-            }
             
-            // Wait for the worker thread to terminate
             try {
                 if (requestWorker != null) {
-                    requestWorker.join(5000); // Wait up to 5 seconds
-                    if (requestWorker.isAlive()) {
-                        logger.warn("Request worker thread did not terminate within timeout for node {}:{}", 
-                                node.address(), node.port());
-                    }
+                    requestWorker.interrupt();
+                    requestWorker.join(1000);
                 }
             } catch (InterruptedException e) {
+                logger.error("Error joining request worker thread for node {}:{}", node.address(), node.port(), e);
                 Thread.currentThread().interrupt();
-                logger.warn("Interrupted while waiting for request worker thread to terminate", e);
             }
-            
-            requestObserver.onCompleted();
+            logger.info("Closed connection to block node {}:{}", node.address(), node.port());
         }
     }
 
@@ -235,7 +270,7 @@ public class BlockNodeConnection {
     /**
      * Gets the current block number being processed.
      * 
-     * @return the current block number, or -1 if no block is being processed
+     * @return the current block number
      */
     public long getCurrentBlockNumber() {
         return currentBlockNumber;
@@ -249,8 +284,43 @@ public class BlockNodeConnection {
     public int getCurrentRequestIndex() {
         return currentRequestIndex;
     }
-
+    
     public ReentrantLock getIsActiveLock() {
         return isActiveLock;
+    }
+
+    public Object getNewBlockAvailable() {
+        return newBlockAvailable;
+    }
+
+    public Object getNewRequestAvailable() {
+        return newRequestAvailable;
+    }
+    public void notifyNewRequestAvailable() {
+        synchronized (newRequestAvailable) {
+            BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
+            if (blockState != null) {
+                logger.info("Notifying of new request available for node {}:{} - block: {}, requests: {}, isComplete: {}", 
+                        node.address(), node.port(), currentBlockNumber, 
+                        blockState.requests().size(), blockState.isComplete());
+            } else {
+                logger.info("Notifying of new request available for node {}:{} - block: {} (state not found)", 
+                        node.address(), node.port(), currentBlockNumber);
+            }
+            newRequestAvailable.notify();
+        }
+    }
+
+    public void notifyNewBlockAvailable() {
+        synchronized (newBlockAvailable) {
+            newBlockAvailable.notify();
+        }
+    }
+
+    public void setCurrentBlockNumber(long blockNumber) {
+        currentBlockNumber = blockNumber;
+        currentRequestIndex = 0; // Reset the request index when setting a new block
+        logger.info("Set current block number to {} for node {}:{}, reset request index to 0", 
+                blockNumber, node.address(), node.port());
     }
 }

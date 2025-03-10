@@ -14,30 +14,36 @@ import org.apache.logging.log4j.Logger;
  */
 public class GrpcBlockItemWriter implements BlockItemWriter {
     private static final Logger logger = LogManager.getLogger(GrpcBlockItemWriter.class);
+    private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
+    private long blockNumber;
 
     /**
      * Construct a new GrpcBlockItemWriter.
      *
-     * @param blockStreamStateManager the block stream state manager
+     * @param blockNodeConnectionManager the block stream connection manager
      */
     public GrpcBlockItemWriter(
+            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
-        this.blockStreamStateManager = requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
+        requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
+        requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
+        this.blockStreamStateManager = blockStreamStateManager;
+        this.blockNodeConnectionManager = requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
     }
 
     @Override
     public void openBlock(long blockNumber) {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
-
-        blockStreamStateManager.openBlock(blockNumber);
+        this.blockNumber = blockNumber;
+        blockNodeConnectionManager.openBlock(blockNumber);
         logger.info("Started new block in GrpcBlockItemWriter {}", blockNumber);
     }
 
     @Override
     public void writePbjItem(@NonNull Bytes bytes) {
         requireNonNull(bytes, "bytes must not be null");
-        blockStreamStateManager.addItem(bytes);
+        blockStreamStateManager.addItem(blockNumber, bytes);
     }
 
     @Override
@@ -47,7 +53,7 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
 
     @Override
     public void closeBlock() {
-        blockStreamStateManager.closeBlock();
+        blockStreamStateManager.closeBlock(blockNumber);
         logger.info("Closed block in GrpcBlockItemWriter");
     }
 }

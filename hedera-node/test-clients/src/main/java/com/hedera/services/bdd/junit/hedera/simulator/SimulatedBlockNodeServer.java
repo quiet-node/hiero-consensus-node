@@ -203,6 +203,8 @@ public class SimulatedBlockNodeServer {
                         return;
                     }
 
+                    log.info("Received block stream request on port {}", port);
+
                     // Default behavior: acknowledge block proofs
                     if (request.getBlockItems().getBlockItemsList().stream().anyMatch(BlockItem::hasBlockProof)) {
                         List<BlockItem> blockProofs = request.getBlockItems().getBlockItemsList().stream()
@@ -281,7 +283,7 @@ public class SimulatedBlockNodeServer {
                 long blockNumber) {
             try {
                 observer.onNext(PublishStreamResponse.newBuilder()
-                        .setStatus(EndOfStream.newBuilder()
+                        .setEndStream(EndOfStream.newBuilder()
                                 .setStatus(responseCode)
                                 .setBlockNumber(blockNumber)
                                 .build())

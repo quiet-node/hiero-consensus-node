@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
@@ -29,13 +28,10 @@ public class BlockStreamStateManager {
     private static final Logger logger = LogManager.getLogger(BlockStreamStateManager.class);
 
     private final Map<Long, BlockState> blockStates = new ConcurrentHashMap<>();
-    private volatile BlockState currentBlock;
     private final int blockItemBatchSize;
     
-    // Lock and condition variables for thread synchronization
+    // Lock for synchronizing modifications to the block states
     private final Lock lock = new ReentrantLock();
-    private final Condition newBlockAvailable = lock.newCondition();
-    private final Condition newRequestAvailable = lock.newCondition();
     
     // Reference to the connection manager for notifications
     private BlockNodeConnectionManager blockNodeConnectionManager;
@@ -66,19 +62,22 @@ public class BlockStreamStateManager {
 
     /**
      * Opens a new block with the given block number.
-     * 
+     *
      * @param blockNumber the block number
      * @throws IllegalArgumentException if the block number is negative
      */
     public void openBlock(long blockNumber) {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
 
-        currentBlock = BlockState.from(blockNumber);
-        blockStates.put(blockNumber, currentBlock);
-        logger.info("Started new block in BlockStreamStateManager {}", blockNumber);
+        lock.lock();
+        try {
+            // Create a new block state
+            blockStates.put(blockNumber, BlockState.from(blockNumber));
+            logger.info("Started new block in BlockStreamStateManager {}", blockNumber);
 
-        // Signal that a new block is available
-        signalNewBlockAvailable();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -87,31 +86,27 @@ public class BlockStreamStateManager {
      * @param bytes the item bytes to add
      * @throws IllegalStateException if no block is currently open
      */
-    public void addItem(@NonNull Bytes bytes) {
+    public void addItem(@NonNull final long blockNumber, @NonNull Bytes bytes) {
         requireNonNull(bytes, "bytes must not be null");
-        
-        if (currentBlock == null) {
-            throw new IllegalStateException("Received block item before opening block");
+        BlockState blockState = getBlockState(blockNumber);
+        if (blockState == null) {
+            throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        currentBlock.itemBytes().add(bytes);
+        blockState.itemBytes().add(bytes);
 
         // If we have enough items, create a new request
-        if (currentBlock.itemBytes().size() >= blockItemBatchSize) {
-            createRequestFromCurrentItems();
+        if (blockState.itemBytes().size() >= blockItemBatchSize) {
+            createRequestFromCurrentItems(blockState);
         }
     }
 
     /**
      * Creates a new PublishStreamRequest from the current items in the block.
      */
-    private void createRequestFromCurrentItems() {
-        if (currentBlock.itemBytes().isEmpty()) {
-            return;
-        }
-        
+    private void createRequestFromCurrentItems(@NonNull BlockState blockState) {
         List<com.hedera.hapi.block.stream.protoc.BlockItem> protocBlockItems = new ArrayList<>();
-        for (Bytes batchItem : currentBlock.itemBytes()) {
+        for (Bytes batchItem : blockState.itemBytes()) {
             try {
                 protocBlockItems.add(
                         com.hedera.hapi.block.stream.protoc.BlockItem.parseFrom(batchItem.toByteArray()));
@@ -123,16 +118,19 @@ public class BlockStreamStateManager {
 
         // Create BlockItemSet by adding all items at once
         BlockItemSet itemSet = BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
-        
+
         // Create the request and add it to the list
         PublishStreamRequest request = PublishStreamRequest.newBuilder().setBlockItems(itemSet).build();
-        currentBlock.requests().add(request);
-        
+
+        blockState.requests().add(request);
+        logger.info("Added request to block {} - request count now: {}",
+                blockState.blockNumber(), blockState.requests().size());
+
         // Clear the item bytes list
-        currentBlock.itemBytes().clear();
-        
-        // Signal that a new request is available
-        signalNewRequestAvailable();
+        blockState.itemBytes().clear();
+
+        // Notify the connection manager
+        blockNodeConnectionManager.notifyConnectionsOfNewRequest();
     }
 
     /**
@@ -140,32 +138,23 @@ public class BlockStreamStateManager {
      * 
      * @throws IllegalStateException if no block is currently open
      */
-    public void closeBlock() {
-        if (currentBlock == null) {
-            throw new IllegalStateException("Received close block before opening block");
-        }
-        
-        final long blockNumber = currentBlock.blockNumber();
-
-        BlockState block = blockStates.get(blockNumber);
-        if (block == null) {
-            logger.error("Could not find block state for block {}", blockNumber);
-            return;
+    public void closeBlock(final long blockNumber) {
+        BlockState blockState = getBlockState(blockNumber);
+        if (blockState == null) {
+            throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        // Create a final request from any remaining items
-        if (!block.itemBytes().isEmpty()) {
-            createRequestFromCurrentItems();
+        // Check if there are remaining items
+        if (!blockState.itemBytes().isEmpty()) {
+            logger.info("Creating request from remaining items in block {} size {}", blockNumber,
+                    blockState.itemBytes().size());
+            createRequestFromCurrentItems(blockState);
         }
 
         // Mark the block as complete
-        block.setComplete();
-
-        logger.info("Closed block in BlockStreamStateManager {}", blockNumber);
-        currentBlock = null;
-
-        // Signal that the block is complete
-        signalNewRequestAvailable();
+        blockState.setComplete();
+        logger.info("Closed block in BlockStreamStateManager {} - request count: {}",
+                blockNumber, blockState.requests().size());
     }
 
     /**
@@ -175,69 +164,15 @@ public class BlockStreamStateManager {
      * @return the block state, or null if no block state exists for the given block number
      */
     public BlockState getBlockState(long blockNumber) {
-        return blockStates.get(blockNumber);
+        // Direct access to the map is safe because it's a ConcurrentHashMap
+        BlockState blockState = blockStates.get(blockNumber);
+        if (blockState == null) {
+            logger.warn("Block state not found for block {}", blockNumber);
+        } else {
+            logger.debug("Retrieved block state for block {} with {} requests, isComplete: {}", 
+                    blockNumber, blockState.requests().size(), blockState.isComplete());
+        }
+        return blockState;
     }
 
-    /**
-     * Removes the block state for the given block number.
-     * 
-     * @param blockNumber the block number
-     */
-    public void removeBlockState(long blockNumber) {
-        blockStates.remove(blockNumber);
-    }
-
-    /**
-     * Gets all block numbers currently being managed.
-     * 
-     * @return a list of all block numbers
-     */
-    public List<Long> getAllBlockNumbers() {
-        return new ArrayList<>(blockStates.keySet());
-    }
-    
-    /**
-     * Gets the lock used for synchronization.
-     * 
-     * @return the lock
-     */
-    public Lock getLock() {
-        return lock;
-    }
-    
-    /**
-     * Gets the condition variable for signaling when a new block is available.
-     * 
-     * @return the condition variable
-     */
-    public Condition getNewBlockAvailableCondition() {
-        return newBlockAvailable;
-    }
-    
-    /**
-     * Gets the condition variable for signaling when a new request is available.
-     * 
-     * @return the condition variable
-     */
-    public Condition getNewRequestAvailableCondition() {
-        return newRequestAvailable;
-    }
-    
-    /**
-     * Signals that a new block is available.
-     * This method must be called with the lock held.
-     */
-    public void signalNewBlockAvailable() {
-        logger.info("Signaling new block available");
-        newBlockAvailable.signalAll();
-    }
-    
-    /**
-     * Signals that new requests are available.
-     * This method must be called with the lock held.
-     */
-    public void signalNewRequestAvailable() {
-        logger.info("Signaling new request available");
-        newRequestAvailable.signalAll();
-    }
 } 

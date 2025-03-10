@@ -164,9 +164,10 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Waits for at least one active connection to be established, with timeout.
-     * @param timeout maximum time to wait
-     * @return true if at least one connection was established, false if timeout occurred
+     * Waits for at least one connection to be established.
+     *
+     * @param timeout the maximum time to wait
+     * @return true if at least one connection was established, false if the timeout elapsed before any connections were established
      */
     public boolean waitForConnection(Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
@@ -195,4 +196,26 @@ public class BlockNodeConnectionManager {
     public String getGrpcEndPoint() {
         return GRPC_END_POINT;
     }
+
+    public void openBlock(long blockNumber) {
+        blockStreamStateManager.openBlock(blockNumber);
+        synchronized (connectionLock) {
+            for (BlockNodeConnection blockNodeConnection : activeConnections.values()) {
+                if (blockNodeConnection.getCurrentBlockNumber() == -1) {
+                    blockNodeConnection.setCurrentBlockNumber(blockNumber);
+                }
+                blockNodeConnection.notifyNewBlockAvailable();
+            }
+        }
+    }
+
+    public void notifyConnectionsOfNewRequest() {
+        synchronized (connectionLock) {
+            for (BlockNodeConnection blockNodeConnection : activeConnections.values()) {
+                blockNodeConnection.notifyNewRequestAvailable();
+            }
+        }
+    }
+
+
 }
