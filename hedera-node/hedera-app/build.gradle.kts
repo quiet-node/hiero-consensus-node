@@ -160,6 +160,9 @@ var updateDockerEnvTask =
         workingDir(layout.projectDirectory.dir("../docker"))
         commandLine("./update-env.sh", project.version)
     }
+dependencies {
+    testImplementation(project(":test-clients"))
+}
 
 tasks.register<Exec>("createDockerImage") {
     description = "Creates the docker image of the services based on the current version"

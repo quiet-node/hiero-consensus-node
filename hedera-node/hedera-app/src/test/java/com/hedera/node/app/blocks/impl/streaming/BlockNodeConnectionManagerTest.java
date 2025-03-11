@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.block.stream.BlockProof;
 import com.hedera.hapi.block.stream.output.BlockHeader;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
@@ -15,10 +17,10 @@ import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
-import io.grpc.Server;
-import io.grpc.ServerBuilder;
+import com.hedera.services.bdd.junit.hedera.simulator.SimulatedBlockNodeServer;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,13 +40,13 @@ class BlockNodeConnectionManagerTest {
     @Mock
     ConfigProvider mockConfigProvider;
 
-    private static Server testServer;
+    private static SimulatedBlockNodeServer testServer;
 
     @BeforeAll
     static void beforeAll() throws IOException {
         final var configExtractor = new BlockNodeConfigExtractor("./src/test/resources/bootstrap");
         final int testServerPort = configExtractor.getAllNodes().getFirst().port();
-        testServer = ServerBuilder.forPort(testServerPort).build();
+        testServer = new SimulatedBlockNodeServer(testServerPort);
         testServer.start();
     }
 
@@ -83,8 +85,29 @@ class BlockNodeConnectionManagerTest {
                         "Successfully streamed block header for block 1 to localhost:8080");
     }
 
+    @Test
+    void testStreamBlockToConnections() {
+        final long blockNumber = 1L;
+        final var blockHeader = BlockHeader.newBuilder()
+                .number(blockNumber)
+                .hashAlgorithm(SHA2_384)
+                .build();
+        final var blockProof =
+                BlockItem.newBuilder().blockProof(BlockProof.DEFAULT).build();
+        final var block = new BlockState(
+                blockNumber,
+                List.of(BlockHeader.PROTOBUF.toBytes(blockHeader), BlockItem.PROTOBUF.toBytes(blockProof)));
+
+        blockNodeConnectionManager.streamBlockToConnections(block);
+
+        assertThat(logCaptor.infoLogs())
+                .contains(
+                        "Streaming block items for block 1 to 1 active connections",
+                        "Successfully streamed block items for block 1 to localhost:8080");
+    }
+
     @AfterAll
     static void afterAll() {
-        testServer.shutdown();
+        testServer.stop();
     }
 }

@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -121,30 +122,90 @@ public class BlockNodeConnectionManager {
         }
     }
 
-    private void streamBlockToConnections(@NonNull BlockState block) {
-        long blockNumber = block.blockNumber();
-        // Get currently active connections
-        List<BlockNodeConnection> connectionsToStream;
-        synchronized (connectionLock) {
-            connectionsToStream = activeConnections.values().stream()
-                    .filter(BlockNodeConnection::isActive)
-                    .toList();
-        }
+    public void streamBlockToConnections(@NonNull BlockState block) {
+        streamToConnections(
+                this::getActiveConnections,
+                () -> createPublishStreamRequests(block),
+                block.blockNumber(),
+                "block items");
+    }
 
+    public void streamBlockHeaderToConnections(long blockNumber, @NonNull Bytes blockHeader) {
+        streamToConnections(
+                this::getActiveConnections,
+                () -> createPublishStreamRequests(blockHeader),
+                blockNumber,
+                "block header");
+    }
+
+    /**
+     * Common streaming logic for both blocks and block headers.
+     *
+     * @param activeConnectionsSupplier supplier for the active block node connections to stream to
+     * @param blockNumber the block number
+     * @param requestsSupplier supplier for the requests to stream to block node connections
+     * @param contentType description of what's being streamed (for logging); empty string if whole block is streamed
+     */
+    private void streamToConnections(
+            @NonNull final Supplier<List<BlockNodeConnection>> activeConnectionsSupplier,
+            @NonNull final Supplier<List<PublishStreamRequest>> requestsSupplier,
+            final long blockNumber,
+            @NonNull final String contentType) {
+        final var connectionsToStream = activeConnectionsSupplier.get();
         if (connectionsToStream.isEmpty()) {
-            logger.info("No active connections to stream block {}", blockNumber);
+            logger.info("No active connections to stream {} for block {}", contentType, blockNumber);
             return;
         }
 
-        logger.info("Streaming block {} to {} active connections", blockNumber, connectionsToStream.size());
+        logger.info(
+                "Streaming {} for block {} to {} active connections",
+                contentType,
+                blockNumber,
+                connectionsToStream.size());
 
-        // Create all batches once
+        // Stream prepared requests to each connection
+        for (BlockNodeConnection connection : connectionsToStream) {
+            final var connectionNodeConfig = connection.getNodeConfig();
+            try {
+                final var requests = requestsSupplier.get();
+                for (PublishStreamRequest request : requests) {
+                    connection.sendRequest(request);
+                }
+                logger.info(
+                        "Successfully streamed {} for block {} to {}:{}",
+                        contentType,
+                        blockNumber,
+                        connectionNodeConfig.address(),
+                        connectionNodeConfig.port());
+            } catch (Exception e) {
+                logger.error(
+                        "Failed to stream {} for block {} to {}:{}",
+                        contentType,
+                        blockNumber,
+                        connectionNodeConfig.address(),
+                        connectionNodeConfig.port(),
+                        e);
+            }
+        }
+    }
+
+    private List<BlockNodeConnection> getActiveConnections() {
+        synchronized (connectionLock) {
+            return activeConnections.values().stream()
+                    .filter(BlockNodeConnection::isActive)
+                    .toList();
+        }
+    }
+
+    private List<PublishStreamRequest> createPublishStreamRequests(@NonNull BlockState block) {
         List<PublishStreamRequest> batchRequests = new ArrayList<>();
         final int blockItemBatchSize = blockNodeConfigurations.getBlockItemBatchSize();
+
         for (int i = 0; i < block.itemBytes().size(); i += blockItemBatchSize) {
             int end = Math.min(i + blockItemBatchSize, block.itemBytes().size());
             List<Bytes> batch = block.itemBytes().subList(i, end);
             List<com.hedera.hapi.block.stream.protoc.BlockItem> protocBlockItems = new ArrayList<>();
+
             batch.forEach(batchItem -> {
                 try {
                     protocBlockItems.add(
@@ -157,84 +218,25 @@ public class BlockNodeConnectionManager {
             // Create BlockItemSet by adding all items at once
             BlockItemSet itemSet =
                     BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
-
             batchRequests.add(
                     PublishStreamRequest.newBuilder().setBlockItems(itemSet).build());
         }
 
-        // Stream prepared batches to each connection
-        for (BlockNodeConnection connection : connectionsToStream) {
-            final var connectionNodeConfig = connection.getNodeConfig();
-            try {
-                for (PublishStreamRequest request : batchRequests) {
-                    connection.sendRequest(request);
-                }
-                logger.info(
-                        "Successfully streamed block {} to {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port());
-            } catch (Exception e) {
-                logger.error(
-                        "Failed to stream block {} to {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port(),
-                        e);
-            }
-        }
+        return batchRequests;
     }
 
-    public void streamBlockHeaderToConnections(long blockNumber, @NonNull Bytes blockHeader) {
-        // Get currently active connections
-        List<BlockNodeConnection> connectionsToStream;
-        synchronized (connectionLock) {
-            connectionsToStream = activeConnections.values().stream()
-                    .filter(BlockNodeConnection::isActive)
-                    .toList();
-        }
-
-        if (connectionsToStream.isEmpty()) {
-            logger.info("No active connections to stream block header for block {}", blockNumber);
-            return;
-        }
-
-        logger.info(
-                "Streaming block header for block {} to {} active connections",
-                blockNumber,
-                connectionsToStream.size());
-
-        // Create publish stream request
-        final PublishStreamRequest request;
+    private List<PublishStreamRequest> createPublishStreamRequests(@NonNull Bytes blockHeader) {
         try {
-            request = PublishStreamRequest.newBuilder()
+            PublishStreamRequest request = PublishStreamRequest.newBuilder()
                     .setBlockItems(BlockItemSet.newBuilder()
                             .addBlockItems(
                                     com.hedera.hapi.block.stream.protoc.BlockItem.parseFrom(blockHeader.toByteArray()))
                             .build())
                     .build();
+
+            return List.of(request);
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-
-        // Stream header to each connection
-        for (BlockNodeConnection connection : connectionsToStream) {
-            final var connectionNodeConfig = connection.getNodeConfig();
-            try {
-                connection.sendRequest(request);
-                logger.info(
-                        "Successfully streamed block header for block {} to {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port());
-            } catch (Exception e) {
-                logger.error(
-                        "Failed to stream block header for block {} to {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port(),
-                        e);
-            }
         }
     }
 
