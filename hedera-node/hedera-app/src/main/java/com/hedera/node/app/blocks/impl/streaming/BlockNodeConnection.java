@@ -44,7 +44,6 @@ public class BlockNodeConnection {
         requestObserver = stub.publishBlockStream(new StreamObserver<PublishStreamResponse>() {
             @Override
             public void onNext(PublishStreamResponse response) {
-                logger.info("Response {}", response);
                 if (response.hasAcknowledgement()) {
                     handleAcknowledgement(response.getAcknowledgement());
                 } else if (response.hasEndStream()) {
