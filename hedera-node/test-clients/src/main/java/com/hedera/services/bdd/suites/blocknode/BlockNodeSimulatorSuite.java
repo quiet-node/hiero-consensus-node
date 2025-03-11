@@ -8,6 +8,7 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.utilops.BlockNodeSimulatorVerbs.blockNodeSimulator;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogContains;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
@@ -31,12 +32,27 @@ import org.junit.jupiter.api.Tag;
 public class BlockNodeSimulatorSuite {
 
     @HapiTest
+    final Stream<DynamicTest> waitForMultipleBlocksWithBackgroundTraffic() {
+        return hapiTest(
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true));
+    }
+
+    @HapiTest
     final Stream<DynamicTest> node0BlockNodeInternalError() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         return hapiTest(
                 // Block node simulator 0 respond with internal error
-                blockNodeSimulator()
-                        .sendEndOfStreamImmediately(0, PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
+                blockNodeSimulator(0)
+                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
                         .withBlockNumber(123456L)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 // Verify the log message in node 0's log
@@ -51,18 +67,18 @@ public class BlockNodeSimulatorSuite {
     final Stream<DynamicTest> node0BlockNodeShutsDownAndRestarts() {
         return hapiTest(
                 // Shut down block node simulator 0
-                blockNodeSimulator().shutDownImmediately(0),
+                blockNodeSimulator(0).shutDownImmediately(),
                 // Verify the log message in node 0's log
                 assertHgcaaLogContains(byNodeId(0), "Error in block node stream", Duration.ofSeconds(10)),
                 // Restart node 0
-                blockNodeSimulator().restartImmediately(0),
+                blockNodeSimulator(0).restartImmediately(),
                 sleepFor(10000));
         // TODO Add more log assertions for reconnection
     }
 
     @HapiTest
     final Stream<DynamicTest> assertGenesisBlockReceivedBySimulator() {
-        return hapiTest(blockNodeSimulator().assertBlockReceived(0, 0));
+        return hapiTest(blockNodeSimulator(0).assertBlockReceived(0));
     }
 
     @HapiTest
@@ -78,11 +94,11 @@ public class BlockNodeSimulatorSuite {
                 // Wait a bit to ensure the block is processed
                 sleepFor(2000),
                 // Get the last verified block number using the fluent API
-                blockNodeSimulator()
-                        .getLastVerifiedBlock(0)
+                blockNodeSimulator(0)
+                        .getLastVerifiedBlock()
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
                         .build(),
                 // Assert that the block has been received by the simulator
-                blockNodeSimulator().assertBlockReceived(0, lastVerifiedBlockNumber.get()));
+                blockNodeSimulator(0).assertBlockReceived(lastVerifiedBlockNumber.get()));
     }
 }

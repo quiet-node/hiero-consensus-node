@@ -14,41 +14,170 @@ public class BlockNodeSimulatorVerbs {
     }
 
     /**
-     * Creates a builder for interacting with block node simulators.
+     * Creates a builder for interacting with a specific block node simulator.
      * This is a convenience method that uses a more fluent naming convention.
      *
-     * @return a builder for the operation
+     * @param nodeIndex the index of the block node simulator (0-based)
+     * @return a builder for the operation targeting the specified simulator
      */
-    public static BlockNodeSimulatorBuilder blockNodeSimulator() {
-        return new BlockNodeSimulatorBuilder();
+    public static BlockNodeSimulatorBuilder blockNodeSimulator(int nodeIndex) {
+        return new BlockNodeSimulatorBuilder(nodeIndex);
     }
 
     /**
-     * Builder for block node simulator operations.
+     * Creates a builder for operations that affect all block node simulators.
+     *
+     * @return a builder for operations affecting all simulators
+     */
+    public static AllBlockNodeSimulatorBuilder allBlockNodeSimulators() {
+        return new AllBlockNodeSimulatorBuilder();
+    }
+
+    /**
+     * Builder for block node simulator operations targeting a specific simulator.
      */
     public static class BlockNodeSimulatorBuilder {
+        private final int nodeIndex;
+
         /**
-         * Sends an immediate EndOfStream response to a block node simulator.
+         * Creates a new builder for the specified simulator index.
          *
          * @param nodeIndex the index of the block node simulator (0-based)
+         */
+        public BlockNodeSimulatorBuilder(int nodeIndex) {
+            this.nodeIndex = nodeIndex;
+        }
+
+        /**
+         * Sends an immediate EndOfStream response to the block node simulator.
+         *
          * @param responseCode the response code to send
          * @return a builder for configuring the operation
          */
         public BlockNodeSimulatorOp.SendEndOfStreamBuilder sendEndOfStreamImmediately(
-                int nodeIndex, PublishStreamResponseCode responseCode) {
+                PublishStreamResponseCode responseCode) {
             return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode);
         }
 
         /**
-         * Shuts down a specific block node simulator immediately.
+         * Sends an immediate SkipBlock response to the block node simulator.
          *
-         * @param nodeIndex the index of the block node simulator (0-based)
+         * @param blockNumber the block number to skip
          * @return the operation
          */
-        public BlockNodeSimulatorOp shutDownImmediately(int nodeIndex) {
+        public BlockNodeSimulatorOp sendSkipBlockImmediately(long blockNumber) {
+            return BlockNodeSimulatorOp.sendSkipBlockImmediately(nodeIndex, blockNumber)
+                    .build();
+        }
+
+        /**
+         * Sends an immediate ResendBlock response to the block node simulator.
+         *
+         * @param blockNumber the block number to resend
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp sendResendBlockImmediately(long blockNumber) {
+            return BlockNodeSimulatorOp.sendResendBlockImmediately(nodeIndex, blockNumber)
+                    .build();
+        }
+
+        /**
+         * Shuts down the block node simulator immediately.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp shutDownImmediately() {
             return BlockNodeSimulatorOp.shutdownImmediately(nodeIndex).build();
         }
 
+        /**
+         * Restarts the block node simulator immediately.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp restartImmediately() {
+            return BlockNodeSimulatorOp.restartImmediately(nodeIndex).build();
+        }
+
+        /**
+         * Asserts that a specific block has been received by the block node simulator.
+         *
+         * @param blockNumber the block number to check
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp assertBlockReceived(long blockNumber) {
+            return BlockNodeSimulatorOp.assertBlockReceived(nodeIndex, blockNumber)
+                    .build();
+        }
+
+        /**
+         * Gets the last verified block number from the block node simulator.
+         *
+         * @return a builder for configuring the operation
+         */
+        public BlockNodeSimulatorOp.GetLastVerifiedBlockBuilder getLastVerifiedBlock() {
+            return BlockNodeSimulatorOp.getLastVerifiedBlock(nodeIndex);
+        }
+
+        /**
+         * Creates a builder for sending an immediate EndOfStream response with a specific block number.
+         *
+         * @param responseCode the response code to send
+         * @param blockNumber the block number to include in the response
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp sendEndOfStreamWithBlock(PublishStreamResponseCode responseCode, long blockNumber) {
+            return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode)
+                    .withBlockNumber(blockNumber)
+                    .build();
+        }
+
+        /**
+         * Creates a builder for sending an immediate EndOfStream response with a specific block number
+         * and exposing the last verified block number.
+         *
+         * @param responseCode the response code to send
+         * @param blockNumber the block number to include in the response
+         * @param lastVerifiedBlockNumber the AtomicLong to store the last verified block number
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp sendEndOfStreamWithBlock(
+                PublishStreamResponseCode responseCode, long blockNumber, AtomicLong lastVerifiedBlockNumber) {
+            return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode)
+                    .withBlockNumber(blockNumber)
+                    .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
+                    .build();
+        }
+
+        /**
+         * Gets the last verified block number from the block node simulator and exposes it through an AtomicLong.
+         *
+         * @param lastVerifiedBlockNumber the AtomicLong to store the last verified block number
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp getLastVerifiedBlockExposing(AtomicLong lastVerifiedBlockNumber) {
+            return BlockNodeSimulatorOp.getLastVerifiedBlock(nodeIndex)
+                    .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
+                    .build();
+        }
+
+        /**
+         * Gets the last verified block number from the block node simulator and exposes it through a Consumer.
+         *
+         * @param lastVerifiedBlockConsumer the consumer to receive the last verified block number
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp getLastVerifiedBlockExposing(Consumer<Long> lastVerifiedBlockConsumer) {
+            return BlockNodeSimulatorOp.getLastVerifiedBlock(nodeIndex)
+                    .exposingLastVerifiedBlockNumber(lastVerifiedBlockConsumer)
+                    .build();
+        }
+    }
+
+    /**
+     * Builder for operations that affect all block node simulators.
+     */
+    public static class AllBlockNodeSimulatorBuilder {
         /**
          * Shuts down all block node simulators immediately.
          *
@@ -59,107 +188,12 @@ public class BlockNodeSimulatorVerbs {
         }
 
         /**
-         * Restarts a specific block node simulator immediately.
-         *
-         * @param nodeIndex the index of the block node simulator (0-based)
-         * @return the operation
-         */
-        public BlockNodeSimulatorOp restartImmediately(int nodeIndex) {
-            return BlockNodeSimulatorOp.restartImmediately(nodeIndex).build();
-        }
-
-        /**
          * Restarts all previously shutdown block node simulators.
          *
          * @return the operation
          */
         public BlockNodeSimulatorOp restartAll() {
             return BlockNodeSimulatorOp.restartAll().build();
-        }
-
-        /**
-         * Asserts that a specific block has been received by a block node simulator.
-         *
-         * @param nodeIndex the index of the block node simulator (0-based)
-         * @param blockNumber the block number to check
-         * @return the operation
-         */
-        public BlockNodeSimulatorOp assertBlockReceived(int nodeIndex, long blockNumber) {
-            return BlockNodeSimulatorOp.assertBlockReceived(nodeIndex, blockNumber)
-                    .build();
-        }
-
-        /**
-         * Gets the last verified block number from a block node simulator.
-         *
-         * @param nodeIndex the index of the block node simulator (0-based)
-         * @return a builder for configuring the operation
-         */
-        public BlockNodeSimulatorOp.GetLastVerifiedBlockBuilder getLastVerifiedBlock(int nodeIndex) {
-            return BlockNodeSimulatorOp.getLastVerifiedBlock(nodeIndex);
-        }
-
-        /**
-         * Creates a builder for sending an immediate EndOfStream response with a specific block number.
-         *
-         * @param nodeIndex the index of the block node simulator (0-based)
-         * @param responseCode the response code to send
-         * @param blockNumber the block number to include in the response
-         * @return the operation
-         */
-        public BlockNodeSimulatorOp sendEndOfStreamWithBlock(
-                int nodeIndex, PublishStreamResponseCode responseCode, long blockNumber) {
-            return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode)
-                    .withBlockNumber(blockNumber)
-                    .build();
-        }
-
-        /**
-         * Creates a builder for sending an immediate EndOfStream response with a specific block number
-         * and exposing the last verified block number.
-         *
-         * @param nodeIndex the index of the block node simulator (0-based)
-         * @param responseCode the response code to send
-         * @param blockNumber the block number to include in the response
-         * @param lastVerifiedBlockNumber the AtomicLong to store the last verified block number
-         * @return the operation
-         */
-        public BlockNodeSimulatorOp sendEndOfStreamWithBlock(
-                int nodeIndex,
-                PublishStreamResponseCode responseCode,
-                long blockNumber,
-                AtomicLong lastVerifiedBlockNumber) {
-            return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode)
-                    .withBlockNumber(blockNumber)
-                    .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
-                    .build();
-        }
-
-        /**
-         * Gets the last verified block number from a block node simulator and exposes it through an AtomicLong.
-         *
-         * @param nodeIndex the index of the block node simulator (0-based)
-         * @param lastVerifiedBlockNumber the AtomicLong to store the last verified block number
-         * @return the operation
-         */
-        public BlockNodeSimulatorOp getLastVerifiedBlockExposing(int nodeIndex, AtomicLong lastVerifiedBlockNumber) {
-            return BlockNodeSimulatorOp.getLastVerifiedBlock(nodeIndex)
-                    .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
-                    .build();
-        }
-
-        /**
-         * Gets the last verified block number from a block node simulator and exposes it through a Consumer.
-         *
-         * @param nodeIndex the index of the block node simulator (0-based)
-         * @param lastVerifiedBlockConsumer the consumer to receive the last verified block number
-         * @return the operation
-         */
-        public BlockNodeSimulatorOp getLastVerifiedBlockExposing(
-                int nodeIndex, Consumer<Long> lastVerifiedBlockConsumer) {
-            return BlockNodeSimulatorOp.getLastVerifiedBlock(nodeIndex)
-                    .exposingLastVerifiedBlockNumber(lastVerifiedBlockConsumer)
-                    .build();
         }
     }
 }

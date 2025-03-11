@@ -3,24 +3,11 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.protoc.BlockItemSet;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
-import com.hedera.hapi.block.protoc.PublishStreamRequest;
-import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import io.helidon.common.tls.Tls;
-import io.helidon.webclient.grpc.GrpcClient;
-import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
-import io.helidon.webclient.grpc.GrpcClientProtocolConfig;
-import io.helidon.webclient.grpc.GrpcServiceClient;
-import io.helidon.webclient.grpc.GrpcServiceDescriptor;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -87,27 +74,7 @@ public class BlockNodeConnectionManager {
     private void connectToNode(@NonNull BlockNodeConfig node) {
         logger.info("Connecting to block node {}:{}", node.address(), node.port());
         try {
-            GrpcClient client = GrpcClient.builder()
-                    .tls(Tls.builder().enabled(false).build())
-                    .baseUri(new URI("http://" + node.address() + ":" + node.port()))
-                    .protocolConfig(GrpcClientProtocolConfig.builder()
-                            .abortPollTimeExpired(false)
-                            .build())
-                    .keepAlive(true)
-                    .build();
-
-            GrpcServiceClient grpcServiceClient = client.serviceClient(GrpcServiceDescriptor.builder()
-                    .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
-                    .putMethod(
-                            GRPC_END_POINT,
-                            GrpcClientMethodDescriptor.bidirectional(
-                                            BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
-                                    .requestType(PublishStreamRequest.class)
-                                    .responseType(PublishStreamResponse.class)
-                                    .build())
-                    .build());
-
-            BlockNodeConnection connection = new BlockNodeConnection(node, grpcServiceClient, this, blockStreamStateManager);
+            BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
             synchronized (connectionLock) {
                 connection.getIsActiveLock().lock();
                 if (connection.isActive()) {
@@ -116,7 +83,7 @@ public class BlockNodeConnectionManager {
                 connection.getIsActiveLock().unlock();
             }
             logger.info("Successfully connected to block node {}:{}", node.address(), node.port());
-        } catch (URISyntaxException | RuntimeException e) {
+        } catch (Exception e) {
             logger.error("Failed to connect to block node {}:{}", node.address(), node.port(), e);
         }
     }
@@ -216,6 +183,4 @@ public class BlockNodeConnectionManager {
             }
         }
     }
-
-
 }

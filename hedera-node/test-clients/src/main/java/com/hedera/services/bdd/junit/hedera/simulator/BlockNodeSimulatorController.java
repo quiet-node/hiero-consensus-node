@@ -118,6 +118,66 @@ public class BlockNodeSimulatorController {
     }
 
     /**
+     * Send a SkipBlock response immediately to all active streams on all simulated block nodes.
+     * This will instruct all active streams to skip the specified block.
+     *
+     * @param blockNumber the block number to skip
+     */
+    public void sendSkipBlockImmediately(long blockNumber) {
+        for (SimulatedBlockNodeServer server : simulatedBlockNodes) {
+            server.sendSkipBlockImmediately(blockNumber);
+        }
+        log.info("Sent immediate SkipBlock response for block {} on all simulators", blockNumber);
+    }
+
+    /**
+     * Send a SkipBlock response immediately to all active streams on a specific simulated block node.
+     * This will instruct all active streams to skip the specified block.
+     *
+     * @param index the index of the simulated block node (0-based)
+     * @param blockNumber the block number to skip
+     */
+    public void sendSkipBlockImmediately(int index, long blockNumber) {
+        if (index >= 0 && index < simulatedBlockNodes.size()) {
+            SimulatedBlockNodeServer server = simulatedBlockNodes.get(index);
+            server.sendSkipBlockImmediately(blockNumber);
+            log.info("Sent immediate SkipBlock response for block {} on simulator {}", blockNumber, index);
+        } else {
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
+        }
+    }
+
+    /**
+     * Send a ResendBlock response immediately to all active streams on all simulated block nodes.
+     * This will instruct all active streams to resend the specified block.
+     *
+     * @param blockNumber the block number to resend
+     */
+    public void sendResendBlockImmediately(long blockNumber) {
+        for (SimulatedBlockNodeServer server : simulatedBlockNodes) {
+            server.sendResendBlockImmediately(blockNumber);
+        }
+        log.info("Sent immediate ResendBlock response for block {} on all simulators", blockNumber);
+    }
+
+    /**
+     * Send a ResendBlock response immediately to all active streams on a specific simulated block node.
+     * This will instruct all active streams to resend the specified block.
+     *
+     * @param index the index of the simulated block node (0-based)
+     * @param blockNumber the block number to resend
+     */
+    public void sendResendBlockImmediately(int index, long blockNumber) {
+        if (index >= 0 && index < simulatedBlockNodes.size()) {
+            SimulatedBlockNodeServer server = simulatedBlockNodes.get(index);
+            server.sendResendBlockImmediately(blockNumber);
+            log.info("Sent immediate ResendBlock response for block {} on simulator {}", blockNumber, index);
+        } else {
+            log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
+        }
+    }
+
+    /**
      * Reset all configured responses on all simulated block nodes to default behavior.
      */
     public void resetAllResponses() {

@@ -29,8 +29,7 @@ public class BlockStreamModule {
     @Provides
     @Singleton
     public BlockNodeConnectionManager provideBlockNodeConnectionManager(
-            ConfigProvider configProvider,
-            BlockStreamStateManager blockStreamStateManager) {
+            ConfigProvider configProvider, BlockStreamStateManager blockStreamStateManager) {
         BlockNodeConnectionManager manager = new BlockNodeConnectionManager(configProvider, blockStreamStateManager);
         blockStreamStateManager.setBlockNodeConnectionManager(manager);
         return manager;

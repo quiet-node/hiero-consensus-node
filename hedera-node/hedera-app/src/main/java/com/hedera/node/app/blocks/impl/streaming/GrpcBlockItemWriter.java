@@ -29,7 +29,8 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
         requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager = blockStreamStateManager;
-        this.blockNodeConnectionManager = requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
+        this.blockNodeConnectionManager =
+                requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
     }
 
     @Override

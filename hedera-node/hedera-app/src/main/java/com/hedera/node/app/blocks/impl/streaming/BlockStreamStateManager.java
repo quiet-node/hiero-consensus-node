@@ -29,30 +29,30 @@ public class BlockStreamStateManager {
 
     private final Map<Long, BlockState> blockStates = new ConcurrentHashMap<>();
     private final int blockItemBatchSize;
-    
+
     // Lock for synchronizing modifications to the block states
     private final Lock lock = new ReentrantLock();
-    
+
     // Reference to the connection manager for notifications
     private BlockNodeConnectionManager blockNodeConnectionManager;
 
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
-     * 
+     *
      * @param configProvider the configuration provider
      */
     public BlockStreamStateManager(@NonNull final ConfigProvider configProvider) {
         requireNonNull(configProvider, "configProvider must not be null");
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
-        
-        BlockNodeConfigExtractor blockNodeConfigurations = 
+
+        BlockNodeConfigExtractor blockNodeConfigurations =
                 new BlockNodeConfigExtractor(blockStreamConfig.blockNodeConnectionFileDir());
         this.blockItemBatchSize = blockNodeConfigurations.getBlockItemBatchSize();
     }
-    
+
     /**
      * Sets the block node connection manager for notifications.
-     * 
+     *
      * @param blockNodeConnectionManager the block node connection manager
      */
     public void setBlockNodeConnectionManager(@NonNull BlockNodeConnectionManager blockNodeConnectionManager) {
@@ -82,7 +82,7 @@ public class BlockStreamStateManager {
 
     /**
      * Adds a new item to the current block.
-     * 
+     *
      * @param bytes the item bytes to add
      * @throws IllegalStateException if no block is currently open
      */
@@ -108,8 +108,7 @@ public class BlockStreamStateManager {
         List<com.hedera.hapi.block.stream.protoc.BlockItem> protocBlockItems = new ArrayList<>();
         for (Bytes batchItem : blockState.itemBytes()) {
             try {
-                protocBlockItems.add(
-                        com.hedera.hapi.block.stream.protoc.BlockItem.parseFrom(batchItem.toByteArray()));
+                protocBlockItems.add(com.hedera.hapi.block.stream.protoc.BlockItem.parseFrom(batchItem.toByteArray()));
             } catch (IOException e) {
                 logger.error("Failed to parse block item", e);
                 throw new RuntimeException(e);
@@ -117,14 +116,18 @@ public class BlockStreamStateManager {
         }
 
         // Create BlockItemSet by adding all items at once
-        BlockItemSet itemSet = BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
+        BlockItemSet itemSet =
+                BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
 
         // Create the request and add it to the list
-        PublishStreamRequest request = PublishStreamRequest.newBuilder().setBlockItems(itemSet).build();
+        PublishStreamRequest request =
+                PublishStreamRequest.newBuilder().setBlockItems(itemSet).build();
 
         blockState.requests().add(request);
-        logger.info("Added request to block {} - request count now: {}",
-                blockState.blockNumber(), blockState.requests().size());
+        logger.info(
+                "Added request to block {} - request count now: {}",
+                blockState.blockNumber(),
+                blockState.requests().size());
 
         // Clear the item bytes list
         blockState.itemBytes().clear();
@@ -135,7 +138,7 @@ public class BlockStreamStateManager {
 
     /**
      * Closes the current block and marks it as complete.
-     * 
+     *
      * @throws IllegalStateException if no block is currently open
      */
     public void closeBlock(final long blockNumber) {
@@ -146,20 +149,24 @@ public class BlockStreamStateManager {
 
         // Check if there are remaining items
         if (!blockState.itemBytes().isEmpty()) {
-            logger.info("Creating request from remaining items in block {} size {}", blockNumber,
+            logger.info(
+                    "Creating request from remaining items in block {} size {}",
+                    blockNumber,
                     blockState.itemBytes().size());
             createRequestFromCurrentItems(blockState);
         }
 
         // Mark the block as complete
         blockState.setComplete();
-        logger.info("Closed block in BlockStreamStateManager {} - request count: {}",
-                blockNumber, blockState.requests().size());
+        logger.info(
+                "Closed block in BlockStreamStateManager {} - request count: {}",
+                blockNumber,
+                blockState.requests().size());
     }
 
     /**
      * Gets the block state for the given block number.
-     * 
+     *
      * @param blockNumber the block number
      * @return the block state, or null if no block state exists for the given block number
      */
@@ -169,10 +176,12 @@ public class BlockStreamStateManager {
         if (blockState == null) {
             logger.warn("Block state not found for block {}", blockNumber);
         } else {
-            logger.debug("Retrieved block state for block {} with {} requests, isComplete: {}", 
-                    blockNumber, blockState.requests().size(), blockState.isComplete());
+            logger.debug(
+                    "Retrieved block state for block {} with {} requests, isComplete: {}",
+                    blockNumber,
+                    blockState.requests().size(),
+                    blockState.isComplete());
         }
         return blockState;
     }
-
-} 
+}
