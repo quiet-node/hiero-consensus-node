@@ -172,7 +172,6 @@ The following block node modes are available:
 
 - `SIM` - Use simulated block nodes
 - `REAL` - Use Docker containers for block nodes
-- `LOCAL` - Use a local block node for SubProcessNode 0
 - If not specified, no block nodes will be used
 
 ### Running Tests with Block Node Simulator
@@ -208,12 +207,14 @@ You can also set the system property directly with any Gradle task:
 ./gradlew testSubprocess --tests "com.hedera.services.bdd.suites.crypto.CryptoCreateSuite" -Dhapi.spec.blocknode.mode=LOCAL
 ```
 
+Another system property `hapi.spec.blocknode.simulator.manyToOne` will configure the `SubProcessNetwork` to use a single
+block node simulator for all consensus nodes. This can currently be specified manually in the same fashion as the above.
+
 #### Notes
 
 - The block node simulator is useful for testing how consensus nodes handle different response codes from block nodes.
-- When using the block node simulator, each consensus node will have a corresponding simulated block node.
+- When using the block node simulator, each consensus node will have a corresponding simulated block node unless the `manyToOne` property is set.
 - The Docker container mode requires Docker to be installed and running on your machine.
-- The local block node mode requires you to have a local block node running.
 
 ## Style guide
 

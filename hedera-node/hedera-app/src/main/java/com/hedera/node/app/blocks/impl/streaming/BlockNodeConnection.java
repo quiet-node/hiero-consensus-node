@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.node.internal.network.BlockNodeConfig;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import io.helidon.webclient.grpc.GrpcServiceClient;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -20,50 +23,67 @@ public class BlockNodeConnection {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final BlockNodeConfig node;
-    private final GrpcServiceClient grpcServiceClient;
+    private final ManagedChannel channel;
     private final BlockNodeConnectionManager manager;
     private StreamObserver<PublishStreamRequest> requestObserver;
     private volatile boolean isActive = true;
 
-    public BlockNodeConnection(
-            BlockNodeConfig nodeConfig, GrpcServiceClient grpcServiceClient, BlockNodeConnectionManager manager) {
+    public BlockNodeConnection(BlockNodeConfig nodeConfig, BlockNodeConnectionManager manager) {
         this.node = nodeConfig;
-        this.grpcServiceClient = grpcServiceClient;
         this.manager = manager;
+        this.channel = ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
+                .usePlaintext() // For development; use TLS in production
+                .build();
         establishStream();
         logger.info("BlockNodeConnection INITIALIZED");
     }
 
     private void establishStream() {
-        requestObserver =
-                grpcServiceClient.bidi(manager.getGrpcEndPoint(), new StreamObserver<PublishStreamResponse>() {
-                    @Override
-                    public void onNext(PublishStreamResponse response) {
-                        if (response.hasAcknowledgement()) {
-                            handleAcknowledgement(response.getAcknowledgement());
-                        } else if (response.hasEndStream()) {
-                            handleEndOfStream(response.getEndStream());
-                        }
-                    }
+        BlockStreamServiceGrpc.BlockStreamServiceStub stub = BlockStreamServiceGrpc.newStub(channel);
 
-                    @Override
-                    public void onError(Throwable t) {
-                        Status status = Status.fromThrowable(t);
-                        logger.error("Error in block node stream {}:{}: {}", node.address(), node.port(), status, t);
-                        handleStreamFailure();
-                    }
+        requestObserver = stub.publishBlockStream(new StreamObserver<PublishStreamResponse>() {
+            @Override
+            public void onNext(PublishStreamResponse response) {
+                logger.info("Response {}", response);
+                if (response.hasAcknowledgement()) {
+                    handleAcknowledgement(response.getAcknowledgement());
+                } else if (response.hasEndStream()) {
+                    handleEndOfStream(response.getEndStream());
+                } else if (response.hasSkipBlock()) {
+                    logger.info(
+                            "Received SkipBlock from Block Node {}:{}  Block #{}",
+                            node.address(),
+                            node.port(),
+                            response.getSkipBlock().getBlockNumber());
+                } else if (response.hasResendBlock()) {
+                    logger.info(
+                            "Received ResendBlock from Block Node {}:{}  Block #{}",
+                            node.address(),
+                            node.port(),
+                            response.getResendBlock().getBlockNumber());
+                }
+            }
 
-                    @Override
-                    public void onCompleted() {
-                        logger.info("Stream completed for block node {}:{}", node.address(), node.port());
-                        handleStreamFailure();
-                    }
-                });
+            @Override
+            public void onError(Throwable t) {
+                Status status = Status.fromThrowable(t);
+                logger.error("Error in block node stream {}:{}: {}", node.address(), node.port(), status, t);
+                handleStreamFailure();
+            }
+
+            @Override
+            public void onCompleted() {
+                logger.info("Stream completed for block node {}:{}", node.address(), node.port());
+                handleStreamFailure();
+            }
+        });
     }
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
-            logger.info("Block acknowledgment received for a full block: {}", acknowledgement.getBlockAck());
+            logger.info(
+                    "Block acknowledgment received for a full block: {}",
+                    acknowledgement.getBlockAck().getBlockNumber());
         }
     }
 
@@ -91,6 +111,17 @@ public class BlockNodeConnection {
             isActive = false;
             requestObserver.onCompleted();
             scheduler.shutdown();
+            // Shutdown the channel gracefully
+            try {
+                channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                logger.warn("Channel shutdown interrupted", e);
+                Thread.currentThread().interrupt();
+            } finally {
+                if (!channel.isShutdown()) {
+                    channel.shutdownNow();
+                }
+            }
         }
     }
 

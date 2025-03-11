@@ -7,7 +7,7 @@ package com.hedera.services.bdd.junit.hedera;
  * <p>The block node mode can be set using the system property "hapi.spec.blocknode.mode" with the following values:
  * <ul>
  *   <li>"SIM" - Use simulated block nodes (maps to SIMULATOR)</li>
- *   <li>"REAL" - Use Docker containers for block nodes (maps to CONTAINERS)</li>
+ *   <li>"REAL" - Use Docker containers for block nodes (maps to REAL)</li>
  *   <li>"LOCAL" - Use a local block node (maps to LOCAL_NODE)</li>
  * </ul>
  * If not specified, the default is NONE.
@@ -19,7 +19,7 @@ public enum BlockNodeMode {
     /** Use a simulated block node */
     SIMULATOR,
 
-    /** User is already running a local hedera block node. SubProcessNode 1 will connect to it. */
+    /** User is already running a local hiero block node. SubProcessNode 1 will connect to it. */
     LOCAL_NODE,
 
     /** Don't use any block nodes */

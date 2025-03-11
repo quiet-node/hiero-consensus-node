@@ -67,6 +67,24 @@ public class BlockNodeSimulatorOp extends UtilOp {
                         nodeIndex,
                         verifiedBlock);
                 break;
+            case SEND_SKIP_BLOCK_IMMEDIATELY:
+                controller.sendSkipBlockImmediately(nodeIndex, blockNumber);
+                verifiedBlock = controller.getLastVerifiedBlockNumber(nodeIndex);
+                log.info(
+                        "Sent immediate SkipBlock response for block {} on simulator {}, last verified block: {}",
+                        blockNumber,
+                        nodeIndex,
+                        verifiedBlock);
+                break;
+            case SEND_RESEND_BLOCK_IMMEDIATELY:
+                controller.sendResendBlockImmediately(nodeIndex, blockNumber);
+                verifiedBlock = controller.getLastVerifiedBlockNumber(nodeIndex);
+                log.info(
+                        "Sent immediate ResendBlock response for block {} on simulator {}, last verified block: {}",
+                        blockNumber,
+                        nodeIndex,
+                        verifiedBlock);
+                break;
             case SET_END_OF_STREAM_RESPONSE:
                 controller.setEndOfStreamResponse(nodeIndex, responseCode, blockNumber);
                 verifiedBlock = controller.getLastVerifiedBlockNumber(nodeIndex);
@@ -152,6 +170,8 @@ public class BlockNodeSimulatorOp extends UtilOp {
      */
     public enum BlockNodeSimulatorAction {
         SEND_END_OF_STREAM_IMMEDIATELY,
+        SEND_SKIP_BLOCK_IMMEDIATELY,
+        SEND_RESEND_BLOCK_IMMEDIATELY,
         SET_END_OF_STREAM_RESPONSE,
         RESET_RESPONSES,
         SHUTDOWN_SIMULATOR,
@@ -172,6 +192,28 @@ public class BlockNodeSimulatorOp extends UtilOp {
     public static SendEndOfStreamBuilder sendEndOfStreamImmediately(
             int nodeIndex, PublishStreamResponseCode responseCode) {
         return new SendEndOfStreamBuilder(nodeIndex, responseCode);
+    }
+
+    /**
+     * Creates a builder for sending an immediate SkipBlock response to a block node simulator.
+     *
+     * @param nodeIndex the index of the block node simulator (0-based)
+     * @param blockNumber the block number to skip
+     * @return a builder for the operation
+     */
+    public static SendSkipBlockBuilder sendSkipBlockImmediately(int nodeIndex, long blockNumber) {
+        return new SendSkipBlockBuilder(nodeIndex, blockNumber);
+    }
+
+    /**
+     * Creates a builder for sending an immediate ResendBlock response to a block node simulator.
+     *
+     * @param nodeIndex the index of the block node simulator (0-based)
+     * @param blockNumber the block number to resend
+     * @return a builder for the operation
+     */
+    public static SendResendBlockBuilder sendResendBlockImmediately(int nodeIndex, long blockNumber) {
+        return new SendResendBlockBuilder(nodeIndex, blockNumber);
     }
 
     /**
@@ -250,7 +292,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
 
         /**
-         * Sets the block number to include in the EndOfStream response.
+         * Sets the block number to include in the response.
          *
          * @param blockNumber the block number
          * @return this builder
@@ -261,7 +303,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
 
         /**
-         * Sets an AtomicLong to store the last verified block number.
+         * Exposes the last verified block number through an AtomicLong.
          *
          * @param lastVerifiedBlockNumber the AtomicLong to store the last verified block number
          * @return this builder
@@ -272,7 +314,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
 
         /**
-         * Sets a consumer to receive the last verified block number.
+         * Exposes the last verified block number through a Consumer.
          *
          * @param lastVerifiedBlockConsumer the consumer to receive the last verified block number
          * @return this builder
@@ -304,8 +346,63 @@ public class BlockNodeSimulatorOp extends UtilOp {
     }
 
     /**
-     * Builder for shutting down a specific block node simulator.
+     * Builder for sending an immediate SkipBlock response to a block node simulator.
+     * This builder also implements UtilOp so it can be used directly in HapiSpec without calling build().
      */
+    public static class SendSkipBlockBuilder extends UtilOp {
+        private final int nodeIndex;
+        private final long blockNumber;
+
+        private SendSkipBlockBuilder(int nodeIndex, long blockNumber) {
+            this.nodeIndex = nodeIndex;
+            this.blockNumber = blockNumber;
+        }
+
+        /**
+         * Builds the operation.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp build() {
+            return new BlockNodeSimulatorOp(
+                    nodeIndex, BlockNodeSimulatorAction.SEND_SKIP_BLOCK_IMMEDIATELY, null, blockNumber, null, null);
+        }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
+    }
+
+    /**
+     * Builder for sending an immediate ResendBlock response to a block node simulator.
+     * This builder also implements UtilOp so it can be used directly in HapiSpec without calling build().
+     */
+    public static class SendResendBlockBuilder extends UtilOp {
+        private final int nodeIndex;
+        private final long blockNumber;
+
+        private SendResendBlockBuilder(int nodeIndex, long blockNumber) {
+            this.nodeIndex = nodeIndex;
+            this.blockNumber = blockNumber;
+        }
+
+        /**
+         * Builds the operation.
+         *
+         * @return the operation
+         */
+        public BlockNodeSimulatorOp build() {
+            return new BlockNodeSimulatorOp(
+                    nodeIndex, BlockNodeSimulatorAction.SEND_RESEND_BLOCK_IMMEDIATELY, null, blockNumber, null, null);
+        }
+
+        @Override
+        protected boolean submitOp(HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
+    }
+
     public static class ShutdownBuilder extends UtilOp {
         private final int nodeIndex;
 
@@ -329,9 +426,6 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
     }
 
-    /**
-     * Builder for shutting down all block node simulators.
-     */
     public static class ShutdownAllBuilder extends UtilOp {
         /**
          * Builds the operation.
@@ -339,7 +433,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeSimulatorOp build() {
-            return new BlockNodeSimulatorOp(-1, BlockNodeSimulatorAction.SHUTDOWN_ALL_SIMULATORS, null, 0, null, null);
+            return new BlockNodeSimulatorOp(0, BlockNodeSimulatorAction.SHUTDOWN_ALL_SIMULATORS, null, 0, null, null);
         }
 
         @Override
@@ -348,9 +442,6 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
     }
 
-    /**
-     * Builder for restarting a specific block node simulator.
-     */
     public static class RestartBuilder extends UtilOp {
         private final int nodeIndex;
 
@@ -373,9 +464,6 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
     }
 
-    /**
-     * Builder for restarting all previously shutdown block node simulators.
-     */
     public static class RestartAllBuilder extends UtilOp {
         /**
          * Builds the operation.
@@ -383,7 +471,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeSimulatorOp build() {
-            return new BlockNodeSimulatorOp(-1, BlockNodeSimulatorAction.RESTART_ALL_SIMULATORS, null, 0, null, null);
+            return new BlockNodeSimulatorOp(0, BlockNodeSimulatorAction.RESTART_ALL_SIMULATORS, null, 0, null, null);
         }
 
         @Override
@@ -392,9 +480,6 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
     }
 
-    /**
-     * Builder for asserting that a specific block has been received by a block node simulator.
-     */
     public static class AssertBlockReceivedBuilder extends UtilOp {
         private final int nodeIndex;
         private final long blockNumber;
@@ -420,9 +505,6 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
     }
 
-    /**
-     * Builder for getting the last verified block number from a block node simulator.
-     */
     public static class GetLastVerifiedBlockBuilder extends UtilOp {
         private final int nodeIndex;
         private AtomicLong lastVerifiedBlockNumber;
@@ -433,7 +515,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
 
         /**
-         * Sets an AtomicLong to store the last verified block number.
+         * Exposes the last verified block number through an AtomicLong.
          *
          * @param lastVerifiedBlockNumber the AtomicLong to store the last verified block number
          * @return this builder
@@ -444,7 +526,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
         }
 
         /**
-         * Sets a consumer to receive the last verified block number.
+         * Exposes the last verified block number through a Consumer.
          *
          * @param lastVerifiedBlockConsumer the consumer to receive the last verified block number
          * @return this builder

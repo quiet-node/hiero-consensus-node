@@ -138,6 +138,13 @@ tasks.register<Test>("testSubprocessWithBlockNodeSimulator") {
     // Set the block node mode to simulator
     systemProperty("hapi.spec.blocknode.mode", "SIM")
 
+    // Default to false for manyToOne mode, can be overridden with
+    // -Dhapi.spec.blocknode.simulator.manyToOne=true
+    systemProperty(
+        "hapi.spec.blocknode.simulator.manyToOne",
+        System.getProperty("hapi.spec.blocknode.simulator.manyToOne") ?: "false",
+    )
+
     // Default quiet mode is "false" unless we are running in CI or set it explicitly to "true"
     systemProperty(
         "hapi.spec.quiet.mode",

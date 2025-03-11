@@ -95,6 +95,13 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                                 subProcessNetwork.setBlockNodeMode(BlockNodeMode.NONE);
                             }
 
+                            String blockNodeManyToOneProperty =
+                                    System.getProperty("hapi.spec.blocknode.simulator.manyToOne");
+                            if (blockNodeManyToOneProperty != null && !blockNodeManyToOneProperty.isEmpty()) {
+                                subProcessNetwork.setManyToOneSimulator(
+                                        Boolean.parseBoolean(blockNodeManyToOneProperty));
+                            }
+
                             yield subProcessNetwork;
                         }
                             // For the default Test task, we need to run some tests in concurrent embedded mode and
