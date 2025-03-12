@@ -8,14 +8,11 @@ import com.swirlds.common.crypto.DigestType;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.function.IntFunction;
 
 /**
  * Utility methods for block implementation.
  */
 public class BlockImplUtils {
-    private static final IntFunction<String> UPGRADE_DATA_FILE_FORMAT =
-            n -> String.format("UPGRADE_DATA\\[FileID\\[shardNum=\\d, realmNum=\\d, fileNum=%s]]", n);
 
     /**
      * Prevent instantiation
