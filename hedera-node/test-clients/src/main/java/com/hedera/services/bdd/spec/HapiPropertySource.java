@@ -95,16 +95,16 @@ public interface HapiPropertySource {
         try {
             return asFile(get("default.shard"), get("default.realm"), get(property));
         } catch (Exception ignore) {
+            return asFile(get("default.shard"), get("default.realm"), "0");
         }
-        return FileID.getDefaultInstance();
     }
 
     default AccountID getAccount(String property) {
         try {
             return asAccount(get("default.shard"), get("default.realm"), get(property));
         } catch (Exception ignore) {
+            return asAccount(get("default.shard"), get("default.realm"), "0");
         }
-        return AccountID.getDefaultInstance();
     }
 
     /**
