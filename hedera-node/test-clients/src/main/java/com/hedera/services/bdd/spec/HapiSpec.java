@@ -1173,8 +1173,11 @@ public class HapiSpec implements Runnable, Executable {
 
         // (FUTURE) Remove this override by initializing the HapiClients for a remote network
         // directly from the network's HederaNode instances instead of this "nodes" property
-        final var specNodes =
-                targetNetwork.nodes().stream().map(HederaNode::hapiSpecInfo).collect(joining(","));
+        final var specNodes = targetNetwork.nodes().stream()
+                .map(n -> n.hapiSpecInfo(
+                        spec.setup().defaultShard().getShardNum(),
+                        spec.setup().defaultRealm().getRealmNum()))
+                .collect(joining(","));
         spec.addOverrideProperties(Map.of("nodes", specNodes, "memo.useSpecName", "true"));
 
         if (targetNetwork instanceof EmbeddedNetwork embeddedNetwork) {
