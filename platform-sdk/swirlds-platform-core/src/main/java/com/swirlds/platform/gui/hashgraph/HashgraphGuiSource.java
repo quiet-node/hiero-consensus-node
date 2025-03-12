@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.gui.hashgraph;
 
+import com.swirlds.platform.gui.GuiEventStorage;
 import com.swirlds.platform.internal.EventImpl;
 import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -33,6 +34,8 @@ public interface HashgraphGuiSource {
      */
     @NonNull
     AddressBook getAddressBook();
+
+    GuiEventStorage getEventStorage();
 
     /**
      * @return true if the source is ready to return data

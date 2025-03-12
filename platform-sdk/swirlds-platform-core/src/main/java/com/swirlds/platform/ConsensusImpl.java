@@ -1299,6 +1299,10 @@ public class ConsensusImpl implements Consensus {
         return rosterIndicesMap.get(e.getCreatorId().id()) == index;
     }
 
+    public ConsensusRounds getRounds() {
+        return rounds;
+    }
+
     @Override
     public long getMaxRound() {
         return rounds.getMaxRound();

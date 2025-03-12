@@ -4,6 +4,8 @@ package com.swirlds.platform.gui.hashgraph.internal;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants.HASHGRAPH_PICTURE_FONT;
 
+import com.swirlds.platform.Consensus;
+import com.swirlds.platform.consensus.CandidateWitness;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.gui.hashgraph.HashgraphPictureOptions;
@@ -22,6 +24,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.Serial;
 import java.time.Instant;
+import java.util.Iterator;
 import java.util.List;
 import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
@@ -125,9 +128,17 @@ public class HashgraphPicture extends JPanel {
                 drawLinksToParents(g, event);
             }
 
+            Consensus consensus = hashgraphSource.getEventStorage().getConsensus();
             // for each event, draw its circle
             for (final EventImpl event : events) {
-                drawEventCircle(g, event, options, d);
+                CandidateWitness candidateWitness = null;
+                for (final Iterator<CandidateWitness> it = consensus.getRounds().getElectionRound().undecidedWitnesses(); it.hasNext(); ) {
+                    final CandidateWitness candidateWitnessI = it.next();
+                    if (candidateWitnessI.getWitness().equals(event)) {
+                        candidateWitness = candidateWitnessI;
+                    }
+                }
+                drawEventCircle(g, event, options, d, candidateWitness);
             }
         } catch (final Exception e) {
             logger.error(EXCEPTION.getMarker(), "error while painting", e);
@@ -163,7 +174,7 @@ public class HashgraphPicture extends JPanel {
     }
 
     private void drawEventCircle(
-            final Graphics g, final EventImpl event, final HashgraphPictureOptions options, final int d) {
+            final Graphics g, final EventImpl event, final HashgraphPictureOptions options, final int d, final CandidateWitness candidateWitness) {
         final FontMetrics fm = g.getFontMetrics();
         final int fa = fm.getMaxAscent();
         final int fd = fm.getMaxDescent();
@@ -191,6 +202,9 @@ public class HashgraphPicture extends JPanel {
 
         String s = "";
 
+        if (options.writeVote() && candidateWitness != null) {
+            s += " " + event.getVote(candidateWitness);
+        }
         if (options.writeRoundCreated()) {
             s += " " + event.getRoundCreated();
         }
