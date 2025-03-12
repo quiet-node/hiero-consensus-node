@@ -36,6 +36,7 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
 
         currentBlock = BlockState.from(blockNumber);
         blockStates.put(blockNumber, currentBlock);
+        logger.debug("Started new block in GrpcBlockItemWriter {}", blockNumber);
     }
 
     @Override
@@ -66,6 +67,8 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
             }
             // Stream the block asynchronously
             connectionManager.startStreamingBlock(block);
+
+            logger.debug("Closed block in GrpcBlockItemWriter {}", blockNumber);
             currentBlock = null;
         } finally {
             // Clean up the block state after streaming

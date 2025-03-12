@@ -32,7 +32,7 @@ public class BlockNodeConnection {
         this.node = nodeConfig;
         this.manager = manager;
         this.channel = ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
-                .usePlaintext() // For development; use TLS in production
+                .usePlaintext() // 🔥🔥 For development only! change to use TLS in production 🔥🔥
                 .build();
         establishStream();
         logger.info("BlockNodeConnection INITIALIZED");

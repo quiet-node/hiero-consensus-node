@@ -4,7 +4,6 @@ package com.hedera.services.bdd.junit.hedera.simulator;
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -250,31 +249,13 @@ public class BlockNodeSimulatorController {
      * @throws IOException if a server fails to start
      */
     public void restartAllSimulators() throws IOException {
-        List<Integer> successfullyRestarted = new ArrayList<>();
-
         for (Map.Entry<Integer, Integer> entry : shutdownSimulatorPorts.entrySet()) {
             int index = entry.getKey();
-            int port = entry.getValue();
-
-            if (index >= 0 && index < simulatedBlockNodes.size()) {
-                // Create a new server on the same port
-                SimulatedBlockNodeServer newServer = new SimulatedBlockNodeServer(port);
-                newServer.start();
-
-                // Replace the old server in the list
-                simulatedBlockNodes.set(index, newServer);
-                successfullyRestarted.add(index);
-
-                log.info("Restarted simulator {} on port {}", index, port);
-            }
-        }
-
-        // Clear the ports of successfully restarted simulators
-        for (Integer index : successfullyRestarted) {
+            restartSimulator(index);
             shutdownSimulatorPorts.remove(index);
         }
 
-        log.info("Restarted {} simulators", successfullyRestarted.size());
+        log.info("Restarted simulators");
     }
 
     /**
