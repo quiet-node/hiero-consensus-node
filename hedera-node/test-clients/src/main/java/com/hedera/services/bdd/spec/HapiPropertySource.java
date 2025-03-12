@@ -76,6 +76,8 @@ public interface HapiPropertySource {
             return new HapiPropertySource() {
                 @Override
                 public String get(String property) {
+                    System.out.println("Property: " + property + " overrides: " + overrides.get(property)
+                            + " defaults: " + defaults.get(property));
                     return overrides.has(property) ? overrides.get(property) : defaults.get(property);
                 }
 
