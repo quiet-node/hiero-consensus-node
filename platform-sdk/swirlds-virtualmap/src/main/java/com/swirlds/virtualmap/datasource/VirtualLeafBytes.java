@@ -99,7 +99,7 @@ public class VirtualLeafBytes<V> {
             // No synchronization here. In the worst case, value will be initialized multiple
             // times, but always to the same object
             if (valueBytes != null) {
-                assert this.valueCodec == null;
+                assert this.valueCodec == null || this.valueCodec.equals(valueCodec);
                 this.valueCodec = valueCodec;
                 try {
                     value = valueCodec.parse(valueBytes);
