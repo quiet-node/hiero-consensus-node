@@ -206,6 +206,7 @@ public class HapiClients {
      * @return a blocking stub for the FileService with a specified deadline
      */
     public FileServiceBlockingStub getFileSvcStub(AccountID nodeId, boolean useTls, boolean asNodeOperator) {
+        log.info("getFileSvcStub nodeId {} - {} - {}", nodeId, useTls, asNodeOperator);
         return nextStubsFromPool(stubId(nodeId, useTls, asNodeOperator))
                 .fileSvcStubs()
                 .withDeadlineAfter(DEADLINE_SECS, TimeUnit.SECONDS);
@@ -376,6 +377,7 @@ public class HapiClients {
     }
 
     private String stubId(AccountID nodeId, boolean useTls, boolean asNodeOperator) {
+        log.info("stubId tlsStubIds {} - nodeOperatorStubIds {} - stubIds {}", tlsStubIds, nodeOperatorStubIds, stubIds);
         if (useTls) {
             return tlsStubIds.get(nodeId);
         } else if (asNodeOperator) {
