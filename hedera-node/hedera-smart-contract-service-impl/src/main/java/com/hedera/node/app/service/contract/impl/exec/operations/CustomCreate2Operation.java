@@ -2,6 +2,8 @@
 package com.hedera.node.app.service.contract.impl.exec.operations;
 
 import static com.hedera.node.app.service.contract.impl.exec.operations.CustomizedOpcodes.CREATE2;
+import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
+import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import com.hedera.node.app.service.contract.impl.exec.FeatureFlags;
@@ -44,7 +46,15 @@ public class CustomCreate2Operation extends AbstractCustomCreateOperation {
 
     @Override
     protected long cost(@NonNull final MessageFrame frame) {
-        return gasCalculator().create2OperationGasCost(frame);
+        final int inputOffset = clampedToInt(frame.getStackItem(1));
+        final int inputSize = clampedToInt(frame.getStackItem(2));
+        return clampedAdd(
+                clampedAdd(
+                        gasCalculator().txCreateCost(),
+                        gasCalculator().memoryExpansionGasCost(frame, inputOffset, inputSize)),
+                clampedAdd(
+                        gasCalculator().createKeccakCost(inputSize),
+                        gasCalculator().initcodeCost(inputSize)));
     }
 
     @Override

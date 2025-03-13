@@ -3,6 +3,8 @@ package com.hedera.node.app.service.contract.impl.exec.operations;
 
 import static com.hedera.node.app.service.contract.impl.exec.operations.CustomizedOpcodes.CREATE;
 import static java.util.Objects.requireNonNull;
+import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
+import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
 
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -36,7 +38,13 @@ public class CustomCreateOperation extends AbstractCustomCreateOperation {
 
     @Override
     protected long cost(@NonNull final MessageFrame frame) {
-        return gasCalculator().createOperationGasCost(frame);
+        final int inputOffset = clampedToInt(frame.getStackItem(1));
+        final int inputSize = clampedToInt(frame.getStackItem(2));
+        return clampedAdd(
+                clampedAdd(
+                        gasCalculator().txCreateCost(),
+                        gasCalculator().memoryExpansionGasCost(frame, inputOffset, inputSize)),
+                gasCalculator().initcodeCost(inputSize));
     }
 
     @Override
