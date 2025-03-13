@@ -200,8 +200,8 @@ public class HashgraphPicture extends JPanel {
             if (event.isWitness()) {
                 for (final Iterator<CandidateWitness> it = consensus.getRounds().getElectionRound().undecidedWitnesses(); it.hasNext(); ) {
                     final CandidateWitness candidateWitnessI = it.next();
-                    s += " " + event.getVote(candidateWitnessI) + " for" + candidateWitnessI.getWitness().shortString().substring(5, 10) + " |";
-
+                    String vote = String.valueOf(event.getVote(candidateWitnessI));
+                    s +=  vote.charAt(0) + candidateWitnessI.getWitness().shortString().substring(5, 10) + "|";
                 }
 
             }
