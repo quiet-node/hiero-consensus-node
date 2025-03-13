@@ -13,6 +13,7 @@ import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
 import org.bouncycastle.jcajce.provider.digest.Keccak;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.evm.code.CodeFactory;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
@@ -29,8 +30,10 @@ public class CustomCreate2Operation extends AbstractCustomCreateOperation {
      * @param featureFlags current evm module feature flags
      */
     public CustomCreate2Operation(
-            @NonNull final GasCalculator gasCalculator, @NonNull final FeatureFlags featureFlags) {
-        super(CREATE2.opcode(), "ħCREATE2", 4, 1, gasCalculator);
+            @NonNull final GasCalculator gasCalculator,
+            @NonNull final FeatureFlags featureFlags,
+            @NonNull final CodeFactory codeFactory) {
+        super(CREATE2.opcode(), "ħCREATE2", 4, 1, gasCalculator, codeFactory);
         this.featureFlags = featureFlags;
     }
 
