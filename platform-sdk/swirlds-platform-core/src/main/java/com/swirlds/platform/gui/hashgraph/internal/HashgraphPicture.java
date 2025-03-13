@@ -131,14 +131,8 @@ public class HashgraphPicture extends JPanel {
             Consensus consensus = hashgraphSource.getEventStorage().getConsensus();
             // for each event, draw its circle
             for (final EventImpl event : events) {
-                CandidateWitness candidateWitness = null;
-                for (final Iterator<CandidateWitness> it = consensus.getRounds().getElectionRound().undecidedWitnesses(); it.hasNext(); ) {
-                    final CandidateWitness candidateWitnessI = it.next();
-                    if (candidateWitnessI.getWitness().equals(event)) {
-                        candidateWitness = candidateWitnessI;
-                    }
-                }
-                drawEventCircle(g, event, options, d, candidateWitness);
+
+                drawEventCircle(g, event, options, d, consensus);
             }
         } catch (final Exception e) {
             logger.error(EXCEPTION.getMarker(), "error while painting", e);
@@ -174,7 +168,7 @@ public class HashgraphPicture extends JPanel {
     }
 
     private void drawEventCircle(
-            final Graphics g, final EventImpl event, final HashgraphPictureOptions options, final int d, final CandidateWitness candidateWitness) {
+            final Graphics g, final EventImpl event, final HashgraphPictureOptions options, final int d, final Consensus consensus) {
         final FontMetrics fm = g.getFontMetrics();
         final int fa = fm.getMaxAscent();
         final int fd = fm.getMaxDescent();
@@ -202,11 +196,18 @@ public class HashgraphPicture extends JPanel {
 
         String s = "";
 
-        if (options.writeVote() && candidateWitness != null) {
-            s += " " + event.getVote(candidateWitness);
+        if (options.writeVote()) {
+            if (event.isWitness()) {
+                for (final Iterator<CandidateWitness> it = consensus.getRounds().getElectionRound().undecidedWitnesses(); it.hasNext(); ) {
+                    final CandidateWitness candidateWitnessI = it.next();
+                    s += " " + event.getVote(candidateWitnessI) + " for" + candidateWitnessI.getWitness().shortString().substring(5, 10) + " |";
+
+                }
+
+            }
         }
         if (options.writeRoundCreated()) {
-            s += " " + event.getRoundCreated();
+            s += " " + event.getRoundCreated() + " h:" + event.getBaseHash().toString().substring(0, 2);
         }
         if (options.writeRoundReceived() && event.getRoundReceived() > 0) {
             s += " " + event.getRoundReceived();
