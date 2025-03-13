@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.hapi.block.protoc.PublishStreamRequest;
+import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.BlockProof;
 import com.hedera.hapi.block.stream.output.BlockHeader;
@@ -17,7 +19,9 @@ import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
-import com.hedera.services.bdd.junit.hedera.simulator.SimulatedBlockNodeServer;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
@@ -40,13 +44,15 @@ class BlockNodeConnectionManagerTest {
     @Mock
     ConfigProvider mockConfigProvider;
 
-    private static SimulatedBlockNodeServer testServer;
+    private static Server testServer;
 
     @BeforeAll
     static void beforeAll() throws IOException {
         final var configExtractor = new BlockNodeConfigExtractor("./src/test/resources/bootstrap");
         final int testServerPort = configExtractor.getAllNodes().getFirst().port();
-        testServer = new SimulatedBlockNodeServer(testServerPort);
+        testServer = ServerBuilder.forPort(testServerPort)
+                .addService(new BlockStreamServiceTestImpl())
+                .build();
         testServer.start();
     }
 
@@ -108,6 +114,29 @@ class BlockNodeConnectionManagerTest {
 
     @AfterAll
     static void afterAll() {
-        testServer.stop();
+        testServer.shutdownNow();
+    }
+
+    private static class BlockStreamServiceTestImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
+        @Override
+        public StreamObserver<PublishStreamRequest> publishBlockStream(
+                StreamObserver<PublishStreamResponse> responseObserver) {
+            return new StreamObserver<>() {
+                @Override
+                public void onNext(PublishStreamRequest request) {
+                    // no-op
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    // no-op
+                }
+
+                @Override
+                public void onCompleted() {
+                    responseObserver.onCompleted();
+                }
+            };
+        }
     }
 }
