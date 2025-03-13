@@ -3,6 +3,7 @@ plugins { id("org.hiero.gradle.module.application") }
 
 mainModuleInfo {
     runtimeOnly("com.swirlds.platform.core")
+    runtimeOnly("com.swirlds.platform.core.test.fixtures")
     runtimeOnly("com.swirlds.merkle")
     runtimeOnly("com.swirlds.merkle.test.fixtures")
 }
