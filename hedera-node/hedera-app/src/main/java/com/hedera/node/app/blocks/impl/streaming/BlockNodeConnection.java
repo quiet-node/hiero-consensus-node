@@ -32,7 +32,7 @@ public class BlockNodeConnection {
     // Variables for tracking the current block and request index
     private final Object newBlockAvailable = new Object();
     private final Object newRequestAvailable = new Object();
-    private volatile long currentBlockNumber = -1;
+    private long currentBlockNumber = -1;
     private int currentRequestIndex = 0;
 
     // Worker thread for submitting requests
@@ -92,6 +92,9 @@ public class BlockNodeConnection {
                 handleStreamFailure();
             }
         });
+        isActiveLock.lock();
+        isActive = true;
+        isActiveLock.unlock();
     }
 
     private void startRequestWorker() {
@@ -107,134 +110,136 @@ public class BlockNodeConnection {
                 // Wait for a block to be available if we don't have one yet
                 if (currentBlockNumber == -1 || blockStreamStateManager.getBlockState(currentBlockNumber) == null) {
                     logger.info("Waiting for new block to be available for node {}:{}", node.address(), node.port());
-                    synchronized (newBlockAvailable) {
-                        newBlockAvailable.wait();
-                    }
+                    waitForNewBlock();
                     continue;
-                }
-
-                // Check if we should exit the loop
-                if (!isActive) {
-                    break;
                 }
 
                 // Get the current block state
                 BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
                 if (blockState == null) {
-                    // This shouldn't happen due to the condition above, but just in case
-                    logger.warn(
-                            "Block state is null for block {} on node {}:{}",
-                            currentBlockNumber,
-                            node.address(),
-                            node.port());
-                    continue;
+                    logger.info("Block state is null for block {} on node {}:{}", currentBlockNumber, node.address(), node.port());
+                    break;
                 }
 
-                logger.info(
-                        "Processing block {} for node {}:{}, isComplete: {}, requests: {}",
-                        currentBlockNumber,
-                        node.address(),
-                        node.port(),
-                        blockState.isComplete(),
-                        blockState.requests().size());
+                logBlockProcessingInfo(blockState);
 
-                // Process available requests
-                int requestsSize = blockState.requests().size();
                 // If there are no requests yet, wait for some to be added
-                if (requestsSize == 0 && !blockState.isComplete()) {
+                if (blockState.requests().isEmpty() && !blockState.isComplete()) {
                     logger.info(
                             "No requests available for block {} on node {}:{}, waiting...",
                             currentBlockNumber,
                             node.address(),
                             node.port());
-                    synchronized (newRequestAvailable) {
-                        newRequestAvailable.wait();
-                    }
-                    // Refresh the block state and requests size after waiting
-                    blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
-                    if (blockState == null) {
-                        continue;
-                    }
-                    requestsSize = blockState.requests().size();
+                    waitForNewRequests();
                 }
 
                 // If we've processed all available requests but the block isn't complete,
                 // wait for more requests to be added
-                if (currentRequestIndex >= requestsSize && !blockState.isComplete()) {
-                    logger.info(
-                            "Waiting for new requests to be available for block {} on node {}:{}, "
-                                    + "currentRequestIndex: {}, requestsSize: {}",
-                            currentBlockNumber,
-                            node.address(),
-                            node.port(),
-                            currentRequestIndex,
-                            requestsSize);
-                    synchronized (newRequestAvailable) {
-                        newRequestAvailable.wait();
-                    }
-                    // Refresh the block state and requests size after waiting
-                    blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
-                    if (blockState == null) {
-                        continue;
-                    }
-                    requestsSize = blockState.requests().size();
-                    logger.info(
-                            "After wait - Block: {}, currentRequestIndex: {}, requestsSize: {}, isComplete: {}",
-                            currentBlockNumber,
-                            currentRequestIndex,
-                            requestsSize,
-                            blockState.isComplete());
+                if (needToWaitForMoreRequests(blockState)) {
+                    waitForNewRequests();
                 }
 
                 // Process any available requests
-                while (currentRequestIndex < requestsSize) {
-                    PublishStreamRequest request = blockState.requests().get(currentRequestIndex);
-                    logger.info(
-                            "Sending request for block {} request index {} to node {}:{}, items: {}",
-                            currentBlockNumber,
-                            currentRequestIndex,
-                            node.address(),
-                            node.port(),
-                            request.getBlockItems().getBlockItemsCount());
-                    sendRequest(request);
-                    currentRequestIndex++;
-                }
+                processAvailableRequests(blockState);
 
                 // If the block is complete and we've sent all requests, move to the next block
-                if (blockState.isComplete()
-                        && currentRequestIndex >= blockState.requests().size()) {
-                    logger.info(
-                            "Completed sending all requests for block {} to node {}:{}",
-                            currentBlockNumber,
-                            node.address(),
-                            node.port());
-                    currentBlockNumber++;
-                    currentRequestIndex = 0;
+                if (blockState.isComplete() && currentRequestIndex >= blockState.requests().size()) {
+                    moveToNextBlock();
                 }
             } catch (InterruptedException e) {
-                if (isActive) {
-                    logger.error("Request worker thread interrupted for node {}:{}", node.address(), node.port(), e);
-                }
-                Thread.currentThread().interrupt();
+                handleInterruptedException(e);
                 break;
             } catch (Exception e) {
-                logger.error("Error in request worker thread for node {}:{}", node.address(), node.port(), e);
-                // If we get an IndexOutOfBoundsException, reset the request index to a safe value
-                if (e instanceof IndexOutOfBoundsException) {
-                    BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
-                    if (blockState != null) {
-                        int safeIndex = Math.min(blockState.requests().size(), currentRequestIndex);
-                        logger.info(
-                                "Resetting request index from {} to {} for block {}",
-                                currentRequestIndex,
-                                safeIndex,
-                                currentBlockNumber);
-                        currentRequestIndex = safeIndex;
-                    }
-                }
+                handleGenericException(e);
             }
         }
         logger.info("Request worker thread exiting for node {}:{}", node.address(), node.port());
+    }
+
+    private void waitForNewBlock() throws InterruptedException {
+        synchronized (newBlockAvailable) {
+            newBlockAvailable.wait();
+        }
+    }
+
+    private void waitForNewRequests() throws InterruptedException {
+        logger.info(
+                "Waiting for new requests to be available for block {} on node {}:{}, "
+                        + "currentRequestIndex: {}, requestsSize: {}",
+                currentBlockNumber,
+                node.address(),
+                node.port(),
+                currentRequestIndex,
+                blockStreamStateManager.getBlockState(currentBlockNumber) != null
+                        ? blockStreamStateManager.getBlockState(currentBlockNumber).requests().size()
+                        : 0);
+        synchronized (newRequestAvailable) {
+            newRequestAvailable.wait();
+        }
+    }
+
+    private void logBlockProcessingInfo(BlockState blockState) {
+        logger.info(
+                "Processing block {} for node {}:{}, isComplete: {}, requests: {}",
+                currentBlockNumber,
+                node.address(),
+                node.port(),
+                blockState.isComplete(),
+                blockState.requests().size());
+    }
+
+    private boolean needToWaitForMoreRequests(BlockState blockState) {
+        return currentRequestIndex >= blockState.requests().size() && !blockState.isComplete();
+    }
+
+    private void processAvailableRequests(BlockState blockState) {
+        int requestsSize = blockState.requests().size();
+        while (currentRequestIndex < requestsSize) {
+            PublishStreamRequest request = blockState.requests().get(currentRequestIndex);
+            logger.info(
+                    "Sending request for block {} request index {} to node {}:{}, items: {}",
+                    currentBlockNumber,
+                    currentRequestIndex,
+                    node.address(),
+                    node.port(),
+                    request.getBlockItems().getBlockItemsCount());
+            sendRequest(request);
+            currentRequestIndex++;
+        }
+    }
+
+    private void moveToNextBlock() {
+        logger.info(
+                "Completed sending all requests for block {} to node {}:{}",
+                currentBlockNumber,
+                node.address(),
+                node.port());
+        currentBlockNumber++;
+        currentRequestIndex = 0;
+    }
+
+    private void handleInterruptedException(InterruptedException e) {
+        if (isActive) {
+            logger.error("Request worker thread interrupted for node {}:{}", node.address(), node.port(), e);
+        }
+        Thread.currentThread().interrupt();
+    }
+
+    private void handleGenericException(Exception e) {
+        logger.error("Error in request worker thread for node {}:{}", node.address(), node.port(), e);
+        // If we get an IndexOutOfBoundsException, reset the request index to a safe value
+        if (e instanceof IndexOutOfBoundsException) {
+            BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
+            if (blockState != null) {
+                int safeIndex = Math.min(blockState.requests().size(), currentRequestIndex);
+                logger.info(
+                        "Resetting request index from {} to {} for block {}",
+                        currentRequestIndex,
+                        safeIndex,
+                        currentBlockNumber);
+                currentRequestIndex = safeIndex;
+            }
+        }
     }
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
@@ -378,5 +383,39 @@ public class BlockNodeConnection {
                 blockNumber,
                 node.address(),
                 node.port());
+    }
+
+    /**
+     * Restarts the worker thread at a specific block number.
+     * This method will interrupt the current worker thread if it exists,
+     * set the new block number and request index, and start a new worker thread.
+     *
+     * @param blockNumber the block number to restart at
+     */
+    public void restartWorkerAtBlock(long blockNumber) {
+        logger.info("Restarting worker thread for node {}:{} at block {}", node.address(), node.port(), blockNumber);
+        
+        // Stop the current worker thread if it exists
+        if (requestWorker != null && requestWorker.isAlive()) {
+            requestWorker.interrupt();
+            try {
+                // Wait for the thread to terminate
+                requestWorker.join(1000);
+            } catch (InterruptedException e) {
+                logger.error("Interrupted while waiting for worker thread to terminate", e);
+                Thread.currentThread().interrupt();
+            }
+        }
+        
+        // Set the new block number and reset request index
+        setCurrentBlockNumber(blockNumber);
+        
+        // Start a new worker thread
+        startRequestWorker();
+        
+        // Notify that a new block is available to process
+        notifyNewBlockAvailable();
+        
+        logger.info("Worker thread restarted for node {}:{} at block {}", node.address(), node.port(), blockNumber);
     }
 }
