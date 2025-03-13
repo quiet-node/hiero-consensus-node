@@ -68,21 +68,10 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
 
         stateLifecycleMetrics.stateCopyMicros((copyEnd - copyStart) * NANOSECONDS_TO_MICROSECONDS);
 
-        setState(copy);
-    }
-
-    /**
-     * Sets the consensus state to the state provided. Must be mutable and have a reference count of at least 1.
-     *
-     * @param state a new mutable state
-     */
-    private void setState(final T state) {
         if (currentState != null) {
             currentState.release();
         }
-        // Do not increment the reference count because the state provided already has a reference count of at least
-        // one to represent this reference and to prevent it from being deleted before this reference is set.
-        this.currentState = state;
+        this.currentState = copy;
     }
 
     /**
@@ -99,6 +88,8 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
     @Override
     public synchronized T copyMutableState() {
         T currentState = this.currentState;
+        // creation of a copy will reduce the reference count of the original state, but we still want the state to be around
+        currentState.reserve();
         fastCopyAndUpdateRefs(currentState);
         // returning the original state that became immutable
         return currentState;

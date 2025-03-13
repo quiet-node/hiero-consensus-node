@@ -29,7 +29,8 @@ public interface StateLifecycleManager<T extends State> {
     void overwriteExistingState(@NonNull final T state);
 
     /**
-     * Get the mutable state.
+     * Get the mutable state. The implementation makes sure that this method can't be executed simultaneously
+     * with {@link #copyMutableState()}. It can be achieved by using a lock or any other synchronization mechanism.
      */
     T getMutableState();
 

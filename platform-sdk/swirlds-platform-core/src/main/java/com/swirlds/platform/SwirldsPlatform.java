@@ -77,8 +77,11 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -261,13 +264,8 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
 
         final EventWindowManager eventWindowManager = new DefaultEventWindowManager();
 
-        blocks.isInFreezePeriodReference().set(timestamp -> {
-            MerkleNodeState mutableState = stateLifecycleManager.getMutableState();
-            return PlatformStateFacade.isInFreezePeriod(
-                    timestamp,
-                    platformStateFacade.freezeTimeOf(mutableState),
-                    platformStateFacade.lastFrozenTimeOf(mutableState));
-        });
+        blocks.isInFreezePeriodReference().set(createInFreezePeriodPredicate(stateLifecycleManager, platformStateFacade));
+
 
         final BirthRoundMigrationShim birthRoundMigrationShim =
                 buildBirthRoundMigrationShim(initialState, ancientMode, platformStateFacade);
@@ -364,6 +362,18 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
         blocks.loadReconnectStateReference().set(reconnectStateLoader::loadReconnectState);
         blocks.clearAllPipelinesForReconnectReference().set(platformWiring::clear);
         blocks.latestImmutableStateProviderReference().set(latestImmutableStateNexus::getState);
+    }
+
+    private static <T extends MerkleNodeState> Predicate<Instant> createInFreezePeriodPredicate(
+            StateLifecycleManager<T> stateLifecycleManager,
+            PlatformStateFacade platformStateFacade) {
+        return timestamp -> {
+            MerkleNodeState mutableState = stateLifecycleManager.getMutableState();
+            return PlatformStateFacade.isInFreezePeriod(
+                    timestamp,
+                    platformStateFacade.freezeTimeOf(mutableState),
+                    platformStateFacade.lastFrozenTimeOf(mutableState));
+        };
     }
 
     /**
