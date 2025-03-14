@@ -23,7 +23,8 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
 
     private final StateLifecycleMetrics stateLifecycleMetrics;
 
-    public StateLifecycleManagerImpl(final Metrics metrics) {
+    public StateLifecycleManagerImpl(@NonNull final Metrics metrics) {
+        requireNonNull(metrics);
         this.stateLifecycleMetrics = new StateLifecycleMetrics(metrics);
     }
 

@@ -10,7 +10,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  */
 public interface StateLifecycleManager<T extends State> {
     /**
-     * Set the initial State for the platform. This method should only be called once.
+     * Sets the initial State for the platform. This method should only be called once.
      * It will through an IllegalStateException if called more than once.
      * Important: the passed state becomes immutable after this method is called.
      *
@@ -19,7 +19,7 @@ public interface StateLifecycleManager<T extends State> {
     void setInitialState(@NonNull final T state);
 
     /**
-     * Overwrite the existing state with the new state.
+     * Overwrites the existing state with the new state.
      * Important: the passed state becomes immutable after this method is called.
      * Unlike {@link #setInitialState(State)}, this method can be called multiple times and the idea of this method
      * is to replace the existing mutable state with the new state.
