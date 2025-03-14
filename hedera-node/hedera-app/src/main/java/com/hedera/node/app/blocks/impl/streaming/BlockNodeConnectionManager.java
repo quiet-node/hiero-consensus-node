@@ -151,13 +151,13 @@ public class BlockNodeConnectionManager {
                     connection.sendRequest(request);
                 }
                 logger.info(
-                        "Successfully streamed block {} to {}:{}",
+                        "Sent block {} to stream observer for Block Node {}:{}",
                         blockNumber,
                         connectionNodeConfig.address(),
                         connectionNodeConfig.port());
             } catch (Exception e) {
                 logger.error(
-                        "Failed to stream block {} to {}:{}",
+                        "Failed to send block {} to stream observer for Block Node {}:{}",
                         blockNumber,
                         connectionNodeConfig.address(),
                         connectionNodeConfig.port(),
