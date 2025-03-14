@@ -97,7 +97,8 @@ val prCheckStartPorts =
         "hapiTestIss" to "26400",
         "hapiTestMisc" to "26800",
     )
-val prCheckNetSizeOverrides = mapOf("hapiTestToken" to "3")
+// Use to override the default network size for a specific test task
+val prCheckNetSizeOverrides = mapOf("hapiTestToken" to "4")
 
 tasks {
     prCheckTags.forEach { (taskName, _) -> register(taskName) { dependsOn("testSubprocess") } }
