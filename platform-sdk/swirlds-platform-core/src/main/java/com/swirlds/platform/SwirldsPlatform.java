@@ -81,7 +81,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -264,8 +263,8 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
 
         final EventWindowManager eventWindowManager = new DefaultEventWindowManager();
 
-        blocks.isInFreezePeriodReference().set(createInFreezePeriodPredicate(stateLifecycleManager, platformStateFacade));
-
+        blocks.isInFreezePeriodReference()
+                .set(createInFreezePeriodPredicate(stateLifecycleManager, platformStateFacade));
 
         final BirthRoundMigrationShim birthRoundMigrationShim =
                 buildBirthRoundMigrationShim(initialState, ancientMode, platformStateFacade);
@@ -365,8 +364,7 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
     }
 
     private static <T extends MerkleNodeState> Predicate<Instant> createInFreezePeriodPredicate(
-            StateLifecycleManager<T> stateLifecycleManager,
-            PlatformStateFacade platformStateFacade) {
+            StateLifecycleManager<T> stateLifecycleManager, PlatformStateFacade platformStateFacade) {
         return timestamp -> {
             MerkleNodeState mutableState = stateLifecycleManager.getMutableState();
             return PlatformStateFacade.isInFreezePeriod(

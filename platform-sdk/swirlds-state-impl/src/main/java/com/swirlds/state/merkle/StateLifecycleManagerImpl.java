@@ -89,7 +89,8 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
     @Override
     public synchronized T copyMutableState() {
         T currentState = this.currentState;
-        // creation of a copy will reduce the reference count of the original state, but we still want the state to be around
+        // creation of a copy will reduce the reference count of the original state, but we still want the state to be
+        // around
         currentState.reserve();
         fastCopyAndUpdateRefs(currentState);
         // returning the original state that became immutable
