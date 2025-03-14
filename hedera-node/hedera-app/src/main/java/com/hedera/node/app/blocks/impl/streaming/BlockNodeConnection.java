@@ -80,7 +80,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             try {
                 // Wait for a block to be available if we don't have one yet
                 if (currentBlockNumber == -1 || blockStreamStateManager.getBlockState(currentBlockNumber) == null) {
-                    logger.info("Waiting for new block to be available for node {}:{}", node.address(), node.port());
+                    logger.info("[{}] Waiting for new block to be available for node {}:{}", 
+                            Thread.currentThread().getName(), node.address(), node.port());
                     waitForNewBlock();
                     continue;
                 }
@@ -89,7 +90,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
                 if (blockState == null) {
                     logger.info(
-                            "Block state is null for block {} on node {}:{}",
+                            "[{}] Block state is null for block {} on node {}:{}",
+                            Thread.currentThread().getName(),
                             currentBlockNumber,
                             node.address(),
                             node.port());
@@ -101,7 +103,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 // If there are no requests yet, wait for some to be added
                 if (blockState.requests().isEmpty() && !blockState.isComplete()) {
                     logger.info(
-                            "No requests available for block {} on node {}:{}, waiting...",
+                            "[{}] No requests available for block {} on node {}:{}, waiting...",
+                            Thread.currentThread().getName(),
                             currentBlockNumber,
                             node.address(),
                             node.port());
@@ -129,7 +132,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 handleGenericException(e);
             }
         }
-        logger.info("Request worker thread exiting for node {}:{}", node.address(), node.port());
+        logger.info("[{}] Request worker thread exiting for node {}:{}", 
+                Thread.currentThread().getName(), node.address(), node.port());
     }
 
     private void waitForNewBlock() throws InterruptedException {
@@ -140,8 +144,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void waitForNewRequests() throws InterruptedException {
         logger.info(
-                "Waiting for new requests to be available for block {} on node {}:{}, "
+                "[{}] Waiting for new requests to be available for block {} on node {}:{}, "
                         + "currentRequestIndex: {}, requestsSize: {}",
+                Thread.currentThread().getName(),
                 currentBlockNumber,
                 node.address(),
                 node.port(),
@@ -159,7 +164,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void logBlockProcessingInfo(BlockState blockState) {
         logger.info(
-                "Processing block {} for node {}:{}, isComplete: {}, requests: {}",
+                "[{}] Processing block {} for node {}:{}, isComplete: {}, requests: {}",
+                Thread.currentThread().getName(),
                 currentBlockNumber,
                 node.address(),
                 node.port(),
@@ -176,7 +182,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         while (currentRequestIndex < requestsSize) {
             PublishStreamRequest request = blockState.requests().get(currentRequestIndex);
             logger.info(
-                    "Sending request for block {} request index {} to node {}:{}, items: {}",
+                    "[{}] Sending request for block {} request index {} to node {}:{}, items: {}",
+                    Thread.currentThread().getName(),
                     currentBlockNumber,
                     currentRequestIndex,
                     node.address(),
@@ -189,7 +196,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void moveToNextBlock() {
         logger.info(
-                "Completed sending all requests for block {} to node {}:{}",
+                "[{}] Completed sending all requests for block {} to node {}:{}",
+                Thread.currentThread().getName(),
                 currentBlockNumber,
                 node.address(),
                 node.port());
@@ -199,20 +207,23 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void handleInterruptedException(InterruptedException e) {
         if (isActive) {
-            logger.error("Request worker thread interrupted for node {}:{}", node.address(), node.port(), e);
+            logger.error("[{}] Request worker thread interrupted for node {}:{}", 
+                    Thread.currentThread().getName(), node.address(), node.port(), e);
         }
         Thread.currentThread().interrupt();
     }
 
     private void handleGenericException(Exception e) {
-        logger.error("Error in request worker thread for node {}:{}", node.address(), node.port(), e);
+        logger.error("[{}] Error in request worker thread for node {}:{}", 
+                Thread.currentThread().getName(), node.address(), node.port(), e);
         // If we get an IndexOutOfBoundsException, reset the request index to a safe value
         if (e instanceof IndexOutOfBoundsException) {
             BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
             if (blockState != null) {
                 int safeIndex = Math.min(blockState.requests().size(), currentRequestIndex);
                 logger.info(
-                        "Resetting request index from {} to {} for block {}",
+                        "[{}] Resetting request index from {} to {} for block {}",
+                        Thread.currentThread().getName(),
                         currentRequestIndex,
                         safeIndex,
                         currentBlockNumber);
