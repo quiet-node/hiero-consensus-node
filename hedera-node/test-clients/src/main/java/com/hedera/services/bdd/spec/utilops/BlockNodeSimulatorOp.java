@@ -102,7 +102,7 @@ public class BlockNodeSimulatorOp extends UtilOp {
                 break;
             case SHUTDOWN_SIMULATOR:
                 controller.shutdownSimulator(nodeIndex);
-                log.info("Shutdown simulator {} to simulate connection drop", nodeIndex);
+                log.info("Shutdown simulator {}", nodeIndex);
                 break;
             case RESTART_SIMULATOR:
                 if (!controller.isSimulatorShutdown(nodeIndex)) {

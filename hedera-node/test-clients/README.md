@@ -171,8 +171,6 @@ This section explains how to run tests with block nodes using the `hapi.spec.blo
 The following block node modes are available:
 
 - `SIM` - Use simulated block nodes
-- `REAL` - Use Docker containers for block nodes
-- If not specified, no block nodes will be used
 
 ### Running Tests with Block Node Simulator
 
@@ -214,7 +212,6 @@ block node simulator for all consensus nodes. This can currently be specified ma
 
 - The block node simulator is useful for testing how consensus nodes handle different response codes from block nodes.
 - When using the block node simulator, each consensus node will have a corresponding simulated block node unless the `manyToOne` property is set.
-- The Docker container mode requires Docker to be installed and running on your machine.
 
 ## Style guide
 

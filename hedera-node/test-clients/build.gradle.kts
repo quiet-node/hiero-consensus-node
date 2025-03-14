@@ -102,8 +102,6 @@ tasks {
     prCheckTags.forEach { (taskName, _) -> register(taskName) { dependsOn("testSubprocess") } }
 }
 
-// Remove the individual PR tag convenience tasks and replace with a single subprocess task with
-// block node simulator
 tasks.register<Test>("testSubprocessWithBlockNodeSimulator") {
     testClassesDirs = sourceSets.main.get().output.classesDirs
     classpath = sourceSets.main.get().runtimeClasspath

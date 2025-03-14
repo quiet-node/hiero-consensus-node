@@ -36,7 +36,7 @@ public class SimulatedBlockNodeServer {
 
     private final Server server;
     private final int port;
-    private final BlockStreamServiceImpl serviceImpl;
+    private final MockBlockStreamServiceImpl serviceImpl;
 
     // Configuration for EndOfStream responses
     private final AtomicReference<EndOfStreamConfig> endOfStreamConfig = new AtomicReference<>();
@@ -63,7 +63,7 @@ public class SimulatedBlockNodeServer {
      */
     public SimulatedBlockNodeServer(int port) {
         this.port = port;
-        this.serviceImpl = new BlockStreamServiceImpl();
+        this.serviceImpl = new MockBlockStreamServiceImpl();
         this.server = ServerBuilder.forPort(port).addService(serviceImpl).build();
     }
 
@@ -224,7 +224,7 @@ public class SimulatedBlockNodeServer {
      * Implementation of the BlockStreamService that can be configured to respond
      * with different response codes.
      */
-    private class BlockStreamServiceImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
+    private class MockBlockStreamServiceImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
         // Keep track of all active stream observers so we can send immediate responses
         private final List<StreamObserver<PublishStreamResponse>> activeStreams = new CopyOnWriteArrayList<>();
 

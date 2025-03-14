@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static java.util.Objects.requireNonNull;
+
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.node.internal.network.BlockNodeConfig;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
@@ -17,8 +22,9 @@ import org.apache.logging.log4j.Logger;
 /**
  * Represents a single connection to a block node. Each connection is responsible for connecting to configured block nodes
  */
-public class BlockNodeConnection {
+public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final BlockNodeConfig node;
     private final ManagedChannel channel;
@@ -27,7 +33,7 @@ public class BlockNodeConnection {
     private StreamObserver<PublishStreamRequest> requestObserver;
 
     private final ReentrantLock isActiveLock = new ReentrantLock();
-    private volatile boolean isActive = true;
+    private volatile boolean isActive = false;
 
     // Variables for tracking the current block and request index
     private final Object newBlockAvailable = new Object();
@@ -44,57 +50,22 @@ public class BlockNodeConnection {
             BlockStreamStateManager blockStreamStateManager) {
         this.node = nodeConfig;
         this.manager = manager;
-        this.channel = ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
-                .usePlaintext() // For development; use TLS in production
-                .build();
         this.blockStreamStateManager = blockStreamStateManager;
-        establishStream();
-        startRequestWorker();
+        this.channel = ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
+                .usePlaintext() // 🔥🔥 For development only! change to use TLS in production 🔥🔥
+                .build();
         logger.info("BlockNodeConnection INITIALIZED");
     }
 
-    private void establishStream() {
+    public Void establishStream() {
         logger.info("Establishing stream to block node {}:{}", node.address(), node.port());
         BlockStreamServiceGrpc.BlockStreamServiceStub stub = BlockStreamServiceGrpc.newStub(channel);
-
-        requestObserver = stub.publishBlockStream(new StreamObserver<>() {
-            @Override
-            public void onNext(PublishStreamResponse response) {
-                if (response.hasAcknowledgement()) {
-                    handleAcknowledgement(response.getAcknowledgement());
-                } else if (response.hasEndStream()) {
-                    handleEndOfStream(response.getEndStream());
-                } else if (response.hasSkipBlock()) {
-                    logger.info(
-                            "Received SkipBlock from Block Node {}:{}  Block #{}",
-                            node.address(),
-                            node.port(),
-                            response.getSkipBlock().getBlockNumber());
-                } else if (response.hasResendBlock()) {
-                    logger.info(
-                            "Received ResendBlock from Block Node {}:{}  Block #{}",
-                            node.address(),
-                            node.port(),
-                            response.getResendBlock().getBlockNumber());
-                }
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                Status status = Status.fromThrowable(t);
-                logger.error("Error in block node stream {}:{}: {}", node.address(), node.port(), status, t);
-                handleStreamFailure();
-            }
-
-            @Override
-            public void onCompleted() {
-                logger.info("Stream completed for block node {}:{}", node.address(), node.port());
-                handleStreamFailure();
-            }
-        });
-        isActiveLock.lock();
-        isActive = true;
-        isActiveLock.unlock();
+        synchronized (isActiveLock) {
+            requestObserver = stub.publishBlockStream(this);
+            isActive = true;
+            startRequestWorker();
+        }
+        return null;
     }
 
     private void startRequestWorker() {
@@ -117,7 +88,11 @@ public class BlockNodeConnection {
                 // Get the current block state
                 BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
                 if (blockState == null) {
-                    logger.info("Block state is null for block {} on node {}:{}", currentBlockNumber, node.address(), node.port());
+                    logger.info(
+                            "Block state is null for block {} on node {}:{}",
+                            currentBlockNumber,
+                            node.address(),
+                            node.port());
                     break;
                 }
 
@@ -143,7 +118,8 @@ public class BlockNodeConnection {
                 processAvailableRequests(blockState);
 
                 // If the block is complete and we've sent all requests, move to the next block
-                if (blockState.isComplete() && currentRequestIndex >= blockState.requests().size()) {
+                if (blockState.isComplete()
+                        && currentRequestIndex >= blockState.requests().size()) {
                     moveToNextBlock();
                 }
             } catch (InterruptedException e) {
@@ -171,7 +147,10 @@ public class BlockNodeConnection {
                 node.port(),
                 currentRequestIndex,
                 blockStreamStateManager.getBlockState(currentBlockNumber) != null
-                        ? blockStreamStateManager.getBlockState(currentBlockNumber).requests().size()
+                        ? blockStreamStateManager
+                                .getBlockState(currentBlockNumber)
+                                .requests()
+                                .size()
                         : 0);
         synchronized (newRequestAvailable) {
             newRequestAvailable.wait();
@@ -250,6 +229,13 @@ public class BlockNodeConnection {
         }
     }
 
+    private void handleStreamFailure() {
+        synchronized (isActiveLock) {
+            isActive = false;
+            removeFromActiveConnections(node);
+        }
+    }
+
     private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
         logger.info("Error returned from block node at block number {}: {}", endOfStream.getBlockNumber(), endOfStream);
     }
@@ -258,61 +244,66 @@ public class BlockNodeConnection {
         manager.handleConnectionError(node);
     }
 
-    public void handleStreamFailure() {
-        isActiveLock.lock();
-        isActive = false;
-        isActiveLock.unlock();
-        removeFromActiveConnections(node);
-        // TODO Could interrupt request worker here
-    }
-
-    public void sendRequest(PublishStreamRequest request) {
-        if (isActive) {
-            try {
-                logger.info(
-                        "Sending request to node {}:{}: {}",
-                        node.address(),
-                        node.port(),
-                        request.getBlockItems().getBlockItemsCount());
+    /**
+     * If connection is active sends a request to the block node, otherwise does nothing.
+     *
+     * @param request the request to send
+     */
+    public void sendRequest(@NonNull final PublishStreamRequest request) {
+        requireNonNull(request);
+        synchronized (isActiveLock) {
+            if (isActive) {
                 requestObserver.onNext(request);
-                logger.info("Successfully sent request to node {}:{}", node.address(), node.port());
-            } catch (Exception e) {
-                logger.error("Failed to send request to node {}:{}", node.address(), node.port(), e);
-                handleStreamFailure();
             }
-        } else {
-            logger.warn("Attempted to send request to inactive connection for node {}:{}", node.address(), node.port());
         }
     }
 
-    public void close() {
-        if (isActive) {
-            isActiveLock.lock();
-            isActive = false;
-            isActiveLock.unlock();
+    private void scheduleReconnect() {
+        manager.scheduleReconnect(this);
+    }
 
-            try {
-                if (requestWorker != null) {
-                    requestWorker.interrupt();
-                    requestWorker.join(1000);
-                }
-                channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                logger.error("Error joining request worker thread for node {}:{}", node.address(), node.port(), e);
-                Thread.currentThread().interrupt();
-            } finally {
-                if (!channel.isShutdown()) {
-                    channel.shutdownNow();
+    /**
+     * If connection is active it closes it, otherwise does nothing.
+     */
+    public void close() {
+        synchronized (isActiveLock) {
+            if (isActive) {
+                requestObserver.onCompleted();
+                scheduler.shutdown();
+                isActive = false;
+                try {
+                    if (requestWorker != null) {
+                        requestWorker.interrupt();
+                        requestWorker.join(1000);
+                    }
+                    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    logger.error("BlockNodeConnection interrupted {}:{}", node.address(), node.port(), e);
+                    Thread.currentThread().interrupt();
+                } finally {
+                    if (!channel.isShutdown()) {
+                        channel.shutdownNow();
+                    }
                 }
             }
             logger.info("Closed connection to block node {}:{}", node.address(), node.port());
         }
     }
 
+    /**
+     * Returns whether the connection is active.
+     *
+     * @return true if the connection is active, false otherwise
+     */
     public boolean isActive() {
         return isActive;
     }
 
+    /**
+     * Returns the block node configuration this connection.
+     *
+     * @return the block node configuration
+     */
     public BlockNodeConfig getNodeConfig() {
         return node;
     }
@@ -394,7 +385,7 @@ public class BlockNodeConnection {
      */
     public void restartWorkerAtBlock(long blockNumber) {
         logger.info("Restarting worker thread for node {}:{} at block {}", node.address(), node.port(), blockNumber);
-        
+
         // Stop the current worker thread if it exists
         if (requestWorker != null && requestWorker.isAlive()) {
             requestWorker.interrupt();
@@ -406,16 +397,52 @@ public class BlockNodeConnection {
                 Thread.currentThread().interrupt();
             }
         }
-        
+
         // Set the new block number and reset request index
         setCurrentBlockNumber(blockNumber);
-        
+
         // Start a new worker thread
         startRequestWorker();
-        
+
         // Notify that a new block is available to process
         notifyNewBlockAvailable();
-        
+
         logger.info("Worker thread restarted for node {}:{} at block {}", node.address(), node.port(), blockNumber);
+    }
+
+    @Override
+    public void onNext(PublishStreamResponse response) {
+        if (response.hasAcknowledgement()) {
+            handleAcknowledgement(response.getAcknowledgement());
+        } else if (response.hasEndStream()) {
+            handleEndOfStream(response.getEndStream());
+        } else if (response.hasSkipBlock()) {
+            logger.info(
+                    "Received SkipBlock from Block Node {}:{}  Block #{}",
+                    node.address(),
+                    node.port(),
+                    response.getSkipBlock().getBlockNumber());
+        } else if (response.hasResendBlock()) {
+            logger.info(
+                    "Received ResendBlock from Block Node {}:{}  Block #{}",
+                    node.address(),
+                    node.port(),
+                    response.getResendBlock().getBlockNumber());
+        }
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+        Status status = Status.fromThrowable(throwable);
+        logger.error(
+                "Error in block node stream {}:{}: {} {}", node.address(), node.port(), status, throwable.getMessage());
+        handleStreamFailure();
+        scheduleReconnect();
+    }
+
+    @Override
+    public void onCompleted() {
+        logger.info("Stream completed for block node {}:{}", node.address(), node.port());
+        handleStreamFailure();
     }
 }
