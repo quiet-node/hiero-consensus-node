@@ -69,9 +69,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void startRequestWorker() {
-        requestWorker = new Thread(this::requestWorkerLoop);
-        requestWorker.setName("BlockNodeConnection-RequestWorker-" + node.address() + ":" + node.port());
-        requestWorker.start();
+        requestWorker = Thread.ofVirtual()
+                .name("BlockNodeConnection-RequestWorker-" + node.address() + ":" + node.port())
+                .start(this::requestWorkerLoop);
         logger.info("Started request worker thread for block node {}:{}", node.address(), node.port());
     }
 
@@ -80,8 +80,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             try {
                 // Wait for a block to be available if we don't have one yet
                 if (currentBlockNumber == -1 || blockStreamStateManager.getBlockState(currentBlockNumber) == null) {
-                    logger.info("[{}] Waiting for new block to be available for node {}:{}", 
-                            Thread.currentThread().getName(), node.address(), node.port());
+                    logger.info(
+                            "[{}] Waiting for new block to be available for node {}:{}",
+                            Thread.currentThread().getName(),
+                            node.address(),
+                            node.port());
                     waitForNewBlock();
                     continue;
                 }
@@ -132,8 +135,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 handleGenericException(e);
             }
         }
-        logger.info("[{}] Request worker thread exiting for node {}:{}", 
-                Thread.currentThread().getName(), node.address(), node.port());
+        logger.info(
+                "[{}] Request worker thread exiting for node {}:{}",
+                Thread.currentThread().getName(),
+                node.address(),
+                node.port());
     }
 
     private void waitForNewBlock() throws InterruptedException {
@@ -207,15 +213,23 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void handleInterruptedException(InterruptedException e) {
         if (isActive) {
-            logger.error("[{}] Request worker thread interrupted for node {}:{}", 
-                    Thread.currentThread().getName(), node.address(), node.port(), e);
+            logger.error(
+                    "[{}] Request worker thread interrupted for node {}:{}",
+                    Thread.currentThread().getName(),
+                    node.address(),
+                    node.port(),
+                    e);
         }
         Thread.currentThread().interrupt();
     }
 
     private void handleGenericException(Exception e) {
-        logger.error("[{}] Error in request worker thread for node {}:{}", 
-                Thread.currentThread().getName(), node.address(), node.port(), e);
+        logger.error(
+                "[{}] Error in request worker thread for node {}:{}",
+                Thread.currentThread().getName(),
+                node.address(),
+                node.port(),
+                e);
         // If we get an IndexOutOfBoundsException, reset the request index to a safe value
         if (e instanceof IndexOutOfBoundsException) {
             BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);

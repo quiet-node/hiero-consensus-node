@@ -383,6 +383,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     writer,
                     new MerkleSiblingHash(false, inputHash),
                     new MerkleSiblingHash(false, rightParent)));
+
+            // Perform any pre-block proof actions
+            writer.performPreBlockProofActions();
+
             // Update in-memory state to prepare for the next block
             lastBlockHash = blockHash;
             writer = null;

@@ -57,4 +57,9 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
         blockStreamStateManager.closeBlock(blockNumber);
         logger.info("Closed block in GrpcBlockItemWriter");
     }
+
+    @Override
+    public void performPreBlockProofActions() {
+        blockStreamStateManager.performPreBlockProofActions(blockNumber);
+    }
 }

@@ -14,8 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -29,9 +27,6 @@ public class BlockStreamStateManager {
 
     private final Map<Long, BlockState> blockStates = new ConcurrentHashMap<>();
     private final int blockItemBatchSize;
-
-    // Lock for synchronizing modifications to the block states
-    private final Lock lock = new ReentrantLock();
 
     // Reference to the connection manager for notifications
     private BlockNodeConnectionManager blockNodeConnectionManager;
@@ -68,25 +63,19 @@ public class BlockStreamStateManager {
      */
     public void openBlock(long blockNumber) {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
-
-        lock.lock();
-        try {
-            // Create a new block state
-            blockStates.put(blockNumber, BlockState.from(blockNumber));
-            logger.info("Started new block in BlockStreamStateManager {}", blockNumber);
-
-        } finally {
-            lock.unlock();
-        }
+        // Create a new block state
+        blockStates.put(blockNumber, BlockState.from(blockNumber));
+        logger.info("Started new block in BlockStreamStateManager {}", blockNumber);
     }
 
     /**
      * Adds a new item to the current block.
      *
+     * @param blockNumber the block number
      * @param bytes the item bytes to add
      * @throws IllegalStateException if no block is currently open
      */
-    public void addItem(@NonNull final long blockNumber, @NonNull Bytes bytes) {
+    public void addItem(final long blockNumber, @NonNull Bytes bytes) {
         requireNonNull(bytes, "bytes must not be null");
         BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
@@ -138,7 +127,7 @@ public class BlockStreamStateManager {
 
     /**
      * Closes the current block and marks it as complete.
-     *
+     * @param blockNumber the block number
      * @throws IllegalStateException if no block is currently open
      */
     public void closeBlock(final long blockNumber) {
@@ -171,17 +160,26 @@ public class BlockStreamStateManager {
      * @return the block state, or null if no block state exists for the given block number
      */
     public BlockState getBlockState(long blockNumber) {
-        // Direct access to the map is safe because it's a ConcurrentHashMap
-        BlockState blockState = blockStates.get(blockNumber);
+        return blockStates.get(blockNumber);
+    }
+
+    /**
+     * Creates a new request from the current items in the block prior to BlockProof if there are any.
+     * @param blockNumber the block number
+     */
+    public void performPreBlockProofActions(long blockNumber) {
+        BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
-            logger.warn("Block state not found for block {}", blockNumber);
-        } else {
-            logger.debug(
-                    "Retrieved block state for block {} with {} requests, isComplete: {}",
-                    blockNumber,
-                    blockState.requests().size(),
-                    blockState.isComplete());
+            throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
-        return blockState;
+
+        // If there are remaining items we will create a request from them while the BlockProof is pending
+        if (!blockState.itemBytes().isEmpty()) {
+            logger.info(
+                    "Prior to BlockProof, creating request from items in block {} size {}",
+                    blockNumber,
+                    blockState.itemBytes().size());
+            createRequestFromCurrentItems(blockState);
+        }
     }
 }
