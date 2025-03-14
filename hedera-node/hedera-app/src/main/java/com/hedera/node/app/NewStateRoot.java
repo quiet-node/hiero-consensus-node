@@ -607,7 +607,7 @@ public class NewStateRoot implements MerkleNodeState {
                     virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(MAP)) {
-                    registerKVListener(md.serviceName(), state, listener);
+                    registerKVListener(serviceName, state, listener);
                 }
             });
             return state;
@@ -620,7 +620,7 @@ public class NewStateRoot implements MerkleNodeState {
                     md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(SINGLETON)) {
-                    registerSingletonListener(md.serviceName(), state, listener);
+                    registerSingletonListener(serviceName, state, listener);
                 }
             });
             return state;
@@ -633,7 +633,7 @@ public class NewStateRoot implements MerkleNodeState {
                     md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(QUEUE)) {
-                    registerQueueListener(md.serviceName(), state, listener);
+                    registerQueueListener(serviceName, state, listener);
                 }
             });
             return state;

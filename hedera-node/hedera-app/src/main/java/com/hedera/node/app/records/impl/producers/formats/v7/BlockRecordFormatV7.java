@@ -198,7 +198,7 @@ public final class BlockRecordFormatV7 implements BlockRecordFormat {
 
         @Override
         public RecordStreamItemV7 getDefaultInstance() {
-            throw new UnsupportedOperationException();
+            return new RecordStreamItemV7(Transaction.DEFAULT, TransactionRecord.DEFAULT, Bytes.EMPTY, SemanticVersion.DEFAULT, 0, 0);
         }
     }
 }
