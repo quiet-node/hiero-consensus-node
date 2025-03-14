@@ -5,6 +5,10 @@ import static com.hedera.hapi.node.base.BlockHashAlgorithm.SHA2_384;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
@@ -24,7 +28,9 @@ import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +41,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith({MockitoExtension.class, LogCaptureExtension.class})
 class BlockNodeConnectionManagerTest {
+    private static final Duration INITIAL_DELAY = Duration.ofMillis(10);
+
     @LoggingSubject
     BlockNodeConnectionManager blockNodeConnectionManager;
 
@@ -43,6 +51,12 @@ class BlockNodeConnectionManagerTest {
 
     @Mock
     ConfigProvider mockConfigProvider;
+
+    @Mock
+    private Supplier<Void> mockSupplier;
+
+    @Mock
+    BlockNodeConnection mockConnection;
 
     private static Server testServer;
 
@@ -112,9 +126,54 @@ class BlockNodeConnectionManagerTest {
                         "Successfully streamed block items for block 1 to localhost:8080");
     }
 
+    void testRetry_SuccessOnFirstAttempt() {
+        blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
+
+        verify(mockSupplier, times(1)).get();
+
+        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
+    }
+
+    @Test
+    void testRetry_SuccessOnRetry() {
+        when(mockSupplier.get())
+                .thenThrow(new RuntimeException("First attempt failed"))
+                .thenReturn(null);
+
+        blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
+
+        verify(mockSupplier, times(2)).get();
+        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
+        assertThat(logCaptor.infoLogs())
+                .containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY.multipliedBy(2)));
+    }
+
+    @Test
+    void testScheduleReconnect() throws InterruptedException {
+        blockNodeConnectionManager.scheduleReconnect(mockConnection);
+
+        verifyNoInteractions(mockConnection); // there should be no immediate attempt to establish a stream
+
+        Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
+
+        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(Duration.ofSeconds(1L)));
+        verify(mockConnection, times(1)).establishStream();
+    }
+
     @AfterAll
     static void afterAll() {
         testServer.shutdownNow();
+    }
+
+    private List<String> generateExpectedRetryLogs(Duration delay) {
+        final long start = delay.toMillis() / 2;
+        final long end = delay.toMillis();
+        final List<String> logs = new ArrayList<>();
+        for (long i = start; i <= end; i++) {
+            logs.add(String.format("Retrying in %d ms", i));
+        }
+
+        return logs;
     }
 
     private static class BlockStreamServiceTestImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
