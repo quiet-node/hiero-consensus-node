@@ -128,7 +128,7 @@ public enum BlockStreamAccess {
     }
 
     private Bytes getTrailingBlockHashes(String folderPath, int blockNumber) {
-        Bytes result = Bytes.EMPTY;
+        AtomicReference<Bytes> result = new AtomicReference<>(Bytes.EMPTY);
 
         for (int i = blockNumber - 256; i <= blockNumber; i++) {
 
@@ -142,7 +142,7 @@ public enum BlockStreamAccess {
                         block.items().forEach(blockItem -> {
                             if (blockItem.hasBlockProof()) {
                                 BlockProof blockProof = blockItem.blockProofOrThrow();
-                                result.append(blockProof.previousBlockRootHash());
+                                result.set(result.get().append(blockProof.previousBlockRootHash()));
                             }
                         });
                     }
@@ -151,7 +151,7 @@ public enum BlockStreamAccess {
             }
         }
 
-        return result;
+        return result.get();
     }
 
     private Bytes startBlockHashFrom(@NonNull final BlockStreamInfo blockStreamInfo) {
