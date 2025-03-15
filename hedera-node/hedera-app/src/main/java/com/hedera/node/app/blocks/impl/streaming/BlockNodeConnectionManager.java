@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -40,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -54,6 +56,9 @@ public class BlockNodeConnectionManager {
             BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
+    // Add a random number generator for jitter
+    private final Random random = new Random();
+
     private final Map<BlockNodeConfig, BlockNodeConnection> activeConnections;
     private final Map<BlockNodeConfig, BlockNodeConnection> connectionsInRetry;
     private BlockNodeConfigExtractor blockNodeConfigurations;
@@ -61,8 +66,7 @@ public class BlockNodeConnectionManager {
     private final Object connectionLock = new Object();
     private final ExecutorService streamingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService retryExecutor = Executors.newVirtualThreadPerTaskExecutor();
-    private final ScheduledExecutorService connectionExecutor;
-    private int maxSimultaneousConnections;
+	private final ScheduledExecutorService connectionExecutor;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -75,18 +79,12 @@ public class BlockNodeConnectionManager {
 
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
         if (!blockStreamConfig.streamToBlockNodes()) {
-            maxSimultaneousConnections = 0;
             connectionExecutor = Executors.newScheduledThreadPool(1);
             return;
-        }
-        // Ensure maxSimultaneousConnections is at least 1 if streaming to block nodes
-        if (this.maxSimultaneousConnections <= 0) {
-            this.maxSimultaneousConnections = 1;
         }
 
         final var blockNodeConfig = configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
         this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockNodeConfig.blockNodeConnectionFileDir());
-        this.maxSimultaneousConnections = blockNodeConfigurations.getMaxSimultaneousConnections();
         this.connectionExecutor = Executors.newScheduledThreadPool(maxSimultaneousConnections);
     }
 
@@ -285,38 +283,37 @@ public class BlockNodeConnectionManager {
     public void scheduleReconnect(@NonNull final BlockNodeConnection connection) {
         requireNonNull(connection);
 
-        // Avoid duplicate retry attempts
-        if (connectionsInRetry.containsKey(connection.getNodeConfig())) {
-            logger.info(
-                    "Skipping reconnect, already in retry: {}:{}",
-                    connection.getNodeConfig().address(),
-                    connection.getNodeConfig().port());
-            return;
-        }
+		// Avoid duplicate retry attempts
+		if (connectionsInRetry.containsKey(connection.getNodeConfig())) {
+			logger.info(
+					"Skipping reconnect, already in retry: {}:{}",
+					connection.getNodeConfig().address(),
+					connection.getNodeConfig().port());
+			return;
+		}
 
-        connectionsInRetry.put(connection.getNodeConfig(), connection);
+		connectionsInRetry.put(connection.getNodeConfig(), connection);
 
         retryExecutor.execute(() -> {
             try {
                 retry(
-                        () -> {
-                            if (isHigherPriorityNodeAvailable()) {
-                                logger.info(
-                                        "Higher-priority node found, skipping retry for {}:{}",
-                                        connection.getNodeConfig().address(),
-                                        connection.getNodeConfig().port());
-                                connectionsInRetry.remove(connection.getNodeConfig());
-                                return false;
-                            }
+				() -> {
+					if (isHigherPriorityNodeAvailable()) {
+						logger.info(
+								"Higher-priority node found, skipping retry for {}:{}",
+								connection.getNodeConfig().address(),
+								connection.getNodeConfig().port());
+						connectionsInRetry.remove(connection.getNodeConfig());
+						return false;
+					}
 
-                            connection.establishStream();
-                            synchronized (connectionLock) {
-                                activeConnections.put(connection.getNodeConfig(), connection);
-                                connectionsInRetry.remove(connection.getNodeConfig());
-                            }
-                            return true;
-                        },
-                        INITIAL_RETRY_DELAY);
+					connection.establishStream();
+					synchronized (connectionLock) {
+						activeConnections.put(connection.getNodeConfig(), connection);
+						connectionsInRetry.remove(connection.getNodeConfig());
+					}
+					return true;
+				}, INITIAL_RETRY_DELAY);
             } catch (Exception e) {
                 final var node = connection.getNodeConfig();
                 logger.error("Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
@@ -338,8 +335,10 @@ public class BlockNodeConnectionManager {
         Duration delay = initialDelay;
         while (true) {
             try {
-                logger.info("Retrying in {} ms", delay.toMillis());
-                Thread.sleep(delay.toMillis());
+                // Apply jitter: use a random value between 50-100% of the calculated delay
+                final long jitteredDelayMs = delay.toMillis() / 2 + random.nextLong(delay.toMillis() / 2 + 1);
+                logger.info("Retrying in {} ms", jitteredDelayMs);
+                Thread.sleep(jitteredDelayMs);
                 action.get();
                 return;
             } catch (Exception e) {
@@ -352,7 +351,9 @@ public class BlockNodeConnectionManager {
      * Shuts down the connection manager, closing all active connections.
      */
     public void shutdown() {
-        connectionExecutor.shutdown();
+		connectionExecutor.shutdown();
+        scheduler.shutdown();
+        retryExecutor.shutdown();
         try {
             if (!connectionExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
                 logger.error("Failed to shut down connection executor within timeout");

@@ -168,7 +168,7 @@ class BlockNodeConnectionTest {
         assertNotNull(capturedObserver);
 
         final var response = PublishStreamResponse.newBuilder()
-                .setStatus(PublishStreamResponse.EndOfStream.newBuilder()
+                .setEndStream(PublishStreamResponse.EndOfStream.newBuilder()
                         .setStatus(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT)
                         .setBlockNumber(1234)
                         .build())

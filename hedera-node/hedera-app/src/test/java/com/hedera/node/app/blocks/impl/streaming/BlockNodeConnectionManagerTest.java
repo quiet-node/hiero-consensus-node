@@ -20,6 +20,7 @@ import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,9 @@ class BlockNodeConnectionManagerTest {
 
     @LoggingSubject
     BlockNodeConnectionManager blockNodeConnectionManager;
+
+    @LoggingTarget
+    private LogCaptor logCaptor;
 
     @Mock
     ConfigProvider mockConfigProvider;
@@ -61,7 +65,7 @@ class BlockNodeConnectionManagerTest {
         final var config = HederaTestConfigBuilder.create()
                 .withConfigDataType(BlockStreamConfig.class)
                 .withValue("blockStream.writerMode", "FILE_AND_GRPC")
-                .withValue("blockNode.blockNodeConnectionFileDir", "./src/test/resources/bootstrap")
+                .withValue("blockStream.blockNodeConnectionFileDir", "./src/test/resources/bootstrap")
                 .getOrCreateConfig();
         given(mockConfigProvider.getConfiguration()).willReturn(new VersionedConfigImpl(config, 1));
         blockNodeConnectionManager = new BlockNodeConnectionManager(mockConfigProvider);
@@ -79,7 +83,8 @@ class BlockNodeConnectionManagerTest {
         blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(1)).get();
-        assertThat(logCaptor.infoLogs()).contains("Retrying in 10 ms");
+
+        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
     }
 
     @Test
@@ -91,7 +96,9 @@ class BlockNodeConnectionManagerTest {
         blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(2)).get();
-        assertThat(logCaptor.infoLogs()).contains("Retrying in 10 ms", "Retrying in 20 ms");
+        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
+        assertThat(logCaptor.infoLogs())
+                .containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY.multipliedBy(2)));
     }
 
     @Test
@@ -102,7 +109,7 @@ class BlockNodeConnectionManagerTest {
 
         Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
 
-        assertThat(logCaptor.infoLogs()).contains("Retrying in 1000 ms");
+        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(Duration.ofSeconds(1L)));
         verify(mockConnection, times(1)).establishStream();
     }
 
@@ -124,4 +131,15 @@ class BlockNodeConnectionManagerTest {
                         || log.contains("Connecting to block node node3.example.com:8081")
                         || log.contains("Connecting to block node node4.example.com:8081"));
     }
+
+	private List<String> generateExpectedRetryLogs(Duration delay) {
+		final long start = delay.toMillis() / 2;
+		final long end = delay.toMillis();
+		final List<String> logs = new ArrayList<>();
+		for (long i = start; i <= end; i++) {
+			logs.add(String.format("Retrying in %d ms", i));
+		}
+
+		return logs;
+	}
 }
