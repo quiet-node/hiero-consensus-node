@@ -46,7 +46,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -89,11 +88,6 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
      * Used for registering notice of transactionIDs seen by this node
      */
     private final DeduplicationCache deduplicationCache;
-    /**
-     * If not null, the flag at GENESIS that signals that system entities have been created.
-     */
-    @Nullable
-    private final AtomicBoolean systemEntitiesCreatedFlag;
 
     /**
      * Creates a new instance of {@code PreHandleWorkflowImpl}.
@@ -111,15 +105,13 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
             @NonNull final SignatureVerifier signatureVerifier,
             @NonNull final SignatureExpander signatureExpander,
             @NonNull final ConfigProvider configProvider,
-            @NonNull final DeduplicationCache deduplicationCache,
-            @Nullable final AtomicBoolean systemEntitiesCreatedFlag) {
+            @NonNull final DeduplicationCache deduplicationCache) {
         this.dispatcher = requireNonNull(dispatcher);
         this.transactionChecker = requireNonNull(transactionChecker);
         this.signatureVerifier = requireNonNull(signatureVerifier);
         this.signatureExpander = requireNonNull(signatureExpander);
         this.configProvider = requireNonNull(configProvider);
         this.deduplicationCache = requireNonNull(deduplicationCache);
-        this.systemEntitiesCreatedFlag = systemEntitiesCreatedFlag;
     }
 
     /**
@@ -233,23 +225,6 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
             // track of the fact that we have seen this transaction ID, so we can give proper results
             // in the different receipt queries)
             deduplicationCache.add(txInfo.transactionID());
-        }
-
-        // Until system entities exist, only node transactions will exist, so we can skip payer lookup and
-        // any signature verification work; there is no concept of due diligence failures at this stage
-        if (systemEntitiesCreatedFlag != null && !systemEntitiesCreatedFlag.get()) {
-            return new PreHandleResult(
-                    txInfo.transactionID().accountIDOrThrow(),
-                    null,
-                    SO_FAR_SO_GOOD,
-                    OK,
-                    txInfo,
-                    Set.of(),
-                    Set.of(),
-                    Set.of(),
-                    Map.of(),
-                    null,
-                    configProvider.getConfiguration().getVersion());
         }
 
         // 2. Get Payer Account---we can never reuse a previous result here, as the payer account could have been

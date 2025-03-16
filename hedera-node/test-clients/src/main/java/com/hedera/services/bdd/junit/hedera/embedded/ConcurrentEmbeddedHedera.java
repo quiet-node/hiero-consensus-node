@@ -52,8 +52,8 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
     }
 
     @Override
-    protected void handleEmptyRound() {
-        final var round = platform.emptyConsensusRound();
+    protected void handleRoundWith(@NonNull final Transaction txn) {
+        final var round = platform.roundWith(txn);
         hedera.handleWorkflow().handleRound(state, round, NOOP_STATE_SIG_CALLBACK);
         hedera.onSealConsensusRound(round, state);
         notifyStateHashed(round.getRoundNum());
@@ -146,10 +146,22 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
         }
 
         /**
-         * Creates an empty consensus round.
+         * Creates a fake consensus round with just the given transaction.
          */
-        private Round emptyConsensusRound() {
-            return new FakeRound(roundNo.getAndIncrement(), requireNonNull(roster), List.of());
+        private Round roundWith(@NonNull final Transaction txn) {
+            final var firstRoundTime = now();
+            return new FakeRound(
+                    roundNo.getAndIncrement(),
+                    requireNonNull(roster),
+                    List.of(new FakeConsensusEvent(
+                            new FakeEvent(
+                                    defaultNodeId,
+                                    firstRoundTime,
+                                    version.getPbjSemanticVersion(),
+                                    createAppPayloadWrapper(txn.toByteArray())),
+                            consensusOrder.getAndIncrement(),
+                            firstRoundTime,
+                            version.getPbjSemanticVersion())));
         }
 
         /**

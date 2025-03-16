@@ -4,6 +4,7 @@ package com.hedera.services.bdd.junit.hedera.embedded;
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.fromPbj;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.ADDRESS_BOOK;
 import static com.hedera.services.bdd.junit.hedera.embedded.fakes.FakePlatformContext.PLATFORM_CONFIG;
+import static com.hedera.services.bdd.spec.transactions.TxnUtils.randomUtf8Bytes;
 import static com.swirlds.platform.roster.RosterUtils.rosterFrom;
 import static com.swirlds.platform.system.InitTrigger.GENESIS;
 import static com.swirlds.platform.system.InitTrigger.RESTART;
@@ -14,8 +15,10 @@ import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.StreamSupport.stream;
 
+import com.google.protobuf.ByteString;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.platform.event.legacy.StateSignatureTransaction;
 import com.hedera.node.app.Hedera;
 import com.hedera.node.app.ServicesMain;
 import com.hedera.node.app.fixtures.state.FakeServiceMigrator;
@@ -35,8 +38,10 @@ import com.hedera.services.bdd.junit.hedera.embedded.fakes.LapsingBlockHashSigne
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.Response;
+import com.hederahashgraph.api.proto.java.SignedTransaction;
 import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.Transaction;
+import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.hederahashgraph.api.proto.java.TransactionResponse;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.constructable.ConstructableRegistry;
@@ -193,6 +198,10 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
         hedera.init(fakePlatform(), defaultNodeId);
         fakePlatform().start();
         fakePlatform().notifyListeners(ACTIVE_NOTIFICATION);
+        if (trigger == GENESIS) {
+            // Trigger creation of system entities
+            handleRoundWith(mockStateSignatureTxn());
+        }
     }
 
     @Override
@@ -286,8 +295,15 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
     /**
      * Handles an empty round to trigger system work like genesis entity creations.
      */
-    protected abstract void handleEmptyRound();
+    protected abstract void handleRoundWith(Transaction txn);
 
+    /**
+     * Submits a transaction to the given node account with the given version.
+     * @param transaction the transaction to submit
+     * @param nodeAccountId the account ID of the node to submit the transaction to
+     * @param version the version of the transaction
+     * @return the response to the transaction
+     */
     protected abstract TransactionResponse submit(
             @NonNull Transaction transaction, @NonNull AccountID nodeAccountId, @NonNull SemanticVersion version);
 
@@ -313,6 +329,23 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
         if (syntheticVersion != SyntheticVersion.PRESENT) {
             throw new UnsupportedOperationException("Event version used at ingest by default node is always PRESENT");
         }
+    }
+
+    /**
+     * Gives a pretend state signature transaction.
+     */
+    private static Transaction mockStateSignatureTxn() {
+        return Transaction.newBuilder()
+                .setSignedTransactionBytes(SignedTransaction.newBuilder()
+                        .setBodyBytes(TransactionBody.newBuilder()
+                                .setStateSignatureTransaction(StateSignatureTransaction.newBuilder()
+                                        .setHash(ByteString.copyFrom(randomUtf8Bytes(48)))
+                                        .setSignature(ByteString.copyFrom(randomUtf8Bytes(256))))
+                                .build()
+                                .toByteString())
+                        .build()
+                        .toByteString())
+                .build();
     }
 
     protected static TransactionResponse parseTransactionResponse(@NonNull final BufferedData responseBuffer) {

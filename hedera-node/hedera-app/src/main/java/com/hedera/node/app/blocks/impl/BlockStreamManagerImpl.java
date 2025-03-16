@@ -525,8 +525,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final BlockStreamInfo blockStreamInfo, @NonNull final SemanticVersion version) {
         requireNonNull(version);
         requireNonNull(blockStreamInfo);
-        if (EPOCH.equals(blockStreamInfo.lastIntervalProcessTimeOrElse(EPOCH))) {
-            // If we have never processed any time-based events, we must be at genesis
+        if (EPOCH.equals(blockStreamInfo.lastHandleTimeOrElse(EPOCH))) {
             return GENESIS_WORK;
         } else if (impliesPostUpgradeWorkPending(blockStreamInfo, version)) {
             return POST_UPGRADE_WORK;

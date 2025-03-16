@@ -194,14 +194,14 @@ public class SystemTransactions {
         final var systemAutoRenewPeriod = new Duration(7776000L);
         // Create the system accounts
         for (int i = 1, n = ledgerConfig.numSystemAccounts(); i < n; i++) {
+            final long num = i;
             systemContext.dispatchCreation(
-                    TransactionBody.newBuilder()
-                            .memo("Synthetic system creation")
+                    b -> b.memo("Synthetic system creation")
                             .cryptoCreateAccount(CryptoCreateTransactionBody.newBuilder()
                                     .key(systemKey)
                                     .autoRenewPeriod(systemAutoRenewPeriod)
                                     .initialBalance(
-                                            n == accountsConfig.treasury() ? ledgerConfig.totalTinyBarFloat() : 0L)
+                                            num == accountsConfig.treasury() ? ledgerConfig.totalTinyBarFloat() : 0L)
                                     .build())
                             .build(),
                     i);
@@ -211,8 +211,7 @@ public class SystemTransactions {
                 .filter(j -> j < FIRST_RESERVED_SYSTEM_CONTRACT || j > LAST_RESERVED_SYSTEM_CONTRACT)
                 .toArray()) {
             systemContext.dispatchCreation(
-                    TransactionBody.newBuilder()
-                            .memo("Synthetic zero-balance treasury clone")
+                    b -> b.memo("Synthetic zero-balance treasury clone")
                             .cryptoCreateAccount(CryptoCreateTransactionBody.newBuilder()
                                     .key(systemKey)
                                     .autoRenewPeriod(systemAutoRenewPeriod)
@@ -223,8 +222,7 @@ public class SystemTransactions {
         // Create the staking reward accounts
         for (long i : List.of(accountsConfig.stakingRewardAccount(), accountsConfig.nodeRewardAccount())) {
             systemContext.dispatchCreation(
-                    TransactionBody.newBuilder()
-                            .memo("Release 0.24.1 migration record")
+                    b -> b.memo("Release 0.24.1 migration record")
                             .cryptoCreateAccount(CryptoCreateTransactionBody.newBuilder()
                                     .key(IMMUTABILITY_SENTINEL_KEY)
                                     .autoRenewPeriod(systemAutoRenewPeriod)
@@ -236,8 +234,7 @@ public class SystemTransactions {
         for (long i : LongStream.range(FIRST_MISC_ACCOUNT_NUM, hederaConfig.firstUserEntity())
                 .toArray()) {
             systemContext.dispatchCreation(
-                    TransactionBody.newBuilder()
-                            .cryptoCreateAccount(CryptoCreateTransactionBody.newBuilder()
+                    b -> b.cryptoCreateAccount(CryptoCreateTransactionBody.newBuilder()
                                     .key(systemKey)
                                     .autoRenewPeriod(systemAutoRenewPeriod)
                                     .build())
@@ -467,18 +464,34 @@ public class SystemTransactions {
 
     private SystemContext newSystemContext(@NonNull final Instant now, @NonNull final State state) {
         final var config = configProvider.getConfiguration();
+        final var hederaConfig = config.getConfigData(HederaConfig.class);
         // Support dispatching at least as many transactions as there are system entities
         final var firstConsTime = now.minusNanos(
                         config.getConfigData(SchedulingConfig.class).consTimeSeparationNanos())
-                .minusNanos(config.getConfigData(HederaConfig.class).firstUserEntity());
+                .minusNanos(hederaConfig.firstUserEntity());
         final AtomicReference<Instant> nextConsTime = new AtomicReference<>(firstConsTime);
         final var systemAdminId = idFactory.newAccountId(
                 config.getConfigData(AccountsConfig.class).systemAdmin());
         // Use whatever node happens to be first in the address book as the "creator"
         final var creatorInfo = networkInfo.addressBook().getFirst();
+        final var validDuration = new Duration(hederaConfig.transactionMaxValidDuration());
         final AtomicBoolean firstHandled = new AtomicBoolean(true);
 
         return new SystemContext() {
+            @Override
+            public void dispatchCreation(@NonNull final Consumer<TransactionBody.Builder> spec, final long entityNum) {
+                requireNonNull(spec);
+                final var builder = TransactionBody.newBuilder()
+                        .transactionValidDuration(validDuration)
+                        .transactionID(TransactionID.newBuilder()
+                                .accountID(systemAdminId)
+                                .transactionValidStart(asTimestamp(now()))
+                                .nonce(nextDispatchNonce.getAndIncrement())
+                                .build());
+                spec.accept(builder);
+                dispatchCreation(builder.build(), entityNum);
+            }
+
             @Override
             public void dispatchCreation(@NonNull final TransactionBody body, final long entityNum) {
                 requireNonNull(body);
@@ -504,6 +517,7 @@ public class SystemTransactions {
             @Override
             public void dispatchAdmin(@NonNull final Consumer<TransactionBody.Builder> spec) {
                 requireNonNull(spec);
+                throw new UnsupportedOperationException("Parent transaction context only supports creations currently");
             }
 
             @NonNull

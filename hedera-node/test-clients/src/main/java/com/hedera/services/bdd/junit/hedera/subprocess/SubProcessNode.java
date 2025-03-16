@@ -249,14 +249,6 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
         }
     }
 
-    private boolean applicationLogContains(@NonNull final String text) {
-        try (var lines = Files.lines(getExternalPath(APPLICATION_LOG))) {
-            return lines.anyMatch(line -> line.contains(text));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
     private int numApplicationLogLinesWith(@NonNull final String text) {
         try (var lines = Files.lines(getExternalPath(APPLICATION_LOG))) {
             return (int) lines.filter(line -> line.contains(text)).count();

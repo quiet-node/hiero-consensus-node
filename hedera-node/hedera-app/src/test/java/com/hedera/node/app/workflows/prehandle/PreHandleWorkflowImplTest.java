@@ -65,7 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -158,8 +157,7 @@ final class PreHandleWorkflowImplTest extends AppTestBase implements Scenarios {
                 signatureVerifier,
                 signatureExpander,
                 configProvider,
-                deduplicationCache,
-                new AtomicBoolean(true));
+                deduplicationCache);
     }
 
     /** Null arguments are not permitted to the preHandle method */

@@ -36,6 +36,8 @@ import org.apache.logging.log4j.core.config.Configurator;
  * are received.
  */
 public class EmbeddedNode extends AbstractLocalNode<EmbeddedNode> implements HederaNode {
+    private static final long LOG_SCAN_BACKOFF_MS = 100L;
+
     public EmbeddedNode(@NonNull final NodeMetadata metadata) {
         super(metadata);
     }
@@ -96,7 +98,7 @@ public class EmbeddedNode extends AbstractLocalNode<EmbeddedNode> implements Hed
 
     @Override
     public CompletableFuture<Void> minLogsFuture(@NonNull final String pattern, final int n) {
-        throw new UnsupportedOperationException("TSS logs should not be expected in an embedded network");
+        throw new UnsupportedOperationException("Logs not reliably written in an embedded network");
     }
 
     @Override

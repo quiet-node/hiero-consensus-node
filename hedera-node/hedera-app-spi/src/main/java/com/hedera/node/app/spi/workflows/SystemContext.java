@@ -15,6 +15,16 @@ import java.util.function.Consumer;
  */
 public interface SystemContext {
     /**
+     * Dispatches a transaction body customized by the given specification to the appropriate service using
+     * the requested next entity number, which must be less than the first user entity number.
+     * @param spec the transaction body
+     * @param entityNum the entity number
+     */
+    default void dispatchCreation(@NonNull Consumer<TransactionBody.Builder> spec, long entityNum) {
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    /**
      * Dispatches a transaction to the appropriate service using the requested next entity number, which
      * must be less than the first user entity number.
      *

@@ -99,6 +99,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
@@ -145,6 +146,9 @@ public class HandleWorkflow {
     private final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory;
     private final CurrentPlatformStatus currentPlatformStatus;
 
+    @Nullable
+    private final AtomicBoolean systemEntitiesCreatedFlag;
+
     // The last second since the epoch at which the metrics were updated; this does not affect transaction handling
     private long lastMetricUpdateSecond;
     // The last second for which this workflow has confirmed all scheduled transactions are executed
@@ -178,7 +182,8 @@ public class HandleWorkflow {
             @NonNull final HistoryService historyService,
             @NonNull final CongestionMetrics congestionMetrics,
             @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory,
-            @NonNull final CurrentPlatformStatus currentPlatformStatus) {
+            @NonNull final CurrentPlatformStatus currentPlatformStatus,
+            @Nullable final AtomicBoolean systemEntitiesCreatedFlag) {
         this.networkInfo = requireNonNull(networkInfo);
         this.stakePeriodChanges = requireNonNull(stakePeriodChanges);
         this.dispatchProcessor = requireNonNull(dispatchProcessor);
@@ -210,6 +215,7 @@ public class HandleWorkflow {
         this.historyService = requireNonNull(historyService);
         this.softwareVersionFactory = requireNonNull(softwareVersionFactory);
         this.currentPlatformStatus = requireNonNull(currentPlatformStatus);
+        this.systemEntitiesCreatedFlag = systemEntitiesCreatedFlag;
     }
 
     /**
@@ -308,6 +314,7 @@ public class HandleWorkflow {
                     blockStreamManager.confirmPendingWorkFinished();
                 }
                 logger.info(SYSTEM_ENTITIES_CREATED_MSG);
+                requireNonNull(systemEntitiesCreatedFlag).set(true);
             }
 
             // log start of event to transaction state log
@@ -389,8 +396,6 @@ public class HandleWorkflow {
         } else if (streamMode != BLOCKS && startsNewRecordFile) {
             blockRecordManager.startUserTransaction(consensusNow, state);
         }
-
-        //        logger.info("Functionality - {}", userTxn.functionality());
 
         var lastRecordManagerTime = streamMode == RECORDS ? blockRecordManager.consTimeOfLastHandledTxn() : null;
         final var handleOutput = executeTopLevel(userTxn, txnVersion, state);

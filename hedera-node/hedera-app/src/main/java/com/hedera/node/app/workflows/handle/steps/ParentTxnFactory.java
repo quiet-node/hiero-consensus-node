@@ -78,14 +78,20 @@ import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Singleton
 public class ParentTxnFactory {
+    private static final Logger log = LogManager.getLogger(ParentTxnFactory.class);
 
     private final ConfigProvider configProvider;
     private final KVStateChangeListener kvStateChangeListener;
@@ -106,6 +112,9 @@ public class ParentTxnFactory {
     private final ChildDispatchFactory childDispatchFactory;
     private final TransactionChecker transactionChecker;
 
+    @Nullable
+    private final AtomicBoolean systemEntitiesCreatedFlag;
+
     @Inject
     public ParentTxnFactory(
             @NonNull final ConfigProvider configProvider,
@@ -124,7 +133,8 @@ public class ParentTxnFactory {
             @NonNull final BlockStreamManager blockStreamManager,
             @NonNull final ChildDispatchFactory childDispatchFactory,
             @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory,
-            @NonNull final TransactionChecker transactionChecker) {
+            @NonNull final TransactionChecker transactionChecker,
+            @Nullable final AtomicBoolean systemEntitiesCreatedFlag) {
         this.configProvider = requireNonNull(configProvider);
         this.kvStateChangeListener = requireNonNull(kvStateChangeListener);
         this.boundaryStateChangeListener = requireNonNull(boundaryStateChangeListener);
@@ -146,6 +156,7 @@ public class ParentTxnFactory {
                 .streamMode();
         this.softwareVersionFactory = softwareVersionFactory;
         this.transactionChecker = requireNonNull(transactionChecker);
+        this.systemEntitiesCreatedFlag = systemEntitiesCreatedFlag;
     }
 
     /**
@@ -186,7 +197,11 @@ public class ParentTxnFactory {
         final var readableStoreFactory = new ReadableStoreFactory(stack, softwareVersionFactory);
         final var preHandleResult = preHandleWorkflow.getCurrentPreHandleResult(
                 creatorInfo, platformTxn, readableStoreFactory, stateSignatureTxnCallback);
-        final var txnInfo = requireNonNull(preHandleResult.txInfo());
+        final var txnInfo = preHandleResult.txInfo();
+        if (txnInfo == null) {
+            log.error("Node {} submitted an unparseable transaction {}", creatorInfo.nodeId(), platformTxn);
+            return null;
+        }
         if (txnInfo.functionality() == STATE_SIGNATURE_TRANSACTION) {
             return null;
         }
@@ -425,6 +440,21 @@ public class ParentTxnFactory {
             @NonNull final AccountID payerId,
             @NonNull final Configuration config,
             @NonNull final ReadableStoreFactory readableStoreFactory) {
+        // Until system entities exist, we can skip everything here
+        if (systemEntitiesCreatedFlag != null && !systemEntitiesCreatedFlag.get()) {
+            return new PreHandleResult(
+                    payerId,
+                    null,
+                    SO_FAR_SO_GOOD,
+                    OK,
+                    getTxnInfoFrom(payerId, body),
+                    Set.of(),
+                    Set.of(),
+                    Set.of(),
+                    Map.of(),
+                    null,
+                    0);
+        }
         try {
             final var pureChecksContext = new PureChecksContextImpl(body, dispatcher);
             dispatcher.dispatchPureChecks(pureChecksContext);

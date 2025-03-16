@@ -10,6 +10,7 @@ import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategor
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.USER;
 import static com.hedera.node.app.state.HederaRecordCache.DuplicateCheckResult.NO_DUPLICATE;
 import static com.hedera.node.app.workflows.handle.dispatch.ValidationResult.newCreatorError;
+import static com.hedera.node.app.workflows.handle.dispatch.ValidationResult.newGenesisWaiver;
 import static com.hedera.node.app.workflows.handle.dispatch.ValidationResult.newPayerDuplicateError;
 import static com.hedera.node.app.workflows.handle.dispatch.ValidationResult.newPayerUniqueError;
 import static com.hedera.node.app.workflows.prehandle.PreHandleResult.Status.SO_FAR_SO_GOOD;
@@ -30,6 +31,7 @@ import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.node.app.workflows.handle.Dispatch;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -44,6 +46,9 @@ public class DispatchValidator {
     private final TransactionChecker transactionChecker;
     private final AppFeeCharging feeCharging;
 
+    @Nullable
+    private final AtomicBoolean systemEntitiesCreatedFlag;
+
     /**
      * Creates an error reporter with the given dependencies.
      *
@@ -54,10 +59,12 @@ public class DispatchValidator {
     public DispatchValidator(
             @NonNull final HederaRecordCache recordCache,
             @NonNull final TransactionChecker transactionChecker,
-            @NonNull final AppFeeCharging feeCharging) {
+            @NonNull final AppFeeCharging feeCharging,
+            @Nullable final AtomicBoolean systemEntitiesCreatedFlag) {
         this.recordCache = requireNonNull(recordCache);
         this.transactionChecker = requireNonNull(transactionChecker);
         this.feeCharging = requireNonNull(feeCharging);
+        this.systemEntitiesCreatedFlag = systemEntitiesCreatedFlag;
     }
 
     /**
@@ -69,6 +76,9 @@ public class DispatchValidator {
      * @return the error report
      */
     public FeeCharging.Validation validateFeeChargingScenario(@NonNull final Dispatch dispatch) {
+        if (systemEntitiesCreatedFlag != null && !systemEntitiesCreatedFlag.get()) {
+            return newGenesisWaiver(dispatch.creatorInfo().accountId());
+        }
         final var creatorError = creatorErrorIfKnown(dispatch);
         if (creatorError != null) {
             return newCreatorError(dispatch.creatorInfo().accountId(), creatorError);

@@ -160,6 +160,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -1068,6 +1069,12 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
 
     public BoundaryStateChangeListener boundaryStateChangeListener() {
         return boundaryStateChangeListener;
+    }
+
+    public boolean systemEntitiesCreated() {
+        return Optional.ofNullable(daggerApp.systemEntitiesCreationFlag())
+                .map(AtomicBoolean::get)
+                .orElse(true);
     }
 
     @Override
