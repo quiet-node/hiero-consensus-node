@@ -283,6 +283,11 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
         }
     }
 
+    /**
+     * Handles an empty round to trigger system work like genesis entity creations.
+     */
+    protected abstract void handleEmptyRound();
+
     protected abstract TransactionResponse submit(
             @NonNull Transaction transaction, @NonNull AccountID nodeAccountId, @NonNull SemanticVersion version);
 

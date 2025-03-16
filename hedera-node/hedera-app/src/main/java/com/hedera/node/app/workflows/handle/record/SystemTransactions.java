@@ -58,6 +58,7 @@ import com.hedera.node.app.service.file.impl.FileServiceImpl;
 import com.hedera.node.app.service.file.impl.schemas.V0490FileSchema;
 import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.token.TokenService;
+import com.hedera.node.app.service.token.impl.BlocklistParser;
 import com.hedera.node.app.spi.AppContext;
 import com.hedera.node.app.spi.workflows.SystemContext;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
@@ -124,6 +125,7 @@ public class SystemTransactions {
     private static final EnumSet<ResponseCodeEnum> SUCCESSES =
             EnumSet.of(SUCCESS, SUCCESS_BUT_MISSING_EXPECTED_OPERATION);
 
+    private final BlocklistParser blocklistParser = new BlocklistParser();
     private final AtomicInteger nextDispatchNonce = new AtomicInteger(1);
     private final FileServiceImpl fileService;
     private final ParentTxnFactory parentTxnFactory;
@@ -241,6 +243,19 @@ public class SystemTransactions {
                                     .build())
                             .build(),
                     i);
+        }
+        // If requested, create accounts with aliases from the blocklist
+        if (accountsConfig.blocklistEnabled()) {
+            for (final var info : blocklistParser.parse(accountsConfig.blocklistResource())) {
+                systemContext.dispatchAdmin(b -> b.cryptoCreateAccount(CryptoCreateTransactionBody.newBuilder()
+                        .key(systemKey)
+                        .autoRenewPeriod(systemAutoRenewPeriod)
+                        .receiverSigRequired(true)
+                        .declineReward(true)
+                        .alias(info.evmAddress())
+                        .memo(info.memo())
+                        .build()));
+            }
         }
 
         final var nodeStore = new ReadableStoreFactory(state, softwareVersionFactory).getStore(ReadableNodeStore.class);
@@ -481,7 +496,7 @@ public class SystemTransactions {
                 if (streamMode != RECORDS) {
                     handleOutput.blockRecordSourceOrThrow().forEachItem(blockStreamManager::writeItem);
                     if (firstHandled.compareAndSet(true, false)) {
-                        blockStreamManager.setRoundFirstUserTransactionTime(now);
+                        blockStreamManager.setRoundFirstTransactionTime(now);
                     }
                 }
             }

@@ -19,6 +19,7 @@ import com.hederahashgraph.api.proto.java.TransactionResponse;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
 import com.swirlds.platform.system.Platform;
+import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.events.ConsensusEvent;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
@@ -48,6 +49,14 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
     public ConcurrentEmbeddedHedera(@NonNull final EmbeddedNode node) {
         super(node);
         platform = new ConcurrentFakePlatform(executorService, metrics);
+    }
+
+    @Override
+    protected void handleEmptyRound() {
+        final var round = platform.emptyConsensusRound();
+        hedera.handleWorkflow().handleRound(state, round, NOOP_STATE_SIG_CALLBACK);
+        hedera.onSealConsensusRound(round, state);
+        notifyStateHashed(round.getRoundNum());
     }
 
     @Override
@@ -134,6 +143,13 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
         public boolean createTransaction(@NonNull byte[] transaction) {
             return queue.add(new FakeEvent(
                     defaultNodeId, now(), version.getPbjSemanticVersion(), createAppPayloadWrapper(transaction)));
+        }
+
+        /**
+         * Creates an empty consensus round.
+         */
+        private Round emptyConsensusRound() {
+            return new FakeRound(roundNo.getAndIncrement(), requireNonNull(roster), List.of());
         }
 
         /**

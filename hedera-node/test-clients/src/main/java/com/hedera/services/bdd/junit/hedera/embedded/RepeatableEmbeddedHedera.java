@@ -156,6 +156,14 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
         this.roundDuration = requireNonNull(roundDuration);
     }
 
+    @Override
+    protected void handleEmptyRound() {
+        final var round = platform.emptyConsensusRound();
+        hedera.handleWorkflow().handleRound(state, round, handleStateSignatureCallback);
+        hedera.onSealConsensusRound(round, state);
+        notifyStateHashed(round.getRoundNum());
+    }
+
     /**
      * Executes the transaction in the last-created event within its own round.
      */
@@ -188,6 +196,11 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
         @Override
         public void start() {
             // No-op
+        }
+
+        private Round emptyConsensusRound() {
+            time.tick(roundDuration);
+            return new FakeRound(roundNo.getAndIncrement(), requireNonNull(roster), List.of());
         }
 
         private Round nextConsensusRound() {
