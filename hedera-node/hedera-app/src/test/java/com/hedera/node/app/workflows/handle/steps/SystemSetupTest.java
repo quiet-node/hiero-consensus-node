@@ -1,11 +1,32 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle.steps;
 
+import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_CREATE;
+import static com.hedera.hapi.node.base.HederaFunctionality.NODE_CREATE;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
+import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
+import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.endpointFor;
+import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.parseFeeSchedules;
+import static com.hedera.node.app.spi.workflows.record.StreamBuilder.transactionWith;
+import static com.hedera.node.app.workflows.handle.record.SystemSetup.NODE_COMPARATOR;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.verify;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoInteractions;
+
 import com.hedera.hapi.node.addressbook.NodeCreateTransactionBody;
 import com.hedera.hapi.node.base.AccountAmount;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.CurrentAndNextFeeSchedule;
 import com.hedera.hapi.node.base.Key;
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.ServicesConfigurationList;
 import com.hedera.hapi.node.base.Setting;
 import com.hedera.hapi.node.base.Timestamp;
@@ -47,16 +68,9 @@ import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.lifecycle.EntityIdFactory;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -65,26 +79,14 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.Consumer;
-
-import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_CREATE;
-import static com.hedera.hapi.node.base.HederaFunctionality.NODE_CREATE;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
-import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
-import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.endpointFor;
-import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.parseFeeSchedules;
-import static com.hedera.node.app.spi.workflows.record.StreamBuilder.transactionWith;
-import static com.hedera.node.app.workflows.handle.record.SystemSetup.NODE_COMPARATOR;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.verify;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verifyNoInteractions;
+import java.util.function.Function;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith({MockitoExtension.class, LogCaptureExtension.class})
 class SystemSetupTest {
@@ -163,24 +165,33 @@ class SystemSetupTest {
 
     @Mock
     private NetworkInfo networkInfo;
-    @Mock
-    private StakePeriodChanges stakePeriodChanges;
+
     @Mock
     private DispatchProcessor dispatchProcessor;
+
     @Mock
     private ConfigProvider configProvider;
+
     @Mock
     private AppContext appContext;
+
     @Mock
     private EntityIdFactory idFactory;
+
     @Mock
     private BlockRecordManager blockRecordManager;
+
     @Mock
     private BlockStreamManager blockStreamManager;
+
     @Mock
     private ExchangeRateManager exchangeRateManager;
+
     @Mock
     private HederaRecordCache recordCache;
+
+    @Mock
+    private Function<SemanticVersion, SoftwareVersion> softwareVersionFactory;
 
     @LoggingSubject
     private SystemSetup subject;
@@ -208,13 +219,13 @@ class SystemSetupTest {
                 syntheticNodeCreator,
                 networkInfo,
                 configProvider,
-                stakePeriodChanges,
                 dispatchProcessor,
                 appContext,
                 blockRecordManager,
                 blockStreamManager,
                 exchangeRateManager,
-                recordCache);
+                recordCache,
+                softwareVersionFactory);
     }
 
     @Test

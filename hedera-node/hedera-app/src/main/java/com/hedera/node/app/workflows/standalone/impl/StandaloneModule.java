@@ -17,11 +17,10 @@ import dagger.Module;
 import dagger.Provides;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
-import javax.inject.Singleton;
 import java.time.InstantSource;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntSupplier;
+import javax.inject.Singleton;
 
 @Module
 public interface StandaloneModule {

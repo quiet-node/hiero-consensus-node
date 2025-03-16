@@ -10,9 +10,8 @@ import dagger.Module;
 import dagger.Provides;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
-import javax.inject.Singleton;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.inject.Singleton;
 
 /**
  * Dagger module for all workflows
@@ -25,10 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
             QueryWorkflowInjectionModule.class
         })
 public interface WorkflowsInjectionModule {
-        @Provides
-        @Nullable
-        @Singleton
-        static AtomicBoolean provideMaybeSystemEntitiesCreatedFlag(@NonNull final InitTrigger initTrigger) {
-                return initTrigger == InitTrigger.GENESIS ? new AtomicBoolean(false) : null;
-        }
+    @Provides
+    @Nullable
+    @Singleton
+    static AtomicBoolean provideMaybeSystemEntitiesCreatedFlag(@NonNull final InitTrigger initTrigger) {
+        return initTrigger == InitTrigger.GENESIS ? new AtomicBoolean(false) : null;
+    }
 }

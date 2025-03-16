@@ -1,6 +1,30 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle;
 
+import static com.hedera.hapi.node.base.ResponseCodeEnum.BUSY;
+import static com.hedera.hapi.util.HapiUtils.asTimestamp;
+import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.GENESIS_WORK;
+import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
+import static com.hedera.node.app.records.schemas.V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
+import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartEvent;
+import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartRound;
+import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransaction;
+import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP2;
+import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP3;
+import static com.hedera.node.app.state.merkle.VersionUtils.isSoOrdered;
+import static com.hedera.node.app.workflows.handle.TransactionType.GENESIS_TRANSACTION;
+import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
+import static com.hedera.node.app.workflows.handle.TransactionType.POST_UPGRADE_TRANSACTION;
+import static com.hedera.node.app.workflows.handle.steps.StakePeriodChanges.isNextSecond;
+import static com.hedera.node.config.types.StreamMode.BLOCKS;
+import static com.hedera.node.config.types.StreamMode.BOTH;
+import static com.hedera.node.config.types.StreamMode.RECORDS;
+import static com.swirlds.platform.system.InitTrigger.EVENT_STREAM_RECOVERY;
+import static com.swirlds.platform.system.status.PlatformStatus.ACTIVE;
+import static com.swirlds.state.lifecycle.HapiUtils.SEMANTIC_VERSION_COMPARATOR;
+import static java.util.Objects.requireNonNull;
+
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.input.EventHeader;
 import com.hedera.hapi.block.stream.input.RoundHeader;
@@ -72,39 +96,15 @@ import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import static com.hedera.hapi.node.base.ResponseCodeEnum.BUSY;
-import static com.hedera.hapi.util.HapiUtils.asTimestamp;
-import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
-import static com.hedera.node.app.records.schemas.V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
-import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartEvent;
-import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartRound;
-import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransaction;
-import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP2;
-import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP3;
-import static com.hedera.node.app.state.merkle.VersionUtils.isSoOrdered;
-import static com.hedera.node.app.workflows.handle.TransactionType.GENESIS_TRANSACTION;
-import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
-import static com.hedera.node.app.workflows.handle.TransactionType.POST_UPGRADE_TRANSACTION;
-import static com.hedera.node.app.workflows.handle.steps.StakePeriodChanges.isNextSecond;
-import static com.hedera.node.config.types.StreamMode.BLOCKS;
-import static com.hedera.node.config.types.StreamMode.BOTH;
-import static com.hedera.node.config.types.StreamMode.RECORDS;
-import static com.swirlds.platform.system.InitTrigger.EVENT_STREAM_RECOVERY;
-import static com.swirlds.platform.system.status.PlatformStatus.ACTIVE;
-import static com.swirlds.state.lifecycle.HapiUtils.SEMANTIC_VERSION_COMPARATOR;
-import static java.util.Objects.requireNonNull;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * The handle workflow that is responsible for handling the next {@link Round} of transactions.
@@ -293,6 +293,21 @@ public class HandleWorkflow {
                 stateSignatureTxnCallback.accept(scopedTxn);
             };
 
+            final boolean isGenesis =
+                    switch (streamMode) {
+                        case RECORDS -> blockRecordManager
+                                .consTimeOfLastHandledTxn()
+                                .equals(Instant.EPOCH);
+                        case BLOCKS, BOTH -> blockStreamManager.pendingWork() == GENESIS_WORK;
+                    };
+            if (isGenesis) {
+                logger.info("Doing genesis setup @ {}", round.getConsensusTimestamp());
+                systemSetup.doGenesisSetup(round.getConsensusTimestamp(), state);
+                if (streamMode != RECORDS) {
+                    blockStreamManager.confirmPendingWorkFinished();
+                }
+            }
+
             // log start of event to transaction state log
             logStartEvent(event, creator);
             // handle each transaction of the event
@@ -362,7 +377,6 @@ public class HandleWorkflow {
         }
         if (streamMode != RECORDS) {
             type = switch (blockStreamManager.pendingWork()) {
-                case GENESIS_WORK -> GENESIS_TRANSACTION;
                 case POST_UPGRADE_WORK -> POST_UPGRADE_TRANSACTION;
                 default -> ORDINARY_TRANSACTION;};
         }
@@ -585,11 +599,7 @@ public class HandleWorkflow {
                 // Flushes the BUSY builder to the stream, no other side effects
                 parentTxn.stack().commitTransaction(parentTxn.baseBuilder());
             } else {
-                if (parentTxn.type() == GENESIS_TRANSACTION) {
-                    // (FUTURE) Once all genesis setup is done via dispatch, remove this method
-                    systemSetup.externalizeInitSideEffects(
-                            parentTxn.tokenContextImpl(), exchangeRateManager.exchangeRates());
-                } else if (parentTxn.type() == POST_UPGRADE_TRANSACTION) {
+                if (parentTxn.type() == POST_UPGRADE_TRANSACTION) {
                     // Since we track node stake metadata separately from the future address book (FAB),
                     // we need to update that stake metadata from any node additions or deletions that
                     // just took effect; it would be nice to unify the FAB and stake metadata in the future.
@@ -602,7 +612,8 @@ public class HandleWorkflow {
                     //   will come before the base builder's changes in the block stream
                     final var writableTokenStates = state.getWritableStates(TokenService.NAME);
                     final var writableEntityIdStates = state.getWritableStates(EntityIdService.NAME);
-                    final int maxPrecedingRecords = parentTxn.config()
+                    final int maxPrecedingRecords = parentTxn
+                            .config()
                             .getConfigData(ConsensusConfig.class)
                             .handleMaxPrecedingRecords();
                     doStreamingKVChanges(
@@ -627,14 +638,9 @@ public class HandleWorkflow {
                 final var dispatch = parentTxnFactory.createDispatch(parentTxn, exchangeRateManager.exchangeRates());
                 advanceTimeFor(parentTxn, dispatch);
                 logPreDispatch(parentTxn);
-                if (parentTxn.type() != ORDINARY_TRANSACTION) {
-                    if (parentTxn.type() == GENESIS_TRANSACTION) {
-                        logger.info("Doing genesis setup @ {}", parentTxn.consensusNow());
-                        systemSetup.doGenesisSetup(dispatch);
-                    } else if (parentTxn.type() == POST_UPGRADE_TRANSACTION) {
-                        logger.info("Doing post-upgrade setup @ {}", parentTxn.consensusNow());
-                        systemSetup.doPostUpgradeSetup(dispatch);
-                    }
+                if (parentTxn.type() == POST_UPGRADE_TRANSACTION) {
+                    logger.info("Doing post-upgrade setup @ {}", parentTxn.consensusNow());
+                    systemSetup.doPostUpgradeSetup(dispatch);
                     // Only for 0.59.0 we need to update the entity ID store entity counts
                     systemSetup.initializeEntityCounts(dispatch);
                     if (streamMode != RECORDS) {
@@ -655,7 +661,8 @@ public class HandleWorkflow {
             return handleOutput;
         } catch (final Exception e) {
             logger.error("{} - exception thrown while handling user transaction", ALERT_MESSAGE, e);
-            return HandleOutput.failInvalidStreamItems(parentTxn, exchangeRateManager.exchangeRates(), streamMode, recordCache);
+            return HandleOutput.failInvalidStreamItems(
+                    parentTxn, exchangeRateManager.exchangeRates(), streamMode, recordCache);
         }
     }
 
@@ -697,7 +704,8 @@ public class HandleWorkflow {
             return handleOutput;
         } catch (final Exception e) {
             logger.error("{} - exception thrown while handling scheduled transaction", ALERT_MESSAGE, e);
-            return HandleOutput.failInvalidStreamItems(scheduledTxn, exchangeRateManager.exchangeRates(), streamMode, recordCache);
+            return HandleOutput.failInvalidStreamItems(
+                    scheduledTxn, exchangeRateManager.exchangeRates(), streamMode, recordCache);
         }
     }
 
@@ -768,7 +776,8 @@ public class HandleWorkflow {
      * Updates the metrics for the handle workflow.
      */
     private void updateWorkflowMetrics(@NonNull final ParentTxn parentTxn) {
-        if (parentTxn.type() == GENESIS_TRANSACTION || parentTxn.consensusNow().getEpochSecond() > lastMetricUpdateSecond) {
+        if (parentTxn.type() == GENESIS_TRANSACTION
+                || parentTxn.consensusNow().getEpochSecond() > lastMetricUpdateSecond) {
             opWorkflowMetrics.switchConsensusSecond();
             lastMetricUpdateSecond = parentTxn.consensusNow().getEpochSecond();
         }
