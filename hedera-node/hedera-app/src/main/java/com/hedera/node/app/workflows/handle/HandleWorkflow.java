@@ -71,7 +71,7 @@ import com.hedera.node.app.throttle.ThrottleServiceManager;
 import com.hedera.node.app.workflows.OpWorkflowMetrics;
 import com.hedera.node.app.workflows.TransactionInfo;
 import com.hedera.node.app.workflows.handle.cache.CacheWarmer;
-import com.hedera.node.app.workflows.handle.record.SystemSetup;
+import com.hedera.node.app.workflows.handle.record.SystemTransactions;
 import com.hedera.node.app.workflows.handle.steps.HollowAccountCompletions;
 import com.hedera.node.app.workflows.handle.steps.ParentTxn;
 import com.hedera.node.app.workflows.handle.steps.ParentTxnFactory;
@@ -114,6 +114,7 @@ public class HandleWorkflow {
     private static final Logger logger = LogManager.getLogger(HandleWorkflow.class);
 
     public static final String ALERT_MESSAGE = "Possibly CATASTROPHIC failure";
+    public static final String SYSTEM_ENTITIES_CREATED_MSG = "System entities created";
 
     private final StreamMode streamMode;
     private final NetworkInfo networkInfo;
@@ -127,7 +128,7 @@ public class HandleWorkflow {
     private final SemanticVersion version;
     private final InitTrigger initTrigger;
     private final HollowAccountCompletions hollowAccountCompletions;
-    private final SystemSetup systemSetup;
+    private final SystemTransactions systemTransactions;
     private final StakeInfoHelper stakeInfoHelper;
     private final HederaRecordCache recordCache;
     private final ExchangeRateManager exchangeRateManager;
@@ -163,7 +164,7 @@ public class HandleWorkflow {
             @NonNull final SemanticVersion version,
             @NonNull final InitTrigger initTrigger,
             @NonNull final HollowAccountCompletions hollowAccountCompletions,
-            @NonNull final SystemSetup systemSetup,
+            @NonNull final SystemTransactions systemTransactions,
             @NonNull final StakeInfoHelper stakeInfoHelper,
             @NonNull final HederaRecordCache recordCache,
             @NonNull final ExchangeRateManager exchangeRateManager,
@@ -189,7 +190,7 @@ public class HandleWorkflow {
         this.version = requireNonNull(version);
         this.initTrigger = requireNonNull(initTrigger);
         this.hollowAccountCompletions = requireNonNull(hollowAccountCompletions);
-        this.systemSetup = requireNonNull(systemSetup);
+        this.systemTransactions = requireNonNull(systemTransactions);
         this.stakeInfoHelper = requireNonNull(stakeInfoHelper);
         this.recordCache = requireNonNull(recordCache);
         this.exchangeRateManager = requireNonNull(exchangeRateManager);
@@ -302,10 +303,11 @@ public class HandleWorkflow {
                     };
             if (isGenesis) {
                 logger.info("Doing genesis setup @ {}", round.getConsensusTimestamp());
-                systemSetup.doGenesisSetup(round.getConsensusTimestamp(), state);
+                systemTransactions.doGenesisSetup(round.getConsensusTimestamp(), state);
                 if (streamMode != RECORDS) {
                     blockStreamManager.confirmPendingWorkFinished();
                 }
+                logger.info(SYSTEM_ENTITIES_CREATED_MSG);
             }
 
             // log start of event to transaction state log
@@ -640,9 +642,9 @@ public class HandleWorkflow {
                 logPreDispatch(parentTxn);
                 if (parentTxn.type() == POST_UPGRADE_TRANSACTION) {
                     logger.info("Doing post-upgrade setup @ {}", parentTxn.consensusNow());
-                    systemSetup.doPostUpgradeSetup(dispatch);
+                    systemTransactions.doPostUpgradeSetup(dispatch);
                     // Only for 0.59.0 we need to update the entity ID store entity counts
-                    systemSetup.initializeEntityCounts(dispatch);
+                    systemTransactions.initializeEntityCounts(dispatch);
                     if (streamMode != RECORDS) {
                         blockStreamManager.confirmPendingWorkFinished();
                     }

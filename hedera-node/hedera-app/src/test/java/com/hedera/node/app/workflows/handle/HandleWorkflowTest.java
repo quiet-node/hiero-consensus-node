@@ -31,7 +31,7 @@ import com.hedera.node.app.throttle.ThrottleServiceManager;
 import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.app.workflows.OpWorkflowMetrics;
 import com.hedera.node.app.workflows.handle.cache.CacheWarmer;
-import com.hedera.node.app.workflows.handle.record.SystemSetup;
+import com.hedera.node.app.workflows.handle.record.SystemTransactions;
 import com.hedera.node.app.workflows.handle.steps.HollowAccountCompletions;
 import com.hedera.node.app.workflows.handle.steps.ParentTxnFactory;
 import com.hedera.node.app.workflows.handle.steps.StakePeriodChanges;
@@ -117,7 +117,7 @@ class HandleWorkflowTest {
     private HollowAccountCompletions hollowAccountCompletions;
 
     @Mock
-    private SystemSetup systemSetup;
+    private SystemTransactions systemTransactions;
 
     @Mock
     private HederaRecordCache recordCache;
@@ -211,7 +211,7 @@ class HandleWorkflowTest {
                 version,
                 initTrigger,
                 hollowAccountCompletions,
-                systemSetup,
+                systemTransactions,
                 stakeInfoHelper,
                 recordCache,
                 exchangeRateManager,

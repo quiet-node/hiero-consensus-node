@@ -78,6 +78,8 @@ import com.hedera.node.config.data.StakingConfig;
 import com.hedera.node.config.data.TokensConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -94,14 +96,20 @@ public class CryptoCreateHandler extends BaseCryptoHandler implements Transactio
 
     private final CryptoCreateValidator cryptoCreateValidator;
 
+    @Nullable
+    private final AtomicBoolean systemEntitiesCreatedFlag;
+
     /**
      * Constructs a {@link CryptoCreateHandler} with the given {@link CryptoCreateValidator} and {@link StakingValidator}.
      * @param cryptoCreateValidator the validator for the crypto create transaction
      */
     @Inject
-    public CryptoCreateHandler(@NonNull final CryptoCreateValidator cryptoCreateValidator) {
+    public CryptoCreateHandler(
+            @NonNull final CryptoCreateValidator cryptoCreateValidator,
+            @Nullable final AtomicBoolean systemEntitiesCreatedFlag) {
         this.cryptoCreateValidator =
                 requireNonNull(cryptoCreateValidator, "The supplied argument 'cryptoCreateValidator' must not be null");
+        this.systemEntitiesCreatedFlag = systemEntitiesCreatedFlag;
     }
 
     @Override
@@ -233,8 +241,9 @@ public class CryptoCreateHandler extends BaseCryptoHandler implements Transactio
         validateSemantics(context, accountStore, op);
 
         // Now that we have fully validated the transaction inputs, it is time to create an account!
-        // First, charge the payer for whatever initial balance there is.
-        if (op.initialBalance() > 0) {
+        // First, charge the payer for whatever initial balance there is, unless this dispatch is specifically
+        // to create system entities at genesis.
+        if (op.initialBalance() > 0 && (systemEntitiesCreatedFlag == null || systemEntitiesCreatedFlag.get())) {
             final var payer =
                     getIfUsable(context.payer(), accountStore, context.expiryValidator(), INVALID_PAYER_ACCOUNT_ID);
             final long newPayerBalance = payer.tinybarBalance() - op.initialBalance();
