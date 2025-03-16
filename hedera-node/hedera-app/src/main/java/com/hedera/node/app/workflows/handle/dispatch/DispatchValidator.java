@@ -4,7 +4,7 @@ package com.hedera.node.app.workflows.handle.dispatch;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.DUPLICATE_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_PAYER_SIGNATURE;
 import static com.hedera.hapi.util.HapiUtils.isHollow;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.BATCH;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.BATCH_INNER;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.USER;
@@ -77,7 +77,7 @@ public class DispatchValidator {
                     getPayerAccount(dispatch.readableStoreFactory(), dispatch.payerId(), dispatch.txnCategory());
             final var category = dispatch.txnCategory();
             // Check payer signature for all batch inner transactions, scheduled, and user transactions
-            final var requiresPayerSig = category == SCHEDULED || category == USER || category == BATCH;
+            final var requiresPayerSig = category == SCHEDULED || category == USER || category == BATCH_INNER;
             if (requiresPayerSig && !isHollow(payer)) {
                 // Skip payer verification for hollow accounts because ingest only submits valid signatures
                 // for hollow payers; and if an account is still hollow here, its alias cannot have changed
@@ -86,7 +86,7 @@ public class DispatchValidator {
                     return newCreatorError(dispatch.creatorInfo().accountId(), INVALID_PAYER_SIGNATURE);
                 }
             }
-            final var duplicateCheckResult = category != USER && category != NODE && category != BATCH
+            final var duplicateCheckResult = category != USER && category != NODE && category != BATCH_INNER
                     ? NO_DUPLICATE
                     : recordCache.hasDuplicate(
                             dispatch.txnInfo().txBody().transactionIDOrThrow(),
@@ -164,7 +164,7 @@ public class DispatchValidator {
      */
     @Nullable
     private ResponseCodeEnum getExpiryError(final @NonNull Dispatch dispatch) {
-        if (dispatch.txnCategory() != USER && dispatch.txnCategory() != NODE && dispatch.txnCategory() != BATCH) {
+        if (dispatch.txnCategory() != USER && dispatch.txnCategory() != NODE && dispatch.txnCategory() != BATCH_INNER) {
             return null;
         }
         try {
@@ -197,7 +197,7 @@ public class DispatchValidator {
         final var accountStore = storeFactory.getStore(ReadableAccountStore.class);
         final var account = accountStore.getAccountById(accountID);
         return switch (category) {
-            case USER, NODE, BATCH -> {
+            case USER, NODE, BATCH_INNER -> {
                 if (account == null || account.deleted() || account.smartContract()) {
                     throw new IllegalStateException("Category " + category
                             + " payer account should have resulted in failure upstream " + account);

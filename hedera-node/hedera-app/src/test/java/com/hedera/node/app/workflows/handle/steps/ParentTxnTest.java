@@ -69,7 +69,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class UserTxnTest {
+class ParentTxnTest {
     private static final long CONGESTION_MULTIPLIER = 2L;
     private static final Instant CONSENSUS_NOW = Instant.ofEpochSecond(1_234_567L, 890);
     private static final ConsensusTransaction PLATFORM_TXN = new TransactionWrapper(Bytes.EMPTY);
@@ -260,8 +260,8 @@ class UserTxnTest {
         assertEquals(0L, result.congestionPricingMultiplier());
     }
 
-    private UserTxnFactory createUserTxnFactory() {
-        return new UserTxnFactory(
+    private ParentTxnFactory createUserTxnFactory() {
+        return new ParentTxnFactory(
                 configProvider,
                 kvStateChangeListener,
                 boundaryStateChangeListener,

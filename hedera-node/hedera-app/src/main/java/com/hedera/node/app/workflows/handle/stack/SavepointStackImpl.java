@@ -1,23 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle.stack;
 
-import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.NO_SCHEDULING_ALLOWED_AFTER_SCHEDULED_RECURSION;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.RECURSIVE_SCHEDULING_LIMIT_REACHED;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.BATCH;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.CHILD;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.PRECEDING;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
-import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.USER;
-import static com.hedera.node.app.spi.workflows.record.StreamBuilder.ReversingBehavior.IRREVERSIBLE;
-import static com.hedera.node.app.spi.workflows.record.StreamBuilder.ReversingBehavior.REMOVABLE;
-import static com.hedera.node.app.spi.workflows.record.StreamBuilder.ReversingBehavior.REVERSIBLE;
-import static com.hedera.node.app.spi.workflows.record.StreamBuilder.TransactionCustomizer.NOOP_TRANSACTION_CUSTOMIZER;
-import static com.hedera.node.config.types.StreamMode.BLOCKS;
-import static com.hedera.node.config.types.StreamMode.RECORDS;
-import static java.util.Objects.requireNonNull;
-
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
@@ -51,6 +34,7 @@ import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -61,6 +45,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+
+import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.NO_SCHEDULING_ALLOWED_AFTER_SCHEDULED_RECURSION;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.RECURSIVE_SCHEDULING_LIMIT_REACHED;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.BATCH_INNER;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.CHILD;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.PRECEDING;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.USER;
+import static com.hedera.node.app.spi.workflows.record.StreamBuilder.ReversingBehavior.IRREVERSIBLE;
+import static com.hedera.node.app.spi.workflows.record.StreamBuilder.ReversingBehavior.REMOVABLE;
+import static com.hedera.node.app.spi.workflows.record.StreamBuilder.ReversingBehavior.REVERSIBLE;
+import static com.hedera.node.app.spi.workflows.record.StreamBuilder.TransactionCustomizer.NOOP_TRANSACTION_CUSTOMIZER;
+import static com.hedera.node.config.types.StreamMode.BLOCKS;
+import static com.hedera.node.config.types.StreamMode.RECORDS;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A stack of savepoints scoped to a dispatch. Each savepoint captures the state of the {@link State} at the time
@@ -193,6 +194,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
         this.roundStateChangeListener = null;
         setupFirstSavepoint(category);
         baseBuilder = peek().createBuilder(reversingBehavior, category, customizer, streamMode, true);
+        baseBuilder.markChild();
         presetIdsAllowed = false;
     }
 
@@ -545,7 +547,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             final var builder = builders.get(i);
             final var nonceOffset =
                     switch (builder.category()) {
-                        case USER, SCHEDULED, NODE, BATCH -> 0;
+                        case USER, SCHEDULED, NODE, BATCH_INNER -> 0;
                         case PRECEDING, CHILD -> nextNonceOffset++;
                     };
             final var txnId = builder.transactionID();
@@ -554,14 +556,14 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                 if (i > indexOfTopLevelRecord && isBatch) {
                     if (builder.category() == PRECEDING) {
                         for (int j = i + 1; j < n; j++) {
-                            if (builders.get(j).category() == BATCH) {
+                            if (builders.get(j).category() == BATCH_INNER) {
                                 idBuilder = builders.get(j).transactionID().copyBuilder();
                                 break;
                             }
                         }
                     } else if (builder.category() == CHILD) {
                         for (int j = i - 1; j > indexOfTopLevelRecord; j--) {
-                            if (builders.get(j).category() == BATCH) {
+                            if (builders.get(j).category() == BATCH_INNER) {
                                 idBuilder = builders.get(j).transactionID().copyBuilder();
                                 break;
                             }
@@ -580,7 +582,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             if (i > indexOfTopLevelRecord) {
                 switch (builder.category()) {
                     case SCHEDULED -> builder.exchangeRate(exchangeRates);
-                    case BATCH -> {
+                    case BATCH_INNER -> {
                         builder.parentConsensus(consensusTime).exchangeRate(null);
                         parentConsensusTime = consensusNow;
                     }

@@ -47,4 +47,13 @@ message EventTransaction {
       StateSignatureTransaction state_signature_transaction = 2;
   }
 
+  /**
+   * If true, a "child" transaction that lightweight block stream consumers can use to
+   * provide a more legible view of non-child transaction state changes. Note this
+   * is_child flag may be true even when the next TransactionResult item does not have a
+   * parent_consensus_timestamp set, since some "child" transactions logically precede
+   * the transaction that spawned them (e.g., a child account creation triggered by a
+   * transfer that sent value to an unused EVM address or alias).
+   */
+  bool is_child = 3;
 }

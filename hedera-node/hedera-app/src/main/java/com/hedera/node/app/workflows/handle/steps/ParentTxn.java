@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle.steps;
 
-import static com.hedera.node.app.workflows.handle.HandleWorkflow.initializeBuilderInfo;
-
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
@@ -16,10 +14,13 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
+
 import java.time.Instant;
 import java.util.function.Consumer;
 
-public record UserTxn(
+import static com.hedera.node.app.workflows.handle.HandleWorkflow.initializeBuilderInfo;
+
+public record ParentTxn(
         @NonNull TransactionType type,
         @NonNull HederaFunctionality functionality,
         @NonNull Instant consensusNow,

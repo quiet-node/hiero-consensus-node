@@ -1,6 +1,95 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle.record;
 
+import com.hedera.hapi.node.addressbook.NodeCreateTransactionBody;
+import com.hedera.hapi.node.addressbook.NodeUpdateTransactionBody;
+import com.hedera.hapi.node.base.AccountID;
+import com.hedera.hapi.node.base.CurrentAndNextFeeSchedule;
+import com.hedera.hapi.node.base.Duration;
+import com.hedera.hapi.node.base.Key;
+import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.hapi.node.base.TransactionID;
+import com.hedera.hapi.node.base.TransferList;
+import com.hedera.hapi.node.state.addressbook.Node;
+import com.hedera.hapi.node.state.common.EntityNumber;
+import com.hedera.hapi.node.state.entity.EntityCounts;
+import com.hedera.hapi.node.state.token.Account;
+import com.hedera.hapi.node.token.CryptoCreateTransactionBody;
+import com.hedera.hapi.node.transaction.ExchangeRateSet;
+import com.hedera.hapi.node.transaction.TransactionBody;
+import com.hedera.node.app.blocks.BlockStreamManager;
+import com.hedera.node.app.fees.ExchangeRateManager;
+import com.hedera.node.app.ids.EntityIdService;
+import com.hedera.node.app.records.BlockRecordManager;
+import com.hedera.node.app.service.addressbook.AddressBookService;
+import com.hedera.node.app.service.addressbook.ReadableNodeStore;
+import com.hedera.node.app.service.addressbook.impl.records.NodeCreateStreamBuilder;
+import com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema;
+import com.hedera.node.app.service.consensus.ConsensusService;
+import com.hedera.node.app.service.contract.ContractService;
+import com.hedera.node.app.service.file.impl.FileServiceImpl;
+import com.hedera.node.app.service.file.impl.schemas.V0490FileSchema;
+import com.hedera.node.app.service.networkadmin.impl.schemas.SyntheticNodeCreator;
+import com.hedera.node.app.service.schedule.ScheduleService;
+import com.hedera.node.app.service.token.TokenService;
+import com.hedera.node.app.service.token.impl.schemas.SyntheticAccountCreator;
+import com.hedera.node.app.service.token.records.GenesisAccountStreamBuilder;
+import com.hedera.node.app.service.token.records.TokenContext;
+import com.hedera.node.app.spi.AppContext;
+import com.hedera.node.app.spi.workflows.SystemContext;
+import com.hedera.node.app.spi.workflows.record.StreamBuilder;
+import com.hedera.node.app.state.HederaRecordCache;
+import com.hedera.node.app.state.recordcache.LegacyListRecordSource;
+import com.hedera.node.app.workflows.handle.Dispatch;
+import com.hedera.node.app.workflows.handle.DispatchProcessor;
+import com.hedera.node.app.workflows.handle.HandleOutput;
+import com.hedera.node.app.workflows.handle.steps.ParentTxnFactory;
+import com.hedera.node.app.workflows.handle.steps.StakePeriodChanges;
+import com.hedera.node.config.ConfigProvider;
+import com.hedera.node.config.data.AccountsConfig;
+import com.hedera.node.config.data.BlockStreamConfig;
+import com.hedera.node.config.data.FilesConfig;
+import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.config.data.NetworkAdminConfig;
+import com.hedera.node.config.data.NodesConfig;
+import com.hedera.node.config.data.SchedulingConfig;
+import com.hedera.node.config.types.StreamMode;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.config.api.Configuration;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
+import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.system.InitTrigger;
+import com.swirlds.platform.system.Platform;
+import com.swirlds.platform.system.SoftwareVersion;
+import com.swirlds.state.State;
+import com.swirlds.state.lifecycle.EntityIdFactory;
+import com.swirlds.state.lifecycle.info.NetworkInfo;
+import com.swirlds.state.lifecycle.info.NodeInfo;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
 import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.NODE_CREATE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
@@ -27,78 +116,16 @@ import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TO
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TOKEN_RELS_KEY;
 import static com.hedera.node.app.service.token.impl.schemas.V0530TokenSchema.AIRDROPS_KEY;
 import static com.hedera.node.app.spi.workflows.DispatchOptions.independentDispatch;
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
 import static com.hedera.node.app.spi.workflows.record.StreamBuilder.transactionWith;
 import static com.hedera.node.app.util.FileUtilities.createFileID;
+import static com.hedera.node.app.workflows.handle.HandleOutput.failInvalidStreamItems;
+import static com.hedera.node.app.workflows.handle.HandleWorkflow.ALERT_MESSAGE;
+import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
+import static com.hedera.node.config.types.StreamMode.BLOCKS;
+import static com.hedera.node.config.types.StreamMode.BOTH;
+import static com.hedera.node.config.types.StreamMode.RECORDS;
 import static java.util.Objects.requireNonNull;
-
-import com.hedera.hapi.node.addressbook.NodeCreateTransactionBody;
-import com.hedera.hapi.node.addressbook.NodeUpdateTransactionBody;
-import com.hedera.hapi.node.base.AccountID;
-import com.hedera.hapi.node.base.CurrentAndNextFeeSchedule;
-import com.hedera.hapi.node.base.Duration;
-import com.hedera.hapi.node.base.Key;
-import com.hedera.hapi.node.base.ResponseCodeEnum;
-import com.hedera.hapi.node.base.TransactionID;
-import com.hedera.hapi.node.base.TransferList;
-import com.hedera.hapi.node.state.addressbook.Node;
-import com.hedera.hapi.node.state.common.EntityNumber;
-import com.hedera.hapi.node.state.entity.EntityCounts;
-import com.hedera.hapi.node.state.token.Account;
-import com.hedera.hapi.node.token.CryptoCreateTransactionBody;
-import com.hedera.hapi.node.transaction.ExchangeRateSet;
-import com.hedera.hapi.node.transaction.TransactionBody;
-import com.hedera.node.app.ids.EntityIdService;
-import com.hedera.node.app.service.addressbook.AddressBookService;
-import com.hedera.node.app.service.addressbook.ReadableNodeStore;
-import com.hedera.node.app.service.addressbook.impl.records.NodeCreateStreamBuilder;
-import com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema;
-import com.hedera.node.app.service.consensus.ConsensusService;
-import com.hedera.node.app.service.contract.ContractService;
-import com.hedera.node.app.service.file.impl.FileServiceImpl;
-import com.hedera.node.app.service.file.impl.schemas.V0490FileSchema;
-import com.hedera.node.app.service.networkadmin.impl.schemas.SyntheticNodeCreator;
-import com.hedera.node.app.service.schedule.ScheduleService;
-import com.hedera.node.app.service.token.TokenService;
-import com.hedera.node.app.service.token.impl.schemas.SyntheticAccountCreator;
-import com.hedera.node.app.service.token.records.GenesisAccountStreamBuilder;
-import com.hedera.node.app.service.token.records.TokenContext;
-import com.hedera.node.app.spi.workflows.SystemContext;
-import com.hedera.node.app.spi.workflows.record.StreamBuilder;
-import com.hedera.node.app.workflows.handle.Dispatch;
-import com.hedera.node.config.data.AccountsConfig;
-import com.hedera.node.config.data.FilesConfig;
-import com.hedera.node.config.data.HederaConfig;
-import com.hedera.node.config.data.NetworkAdminConfig;
-import com.hedera.node.config.data.NodesConfig;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.config.api.Configuration;
-import com.swirlds.platform.state.ConsensusStateEventHandler;
-import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.system.InitTrigger;
-import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.SoftwareVersion;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.util.Comparator;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * This class is responsible for storing the system accounts created during node startup, and then creating
@@ -129,18 +156,53 @@ public class SystemSetup {
     private final FileServiceImpl fileService;
     private final SyntheticAccountCreator syntheticAccountCreator;
     private final SyntheticNodeCreator syntheticNodeCreator;
+    private final ParentTxnFactory parentTxnFactory;
+    private final StreamMode streamMode;
+    private final NetworkInfo networkInfo;
+    private final StakePeriodChanges stakePeriodChanges;
+    private final DispatchProcessor dispatchProcessor;
+    private final ConfigProvider configProvider;
+    private final EntityIdFactory idFactory;
+    private final BlockRecordManager blockRecordManager;
+    private final BlockStreamManager blockStreamManager;
+    private final ExchangeRateManager exchangeRateManager;
+    private final HederaRecordCache recordCache;
 
     /**
      * Constructs a new {@link SystemSetup}.
      */
     @Inject
     public SystemSetup(
+            @NonNull final ParentTxnFactory parentTxnFactory,
             @NonNull final FileServiceImpl fileService,
             @NonNull final SyntheticAccountCreator syntheticAccountCreator,
-            @NonNull final SyntheticNodeCreator syntheticNodeCreator) {
+            @NonNull final SyntheticNodeCreator syntheticNodeCreator,
+            @NonNull final NetworkInfo networkInfo,
+            @NonNull final ConfigProvider configProvider,
+            @NonNull final StakePeriodChanges stakePeriodChanges,
+            @NonNull final DispatchProcessor dispatchProcessor,
+            @NonNull final AppContext appContext,
+            @NonNull final BlockRecordManager blockRecordManager,
+            @NonNull final BlockStreamManager blockStreamManager,
+            @NonNull final ExchangeRateManager exchangeRateManager,
+            @NonNull final HederaRecordCache recordCache) {
         this.fileService = requireNonNull(fileService);
+        this.parentTxnFactory = requireNonNull(parentTxnFactory);
         this.syntheticAccountCreator = requireNonNull(syntheticAccountCreator);
         this.syntheticNodeCreator = requireNonNull(syntheticNodeCreator);
+        this.networkInfo = networkInfo;
+        this.stakePeriodChanges = stakePeriodChanges;
+        this.dispatchProcessor = dispatchProcessor;
+        this.configProvider = requireNonNull(configProvider);
+        this.streamMode = configProvider
+                .getConfiguration()
+                .getConfigData(BlockStreamConfig.class)
+                .streamMode();
+        this.idFactory = appContext.idFactory();
+        this.blockRecordManager = requireNonNull(blockRecordManager);
+        this.blockStreamManager = requireNonNull(blockStreamManager);
+        this.exchangeRateManager = requireNonNull(exchangeRateManager);
+        this.recordCache = requireNonNull(recordCache);
     }
 
     /**
@@ -354,6 +416,132 @@ public class SystemSetup {
                 log.error("Failed to read update file at {}", path.toAbsolutePath(), e);
             }
             return false;
+        }
+    }
+
+    private SystemContext newSystemContext(@NonNull final Instant now, @NonNull final State state) {
+        final var config = configProvider.getConfiguration();
+        // Support dispatching at least as many transactions as there are system entities
+        final var firstConsTime = now.minusNanos(
+                        config.getConfigData(SchedulingConfig.class).consTimeSeparationNanos())
+                .minusNanos(config.getConfigData(HederaConfig.class).firstUserEntity());
+        final AtomicReference<Instant> nextConsTime = new AtomicReference<>(firstConsTime);
+        final var systemAdminId = idFactory.newAccountId(
+                config.getConfigData(AccountsConfig.class).systemAdmin());
+        // Use whatever node happens to be first in the address book as the "creator"
+        final var creatorInfo = networkInfo.addressBook().getFirst();
+        final AtomicBoolean firstHandled = new AtomicBoolean(true);
+
+        return new SystemContext() {
+            @Override
+            public void dispatchCreation(@NonNull final TransactionBody body, final long entityNum) {
+                requireNonNull(body);
+                // System dispatches never have child transactions, so one nano is enough to separate them
+                final var now = nextConsTime.getAndUpdate(then -> then.plusNanos(1));
+                if (streamMode == BOTH) {
+                    blockRecordManager.startUserTransaction(now, state);
+                }
+                final var handleOutput = executeSystem(state, now, creatorInfo, systemAdminId, body, entityNum);
+                if (streamMode != BLOCKS) {
+                    final var records =
+                            ((LegacyListRecordSource) handleOutput.recordSourceOrThrow()).precomputedRecords();
+                    blockRecordManager.endUserTransaction(records.stream(), state);
+                }
+                if (streamMode != RECORDS) {
+                    handleOutput.blockRecordSourceOrThrow().forEachItem(blockStreamManager::writeItem);
+                    if (firstHandled.compareAndSet(true, false)) {
+                        blockStreamManager.setRoundFirstUserTransactionTime(now);
+                    }
+                }
+            }
+
+            @Override
+            public void dispatchAdmin(@NonNull final Consumer<TransactionBody.Builder> spec) {
+                requireNonNull(spec);
+            }
+
+            @NonNull
+            @Override
+            public Configuration configuration() {
+                return config;
+            }
+
+            @NonNull
+            @Override
+            public NetworkInfo networkInfo() {
+                return networkInfo;
+            }
+
+            @NonNull
+            @Override
+            public Instant now() {
+                return nextConsTime.get();
+            }
+        };
+    }
+
+    /**
+     * Executes the scheduled transaction against the given state at the given time and returns
+     * the output that should be externalized in the block stream. (And if still producing records,
+     * the precomputed records.)
+     * <p>
+     * Never throws an exception without a fundamental breakdown of the system invariants. If
+     * there is an internal error when executing the transaction, returns stream output of just the
+     * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
+     * no other side effects.
+     *
+     * @param state the state to execute the transaction against
+     * @param now the time to execute the transaction at
+     * @param creatorInfo the node info of the creator of the transaction
+     * @param payerId the payer of the transaction
+     * @param body the transaction to execute
+     * @param nextEntityNum if not zero, the next entity number to use for the transaction
+     * @return the stream output from executing the transaction
+     */
+    private HandleOutput executeSystem(
+            @NonNull final State state,
+            @NonNull final Instant now,
+            @NonNull final NodeInfo creatorInfo,
+            @NonNull final AccountID payerId,
+            @NonNull final TransactionBody body,
+            final long nextEntityNum) {
+        final var parentTxn =
+                parentTxnFactory.createSystemTxn(state, creatorInfo, now, ORDINARY_TRANSACTION, payerId, body);
+        parentTxn.initBaseBuilder(exchangeRateManager.exchangeRates());
+        final var dispatch = parentTxnFactory.createDispatch(parentTxn, parentTxn.baseBuilder(), ignore -> true, NODE);
+        blockStreamManager.setLastHandleTime(parentTxn.consensusNow());
+        if (streamMode != BLOCKS) {
+            // This updates consTimeOfLastHandledTxn as a side effect
+            blockRecordManager.advanceConsensusClock(parentTxn.consensusNow(), parentTxn.state());
+        }
+        try {
+            final var controlledNum = (nextEntityNum != 0)
+                    ? dispatch.stack()
+                            .getWritableStates(EntityIdService.NAME)
+                            .<EntityNumber>getSingleton(ENTITY_ID_STATE_KEY)
+                    : null;
+            if (controlledNum != null) {
+                controlledNum.put(new EntityNumber(nextEntityNum - 1));
+            }
+            dispatchProcessor.processDispatch(dispatch);
+            if (controlledNum != null) {
+                controlledNum.put(new EntityNumber(configProvider
+                                .getConfiguration()
+                                .getConfigData(HederaConfig.class)
+                                .firstUserEntity()
+                        - 1));
+            }
+            final var handleOutput =
+                    parentTxn.stack().buildHandleOutput(parentTxn.consensusNow(), exchangeRateManager.exchangeRates());
+            recordCache.addRecordSource(
+                    creatorInfo.nodeId(),
+                    parentTxn.txnInfo().transactionID(),
+                    HederaRecordCache.DueDiligenceFailure.NO,
+                    handleOutput.preferringBlockRecordSource());
+            return handleOutput;
+        } catch (final Exception e) {
+            log.error("{} - exception thrown while handling system transaction", ALERT_MESSAGE, e);
+            return failInvalidStreamItems(parentTxn, exchangeRateManager.exchangeRates(), streamMode, recordCache);
         }
     }
 

@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.prehandle;
 
-import static com.hedera.hapi.node.base.ResponseCodeEnum.UNKNOWN;
-import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
-import static com.hedera.node.app.workflows.prehandle.PreHandleResult.Status.NODE_DUE_DILIGENCE_FAILURE;
-import static java.util.Objects.requireNonNull;
-
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
@@ -16,11 +11,17 @@ import com.hedera.node.app.state.HederaRecordCache;
 import com.hedera.node.app.workflows.TransactionInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
+
+import static com.hedera.hapi.node.base.ResponseCodeEnum.UNKNOWN;
+import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
+import static com.hedera.node.app.workflows.prehandle.PreHandleResult.Status.NODE_DUE_DILIGENCE_FAILURE;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Metadata collected when transactions are handled as part of "pre-handle". This is then made available to the
@@ -82,6 +83,13 @@ public record PreHandleResult(
         return status == NODE_DUE_DILIGENCE_FAILURE
                 ? HederaRecordCache.DueDiligenceFailure.YES
                 : HederaRecordCache.DueDiligenceFailure.NO;
+    }
+
+    /**
+     * Returns the transaction info for this result, or throws an exception if it is not available.
+     */
+    public @NonNull TransactionInfo txnInfoOrThrow() {
+        return requireNonNull(txInfo);
     }
 
     /**

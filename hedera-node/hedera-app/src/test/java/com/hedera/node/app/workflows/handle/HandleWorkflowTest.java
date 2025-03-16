@@ -34,7 +34,7 @@ import com.hedera.node.app.workflows.handle.cache.CacheWarmer;
 import com.hedera.node.app.workflows.handle.record.SystemSetup;
 import com.hedera.node.app.workflows.handle.steps.HollowAccountCompletions;
 import com.hedera.node.app.workflows.handle.steps.StakePeriodChanges;
-import com.hedera.node.app.workflows.handle.steps.UserTxnFactory;
+import com.hedera.node.app.workflows.handle.steps.ParentTxnFactory;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
@@ -135,7 +135,7 @@ class HandleWorkflowTest {
     private StakeInfoHelper stakeInfoHelper;
 
     @Mock
-    private UserTxnFactory userTxnFactory;
+    private ParentTxnFactory parentTxnFactory;
 
     @Mock
     private CongestionMetrics congestionMetrics;
@@ -217,7 +217,7 @@ class HandleWorkflowTest {
                 exchangeRateManager,
                 stakePeriodManager,
                 migrationStateChanges,
-                userTxnFactory,
+                parentTxnFactory,
                 kvStateChangeListener,
                 boundaryStateChangeListener,
                 scheduleService,

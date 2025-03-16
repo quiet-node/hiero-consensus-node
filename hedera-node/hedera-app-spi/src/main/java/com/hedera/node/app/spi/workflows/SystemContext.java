@@ -49,9 +49,7 @@ public interface SystemContext {
     NetworkInfo networkInfo();
 
     /**
-     * The consensus {@link Instant} of the genesis transaction.
-     *
-     * @return The genesis instant.
+     * The consensus time now.
      */
     @NonNull
     Instant now();

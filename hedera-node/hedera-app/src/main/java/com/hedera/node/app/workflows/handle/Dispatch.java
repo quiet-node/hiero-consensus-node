@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle;
 
-import static java.util.Objects.requireNonNull;
-
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.state.token.Account;
@@ -24,9 +22,12 @@ import com.swirlds.state.lifecycle.Service;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.time.Instant;
 import java.util.Set;
 import java.util.function.ObjLongConsumer;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The fundamental unit of work in the handle workflow.
@@ -69,7 +70,7 @@ public interface Dispatch extends FeeCharging.Context {
      *
      * @return the builder
      */
-    StreamBuilder recordBuilder();
+    StreamBuilder streamBuilder();
 
     /**
      * The configuration for the dispatch.

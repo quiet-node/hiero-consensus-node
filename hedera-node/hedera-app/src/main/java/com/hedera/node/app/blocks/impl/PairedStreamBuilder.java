@@ -122,6 +122,12 @@ public class PairedStreamBuilder
     }
 
     @Override
+    public void markChild() {
+        // No-op for v6 record stream
+        blockStreamBuilder.markChild();
+    }
+
+    @Override
     public @NonNull PairedStreamBuilder transaction(@NonNull final Transaction transaction) {
         recordStreamBuilder.transaction(transaction);
         blockStreamBuilder.transaction(transaction);

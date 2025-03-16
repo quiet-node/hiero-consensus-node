@@ -1,13 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.spi.workflows;
 
-import static com.hedera.node.app.spi.fees.NoopFeeCharging.NOOP_FEE_CHARGING;
-import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.EMPTY_METADATA;
-import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.Type.CUSTOM_FEE_CHARGING;
-import static com.hedera.node.app.spi.workflows.record.StreamBuilder.TransactionCustomizer.NOOP_TRANSACTION_CUSTOMIZER;
-import static java.util.Collections.emptySet;
-import static java.util.Objects.requireNonNull;
-
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.Key;
@@ -20,8 +13,16 @@ import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder.ReversingBehavior;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.util.Set;
 import java.util.function.Predicate;
+
+import static com.hedera.node.app.spi.fees.NoopFeeCharging.NOOP_FEE_CHARGING;
+import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.EMPTY_METADATA;
+import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.Type.CUSTOM_FEE_CHARGING;
+import static com.hedera.node.app.spi.workflows.record.StreamBuilder.TransactionCustomizer.NOOP_TRANSACTION_CUSTOMIZER;
+import static java.util.Collections.emptySet;
+import static java.util.Objects.requireNonNull;
 
 /**
  * The options a {@link HandleContext} client can customize its dispatch with.
@@ -359,7 +360,7 @@ public record DispatchOptions<T extends StreamBuilder>(
                 UsePresetTxnId.NO,
                 PREAUTHORIZED_KEYS,
                 emptySet(),
-                TransactionCategory.BATCH,
+                TransactionCategory.BATCH_INNER,
                 ConsensusThrottling.ON,
                 streamBuilderType,
                 ReversingBehavior.REVERSIBLE,
