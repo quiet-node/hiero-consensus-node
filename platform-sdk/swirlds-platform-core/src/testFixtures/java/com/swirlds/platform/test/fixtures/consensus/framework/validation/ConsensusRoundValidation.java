@@ -2,8 +2,6 @@
 package com.swirlds.platform.test.fixtures.consensus.framework.validation;
 
 import com.swirlds.platform.internal.ConsensusRound;
-import com.swirlds.platform.system.events.EventConstants;
-import com.swirlds.platform.test.fixtures.consensus.framework.ConsensusOutput;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 
