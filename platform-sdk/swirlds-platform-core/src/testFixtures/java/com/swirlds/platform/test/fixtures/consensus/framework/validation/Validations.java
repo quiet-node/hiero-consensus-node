@@ -1,13 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.consensus.framework.validation;
 
-import static com.swirlds.platform.test.fixtures.consensus.framework.validation.Validations.ValidationType.CONSENSUS_EVENTS;
-import static com.swirlds.platform.test.fixtures.consensus.framework.validation.Validations.ValidationType.CONSENSUS_TIMESTAMPS;
-import static com.swirlds.platform.test.fixtures.consensus.framework.validation.Validations.ValidationType.DIFFERENT_ORDER;
-import static com.swirlds.platform.test.fixtures.consensus.framework.validation.Validations.ValidationType.INPUTS_ARE_SAME;
-import static com.swirlds.platform.test.fixtures.consensus.framework.validation.Validations.ValidationType.RATIOS;
+import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusValidator.ConsensusValidationType;
 
-import com.swirlds.platform.test.consensus.framework.validation.ConsensusValidator.ConsensusValidationType;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 public class Validations {

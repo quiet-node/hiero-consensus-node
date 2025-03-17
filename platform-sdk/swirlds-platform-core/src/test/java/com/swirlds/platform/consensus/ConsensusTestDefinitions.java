@@ -20,23 +20,10 @@ import com.swirlds.platform.test.fixtures.consensus.framework.OrchestratorBuilde
 import com.swirlds.platform.test.fixtures.consensus.framework.TestInput;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.EventRatioValidation;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.Validations;
-import com.swirlds.platform.test.consensus.framework.ConsensusTestNode;
-import com.swirlds.platform.test.consensus.framework.ConsensusTestOrchestrator;
-import com.swirlds.platform.test.consensus.framework.ConsensusTestUtils;
-import com.swirlds.platform.test.consensus.framework.OrchestratorBuilder;
-import com.swirlds.platform.test.consensus.framework.TestInput;
 import com.swirlds.platform.test.consensus.framework.validation.ConsensusValidator.ConsensusValidationType;
-import com.swirlds.platform.test.consensus.framework.validation.EventRatioValidation;
-import com.swirlds.platform.test.consensus.framework.validation.Validations;
-import com.swirlds.platform.test.event.emitter.PriorityEventEmitter;
-import com.swirlds.platform.test.event.emitter.StandardEventEmitter;
-import com.swirlds.platform.test.event.source.ForkingEventSource;
 import com.swirlds.platform.test.fixtures.event.DynamicValue;
-import com.swirlds.platform.test.fixtures.event.emitter.PriorityEventEmitter;
-import com.swirlds.platform.test.fixtures.event.emitter.StandardEventEmitter;
 import com.swirlds.platform.test.fixtures.event.generator.StandardGraphGenerator;
 import com.swirlds.platform.test.fixtures.event.source.EventSource;
-import com.swirlds.platform.test.fixtures.event.source.ForkingEventSource;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
@@ -403,7 +390,7 @@ public final class ConsensusTestDefinitions {
                 .consensusAllValidationsWithRatios(EventRatioValidation.standard()
                         .setMinimumConsensusRatio(0.0)
                         .setMaximumConsensusRatio(0.2))
-                .withoutConsensusValidationType(ConsensusValidationType.DIFFERENT_ORDER));
+                .withoutConsensusValidationType(DIFFERENT_ORDER));
 
         //
         // Phase 3
@@ -577,7 +564,7 @@ public final class ConsensusTestDefinitions {
         orchestrator.validateAndClear(Validations.newInstance()
                 .consensusAllValidationsWithRatios(EventRatioValidation.blank().setMaximumConsensusRatio(0))
                 // only 1 event will actually be added, that is the judge, so there can be no variation in the order
-                .withoutConsensusValidationType(ConsensusValidationType.DIFFERENT_ORDER));
+                .withoutConsensusValidationType(DIFFERENT_ORDER));
 
         orchestrator.generateEvents(0.5);
         orchestrator.validate(Validations.newInstance()
