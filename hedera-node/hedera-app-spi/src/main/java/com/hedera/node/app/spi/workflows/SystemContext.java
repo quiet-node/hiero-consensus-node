@@ -21,7 +21,7 @@ public interface SystemContext {
      * @param entityNum the entity number
      */
     default void dispatchCreation(@NonNull Consumer<TransactionBody.Builder> spec, long entityNum) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        throw new UnsupportedOperationException();
     }
 
     /**
