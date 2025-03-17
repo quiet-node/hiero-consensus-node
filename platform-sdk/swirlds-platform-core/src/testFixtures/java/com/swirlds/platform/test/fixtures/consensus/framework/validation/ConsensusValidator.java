@@ -61,12 +61,12 @@ public class ConsensusValidator {
      */
     public @NonNull ConsensusValidator standard() {
         consensusOutputValidationsMap.putAll(Map.of(
-                INPUTS_ARE_SAME, InputEventsValidation::validateInputsAreTheSame,
-                DIFFERENT_ORDER, InputEventsValidation::validateEventsAreInDifferentOrder));
+                INPUTS_ARE_SAME, new InputEventsAreSameValidation(),
+                DIFFERENT_ORDER, new InputEventsInDifferentOrderValidation()));
 
         consensusRoundValidationsMap.putAll(Map.of(
-                CONSENSUS_EVENTS, RoundContentValidation::validateRounds,
-                CONSENSUS_TIMESTAMPS, TimestampChecker::validateConsensusTimestamps));
+                CONSENSUS_EVENTS, new ConsensusRoundsAreSameValidation(),
+                CONSENSUS_TIMESTAMPS, new ConsensusRoundsTimestampChecker()));
         return this;
     }
 
@@ -83,8 +83,8 @@ public class ConsensusValidator {
      */
     public @NonNull ConsensusValidator rounds() {
         consensusRoundValidationsMap.putAll(Map.of(
-                CONSENSUS_EVENTS, RoundContentValidation::validateRounds,
-                CONSENSUS_TIMESTAMPS, TimestampChecker::validateConsensusTimestamps));
+                CONSENSUS_EVENTS, new ConsensusRoundsAreSameValidation(),
+                CONSENSUS_TIMESTAMPS, new ConsensusRoundsTimestampChecker()));
         return this;
     }
 

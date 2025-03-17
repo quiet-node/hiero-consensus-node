@@ -6,8 +6,9 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 
 /**
- * Validates rounds of a test. The type of validation that is done depends on the implementation.
+ * Validates rounds produced by a test. The type of validation that is done depends on the implementation.
  */
+@FunctionalInterface
 public interface ConsensusRoundValidation {
 
     /**

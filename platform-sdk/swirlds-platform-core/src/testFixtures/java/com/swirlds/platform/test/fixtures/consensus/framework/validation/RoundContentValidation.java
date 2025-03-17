@@ -22,25 +22,6 @@ import java.util.Objects;
 public class RoundContentValidation {
 
     /**
-     * Validates the rounds from two different sources including the internal round information.
-     *
-     * @param output1 the first source of rounds
-     * @param output2 the second source of rounds
-     */
-    public static void validateRounds(final List<ConsensusRound> output1, final List<ConsensusRound> output2) {
-        validateIterableRounds(output1.iterator(), output2.iterator());
-
-        assertEquals(
-                output1.size(),
-                output2.size(),
-                String.format(
-                        "The number of consensus rounds is not the same."
-                                + "output1 has %d rounds, output2 has %d rounds",
-                        output1.size(), output2.size()));
-        validateAncientThresholdIncreases(output1);
-    }
-
-    /**
      * Validates that the threshold info of the rounds in the list is increasing for each next round
      *
      * @param rounds to validate

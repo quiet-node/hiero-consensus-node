@@ -7,9 +7,16 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 
-public class TimestampChecker {
-    public static void validateConsensusTimestamps(
-            @NonNull final List<ConsensusRound> output1, @NonNull final List<ConsensusRound> ignored) {
+/**
+ * Validates that the timestamps in consensus rounds are correct.
+ */
+public class ConsensusRoundsTimestampChecker implements ConsensusRoundValidation {
+
+    /**
+     * Validate the timestamps in consensus rounds are properly increasing.
+     * */
+    @Override
+    public void validate(@NonNull final List<ConsensusRound> output1, @NonNull final List<ConsensusRound> ignored) {
         PlatformEvent previousConsensusEvent = null;
 
         for (final ConsensusRound round : output1) {
