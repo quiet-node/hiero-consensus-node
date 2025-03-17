@@ -60,6 +60,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class HandleWorkflowTest {
+    private static final Instant NOW = Instant.ofEpochSecond(1_234_567L, 890);
     private static final Timestamp BLOCK_TIME = new Timestamp(1_234_567L, 890);
 
     @Mock
@@ -132,6 +133,9 @@ class HandleWorkflowTest {
     private Round round;
 
     @Mock
+    private ConsensusEvent event;
+
+    @Mock
     private StakeInfoHelper stakeInfoHelper;
 
     @Mock
@@ -164,6 +168,7 @@ class HandleWorkflowTest {
         given(networkInfo.nodeInfo(missingCreatorId.id())).willReturn(null);
         given(eventFromPresentCreator.consensusTransactionIterator()).willReturn(emptyIterator());
         given(round.getConsensusTimestamp()).willReturn(Instant.ofEpochSecond(12345L));
+        given(blockRecordManager.consTimeOfLastHandledTxn()).willReturn(NOW);
 
         givenSubjectWith(RECORDS, emptyList());
 
@@ -176,13 +181,14 @@ class HandleWorkflowTest {
 
     @Test
     void writesEachMigrationStateChangeWithBlockTimestamp() {
-        given(round.iterator()).willReturn(emptyIterator());
+        given(round.iterator()).willReturn(List.of(event).iterator());
+        given(event.getConsensusTimestamp()).willReturn(NOW);
+        given(systemTransactions.startupWorkConsTimeFor(any())).willReturn(NOW);
         final var firstBuilder = StateChanges.newBuilder().stateChanges(List.of(StateChange.DEFAULT));
         final var secondBuilder =
                 StateChanges.newBuilder().stateChanges(List.of(StateChange.DEFAULT, StateChange.DEFAULT));
         final var builders = List.of(firstBuilder, secondBuilder);
         givenSubjectWith(BOTH, builders);
-        given(blockStreamManager.blockTimestamp()).willReturn(BLOCK_TIME);
 
         subject.handleRound(state, round, txns -> {});
 

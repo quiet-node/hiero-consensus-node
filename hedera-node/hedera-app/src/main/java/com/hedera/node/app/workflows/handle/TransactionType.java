@@ -6,11 +6,10 @@ package com.hedera.node.app.workflows.handle;
  * but the first transactions at genesis and after an upgrade require special handling since the network needs to
  * prepare for all following transactions at these boundary conditions.
  * <p>
- * Deprecated because we will lift all system activity out of {@code handlePlatformTransaction()} and put it in
- * {@code handleConsensusRound()} where it does not have counter-intuitive dependencies on the {@link Dispatch} being
- * used for a user transaction.
+ * Eventually won't exist because we will lift all system activity out of {@code handlePlatformTransaction()} and put
+ * it in {@code handleConsensusRound()} where it does not have counter-intuitive dependencies on the {@link Dispatch}
+ * being used for a user transaction.
  */
-@Deprecated(forRemoval = true)
 public enum TransactionType {
     /**
      * The first transaction after an upgrade.

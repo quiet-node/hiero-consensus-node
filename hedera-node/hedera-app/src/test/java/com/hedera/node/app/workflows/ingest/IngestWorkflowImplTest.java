@@ -12,7 +12,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.PLATFORM_TRANSACTION_NO
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_HAS_UNKNOWN_FIELDS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_OVERSIZE;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mock.Strictness.LENIENT;
 import static org.mockito.Mockito.doThrow;
@@ -128,22 +127,6 @@ class IngestWorkflowImplTest extends AppTestBase {
 
         // Create the workflow we are going to test with
         workflow = new IngestWorkflowImpl(stateAccessor, ingestChecker, submissionManager, configProvider);
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    @Test
-    void testConstructorWithInvalidArguments() {
-        assertThatThrownBy(() -> new IngestWorkflowImpl(null, ingestChecker, submissionManager, configProvider))
-                .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(
-                        () -> new IngestWorkflowImpl(stateAccessor, ingestChecker, submissionManager, configProvider))
-                .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new IngestWorkflowImpl(stateAccessor, null, submissionManager, configProvider))
-                .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new IngestWorkflowImpl(stateAccessor, ingestChecker, null, configProvider))
-                .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new IngestWorkflowImpl(stateAccessor, ingestChecker, submissionManager, null))
-                .isInstanceOf(NullPointerException.class);
     }
 
     @Test

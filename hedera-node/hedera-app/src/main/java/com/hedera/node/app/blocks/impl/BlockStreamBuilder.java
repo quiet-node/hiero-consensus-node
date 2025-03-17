@@ -47,6 +47,7 @@ import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
 import com.hedera.hapi.platform.event.EventTransaction;
+import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChanges;
@@ -374,9 +375,9 @@ public class BlockStreamBuilder
     private final TransactionCustomizer customizer;
 
     /**
-     * Whether the transaction is a child transaction.
+     * The builder {@link EventTransaction}'s role in a state changes "group".
      */
-    private boolean isChild;
+    private TransactionGroupRole role = TransactionGroupRole.STANDALONE;
 
     /**
      * Constructs a builder for a user transaction with the given characteristics.
@@ -502,7 +503,7 @@ public class BlockStreamBuilder
         blockItems.add(BlockItem.newBuilder()
                 .eventTransaction(EventTransaction.newBuilder()
                         .applicationTransaction(getSerializedTransaction())
-                        .isChild(isChild)
+                        .transactionGroupRole(role)
                         .build())
                 .build());
         blockItems.add(transactionResultBlockItem());
@@ -519,8 +520,8 @@ public class BlockStreamBuilder
     }
 
     @Override
-    public void markChild() {
-        isChild = true;
+    public void setTransactionGroupRole(@NonNull final TransactionGroupRole role) {
+        this.role = requireNonNull(role);
     }
 
     @Override

@@ -200,6 +200,7 @@ class ParentTxnTest {
                         .transactionID(TransactionID.DEFAULT)
                         .build());
         given(txnInfo.transaction()).willReturn(Transaction.DEFAULT);
+        given(preHandleResult.txnInfoOrThrow()).willReturn(txnInfo);
         given(txnInfo.signatureMap()).willReturn(SignatureMap.DEFAULT);
         given(preHandleResult.payerKey()).willReturn(AN_ED25519_KEY);
         given(preHandleResult.getVerificationResults()).willReturn(emptyMap());
@@ -235,6 +236,7 @@ class ParentTxnTest {
         given(txnInfo.transaction()).willReturn(Transaction.DEFAULT);
         given(txnInfo.signatureMap()).willReturn(SignatureMap.DEFAULT);
         given(preHandleResult.getVerificationResults()).willReturn(emptyMap());
+        given(preHandleResult.txnInfoOrThrow()).willReturn(txnInfo);
         given(feeManager.congestionMultiplierFor(any(), eq(CONSENSUS_CREATE_TOPIC), any(ReadableStoreFactory.class)))
                 .willReturn(1L);
         given(serviceScopeLookup.getServiceName(any())).willReturn(ConsensusServiceImpl.NAME);

@@ -186,12 +186,11 @@ public class SystemTransactions {
 
         final var config = configProvider.getConfiguration();
         final var ledgerConfig = config.getConfigData(LedgerConfig.class);
-        final var hederaConfig = config.getConfigData(HederaConfig.class);
         final var accountsConfig = config.getConfigData(AccountsConfig.class);
         final var bootstrapConfig = config.getConfigData(BootstrapConfig.class);
         final var systemKey =
                 Key.newBuilder().ed25519(bootstrapConfig.genesisPublicKey()).build();
-        final var systemAutoRenewPeriod = new Duration(7776000L);
+        final var systemAutoRenewPeriod = new Duration(ledgerConfig.autoRenewPeriodMaxDuration());
         // Create the system accounts
         for (int i = 1, n = ledgerConfig.numSystemAccounts(); i <= n; i++) {
             final long num = i;
@@ -206,6 +205,9 @@ public class SystemTransactions {
                             .build(),
                     i);
         }
+        // For a slightly more intuitive stream, now create the system files (which come next numerically)
+        final var nodeStore = new ReadableStoreFactory(state, softwareVersionFactory).getStore(ReadableNodeStore.class);
+        fileService.createSystemEntities(systemContext, nodeStore);
         // Create the treasury clones
         for (long i : LongStream.rangeClosed(FIRST_POST_SYSTEM_FILE_ENTITY, ledgerConfig.numReservedSystemEntities())
                 .filter(j -> j < FIRST_RESERVED_SYSTEM_CONTRACT || j > LAST_RESERVED_SYSTEM_CONTRACT)
@@ -231,6 +233,7 @@ public class SystemTransactions {
                     i);
         }
         // Create the miscellaneous accounts
+        final var hederaConfig = config.getConfigData(HederaConfig.class);
         for (long i : LongStream.range(FIRST_MISC_ACCOUNT_NUM, hederaConfig.firstUserEntity())
                 .toArray()) {
             systemContext.dispatchCreation(
@@ -254,9 +257,6 @@ public class SystemTransactions {
                         .build()));
             }
         }
-
-        final var nodeStore = new ReadableStoreFactory(state, softwareVersionFactory).getStore(ReadableNodeStore.class);
-        fileService.createSystemEntities(systemContext, nodeStore);
     }
 
     /**
@@ -462,19 +462,29 @@ public class SystemTransactions {
         }
     }
 
+    /**
+     * Returns the timestamp to use for startup work state change consensus time in the block stream.
+     * @param roundTime the round timestamp
+     */
+    public Instant startupWorkConsTimeFor(@NonNull final Instant roundTime) {
+        requireNonNull(roundTime);
+        final var config = configProvider.getConfiguration();
+        // Make room for dispatching at least as many transactions as there are system entities
+        return roundTime
+                .minusNanos(config.getConfigData(SchedulingConfig.class).consTimeSeparationNanos())
+                .minusNanos(config.getConfigData(HederaConfig.class).firstUserEntity());
+    }
+
     private SystemContext newSystemContext(@NonNull final Instant now, @NonNull final State state) {
         final var config = configProvider.getConfiguration();
-        final var hederaConfig = config.getConfigData(HederaConfig.class);
-        // Support dispatching at least as many transactions as there are system entities
-        final var firstConsTime = now.minusNanos(
-                        config.getConfigData(SchedulingConfig.class).consTimeSeparationNanos())
-                .minusNanos(hederaConfig.firstUserEntity());
+        final var firstConsTime = startupWorkConsTimeFor(now);
         final AtomicReference<Instant> nextConsTime = new AtomicReference<>(firstConsTime);
         final var systemAdminId = idFactory.newAccountId(
                 config.getConfigData(AccountsConfig.class).systemAdmin());
         // Use whatever node happens to be first in the address book as the "creator"
         final var creatorInfo = networkInfo.addressBook().getFirst();
-        final var validDuration = new Duration(hederaConfig.transactionMaxValidDuration());
+        final var validDuration =
+                new Duration(config.getConfigData(HederaConfig.class).transactionMaxValidDuration());
         final AtomicBoolean firstHandled = new AtomicBoolean(true);
 
         return new SystemContext() {

@@ -227,21 +227,41 @@ public class HandleWorkflow {
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
         logStartRound(round);
         cacheWarmer.warm(state, round);
-        reconcileTssState(
-                configProvider.getConfiguration().getConfigData(TssConfig.class), state, round.getConsensusTimestamp());
         if (streamMode != RECORDS) {
             blockStreamManager.startRound(round, state);
             blockStreamManager.writeItem(BlockItem.newBuilder()
                     .roundHeader(new RoundHeader(round.getRoundNum()))
                     .build());
             if (!migrationStateChanges.isEmpty()) {
+                final var startupConsTime = systemTransactions.startupWorkConsTimeFor(
+                        round.iterator().next().getConsensusTimestamp());
                 migrationStateChanges.forEach(builder -> blockStreamManager.writeItem(BlockItem.newBuilder()
-                        .stateChanges(builder.consensusTimestamp(blockStreamManager.blockTimestamp())
+                        .stateChanges(builder.consensusTimestamp(asTimestamp(startupConsTime))
                                 .build())
                         .build()));
                 migrationStateChanges.clear();
             }
         }
+        final boolean isGenesis =
+                switch (streamMode) {
+                    case RECORDS -> blockRecordManager
+                            .consTimeOfLastHandledTxn()
+                            .equals(Instant.EPOCH);
+                    case BLOCKS, BOTH -> blockStreamManager.pendingWork() == GENESIS_WORK;
+                };
+        if (isGenesis) {
+            final var genesisEventTime = round.iterator().next().getConsensusTimestamp();
+            logger.info("Doing genesis setup before {}", genesisEventTime);
+            systemTransactions.doGenesisSetup(genesisEventTime, state);
+            if (streamMode != RECORDS) {
+                blockStreamManager.confirmPendingWorkFinished();
+            }
+            logger.info(SYSTEM_ENTITIES_CREATED_MSG);
+            requireNonNull(systemEntitiesCreatedFlag).set(true);
+        }
+
+        reconcileTssState(
+                configProvider.getConfiguration().getConfigData(TssConfig.class), state, round.getConsensusTimestamp());
         recordCache.resetRoundReceipts();
         try {
             handleEvents(state, round, stateSignatureTxnCallback);
@@ -295,23 +315,6 @@ public class HandleWorkflow {
                         new ScopedSystemTransaction<>(event.getCreatorId(), event.getSoftwareVersion(), txn);
                 stateSignatureTxnCallback.accept(scopedTxn);
             };
-
-            final boolean isGenesis =
-                    switch (streamMode) {
-                        case RECORDS -> blockRecordManager
-                                .consTimeOfLastHandledTxn()
-                                .equals(Instant.EPOCH);
-                        case BLOCKS, BOTH -> blockStreamManager.pendingWork() == GENESIS_WORK;
-                    };
-            if (isGenesis) {
-                logger.info("Doing genesis setup @ {}", round.getConsensusTimestamp());
-                systemTransactions.doGenesisSetup(round.getConsensusTimestamp(), state);
-                if (streamMode != RECORDS) {
-                    blockStreamManager.confirmPendingWorkFinished();
-                }
-                logger.info(SYSTEM_ENTITIES_CREATED_MSG);
-                requireNonNull(systemEntitiesCreatedFlag).set(true);
-            }
 
             // log start of event to transaction state log
             logStartEvent(event, creator);

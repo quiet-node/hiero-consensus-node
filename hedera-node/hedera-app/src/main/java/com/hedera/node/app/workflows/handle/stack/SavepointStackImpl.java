@@ -4,6 +4,11 @@ package com.hedera.node.app.workflows.handle.stack;
 import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.NO_SCHEDULING_ALLOWED_AFTER_SCHEDULED_RECURSION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.RECURSIVE_SCHEDULING_LIMIT_REACHED;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.FIRST_CHILD;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.LAST_CHILD;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.MIDDLE_CHILD;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.PARENT;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.STARTING_PARENT;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.BATCH_INNER;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.CHILD;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
@@ -193,7 +198,6 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
         this.roundStateChangeListener = null;
         setupFirstSavepoint(category);
         baseBuilder = peek().createBuilder(reversingBehavior, category, customizer, streamMode, true);
-        baseBuilder.markChild();
         presetIdsAllowed = false;
     }
 
@@ -525,7 +529,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
         var lastAssignedConsenusTime = consensusTime;
         final var builders = requireNonNull(builderSink).allBuilders();
         TransactionID.Builder idBuilder = null;
-        int indexOfTopLevelRecord = 0;
+        int indexOfParentBuilder = 0;
         int topLevelNonce = 0;
         boolean isBatch = false;
         final int n = builders.size();
@@ -533,11 +537,25 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             final var builder = builders.get(i);
             final var category = builder.category();
             if (category == USER || category == NODE) {
-                indexOfTopLevelRecord = i;
+                indexOfParentBuilder = i;
                 topLevelNonce = builder.transactionID().nonce();
                 idBuilder = builder.transactionID().copyBuilder();
                 isBatch = builder.functionality() == ATOMIC_BATCH;
                 break;
+            }
+        }
+        // Reduce the work that light clients must do when ingesting block streams by explicitly
+        // grouping all logical transactions connected to this commit's Merkle state changes
+        if (streamMode != RECORDS && n > 1) {
+            for (int i = 0; i < indexOfParentBuilder; i++) {
+                final var builder = builders.get(i);
+                builder.setTransactionGroupRole(i == 0 ? FIRST_CHILD : MIDDLE_CHILD);
+            }
+            final var parentBuilder = builders.get(indexOfParentBuilder);
+            parentBuilder.setTransactionGroupRole(indexOfParentBuilder == 0 ? STARTING_PARENT : PARENT);
+            for (int i = indexOfParentBuilder + 1; i < n; i++) {
+                final var builder = builders.get(i);
+                builder.setTransactionGroupRole(i == n - 1 ? LAST_CHILD : MIDDLE_CHILD);
             }
         }
         int nextNonceOffset = 1;
@@ -552,7 +570,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             final var txnId = builder.transactionID();
             // If the builder does not already have a transaction id, then complete with the next nonce offset
             if (txnId == null || TransactionID.DEFAULT.equals(txnId)) {
-                if (i > indexOfTopLevelRecord && isBatch) {
+                if (i > indexOfParentBuilder && isBatch) {
                     if (builder.category() == PRECEDING) {
                         for (int j = i + 1; j < n; j++) {
                             if (builders.get(j).category() == BATCH_INNER) {
@@ -561,7 +579,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                             }
                         }
                     } else if (builder.category() == CHILD) {
-                        for (int j = i - 1; j > indexOfTopLevelRecord; j--) {
+                        for (int j = i - 1; j > indexOfParentBuilder; j--) {
                             if (builders.get(j).category() == BATCH_INNER) {
                                 idBuilder = builders.get(j).transactionID().copyBuilder();
                                 break;
@@ -574,11 +592,11 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                                 .build())
                         .syncBodyIdFromRecordId();
             }
-            final var consensusNow = consensusTime.plusNanos((long) i - indexOfTopLevelRecord);
+            final var consensusNow = consensusTime.plusNanos((long) i - indexOfParentBuilder);
             lastAssignedConsenusTime = consensusNow;
             builder.consensusTimestamp(consensusNow);
 
-            if (i > indexOfTopLevelRecord) {
+            if (i > indexOfParentBuilder) {
                 switch (builder.category()) {
                     case SCHEDULED -> builder.exchangeRate(exchangeRates);
                     case BATCH_INNER -> {
@@ -613,7 +631,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
         }
         final var recordSource = streamMode != BLOCKS ? new LegacyListRecordSource(records, receipts) : null;
         final var firstAssignedConsensusTime =
-                indexOfTopLevelRecord == 0 ? consensusTime : consensusTime.minusNanos(indexOfTopLevelRecord);
+                indexOfParentBuilder == 0 ? consensusTime : consensusTime.minusNanos(indexOfParentBuilder);
         return new HandleOutput(blockRecordSource, recordSource, firstAssignedConsensusTime);
     }
 

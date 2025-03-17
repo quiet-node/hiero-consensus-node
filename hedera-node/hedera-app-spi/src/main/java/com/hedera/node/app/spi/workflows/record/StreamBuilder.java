@@ -19,6 +19,7 @@ import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.SignedTransaction;
 import com.hedera.hapi.node.transaction.TransactionBody;
+import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -42,9 +43,9 @@ public interface StreamBuilder {
     }
 
     /**
-     * Marks this stream item as a child of another stream item.
+     * Sets this stream item's position in a state changes "group".
      */
-    void markChild();
+    void setTransactionGroupRole(@NonNull TransactionGroupRole role);
 
     /**
      * Sets the transaction for this stream item builder.

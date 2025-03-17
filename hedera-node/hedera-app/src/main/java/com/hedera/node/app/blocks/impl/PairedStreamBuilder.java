@@ -22,6 +22,7 @@ import com.hedera.hapi.node.transaction.AssessedCustomFee;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.PendingAirdropRecord;
 import com.hedera.hapi.node.transaction.TransactionBody;
+import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChanges;
@@ -122,9 +123,8 @@ public class PairedStreamBuilder
     }
 
     @Override
-    public void markChild() {
-        // No-op for v6 record stream
-        blockStreamBuilder.markChild();
+    public void setTransactionGroupRole(@NonNull final TransactionGroupRole role) {
+        blockStreamBuilder.setTransactionGroupRole(role);
     }
 
     @Override

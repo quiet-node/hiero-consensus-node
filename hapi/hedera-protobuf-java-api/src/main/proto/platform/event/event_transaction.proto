@@ -21,6 +21,48 @@ option java_package = "com.hedera.hapi.platform.event.legacy";
 option java_multiple_files = true;
 
 /**
+ * Defines the position of an EventTransaction relative to a logical "group"
+ * of EventTransaction that correspond to a single set of changes to the state
+ * Merkle tree.
+ */
+enum TransactionGroupRole {
+  /**
+   * The EventTransaction is the only transaction in its group.
+   */
+  STANDALONE = 0;
+
+  /**
+   * The EventTransaction is a child and first in its group.
+   */
+  FIRST_CHILD = 1;
+
+  /**
+   * The EventTransaction is a child in the middle of its group.
+   */
+  MIDDLE_CHILD = 2;
+
+  /**
+   * The EventTransaction is a child and last in its group.
+   */
+  LAST_CHILD = 3;
+
+  /**
+   * The EventTransaction is a parent and first in its group.
+   */
+  STARTING_PARENT = 4;
+
+  /**
+   * The EventTransaction is a parent in the middle of its group.
+   */
+  PARENT = 5;
+
+  /**
+   * The EventTransaction is a parent and last in its group.
+   */
+  ENDING_PARENT = 6;
+}
+
+/**
  * An Event Transaction gossiped between nodes as part of events.
  *
  * Each node MUST extract this transaction and process according to the type
@@ -48,12 +90,7 @@ message EventTransaction {
   }
 
   /**
-   * If true, a "child" transaction that lightweight block stream consumers can use to
-   * provide a more legible view of non-child transaction state changes. Note this
-   * is_child flag may be true even when the next TransactionResult item does not have a
-   * parent_consensus_timestamp set, since some "child" transactions logically precede
-   * the transaction that spawned them (e.g., a child account creation triggered by a
-   * transfer that sent value to an unused EVM address or alias).
+   * The role of this transaction in a group of transactions.
    */
-  bool is_child = 3;
+  TransactionGroupRole transaction_group_role = 3;
 }

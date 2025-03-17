@@ -21,6 +21,7 @@ import com.hedera.hapi.node.base.ContractID;
 import com.hedera.hapi.node.base.Duration;
 import com.hedera.hapi.node.base.FileID;
 import com.hedera.hapi.node.base.HederaFunctionality;
+import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.KeyList;
 import com.hedera.hapi.node.base.RealmID;
 import com.hedera.hapi.node.base.ServiceEndpoint;
@@ -32,6 +33,7 @@ import com.hedera.hapi.node.contract.ContractCreateTransactionBody;
 import com.hedera.hapi.node.file.FileCreateTransactionBody;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.state.file.File;
+import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.transaction.ThrottleDefinitions;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
@@ -58,7 +60,9 @@ import com.hedera.node.app.service.file.impl.schemas.V0490FileSchema;
 import com.hedera.node.app.service.networkadmin.impl.FreezeServiceImpl;
 import com.hedera.node.app.service.networkadmin.impl.NetworkServiceImpl;
 import com.hedera.node.app.service.schedule.impl.ScheduleServiceImpl;
+import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.TokenServiceImpl;
+import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.node.app.service.util.impl.UtilServiceImpl;
 import com.hedera.node.app.services.AppContextImpl;
 import com.hedera.node.app.services.ServicesRegistry;
@@ -69,9 +73,12 @@ import com.hedera.node.app.throttle.AppThrottleFactory;
 import com.hedera.node.app.throttle.CongestionThrottleService;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
 import com.hedera.node.app.version.ServicesSoftwareVersion;
+import com.hedera.node.config.data.AccountsConfig;
+import com.hedera.node.config.data.BootstrapConfig;
 import com.hedera.node.config.data.EntitiesConfig;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.node.internal.network.Network;
@@ -430,6 +437,26 @@ public class TransactionExecutorsTest {
                             .contents(provider.apply(config))
                             .build());
         });
+        final var ledgerConfig = config.getConfigData(LedgerConfig.class);
+        final var accountsConfig = config.getConfigData(AccountsConfig.class);
+        final var systemKey = Key.newBuilder()
+                .ed25519(config.getConfigData(BootstrapConfig.class).genesisPublicKey())
+                .build();
+        final var accounts =
+                state.getWritableStates(TokenService.NAME).<AccountID, Account>get(V0490TokenSchema.ACCOUNTS_KEY);
+        // Create the system accounts
+        for (int i = 1, n = ledgerConfig.numSystemAccounts(); i <= n; i++) {
+            final var accountId = AccountID.newBuilder().accountNum(i).build();
+            accounts.put(
+                    accountId,
+                    Account.newBuilder()
+                            .accountId(accountId)
+                            .key(systemKey)
+                            .expirationSecond(Long.MAX_VALUE)
+                            .tinybarBalance(
+                                    (long) i == accountsConfig.treasury() ? ledgerConfig.totalTinyBarFloat() : 0L)
+                            .build());
+        }
         ((CommittableWritableStates) writableStates).commit();
         return state;
     }
