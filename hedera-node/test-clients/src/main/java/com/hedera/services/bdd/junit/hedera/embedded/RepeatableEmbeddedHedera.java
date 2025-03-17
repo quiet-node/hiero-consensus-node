@@ -199,6 +199,11 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
             // No-op
         }
 
+        /**
+         * Creates a new round with the given transaction.
+         * @param serializedTxn the serialized transaction
+         * @return the new round
+         */
         private Round roundWith(@NonNull final byte[] serializedTxn) {
             time.tick(roundDuration);
             final var firstRoundTime = time.now();

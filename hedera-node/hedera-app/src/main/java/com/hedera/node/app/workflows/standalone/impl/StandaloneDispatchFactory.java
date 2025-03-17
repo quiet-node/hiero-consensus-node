@@ -228,7 +228,7 @@ public class StandaloneDispatchFactory {
     }
 
     private NodeInfo creatorInfoFor(@NonNull final TransactionBody transactionBody) {
-        return new NodeInfoImpl(0, transactionBody.nodeAccountIDOrThrow(), 0, List.of(), Bytes.EMPTY);
+        return new NodeInfoImpl(0, transactionBody.nodeAccountIDOrThrow(), 0, List.of(), Bytes.EMPTY, List.of());
     }
 
     private PreHandleResult temporaryPreHandleResult() {

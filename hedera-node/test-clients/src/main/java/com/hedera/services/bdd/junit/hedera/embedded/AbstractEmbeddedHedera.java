@@ -4,7 +4,6 @@ package com.hedera.services.bdd.junit.hedera.embedded;
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.fromPbj;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.ADDRESS_BOOK;
 import static com.hedera.services.bdd.junit.hedera.embedded.fakes.FakePlatformContext.PLATFORM_CONFIG;
-import static com.hedera.services.bdd.spec.transactions.TxnUtils.randomUtf8Bytes;
 import static com.swirlds.platform.roster.RosterUtils.rosterFrom;
 import static com.swirlds.platform.system.InitTrigger.GENESIS;
 import static com.swirlds.platform.system.InitTrigger.RESTART;
@@ -333,8 +332,8 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
     private byte[] mockStateSignatureTxn() {
         return hedera.encodeSystemTransaction(com.hedera.hapi.platform.event.StateSignatureTransaction.newBuilder()
                         .round(1L)
-                        .hash(Bytes.wrap(randomUtf8Bytes(48)))
-                        .signature(Bytes.wrap(randomUtf8Bytes(256)))
+                        .hash(Bytes.wrap(new byte[48]))
+                        .signature(Bytes.wrap(new byte[256]))
                         .build())
                 .toByteArray();
     }

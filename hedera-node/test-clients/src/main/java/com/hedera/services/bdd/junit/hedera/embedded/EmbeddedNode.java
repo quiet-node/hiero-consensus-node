@@ -36,8 +36,6 @@ import org.apache.logging.log4j.core.config.Configurator;
  * are received.
  */
 public class EmbeddedNode extends AbstractLocalNode<EmbeddedNode> implements HederaNode {
-    private static final long LOG_SCAN_BACKOFF_MS = 100L;
-
     public EmbeddedNode(@NonNull final NodeMetadata metadata) {
         super(metadata);
     }

@@ -7,6 +7,7 @@ import static com.hedera.hapi.util.HapiUtils.asTimestamp;
 import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STATE_KEY;
 import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
 import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.NODES_KEY;
+import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.parseEd25519NodeAdminKeysFrom;
 import static com.hedera.node.app.service.consensus.impl.ConsensusServiceImpl.TOPICS_KEY;
 import static com.hedera.node.app.service.contract.impl.schemas.V0490ContractSchema.BYTECODE_KEY;
 import static com.hedera.node.app.service.contract.impl.schemas.V0490ContractSchema.STORAGE_KEY;
@@ -31,8 +32,10 @@ import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRAN
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
+import static com.swirlds.platform.roster.RosterUtils.formatNodeName;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.node.addressbook.NodeCreateTransactionBody;
 import com.hedera.hapi.node.addressbook.NodeUpdateTransactionBody;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.CurrentAndNextFeeSchedule;
@@ -40,6 +43,7 @@ import com.hedera.hapi.node.base.Duration;
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.base.ServiceEndpoint;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
@@ -121,6 +125,8 @@ public class SystemTransactions {
     private static final long LAST_RESERVED_SYSTEM_CONTRACT = 399L;
     private static final long FIRST_POST_SYSTEM_FILE_ENTITY = 200L;
     private static final long FIRST_MISC_ACCOUNT_NUM = 900L;
+    private static final List<ServiceEndpoint> UNKNOWN_HAPI_ENDPOINT =
+            List.of(V053AddressBookSchema.endpointFor("1.0.0.0", 1));
 
     private static final EnumSet<ResponseCodeEnum> SUCCESSES =
             EnumSet.of(SUCCESS, SUCCESS_BUT_MISSING_EXPECTED_OPERATION);
@@ -256,6 +262,25 @@ public class SystemTransactions {
                         .memo(info.memo())
                         .build()));
             }
+        }
+
+        // Create the address book nodes
+        final var nodeAdminKeys = parseEd25519NodeAdminKeysFrom(bootstrapConfig.nodeAdminKeysPath());
+        for (final var nodeInfo : networkInfo.addressBook()) {
+            final var adminKey = nodeAdminKeys.getOrDefault(nodeInfo.nodeId(), systemKey);
+            if (adminKey != systemKey) {
+                log.info("Override admin key for node{} is :: {}", nodeInfo.nodeId(), adminKey);
+            }
+            final var hapiEndpoints =
+                    nodeInfo.hapiEndpoints().isEmpty() ? UNKNOWN_HAPI_ENDPOINT : nodeInfo.hapiEndpoints();
+            systemContext.dispatchAdmin(b -> b.nodeCreate(NodeCreateTransactionBody.newBuilder()
+                    .adminKey(adminKey)
+                    .accountId(nodeInfo.accountId())
+                    .description(formatNodeName(nodeInfo.nodeId()))
+                    .gossipEndpoint(nodeInfo.gossipEndpoints())
+                    .gossipCaCertificate(nodeInfo.sigCertBytes())
+                    .serviceEndpoint(hapiEndpoints)
+                    .build()));
         }
     }
 
@@ -489,6 +514,11 @@ public class SystemTransactions {
 
         return new SystemContext() {
             @Override
+            public void dispatchAdmin(@NonNull final Consumer<TransactionBody.Builder> spec) {
+                dispatchCreation(spec, 0);
+            }
+
+            @Override
             public void dispatchCreation(@NonNull final Consumer<TransactionBody.Builder> spec, final long entityNum) {
                 requireNonNull(spec);
                 final var builder = TransactionBody.newBuilder()
@@ -522,12 +552,6 @@ public class SystemTransactions {
                         blockStreamManager.setRoundFirstTransactionTime(now);
                     }
                 }
-            }
-
-            @Override
-            public void dispatchAdmin(@NonNull final Consumer<TransactionBody.Builder> spec) {
-                requireNonNull(spec);
-                throw new UnsupportedOperationException("Parent transaction context only supports creations currently");
             }
 
             @NonNull
@@ -597,9 +621,9 @@ public class SystemTransactions {
             dispatchProcessor.processDispatch(dispatch);
             if (!SUCCESSES.contains(dispatch.streamBuilder().status())) {
                 log.error(
-                        "Failed to dispatch system create transaction {} for entity {} - {}",
+                        "Failed to dispatch system transaction {}{} - {}",
                         body,
-                        nextEntityNum,
+                        nextEntityNum == 0 ? "" : (" for entity #" + nextEntityNum),
                         dispatch.streamBuilder().status());
             }
             if (controlledNum != null) {

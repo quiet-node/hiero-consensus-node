@@ -130,7 +130,7 @@ public class StateNetworkInfo implements NetworkInfo {
                 // Notice it's possible the node could be deleted here, because a DAB transaction removed
                 // it from the future address book; that doesn't mean we should stop using it in the current
                 // version of the software
-                nodeInfos.put(rosterEntry.nodeId(), fromRosterEntry(rosterEntry, node));
+                nodeInfos.put(rosterEntry.nodeId(), NodeInfoImpl.fromRosterWithCurrentMetadata(rosterEntry, node));
             } else {
                 nodeInfos.put(
                         rosterEntry.nodeId(),

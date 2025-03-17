@@ -90,7 +90,8 @@ public class GenesisNetworkInfo implements NetworkInfo {
                     node.accountIdOrThrow(),
                     node.weight(),
                     node.gossipEndpoint(),
-                    node.gossipCaCertificate());
+                    node.gossipCaCertificate(),
+                    node.serviceEndpoint());
             nodeInfos.put(node.nodeId(), nodeInfo);
         }
         return nodeInfos;

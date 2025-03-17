@@ -11,6 +11,7 @@ import com.hedera.services.bdd.spec.utilops.lifecycle.AbstractLifecycleOp;
 import com.swirlds.platform.system.status.PlatformStatus;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
+import java.util.Arrays;
 
 /**
  * Waits for the selected node or nodes specified by the {@link NodeSelector} to
@@ -37,6 +38,6 @@ public class WaitForStatusOp extends AbstractLifecycleOp {
 
     @Override
     public String toString() {
-        return "WaitFor" + statuses + "Within" + timeout;
+        return "WaitFor" + Arrays.toString(statuses) + "Within" + timeout;
     }
 }

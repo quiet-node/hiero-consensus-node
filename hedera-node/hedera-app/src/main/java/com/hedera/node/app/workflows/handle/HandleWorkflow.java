@@ -397,7 +397,7 @@ public class HandleWorkflow {
         }
 
         var lastRecordManagerTime = streamMode == RECORDS ? blockRecordManager.consTimeOfLastHandledTxn() : null;
-        final var handleOutput = executeTopLevel(userTxn, txnVersion, state);
+        final var handleOutput = executeSubmittedParent(userTxn, txnVersion, state);
         if (streamMode != BLOCKS) {
             final var records = ((LegacyListRecordSource) handleOutput.recordSourceOrThrow()).precomputedRecords();
             blockRecordManager.endUserTransaction(records.stream(), state);
@@ -592,7 +592,7 @@ public class HandleWorkflow {
      * @param state the state to commit any direct changes against
      * @return the stream output from executing the transaction
      */
-    private HandleOutput executeTopLevel(
+    private HandleOutput executeSubmittedParent(
             @NonNull final ParentTxn parentTxn, @NonNull final SemanticVersion txnVersion, @NonNull final State state) {
         try {
             if (isOlderSoftwareEvent(txnVersion)) {

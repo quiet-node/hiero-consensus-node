@@ -497,9 +497,6 @@ public class BaseTranslator {
                         .ifPresent(sidecarRecords::addAll);
             }
         });
-        if (userTimestamp == null) {
-            System.out.println("No user timestamp found in unit - " + unit.blockTransactionParts());
-        }
     }
 
     private static boolean isContractOp(@NonNull final BlockTransactionParts parts) {

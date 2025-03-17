@@ -157,7 +157,8 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
             nodeSelfAccountId,
             10,
             List.of(endpointFor("127.0.0.1", 50211), endpointFor("127.0.0.1", 23456)),
-            Bytes.wrap("cert7"));
+            Bytes.wrap("cert7"),
+            List.of(endpointFor("127.0.0.1", 50211), endpointFor("127.0.0.1", 23456)));
 
     /**
      * The gRPC system has extensive metrics. This object allows us to inspect them and make sure they are being set
@@ -241,7 +242,12 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
         private Set<Service> services = new LinkedHashSet<>();
         private TestConfigBuilder configBuilder = HederaTestConfigBuilder.create();
         private NodeInfo selfNodeInfo = new NodeInfoImpl(
-                0, AccountID.newBuilder().shardNum(0).realmNum(0).accountNum(8).build(), 10, List.of(), Bytes.EMPTY);
+                0,
+                AccountID.newBuilder().shardNum(0).realmNum(0).accountNum(8).build(),
+                10,
+                List.of(),
+                Bytes.EMPTY,
+                List.of());
         private Set<NodeInfo> nodes = new LinkedHashSet<>();
 
         private TestAppBuilder() {}
@@ -321,14 +327,16 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
                         nodeSelfAccountId,
                         10,
                         List.of(endpointFor("127.0.0.1", 50211), endpointFor("127.0.0.4", 23456)),
-                        Bytes.wrap("cert7"));
+                        Bytes.wrap("cert7"),
+                        List.of(endpointFor("127.0.0.1", 50211), endpointFor("127.0.0.4", 23456)));
             } else {
                 realSelfNodeInfo = new NodeInfoImpl(
                         selfNodeInfo.nodeId(),
                         selfNodeInfo.accountId(),
                         selfNodeInfo.weight(),
                         selfNodeInfo.gossipEndpoints(),
-                        selfNodeInfo.sigCertBytes());
+                        selfNodeInfo.sigCertBytes(),
+                        selfNodeInfo.hapiEndpoints());
             }
 
             final var workingStateAccessor = new WorkingStateAccessor();

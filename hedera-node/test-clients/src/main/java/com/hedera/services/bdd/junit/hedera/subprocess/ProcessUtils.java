@@ -69,18 +69,19 @@ public class ProcessUtils {
             @NonNull final Duration timeout,
             @NonNull final PlatformStatus... statuses) {
         final AtomicReference<NodeStatus> lastStatus = new AtomicReference<>();
-        log.info("Waiting for node '{}' to be {} within {}", node.getName(), statuses, timeout);
+        log.info("Waiting for node '{}' to be {} within {}", node.getName(), Arrays.toString(statuses), timeout);
         try {
             node.statusFuture(lastStatus::set, statuses).get(timeout.toMillis(), MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
-            Assertions.fail("Node '" + node.getName() + "' did not reach status " + statuses + " within " + timeout
+            Assertions.fail("Node '" + node.getName() + "' did not reach status any of " + Arrays.toString(statuses)
+                    + " within " + timeout
                     + "\n  Final status: " + lastStatus.get()
                     + "\n  Cause       : " + e);
         }
-        log.info("Node '{}' is {}", node.getName(), statuses);
+        log.info("Node '{}' is {}", node.getName(), lastStatus.get());
     }
 
     /**
