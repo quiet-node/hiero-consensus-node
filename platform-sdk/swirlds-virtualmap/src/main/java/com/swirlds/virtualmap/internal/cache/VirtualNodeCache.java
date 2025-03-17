@@ -117,7 +117,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
      * will ask the cache for a leaf either by key or path. At such times, if we determine by looking at
      * the mutation that the leaf has been deleted, we will return this singleton instance.
      */
-    public static final VirtualLeafBytes DELETED_LEAF_RECORD = new VirtualLeafBytes(-1, Bytes.EMPTY, null, null);
+    public static final VirtualLeafBytes<?> DELETED_LEAF_RECORD = new VirtualLeafBytes<>(-1, Bytes.EMPTY, null, null);
 
     /**
      * A special {@link Hash} used to indicate that the record associated with a particular
@@ -590,7 +590,13 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
         final Bytes key = leaf.keyBytes();
 
         // Update the path index to point to this node at this path
-        updatePaths(key, null, null, leaf.path(), pathToDirtyLeafIndex, dirtyLeafPaths);
+        updatePaths(
+                key,
+                estimatedLeafPathsSizeInBytes,
+                k -> (int) k.length(),
+                leaf.path(),
+                pathToDirtyLeafIndex,
+                dirtyLeafPaths);
 
         // Get the first data element (mutation) in the list based on the key,
         // and then create or update the associated mutation.
@@ -648,7 +654,8 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
     public void clearLeafPath(final long path) {
         throwIfLeafImmutable();
         // Note: this marks the mutations as deleted, in addition to clearing the value of the mutation
-        updatePaths(null, null, null, path, pathToDirtyLeafIndex, dirtyLeafPaths);
+        updatePaths(
+                null, estimatedLeafPathsSizeInBytes, k -> (int) k.length(), path, pathToDirtyLeafIndex, dirtyLeafPaths);
     }
 
     /**
@@ -1142,8 +1149,8 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
      */
     private <V> void updatePaths(
             final V value,
-            final AtomicInteger estimatedSize,
-            final Function<V, Integer> getValueSize,
+            @NonNull final AtomicInteger estimatedSize,
+            @NonNull final Function<V, Integer> getValueSize,
             final long path,
             final Map<Long, Mutation<Long, V>> index,
             final ConcurrentArray<Mutation<Long, V>> dirtyPaths) {
@@ -1157,6 +1164,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
                 previousMutation = nextMutation;
                 nextMutation = nextMutation.next;
             }
+            int sizeDelta = 0;
             if (nextMutation == null || nextMutation.version != fastCopyVersion.get()) {
                 // It must be that there is *NO* mutation in the dirtyPaths for this cache version.
                 // I don't have an easy way to assert it programmatically, but by inspection, it must be true.
@@ -1165,19 +1173,19 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
                 nextMutation.setDeleted(value == null);
                 // Hold a reference to this newest mutation in this cache
                 dirtyPaths.add(nextMutation);
-                if ((value != null) && (getValueSize != null)) {
-                    estimatedSize.addAndGet(getValueSize.apply(value));
+                if (value != null) {
+                    sizeDelta += Long.BYTES + getValueSize.apply(value); // path and value
                 }
-            } else {
+            } else if (nextMutation.value != value) {
                 assert nextMutation.notFiltered();
-                // This mutation already exists in this version. Simply update its value and deleted status.
-                if ((nextMutation.value != null) && (getValueSize != null)) {
-                    estimatedSize.addAndGet(-getValueSize.apply(nextMutation.value));
+                // This mutation already exists in this version. Simply update its value and deleted status
+                if (nextMutation.value != null) {
+                    sizeDelta -= getValueSize.apply(nextMutation.value);
                 }
                 nextMutation.value = value;
                 nextMutation.setDeleted(value == null);
-                if ((value != null) && (getValueSize != null)) {
-                    estimatedSize.addAndGet(getValueSize.apply(value));
+                if (value != null) {
+                    sizeDelta += getValueSize.apply(value);
                 }
             }
             if (previousMutation != null) {
@@ -1186,6 +1194,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
             } else {
                 mutation = nextMutation;
             }
+            estimatedSize.addAndGet(sizeDelta);
             return mutation;
         });
     }
@@ -1230,7 +1239,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
      */
     private Mutation<Bytes, VirtualLeafBytes> mutate(
             @NonNull final VirtualLeafBytes leaf, @Nullable Mutation<Bytes, VirtualLeafBytes> mutation) {
-
+        int sizeDelta = 0;
         // We only create a new mutation if one of the following is true:
         //  - There is no mutation in the cache (mutation == null)
         //  - There is a mutation but not for this version of the cache
@@ -1242,18 +1251,20 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
             final Mutation<Bytes, VirtualLeafBytes> newerMutation =
                     new Mutation<>(mutation, leaf.keyBytes(), leaf, fastCopyVersion.get());
             dirtyLeaves.add(newerMutation);
-            // Don't add key size to estimatedSizeInBytes, since the key is a part of the leaf
             mutation = newerMutation;
+            sizeDelta += leaf.getSizeInBytes();
         } else if (mutation.value != leaf) {
             // A different value (leaf) has arrived, but the mutation already exists for this version.
             // So we can just update the value
             assert mutation.value.keyBytes().equals(leaf.keyBytes());
+            sizeDelta -= mutation.value.getSizeInBytes();
             mutation.value = leaf;
             mutation.setDeleted(false);
+            sizeDelta += leaf.getSizeInBytes();
         } else {
             mutation.setDeleted(false);
         }
-
+        estimatedLeavesSizeInBytes.addAndGet(sizeDelta);
         return mutation;
     }
 
@@ -1568,41 +1579,11 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
     /**
      * Get estimated size of this cache copy. The size includes all leaf records in dirtyLeaves,
      * all keys in dirtyLeafPaths, and all hashes in dirtyHashes.
-     *
-     * <p>This method may only be called when this cache copy instance is immutable, to make sure
-     * no further leaf records are updated.
      */
     public int getEstimatedSize() {
-        if (estimatedLeavesSizeInBytes.get() == 0) {
-            assert leafIndexesAreImmutable.get();
-            // In rare cases this method may be called on a released cache instance
-            if (dirtyLeaves != null) {
-                //noinspection Convert2MethodRef
-                estimatedLeavesSizeInBytes.set(estimateSize(dirtyLeaves, record -> record.getSizeInBytes()));
-            }
-        }
-        if (estimatedLeafPathsSizeInBytes.get() == 0) {
-            assert leafIndexesAreImmutable.get();
-            // In rare cases this method may be called on a released cache instance
-            if (dirtyLeafPaths != null) {
-                estimatedLeafPathsSizeInBytes.set(estimateSize(dirtyLeafPaths, key -> (int) key.length()));
-            }
-        }
         return estimatedLeavesSizeInBytes.get()
                 + estimatedLeafPathsSizeInBytes.get()
                 + estimatedHashesSizeInBytes.get();
-    }
-
-    private <K, V> int estimateSize(final ConcurrentArray<Mutation<K, V>> array, final Function<V, Integer> getSize) {
-        int size = 0;
-        for (int i = 0; i < array.size(); i++) {
-            final Mutation<?, V> mutation = array.get(i);
-            // Filtered mutations don't contribute to estimated size
-            if (mutation.notFiltered() && (mutation.value != null)) {
-                size += getSize.apply(mutation.value);
-            }
-        }
-        return size;
     }
 
     /**

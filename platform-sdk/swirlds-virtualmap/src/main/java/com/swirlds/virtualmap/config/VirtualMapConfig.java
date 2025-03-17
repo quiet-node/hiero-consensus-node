@@ -91,8 +91,6 @@ public record VirtualMapConfig(
                 long virtualMapWarningInterval,
         @Min(1) @ConfigProperty(defaultValue = "20") int flushInterval,
         @ConfigProperty(defaultValue = "250000000") long copyFlushCandidateThreshold,
-        @Min(0) @Max(100) @ConfigProperty(defaultValue = "80.0")
-                double percentCopyFlushAfterGCThreshold, // FUTURE WORK: We need to add min/max support for double
         // values
         @ConfigProperty(defaultValue = "2500000000") long familyThrottleThreshold,
         @ConfigProperty(defaultValue = "10000") int preferredFlushQueueSize,
