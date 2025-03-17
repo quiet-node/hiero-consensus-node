@@ -431,7 +431,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             final var deferredRun = new DeferredRun(() -> {
                 final var deadline = Instant.now().plus(timeout);
                 // Block until all nodes are ACTIVE
-                nodes.forEach(node -> awaitStatus(node, ACTIVE, Duration.between(Instant.now(), deadline)));
+                nodes.forEach(node -> awaitStatus(node, Duration.between(Instant.now(), deadline), ACTIVE));
                 nodes.forEach(node -> node.logFuture(HandleWorkflow.SYSTEM_ENTITIES_CREATED_MSG)
                         .orTimeout(10, TimeUnit.SECONDS)
                         .join());

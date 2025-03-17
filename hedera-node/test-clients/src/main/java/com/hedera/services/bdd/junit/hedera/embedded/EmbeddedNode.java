@@ -92,7 +92,7 @@ public class EmbeddedNode extends AbstractLocalNode<EmbeddedNode> implements Hed
 
     @Override
     public CompletableFuture<Void> statusFuture(
-            @NonNull final PlatformStatus status, @Nullable final Consumer<NodeStatus> nodeStatusObserver) {
+            @Nullable final Consumer<NodeStatus> nodeStatusObserver, @NonNull final PlatformStatus... statuses) {
         throw new UnsupportedOperationException("Prefer awaiting status of the embedded network");
     }
 

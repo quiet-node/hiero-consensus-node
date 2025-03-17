@@ -199,6 +199,8 @@ import org.apache.logging.log4j.Logger;
 public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatusChangeListener, AppContext.Gossip {
     private static final Logger logger = LogManager.getLogger(Hedera.class);
 
+    private static final java.time.Duration SHUTDOWN_TIMEOUT = java.time.Duration.ofSeconds(10);
+
     /**
      * The application name from the platform's perspective. This is currently locked in at the old main class name and
      * requires data migration to change.
@@ -600,7 +602,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 }
 
                 // Wait for the block stream to close any pending or current blocks–-we may need them for triage
-                blockStreamManager().awaitFatalShutdown(java.time.Duration.ofSeconds(30));
+                blockStreamManager().awaitFatalShutdown(SHUTDOWN_TIMEOUT);
             }
             case REPLAYING_EVENTS, STARTING_UP, OBSERVING, RECONNECT_COMPLETE, CHECKING, FREEZING, BEHIND -> {
                 // Nothing to do here, just enumerate for completeness
