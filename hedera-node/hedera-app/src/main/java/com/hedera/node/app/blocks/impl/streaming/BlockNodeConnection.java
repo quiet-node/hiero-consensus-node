@@ -6,6 +6,7 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
+import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.ManagedChannel;
@@ -27,10 +28,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final BlockNodeConfig node;
-    private final ManagedChannel channel;
     private final BlockNodeConnectionManager manager;
     private final BlockStreamStateManager blockStreamStateManager;
-    private StreamObserver<PublishStreamRequest> requestObserver;
+    private final Object channelLock = new Object();
+    private volatile ManagedChannel channel;
+    private volatile StreamObserver<PublishStreamRequest> requestObserver;
 
     private final ReentrantLock isActiveLock = new ReentrantLock();
     private volatile boolean isActive = false;
@@ -51,19 +53,38 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         this.node = nodeConfig;
         this.manager = manager;
         this.blockStreamStateManager = blockStreamStateManager;
-        this.channel = ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
+        this.channel = createNewChannel();
+        logger.info("BlockNodeConnection INITIALIZED");
+    }
+
+    private ManagedChannel createNewChannel() {
+        return ManagedChannelBuilder.forAddress(node.address(), node.port())
                 .usePlaintext() // 🔥🔥 For development only! change to use TLS in production 🔥🔥
                 .build();
-        logger.info("BlockNodeConnection INITIALIZED");
     }
 
     public Void establishStream() {
         logger.info("Establishing stream to block node {}:{}", node.address(), node.port());
-        BlockStreamServiceGrpc.BlockStreamServiceStub stub = BlockStreamServiceGrpc.newStub(channel);
-        synchronized (isActiveLock) {
-            requestObserver = stub.publishBlockStream(this);
-            isActive = true;
-            startRequestWorker();
+        synchronized (channelLock) {
+            // Ensure any existing channel is properly shutdown
+            if (channel != null && !channel.isShutdown()) {
+                try {
+                    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    logger.warn("Interrupted while shutting down channel");
+                }
+            }
+            
+            // Create new channel and stub
+            channel = createNewChannel();
+            BlockStreamServiceGrpc.BlockStreamServiceStub stub = BlockStreamServiceGrpc.newStub(channel);
+            
+            synchronized (isActiveLock) {
+                requestObserver = stub.publishBlockStream(this);
+                isActive = true;
+                startRequestWorker();
+            }
         }
         return null;
     }
@@ -86,18 +107,21 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                             node.address(),
                             node.port());
                     waitForNewBlock();
-                    continue;
                 }
 
                 // Get the current block state
                 BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
                 if (blockState == null) {
                     logger.info(
-                            "[{}] Block state is null for block {} on node {}:{}",
+                            "[{}] Block {} state is null for node {}:{}, likely due to acknowledgement. Ending stream.",
                             Thread.currentThread().getName(),
                             currentBlockNumber,
                             node.address(),
                             node.port());
+                    
+                    // End the stream gracefully and schedule reconnect
+                    close();
+                    scheduleReconnect();
                     break;
                 }
 
@@ -128,9 +152,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         && currentRequestIndex >= blockState.requests().size()) {
                     moveToNextBlock();
                 }
-            } catch (InterruptedException e) {
-                handleInterruptedException(e);
-                break;
             } catch (Exception e) {
                 handleGenericException(e);
             }
@@ -211,18 +232,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         currentRequestIndex = 0;
     }
 
-    private void handleInterruptedException(InterruptedException e) {
-        if (isActive) {
-            logger.error(
-                    "[{}] Request worker thread interrupted for node {}:{}",
-                    Thread.currentThread().getName(),
-                    node.address(),
-                    node.port(),
-                    e);
-        }
-        Thread.currentThread().interrupt();
-    }
-
     private void handleGenericException(Exception e) {
         logger.error(
                 "[{}] Error in request worker thread for node {}:{}",
@@ -230,27 +239,26 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 node.address(),
                 node.port(),
                 e);
-        // If we get an IndexOutOfBoundsException, reset the request index to a safe value
-        if (e instanceof IndexOutOfBoundsException) {
-            BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
-            if (blockState != null) {
-                int safeIndex = Math.min(blockState.requests().size(), currentRequestIndex);
-                logger.info(
-                        "[{}] Resetting request index from {} to {} for block {}",
-                        Thread.currentThread().getName(),
-                        currentRequestIndex,
-                        safeIndex,
-                        currentBlockNumber);
-                currentRequestIndex = safeIndex;
-            }
-        }
+        // End the stream gracefully and schedule reconnect
+        close();
+        scheduleReconnect();
     }
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
+            var blockAck = acknowledgement.getBlockAck();
+            var blockNumber = blockAck.getBlockNumber();
+            var blockAlreadyExists = blockAck.getBlockAlreadyExists();
+            
             logger.info(
-                    "Block acknowledgment received for a full block: {}",
-                    acknowledgement.getBlockAck().getBlockNumber());
+                    "Received acknowledgement for block {} from node {}:{}, blockAlreadyExists: {}",
+                    blockNumber,
+                    node.address(),
+                    node.port(),
+                    blockAlreadyExists);
+
+            // Remove all block states up to and including this block number
+            blockStreamStateManager.removeBlockStatesUpTo(blockNumber);
         }
     }
 
@@ -262,7 +270,27 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
-        logger.info("Error returned from block node at block number {}: {}", endOfStream.getBlockNumber(), endOfStream);
+        var blockNumber = endOfStream.getBlockNumber();
+        var responseCode = endOfStream.getStatus();
+        
+        logger.info(
+                "[{}] Received EndOfStream from block node {}:{} at block {} with PublishStreamResponseCode {}",
+                Thread.currentThread().getName(),
+                node.address(),
+                node.port(),
+                blockNumber,
+                responseCode);
+
+        // For all error codes, restart at the last verified block + 1
+        var restartBlockNumber = blockNumber + 1;
+        logger.info(
+                "[{}] Restarting stream at block {} due to {} for node {}:{}",
+                Thread.currentThread().getName(),
+                restartBlockNumber,
+                responseCode,
+                node.address(),
+                node.port());
+        endStreamAndRestartAtBlock(restartBlockNumber);
     }
 
     private void removeFromActiveConnections(BlockNodeConfig node) {
@@ -292,27 +320,32 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void close() {
         synchronized (isActiveLock) {
-            if (isActive) {
-                requestObserver.onCompleted();
-                scheduler.shutdown();
-                isActive = false;
+            isActive = false;
+        }
+
+        synchronized (channelLock) {
+            if (requestObserver != null) {
                 try {
-                    if (requestWorker != null) {
-                        requestWorker.interrupt();
-                        requestWorker.join(1000);
-                    }
+                    requestObserver.onCompleted();
+                } catch (Exception e) {
+                    logger.warn("Error while completing request observer", e);
+                }
+                requestObserver = null;
+            }
+
+            if (channel != null) {
+                try {
                     channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    logger.error("BlockNodeConnection interrupted {}:{}", node.address(), node.port(), e);
                     Thread.currentThread().interrupt();
+                    logger.warn("Interrupted while shutting down channel during close");
                 } finally {
-                    if (!channel.isShutdown()) {
-                        channel.shutdownNow();
-                    }
+                    channel = null;
                 }
             }
-            logger.info("Closed connection to block node {}:{}", node.address(), node.port());
         }
+
+        logger.info("Closed connection to block node {}:{}", node.address(), node.port());
     }
 
     /**
@@ -355,14 +388,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         return isActiveLock;
     }
 
-    public Object getNewBlockAvailable() {
-        return newBlockAvailable;
-    }
-
-    public Object getNewRequestAvailable() {
-        return newRequestAvailable;
-    }
-
     public void notifyNewRequestAvailable() {
         synchronized (newRequestAvailable) {
             BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber);
@@ -402,15 +427,84 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * Restarts the worker thread at a specific block number.
+     * Restarts the worker thread at a specific block number without ending the stream.
+     * This method will interrupt the current worker thread if it exists,
+     * set the new block number and request index, and start a new worker thread.
+     * The gRPC stream with the block node is maintained.
+     *
+     * @param blockNumber the block number to jump to
+     */
+    public void jumpToBlock(long blockNumber) {
+        logger.info(
+                "Jumping to block {} for node {}:{} without ending stream",
+                blockNumber,
+                node.address(),
+                node.port());
+
+        stopWorkerThread();
+        setCurrentBlockNumber(blockNumber);
+        startRequestWorker();
+        notifyNewBlockAvailable();
+
+        logger.info(
+                "Worker thread restarted and jumped to block {} for node {}:{}",
+                blockNumber,
+                node.address(),
+                node.port());
+    }
+
+    /**
+     * Ends the current stream and restarts a new stream at a specific block number.
+     * This method will close the current connection, establish a new stream,
+     * and start processing from the specified block number.
+     *
+     * @param blockNumber the block number to restart at
+     */
+    public void endStreamAndRestartAtBlock(long blockNumber) {
+        logger.info(
+                "Ending stream and restarting at block {} for node {}:{}",
+                blockNumber,
+                node.address(),
+                node.port());
+
+        // Close the current connection and clean up resources
+        close();
+
+        // Set the new block number
+        setCurrentBlockNumber(blockNumber);
+
+        // Establish a new stream
+        establishStream();
+
+        logger.info(
+                "Stream ended and restarted at block {} for node {}:{}",
+                blockNumber,
+                node.address(),
+                node.port());
+    }
+
+    /**
+     * Restarts the stream and worker thread at a specific block number.
      * This method will interrupt the current worker thread if it exists,
      * set the new block number and request index, and start a new worker thread.
      *
      * @param blockNumber the block number to restart at
      */
-    public void restartWorkerAtBlock(long blockNumber) {
+    public void restartStreamAtBlock(long blockNumber) {
         logger.info("Restarting worker thread for node {}:{} at block {}", node.address(), node.port(), blockNumber);
 
+        stopWorkerThread();
+        setCurrentBlockNumber(blockNumber);
+        startRequestWorker();
+        notifyNewBlockAvailable();
+
+        logger.info("Worker thread restarted for node {}:{} at block {}", node.address(), node.port(), blockNumber);
+    }
+
+    /**
+     * Stops the current worker thread if it exists and waits for it to terminate.
+     */
+    private void stopWorkerThread() {
         // Stop the current worker thread if it exists
         if (requestWorker != null && requestWorker.isAlive()) {
             requestWorker.interrupt();
@@ -422,17 +516,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 Thread.currentThread().interrupt();
             }
         }
-
-        // Set the new block number and reset request index
-        setCurrentBlockNumber(blockNumber);
-
-        // Start a new worker thread
-        startRequestWorker();
-
-        // Notify that a new block is available to process
-        notifyNewBlockAvailable();
-
-        logger.info("Worker thread restarted for node {}:{} at block {}", node.address(), node.port(), blockNumber);
     }
 
     @Override
@@ -457,12 +540,30 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     @Override
-    public void onError(Throwable throwable) {
-        Status status = Status.fromThrowable(throwable);
+    public void onError(Throwable error) {
         logger.error(
-                "Error in block node stream {}:{}: {} {}", node.address(), node.port(), status, throwable.getMessage());
-        handleStreamFailure();
-        scheduleReconnect();
+                "[{}] Error on stream from block node {}:{}",
+                Thread.currentThread().getName(),
+                node.address(),
+                node.port(),
+                error);
+
+        synchronized (channelLock) {
+            // Shutdown the existing channel
+            if (channel != null && !channel.isShutdown()) {
+                try {
+                    channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    logger.warn("Interrupted while shutting down channel after error");
+                }
+            }
+            // Clear the requestObserver since it's no longer valid
+            requestObserver = null;
+        }
+
+        // Notify connection manager of the error
+        manager.handleConnectionError(node);
     }
 
     @Override

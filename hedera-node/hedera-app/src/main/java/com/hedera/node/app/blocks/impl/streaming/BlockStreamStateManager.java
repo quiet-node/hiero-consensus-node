@@ -65,7 +65,6 @@ public class BlockStreamStateManager {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
         // Create a new block state
         blockStates.put(blockNumber, BlockState.from(blockNumber));
-        logger.info("Started new block in BlockStreamStateManager {}", blockNumber);
     }
 
     /**
@@ -113,7 +112,7 @@ public class BlockStreamStateManager {
                 PublishStreamRequest.newBuilder().setBlockItems(itemSet).build();
 
         blockState.requests().add(request);
-        logger.info(
+        logger.debug(
                 "Added request to block {} - request count now: {}",
                 blockState.blockNumber(),
                 blockState.requests().size());
@@ -138,7 +137,7 @@ public class BlockStreamStateManager {
 
         // Check if there are remaining items
         if (!blockState.itemBytes().isEmpty()) {
-            logger.info(
+            logger.debug(
                     "Creating request from remaining items in block {} size {}",
                     blockNumber,
                     blockState.itemBytes().size());
@@ -147,7 +146,7 @@ public class BlockStreamStateManager {
 
         // Mark the block as complete
         blockState.setComplete();
-        logger.info(
+        logger.debug(
                 "Closed block in BlockStreamStateManager {} - request count: {}",
                 blockNumber,
                 blockState.requests().size());
@@ -175,11 +174,23 @@ public class BlockStreamStateManager {
 
         // If there are remaining items we will create a request from them while the BlockProof is pending
         if (!blockState.itemBytes().isEmpty()) {
-            logger.info(
+            logger.debug(
                     "Prior to BlockProof, creating request from items in block {} size {}",
                     blockNumber,
                     blockState.itemBytes().size());
             createRequestFromCurrentItems(blockState);
         }
+    }
+
+    /**
+     * Removes all block states with block numbers less than or equal to the given block number. This operation is
+     * thread-safe.
+     *
+     * @param blockNumber the block number
+     */
+    public void removeBlockStatesUpTo(long blockNumber) {
+        // Use keySet().removeIf for atomic removal of multiple entries
+        blockStates.keySet().removeIf(key -> key <= blockNumber);
+        logger.debug("Removed block states up to and including block {}", blockNumber);
     }
 }

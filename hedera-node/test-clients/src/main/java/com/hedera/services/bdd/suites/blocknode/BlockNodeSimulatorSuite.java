@@ -12,11 +12,20 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
+import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.OrderedInIsolation;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilder;
+import org.apache.logging.log4j.core.config.builder.api.ConfigurationBuilderFactory;
+import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -55,10 +64,6 @@ public class BlockNodeSimulatorSuite {
                         .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
                         .withBlockNumber(123456L)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
-                // Verify the log message in node 0's log
-                // TODO This is a temporary solution. Behaviors could be verified through log statements that occur
-                // on the consensus node. In addition, the lastVerifiedBlockNumber could be used in the log verification
-                // below.
                 assertHgcaaLogContains(
                         byNodeId(0), "Error returned from block node at block number 123456", Duration.ofSeconds(5)));
     }

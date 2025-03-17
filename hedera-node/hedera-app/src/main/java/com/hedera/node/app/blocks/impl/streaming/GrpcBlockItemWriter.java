@@ -38,7 +38,7 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
         this.blockNumber = blockNumber;
         blockNodeConnectionManager.openBlock(blockNumber);
-        logger.info("Started new block in GrpcBlockItemWriter {}", blockNumber);
+        logger.debug("Started new block in GrpcBlockItemWriter {}", blockNumber);
     }
 
     @Override
@@ -55,7 +55,7 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
     @Override
     public void closeBlock() {
         blockStreamStateManager.closeBlock(blockNumber);
-        logger.info("Closed block in GrpcBlockItemWriter");
+        logger.debug("Closed block in GrpcBlockItemWriter");
     }
 
     @Override
