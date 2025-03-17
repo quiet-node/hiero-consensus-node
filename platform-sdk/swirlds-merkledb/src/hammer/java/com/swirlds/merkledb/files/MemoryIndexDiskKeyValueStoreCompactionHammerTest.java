@@ -79,7 +79,7 @@ class MemoryIndexDiskKeyValueStoreCompactionHammerTest {
             throws IOException, InterruptedException {
 
         // Collection of database files and index
-        LongListOffHeap storeIndex = new LongListOffHeap();
+        LongListOffHeap storeIndex = new LongListOffHeap(1024 * 1024, 2L * 1024 * 1024, 256 * 1024);
         final MerkleDbConfig dbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
         final var store = new MemoryIndexDiskKeyValueStore(
                 dbConfig,

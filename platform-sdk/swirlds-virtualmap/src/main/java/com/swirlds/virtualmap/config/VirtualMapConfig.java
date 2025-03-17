@@ -57,10 +57,6 @@ import java.time.Duration;
  *      Virtual root copy flush threshold. A copy can be flushed to disk only if it's size exceeds this
  *      threshold. If set to zero, size-based flushes aren't used, and copies are flushed based on {@link
  *      #flushInterval} instead.
- * @param percentCopyFlushAfterGCThreshold
- *      If a copy is a candidate to flush, and its estimated size after GC is greater than {@link
- *      #percentCopyFlushAfterGCThreshold} percents of {@link #copyFlushCandidateThreshold}, then the copy is
- *      flushed to disk, otherwise it's GCed and then merged to the next copy.
  * @param familyThrottleThreshold
  *      Virtual root family throttle threshold. When estimated size of all unreleased copies of the same virtual
  *      root exceeds this threshold, virtual pipeline starts applying backpressure on creating new root copies.

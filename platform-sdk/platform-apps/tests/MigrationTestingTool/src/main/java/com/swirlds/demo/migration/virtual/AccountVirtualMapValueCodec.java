@@ -12,6 +12,13 @@ public class AccountVirtualMapValueCodec implements Codec<AccountVirtualMapValue
 
     public static final AccountVirtualMapValueCodec INSTANCE = new AccountVirtualMapValueCodec();
 
+    private static final AccountVirtualMapValue DEFAULT_VALUE = new AccountVirtualMapValue(0, 0, 0, false, 0);
+
+    @Override
+    public AccountVirtualMapValue getDefaultInstance() {
+        return DEFAULT_VALUE;
+    }
+
     @NonNull
     @Override
     public AccountVirtualMapValue parse(@NonNull ReadableSequentialData in, boolean strictMode, int maxDepth)

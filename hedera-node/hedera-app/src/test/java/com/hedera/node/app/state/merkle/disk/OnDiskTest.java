@@ -61,9 +61,13 @@ class OnDiskTest extends MerkleTestBase {
             }
         };
 
-        // Force all hashes to disk, to make sure we're going through all the
-        // serialization paths we can
-        final var tableConfig = new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 100, 0);
+        final var tableConfig = new MerkleDbTableConfig(
+                (short) 1,
+                DigestType.SHA_384,
+                100,
+                // Force all hashes to disk, to make sure we're going through all the
+                // serialization paths we can
+                0);
 
         final var builder = new MerkleDbDataSourceBuilder(storageDir, tableConfig, CONFIGURATION);
         virtualMap =
