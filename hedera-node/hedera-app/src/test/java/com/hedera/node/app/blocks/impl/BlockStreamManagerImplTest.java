@@ -29,7 +29,6 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.withSettings;
@@ -284,7 +283,7 @@ class BlockStreamManagerImplTest {
         // Write some items to the block
         subject.writeItem(FAKE_EVENT_TRANSACTION);
         subject.writeItem(FAKE_TRANSACTION_RESULT);
-        subject.setRoundFirstUserTransactionTime(CONSENSUS_NOW);
+        subject.setRoundFirstTransactionTime(CONSENSUS_NOW);
         subject.writeItem(FAKE_STATE_CHANGES);
         subject.writeItem(FAKE_RECORD_FILE_ITEM);
 
@@ -452,6 +451,7 @@ class BlockStreamManagerImplTest {
 
         // Start the round that will be block N
         subject.startRound(round, state);
+        subject.setRoundFirstTransactionTime(CONSENSUS_NOW);
 
         verify(aWriter, timeout(1000)).openBlock(N_BLOCK_NO);
         verify(aWriter, timeout(1000)).writeBlockHeaderItem(any());
@@ -498,7 +498,7 @@ class BlockStreamManagerImplTest {
         subject.endRound(state, ROUND_NO);
 
         // Assert the internal state of the subject has changed as expected and the writer has been closed
-        verify(blockHashSigner, times(2)).isReady();
+        verify(blockHashSigner).isReady();
         verifyNoMoreInteractions(blockHashSigner);
     }
 
@@ -534,7 +534,7 @@ class BlockStreamManagerImplTest {
         subject.writeItem(FAKE_EVENT_TRANSACTION);
         assertEquals(Bytes.fromHex("aa".repeat(48)), subject.prngSeed());
         subject.writeItem(FAKE_TRANSACTION_RESULT);
-        subject.setRoundFirstUserTransactionTime(CONSENSUS_NOW);
+        subject.setRoundFirstTransactionTime(CONSENSUS_NOW);
         assertEquals(Bytes.fromHex("bb".repeat(48)), subject.prngSeed());
         subject.writeItem(FAKE_STATE_CHANGES);
         for (int i = 0; i < 8; i++) {
