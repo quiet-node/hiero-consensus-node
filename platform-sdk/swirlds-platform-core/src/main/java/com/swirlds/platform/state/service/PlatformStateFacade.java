@@ -331,9 +331,9 @@ public class PlatformStateFacade {
 
         List<String> states = new ArrayList<>();
 
-        MerkleIterator<MerkleNode> merkleNodeIterator = state.getRoot().treeIterator();
-        while (merkleNodeIterator.hasNext()) {
-            MerkleNode next = merkleNodeIterator.next();
+//        MerkleIterator<MerkleNode> merkleNodeIterator = state.getRoot().treeIterator();
+//        while (merkleNodeIterator.hasNext()) {
+//            MerkleNode next = merkleNodeIterator.next();
 //            if (next instanceof VirtualLeafNode leafNode) {
 //                Bytes key = leafNode.getKey();
 //                if (keysToFind.containsKey(key)) {
@@ -341,10 +341,10 @@ public class PlatformStateFacade {
 //                    states.add(nameAndKey.left() + "." + nameAndKey.right() + ": " + leafNode.getHash());
 //                }
 //            }
-            if (next instanceof VirtualInternalNode internalNode) {
-                states.add("internal node | path= " + internalNode.getPath() + " hash=" + internalNode.getHash());
-            }
-        }
+//            if (next instanceof VirtualInternalNode internalNode) {
+//                states.add("internal node | path= " + internalNode.getPath() + " hash=" + internalNode.getHash());
+//            }
+//        }
 
         final String guiltyContents = services.entrySet().stream()
                 .flatMap(entry -> {
@@ -364,33 +364,33 @@ public class PlatformStateFacade {
                 .findFirst()
                 .orElse("No BlockStreamInfo found");
 
-        final VirtualMap vm = (VirtualMap) state.getRoot();
-        final RecordAccessor recordAccessor = vm.getRoot().getRecords();
+//        final VirtualMap vm = (VirtualMap) state.getRoot();
+//        final RecordAccessor recordAccessor = vm.getRoot().getRecords();
 
-        final StringBuilder sb = new StringBuilder();
-        InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
-            final VirtualLeafBytes<?> virtualLeafBytes = recordAccessor.findLeafRecord(pair.left());
-            final var hash = recordAccessor.findHash(virtualLeafBytes.path());
-            sb.append("k=")
-                    .append(pair.left())
-                    .append(";v=")
-                    .append(pair.right())
-                    .append(";path=")
-                    .append(virtualLeafBytes.path())
-                    .append(";hash=")
-                    .append(hash)
-                    .append("\n");
-        };
+//        final StringBuilder sb = new StringBuilder();
+//        InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
+//            final VirtualLeafBytes<?> virtualLeafBytes = recordAccessor.findLeafRecord(pair.left());
+//            final var hash = recordAccessor.findHash(virtualLeafBytes.path());
+//            sb.append("k=")
+//                    .append(pair.left())
+//                    .append(";v=")
+//                    .append(pair.right())
+//                    .append(";path=")
+//                    .append(virtualLeafBytes.path())
+//                    .append(";hash=")
+//                    .append(hash)
+//                    .append("\n");
+//        };
 
-        try {
-            VirtualMapMigration.extractVirtualMapData(AdHocThreadManager.getStaticThreadManager(), vm, handler, 1);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            VirtualMapMigration.extractVirtualMapData(AdHocThreadManager.getStaticThreadManager(), vm, handler, 1);
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
 
         return createInfoString(hashDepth, readablePlatformStateStore(state), state.getHash(), state.getRoot(), states)
                 .concat("\n")
-                .concat("\n" + sb)
+//                .concat("\n" + sb)
                 .concat("\n" + guiltyContents);
     }
 
