@@ -15,10 +15,8 @@ import static java.util.Spliterators.spliteratorUnknownSize;
 import static java.util.stream.Collectors.toMap;
 import static java.util.stream.StreamSupport.stream;
 
-import com.google.protobuf.ByteString;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
-import com.hedera.hapi.platform.event.legacy.StateSignatureTransaction;
 import com.hedera.node.app.Hedera;
 import com.hedera.node.app.ServicesMain;
 import com.hedera.node.app.fixtures.state.FakeServiceMigrator;
@@ -38,10 +36,8 @@ import com.hedera.services.bdd.junit.hedera.embedded.fakes.LapsingBlockHashSigne
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.Response;
-import com.hederahashgraph.api.proto.java.SignedTransaction;
 import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.Transaction;
-import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.hederahashgraph.api.proto.java.TransactionResponse;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.constructable.ConstructableRegistry;
@@ -295,7 +291,7 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
     /**
      * Handles an empty round to trigger system work like genesis entity creations.
      */
-    protected abstract void handleRoundWith(Transaction txn);
+    protected abstract void handleRoundWith(@NonNull byte[] serializedTxn);
 
     /**
      * Submits a transaction to the given node account with the given version.
@@ -334,18 +330,13 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
     /**
      * Gives a pretend state signature transaction.
      */
-    private static Transaction mockStateSignatureTxn() {
-        return Transaction.newBuilder()
-                .setSignedTransactionBytes(SignedTransaction.newBuilder()
-                        .setBodyBytes(TransactionBody.newBuilder()
-                                .setStateSignatureTransaction(StateSignatureTransaction.newBuilder()
-                                        .setHash(ByteString.copyFrom(randomUtf8Bytes(48)))
-                                        .setSignature(ByteString.copyFrom(randomUtf8Bytes(256))))
-                                .build()
-                                .toByteString())
-                        .build()
-                        .toByteString())
-                .build();
+    private byte[] mockStateSignatureTxn() {
+        return hedera.encodeSystemTransaction(com.hedera.hapi.platform.event.StateSignatureTransaction.newBuilder()
+                        .round(1L)
+                        .hash(Bytes.wrap(randomUtf8Bytes(48)))
+                        .signature(Bytes.wrap(randomUtf8Bytes(256)))
+                        .build())
+                .toByteArray();
     }
 
     protected static TransactionResponse parseTransactionResponse(@NonNull final BufferedData responseBuffer) {

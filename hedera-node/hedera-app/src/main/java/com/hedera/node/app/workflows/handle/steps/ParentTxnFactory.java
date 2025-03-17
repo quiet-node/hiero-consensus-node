@@ -6,7 +6,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.OK;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.USER;
-import static com.hedera.node.app.workflows.handle.TransactionType.GENESIS_TRANSACTION;
 import static com.hedera.node.app.workflows.handle.TransactionType.POST_UPGRADE_TRANSACTION;
 import static com.hedera.node.app.workflows.handle.dispatch.ChildDispatchFactory.functionOfTxn;
 import static com.hedera.node.app.workflows.handle.dispatch.ChildDispatchFactory.getKeyVerifier;
@@ -414,9 +413,8 @@ public class ParentTxnFactory {
         final var config = configProvider.getConfiguration();
         final var consensusConfig = config.getConfigData(ConsensusConfig.class);
         final var blockStreamConfig = config.getConfigData(BlockStreamConfig.class);
-        final var maxPrecedingRecords = (type == GENESIS_TRANSACTION || type == POST_UPGRADE_TRANSACTION)
-                ? Integer.MAX_VALUE
-                : consensusConfig.handleMaxPrecedingRecords();
+        final var maxPrecedingRecords =
+                type == POST_UPGRADE_TRANSACTION ? Integer.MAX_VALUE : consensusConfig.handleMaxPrecedingRecords();
         return SavepointStackImpl.newRootStack(
                 state,
                 maxPrecedingRecords,

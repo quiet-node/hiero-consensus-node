@@ -4,7 +4,6 @@ package com.hedera.node.app.workflows.handle;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.BUSY;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
 import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.GENESIS_WORK;
-import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
 import static com.hedera.node.app.records.schemas.V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartEvent;
@@ -13,10 +12,8 @@ import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartU
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP2;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP3;
 import static com.hedera.node.app.state.merkle.VersionUtils.isSoOrdered;
-import static com.hedera.node.app.workflows.handle.TransactionType.GENESIS_TRANSACTION;
 import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
 import static com.hedera.node.app.workflows.handle.TransactionType.POST_UPGRADE_TRANSACTION;
-import static com.hedera.node.app.workflows.handle.steps.StakePeriodChanges.isNextSecond;
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
@@ -33,7 +30,6 @@ import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
-import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.hapi.util.HapiUtils;
@@ -221,8 +217,8 @@ public class HandleWorkflow {
     /**
      * Handles the next {@link Round}
      *
-     * @param state                     the writable {@link State} that this round will work on
-     * @param round                     the next {@link Round} that needs to be processed
+     * @param state the writable {@link State} that this round will work on
+     * @param round the next {@link Round} that needs to be processed
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     public void handleRound(
@@ -260,8 +256,8 @@ public class HandleWorkflow {
      * Applies all effects of the events in the given round to the given state, writing stream items
      * that capture these effects in the process.
      *
-     * @param state                     the state to apply the effects to
-     * @param round                     the round to apply the effects of
+     * @param state the state to apply the effects to
+     * @param round the round to apply the effects of
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     private void handleEvents(
@@ -357,10 +353,10 @@ public class HandleWorkflow {
      * executing the workflow for the transaction. This produces a stream of records that are then passed to the
      * {@link BlockRecordManager} to be externalized.
      *
-     * @param state          the writable {@link State} that this transaction will work on
-     * @param creator        the {@link NodeInfo} of the creator of the transaction
-     * @param txn            the {@link ConsensusTransaction} to be handled
-     * @param txnVersion     the software version for the event containing the transaction
+     * @param state the writable {@link State} that this transaction will work on
+     * @param creator the {@link NodeInfo} of the creator of the transaction
+     * @param txn the {@link ConsensusTransaction} to be handled
+     * @param txnVersion the software version for the event containing the transaction
      * @param userTxnHandled whether a user transaction has been handled in this round
      * @return {@code true} if the transaction was a user transaction, {@code false} if a system transaction
      */
@@ -420,13 +416,15 @@ public class HandleWorkflow {
             // further consideration here
             purgeScheduling(state, lastRecordManagerTime, userTxn.consensusNow());
         } else {
-            final var executionStart = blockStreamManager.lastIntervalProcessTime();
+            var executionStart = blockStreamManager.lastIntervalProcessTime();
+            if (executionStart.equals(Instant.EPOCH)) {
+                executionStart = userTxn.consensusNow();
+            }
             try {
                 // We execute as many schedules expiring in [lastIntervalProcessTime, consensusNow]
                 // as there are available consensus times and execution slots (ordinarily there will
                 // be more than enough of both, but we must be prepared for the edge cases)
-                executeAsManyScheduled(
-                        state, executionStart, userTxn.consensusNow(), userTxn.creatorInfo(), userTxn.type());
+                executeAsManyScheduled(state, executionStart, userTxn.consensusNow(), userTxn.creatorInfo());
             } catch (Exception e) {
                 logger.error(
                         "{} - unhandled exception while executing schedules between [{}, {}]",
@@ -450,23 +448,21 @@ public class HandleWorkflow {
      * time to the latest time known to have been processed; and the {@link #lastExecutedSecond} value to the last
      * second of the interval for which all scheduled transactions were executed.
      *
-     * @param state          the state to execute scheduled transactions from
+     * @param state the state to execute scheduled transactions from
      * @param executionStart the start of the interval to execute transactions in
-     * @param consensusNow   the consensus time at which the user transaction triggering this execution was processed
-     * @param creatorInfo    the node info of the user transaction creator
-     * @param type           the type of the user transaction triggering this execution
+     * @param consensusNow the consensus time at which the user transaction triggering this execution was processed
+     * @param creatorInfo the node info of the user transaction creator
      */
     private void executeAsManyScheduled(
             @NonNull final State state,
             @NonNull final Instant executionStart,
             @NonNull final Instant consensusNow,
-            @NonNull final NodeInfo creatorInfo,
-            @NonNull final TransactionType type) {
+            @NonNull final NodeInfo creatorInfo) {
         // Non-final right endpoint of the execution interval, in case we cannot do all the scheduled work
         var executionEnd = consensusNow;
         // We only construct an Iterator<ExecutableTxn> if this is not genesis, and we haven't already
         // created and exhausted iterators through the last second in the interval
-        if (type != GENESIS_TRANSACTION && executionEnd.getEpochSecond() > lastExecutedSecond) {
+        if (executionEnd.getEpochSecond() > lastExecutedSecond) {
             final var config = configProvider.getConfiguration();
             final var schedulingConfig = config.getConfigData(SchedulingConfig.class);
             final var consensusConfig = config.getConfigData(ConsensusConfig.class);
@@ -547,9 +543,9 @@ public class HandleWorkflow {
      * Type inference helper to compute the base builder for a {@link ParentTxn} derived from a
      * {@link ExecutableTxn}.
      *
-     * @param <T>           the type of the stream builder
+     * @param <T> the type of the stream builder
      * @param executableTxn the executable transaction to compute the base builder for
-     * @param parentTxn       the user transaction derived from the executable transaction
+     * @param parentTxn the user transaction derived from the executable transaction
      * @return the base builder for the user transaction
      */
     private <T extends StreamBuilder> T baseBuilderFor(
@@ -564,8 +560,8 @@ public class HandleWorkflow {
      * should be set to the current time.
      *
      * @param state the state to purge
-     * @param then  the last time the purge was triggered
-     * @param now   the current time
+     * @param then the last time the purge was triggered
+     * @param now the current time
      */
     private void purgeScheduling(@NonNull final State state, final Instant then, final Instant now) {
         if (!Instant.EPOCH.equals(then) && then.getEpochSecond() < now.getEpochSecond()) {
@@ -590,7 +586,7 @@ public class HandleWorkflow {
      *
      * @param parentTxn the user transaction to execute
      * @param txnVersion the software version for the event containing the transaction
-     * @param state      the state to commit any direct changes against
+     * @param state the state to commit any direct changes against
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeTopLevel(
@@ -684,7 +680,7 @@ public class HandleWorkflow {
      * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
      * no other side effects.
      *
-     * @param state        the state to execute the transaction against
+     * @param state the state to execute the transaction against
      * @param consensusNow the time to execute the transaction at
      * @return the stream output from executing the transaction
      */
@@ -720,16 +716,13 @@ public class HandleWorkflow {
     /**
      * Manages time-based side effects for the given user transaction and dispatch.
      *
-     * @param parentTxn  the user transaction to manage time for
+     * @param parentTxn the user transaction to manage time for
      * @param dispatch the dispatch to manage time for
      */
     private void advanceTimeFor(@NonNull final ParentTxn parentTxn, @NonNull final Dispatch dispatch) {
         // WARNING: The check below relies on the BlockStreamManager's last-handled time not being updated yet,
         // so we must not call setLastHandleTime() until after them
         processStakePeriodChanges(parentTxn, dispatch);
-        if (isNextSecond(parentTxn.consensusNow(), blockStreamManager.lastHandleTime())) {
-            processStakePeriodChanges(parentTxn, dispatch);
-        }
         blockStreamManager.setLastHandleTime(parentTxn.consensusNow());
         if (streamMode != BLOCKS) {
             // This updates consTimeOfLastHandledTxn as a side effect
@@ -741,10 +734,10 @@ public class HandleWorkflow {
      * Commits an action with side effects while capturing its key/value state changes and writing them to the
      * block stream.
      *
-     * @param writableStates         the writable states to commit the action to
+     * @param writableStates the writable states to commit the action to
      * @param entityIdWritableStates if not null, the writable states for the entity ID service
-     * @param now                    the consensus timestamp of the action
-     * @param action                 the action to commit
+     * @param now the consensus timestamp of the action
+     * @param action the action to commit
      */
     private void doStreamingKVChanges(
             @NonNull final WritableStates writableStates,
@@ -784,8 +777,7 @@ public class HandleWorkflow {
      * Updates the metrics for the handle workflow.
      */
     private void updateWorkflowMetrics(@NonNull final ParentTxn parentTxn) {
-        if (parentTxn.type() == GENESIS_TRANSACTION
-                || parentTxn.consensusNow().getEpochSecond() > lastMetricUpdateSecond) {
+        if (parentTxn.consensusNow().getEpochSecond() > lastMetricUpdateSecond) {
             opWorkflowMetrics.switchConsensusSecond();
             lastMetricUpdateSecond = parentTxn.consensusNow().getEpochSecond();
         }
@@ -796,8 +788,8 @@ public class HandleWorkflow {
      * information. The record builder is initialized with the transaction, transaction bytes, transaction ID,
      * exchange rate, and memo.
      *
-     * @param builder         the base builder
-     * @param txnInfo         the transaction information
+     * @param builder the base builder
+     * @param txnInfo the transaction information
      * @param exchangeRateSet the active exchange rate set
      * @return the initialized base builder
      */
@@ -837,7 +829,6 @@ public class HandleWorkflow {
                     parentTxn.stack(),
                     parentTxn.tokenContextImpl(),
                     streamMode,
-                    parentTxn.type() == GENESIS_TRANSACTION,
                     blockStreamManager.lastHandleTime());
         } catch (final Exception e) {
             // We don't propagate a failure here to avoid a catastrophic scenario
@@ -851,8 +842,8 @@ public class HandleWorkflow {
      * Reconciles the state of the TSS system with the active rosters in the given state at the current time.
      *
      * @param tssConfig the TSS configuration
-     * @param state     the state to use when reconciling the TSS system state with the active rosters
-     * @param now       the current consensus time
+     * @param state the state to use when reconciling the TSS system state with the active rosters
+     * @param now the current consensus time
      */
     private void reconcileTssState(
             @NonNull final TssConfig tssConfig, @NonNull final State state, @NonNull final Instant now) {
@@ -906,12 +897,6 @@ public class HandleWorkflow {
      * @return the type of the boundary transaction
      */
     private TransactionType typeOfBoundary(@NonNull final State state) {
-        final var entityCounts =
-                state.getReadableStates(EntityIdService.NAME).<EntityCounts>getSingleton(ENTITY_COUNTS_KEY);
-        // The files map is empty only at genesis
-        if (entityCounts.get().numFiles() == 0) {
-            return GENESIS_TRANSACTION;
-        }
         final var blockInfo = state.getReadableStates(BlockRecordService.NAME)
                 .<BlockInfo>getSingleton(BLOCK_INFO_STATE_KEY)
                 .get();

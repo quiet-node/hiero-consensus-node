@@ -52,8 +52,9 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
     }
 
     @Override
-    protected void handleRoundWith(@NonNull final Transaction txn) {
-        final var round = platform.roundWith(txn);
+    protected void handleRoundWith(@NonNull final byte[] serializedTxn) {
+        final var round = platform.roundWith(serializedTxn);
+        hedera.onPreHandle(round.iterator().next(), state, NOOP_STATE_SIG_CALLBACK);
         hedera.handleWorkflow().handleRound(state, round, NOOP_STATE_SIG_CALLBACK);
         hedera.onSealConsensusRound(round, state);
         notifyStateHashed(round.getRoundNum());
@@ -146,25 +147,6 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
         }
 
         /**
-         * Creates a fake consensus round with just the given transaction.
-         */
-        private Round roundWith(@NonNull final Transaction txn) {
-            final var firstRoundTime = now();
-            return new FakeRound(
-                    roundNo.getAndIncrement(),
-                    requireNonNull(roster),
-                    List.of(new FakeConsensusEvent(
-                            new FakeEvent(
-                                    defaultNodeId,
-                                    firstRoundTime,
-                                    version.getPbjSemanticVersion(),
-                                    createAppPayloadWrapper(txn.toByteArray())),
-                            consensusOrder.getAndIncrement(),
-                            firstRoundTime,
-                            version.getPbjSemanticVersion())));
-        }
-
-        /**
          * Simulates a round of events coming to consensus and being handled by the Hedera node.
          *
          * <p>We advance consensus time by 1 second in fake time for each round, unless some other
@@ -202,6 +184,25 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
             } catch (Throwable t) {
                 log.error("Error handling transactions", t);
             }
+        }
+
+        /**
+         * Creates a fake consensus round with just the given transaction.
+         */
+        private Round roundWith(@NonNull final byte[] serializedTxn) {
+            final var firstRoundTime = now();
+            return new FakeRound(
+                    roundNo.getAndIncrement(),
+                    requireNonNull(roster),
+                    List.of(new FakeConsensusEvent(
+                            new FakeEvent(
+                                    defaultNodeId,
+                                    firstRoundTime,
+                                    version.getPbjSemanticVersion(),
+                                    createAppPayloadWrapper(serializedTxn)),
+                            consensusOrder.getAndIncrement(),
+                            firstRoundTime,
+                            version.getPbjSemanticVersion())));
         }
     }
 }

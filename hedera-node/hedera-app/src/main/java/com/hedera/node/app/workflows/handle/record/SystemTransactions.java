@@ -193,7 +193,7 @@ public class SystemTransactions {
                 Key.newBuilder().ed25519(bootstrapConfig.genesisPublicKey()).build();
         final var systemAutoRenewPeriod = new Duration(7776000L);
         // Create the system accounts
-        for (int i = 1, n = ledgerConfig.numSystemAccounts(); i < n; i++) {
+        for (int i = 1, n = ledgerConfig.numSystemAccounts(); i <= n; i++) {
             final long num = i;
             systemContext.dispatchCreation(
                     b -> b.memo("Synthetic system creation")
@@ -585,9 +585,17 @@ public class SystemTransactions {
                 controlledNum.put(new EntityNumber(nextEntityNum - 1));
             }
             dispatchProcessor.processDispatch(dispatch);
+            if (!SUCCESSES.contains(dispatch.streamBuilder().status())) {
+                log.error(
+                        "Failed to dispatch system create transaction {} for entity {} - {}",
+                        body,
+                        nextEntityNum,
+                        dispatch.streamBuilder().status());
+            }
             if (controlledNum != null) {
                 controlledNum.put(new EntityNumber(
                         config.getConfigData(HederaConfig.class).firstUserEntity() - 1));
+                dispatch.stack().commitSystemStateChanges();
             }
             final var handleOutput =
                     parentTxn.stack().buildHandleOutput(parentTxn.consensusNow(), exchangeRateManager.exchangeRates());
