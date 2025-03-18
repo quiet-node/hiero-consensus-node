@@ -1065,6 +1065,10 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .orElse(true);
     }
 
+    public @NonNull Supplier<Network> genesisNetworkSupplierOrThrow() {
+        return requireNonNull(genesisNetworkSupplier);
+    }
+
     @Override
     public Bytes encodeSystemTransaction(@NonNull StateSignatureTransaction stateSignatureTransaction) {
         final var nodeAccountID = appContext.selfNodeInfoSupplier().get().accountId();
