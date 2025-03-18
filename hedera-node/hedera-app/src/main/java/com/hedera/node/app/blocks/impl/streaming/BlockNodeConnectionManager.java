@@ -139,7 +139,7 @@ public class BlockNodeConnectionManager {
 
     public void scheduleReconnect(@NonNull final BlockNodeConnection connection) {
         requireNonNull(connection);
-        
+
         retryExecutor.execute(() -> {
             synchronized (connectionLock) {
                 try {
@@ -157,8 +157,8 @@ public class BlockNodeConnectionManager {
                     }
                 } catch (Exception e) {
                     final var node = connection.getNodeConfig();
-                    logger.error("Failed to re-establish stream to block node {}:{}: {}", 
-                        node.address(), node.port(), e);
+                    logger.error(
+                            "Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
                     activeConnections.remove(connection.getNodeConfig());
                 }
             }

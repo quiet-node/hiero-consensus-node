@@ -201,7 +201,7 @@ public class BlockStreamStateManager {
      *
      * @return the current block number
      */
-    public long getBlockNumber(){
+    public long getBlockNumber() {
         return blockNumber;
     }
 }

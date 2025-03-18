@@ -20,7 +20,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import org.junit.jupiter.api.Assertions;
 
 /**
@@ -28,7 +27,7 @@ import org.junit.jupiter.api.Assertions;
  * a sequence of patterns within a specified timeframe.
  */
 public class LogContainmentTimeframeOp extends UtilOp {
-    private static final DateTimeFormatter LOG_TIMESTAMP_FORMAT = 
+    private static final DateTimeFormatter LOG_TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     private final NodeSelector selector;
@@ -89,7 +88,7 @@ public class LogContainmentTimeframeOp extends UtilOp {
         spec.targetNetworkOrThrow().nodesFor(selector).forEach(node -> {
             final var logContents = rethrowIO(() -> Files.readString(node.getExternalPath(path)));
             final var logLines = logContents.split("\n");
-            
+
             // Filter logs to only those within the timeframe
             List<String> relevantLogs = new ArrayList<>();
             for (String line : logLines) {
@@ -97,9 +96,8 @@ public class LogContainmentTimeframeOp extends UtilOp {
                     String timestamp = line.substring(0, 23); // "2025-03-17 21:36:20.275"
                     LocalDateTime logTime = LocalDateTime.parse(timestamp, LOG_TIMESTAMP_FORMAT);
                     Instant logInstant = logTime.atZone(ZoneId.systemDefault()).toInstant();
-                    
-                    if (logInstant.isAfter(startTime) && 
-                        logInstant.isBefore(startTime.plus(timeframe))) {
+
+                    if (logInstant.isAfter(startTime) && logInstant.isBefore(startTime.plus(timeframe))) {
                         relevantLogs.add(line);
                     }
                 } catch (Exception e) {
@@ -116,8 +114,8 @@ public class LogContainmentTimeframeOp extends UtilOp {
                     String log = relevantLogs.get(i);
                     // Strip timestamp and thread info for comparison
                     String logContent = log.replaceAll(
-                        "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3} \\w+\\s+\\d+\\s+\\w+\\s+-\\s+\\[.*?\\]\\s*",
-                        "");
+                            "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3} \\w+\\s+\\d+\\s+\\w+\\s+-\\s+\\[.*?\\]\\s*",
+                            "");
                     if (logContent.contains(pattern)) {
                         found = true;
                         lastFoundIndex = i;
@@ -125,15 +123,11 @@ public class LogContainmentTimeframeOp extends UtilOp {
                     }
                 }
                 if (!found) {
-                    Assertions.fail(
-                        String.format(
+                    Assertions.fail(String.format(
                             "Log for node '%s' does not contain '%s' within timeframe %s to %s",
-                            node.getName(),
-                            pattern,
-                            startTime,
-                            startTime.plus(timeframe)));
+                            node.getName(), pattern, startTime, startTime.plus(timeframe)));
                 }
             }
         });
     }
-} 
+}
