@@ -74,8 +74,7 @@ class MerkleStateRootTest extends MerkleTestBase {
         FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
         setupFruitMerkleMap();
         stateRoot = new TestMerkleStateRoot();
-        stateRoot.init(
-                CONFIGURATION, new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
+        stateRoot.init(new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
     }
 
     /** Looks for a merkle node with the given label */
@@ -836,7 +835,7 @@ class MerkleStateRootTest extends MerkleTestBase {
             merkleCryptography = MerkleCryptographyFactory.create(ConfigurationBuilder.create()
                     .withConfigDataType(CryptoConfig.class)
                     .build());
-            stateRoot.init(CONFIGURATION, new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
+            stateRoot.init(new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
         }
 
         @Test

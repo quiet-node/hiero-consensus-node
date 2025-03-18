@@ -212,7 +212,6 @@ class SerializationTest extends MerkleTestBase {
                 .build();
 
         originalTree.init(
-                config,
                 context.getTime(),
                 context.getMetrics(),
                 context.getMerkleCryptography(),

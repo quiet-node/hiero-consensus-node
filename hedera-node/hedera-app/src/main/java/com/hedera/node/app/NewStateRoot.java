@@ -104,9 +104,9 @@ public class NewStateRoot implements MerkleNodeState {
 
     private VirtualMap virtualMap;
 
-    // remove configuration from init method if this is working
-    public NewStateRoot(Configuration configuration) {
-        this.configuration = configuration;
+    public NewStateRoot(@NonNull final Configuration configuration) {
+        this.configuration = requireNonNull(configuration);
+
         // Config constant (TODO: move to config)
         long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
 
@@ -128,14 +128,13 @@ public class NewStateRoot implements MerkleNodeState {
         this.virtualMap = virtualMap;
     }
 
-    // not sure if it is needed though!
     /**
      * Protected constructor for fast-copy.
      *
      * @param from The other state to fast-copy from. Cannot be null.
      */
     protected NewStateRoot(@NonNull final NewStateRoot from) {
-        this.virtualMap = from.virtualMap.copy(); // not sure in this
+        this.virtualMap = from.virtualMap.copy();
 
         this.roundSupplier = from.roundSupplier;
 
@@ -147,14 +146,7 @@ public class NewStateRoot implements MerkleNodeState {
         }
     }
 
-    // This is how MerkleStateRoot was init (except configuration) -- maybe need to work out new way here
-    public void init(
-            @NonNull Configuration configuration,
-            Time time,
-            Metrics metrics,
-            MerkleCryptography merkleCryptography,
-            LongSupplier roundSupplier) {
-        this.configuration = configuration;
+    public void init(Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
         this.time = time;
         this.metrics = metrics;
         this.merkleCryptography = merkleCryptography;
