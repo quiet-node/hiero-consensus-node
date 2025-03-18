@@ -29,7 +29,7 @@ import org.apache.logging.log4j.Logger;
  * It is also responsible for retrying with exponential backoff if a connection fails.
  */
 public class BlockNodeConnectionManager {
-    public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
+    public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(5);
     private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
     private static final String GRPC_END_POINT =
             BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
@@ -81,20 +81,22 @@ public class BlockNodeConnectionManager {
     }
 
     private void connectToNode(@NonNull BlockNodeConfig node) {
-        logger.info("Connecting to block node {}:{}", node.address(), node.port());
-        try {
-            BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
-            connection.establishStream();
-            synchronized (connectionLock) {
+        synchronized (connectionLock) {
+            try {
+                BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
+                connection.establishStream();
                 connection.getIsActiveLock().lock();
-                if (connection.isActive()) {
-                    activeConnections.put(node, connection);
+                try {
+                    if (connection.isActive()) {
+                        activeConnections.put(node, connection);
+                        logger.info("Successfully connected to block node {}:{}", node.address(), node.port());
+                    }
+                } finally {
+                    connection.getIsActiveLock().unlock();
                 }
-                connection.getIsActiveLock().unlock();
+            } catch (Exception e) {
+                logger.error("Failed to connect to block node {}:{}", node.address(), node.port(), e);
             }
-            logger.info("Successfully connected to block node {}:{}", node.address(), node.port());
-        } catch (Exception e) {
-            logger.error("Failed to connect to block node {}:{}", node.address(), node.port(), e);
         }
     }
 
@@ -102,8 +104,13 @@ public class BlockNodeConnectionManager {
         synchronized (connectionLock) {
             BlockNodeConnection connection = activeConnections.remove(node);
             if (connection != null) {
-                connection.close();
-                logger.info("Disconnected from block node {}:{}", node.address(), node.port());
+                connection.getIsActiveLock().lock();
+                try {
+                    connection.close();
+                    logger.info("Disconnected from block node {}:{}", node.address(), node.port());
+                } finally {
+                    connection.getIsActiveLock().unlock();
+                }
             }
         }
     }
@@ -116,20 +123,44 @@ public class BlockNodeConnectionManager {
      */
     public void handleConnectionError(@NonNull BlockNodeConfig node) {
         synchronized (connectionLock) {
-            activeConnections.remove(node); // Remove the failed connection
+            BlockNodeConnection connection = activeConnections.remove(node);
+            if (connection != null) {
+                connection.getIsActiveLock().lock();
+                try {
+                    if (connection.isActive()) {
+                        connection.close();
+                    }
+                } finally {
+                    connection.getIsActiveLock().unlock();
+                }
+            }
         }
     }
 
     public void scheduleReconnect(@NonNull final BlockNodeConnection connection) {
         requireNonNull(connection);
-
+        
         retryExecutor.execute(() -> {
-            try {
-                activeConnections.put(connection.getNodeConfig(), connection);
-                retry(connection::establishStream, INITIAL_RETRY_DELAY);
-            } catch (Exception e) {
-                final var node = connection.getNodeConfig();
-                logger.error("Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
+            synchronized (connectionLock) {
+                try {
+                    BlockNodeConfig nodeConfig = connection.getNodeConfig();
+                    if (!activeConnections.containsKey(nodeConfig)) {
+                        connection.getIsActiveLock().lock();
+                        try {
+                            if (!connection.isActive()) {
+                                activeConnections.put(nodeConfig, connection);
+                                retry(connection::establishStream, INITIAL_RETRY_DELAY);
+                            }
+                        } finally {
+                            connection.getIsActiveLock().unlock();
+                        }
+                    }
+                } catch (Exception e) {
+                    final var node = connection.getNodeConfig();
+                    logger.error("Failed to re-establish stream to block node {}:{}: {}", 
+                        node.address(), node.port(), e);
+                    activeConnections.remove(connection.getNodeConfig());
+                }
             }
         });
     }
@@ -177,8 +208,10 @@ public class BlockNodeConnectionManager {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-        for (BlockNodeConfig node : new ArrayList<>(activeConnections.keySet())) {
-            disconnectFromNode(node);
+        synchronized (connectionLock) {
+            for (BlockNodeConfig node : new ArrayList<>(activeConnections.keySet())) {
+                disconnectFromNode(node);
+            }
         }
     }
 
@@ -194,10 +227,12 @@ public class BlockNodeConnectionManager {
 
         scheduler.scheduleAtFixedRate(
                 () -> {
-                    if (!activeConnections.isEmpty()) {
-                        future.complete(true);
-                    } else if (Instant.now().isAfter(Instant.now().plus(timeout))) {
-                        future.complete(false);
+                    synchronized (connectionLock) {
+                        if (!activeConnections.isEmpty()) {
+                            future.complete(true);
+                        } else if (Instant.now().isAfter(Instant.now().plus(timeout))) {
+                            future.complete(false);
+                        }
                     }
                 },
                 0,
@@ -219,19 +254,35 @@ public class BlockNodeConnectionManager {
     public void openBlock(long blockNumber) {
         blockStreamStateManager.openBlock(blockNumber);
         synchronized (connectionLock) {
-            for (BlockNodeConnection blockNodeConnection : activeConnections.values()) {
-                if (blockNodeConnection.getCurrentBlockNumber() == -1) {
-                    blockNodeConnection.setCurrentBlockNumber(blockNumber);
+            List<BlockNodeConnection> connections = new ArrayList<>(activeConnections.values());
+            for (BlockNodeConnection connection : connections) {
+                connection.getIsActiveLock().lock();
+                try {
+                    if (connection.isActive()) {
+                        if (connection.getCurrentBlockNumber() == -1) {
+                            connection.setCurrentBlockNumber(blockNumber);
+                        }
+                        connection.notifyNewBlockAvailable();
+                    }
+                } finally {
+                    connection.getIsActiveLock().unlock();
                 }
-                blockNodeConnection.notifyNewBlockAvailable();
             }
         }
     }
 
     public void notifyConnectionsOfNewRequest() {
         synchronized (connectionLock) {
-            for (BlockNodeConnection blockNodeConnection : activeConnections.values()) {
-                blockNodeConnection.notifyNewRequestAvailable();
+            List<BlockNodeConnection> connections = new ArrayList<>(activeConnections.values());
+            for (BlockNodeConnection connection : connections) {
+                connection.getIsActiveLock().lock();
+                try {
+                    if (connection.isActive()) {
+                        connection.notifyNewRequestAvailable();
+                    }
+                } finally {
+                    connection.getIsActiveLock().unlock();
+                }
             }
         }
     }

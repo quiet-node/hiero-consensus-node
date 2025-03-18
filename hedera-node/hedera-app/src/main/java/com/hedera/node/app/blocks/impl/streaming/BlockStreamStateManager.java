@@ -27,6 +27,7 @@ public class BlockStreamStateManager {
 
     private final Map<Long, BlockState> blockStates = new ConcurrentHashMap<>();
     private final int blockItemBatchSize;
+    private long blockNumber = 0;
 
     // Reference to the connection manager for notifications
     private BlockNodeConnectionManager blockNodeConnectionManager;
@@ -65,6 +66,7 @@ public class BlockStreamStateManager {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
         // Create a new block state
         blockStates.put(blockNumber, BlockState.from(blockNumber));
+        this.blockNumber = blockNumber;
     }
 
     /**
@@ -192,5 +194,14 @@ public class BlockStreamStateManager {
         // Use keySet().removeIf for atomic removal of multiple entries
         blockStates.keySet().removeIf(key -> key <= blockNumber);
         logger.debug("Removed block states up to and including block {}", blockNumber);
+    }
+
+    /**
+     * Gets the current block number.
+     *
+     * @return the current block number
+     */
+    public long getBlockNumber(){
+        return blockNumber;
     }
 }
