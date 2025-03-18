@@ -62,7 +62,6 @@ class FileGetContentsHandlerTest extends FileTestBase {
     @BeforeEach
     void setUp() {
         config = HederaTestConfigBuilder.create()
-                .withValue("cryptoCreateWithAlias.enabled", true)
                 .withValue("ledger.maxAutoAssociations", 5000)
                 .withValue("entities.limitTokenAssociations", false)
                 .withValue("tokens.maxPerAccount", 1000)

@@ -219,7 +219,6 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
         given(entityNumGenerator.newEntityNum()).willReturn(1000L);
         given(handleContext.payer()).willReturn(id);
         final var config = HederaTestConfigBuilder.create()
-                .withValue("cryptoCreateWithAlias.enabled", true)
                 .withValue("ledger.maxAutoAssociations", 5000)
                 .withValue("entities.limitTokenAssociations", false)
                 .withValue("tokens.maxPerAccount", 1000)
@@ -669,7 +668,6 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
                 .build();
         given(handleContext.body()).willReturn(txn);
         final var config = HederaTestConfigBuilder.create()
-                .withValue("cryptoCreateWithAlias.enabled", false)
                 .getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);
         setupExpiryValidator();
@@ -689,7 +687,6 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
         given(handleContext.payer()).willReturn(idFactory.newAccountId(id.accountNum()));
         given(handleContext.consensusNow()).willReturn(consensusInstant);
         final var config = HederaTestConfigBuilder.create()
-                .withValue("cryptoCreateWithAlias.enabled", true)
                 .getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);
         setupExpiryValidator();
@@ -788,7 +785,6 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
 
     private void setupConfig() {
         final var config = HederaTestConfigBuilder.create()
-                .withValue("cryptoCreateWithAlias.enabled", true)
                 .withValue("ledger.maxAutoAssociations", 5000)
                 .withValue("entities.limitTokenAssociations", false)
                 .withValue("tokens.maxPerAccount", 1000)
