@@ -132,7 +132,7 @@ public class StateChangesValidator implements BlockStreamValidator {
                 .normalize();
         final var validator = new StateChangesValidator(
                 Bytes.fromHex(
-                        "81d4687d6f2465d36907a07f9297a1106a9e230915d7375bca964781536fa8184b7c51e3539dcc7d7daa46678e2e1b18"),
+                        "55f25cf2d3a2648f71f829fe1e16af00cb5da9598d4c787327a347291a9e32fa874e9f20e090b45d8a670c0b211b1e8c"),
                 node0Dir.resolve("output/swirlds.log"),
                 node0Dir.resolve("data/config/application.properties"),
                 node0Dir.resolve("data/config"),
@@ -207,6 +207,7 @@ public class StateChangesValidator implements BlockStreamValidator {
         System.setProperty(
                 "networkAdmin.upgradeSysFilesLoc",
                 pathToUpgradeSysFilesLoc.toAbsolutePath().toString());
+        System.setProperty("tss.hintsEnabled", "" + isHintsEnabled);
         unarchiveGenesisNetworkJson(pathToUpgradeSysFilesLoc);
         final var bootstrapConfig = new BootstrapConfigProviderImpl().getConfiguration();
         final var versionConfig = bootstrapConfig.getConfigData(VersionConfig.class);
@@ -245,9 +246,16 @@ public class StateChangesValidator implements BlockStreamValidator {
                         .findFirst()
                         .orElseThrow()
                 : null;
+        final int lastVerifiableIndex =
+                blocks.reversed().stream().filter(b -> b.items().getLast().hasBlockProof()).findFirst().stream()
+                        .mapToInt(b ->
+                                (int) b.items().getFirst().blockHeaderOrThrow().number())
+                        .findFirst()
+                        .orElseThrow();
         for (int i = 0; i < n; i++) {
             final var block = blocks.get(i);
-            final var shouldVerifyProof = i == 0 || i == n - 2 || RANDOM.nextDouble() < PROOF_VERIFICATION_PROB;
+            final var shouldVerifyProof =
+                    i == 0 || i == lastVerifiableIndex || RANDOM.nextDouble() < PROOF_VERIFICATION_PROB;
             if (i != 0 && shouldVerifyProof) {
                 final var stateToBeCopied = state;
                 this.state = stateToBeCopied.copy();
@@ -289,7 +297,7 @@ public class StateChangesValidator implements BlockStreamValidator {
             if (!firstUserTxnSeen) {
                 assertNull(expectedFirstUserTxnTime, "Block had no user transactions");
             }
-            if (i != n - 1) {
+            if (i <= lastVerifiableIndex) {
                 final var lastBlockItem = block.items().getLast();
                 assertTrue(lastBlockItem.hasBlockProof());
                 final var blockProof = lastBlockItem.blockProofOrThrow();
@@ -304,10 +312,9 @@ public class StateChangesValidator implements BlockStreamValidator {
                     validateBlockProof(blockProof, expectedBlockHash, verificationKey);
                     previousBlockHash = expectedBlockHash;
                 } else {
-                    previousBlockHash = i < n - 2
-                            ? requireNonNull(blocks.get(i + 1).items().getLast().blockProof())
-                                    .previousBlockRootHash()
-                            : Bytes.EMPTY;
+                    previousBlockHash = requireNonNull(
+                                    blocks.get(i + 1).items().getLast().blockProof())
+                            .previousBlockRootHash();
                 }
             }
         }
