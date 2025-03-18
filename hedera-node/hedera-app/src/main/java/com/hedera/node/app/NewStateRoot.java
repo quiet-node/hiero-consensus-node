@@ -654,7 +654,9 @@ public class NewStateRoot implements MerkleNodeState {
          * @param stateKey the state key
          */
         public void remove(String stateKey) {
-            stateMetadata.remove(stateKey);
+            if (!Map.of().equals(stateMetadata)) {
+                stateMetadata.remove(stateKey);
+            }
             kvInstances.remove(stateKey);
             singletonInstances.remove(stateKey);
             queueInstances.remove(stateKey);

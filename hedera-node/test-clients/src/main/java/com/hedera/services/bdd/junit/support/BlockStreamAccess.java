@@ -12,8 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
-import com.hedera.hapi.block.stream.BlockProof;
-import com.hedera.hapi.block.stream.input.EventHeader;
 import com.hedera.hapi.block.stream.output.MapChangeKey;
 import com.hedera.hapi.block.stream.output.MapDeleteChange;
 import com.hedera.hapi.block.stream.output.MapUpdateChange;
@@ -35,7 +33,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,8 +62,26 @@ public enum BlockStreamAccess {
         final String ISS_NODE_LABEL = "ISS node";
 
         final var healthyNodeBlockFilePath =
-                Path.of(HEALTHY_NODE_FOLDER + "/000000000000000000000000000000001420.blk.gz");
-        final var issNodeBlockFilePath = Path.of(ISS_NODE_FOLDER + "/000000000000000000000000000000001420.blk.gz");
+                Path.of(HEALTHY_NODE_FOLDER + "/000000000000000000000000000000000050.blk.gz");
+        final var issNodeBlockFilePath = Path.of(ISS_NODE_FOLDER + "/000000000000000000000000000000000050.blk.gz");
+
+        final var resultOfHealthyAll = BLOCK_STREAM_ACCESS.readBlocks(Path.of(HEALTHY_NODE_FOLDER));
+
+        for (Block block : resultOfHealthyAll) {
+            a:
+            for (BlockItem item : block.items()) {
+                if (item.hasStateChanges()) {
+                    for (StateChange change : item.stateChanges().stateChanges()) {
+                        if (change.hasMapUpdate()) {
+                            //                        if (change.hasSingletonUpdate()) {
+                            System.out.println(
+                                    block.items().getFirst().blockHeader().number() + " " + change);
+                            break a;
+                        }
+                    }
+                }
+            }
+        }
 
         final var resultOfHealthy =
                 BLOCK_STREAM_ACCESS.readBlocks(healthyNodeBlockFilePath).getFirst();
@@ -75,105 +90,26 @@ public enum BlockStreamAccess {
 
         assertEquals(resultOfHealthy.items().size(), resultOfIss.items().size());
 
-        for (int i = 0; i < resultOfHealthy.items().size(); i++) {
-            System.out.println("Block (" + HEALTHY_NODE_LABEL + ")= "
-                    + resultOfHealthy.items().get(i));
-            System.out.println(
-                    "Block (" + ISS_NODE_LABEL + ")= " + resultOfIss.items().get(i));
-            //            assertEquals(resultOfHealthy.items().get(i), resultOfIss.items().get(i));
-        }
+        //        for (int i = 0; i < resultOfHealthy.items().size(); i++) {
+        //            System.out.println("Block (" + HEALTHY_NODE_LABEL + ")= "
+        //                    + resultOfHealthy.items().get(i));
+        //            System.out.println(
+        //                    "Block (" + ISS_NODE_LABEL + ")= " + resultOfIss.items().get(i));
+        //                        assertEquals(resultOfHealthy.items().get(i), resultOfIss.items().get(i));
+        //        }
 
         System.out.println("\nCalculating hash:\n");
 
-        processBlocks(healthyNodeBlockFilePath, HEALTHY_NODE_FOLDER, HEALTHY_NODE_LABEL);
-        processBlocks(issNodeBlockFilePath, ISS_NODE_FOLDER, ISS_NODE_LABEL);
-    }
+        final var healthyNodeBlockStreamInfo = lastBlockStreamInfoFrom(List.of(resultOfHealthy));
+        System.out.println(
+                "startBlockHash (" + HEALTHY_NODE_LABEL + ") = " + startBlockHashFrom(healthyNodeBlockStreamInfo));
 
-    private static void processBlocks(Path blockFilePath, String nodeFolderPath, String nodeLabel) {
-        for (Block block : BLOCK_STREAM_ACCESS.readBlocks(blockFilePath)) {
-            BlockStreamInfo.Builder blockStreamInfoBuilder = BlockStreamInfo.newBuilder();
-            List<BlockItem> items = block.items();
-            for (int i = 0; i < items.size(); i++) {
-                BlockItem blockItem = items.get(i);
-                if (blockItem.hasBlockProof()) {
-                    BlockProof blockProof = blockItem.blockProofOrThrow();
-                    blockStreamInfoBuilder =
-                            blockProofToBlockStreamInfo(blockStreamInfoBuilder, blockProof, i, nodeFolderPath);
-                }
-                if (blockItem.hasEventHeader()) {
-                    EventHeader eventHeader = blockItem.eventHeaderOrThrow();
-                    blockStreamInfoBuilder.blockEndTime(eventHeader.eventCore().timeCreatedOrThrow());
-                }
-            }
-
-            blockStreamInfoBuilder.rightmostPrecedingOutputTreeHashes(getRightmostOutputHashes(block));
-
-            // OUTPUT
-            Bytes startBlockHash = startBlockHashFrom(blockStreamInfoBuilder.build());
-            System.out.println("startBlockHash (" + nodeLabel + ") = " + startBlockHash);
-        }
-    }
-
-    private static BlockStreamInfo.Builder blockProofToBlockStreamInfo(
-            BlockStreamInfo.Builder blockStreamInfoBuilder,
-            BlockProof blockProof,
-            int numPrecedingOutputItems,
-            String nodeFolderPath) {
-        return blockStreamInfoBuilder
-                .trailingBlockHashes(getTrailingBlockHashes(nodeFolderPath, (int) blockProof.block()))
-                .blockNumber(blockProof.block())
-                .inputTreeRootHash(blockProof.previousBlockRootHash()) // this might be a problem
-                .startOfBlockStateHash(blockProof.startOfBlockStateRootHash())
-                .numPrecedingOutputItems(numPrecedingOutputItems);
-    }
-
-    private static Bytes getTrailingBlockHashes(String nodeFolderPath, int blockNumber) {
-        AtomicReference<Bytes> result = new AtomicReference<>(Bytes.EMPTY);
-        File folder = new File(nodeFolderPath);
-        File[] files = folder.listFiles((dir, name) -> name.endsWith(COMPRESSED_FILE_EXT));
-        if (files == null) {
-            return result.get();
-        }
-        for (int i = blockNumber - 256; i <= blockNumber; i++) {
-            for (File file : files) {
-                if (extractBlockNumber(file.getName()) == i) {
-                    for (Block block : BLOCK_STREAM_ACCESS.readBlocks(file.toPath())) {
-                        for (BlockItem blockItem : block.items()) {
-                            if (blockItem.hasBlockProof()) {
-                                BlockProof blockProof = blockItem.blockProofOrThrow();
-                                result.set(result.get().append(blockProof.previousBlockRootHash()));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return result.get();
-    }
-
-    private static List<Bytes> getRightmostOutputHashes(Block block) {
-        List<Bytes> outputHashes = new ArrayList<>();
-        for (BlockItem blockItem : block.items()) {
-            if (blockItem.item().kind() == BlockItem.ItemOneOfType.BLOCK_PROOF) {
-                break;
-            }
-            BlockItem.ItemOneOfType type = blockItem.item().kind();
-            if (type == BlockItem.ItemOneOfType.BLOCK_HEADER
-                    || type == BlockItem.ItemOneOfType.ROUND_HEADER
-                    || type == BlockItem.ItemOneOfType.EVENT_HEADER
-                    || type == BlockItem.ItemOneOfType.STATE_CHANGES) {
-                Bytes serialized = BlockItem.PROTOBUF.toBytes(blockItem);
-                Bytes itemHash = noThrowSha384HashOf(serialized);
-                outputHashes.add(itemHash);
-            }
-        }
-
-        return outputHashes;
+        final var issNodeBlockStreamInfo = lastBlockStreamInfoFrom(List.of(resultOfIss));
+        System.out.println("startBlockHash (" + ISS_NODE_LABEL + ") = " + startBlockHashFrom(issNodeBlockStreamInfo));
     }
 
     private static Bytes startBlockHashFrom(@NonNull final BlockStreamInfo blockStreamInfo) {
         requireNonNull(blockStreamInfo);
-        System.out.println("blockStreamInfo (rebuilt)= " + blockStreamInfo);
         // Three of the four ingredients in the block hash are directly in the BlockStreamInfo; that is,
         // the previous block hash, the input tree root hash, and the start of block state hash
 
@@ -278,6 +214,11 @@ public enum BlockStreamAccess {
                 .sorted(Map.Entry.comparingByKey())
                 .map(Map.Entry::getValue)
                 .toList();
+    }
+
+    public static BlockStreamInfo lastBlockStreamInfoFrom(@NonNull final List<Block> blocks) {
+        return computeSingletonValueFromUpdates(
+                blocks, SingletonUpdateChange::blockStreamInfoValueOrThrow, "BlockStreamService", "BLOCK_STREAM_INFO");
     }
 
     /**
