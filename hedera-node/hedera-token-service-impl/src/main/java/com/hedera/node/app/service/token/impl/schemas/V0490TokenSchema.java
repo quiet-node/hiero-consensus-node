@@ -14,13 +14,10 @@ import com.hedera.hapi.node.state.token.Nft;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.hapi.node.state.token.Token;
 import com.hedera.hapi.node.state.token.TokenRelation;
-import com.hedera.node.config.data.LedgerConfig;
-import com.hedera.node.config.data.StakingConfig;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.Arrays;
 import java.util.Set;
 
 /**
@@ -35,9 +32,6 @@ public class V0490TokenSchema extends Schema {
     private static final long MAX_ACCOUNTS = 1_000_000_000L;
     private static final long MAX_TOKEN_RELS = 1_000_000_000L;
     private static final long MAX_MINTABLE_NFTS = 1_000_000_000L;
-    private static final long FIRST_RESERVED_SYSTEM_CONTRACT = 350L;
-    private static final long LAST_RESERVED_SYSTEM_CONTRACT = 399L;
-    private static final long FIRST_POST_SYSTEM_FILE_ENTITY = 200L;
     private static final SemanticVersion VERSION =
             SemanticVersion.newBuilder().major(0).minor(49).patch(0).build();
 
@@ -69,50 +63,15 @@ public class V0490TokenSchema extends Schema {
 
     @Override
     public void migrate(@NonNull final MigrationContext ctx) {
-        final var isGenesis = ctx.previousVersion() == null;
-        if (isGenesis) {
-            initializeNetworkRewards(ctx);
-            initializeStakingNodeInfo(ctx);
-        }
-    }
-
-    private void initializeStakingNodeInfo(@NonNull final MigrationContext ctx) {
-        final var config = ctx.appConfig();
-        final var ledgerConfig = config.getConfigData(LedgerConfig.class);
-        final var stakingConfig = config.getConfigData(StakingConfig.class);
-        final var addressBook = ctx.genesisNetworkInfo().addressBook();
-        final var numberOfNodes = addressBook.size();
-
-        final long maxStakePerNode = ledgerConfig.totalTinyBarFloat() / numberOfNodes;
-        final long minStakePerNode = 0;
-
-        final var numRewardHistoryStoredPeriods = stakingConfig.rewardHistoryNumStoredPeriods();
-        final var stakingInfoState = ctx.newStates().get(STAKING_INFO_KEY);
-        final var rewardSumHistory = new Long[numRewardHistoryStoredPeriods + 1];
-        Arrays.fill(rewardSumHistory, 0L);
-
-        for (final var node : addressBook) {
-            final var nodeNumber = node.nodeId();
-            final var stakingInfo = StakingNodeInfo.newBuilder()
-                    .nodeNumber(nodeNumber)
-                    .maxStake(maxStakePerNode)
-                    .minStake(minStakePerNode)
-                    .rewardSumHistory(Arrays.asList(rewardSumHistory))
-                    .weight(500)
+        if (ctx.isGenesis()) {
+            final var networkRewardsState = ctx.newStates().getSingleton(STAKING_NETWORK_REWARDS_KEY);
+            final var networkRewards = NetworkStakingRewards.newBuilder()
+                    .pendingRewards(0)
+                    .totalStakedRewardStart(0)
+                    .totalStakedStart(0)
+                    .stakingRewardsActivated(true)
                     .build();
-            stakingInfoState.put(EntityNumber.newBuilder().number(nodeNumber).build(), stakingInfo);
+            networkRewardsState.put(networkRewards);
         }
-    }
-
-    private void initializeNetworkRewards(@NonNull final MigrationContext ctx) {
-        // Set genesis network rewards state
-        final var networkRewardsState = ctx.newStates().getSingleton(STAKING_NETWORK_REWARDS_KEY);
-        final var networkRewards = NetworkStakingRewards.newBuilder()
-                .pendingRewards(0)
-                .totalStakedRewardStart(0)
-                .totalStakedStart(0)
-                .stakingRewardsActivated(true)
-                .build();
-        networkRewardsState.put(networkRewards);
     }
 }

@@ -15,16 +15,12 @@ import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
-import com.hedera.node.app.ids.AppEntityIdFactory;
-import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.ids.schemas.V0490EntityIdSchema;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.node.app.services.MigrationContextImpl;
-import com.hedera.node.app.spi.fixtures.info.FakeNetworkInfo;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.lifecycle.StartupNetworks;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import com.swirlds.state.spi.EmptyReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
@@ -42,7 +38,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 final class V0490TokenSchemaTest {
-    private static final long NON_GENESIS_ROUND = 123L;
     private static final long BEGINNING_ENTITY_ID = 1000;
 
     private static final AccountID[] ACCT_IDS = new AccountID[1001];
@@ -54,8 +49,6 @@ final class V0490TokenSchemaTest {
     private MapWritableKVState<AccountID, Account> accounts;
     private WritableStates newStates;
     private Configuration config;
-    private NetworkInfo networkInfo;
-    private WritableEntityIdStore entityIdStore;
 
     @Mock
     private StartupNetworks startupNetworks;
@@ -72,10 +65,6 @@ final class V0490TokenSchemaTest {
                 new WritableSingletonStateBase<>(
                         ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}));
 
-        entityIdStore = new WritableEntityIdStore(newStates);
-
-        networkInfo = new FakeNetworkInfo();
-
         config = buildConfig(DEFAULT_NUM_SYSTEM_ACCOUNTS, true);
     }
 
@@ -83,24 +72,14 @@ final class V0490TokenSchemaTest {
     void initializesStakingDataOnGenesisStart() {
         final var schema = newSubjectWithAllExpected();
         final var migrationContext = new MigrationContextImpl(
-                EmptyReadableStates.INSTANCE,
-                newStates,
-                config,
-                config,
-                networkInfo,
-                entityIdStore,
-                null,
-                0L,
-                new HashMap<>(),
-                startupNetworks,
-                new AppEntityIdFactory(config));
+                EmptyReadableStates.INSTANCE, newStates, config, config, null, 0L, new HashMap<>(), startupNetworks);
 
         schema.migrate(migrationContext);
 
         final var nodeRewardsStateResult = newStates.<NodeInfo>getSingleton(STAKING_NETWORK_REWARDS_KEY);
         assertThat(nodeRewardsStateResult.isModified()).isTrue();
         final var nodeInfoStateResult = newStates.<EntityNumber, StakingNodeInfo>get(STAKING_INFO_KEY);
-        assertThat(nodeInfoStateResult.isModified()).isTrue();
+        assertThat(nodeInfoStateResult.isModified()).isFalse();
     }
 
     private WritableSingletonState<EntityNumber> newWritableEntityIdState() {

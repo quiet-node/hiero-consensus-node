@@ -17,7 +17,6 @@ import com.hedera.node.app.fixtures.state.FakeSchemaRegistry;
 import com.hedera.node.app.fixtures.state.FakeStartupNetworks;
 import com.hedera.node.app.fixtures.state.FakeState;
 import com.hedera.node.app.ids.EntityIdService;
-import com.hedera.node.app.info.GenesisNetworkInfo;
 import com.hedera.node.app.info.NodeInfoImpl;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.spi.fixtures.Scenarios;
@@ -57,8 +56,10 @@ import com.swirlds.state.test.fixtures.MapWritableStates;
 import com.swirlds.state.test.fixtures.TestBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -362,7 +363,7 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
             services.forEach(svc -> {
                 final var reg = new FakeSchemaRegistry();
                 svc.registerSchemas(reg);
-                reg.migrate(svc.getServiceName(), initialState, networkInfo, startupNetworks);
+                reg.migrate(svc.getServiceName(), initialState, startupNetworks);
             });
             workingStateAccessor.setState(initialState);
 
@@ -405,6 +406,90 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
                     return new StateMutator(writableStates);
                 }
             };
+        }
+    }
+
+    /**
+     * Provides information about the network based on the given roster and ledger ID.
+     */
+    public static class GenesisNetworkInfo implements NetworkInfo {
+        private final Bytes ledgerId;
+        private final Map<Long, NodeInfo> nodeInfos;
+
+        /**
+         * Constructs a new {@link GenesisNetworkInfo} instance.
+         *
+         * @param genesisNetwork The genesis network
+         * @param ledgerId      The ledger ID
+         */
+        public GenesisNetworkInfo(@NonNull final Network genesisNetwork, @NonNull final Bytes ledgerId) {
+            this.ledgerId = requireNonNull(ledgerId);
+            this.nodeInfos = nodeInfosFrom(genesisNetwork);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        public Bytes ledgerId() {
+            return ledgerId;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        public NodeInfo selfNodeInfo() {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @NonNull
+        @Override
+        public List<NodeInfo> addressBook() {
+            return List.copyOf(nodeInfos.values());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Nullable
+        @Override
+        public NodeInfo nodeInfo(final long nodeId) {
+            return nodeInfos.get(nodeId);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean containsNode(final long nodeId) {
+            return nodeInfos.containsKey(nodeId);
+        }
+
+        @Override
+        public void updateFrom(final State state) {
+            throw new UnsupportedOperationException("Not implemented");
+        }
+
+        private static Map<Long, NodeInfo> nodeInfosFrom(@NonNull final Network network) {
+            final var nodeInfos = new LinkedHashMap<Long, NodeInfo>();
+            for (final var metadata : network.nodeMetadata()) {
+                final var node = metadata.nodeOrThrow();
+                final var nodeInfo = new NodeInfoImpl(
+                        node.nodeId(),
+                        node.accountIdOrThrow(),
+                        node.weight(),
+                        node.gossipEndpoint(),
+                        node.gossipCaCertificate(),
+                        node.serviceEndpoint());
+                nodeInfos.put(node.nodeId(), nodeInfo);
+            }
+            return nodeInfos;
         }
     }
 }

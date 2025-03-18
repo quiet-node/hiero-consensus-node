@@ -47,11 +47,13 @@ import com.hedera.hapi.node.base.ServiceEndpoint;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
+import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.hapi.node.token.CryptoCreateTransactionBody;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.ids.EntityIdService;
+import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.records.BlockRecordManager;
 import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.app.service.addressbook.ReadableNodeStore;
@@ -63,6 +65,7 @@ import com.hedera.node.app.service.file.impl.schemas.V0490FileSchema;
 import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.BlocklistParser;
+import com.hedera.node.app.service.token.impl.WritableStakingInfoStore;
 import com.hedera.node.app.spi.AppContext;
 import com.hedera.node.app.spi.workflows.SystemContext;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
@@ -83,6 +86,7 @@ import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
 import com.hedera.node.config.data.NodesConfig;
 import com.hedera.node.config.data.SchedulingConfig;
+import com.hedera.node.config.data.StakingConfig;
 import com.hedera.node.config.types.StreamMode;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
@@ -98,6 +102,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +126,7 @@ import org.apache.logging.log4j.Logger;
 public class SystemTransactions {
     private static final Logger log = LogManager.getLogger(SystemTransactions.class);
 
+    private static final int DEFAULT_GENESIS_WEIGHT = 500;
     private static final long FIRST_RESERVED_SYSTEM_CONTRACT = 350L;
     private static final long LAST_RESERVED_SYSTEM_CONTRACT = 399L;
     private static final long FIRST_POST_SYSTEM_FILE_ENTITY = 200L;
@@ -188,7 +194,9 @@ public class SystemTransactions {
     public void doGenesisSetup(@NonNull final Instant now, @NonNull final State state) {
         requireNonNull(now);
         requireNonNull(state);
-        final var systemContext = newSystemContext(now, state);
+        final AtomicReference<Consumer<Dispatch>> onSuccess = new AtomicReference<>(dispatch -> {});
+        final var systemContext =
+                newSystemContext(now, state, dispatch -> onSuccess.get().accept(dispatch));
 
         final var config = configProvider.getConfiguration();
         final var ledgerConfig = config.getConfigData(LedgerConfig.class);
@@ -265,6 +273,8 @@ public class SystemTransactions {
         }
 
         // Create the address book nodes
+        final var stakingConfig = config.getConfigData(StakingConfig.class);
+        final var numStoredPeriods = stakingConfig.rewardHistoryNumStoredPeriods();
         final var nodeAdminKeys = parseEd25519NodeAdminKeysFrom(bootstrapConfig.nodeAdminKeysPath());
         for (final var nodeInfo : networkInfo.addressBook()) {
             final var adminKey = nodeAdminKeys.getOrDefault(nodeInfo.nodeId(), systemKey);
@@ -273,6 +283,24 @@ public class SystemTransactions {
             }
             final var hapiEndpoints =
                     nodeInfo.hapiEndpoints().isEmpty() ? UNKNOWN_HAPI_ENDPOINT : nodeInfo.hapiEndpoints();
+            onSuccess.set(dispatch -> {
+                final var stack = dispatch.stack();
+                final var writableNodeStore = new WritableStakingInfoStore(
+                        stack.getWritableStates(TokenService.NAME),
+                        new WritableEntityIdStore(stack.getWritableStates(EntityIdService.NAME)));
+                final var rewardSumHistory = new Long[numStoredPeriods + 1];
+                Arrays.fill(rewardSumHistory, 0L);
+                writableNodeStore.putAndIncrementCount(
+                        nodeInfo.nodeId(),
+                        StakingNodeInfo.newBuilder()
+                                .nodeNumber(nodeInfo.nodeId())
+                                .maxStake(stakingConfig.maxStake())
+                                .minStake(stakingConfig.minStake())
+                                .rewardSumHistory(Arrays.asList(rewardSumHistory))
+                                .weight(DEFAULT_GENESIS_WEIGHT)
+                                .build());
+                stack.commitSystemStateChanges();
+            });
             systemContext.dispatchAdmin(b -> b.nodeCreate(NodeCreateTransactionBody.newBuilder()
                     .adminKey(adminKey)
                     .accountId(nodeInfo.accountId())
@@ -282,6 +310,7 @@ public class SystemTransactions {
                     .serviceEndpoint(hapiEndpoints)
                     .build()));
         }
+        networkInfo.updateFrom(state);
     }
 
     /**
@@ -500,7 +529,8 @@ public class SystemTransactions {
                 .minusNanos(config.getConfigData(HederaConfig.class).firstUserEntity());
     }
 
-    private SystemContext newSystemContext(@NonNull final Instant now, @NonNull final State state) {
+    private SystemContext newSystemContext(
+            @NonNull final Instant now, @NonNull final State state, @NonNull final Consumer<Dispatch> onSuccess) {
         final var config = configProvider.getConfiguration();
         final var firstConsTime = startupWorkConsTimeFor(now);
         final AtomicReference<Instant> nextConsTime = new AtomicReference<>(firstConsTime);
@@ -540,7 +570,8 @@ public class SystemTransactions {
                 if (streamMode == BOTH) {
                     blockRecordManager.startUserTransaction(now, state);
                 }
-                final var handleOutput = executeSystem(state, now, creatorInfo, systemAdminId, body, entityNum, config);
+                final var handleOutput =
+                        executeSystem(state, now, creatorInfo, systemAdminId, body, entityNum, config, onSuccess);
                 if (streamMode != BLOCKS) {
                     final var records =
                             ((LegacyListRecordSource) handleOutput.recordSourceOrThrow()).precomputedRecords();
@@ -590,6 +621,7 @@ public class SystemTransactions {
      * @param payerId the payer of the transaction
      * @param body the transaction to execute
      * @param nextEntityNum if not zero, the next entity number to use for the transaction
+     * @param onSuccess the action to take after the transaction is successfully dispatched
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeSystem(
@@ -599,7 +631,8 @@ public class SystemTransactions {
             @NonNull final AccountID payerId,
             @NonNull final TransactionBody body,
             final long nextEntityNum,
-            @NonNull final Configuration config) {
+            @NonNull final Configuration config,
+            @NonNull final Consumer<Dispatch> onSuccess) {
         final var parentTxn =
                 parentTxnFactory.createSystemTxn(state, creatorInfo, now, ORDINARY_TRANSACTION, payerId, body);
         parentTxn.initBaseBuilder(exchangeRateManager.exchangeRates());
@@ -625,6 +658,8 @@ public class SystemTransactions {
                         body,
                         nextEntityNum == 0 ? "" : (" for entity #" + nextEntityNum),
                         dispatch.streamBuilder().status());
+            } else {
+                onSuccess.accept(dispatch);
             }
             if (controlledNum != null) {
                 controlledNum.put(new EntityNumber(

@@ -92,7 +92,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             new ServicesSoftwareVersion(CURRENT_VERSION),
                             VERSIONED_CONFIG,
                             VERSIONED_CONFIG,
-                            networkInfo,
                             mock(Metrics.class),
                             startupNetworks,
                             storeMetricsService,
@@ -111,7 +110,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             null,
                             VERSIONED_CONFIG,
                             VERSIONED_CONFIG,
-                            networkInfo,
                             mock(Metrics.class),
                             startupNetworks,
                             storeMetricsService,
@@ -130,7 +128,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             new ServicesSoftwareVersion(CURRENT_VERSION),
                             null,
                             null,
-                            networkInfo,
                             mock(Metrics.class),
                             startupNetworks,
                             storeMetricsService,
@@ -149,7 +146,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             new ServicesSoftwareVersion(CURRENT_VERSION),
                             VERSIONED_CONFIG,
                             VERSIONED_CONFIG,
-                            networkInfo,
                             null,
                             startupNetworks,
                             storeMetricsService,
@@ -198,7 +194,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                         SemanticVersion.newBuilder().major(2).build()),
                 VERSIONED_CONFIG,
                 VERSIONED_CONFIG,
-                networkInfo,
                 mock(Metrics.class),
                 startupNetworks,
                 storeMetricsService,
@@ -311,7 +306,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                         SemanticVersion.newBuilder().major(1).build()),
                 VERSIONED_CONFIG,
                 VERSIONED_CONFIG,
-                networkInfo,
                 mock(Metrics.class),
                 startupNetworks,
                 storeMetricsService,
@@ -365,14 +359,8 @@ class DependencyMigrationTest extends MerkleTestBase {
             registry.register(new Schema(SemanticVersion.newBuilder().major(2).build()) {
                 public void migrate(@NonNull final MigrationContext ctx) {
                     final WritableStates dsWritableStates = ctx.newStates();
-                    final var newEntityNum1 = ctx.newEntityNumForAccount();
-                    dsWritableStates
-                            .get(STATE_KEY)
-                            .put(new EntityNumber(newEntityNum1), new ProtoString("newly-added 1"));
-                    final var newEntityNum2 = ctx.newEntityNumForAccount();
-                    dsWritableStates
-                            .get(STATE_KEY)
-                            .put(new EntityNumber(newEntityNum2), new ProtoString("newly-added 2"));
+                    dsWritableStates.get(STATE_KEY).put(new EntityNumber(1L), new ProtoString("newly-added 1"));
+                    dsWritableStates.get(STATE_KEY).put(new EntityNumber(2L), new ProtoString("newly-added 2"));
                 }
             });
         }

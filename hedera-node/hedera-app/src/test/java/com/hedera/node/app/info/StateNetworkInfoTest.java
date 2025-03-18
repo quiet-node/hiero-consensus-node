@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.info;
 
-import static com.hedera.node.app.workflows.standalone.TransactionExecutorsTest.randomX509Certificate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -16,17 +15,15 @@ import com.hedera.hapi.node.state.addressbook.Node;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
-import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
+import com.hedera.node.internal.network.Network;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableKVState;
-import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
-import java.security.cert.X509Certificate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,19 +45,10 @@ public class StateNetworkInfoTest {
     @Mock
     private ReadableStates readableStates;
 
-    @Mock
-    private ReadableSingletonState<PlatformState> platformReadableState;
-
-    @Mock
-    private PlatformState platformState;
-
     private static final long SELF_ID = 1L;
     private final Roster activeRoster = new Roster(List.of(
             RosterEntry.newBuilder().nodeId(SELF_ID).weight(10).build(),
             RosterEntry.newBuilder().nodeId(3L).weight(20).build()));
-
-    private static final X509Certificate CERTIFICATE_2 = randomX509Certificate();
-    private static final X509Certificate CERTIFICATE_3 = randomX509Certificate();
 
     private StateNetworkInfo networkInfo;
 
@@ -71,7 +59,7 @@ public class StateNetworkInfoTest {
         when(state.getReadableStates(AddressBookService.NAME)).thenReturn(readableStates);
         when(readableStates.<EntityNumber, Node>get("NODES")).thenReturn(nodeState);
         when(state.getReadableStates(PlatformStateService.NAME)).thenReturn(readableStates);
-        networkInfo = new StateNetworkInfo(SELF_ID, state, activeRoster, configProvider);
+        networkInfo = new StateNetworkInfo(SELF_ID, state, activeRoster, configProvider, () -> Network.DEFAULT);
     }
 
     @Test
@@ -119,7 +107,8 @@ public class StateNetworkInfoTest {
     public void testBuildNodeInfoMapNodeNotFound() {
         when(nodeState.get(any(EntityNumber.class))).thenReturn(null);
 
-        StateNetworkInfo networkInfo = new StateNetworkInfo(SELF_ID, state, activeRoster, configProvider);
+        StateNetworkInfo networkInfo =
+                new StateNetworkInfo(SELF_ID, state, activeRoster, configProvider, () -> Network.DEFAULT);
         final var nodeInfo = networkInfo.nodeInfo(SELF_ID);
 
         assertNotNull(nodeInfo);

@@ -7,6 +7,8 @@ import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.node.app.service.token.impl.schemas.V0500TokenSchema;
 import com.hedera.node.app.service.token.impl.schemas.V0530TokenSchema;
+import com.hedera.node.app.spi.AppContext;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.ZoneId;
@@ -18,15 +20,18 @@ public class TokenServiceImpl implements TokenService {
     public static final long HBARS_TO_TINYBARS = 100_000_000L;
     public static final ZoneId ZONE_UTC = ZoneId.of("UTC");
 
-    public TokenServiceImpl() {
-        // No-op
+    private final EntityIdFactory idFactory;
+
+    public TokenServiceImpl(@NonNull final AppContext appContext) {
+        requireNonNull(appContext);
+        this.idFactory = appContext.idFactory();
     }
 
     @Override
     public void registerSchemas(@NonNull final SchemaRegistry registry) {
         requireNonNull(registry);
         registry.register(new V0490TokenSchema());
-        registry.register(new V0500TokenSchema());
+        registry.register(new V0500TokenSchema(idFactory));
         registry.register(new V0530TokenSchema());
     }
 }

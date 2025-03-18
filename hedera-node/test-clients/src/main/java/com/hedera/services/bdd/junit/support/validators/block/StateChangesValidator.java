@@ -132,9 +132,8 @@ public class StateChangesValidator implements BlockStreamValidator {
                 .normalize();
         final var validator = new StateChangesValidator(
                 Bytes.fromHex(
-                        "63fb5b8a8e40a5afaab12906f71a264d5cb7fcdc636bdb67268055831f73fb6edb3f2bc5199b7f56aca614f07c643cd1"),
+                        "81d4687d6f2465d36907a07f9297a1106a9e230915d7375bca964781536fa8184b7c51e3539dcc7d7daa46678e2e1b18"),
                 node0Dir.resolve("output/swirlds.log"),
-                node0Dir.resolve("config.txt"),
                 node0Dir.resolve("data/config/application.properties"),
                 node0Dir.resolve("data/config"),
                 true);
@@ -185,7 +184,6 @@ public class StateChangesValidator implements BlockStreamValidator {
             return new StateChangesValidator(
                     rootHash,
                     node0.getExternalPath(SWIRLDS_LOG),
-                    genesisConfigTxt,
                     node0.getExternalPath(APPLICATION_PROPERTIES),
                     node0.getExternalPath(DATA_CONFIG_DIR),
                     isHintsEnabled);
@@ -197,7 +195,6 @@ public class StateChangesValidator implements BlockStreamValidator {
     public StateChangesValidator(
             @NonNull final Bytes expectedRootHash,
             @NonNull final Path pathToNode0SwirldsLog,
-            @NonNull final Path pathToAddressBook,
             @NonNull final Path pathToOverrideProperties,
             @NonNull final Path pathToUpgradeSysFilesLoc,
             final boolean isHintsEnabled) {
@@ -214,13 +211,11 @@ public class StateChangesValidator implements BlockStreamValidator {
         final var bootstrapConfig = new BootstrapConfigProviderImpl().getConfiguration();
         final var versionConfig = bootstrapConfig.getConfigData(VersionConfig.class);
         final var servicesVersion = versionConfig.servicesVersion();
-        final var addressBook = loadLegacyBookWithGeneratedCerts(pathToAddressBook);
         final var metrics = new NoOpMetrics();
         final var hedera = ServicesMain.newHedera(metrics, new PlatformStateFacade(ServicesSoftwareVersion::new));
         this.state = hedera.newStateRoot();
         final var platformConfig = ServicesMain.buildPlatformConfig();
-        hedera.initializeStatesApi(
-                state, GENESIS, DiskStartupNetworks.fromLegacyAddressBook(addressBook), platformConfig);
+        hedera.initializeStatesApi(state, GENESIS, platformConfig);
         final var stateToBeCopied = state;
         state = state.copy();
         this.isHintsEnabled = isHintsEnabled;
