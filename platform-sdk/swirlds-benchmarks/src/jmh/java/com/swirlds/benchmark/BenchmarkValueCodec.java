@@ -12,6 +12,12 @@ public class BenchmarkValueCodec implements Codec<BenchmarkValue> {
 
     public static final BenchmarkValueCodec INSTANCE = new BenchmarkValueCodec();
 
+    @Override
+    public BenchmarkValue getDefaultInstance() {
+        // This method is not used in benchmarks
+        return null;
+    }
+
     @NonNull
     @Override
     public BenchmarkValue parse(

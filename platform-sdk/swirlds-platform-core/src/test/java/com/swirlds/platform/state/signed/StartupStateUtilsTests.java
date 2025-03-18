@@ -170,7 +170,7 @@ public class StartupStateUtilsTests {
                         (virtualMap) -> {
                             throw new UnsupportedOperationException();
                         },
-                        currentSoftwareVersion,
+                        currentSoftwareVersion.getPbjSemanticVersion(),
                         platformStateFacade,
                         platformContext)
                 .getNullable();
@@ -204,7 +204,7 @@ public class StartupStateUtilsTests {
                         (virtualMap) -> {
                             throw new UnsupportedOperationException();
                         },
-                        currentSoftwareVersion,
+                        currentSoftwareVersion.getPbjSemanticVersion(),
                         platformStateFacade,
                         platformContext)
                 .get();
@@ -242,7 +242,7 @@ public class StartupStateUtilsTests {
                         (virtualMap) -> {
                             throw new UnsupportedOperationException();
                         },
-                        currentSoftwareVersion,
+                        currentSoftwareVersion.getPbjSemanticVersion(),
                         platformStateFacade,
                         platformContext)
                 .get());
@@ -292,7 +292,7 @@ public class StartupStateUtilsTests {
                         (virtualMap) -> {
                             throw new UnsupportedOperationException();
                         },
-                        currentSoftwareVersion,
+                        currentSoftwareVersion.getPbjSemanticVersion(),
                         platformStateFacade,
                         platformContext)
                 .getNullable();

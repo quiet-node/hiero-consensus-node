@@ -16,12 +16,9 @@ import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.constructable.RuntimeConstructable;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.CryptographyFactory;
 import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
-import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
-import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
@@ -209,16 +206,14 @@ class SerializationTest extends MerkleTestBase {
                 .withValue(
                         StateCommonConfig_.SAVED_STATE_DIRECTORY,
                         tempDir.toFile().toString());
-        final var cryptography = CryptographyFactory.create();
-        final var merkleCryptography = MerkleCryptographyFactory.create(config, cryptography);
         final PlatformContext context = TestPlatformContextBuilder.create()
-                .withMerkleCryptography(merkleCryptography)
                 .withConfiguration(configBuilder.getOrCreateConfig())
                 .withTime(new FakeTime())
                 .build();
 
         originalTree.init(
-                config, context.getTime(), new NoOpMetrics(), merkleCryptography, () -> TEST_PLATFORM_STATE_FACADE
+                config, context.getTime(), context.getMetrics(),
+                context.getMerkleCryptography(), () -> TEST_PLATFORM_STATE_FACADE
                         .consensusSnapshotOf(originalTree)
                         .round());
 

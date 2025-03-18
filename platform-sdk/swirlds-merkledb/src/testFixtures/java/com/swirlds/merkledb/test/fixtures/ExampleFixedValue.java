@@ -74,6 +74,12 @@ public final class ExampleFixedValue extends ExampleByteArrayVirtualValue {
 
     public static class ExampleFixedValueCodec implements Codec<ExampleFixedValue> {
 
+        @Override
+        public ExampleFixedValue getDefaultInstance() {
+            // This method is not used in tests
+            return null;
+        }
+
         @NonNull
         @Override
         public ExampleFixedValue parse(@NonNull ReadableSequentialData in, boolean strictMode, int maxDepth)

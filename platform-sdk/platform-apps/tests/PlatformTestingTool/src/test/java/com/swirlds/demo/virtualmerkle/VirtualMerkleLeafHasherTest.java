@@ -48,14 +48,7 @@ class VirtualMerkleLeafHasherTest {
             e.printStackTrace(System.err);
         }
 
-        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final MerkleDbTableConfig tableConfig = new MerkleDbTableConfig(
-                        (short) 1,
-                        DigestType.SHA_384,
-                        merkleDbConfig.maxNumOfKeys(),
-                        merkleDbConfig.hashesRamToDiskThreshold())
-                .maxNumberOfKeys(50_000_000)
-                .hashesRamToDiskThreshold(0);
+        final MerkleDbTableConfig tableConfig = new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 50_000_000, 0);
         dataSourceBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
     }
 
@@ -187,7 +180,7 @@ class VirtualMerkleLeafHasherTest {
             hash.getBytes().writeTo(bb);
         }
 
-        // key serializaion
+        // key serialization
         bb.putLong(keyInput);
 
         // value serialization

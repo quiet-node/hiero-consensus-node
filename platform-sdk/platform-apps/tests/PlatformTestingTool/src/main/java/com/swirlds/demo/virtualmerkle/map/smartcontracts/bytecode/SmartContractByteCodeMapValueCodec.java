@@ -12,6 +12,13 @@ public class SmartContractByteCodeMapValueCodec implements Codec<SmartContractBy
 
     public static final SmartContractByteCodeMapValueCodec INSTANCE = new SmartContractByteCodeMapValueCodec();
 
+    private static final SmartContractByteCodeMapValue DEFAULT_VALUE = new SmartContractByteCodeMapValue(new byte[0]);
+
+    @Override
+    public SmartContractByteCodeMapValue getDefaultInstance() {
+        return DEFAULT_VALUE;
+    }
+
     @NonNull
     @Override
     public SmartContractByteCodeMapValue parse(@NonNull ReadableSequentialData in, boolean strictMode, int maxDepth) {

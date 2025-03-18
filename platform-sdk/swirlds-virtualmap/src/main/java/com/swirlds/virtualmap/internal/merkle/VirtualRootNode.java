@@ -1054,17 +1054,13 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
      */
     @Override
     public boolean shouldBeFlushed() {
-        return shouldBeFlushed(100);
-    }
-
-    private boolean shouldBeFlushed(final double percentThreshold) {
         // Check if this copy was explicitly marked to flush
         if (shouldBeFlushed.get()) {
             return true;
         }
         // Otherwise check its size and compare against flush threshold
         final long threshold = flushCandidateThreshold.get();
-        return (threshold > 0) && (estimatedSize() >= threshold * percentThreshold / 100);
+        return (threshold > 0) && (estimatedSize() >= threshold);
     }
 
     /**

@@ -7,8 +7,8 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.crypto.Cryptography;
-import com.swirlds.common.crypto.CryptographyFactory;
 import com.swirlds.common.crypto.HashBuilder;
+import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.io.streams.SerializableDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.merkle.MerkleInternal;
@@ -29,7 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 @SuppressWarnings("jol")
 public class VirtualTestBase {
 
-    protected static final Cryptography CRYPTO = CryptographyFactory.create();
+    protected static final Cryptography CRYPTO = CryptographyProvider.getInstance();
 
     private static final HashBuilder HASH_BUILDER = new HashBuilder(Cryptography.DEFAULT_DIGEST_TYPE);
 

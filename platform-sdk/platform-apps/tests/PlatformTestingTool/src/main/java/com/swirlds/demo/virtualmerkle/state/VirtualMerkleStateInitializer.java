@@ -34,6 +34,19 @@ public final class VirtualMerkleStateInitializer {
             .withConfigDataType(StateCommonConfig.class)
             .build();
     private static final MerkleDbConfig MERKLE_DB_CONFIG = CONFIGURATION.getConfigData(MerkleDbConfig.class);
+
+    /*
+     * This capacity is somewhat arbitrary, but it is a reasonable limit for all the PTT tests that we have.
+     * An exact number would have to be calculated like this:
+     * (number of nodes) * (number of TYPE_VIRTUAL_MERKLE_CREATE config entries) * (amount specified in each config entry)
+     *
+     * Even though it's possible to calculate the exact number, it's not necessary for the PTT tests, so we just use the constant.
+     */
+    private static final Integer MAX_LIST_CAPACITY = 1_000_000;
+
+    private static final MerkleDbTableConfig TABLE_CONFIG = new MerkleDbTableConfig(
+            (short) 1, DigestType.SHA_384, MAX_LIST_CAPACITY, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
+
     private static final Logger logger = LogManager.getLogger(VirtualMerkleStateInitializer.class);
     private static final Marker LOGM_DEMO_INFO = LogMarker.DEMO_INFO.getMarker();
 
@@ -61,7 +74,7 @@ public final class VirtualMerkleStateInitializer {
             logger.info(LOGM_DEMO_INFO, "total accounts = {}", totalAccounts);
             if (state.getVirtualMap() == null && totalAccounts > 0) {
                 logger.info(LOGM_DEMO_INFO, "Creating virtualmap for {} accounts.", totalAccounts);
-                final VirtualMap virtualMap = createAccountsVM(totalAccounts);
+                final VirtualMap virtualMap = createAccountsVM();
                 logger.info(LOGM_DEMO_INFO, "accounts VM = {}, DS = {}", virtualMap, virtualMap.getDataSource());
                 virtualMap.registerMetrics(platform.getContext().getMetrics());
                 state.setVirtualMap(virtualMap);
@@ -74,7 +87,7 @@ public final class VirtualMerkleStateInitializer {
                         LOGM_DEMO_INFO,
                         "Creating virtualmap for max {} key value pairs.",
                         maximumNumberOfKeyValuePairs);
-                final VirtualMap virtualMap = createSmartContractsVM(maximumNumberOfKeyValuePairs);
+                final VirtualMap virtualMap = createSmartContractsVM();
                 logger.info(LOGM_DEMO_INFO, "SC VM = {}, DS = {}", virtualMap, virtualMap.getDataSource());
                 virtualMap.registerMetrics(platform.getContext().getMetrics());
                 state.setVirtualMapForSmartContracts(virtualMap);
@@ -84,7 +97,7 @@ public final class VirtualMerkleStateInitializer {
             logger.info(LOGM_DEMO_INFO, "total SC = {}", totalSmartContracts);
             if (state.getVirtualMapForSmartContractsByteCode() == null && totalSmartContracts > 0) {
                 logger.info(LOGM_DEMO_INFO, "Creating virtualmap for {} bytecodes.", totalSmartContracts);
-                final VirtualMap virtualMap = createSmartContractByteCodeVM(totalSmartContracts);
+                final VirtualMap virtualMap = createSmartContractByteCodeVM();
                 logger.info(LOGM_DEMO_INFO, "SCBC VM = {}, DS = {}", virtualMap, virtualMap.getDataSource());
                 virtualMap.registerMetrics(platform.getContext().getMetrics());
                 state.setVirtualMapForSmartContractsByteCode(virtualMap);
@@ -92,27 +105,18 @@ public final class VirtualMerkleStateInitializer {
         }
     }
 
-    private static VirtualMap createAccountsVM(final long numOfKeys) {
-        final MerkleDbTableConfig tableConfig = new MerkleDbTableConfig(
-                (short) 1, DigestType.SHA_384, numOfKeys, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
-        tableConfig.maxNumberOfKeys(numOfKeys);
-        final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
+    private static VirtualMap createAccountsVM() {
+        final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(TABLE_CONFIG, CONFIGURATION);
         return new VirtualMap("accounts", dsBuilder, CONFIGURATION);
     }
 
-    private static VirtualMap createSmartContractsVM(final long numOfKeys) {
-        final MerkleDbTableConfig tableConfig = new MerkleDbTableConfig(
-                (short) 1, DigestType.SHA_384, numOfKeys, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
-        tableConfig.maxNumberOfKeys(numOfKeys);
-        final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
+    private static VirtualMap createSmartContractsVM() {
+        final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(TABLE_CONFIG, CONFIGURATION);
         return new VirtualMap("smartContracts", dsBuilder, CONFIGURATION);
     }
 
-    private static VirtualMap createSmartContractByteCodeVM(final long numOfKeys) {
-        final MerkleDbTableConfig tableConfig = new MerkleDbTableConfig(
-                (short) 1, DigestType.SHA_384, numOfKeys, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
-        tableConfig.maxNumberOfKeys(numOfKeys);
-        final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
+    private static VirtualMap createSmartContractByteCodeVM() {
+        final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(TABLE_CONFIG, CONFIGURATION);
         return new VirtualMap("smartContractByteCode", dsBuilder, CONFIGURATION);
     }
 }

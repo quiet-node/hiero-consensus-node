@@ -38,6 +38,11 @@ public final class ExampleVariableValue extends ExampleByteArrayVirtualValue {
         return Bytes.wrap(bytes);
     }
 
+    public ExampleVariableValue() {
+        this.id = 0;
+        this.data = new byte[256];
+    }
+
     public ExampleVariableValue(final int id) {
         this.id = id;
         data = new byte[256 + (id % 768)];
@@ -78,6 +83,12 @@ public final class ExampleVariableValue extends ExampleByteArrayVirtualValue {
     }
 
     public static class ExampleVariableValueCodec implements Codec<ExampleVariableValue> {
+
+        @Override
+        public ExampleVariableValue getDefaultInstance() {
+            // This method is not used in tests
+            return null;
+        }
 
         @NonNull
         @Override

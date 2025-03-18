@@ -11,6 +11,13 @@ public class TestValueCodec implements Codec<TestValue> {
 
     public static final Codec<TestValue> INSTANCE = new TestValueCodec();
 
+    private static final TestValue DEFAULT_VALUE = new TestValue("");
+
+    @Override
+    public TestValue getDefaultInstance() {
+        return DEFAULT_VALUE;
+    }
+
     @NonNull
     @Override
     public TestValue parse(@NonNull ReadableSequentialData in, boolean strictMode, int maxDepth) {

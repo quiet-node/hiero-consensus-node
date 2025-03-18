@@ -26,8 +26,6 @@ public class VirtualHasherTestBase extends VirtualTestBase {
 
     private static final HashBuilder HASH_BUILDER = new HashBuilder(Cryptography.DEFAULT_DIGEST_TYPE);
 
-    private static final Hash NULL_HASH = CRYPTO.getNullHash();
-
     /**
      * Helper method for computing a list of {@link Arguments} of length {@code num}, each of which contains
      * a random list of dirty leave paths between {@code firstLeafPath} and {@code lastLeafPath}.
@@ -103,7 +101,7 @@ public class VirtualHasherTestBase extends VirtualTestBase {
 
         final long rightChildPath = Path.getRightChildPath(internalNode.path());
         VirtualHashRecord rightChild = ds.getInternal(rightChildPath);
-        Hash rightHash = CRYPTO.getNullHash();
+        Hash rightHash = Cryptography.NULL_HASH;
         if (rightChild != null) {
             if (rightChildPath < ds.firstLeafPath) {
                 rightChild = hashSubTree(ds, hashBuilder, rightChild);
@@ -154,7 +152,7 @@ public class VirtualHasherTestBase extends VirtualTestBase {
             if (rec == null) {
                 final Hash hash;
                 if (path < firstLeafPath) {
-                    hash = CRYPTO.getNullHash();
+                    hash = Cryptography.NULL_HASH;
                 } else {
                     final VirtualLeafBytes<TestValue> leaf = getLeaf(path);
                     assert leaf != null;
