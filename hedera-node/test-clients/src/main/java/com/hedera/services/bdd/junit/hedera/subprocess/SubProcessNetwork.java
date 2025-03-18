@@ -431,6 +431,10 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 final var deadline = Instant.now().plus(timeout);
                 // Block until all nodes are ACTIVE
                 nodes.forEach(node -> awaitStatus(node, ACTIVE, Duration.between(Instant.now(), deadline)));
+                //                 This should be uncommented when TSS is enabled
+                nodes.forEach(node -> node.logFuture("TSS protocol ready") // "Set LedgerID to")
+                        .orTimeout(30, TimeUnit.MINUTES)
+                        .join());
                 this.clients = HapiClients.clientsFor(this);
             });
             if (ready.compareAndSet(null, deferredRun)) {

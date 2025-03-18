@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.system.events;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.EventCore;
 import com.hedera.hapi.util.HapiUtils;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -8,7 +9,6 @@ import com.swirlds.base.utility.ToStringBuilder;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.crypto.Hashable;
 import com.swirlds.common.platform.NodeId;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.transaction.TransactionWrapper;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -47,7 +47,7 @@ public class UnsignedEvent implements Hashable {
      * @param transactions    list of transactions included in this event instance
      */
     public UnsignedEvent(
-            @NonNull final SoftwareVersion softwareVersion,
+            @NonNull final SemanticVersion softwareVersion,
             @NonNull final NodeId creatorId,
             @Nullable final EventDescriptorWrapper selfParent,
             @NonNull final List<EventDescriptorWrapper> otherParents,
@@ -55,7 +55,7 @@ public class UnsignedEvent implements Hashable {
             @NonNull final Instant timeCreated,
             @NonNull final List<Bytes> transactions) {
         this.transactions = Objects.requireNonNull(transactions, "transactions must not be null");
-        this.metadata = new EventMetadata(creatorId, selfParent, otherParents, timeCreated, transactions);
+        this.metadata = new EventMetadata(creatorId, selfParent, otherParents, timeCreated, transactions, birthRound);
         this.eventCore = new EventCore(
                 creatorId.id(),
                 birthRound,
@@ -63,7 +63,7 @@ public class UnsignedEvent implements Hashable {
                 this.metadata.getAllParents().stream()
                         .map(EventDescriptorWrapper::eventDescriptor)
                         .toList(),
-                softwareVersion.getPbjSemanticVersion());
+                softwareVersion);
     }
 
     /**
@@ -95,7 +95,7 @@ public class UnsignedEvent implements Hashable {
      */
     @NonNull
     public EventDescriptorWrapper getDescriptor() {
-        return metadata.getDescriptor(eventCore.birthRound());
+        return metadata.getDescriptor();
     }
 
     /**

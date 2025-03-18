@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.standalone;
 
-import static com.hedera.node.app.history.impl.HistoryLibraryCodecImpl.HISTORY_LIBRARY_CODEC;
 import static com.hedera.node.app.spi.AppContext.Gossip.UNAVAILABLE_GOSSIP;
 import static com.hedera.node.app.workflows.standalone.impl.NoopVerificationStrategies.NOOP_VERIFICATION_STRATEGIES;
 import static java.util.Objects.requireNonNull;
@@ -38,12 +37,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 
@@ -53,6 +52,10 @@ import org.hyperledger.besu.evm.tracing.OperationTracer;
 public enum TransactionExecutors {
     TRANSACTION_EXECUTORS;
 
+    /**
+     * Prefer overriding {@code hedera.nodeTransaction.maxBytes} instead.
+     */
+    @Deprecated(since = "0.61")
     public static final String MAX_SIGNED_TXN_SIZE_PROPERTY = "executor.maxSignedTxnSize";
 
     /**
@@ -224,11 +227,20 @@ public enum TransactionExecutors {
 
     private ExecutorComponent newExecutorComponent(
             @NonNull final State state,
-            @NonNull final Map<String, String> properties,
+            @NonNull Map<String, String> properties,
             @NonNull final TracerBinding tracerBinding,
             @NonNull final Set<Operation> customOps,
             @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory,
             @NonNull final EntityIdFactory entityIdFactory) {
+        // Translate legacy executor property name to hedera.nodeTransaction.maxBytes, which
+        // now controls the effective max size of a signed transaction after ingest
+        if (properties.containsKey(MAX_SIGNED_TXN_SIZE_PROPERTY)) {
+            properties = properties.entrySet().stream()
+                    .map(e -> MAX_SIGNED_TXN_SIZE_PROPERTY.equals(e.getKey())
+                            ? Map.entry("hedera.nodeTransaction.maxBytes", e.getValue())
+                            : e)
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
         final var bootstrapConfigProvider = new BootstrapConfigProviderImpl();
         final var bootstrapConfig = bootstrapConfigProvider.getConfiguration();
         final var configProvider = new ConfigProviderImpl(false, null, properties);
@@ -258,15 +270,10 @@ public enum TransactionExecutors {
                 appContext, NO_OP_METRICS, NOOP_VERIFICATION_STRATEGIES, tracerBinding, customOps);
         final var fileService = new FileServiceImpl();
         final var scheduleService = new ScheduleServiceImpl(appContext);
-        final var hintsService = new HintsServiceImpl(
-                NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HintsLibraryImpl(), bootstrapConfig);
+        final var hintsService =
+                new HintsServiceImpl(NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HintsLibraryImpl());
         final var historyService = new HistoryServiceImpl(
-                NO_OP_METRICS,
-                ForkJoinPool.commonPool(),
-                appContext,
-                new HistoryLibraryImpl(),
-                HISTORY_LIBRARY_CODEC,
-                bootstrapConfig);
+                NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, new HistoryLibraryImpl(), bootstrapConfig);
         final var component = DaggerExecutorComponent.builder()
                 .appContext(appContext)
                 .configProviderImpl(configProvider)
@@ -279,12 +286,6 @@ public enum TransactionExecutors {
                 .historyService(historyService)
                 .metrics(NO_OP_METRICS)
                 .throttleFactory(appContext.throttleFactory())
-                .maxSignedTxnSize(Optional.ofNullable(properties.get(MAX_SIGNED_TXN_SIZE_PROPERTY))
-                        .map(Integer::parseInt)
-                        .orElseGet(() -> configProvider
-                                .getConfiguration()
-                                .getConfigData(HederaConfig.class)
-                                .transactionMaxBytes()))
                 .build();
         componentRef.set(component);
         return component;
