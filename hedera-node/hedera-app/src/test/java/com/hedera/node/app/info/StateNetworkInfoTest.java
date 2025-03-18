@@ -13,8 +13,11 @@ import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.node.state.addressbook.Node;
 import com.hedera.hapi.node.state.common.EntityNumber;
+import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
+import com.hedera.node.app.ids.EntityIdService;
+import com.hedera.node.app.ids.schemas.V0590EntityIdSchema;
 import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
@@ -23,6 +26,7 @@ import com.hedera.node.internal.network.Network;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableKVState;
+import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +47,9 @@ public class StateNetworkInfoTest {
     private ReadableKVState<EntityNumber, Node> nodeState;
 
     @Mock
+    private ReadableSingletonState<EntityCounts> entityCountsState;
+
+    @Mock
     private ReadableStates readableStates;
 
     private static final long SELF_ID = 1L;
@@ -56,6 +63,11 @@ public class StateNetworkInfoTest {
     public void setUp() {
         when(configProvider.getConfiguration())
                 .thenReturn(new VersionedConfigImpl(HederaTestConfigBuilder.createConfig(), 1));
+        when(state.getReadableStates(EntityIdService.NAME)).thenReturn(readableStates);
+        when(readableStates.<EntityCounts>getSingleton(V0590EntityIdSchema.ENTITY_COUNTS_KEY))
+                .thenReturn(entityCountsState);
+        when(entityCountsState.get())
+                .thenReturn(EntityCounts.newBuilder().numNodes(1L).build());
         when(state.getReadableStates(AddressBookService.NAME)).thenReturn(readableStates);
         when(readableStates.<EntityNumber, Node>get("NODES")).thenReturn(nodeState);
         when(state.getReadableStates(PlatformStateService.NAME)).thenReturn(readableStates);
