@@ -12,6 +12,7 @@ import com.hedera.hapi.node.state.token.AccountPendingAirdrop;
 import com.hedera.hapi.node.state.token.Nft;
 import com.hedera.hapi.node.state.token.Token;
 import com.hedera.hapi.node.state.token.TokenRelation;
+import com.hedera.node.app.service.token.TokenService;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -21,10 +22,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  *
  */
 public class StateBuilderUtil {
-    /**
-     * The token service name.
-     */
-    public static final String TOKEN_SERVICE = "TokenService";
     /**
      * The state key for accounts.
      */
@@ -60,66 +57,67 @@ public class StateBuilderUtil {
 
     @NonNull
     protected MapReadableKVState.Builder<AccountID, Account> emptyReadableAccountStateBuilder() {
-        return MapReadableKVState.builder(TOKEN_SERVICE, ACCOUNTS);
+        return MapReadableKVState.builder(TokenService.NAME, ACCOUNTS);
     }
 
     @NonNull
     protected MapWritableKVState.Builder<AccountID, Account> emptyWritableAccountStateBuilder() {
-        return MapWritableKVState.builder(TOKEN_SERVICE, ACCOUNTS);
+        return MapWritableKVState.builder(TokenService.NAME, ACCOUNTS);
     }
 
     @NonNull
     protected MapReadableKVState.Builder<PendingAirdropId, AccountPendingAirdrop> emptyReadableAirdropStateBuilder() {
-        return MapReadableKVState.builder(TOKEN_SERVICE, AIRDROPS);
+        return MapReadableKVState.builder(TokenService.NAME, AIRDROPS);
     }
 
     @NonNull
     protected MapWritableKVState.Builder<PendingAirdropId, AccountPendingAirdrop> emptyWritableAirdropStateBuilder() {
-        return MapWritableKVState.builder(TOKEN_SERVICE, AIRDROPS);
+        return MapWritableKVState.builder(TokenService.NAME, AIRDROPS);
     }
 
     @NonNull
     protected MapReadableKVState.Builder<EntityIDPair, TokenRelation> emptyReadableTokenRelsStateBuilder() {
-        return MapReadableKVState.builder(TOKEN_SERVICE, TOKEN_RELS);
+        return MapReadableKVState.builder(TokenService.NAME, TOKEN_RELS);
     }
 
     @NonNull
     protected MapWritableKVState.Builder<EntityIDPair, TokenRelation> emptyWritableTokenRelsStateBuilder() {
-        return MapWritableKVState.builder(TOKEN_SERVICE, TOKEN_RELS);
+        return MapWritableKVState.builder(TokenService.NAME, TOKEN_RELS);
     }
 
     @NonNull
     protected MapReadableKVState.Builder<NftID, Nft> emptyReadableNftStateBuilder() {
-        return MapReadableKVState.builder(TOKEN_SERVICE, NFTS);
+        return MapReadableKVState.builder(TokenService.NAME, NFTS);
     }
 
     @NonNull
     protected MapWritableKVState.Builder<NftID, Nft> emptyWritableNftStateBuilder() {
-        return MapWritableKVState.builder(TOKEN_SERVICE, NFTS);
+        return MapWritableKVState.builder(TokenService.NAME, NFTS);
     }
 
     @NonNull
     protected MapReadableKVState.Builder<TokenID, Token> emptyReadableTokenStateBuilder() {
-        return MapReadableKVState.builder(TOKEN_SERVICE, TOKENS);
+        return MapReadableKVState.builder(TokenService.NAME, TOKENS);
     }
 
     @NonNull
     protected MapWritableKVState.Builder<TokenID, Token> emptyWritableTokenStateBuilder() {
-        return MapWritableKVState.builder(TOKEN_SERVICE, TOKENS);
+        return MapWritableKVState.builder(TokenService.NAME, TOKENS);
     }
 
     @NonNull
     protected MapWritableKVState.Builder<ProtoBytes, AccountID> emptyWritableAliasStateBuilder() {
-        return MapWritableKVState.builder(TOKEN_SERVICE, ALIASES);
+        return MapWritableKVState.builder(TokenService.NAME, ALIASES);
     }
 
     @NonNull
     protected MapReadableKVState.Builder<ProtoBytes, AccountID> emptyReadableAliasStateBuilder() {
-        return MapReadableKVState.builder(TOKEN_SERVICE, ALIASES);
+        return MapReadableKVState.builder(TokenService.NAME, ALIASES);
     }
 
     @NonNull
     protected MapWritableKVState<TokenID, Token> emptyWritableTokenState() {
-        return MapWritableKVState.<TokenID, Token>builder(TOKEN_SERVICE, TOKENS).build();
+        return MapWritableKVState.<TokenID, Token>builder(TokenService.NAME, TOKENS)
+                .build();
     }
 }

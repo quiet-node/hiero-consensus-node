@@ -7,8 +7,8 @@ import static com.swirlds.state.merkle.logging.StateLogger.logQueueIterate;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
-import com.swirlds.state.merkle.queue.QueueCodec;
 import com.swirlds.state.merkle.queue.QueueState;
+import com.swirlds.state.merkle.queue.QueueStateCodec;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ConcurrentModificationException;
@@ -129,7 +129,7 @@ public final class OnDiskQueueHelper<E> {
      * @return The current state of the queue.
      */
     public QueueState getState() {
-        final QueueState state = virtualMap.get(getVirtualMapKey(serviceName, stateKey), QueueCodec.INSTANCE);
+        final QueueState state = virtualMap.get(getVirtualMapKey(serviceName, stateKey), QueueStateCodec.INSTANCE);
         if (state == null) {
             return null;
         }
@@ -143,7 +143,7 @@ public final class OnDiskQueueHelper<E> {
      * @param state The new state to set for the queue.
      */
     public void updateState(@NonNull final QueueState state) {
-        virtualMap.put(getVirtualMapKey(serviceName, stateKey), state, QueueCodec.INSTANCE);
+        virtualMap.put(getVirtualMapKey(serviceName, stateKey), state, QueueStateCodec.INSTANCE);
     }
 
     /**

@@ -300,8 +300,9 @@ public class PlatformStateFacade {
      * @param hashDepth the depth of the tree to visit and print
      */
     @NonNull
-    public String getInfoString(@NonNull final MerkleNodeState state, final int hashDepth) {
-        final var services = state.getServices();
+    public String getInfoString(@NonNull final State state, final int hashDepth) {
+        final var merkleNodeState = (MerkleNodeState) state;
+        final var services = merkleNodeState.getServices();
 
         //        Map<Bytes, Pair<String, String>> keysToFind = new HashMap<>();
         //        services.forEach((key, value) -> {
@@ -376,7 +377,12 @@ public class PlatformStateFacade {
         //            throw new RuntimeException(e);
         //        }
 
-        return createInfoString(hashDepth, readablePlatformStateStore(state), state.getHash(), state.getRoot(), states)
+        return createInfoString(
+                        hashDepth,
+                        readablePlatformStateStore(state),
+                        state.getHash(),
+                        merkleNodeState.getRoot(),
+                        states)
                 .concat("\n")
                 //                .concat("\n" + sb)
                 .concat("\n" + guiltyContents);

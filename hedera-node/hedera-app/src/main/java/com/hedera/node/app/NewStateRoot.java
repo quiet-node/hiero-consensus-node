@@ -66,11 +66,6 @@ public class NewStateRoot implements MerkleNodeState {
 
     private static final Logger logger = LogManager.getLogger(NewStateRoot.class);
 
-    /**
-     * Used when asked for a service's readable states that we don't have
-     */
-    private static final ReadableStates EMPTY_READABLE_STATES = new EmptyReadableStates();
-
     private MerkleCryptography merkleCryptography;
 
     private Time time;
@@ -177,7 +172,9 @@ public class NewStateRoot implements MerkleNodeState {
     public ReadableStates getReadableStates(@NonNull String serviceName) {
         return readableStatesMap.computeIfAbsent(serviceName, s -> {
             final var stateMetadata = services.get(s);
-            return stateMetadata == null ? EMPTY_READABLE_STATES : new NewStateRoot.MerkleReadableStates(stateMetadata);
+            return stateMetadata == null
+                    ? EmptyReadableStates.INSTANCE
+                    : new NewStateRoot.MerkleReadableStates(stateMetadata);
         });
     }
 

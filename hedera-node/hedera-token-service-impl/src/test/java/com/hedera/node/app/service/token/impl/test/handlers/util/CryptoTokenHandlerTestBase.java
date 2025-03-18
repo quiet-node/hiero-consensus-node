@@ -64,6 +64,7 @@ import com.hedera.node.app.service.token.ReadableNftStore;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
 import com.hedera.node.app.service.token.ReadableTokenRelationStore;
 import com.hedera.node.app.service.token.ReadableTokenStore;
+import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.ReadableAccountStoreImpl;
 import com.hedera.node.app.service.token.impl.ReadableAirdropStoreImpl;
 import com.hedera.node.app.service.token.impl.ReadableNetworkStakingRewardsStoreImpl;
@@ -652,7 +653,7 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
 
     private void givenReadableStakingInfoStore() {
         readableStakingInfoState = MapReadableKVState.<EntityNumber, StakingNodeInfo>builder(
-                        TOKEN_SERVICE, "STAKING_INFOS")
+                        TokenService.NAME, "STAKING_INFOS")
                 .value(node0Id, node0Info)
                 .value(node1Id, node1Info)
                 .build();
@@ -662,7 +663,7 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
 
     private void givenWritableStakingInfoStore() {
         writableStakingInfoState = MapWritableKVState.<EntityNumber, StakingNodeInfo>builder(
-                        TOKEN_SERVICE, "STAKING_INFOS")
+                        TokenService.NAME, "STAKING_INFOS")
                 .value(node0Id, node0Info)
                 .value(node1Id, node1Info)
                 .build();
@@ -679,7 +680,7 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 100000L, 50000L, 1000L));
         final var stakingRewardsState =
-                new FunctionReadableSingletonState<>(TOKEN_SERVICE, NETWORK_REWARDS, backingValue::get);
+                new FunctionReadableSingletonState<>(TokenService.NAME, NETWORK_REWARDS, backingValue::get);
         given(readableStates.getSingleton(NETWORK_REWARDS)).willReturn((ReadableSingletonState) stakingRewardsState);
         readableRewardsStore = new ReadableNetworkStakingRewardsStoreImpl(readableStates);
     }
@@ -688,7 +689,7 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
         final AtomicReference<NetworkStakingRewards> backingValue =
                 new AtomicReference<>(new NetworkStakingRewards(true, 100000L, 50000L, 1000L));
         final var stakingRewardsState = new FunctionWritableSingletonState<>(
-                TOKEN_SERVICE, NETWORK_REWARDS, backingValue::get, backingValue::set);
+                TokenService.NAME, NETWORK_REWARDS, backingValue::get, backingValue::set);
         given(writableStates.getSingleton(NETWORK_REWARDS)).willReturn((WritableSingletonState) stakingRewardsState);
         writableRewardsStore = new WritableNetworkStakingRewardsStore(writableStates);
     }

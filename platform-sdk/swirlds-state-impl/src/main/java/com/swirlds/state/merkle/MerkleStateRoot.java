@@ -44,9 +44,9 @@ import com.swirlds.state.merkle.memory.InMemoryReadableKVState;
 import com.swirlds.state.merkle.memory.InMemoryWritableKVState;
 import com.swirlds.state.merkle.queue.BackedReadableQueueState;
 import com.swirlds.state.merkle.queue.BackedWritableQueueState;
-import com.swirlds.state.merkle.queue.QueueCodec;
 import com.swirlds.state.merkle.queue.QueueNode;
 import com.swirlds.state.merkle.queue.QueueState;
+import com.swirlds.state.merkle.queue.QueueStateCodec;
 import com.swirlds.state.merkle.singleton.BackedReadableSingletonState;
 import com.swirlds.state.merkle.singleton.BackedWritableSingletonState;
 import com.swirlds.state.merkle.singleton.SingletonNode;
@@ -1131,7 +1131,9 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     }
 
                     final var queueState = new QueueState(head, tail);
-                    virtualMapRef.get().put(getVirtualMapKey(serviceName, stateKey), queueState, QueueCodec.INSTANCE);
+                    virtualMapRef
+                            .get()
+                            .put(getVirtualMapKey(serviceName, stateKey), queueState, QueueStateCodec.INSTANCE);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
                     logger.info(

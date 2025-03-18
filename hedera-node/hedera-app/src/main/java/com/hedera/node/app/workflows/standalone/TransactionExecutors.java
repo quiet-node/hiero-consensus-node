@@ -27,7 +27,6 @@ import com.hedera.node.config.data.HederaConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.EntityIdFactory;
@@ -74,7 +73,7 @@ public enum TransactionExecutors {
      * @param customOps the custom operations to use
      */
     public record Properties(
-            @NonNull MerkleNodeState state,
+            @NonNull State state,
             @NonNull Map<String, String> appProperties,
             @Nullable TracerBinding customTracerBinding,
             @NonNull Set<Operation> customOps,
@@ -91,7 +90,7 @@ public enum TransactionExecutors {
          * Builder for {@link Properties}.
          */
         public static class Builder {
-            private MerkleNodeState state;
+            private State state;
             private TracerBinding customTracerBinding;
             private final Map<String, String> appProperties = new HashMap<>();
             private final Set<Operation> customOps = new HashSet<>();
@@ -100,7 +99,7 @@ public enum TransactionExecutors {
             /**
              * Set the required {@link State} field.
              */
-            public Builder state(@NonNull final MerkleNodeState state) {
+            public Builder state(@NonNull final State state) {
                 this.state = requireNonNull(state);
                 return this;
             }
@@ -202,7 +201,7 @@ public enum TransactionExecutors {
      * @return a new {@link TransactionExecutor}
      */
     private TransactionExecutor newExecutor(
-            @NonNull final MerkleNodeState state,
+            @NonNull final State state,
             @NonNull final Map<String, String> properties,
             @Nullable final TracerBinding customTracerBinding,
             @NonNull final Set<Operation> customOps,
