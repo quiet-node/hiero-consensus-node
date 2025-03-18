@@ -93,7 +93,8 @@ public class CreateOperationTestBase {
         given(frame.getStackItem(1)).willReturn(Bytes.ofUnsignedInt(INPUT_OFFSET));
         given(frame.getStackItem(2)).willReturn(Bytes.ofUnsignedInt(INPUT_SIZE));
         given(gasCalculator.txCreateCost()).willReturn(TX_CREATE_COST);
-        given(gasCalculator.memoryExpansionGasCost(frame, INPUT_OFFSET, INPUT_SIZE)).willReturn(MEMORY_EXPANSION_COST);
+        given(gasCalculator.memoryExpansionGasCost(frame, INPUT_OFFSET, INPUT_SIZE))
+                .willReturn(MEMORY_EXPANSION_COST);
         given(gasCalculator.initcodeCost(INPUT_SIZE)).willReturn(INITCODE_COST);
     }
 }

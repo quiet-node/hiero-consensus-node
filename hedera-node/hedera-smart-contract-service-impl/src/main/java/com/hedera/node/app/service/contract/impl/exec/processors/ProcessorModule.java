@@ -23,7 +23,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Map;
 import javax.inject.Singleton;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.EvmSpecVersion;
 import org.hyperledger.besu.evm.contractvalidation.ContractValidationRule;
 import org.hyperledger.besu.evm.contractvalidation.MaxCodeSizeRule;
