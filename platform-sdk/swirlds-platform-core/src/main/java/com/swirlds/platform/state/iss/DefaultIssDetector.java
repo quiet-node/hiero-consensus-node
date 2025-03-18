@@ -229,8 +229,8 @@ public class DefaultIssDetector implements IssDetector {
 
             final List<IssNotification> issNotifications = new ArrayList<>(shiftRoundDataWindow(roundNumber));
 
-            final IssNotification selfHashCheckResult =
-                    checkSelfStateHash(roundNumber, (VirtualMap) state.get().getState().getRoot());
+            final IssNotification selfHashCheckResult = checkSelfStateHash(
+                    roundNumber, (VirtualMap) state.get().getState().getRoot());
             if (selfHashCheckResult != null) {
                 issNotifications.add(selfHashCheckResult);
             }
@@ -400,7 +400,8 @@ public class DefaultIssDetector implements IssDetector {
             shiftRoundDataWindow(roundNumber);
 
             final Hash stateHash = state.get().getState().getHash();
-            final IssNotification issNotification = checkSelfStateHash(roundNumber, (VirtualMap) state.get().getState().getRoot());
+            final IssNotification issNotification = checkSelfStateHash(
+                    roundNumber, (VirtualMap) state.get().getState().getRoot());
 
             return issNotification == null ? null : List.of(issNotification);
         }

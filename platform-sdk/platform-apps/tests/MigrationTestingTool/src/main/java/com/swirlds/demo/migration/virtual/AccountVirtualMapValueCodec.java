@@ -47,9 +47,4 @@ public class AccountVirtualMapValueCodec implements Codec<AccountVirtualMapValue
         final AccountVirtualMapValue other = parse(in);
         return value.equals(other);
     }
-
-    @Override
-    public AccountVirtualMapValue getDefaultInstance() {
-        return new AccountVirtualMapValue();
-    }
 }

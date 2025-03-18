@@ -35,9 +35,6 @@ import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import com.swirlds.virtualmap.internal.merkle.VirtualStateAccessorImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
@@ -45,6 +42,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * A {@link MerkleInternal} node that virtualizes all of its children, such that the child nodes
@@ -118,7 +117,12 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     @Override
     public void setHash(Hash hash) {
         if (hash != null) {
-            logger.error(EXCEPTION.getMarker(), "fc version: {} | hash: {} | stacktrace: {} ", getRoot().getFastCopyVersion(), hash, StackTrace.getStackTrace());
+            logger.error(
+                    EXCEPTION.getMarker(),
+                    "fc version: {} | hash: {} | stacktrace: {} ",
+                    getRoot().getFastCopyVersion(),
+                    hash,
+                    StackTrace.getStackTrace());
             for (int i = 0; i < 256; i++) {
                 byte[] bytes = new byte[2];
                 bytes[0] = 0;
@@ -129,7 +133,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
                     logger.error(EXCEPTION.getMarker(), "i: {} | key: {} | value: {}", i, key, value);
                 }
             }
-
         }
         super.setHash(hash);
     }

@@ -58,23 +58,29 @@ public enum BlockStreamAccess {
     private static final String COMPRESSED_FILE_EXT = UNCOMPRESSED_FILE_EXT + ".gz";
 
     public static void main(String[] args) {
-        final String HEALTHY_NODE_FOLDER = "hedera-node/test-clients/build/hapi-test/node2/data/blockStreams/block-0.0.5";
+        final String HEALTHY_NODE_FOLDER =
+                "hedera-node/test-clients/build/hapi-test/node2/data/blockStreams/block-0.0.5";
         final String ISS_NODE_FOLDER = "hedera-node/test-clients/build/hapi-test/node3/data/blockStreams/block-0.0.6";
         final String HEALTHY_NODE_LABEL = "HEALTHY node";
         final String ISS_NODE_LABEL = "ISS node";
 
-        final var healthyNodeBlockFilePath = Path.of(HEALTHY_NODE_FOLDER + "/000000000000000000000000000000001420.blk.gz");
+        final var healthyNodeBlockFilePath =
+                Path.of(HEALTHY_NODE_FOLDER + "/000000000000000000000000000000001420.blk.gz");
         final var issNodeBlockFilePath = Path.of(ISS_NODE_FOLDER + "/000000000000000000000000000000001420.blk.gz");
 
-        final var resultOfHealthy = BLOCK_STREAM_ACCESS.readBlocks(healthyNodeBlockFilePath).getFirst();
-        final var resultOfIss = BLOCK_STREAM_ACCESS.readBlocks(issNodeBlockFilePath).getFirst();
+        final var resultOfHealthy =
+                BLOCK_STREAM_ACCESS.readBlocks(healthyNodeBlockFilePath).getFirst();
+        final var resultOfIss =
+                BLOCK_STREAM_ACCESS.readBlocks(issNodeBlockFilePath).getFirst();
 
         assertEquals(resultOfHealthy.items().size(), resultOfIss.items().size());
 
         for (int i = 0; i < resultOfHealthy.items().size(); i++) {
-            System.out.println("Block (" + HEALTHY_NODE_LABEL + ")= " + resultOfHealthy.items().get(i));
-            System.out.println("Block (" + ISS_NODE_LABEL + ")= " + resultOfIss.items().get(i));
-//            assertEquals(resultOfHealthy.items().get(i), resultOfIss.items().get(i));
+            System.out.println("Block (" + HEALTHY_NODE_LABEL + ")= "
+                    + resultOfHealthy.items().get(i));
+            System.out.println(
+                    "Block (" + ISS_NODE_LABEL + ")= " + resultOfIss.items().get(i));
+            //            assertEquals(resultOfHealthy.items().get(i), resultOfIss.items().get(i));
         }
 
         System.out.println("\nCalculating hash:\n");
@@ -91,7 +97,8 @@ public enum BlockStreamAccess {
                 BlockItem blockItem = items.get(i);
                 if (blockItem.hasBlockProof()) {
                     BlockProof blockProof = blockItem.blockProofOrThrow();
-                    blockStreamInfoBuilder = blockProofToBlockStreamInfo(blockStreamInfoBuilder, blockProof, i, nodeFolderPath);
+                    blockStreamInfoBuilder =
+                            blockProofToBlockStreamInfo(blockStreamInfoBuilder, blockProof, i, nodeFolderPath);
                 }
                 if (blockItem.hasEventHeader()) {
                     EventHeader eventHeader = blockItem.eventHeaderOrThrow();
@@ -107,7 +114,11 @@ public enum BlockStreamAccess {
         }
     }
 
-    private static BlockStreamInfo.Builder blockProofToBlockStreamInfo(BlockStreamInfo.Builder blockStreamInfoBuilder, BlockProof blockProof, int numPrecedingOutputItems, String nodeFolderPath) {
+    private static BlockStreamInfo.Builder blockProofToBlockStreamInfo(
+            BlockStreamInfo.Builder blockStreamInfoBuilder,
+            BlockProof blockProof,
+            int numPrecedingOutputItems,
+            String nodeFolderPath) {
         return blockStreamInfoBuilder
                 .trailingBlockHashes(getTrailingBlockHashes(nodeFolderPath, (int) blockProof.block()))
                 .blockNumber(blockProof.block())
@@ -147,10 +158,10 @@ public enum BlockStreamAccess {
                 break;
             }
             BlockItem.ItemOneOfType type = blockItem.item().kind();
-            if (type == BlockItem.ItemOneOfType.BLOCK_HEADER ||
-                    type == BlockItem.ItemOneOfType.ROUND_HEADER ||
-                    type == BlockItem.ItemOneOfType.EVENT_HEADER ||
-                    type == BlockItem.ItemOneOfType.STATE_CHANGES) {
+            if (type == BlockItem.ItemOneOfType.BLOCK_HEADER
+                    || type == BlockItem.ItemOneOfType.ROUND_HEADER
+                    || type == BlockItem.ItemOneOfType.EVENT_HEADER
+                    || type == BlockItem.ItemOneOfType.STATE_CHANGES) {
                 Bytes serialized = BlockItem.PROTOBUF.toBytes(blockItem);
                 Bytes itemHash = noThrowSha384HashOf(serialized);
                 outputHashes.add(itemHash);
@@ -165,7 +176,6 @@ public enum BlockStreamAccess {
         System.out.println("blockStreamInfo (rebuilt)= " + blockStreamInfo);
         // Three of the four ingredients in the block hash are directly in the BlockStreamInfo; that is,
         // the previous block hash, the input tree root hash, and the start of block state hash
-
 
         final var prevBlockHash = blockHashByBlockNumber(
                 blockStreamInfo.trailingBlockHashes(),

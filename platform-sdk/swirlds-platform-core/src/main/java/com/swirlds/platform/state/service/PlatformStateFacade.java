@@ -13,35 +13,19 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.base.utility.Pair;
 import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.merkle.MerkleNode;
-import com.swirlds.common.merkle.iterators.MerkleIterator;
-import com.swirlds.common.threading.interrupt.InterruptableConsumer;
-import com.swirlds.common.threading.manager.AdHocThreadManager;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
-import com.swirlds.state.merkle.StateUtils;
-import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
-import com.swirlds.virtualmap.VirtualMap;
-import com.swirlds.virtualmap.VirtualMapMigration;
-import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
-import com.swirlds.virtualmap.internal.RecordAccessor;
-import com.swirlds.virtualmap.internal.merkle.VirtualInternalNode;
-import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -319,32 +303,33 @@ public class PlatformStateFacade {
     public String getInfoString(@NonNull final MerkleNodeState state, final int hashDepth) {
         final var services = state.getServices();
 
-//        Map<Bytes, Pair<String, String>> keysToFind = new HashMap<>();
-//        services.forEach((key, value) -> {
-//            value.forEach((s, stateMetadata) -> {
-//                final String serviceName = stateMetadata.serviceName();
-//                final String stateKey = stateMetadata.stateDefinition().stateKey();
-//                Bytes virtualKey = StateUtils.getVirtualMapKey(serviceName, stateKey);
-//                keysToFind.put(virtualKey, Pair.of(serviceName, stateKey));
-//            });
-//        });
+        //        Map<Bytes, Pair<String, String>> keysToFind = new HashMap<>();
+        //        services.forEach((key, value) -> {
+        //            value.forEach((s, stateMetadata) -> {
+        //                final String serviceName = stateMetadata.serviceName();
+        //                final String stateKey = stateMetadata.stateDefinition().stateKey();
+        //                Bytes virtualKey = StateUtils.getVirtualMapKey(serviceName, stateKey);
+        //                keysToFind.put(virtualKey, Pair.of(serviceName, stateKey));
+        //            });
+        //        });
 
         List<String> states = new ArrayList<>();
 
-//        MerkleIterator<MerkleNode> merkleNodeIterator = state.getRoot().treeIterator();
-//        while (merkleNodeIterator.hasNext()) {
-//            MerkleNode next = merkleNodeIterator.next();
-//            if (next instanceof VirtualLeafNode leafNode) {
-//                Bytes key = leafNode.getKey();
-//                if (keysToFind.containsKey(key)) {
-//                    Pair<String, String> nameAndKey = keysToFind.get(key);
-//                    states.add(nameAndKey.left() + "." + nameAndKey.right() + ": " + leafNode.getHash());
-//                }
-//            }
-//            if (next instanceof VirtualInternalNode internalNode) {
-//                states.add("internal node | path= " + internalNode.getPath() + " hash=" + internalNode.getHash());
-//            }
-//        }
+        //        MerkleIterator<MerkleNode> merkleNodeIterator = state.getRoot().treeIterator();
+        //        while (merkleNodeIterator.hasNext()) {
+        //            MerkleNode next = merkleNodeIterator.next();
+        //            if (next instanceof VirtualLeafNode leafNode) {
+        //                Bytes key = leafNode.getKey();
+        //                if (keysToFind.containsKey(key)) {
+        //                    Pair<String, String> nameAndKey = keysToFind.get(key);
+        //                    states.add(nameAndKey.left() + "." + nameAndKey.right() + ": " + leafNode.getHash());
+        //                }
+        //            }
+        //            if (next instanceof VirtualInternalNode internalNode) {
+        //                states.add("internal node | path= " + internalNode.getPath() + " hash=" +
+        // internalNode.getHash());
+        //            }
+        //        }
 
         final String guiltyContents = services.entrySet().stream()
                 .flatMap(entry -> {
@@ -357,40 +342,43 @@ public class PlatformStateFacade {
                                 return metadata.stateDefinition().singleton() && "BLOCK_STREAM_INFO".equals(stateKey);
                             })
                             .map(innerEntry -> {
-                                final BlockStreamInfo blockStreamInfo = (BlockStreamInfo) readableStates.getSingleton(innerEntry.getKey()).get();
+                                final BlockStreamInfo blockStreamInfo = (BlockStreamInfo) readableStates
+                                        .getSingleton(innerEntry.getKey())
+                                        .get();
                                 return blockStreamInfo.toString();
                             });
                 })
                 .findFirst()
                 .orElse("No BlockStreamInfo found");
 
-//        final VirtualMap vm = (VirtualMap) state.getRoot();
-//        final RecordAccessor recordAccessor = vm.getRoot().getRecords();
+        //        final VirtualMap vm = (VirtualMap) state.getRoot();
+        //        final RecordAccessor recordAccessor = vm.getRoot().getRecords();
 
-//        final StringBuilder sb = new StringBuilder();
-//        InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
-//            final VirtualLeafBytes<?> virtualLeafBytes = recordAccessor.findLeafRecord(pair.left());
-//            final var hash = recordAccessor.findHash(virtualLeafBytes.path());
-//            sb.append("k=")
-//                    .append(pair.left())
-//                    .append(";v=")
-//                    .append(pair.right())
-//                    .append(";path=")
-//                    .append(virtualLeafBytes.path())
-//                    .append(";hash=")
-//                    .append(hash)
-//                    .append("\n");
-//        };
+        //        final StringBuilder sb = new StringBuilder();
+        //        InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
+        //            final VirtualLeafBytes<?> virtualLeafBytes = recordAccessor.findLeafRecord(pair.left());
+        //            final var hash = recordAccessor.findHash(virtualLeafBytes.path());
+        //            sb.append("k=")
+        //                    .append(pair.left())
+        //                    .append(";v=")
+        //                    .append(pair.right())
+        //                    .append(";path=")
+        //                    .append(virtualLeafBytes.path())
+        //                    .append(";hash=")
+        //                    .append(hash)
+        //                    .append("\n");
+        //        };
 
-//        try {
-//            VirtualMapMigration.extractVirtualMapData(AdHocThreadManager.getStaticThreadManager(), vm, handler, 1);
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
+        //        try {
+        //            VirtualMapMigration.extractVirtualMapData(AdHocThreadManager.getStaticThreadManager(), vm,
+        // handler, 1);
+        //        } catch (InterruptedException e) {
+        //            throw new RuntimeException(e);
+        //        }
 
         return createInfoString(hashDepth, readablePlatformStateStore(state), state.getHash(), state.getRoot(), states)
                 .concat("\n")
-//                .concat("\n" + sb)
+                //                .concat("\n" + sb)
                 .concat("\n" + guiltyContents);
     }
 

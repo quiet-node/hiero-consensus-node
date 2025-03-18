@@ -311,9 +311,7 @@ class RoundHashValidatorTests {
 
         boolean decided = false;
 
-        assertFalse(
-                validator.reportSelfHash(null),
-                "we should need to gather more data before becoming decided");
+        assertFalse(validator.reportSelfHash(null), "we should need to gather more data before becoming decided");
 
         final Map<Long, RosterEntry> nodesById = RosterUtils.toMap(roster);
         for (final NodeHashInfo nodeHashInfo : hashGenerationData.nodeList) {

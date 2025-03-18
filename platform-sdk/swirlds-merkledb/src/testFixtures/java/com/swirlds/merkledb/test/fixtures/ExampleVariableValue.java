@@ -117,10 +117,5 @@ public final class ExampleVariableValue extends ExampleByteArrayVirtualValue {
             final ExampleVariableValue other = parse(in);
             return other.equals(value);
         }
-
-        @Override
-        public ExampleVariableValue getDefaultInstance() {
-            throw new UnsupportedOperationException();
-        }
     }
 }

@@ -21,7 +21,6 @@ import java.math.BigInteger;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.FileAttribute;
 import java.util.zip.GZIPOutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -170,7 +169,7 @@ public class FileBlockItemWriter implements BlockItemWriter {
             if (Files.exists(markerFile)) {
                 Files.delete(markerFile);
                 Files.createFile(markerFile);
-//                logger.info("Skipping block marker file for {} as it already exists", markerFile);
+                //                logger.info("Skipping block marker file for {} as it already exists", markerFile);
             } else {
 
                 Files.createFile(markerFile);

@@ -55,6 +55,7 @@ public class RoundHashValidator {
      * this value is never changed.
      */
     private HashValidityStatus status = HashValidityStatus.UNDECIDED;
+
     private VirtualMap virtualMap;
 
     /**
@@ -165,7 +166,10 @@ public class RoundHashValidator {
             if (hashFinder.getConsensusHash().equals(selfStateHash)) {
                 status = HashValidityStatus.VALID;
             } else {
-                logger.error(STATE_TO_DISK.getMarker(), "fc version: {}", this.virtualMap.getRoot().getFastCopyVersion());
+                logger.error(
+                        STATE_TO_DISK.getMarker(),
+                        "fc version: {}",
+                        this.virtualMap.getRoot().getFastCopyVersion());
                 logger.error(STATE_TO_DISK.getMarker(), "consensus hash: {}", this.hashFinder.getConsensusHash());
                 logger.error(STATE_TO_DISK.getMarker(), "self state hash: {}", this.selfStateHash);
                 logger.error(STATE_TO_DISK.getMarker(), "stacktrace: {}", StackTrace.getStackTrace());
