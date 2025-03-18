@@ -951,7 +951,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
             final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
             final var tableConfig = new MerkleDbTableConfig(
-                    (short) 1, DigestType.SHA_384, MEGA_MAP_MAX_KEYS_HINT, merkleDbConfig.hashesRamToDiskThreshold());
+                    (short) 1,
+                    DigestType.SHA_384,
+                    // Future work: drop StateDefinition.maxKeysHint and load VM size
+                    // from VirtualMapConfig.size instead
+                    MEGA_MAP_MAX_KEYS_HINT,
+                    merkleDbConfig.hashesRamToDiskThreshold());
             final var virtualMapLabel = "VirtualMap";
             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
             final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
