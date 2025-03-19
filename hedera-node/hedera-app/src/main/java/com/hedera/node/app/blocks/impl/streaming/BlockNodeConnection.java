@@ -162,7 +162,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     moveToNextBlock();
                 }
             } catch (InterruptedException e) {
-                logger.debug("[] Request worker thread interrupted for node {}:{}", node.address(), node.port());
+                logger.error("[] Request worker thread interrupted for node {}:{}", node.address(), node.port());
                 Thread.currentThread().interrupt();
                 return;
             } catch (Exception e) {
@@ -538,12 +538,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     @Override
     public void onError(Throwable error) {
-        logger.error(
-                "[] Error on stream from block node {}:{}",
-                Thread.currentThread().getName(),
-                node.address(),
-                node.port(),
-                error);
+        logger.error("[] Error on stream from block node {}:{}", node.address(), node.port(), error);
         handleStreamFailure();
     }
 
@@ -551,7 +546,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void onCompleted() {
         if (streamCompletionInProgress.compareAndSet(false, true)) {
             try {
-                logger.info("Stream completed for block node {}:{}", node.address(), node.port());
+                logger.debug("Stream completed for block node {}:{}", node.address(), node.port());
                 handleStreamFailure();
             } finally {
                 streamCompletionInProgress.set(false);
