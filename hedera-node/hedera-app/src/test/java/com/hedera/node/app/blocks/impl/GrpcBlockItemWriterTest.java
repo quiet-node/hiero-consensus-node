@@ -3,6 +3,7 @@ package com.hedera.node.app.blocks.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.BlockProof;
@@ -42,7 +43,7 @@ class GrpcBlockItemWriterTest {
     }
 
     @Test
-    void testWriteItemBeforeOpen() {
+    void testWriteItem() {
         GrpcBlockItemWriter grpcBlockItemWriter =
                 new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
 
@@ -52,17 +53,18 @@ class GrpcBlockItemWriterTest {
         final var blockProof = BlockItem.PROTOBUF.toBytes(
                 BlockItem.newBuilder().blockProof(proof).build());
 
-        assertThatThrownBy(
-                        () -> grpcBlockItemWriter.writePbjItem(blockProof), "Cannot write item before opening a block")
-                .isInstanceOf(IllegalStateException.class);
+        grpcBlockItemWriter.writePbjItem(blockProof);
+
+        verify(blockStreamStateManager).addItem(0L, blockProof);
     }
 
     @Test
-    void testCloseBlockNotOpen() {
+    void testCloseBlock() {
         GrpcBlockItemWriter grpcBlockItemWriter =
                 new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
 
-        assertThatThrownBy(grpcBlockItemWriter::closeBlock, "Cannot close a GrpcBlockItemWriter that is not open")
-                .isInstanceOf(IllegalStateException.class);
+        grpcBlockItemWriter.closeBlock();
+
+        verify(blockStreamStateManager).closeBlock(0L);
     }
 }
