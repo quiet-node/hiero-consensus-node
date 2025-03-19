@@ -61,8 +61,8 @@ class BlockNodeConnectionTest {
 
     @Test
     void testNewBlockNodeConnection() {
-		given(nodeConfig.address()).willReturn("localhost");
-		given(nodeConfig.port()).willReturn(12345);
+        given(nodeConfig.address()).willReturn("localhost");
+        given(nodeConfig.port()).willReturn(12345);
 
         assertEquals(nodeConfig, blockNodeConnection.getNodeConfig());
         assertFalse(blockNodeConnection.isActive());
@@ -158,8 +158,7 @@ class BlockNodeConnectionTest {
         capturedObserver.onNext(response);
 
         assertThat(logCaptor.infoLogs())
-                .contains(
-                        "Received end of stream status STREAM_ITEMS_TIMEOUT for block number 1234");
+                .contains("Received end of stream status STREAM_ITEMS_TIMEOUT for block number 1234");
     }
 
     @Test
@@ -203,7 +202,7 @@ class BlockNodeConnectionTest {
                                 .startsWith(
                                         "Error in block node stream localhost:12345: Status{code=ABORTED, description=null, cause=null} io.grpc.StatusRuntimeException: ABORTED"));
         assertFalse(blockNodeConnection.isActive());
-		verify(blockNodeConnectionManager).handleConnectionError(eq(blockNodeConnection), notNull());
+        verify(blockNodeConnectionManager).handleConnectionError(eq(blockNodeConnection), notNull());
         verify(blockNodeConnectionManager).scheduleReconnect(blockNodeConnection);
     }
 }

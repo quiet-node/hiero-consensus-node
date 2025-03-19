@@ -75,37 +75,36 @@ import org.apache.logging.log4j.Logger;
 public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetwork {
     private static final Logger log = LogManager.getLogger(SubProcessNetwork.class);
 
-	// 3 gRPC ports, 2 gossip ports, 1 Prometheus
-	private static final int PORTS_PER_NODE = 6;
-	private static final SplittableRandom RANDOM = new SplittableRandom();
-	private static final int FIRST_CANDIDATE_PORT = 30000;
-	private static final int LAST_CANDIDATE_PORT = 40000;
-	private BlockNodeMode blockNodeMode = BlockNodeMode.NONE; // Default to no block nodes
+    // 3 gRPC ports, 2 gossip ports, 1 Prometheus
+    private static final int PORTS_PER_NODE = 6;
+    private static final SplittableRandom RANDOM = new SplittableRandom();
+    private static final int FIRST_CANDIDATE_PORT = 30000;
+    private static final int LAST_CANDIDATE_PORT = 40000;
+    private BlockNodeMode blockNodeMode = BlockNodeMode.NONE; // Default to no block nodes
 
-	private static final String SUBPROCESS_HOST = "127.0.0.1";
-	private static final ByteString SUBPROCESS_ENDPOINT = asOctets(SUBPROCESS_HOST);
-	private static final String SHARED_NETWORK_NAME = "SHARED_NETWORK";
-	private static final GrpcPinger GRPC_PINGER = new GrpcPinger();
-	private static final PrometheusClient PROMETHEUS_CLIENT = new PrometheusClient();
-	private static final int DEFAULT_BLOCK_ITEM_BATCH_SIZE = 256;
+    private static final String SUBPROCESS_HOST = "127.0.0.1";
+    private static final ByteString SUBPROCESS_ENDPOINT = asOctets(SUBPROCESS_HOST);
+    private static final String SHARED_NETWORK_NAME = "SHARED_NETWORK";
+    private static final GrpcPinger GRPC_PINGER = new GrpcPinger();
+    private static final PrometheusClient PROMETHEUS_CLIENT = new PrometheusClient();
+    private static final int DEFAULT_BLOCK_ITEM_BATCH_SIZE = 256;
 
-	private static int nextGrpcPort;
-	private static int nextNodeOperatorPort;
-	private static int nextInternalGossipPort;
-	private static int nextExternalGossipPort;
-	private static int nextPrometheusPort;
-	private static boolean nextPortsInitialized = false;
+    private static int nextGrpcPort;
+    private static int nextNodeOperatorPort;
+    private static int nextInternalGossipPort;
+    private static int nextExternalGossipPort;
+    private static int nextPrometheusPort;
+    private static boolean nextPortsInitialized = false;
 
-	private final Map<Long, AccountID> pendingNodeAccounts = new HashMap<>();
-	private final AtomicReference<DeferredRun> ready = new AtomicReference<>();
+    private final Map<Long, AccountID> pendingNodeAccounts = new HashMap<>();
+    private final AtomicReference<DeferredRun> ready = new AtomicReference<>();
 
-	private long maxNodeId;
-	private String configTxt;
-	private final String genesisConfigTxt;
+    private long maxNodeId;
+    private String configTxt;
+    private final String genesisConfigTxt;
 
-	private final List<BlockNodeContainer> blockNodeContainers = new ArrayList<>();
-	private final List<SimulatedBlockNodeServer> simulatedBlockNodes = new ArrayList<>();
-
+    private final List<BlockNodeContainer> blockNodeContainers = new ArrayList<>();
+    private final List<SimulatedBlockNodeServer> simulatedBlockNodes = new ArrayList<>();
 
     /**
      * Configure the block node mode for this network.
@@ -280,8 +279,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             // Create block node config for this container
             List<BlockNodeConfig> blockNodes = List.of(new BlockNodeConfig("127.0.0.1", 8080, 1));
 
-			BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(blockNodes,
-					DEFAULT_BLOCK_ITEM_BATCH_SIZE);
+            BlockNodeConnectionInfo connectionInfo =
+                    new BlockNodeConnectionInfo(blockNodes, DEFAULT_BLOCK_ITEM_BATCH_SIZE);
 
             // Write the config to this consensus node's block-nodes.json
             Path configPath = node.getExternalPath(DATA_CONFIG_DIR).resolve("block-nodes.json");
@@ -333,9 +332,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             List<BlockNodeConfig> blockNodes =
                     List.of(new BlockNodeConfig(container.getHost(), container.getGrpcPort(), 1));
 
-            BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(
-                    blockNodes,
-                    DEFAULT_BLOCK_ITEM_BATCH_SIZE);
+            BlockNodeConnectionInfo connectionInfo =
+                    new BlockNodeConnectionInfo(blockNodes, DEFAULT_BLOCK_ITEM_BATCH_SIZE);
 
             // Write the config to this consensus node's block-nodes.json
             Path configPath = node.getExternalPath(DATA_CONFIG_DIR).resolve("block-nodes.json");
@@ -356,9 +354,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             List<BlockNodeConfig> blockNodes = new ArrayList<>();
             blockNodes.add(new BlockNodeConfig("localhost", sim.getPort(), 1));
 
-            BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(
-                    blockNodes,
-                    DEFAULT_BLOCK_ITEM_BATCH_SIZE);
+            BlockNodeConnectionInfo connectionInfo =
+                    new BlockNodeConnectionInfo(blockNodes, DEFAULT_BLOCK_ITEM_BATCH_SIZE);
 
             // Write the config to this consensus node's block-nodes.json
             Path configPath = node.getExternalPath(DATA_CONFIG_DIR).resolve("block-nodes.json");

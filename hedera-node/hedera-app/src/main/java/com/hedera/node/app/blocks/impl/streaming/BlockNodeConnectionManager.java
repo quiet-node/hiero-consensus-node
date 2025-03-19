@@ -13,7 +13,6 @@ import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.grpc.Status;
@@ -46,7 +45,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -55,12 +53,12 @@ import org.apache.logging.log4j.Logger;
  * It is also responsible for retrying with exponential backoff if a connection fails.
  */
 public class BlockNodeConnectionManager {
-	public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
+    public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
 
-	private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
-	private static final String GRPC_END_POINT =
+    private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
+    private static final String GRPC_END_POINT =
             BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
-	private static final long RETRY_BACKOFF_MULTIPLIER = 2;
+    private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     // Add a random number generator for retry jitter
     private final Random random = new Random();
@@ -71,10 +69,10 @@ public class BlockNodeConnectionManager {
     private final Object connectionLock = new Object();
     private final ExecutorService streamingExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService retryExecutor = Executors.newVirtualThreadPerTaskExecutor();
-	private final ScheduledExecutorService connectionExecutor;
-	private BlockNodeConnection primary;
-	private BlockNodeConnection secondary;
-	private final Map<BlockNodeConfig, Long> latestBlocks;
+    private final ScheduledExecutorService connectionExecutor;
+    private BlockNodeConnection primary;
+    private BlockNodeConnection secondary;
+    private final Map<BlockNodeConfig, Long> latestBlocks;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -84,61 +82,51 @@ public class BlockNodeConnectionManager {
         requireNonNull(configProvider);
 
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
-		if (blockStreamConfig.streamToBlockNodes()) {
-			final var blockNodeConfig = configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
-			this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockNodeConfig.blockNodeConnectionFileDir());
-			this.latestBlocks = new HashMap<>();
-			// (FUTURE) Load latest blocks less naively
-			this.blockNodeConfigurations.getAllNodes().forEach(node -> latestBlocks.put(node, -1L));
+        if (blockStreamConfig.streamToBlockNodes()) {
+            final var blockNodeConfig =
+                    configProvider.getConfiguration().getConfigData(BlockNodeConnectionConfig.class);
+            this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockNodeConfig.blockNodeConnectionFileDir());
+            this.latestBlocks = new HashMap<>();
+            // (FUTURE) Load latest blocks less naively
+            this.blockNodeConfigurations.getAllNodes().forEach(node -> latestBlocks.put(node, -1L));
 
-			this.connectionsInRetry = new ConcurrentHashMap<>();
-			this.connectionExecutor = Executors.newScheduledThreadPool(1);
-		} else {
-			// Block node streaming is disabled, so no connections are needed
-			this.latestBlocks = Collections.emptyMap();
-			this.connectionsInRetry = Collections.emptyMap();
-			this.connectionExecutor = null;
-		}
-	}
+            this.connectionsInRetry = new ConcurrentHashMap<>();
+            this.connectionExecutor = Executors.newScheduledThreadPool(1);
+        } else {
+            // Block node streaming is disabled, so no connections are needed
+            this.latestBlocks = Collections.emptyMap();
+            this.connectionsInRetry = Collections.emptyMap();
+            this.connectionExecutor = null;
+        }
+    }
 
-	/**
-	 * @return the gRPC endpoint for publish block stream
-	 */
-	public String getGrpcEndPoint() {
-		return GRPC_END_POINT;
-	}
+    /**
+     * @return the gRPC endpoint for publish block stream
+     */
+    public String getGrpcEndPoint() {
+        return GRPC_END_POINT;
+    }
 
-	/**
-	 * todo
-	 *
-	 * @param connection
-	 */
-	public void handleEndOfStreamSuccess(@NonNull final BlockNodeConnection connection) {
-		handleEndOfStreamSuccess(connection, null);
-	}
+    public void handleEndOfStreamSuccess(@NonNull final BlockNodeConnection connection) {
+        handleEndOfStreamSuccess(connection, null);
+    }
 
-	/**
-	 * todo
-	 *
-	 * @param connection
-	 * @param blockNumber
-	 */
-	public void handleEndOfStreamSuccess(@NonNull final BlockNodeConnection connection,
-			@Nullable final Long blockNumber) {
-		requireNonNull(connection);
+    public void handleEndOfStreamSuccess(
+            @NonNull final BlockNodeConnection connection, @Nullable final Long blockNumber) {
+        requireNonNull(connection);
 
-		updateLatestBlock(connection, blockNumber);
+        updateLatestBlock(connection, blockNumber);
 
-		disconnectFromNode(connection);
+        disconnectFromNode(connection);
 
-		if (connection.isActive()) {
-			connection.close();
-		}
-	}
+        if (connection.isActive()) {
+            connection.close();
+        }
+    }
 
-	static String blockNodeName(@Nullable final BlockNodeConfig node) {
-		return node != null ? node.address() + ":" + node.port() : "null";
-	}
+    static String blockNodeName(@Nullable final BlockNodeConfig node) {
+        return node != null ? node.address() + ":" + node.port() : "null";
+    }
 
     /**
      * Initiates the streaming of a block to all active connections.
@@ -150,84 +138,91 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-	 * Handles connection errors from a BlockNodeConnection by removing the failed connection
-	 *
-	 * @param connection the connection that received the error
-	 * @param thrown the error that occurred
-	 */
+     * Handles connection errors from a BlockNodeConnection by removing the failed connection
+     *
+     * @param connection the connection that received the error
+     * @param thrown the error that occurred
+     */
     public void handleConnectionError(@NonNull final BlockNodeConnection connection, @NonNull final Throwable thrown) {
-		final Status status = Status.fromThrowable(thrown);
-		logger.error("Error in block stream to node {} (status {})",
-				blockNodeName(connection.getNodeConfig()), status, thrown);
+        final Status status = Status.fromThrowable(thrown);
+        logger.error(
+                "Error in block stream to node {} (status {})",
+                blockNodeName(connection.getNodeConfig()),
+                status,
+                thrown);
 
-		synchronized (connectionLock) {
-			// If available, make the secondary connection the primary connection
-			if (connection == primary && !isRetrying(secondary) && !secondaryActive()) {
-				secondary = primary;
-			}
-			connectionsInRetry.putIfAbsent(connection.getNodeConfig(), connection);
-		}
-		scheduleReconnect(connection);
+        synchronized (connectionLock) {
+            // If available, make the secondary connection the primary connection
+            if (connection == primary && !isRetrying(secondary) && !secondaryActive()) {
+                secondary = primary;
+            }
+            connectionsInRetry.putIfAbsent(connection.getNodeConfig(), connection);
+        }
+        scheduleReconnect(connection);
     }
 
-	public void handleBlockAck(@NonNull final BlockNodeConnection connection, @NonNull final PublishStreamResponse.BlockAcknowledgement blockAck) {
-		final var blockNum = blockAck.getBlockNumber();
-		logger.info("Block {} acknowledged by block node {}", blockAck.getBlockNumber(), blockNodeName(connection.getNodeConfig()));
-		if (blockAck.getBlockAlreadyExists()) {
-			logger.warn("Block {} already exists on block node {}", blockNum, blockNodeName(connection.getNodeConfig()));
-		} else {
-			logger.info("Block {} successfully processed by block node {}", blockAck.getBlockNumber(), blockNodeName(connection.getNodeConfig()));
-		}
+    public void handleBlockAck(
+            @NonNull final BlockNodeConnection connection,
+            @NonNull final PublishStreamResponse.BlockAcknowledgement blockAck) {
+        final var blockNum = blockAck.getBlockNumber();
+        logger.info(
+                "Block {} acknowledged by block node {}",
+                blockAck.getBlockNumber(),
+                blockNodeName(connection.getNodeConfig()));
+        if (blockAck.getBlockAlreadyExists()) {
+            logger.warn(
+                    "Block {} already exists on block node {}", blockNum, blockNodeName(connection.getNodeConfig()));
+        } else {
+            logger.info(
+                    "Block {} successfully processed by block node {}",
+                    blockAck.getBlockNumber(),
+                    blockNodeName(connection.getNodeConfig()));
+        }
 
-		// Regardless of whether the block already exists, we want to update the latest block number
-		updateLatestBlock(connection, blockNum);
-	}
+        // Regardless of whether the block already exists, we want to update the latest block number
+        updateLatestBlock(connection, blockNum);
+    }
 
-	public void handleStreamError(@NonNull final BlockNodeConnection connection, PublishStreamResponse.EndOfStream endOfStream) {
-		logger.error("Stream error for block node {} (status {})", blockNodeName(connection.getNodeConfig()), endOfStream.getStatus());
+    public void handleStreamError(
+            @NonNull final BlockNodeConnection connection, PublishStreamResponse.EndOfStream endOfStream) {
+        logger.error(
+                "Stream error for block node {} (status {})",
+                blockNodeName(connection.getNodeConfig()),
+                endOfStream.getStatus());
 
-		disconnectFromNode(connection);
-		if (primary == connection) {
-			primary = null;
-		} else if (secondary == connection) {
-			secondary = null;
-		}
+        disconnectFromNode(connection);
+        if (primary == connection) {
+            primary = null;
+        } else if (secondary == connection) {
+            secondary = null;
+        }
 
-		// Attempt to reconnect
-		scheduleReconnect(connection);
-	}
+        connectionsInRetry.put(connection.getNodeConfig(), connection);
+
+        // Attempt to reconnect
+        scheduleReconnect(connection);
+    }
 
     public void scheduleReconnect(@NonNull final BlockNodeConnection connection) {
         requireNonNull(connection);
 
-		// Avoid duplicate retry attempts
-		if (connectionsInRetry.containsKey(connection.getNodeConfig())) {
-			logger.info(
-					"Skipping reconnect, already in retry: {}",
-					blockNodeName(connection.getNodeConfig()));
-			return;
-		}
-
-		connectionsInRetry.put(connection.getNodeConfig(), connection);
+        // Avoid duplicate retry attempts
+        if (connectionsInRetry.containsKey(connection.getNodeConfig())) {
+            logger.info("Skipping reconnect, already in retry: {}", blockNodeName(connection.getNodeConfig()));
+            return;
+        }
 
         retryExecutor.execute(() -> {
             try {
                 retry(
-				() -> {
-					if (isHigherPriorityNodeNotRetrying()) {
-						logger.info(
-								"Higher-priority node found, skipping retry for {}",
-								blockNodeName(connection.getNodeConfig()));
-						connectionsInRetry.remove(connection.getNodeConfig());
-						return false;
-					}
-
-					connection.establishStream();
-					synchronized (connectionLock) {
-						connectionsInRetry.remove(connection.getNodeConfig());
-					}
-					return true;
-				}, INITIAL_RETRY_DELAY);
+                        () -> {
+                            connection.establishStream();
+                            synchronized (connectionLock) {
+                                connectionsInRetry.remove(connection.getNodeConfig());
+                            }
+                            return true;
+                        },
+                        INITIAL_RETRY_DELAY);
             } catch (Exception e) {
                 final var node = connection.getNodeConfig();
                 logger.error("Failed to re-establish stream to block node {}", blockNodeName(node), e);
@@ -265,7 +260,7 @@ public class BlockNodeConnectionManager {
      * Shuts down the connection manager, closing all active connections.
      */
     public void shutdown() {
-		connectionExecutor.shutdown();
+        connectionExecutor.shutdown();
         retryExecutor.shutdown();
         try {
             if (!connectionExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
@@ -274,12 +269,12 @@ public class BlockNodeConnectionManager {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
-			synchronized (connectionLock) {
-				primary.close();
-				secondary.close();
-				connectionsInRetry.clear();
-			}
-		}
+            synchronized (connectionLock) {
+                primary.close();
+                secondary.close();
+                connectionsInRetry.clear();
+            }
+        }
     }
 
     /**
@@ -294,13 +289,13 @@ public class BlockNodeConnectionManager {
         final CompletableFuture<Boolean> future = new CompletableFuture<>();
         final ScheduledFuture<?> scheduledTask = connectionExecutor.scheduleAtFixedRate(
                 () -> {
-					if (!primaryActive() && !secondaryActive()) {
-						// Since neither connection is active, we can try to establish a new connection
-						future.complete(true); // Ensure future completed
-					} else if (Instant.now().isAfter(deadline)) {
+                    if (!primaryActive() && !secondaryActive()) {
+                        // Since neither connection is active, we can try to establish a new connection
+                        future.complete(true); // Ensure future completed
+                    } else if (Instant.now().isAfter(deadline)) {
                         future.complete(false); // Handle timeout
                     }
-					// Otherwise we just keep waiting, don't return anything
+                    // Otherwise we just keep waiting, don't return anything
                 },
                 0,
                 100,
@@ -316,199 +311,193 @@ public class BlockNodeConnectionManager {
         }
     }
 
-	/**
-	 * Attempts to establish a connection to a block node based on priority.
-	 */
-	private void establishConnection() {
-		logger.info("Establishing connection to primary block node");
-		List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
+    /**
+     * Attempts to establish a connection to a block node based on priority.
+     */
+    private void establishConnection() {
+        logger.info("Establishing connection to primary block node");
+        List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
 
-		final Map<Integer, List<BlockNodeConfig>> priorityGroups =
-				availableNodes.stream().collect(Collectors.groupingBy(BlockNodeConfig::priority));
-		final List<Integer> sortedPriorities = new ArrayList<>(priorityGroups.keySet());
-		sortedPriorities.sort(Integer::compare);
+        final Map<Integer, List<BlockNodeConfig>> priorityGroups =
+                availableNodes.stream().collect(Collectors.groupingBy(BlockNodeConfig::priority));
+        final List<Integer> sortedPriorities = new ArrayList<>(priorityGroups.keySet());
+        sortedPriorities.sort(Integer::compare);
 
-		// Find the current lowest priority of active connections
-		final int currentMinPriority = getCurrentMinPriority();
+        // Find the current lowest priority of active connections
+        final int currentMinPriority = getCurrentMinPriority();
 
-		BlockNodeConfig selectedNode = null;
-		for (Integer priority : sortedPriorities) {
-			// Skip over any nodes that have less priority than the current minimum
-			if (priority >= currentMinPriority) continue;
+        BlockNodeConfig selectedNode = null;
+        for (Integer priority : sortedPriorities) {
+            // Skip over any nodes that have less priority than the current minimum
+            if (priority >= currentMinPriority) continue;
 
-			final List<BlockNodeConfig> nodesInGroup = new ArrayList<>(priorityGroups.get(priority));
-			Collections.shuffle(nodesInGroup);
-			selectedNode = nodesInGroup.getFirst();
-			if (!connectionsInRetry.containsKey(selectedNode)) {
-				break;
-			}
-		}
+            final List<BlockNodeConfig> nodesInGroup = new ArrayList<>(priorityGroups.get(priority));
+            Collections.shuffle(nodesInGroup);
+            selectedNode = nodesInGroup.getFirst();
+            if (!connectionsInRetry.containsKey(selectedNode)) {
+                break;
+            }
+        }
 
-		if (selectedNode == null) {
-			throw new IllegalStateException("No available block node found for connection. Check configuration and network status.");
-		}
+        if (selectedNode == null) {
+            throw new IllegalStateException(
+                    "No available block node found for connection. Check configuration and network status.");
+        }
 
-		connectToNode(selectedNode);
-	}
+        connectToNode(selectedNode);
+    }
 
-	private Long getLatestBlock(@NonNull final BlockNodeConnection connection) {
-		return latestBlocks.get(connection.getNodeConfig());
-	}
+    private Long getLatestBlock(@NonNull final BlockNodeConnection connection) {
+        return latestBlocks.get(connection.getNodeConfig());
+    }
 
-	private void updateLatestBlock(@NonNull final BlockNodeConnection connection, @Nullable final Long blockNumber) {
-		requireNonNull(connection);
+    private void updateLatestBlock(@NonNull final BlockNodeConnection connection, @Nullable final Long blockNumber) {
+        requireNonNull(connection);
 
-		final Long latestBlock = getLatestBlock(connection);
-		if (blockNumber != null && blockNumber > latestBlock) {
-			latestBlocks.put(connection.getNodeConfig(), blockNumber);
-		} else {
-			logger.warn(
-					"Attempted to update connection {} with invalid block number {} (highest {})",
-					blockNodeName(connection.getNodeConfig()), blockNumber, latestBlock);
-		}
-	}
+        final Long latestBlock = getLatestBlock(connection);
+        if (blockNumber != null && blockNumber > latestBlock) {
+            latestBlocks.put(connection.getNodeConfig(), blockNumber);
+        } else {
+            logger.warn(
+                    "Attempted to update connection {} with invalid block number {} (highest {})",
+                    blockNodeName(connection.getNodeConfig()),
+                    blockNumber,
+                    latestBlock);
+        }
+    }
 
-	private void connectToNode(@NonNull BlockNodeConfig node) {
-		logger.info("Connecting to block node {}", blockNodeName(node));
-		try {
-			final GrpcClient client = GrpcClient.builder()
-					// (FUTURE) Add TLS support?
-					.tls(Tls.builder().enabled(false).build())
-					.baseUri(new URI("http://" + node.address() + ":" + node.port()))
-					.protocolConfig(GrpcClientProtocolConfig.builder()
-							.abortPollTimeExpired(false)
-							.build())
-					.keepAlive(true)
-					.build();
+    private void connectToNode(@NonNull BlockNodeConfig node) {
+        logger.info("Connecting to block node {}", blockNodeName(node));
+        try {
+            final GrpcClient client = GrpcClient.builder()
+                    // (FUTURE) Add TLS support?
+                    .tls(Tls.builder().enabled(false).build())
+                    .baseUri(new URI("http://" + node.address() + ":" + node.port()))
+                    .protocolConfig(GrpcClientProtocolConfig.builder()
+                            .abortPollTimeExpired(false)
+                            .build())
+                    .keepAlive(true)
+                    .build();
 
-			final GrpcServiceClient grpcServiceClient = client.serviceClient(GrpcServiceDescriptor.builder()
-					.serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
-					.putMethod(
-							GRPC_END_POINT,
-							GrpcClientMethodDescriptor.bidirectional(
-											BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
-									.requestType(PublishStreamRequest.class)
-									.responseType(PublishStreamResponse.class)
-									.build())
-					.build());
+            final GrpcServiceClient grpcServiceClient = client.serviceClient(GrpcServiceDescriptor.builder()
+                    .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
+                    .putMethod(
+                            GRPC_END_POINT,
+                            GrpcClientMethodDescriptor.bidirectional(
+                                            BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
+                                    .requestType(PublishStreamRequest.class)
+                                    .responseType(PublishStreamResponse.class)
+                                    .build())
+                    .build());
 
-			final BlockNodeConnection connection = new BlockNodeConnection(node, grpcServiceClient, this);
-			connection.establishStream();
-			synchronized (connectionLock) {
-				// The connection may not be in here, but in case it is, remove it
-				connectionsInRetry.remove(node);
-			}
-			logger.info("Successfully connected to block node {}", blockNodeName(node));
-		} catch (URISyntaxException | RuntimeException e) {
-			logger.error("Failed to connect to block node {}", blockNodeName(node), e);
-		}
-	}
+            final BlockNodeConnection connection = new BlockNodeConnection(node, grpcServiceClient, this);
+            connection.establishStream();
+            synchronized (connectionLock) {
+                // The connection may not be in here, but in case it is, remove it
+                connectionsInRetry.remove(node);
+            }
+            logger.info("Successfully connected to block node {}", blockNodeName(node));
+        } catch (URISyntaxException | RuntimeException e) {
+            logger.error("Failed to connect to block node {}", blockNodeName(node), e);
+        }
+    }
 
-	private void disconnectFromNode(@NonNull BlockNodeConnection connection) {
-		synchronized (connectionLock) {
-			if (connection.isActive()) {
-				connection.close();
-			}
-		}
+    private void disconnectFromNode(@NonNull BlockNodeConnection connection) {
+        synchronized (connectionLock) {
+            if (connection.isActive()) {
+                connection.close();
+            }
+        }
 
-		logger.info("Disconnected from block node {}", connection.getNodeConfig());
-	}
+        logger.info("Disconnected from block node {}", connection.getNodeConfig());
+    }
 
-	private Optional<BlockNodeConnection> getActiveConnection() {
-		synchronized (connectionLock) {
-			if (primaryActive()) {
-				return Optional.of(primary);
-			} else if (secondaryActive()) {
-				return Optional.of(secondary);
-			}
-		}
-		return Optional.empty();
-	}
+    private Optional<BlockNodeConnection> getActiveConnection() {
+        synchronized (connectionLock) {
+            if (primaryActive()) {
+                return Optional.of(primary);
+            } else if (secondaryActive()) {
+                return Optional.of(secondary);
+            }
+        }
+        return Optional.empty();
+    }
 
-	/**
-	 * Streams the given block to the active connection.
-	 *
-	 * @param block the block to stream
-	 */
-	private void streamBlock(@NonNull BlockState block) {
-		final long blockNumber = block.blockNumber();
+    /**
+     * Streams the given block to the active connection.
+     *
+     * @param block the block to stream
+     */
+    private void streamBlock(@NonNull BlockState block) {
+        final long blockNumber = block.blockNumber();
 
-		// Identify the currently-active connection
-		final BlockNodeConnection conn = getActiveConnection().orElse(null);
-		if (conn == null) {
-			logger.warn("No active connections available for streaming block {}", blockNumber);
-			return;
-		}
+        // Identify the currently-active connection
+        final BlockNodeConnection conn = getActiveConnection().orElse(null);
+        if (conn == null) {
+            logger.warn("No active connections available for streaming block {}", blockNumber);
+            return;
+        }
 
-		logger.info("Beginning stream of block {} to {}", blockNumber, blockNodeName(conn.getNodeConfig()));
-		final int blockItemBatchSize = blockNodeConfigurations.getBlockItemBatchSize();
-		PublishStreamRequest request;
-		for (int i = 0; i < block.itemBytes().size(); i += blockItemBatchSize) {
-			final int end = Math.min(i + blockItemBatchSize, block.itemBytes().size());
-			final List<Bytes> batch = block.itemBytes().subList(i, end);
-			final List<BlockItem> protocBlockItems = new ArrayList<>();
-			batch.forEach(batchItem -> {
-				try {
-					final BlockItem itemAsProtoC = BlockItem.parseFrom(batchItem.toByteArray());
-					protocBlockItems.add(itemAsProtoC);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-			});
+        logger.info("Beginning stream of block {} to {}", blockNumber, blockNodeName(conn.getNodeConfig()));
+        final int blockItemBatchSize = blockNodeConfigurations.getBlockItemBatchSize();
+        PublishStreamRequest request;
+        for (int i = 0; i < block.itemBytes().size(); i += blockItemBatchSize) {
+            final int end = Math.min(i + blockItemBatchSize, block.itemBytes().size());
+            final List<Bytes> batch = block.itemBytes().subList(i, end);
+            final List<BlockItem> protocBlockItems = new ArrayList<>();
+            batch.forEach(batchItem -> {
+                try {
+                    final BlockItem itemAsProtoC = BlockItem.parseFrom(batchItem.toByteArray());
+                    protocBlockItems.add(itemAsProtoC);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
 
-			// Create BlockItemSet by adding all items at once
-			final BlockItemSet itemSet =
-					BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
-			request = PublishStreamRequest.newBuilder().setBlockItems(itemSet).build();
+            // Create BlockItemSet by adding all items at once
+            final BlockItemSet itemSet =
+                    BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
+            request = PublishStreamRequest.newBuilder().setBlockItems(itemSet).build();
 
-			// Stream the chunk
-			final var connectionNodeConfig = conn.getNodeConfig();
-			try {
-				conn.sendRequest(request);
-			} catch (Exception e) {
-				logger.error(
-						"Failed to stream batch (byte {} – byte {}) to {}",
-						i,
-						end,
-						connectionNodeConfig,
-						e);
-			}
+            // Stream the chunk
+            final var connectionNodeConfig = conn.getNodeConfig();
+            try {
+                conn.sendRequest(request);
+            } catch (Exception e) {
+                logger.error("Failed to stream batch (byte {} – byte {}) to {}", i, end, connectionNodeConfig, e);
+            }
 
-			// (FUTURE) Add sent batches/items to a cache
-		}
+            // (FUTURE) Add sent batches/items to a cache
+        }
 
-		logger.info(
-				"Successfully streamed block {} to {}",
-				blockNumber,
-				conn.getNodeConfig());
-	}
+        logger.info("Successfully streamed block {} to {}", blockNumber, conn.getNodeConfig());
+    }
 
-	private boolean isRetrying(BlockNodeConnection connection) {
-		return connectionsInRetry.containsKey(connection.getNodeConfig());
-	}
+    private boolean isRetrying(BlockNodeConnection connection) {
+        return isRetrying(connection.getNodeConfig());
+    }
 
-	private boolean isHigherPriorityNodeNotRetrying() {
-		return blockNodeConfigurations.getAllNodes().stream()
-				.anyMatch(node -> !connectionsInRetry.containsKey(node)
-						&& node.priority() < getCurrentMinPriority());
-	}
+    private boolean isRetrying(BlockNodeConfig config) {
+        return connectionsInRetry.containsKey(config);
+    }
 
-	private int getCurrentMinPriority() {
-		final var activeConn = getActiveConnection();
-		return activeConn.map(ac -> ac.getNodeConfig().priority())
-				// If no active connection, return max priority
-				.orElse(Integer.MAX_VALUE);
-	}
+    private int getCurrentMinPriority() {
+        final var activeConn = getActiveConnection();
+        return activeConn
+                .map(ac -> ac.getNodeConfig().priority())
+                // If no active connection, return max priority
+                .orElse(Integer.MAX_VALUE);
+    }
 
-	private boolean primaryActive() {
-		return connectionActive(primary);
-	}
+    private boolean primaryActive() {
+        return connectionActive(primary);
+    }
 
-	private boolean secondaryActive() {
-		return connectionActive(secondary);
-	}
+    private boolean secondaryActive() {
+        return connectionActive(secondary);
+    }
 
-	private boolean connectionActive(BlockNodeConnection connection) {
-		return connection != null && !isRetrying(connection) && connection.isActive();
-	}
+    private boolean connectionActive(BlockNodeConnection connection) {
+        return connection != null && !isRetrying(connection) && connection.isActive();
+    }
 }

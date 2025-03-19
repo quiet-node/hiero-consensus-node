@@ -44,10 +44,12 @@ public class BlockNodeConnection {
     }
 
     public void establishStream() {
-		if (requestObserver != null) {
-			logger.error("Stream is already established for block node {}", BlockNodeConnectionManager.blockNodeName(nodeConf));
-			return;
-		}
+        if (requestObserver != null) {
+            logger.error(
+                    "Stream is already established for block node {}",
+                    BlockNodeConnectionManager.blockNodeName(nodeConf));
+            return;
+        }
 
         requestObserver = grpcServiceClient.bidi(
                 blockNodeConnectionManager.getGrpcEndPoint(), new StreamObserver<PublishStreamResponse>() {
@@ -67,7 +69,7 @@ public class BlockNodeConnection {
 
                     @Override
                     public void onCompleted() {
-						handleGracefulClose();
+                        handleGracefulClose();
                     }
                 });
 
@@ -76,31 +78,36 @@ public class BlockNodeConnection {
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
-            logger.info("Block acknowledgement received for block {}", acknowledgement.getBlockAck().getBlockNumber());
-			blockNodeConnectionManager.handleBlockAck(this, acknowledgement.getBlockAck());
+            logger.info(
+                    "Block acknowledgement received for block {}",
+                    acknowledgement.getBlockAck().getBlockNumber());
+            blockNodeConnectionManager.handleBlockAck(this, acknowledgement.getBlockAck());
         } else if (logger.isWarnEnabled()) {
-			logger.warn("Acknowledgement of unknown type received: {}", acknowledgement);
-		}
+            logger.warn("Acknowledgement of unknown type received: {}", acknowledgement);
+        }
     }
 
     private void handleStreamFailure(Throwable t) {
         isActive = false;
-		blockNodeConnectionManager.handleConnectionError(this, t);
+        blockNodeConnectionManager.handleConnectionError(this, t);
     }
 
     private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
-        logger.info("Received end of stream status {} for block number {}", endOfStream.getStatus(), endOfStream.getBlockNumber());
-		if (!endOfStream.getStatus().equals(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS)) {
-			blockNodeConnectionManager.handleStreamError(this, endOfStream);
-		} else {
-			blockNodeConnectionManager.handleEndOfStreamSuccess(this, endOfStream.getBlockNumber());
-		}
+        logger.info(
+                "Received end of stream status {} for block number {}",
+                endOfStream.getStatus(),
+                endOfStream.getBlockNumber());
+        if (!endOfStream.getStatus().equals(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS)) {
+            blockNodeConnectionManager.handleStreamError(this, endOfStream);
+        } else {
+            blockNodeConnectionManager.handleEndOfStreamSuccess(this, endOfStream.getBlockNumber());
+        }
     }
 
-	private void handleGracefulClose() {
-		logger.info("Received end of stream for block node {}", BlockNodeConnectionManager.blockNodeName(nodeConf));
-		blockNodeConnectionManager.handleEndOfStreamSuccess(this);
-	}
+    private void handleGracefulClose() {
+        logger.info("Received end of stream for block node {}", BlockNodeConnectionManager.blockNodeName(nodeConf));
+        blockNodeConnectionManager.handleEndOfStreamSuccess(this);
+    }
 
     /**
      * If connection is active sends a request to the block node, otherwise does nothing.
@@ -112,10 +119,12 @@ public class BlockNodeConnection {
             requireNonNull(request);
             requestObserver.onNext(request);
         } else {
-			logger.error("Cannot send request to block node {}: connection is not active", BlockNodeConnectionManager.blockNodeName(
-					nodeConf));
-			throw new IllegalStateException("Connection is not active for node " + BlockNodeConnectionManager.blockNodeName(nodeConf));
-		}
+            logger.error(
+                    "Cannot send request to block node {}: connection is not active",
+                    BlockNodeConnectionManager.blockNodeName(nodeConf));
+            throw new IllegalStateException(
+                    "Connection is not active for node " + BlockNodeConnectionManager.blockNodeName(nodeConf));
+        }
     }
 
     /**
