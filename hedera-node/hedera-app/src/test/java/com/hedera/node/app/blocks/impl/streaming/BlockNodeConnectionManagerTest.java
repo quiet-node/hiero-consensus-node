@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
@@ -17,9 +16,11 @@ import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
+import com.hedera.node.internal.network.BlockNodeConfig;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,13 +92,16 @@ class BlockNodeConnectionManagerTest {
 
     @Test
     void testScheduleReconnect() throws InterruptedException {
+        when(mockConnection.getNodeConfig()).thenReturn(new BlockNodeConfig("localhost", 8080));
+        when(mockConnection.getIsActiveLock()).thenReturn(new ReentrantLock());
+
         blockNodeConnectionManager.scheduleReconnect(mockConnection);
+        verify(mockConnection, times(0)).establishStream();
 
-        verifyNoInteractions(mockConnection); // there should be no immediate attempt to establish a stream
+        final var initialDelay = BlockNodeConnectionManager.INITIAL_RETRY_DELAY;
+        Thread.sleep(initialDelay.plusMillis(100));
 
-        Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
-
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(Duration.ofSeconds(1L)));
+        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(initialDelay));
         verify(mockConnection, times(1)).establishStream();
     }
 

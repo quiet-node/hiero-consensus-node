@@ -142,13 +142,13 @@ public class BlockNodeConnectionManager {
 
         retryExecutor.execute(() -> {
             synchronized (connectionLock) {
+                final var blockNodeConfig = connection.getNodeConfig();
                 try {
-                    BlockNodeConfig nodeConfig = connection.getNodeConfig();
-                    if (!activeConnections.containsKey(nodeConfig)) {
+                    if (!activeConnections.containsKey(blockNodeConfig)) {
                         connection.getIsActiveLock().lock();
                         try {
                             if (!connection.isActive()) {
-                                activeConnections.put(nodeConfig, connection);
+                                activeConnections.put(blockNodeConfig, connection);
                                 retry(connection::establishStream, INITIAL_RETRY_DELAY);
                             }
                         } finally {
@@ -156,10 +156,12 @@ public class BlockNodeConnectionManager {
                         }
                     }
                 } catch (Exception e) {
-                    final var node = connection.getNodeConfig();
                     logger.error(
-                            "Failed to re-establish stream to block node {}:{}: {}", node.address(), node.port(), e);
-                    activeConnections.remove(connection.getNodeConfig());
+                            "Failed to re-establish stream to block node {}:{}: {}",
+                            blockNodeConfig.address(),
+                            blockNodeConfig.port(),
+                            e);
+                    activeConnections.remove(blockNodeConfig);
                 }
             }
         });
