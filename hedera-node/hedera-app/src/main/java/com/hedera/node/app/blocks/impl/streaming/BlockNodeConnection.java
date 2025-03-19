@@ -30,7 +30,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final BlockNodeConfig node;
-    private final BlockNodeConnectionManager manager;
+    private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
 
     // Locks and synchronization objects
@@ -55,10 +55,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     public BlockNodeConnection(
             BlockNodeConfig nodeConfig,
-            BlockNodeConnectionManager manager,
+            BlockNodeConnectionManager blockNodeConnectionManager,
             BlockStreamStateManager blockStreamStateManager) {
         this.node = nodeConfig;
-        this.manager = manager;
+        this.blockNodeConnectionManager = blockNodeConnectionManager;
         this.blockStreamStateManager = blockStreamStateManager;
         this.channel = createNewChannel();
     }
@@ -302,7 +302,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockNumber,
                 responseCode);
 
-        // For all error codes, restart at the last verified block + 1
+        // For all error codes, restart after the last verified block + 1
         long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
         logger.debug(
                 "[{}] Restarting stream at block {} due to {} for node {}:{}",
@@ -315,7 +315,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void removeFromActiveConnections(BlockNodeConfig node) {
-        manager.handleConnectionError(node);
+        blockNodeConnectionManager.disconnectFromNode(node);
     }
 
     /**
@@ -337,7 +337,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void scheduleReconnect() {
         logger.debug("Scheduling reconnect for block node {}:{}", node.address(), node.port());
         setCurrentBlockNumber(-1);
-        manager.scheduleReconnect(this);
+        blockNodeConnectionManager.scheduleReconnect(this);
     }
 
     /**
@@ -461,7 +461,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void jumpToBlock(long blockNumber) {
         logger.debug(
-                "Jumping to block {} for node {}:{} without ending stream", blockNumber, node.address(), node.port());
+                "Setting current block number to {} for node {}:{} without ending stream",
+                blockNumber,
+                node.address(),
+                node.port());
 
         stopWorkerThread();
         setCurrentBlockNumber(blockNumber);
@@ -546,7 +549,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void onCompleted() {
         if (streamCompletionInProgress.compareAndSet(false, true)) {
             try {
-                logger.debug("Stream completed for block node {}:{}", node.address(), node.port());
+                logger.debug("[] Stream completed for block node {}:{}", node.address(), node.port());
                 handleStreamFailure();
             } finally {
                 streamCompletionInProgress.set(false);

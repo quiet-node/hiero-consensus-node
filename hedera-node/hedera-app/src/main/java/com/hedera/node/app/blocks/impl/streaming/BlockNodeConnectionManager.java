@@ -100,36 +100,20 @@ public class BlockNodeConnectionManager {
         }
     }
 
-    private synchronized void disconnectFromNode(@NonNull BlockNodeConfig node) {
-        synchronized (connectionLock) {
-            BlockNodeConnection connection = activeConnections.remove(node);
-            if (connection != null) {
-                connection.getIsActiveLock().lock();
-                try {
-                    connection.close();
-                    logger.info("Disconnected from block node {}:{}", node.address(), node.port());
-                } finally {
-                    connection.getIsActiveLock().unlock();
-                }
-            }
-        }
-    }
-
     /**
      * Handles connection errors from a BlockNodeConnection by removing the failed connection
      * and initiating the reconnection process.
      *
      * @param node the node configuration for the failed connection
      */
-    public void handleConnectionError(@NonNull BlockNodeConfig node) {
+    public synchronized void disconnectFromNode(@NonNull BlockNodeConfig node) {
         synchronized (connectionLock) {
-            BlockNodeConnection connection = activeConnections.remove(node);
+            final BlockNodeConnection connection = activeConnections.remove(node);
             if (connection != null) {
                 connection.getIsActiveLock().lock();
                 try {
-                    if (connection.isActive()) {
-                        connection.close();
-                    }
+                    connection.close();
+                    logger.info("Disconnected from block node {}:{}", node.address(), node.port());
                 } finally {
                     connection.getIsActiveLock().unlock();
                 }

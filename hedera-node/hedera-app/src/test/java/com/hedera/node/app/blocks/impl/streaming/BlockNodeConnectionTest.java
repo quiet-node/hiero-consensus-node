@@ -7,12 +7,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
+import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
@@ -38,7 +40,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith({MockitoExtension.class, LogCaptureExtension.class})
 class BlockNodeConnectionTest {
 
-    private static final String TEST_ADDRESS = "test-address";
+    private static final String TEST_ADDRESS = "localhost";
     private static final int TEST_PORT = 8080;
     private static final long TEST_BLOCK_NUMBER = 42L;
 
@@ -58,7 +60,7 @@ class BlockNodeConnectionTest {
     private BlockState blockState;
 
     @LoggingTarget
-    private LogCaptor logCapture;
+    private LogCaptor logCaptor;
 
     @LoggingSubject
     private BlockNodeConnection connection;
@@ -134,11 +136,11 @@ class BlockNodeConnectionTest {
         String expectedWaitingLog =
                 "[] Waiting for new block to be available for node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
         String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
     }
 
@@ -207,11 +209,11 @@ class BlockNodeConnectionTest {
         String expectedWaitingLog =
                 "[] Waiting for new block to be available for node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
         String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
     }
 
@@ -268,16 +270,16 @@ class BlockNodeConnectionTest {
         String expectedProcessingLog =
                 "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
                 "Expected log message not found: " + expectedProcessingLog);
         String expectedWaitingLog = "[] No requests available for block " + TEST_BLOCK_NUMBER + " on node "
                 + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
         String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
     }
 
@@ -329,15 +331,15 @@ class BlockNodeConnectionTest {
         String expectedProcessingLog =
                 "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
                 "Expected log message not found: " + expectedProcessingLog);
         String expectedSendingLog = "[] Sending request for block " + TEST_BLOCK_NUMBER;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedSendingLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedSendingLog)),
                 "Expected log message not found: " + expectedSendingLog);
         String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
     }
 
@@ -389,11 +391,11 @@ class BlockNodeConnectionTest {
         // Verify log messages indicate moving to the next block
         String expectedSendingLog = "[] Sending request for block " + TEST_BLOCK_NUMBER;
         assertTrue(
-                logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedSendingLog)),
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedSendingLog)),
                 "Expected log message not found: " + expectedSendingLog);
         String expectedCompletedLog = "[] Completed sending all requests for block " + TEST_BLOCK_NUMBER;
         assertTrue(
-                logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedCompletedLog)),
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedCompletedLog)),
                 "Expected log message not found: " + expectedCompletedLog);
     }
 
@@ -439,7 +441,7 @@ class BlockNodeConnectionTest {
         // Verify log messages for handling the InterruptedException
         String expectedErrorLog = "[] Request worker thread interrupted for node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
+                logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
     }
 
@@ -492,7 +494,7 @@ class BlockNodeConnectionTest {
         // Verify log messages for handling the generic exception
         String expectedErrorLog = "[] Error in request worker thread for node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
+                logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
     }
 
@@ -550,11 +552,11 @@ class BlockNodeConnectionTest {
         // Verify log messages for handling the IndexOutOfBoundsException
         String expectedErrorLog = "[] Error in request worker thread for node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
+                logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
         String expectedResetLog = "[] Resetting request index";
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedResetLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedResetLog)),
                 "Expected log message not found: " + expectedResetLog);
     }
 
@@ -574,10 +576,11 @@ class BlockNodeConnectionTest {
         assertEquals(0, connection.getCurrentRequestIndex());
 
         // Verify log messages for jumping to a block
-        String expectedLog = "Setting current block number to " + blockNumber;
+        String expectedLog = "Setting current block number to " + blockNumber + " for node " + TEST_ADDRESS + ":"
+                + TEST_PORT + " without ending stream";
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
-                        || logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
+                        || logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
     }
 
@@ -600,8 +603,8 @@ class BlockNodeConnectionTest {
         // Verify log messages for ending stream and restarting
         String expectedLog = "Ending stream and restarting at block " + blockNumber;
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
-                        || logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
+                        || logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
     }
 
@@ -613,7 +616,7 @@ class BlockNodeConnectionTest {
         // Arrange
         final PublishStreamResponse.Acknowledgement acknowledgement = PublishStreamResponse.Acknowledgement.newBuilder()
                 .setBlockAck(PublishStreamResponse.BlockAcknowledgement.newBuilder()
-                        .setBlockNumber(1L)
+                        .setBlockNumber(TEST_BLOCK_NUMBER)
                         .setBlockAlreadyExists(false)
                         .build())
                 .build();
@@ -629,33 +632,9 @@ class BlockNodeConnectionTest {
         // Verify log messages for acknowledgement
         String expectedLog = "Received acknowledgement";
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
-                        || logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
+                        || logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected acknowledgement handling logs not found");
-    }
-
-    /**
-     * Tests the onNext method handling a PublishStreamResponse with a StreamFailure.
-     */
-    @Test
-    void testOnNext_WithStreamFailure() {
-        // Arrange
-        PublishStreamResponse response = mock(PublishStreamResponse.class);
-        // Check what message type is used based on the proto definition
-        when(response.getResponseCase()).thenReturn(PublishStreamResponse.ResponseCase.END_STREAM);
-
-        // Act
-        connection.onNext(response);
-
-        // Assert - connection manager is notified
-        verify(connectionManager).handleConnectionError(nodeConfig);
-
-        // Verify log messages for stream failure
-        String expectedLog = "[] Error returned from block node";
-        assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
-                        || logCapture.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
-                "Expected log message not found: " + expectedLog);
     }
 
     /**
@@ -664,22 +643,25 @@ class BlockNodeConnectionTest {
     @Test
     void testOnNext_WithEndOfStream() {
         // Arrange
-        PublishStreamResponse response = mock(PublishStreamResponse.class);
-        when(response.getResponseCase()).thenReturn(PublishStreamResponse.ResponseCase.END_STREAM);
-        PublishStreamResponse.EndOfStream endOfStream = mock(PublishStreamResponse.EndOfStream.class);
-        when(response.getEndStream()).thenReturn(endOfStream);
+        BlockNodeConnection connectionSpy = spy(connection);
+        final PublishStreamResponse.EndOfStream endOfStream = PublishStreamResponse.EndOfStream.newBuilder()
+                .setBlockNumber(TEST_BLOCK_NUMBER)
+                .setStatus(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
+                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().setEndStream(endOfStream).build();
 
         // Act
-        connection.onNext(response);
+        connectionSpy.onNext(response);
 
-        // Assert - connection manager is notified
-        verify(connectionManager).handleConnectionError(nodeConfig);
+        // Assert connection restarts after the last verified block number
+        verify(connectionSpy).endStreamAndRestartAtBlock(endOfStream.getBlockNumber() + 1L);
 
         // Verify log messages for end of stream
-        String expectedLog = "[] Error returned from block node";
+        String expectedLog = "Received EndOfStream from block node";
         assertTrue(
-                logCapture.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
-                        || logCapture.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog))
+                        || logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
     }
 
@@ -695,12 +677,12 @@ class BlockNodeConnectionTest {
         connection.onError(error);
 
         // Assert - connection manager is notified
-        verify(connectionManager).handleConnectionError(nodeConfig);
+        verify(connectionManager).disconnectFromNode(nodeConfig);
 
         // Verify log messages for onError
         String expectedLog = "[] Error on stream from block node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
     }
 
@@ -713,12 +695,12 @@ class BlockNodeConnectionTest {
         connection.onCompleted();
 
         // Assert - connection manager is notified
-        verify(connectionManager).handleConnectionError(nodeConfig);
+        verify(connectionManager).disconnectFromNode(nodeConfig);
 
         // Verify log messages for onCompleted
         String expectedLog = "[] Stream completed for block node " + TEST_ADDRESS + ":" + TEST_PORT;
         assertTrue(
-                logCapture.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
     }
 }
