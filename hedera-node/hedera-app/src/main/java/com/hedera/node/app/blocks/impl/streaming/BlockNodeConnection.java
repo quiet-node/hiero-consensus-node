@@ -5,9 +5,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
+import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
 import org.apache.logging.log4j.LogManager;
@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Logger;
 public class BlockNodeConnection {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
 
-    private final BlockNodeConfig node;
+    private final BlockNodeConfig nodeConf;
     private final GrpcServiceClient grpcServiceClient;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
     private StreamObserver<PublishStreamRequest> requestObserver;
@@ -36,14 +36,19 @@ public class BlockNodeConnection {
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final GrpcServiceClient grpcServiceClient,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager) {
-        this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
+        this.nodeConf = requireNonNull(nodeConfig, "nodeConfig must not be null");
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
-        logger.info("BlockNodeConnection INITIALIZED");
+        logger.info("BlockNodeConnection {} INITIALIZED", BlockNodeConnectionManager.blockNodeName(nodeConf));
     }
 
-    public Void establishStream() {
+    public void establishStream() {
+		if (requestObserver != null) {
+			logger.error("Stream is already established for block node {}", BlockNodeConnectionManager.blockNodeName(nodeConf));
+			return;
+		}
+
         requestObserver = grpcServiceClient.bidi(
                 blockNodeConnectionManager.getGrpcEndPoint(), new StreamObserver<PublishStreamResponse>() {
                     @Override
@@ -57,45 +62,45 @@ public class BlockNodeConnection {
 
                     @Override
                     public void onError(Throwable t) {
-                        Status status = Status.fromThrowable(t);
-                        logger.error("Error in block node stream {}:{}: {}", node.address(), node.port(), status, t);
-                        handleStreamFailure();
-                        scheduleReconnect();
+                        handleStreamFailure(t);
                     }
 
                     @Override
                     public void onCompleted() {
-                        logger.info("Stream completed for block node {}:{}", node.address(), node.port());
-                        handleStreamFailure();
+						handleGracefulClose();
                     }
                 });
 
         isActive = true;
-        return null;
     }
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
-            logger.info("Block acknowledgment received for a full block: {}", acknowledgement.getBlockAck());
-        }
+            logger.info("Block acknowledgement received for block {}", acknowledgement.getBlockAck().getBlockNumber());
+			blockNodeConnectionManager.handleBlockAck(this, acknowledgement.getBlockAck());
+        } else if (logger.isWarnEnabled()) {
+			logger.warn("Acknowledgement of unknown type received: {}", acknowledgement);
+		}
     }
 
-    private void handleStreamFailure() {
+    private void handleStreamFailure(Throwable t) {
         isActive = false;
-        removeFromActiveConnections(node);
+		blockNodeConnectionManager.handleConnectionError(this, t);
     }
 
     private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
-        logger.info("Error returned from block node at block number {}: {}", endOfStream.getBlockNumber(), endOfStream);
+        logger.info("Received end of stream status {} for block number {}", endOfStream.getStatus(), endOfStream.getBlockNumber());
+		if (!endOfStream.getStatus().equals(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS)) {
+			blockNodeConnectionManager.handleStreamError(this, endOfStream);
+		} else {
+			blockNodeConnectionManager.handleEndOfStreamSuccess(this, endOfStream.getBlockNumber());
+		}
     }
 
-    private void removeFromActiveConnections(BlockNodeConfig node) {
-        blockNodeConnectionManager.handleConnectionError(node);
-    }
-
-    private void scheduleReconnect() {
-        blockNodeConnectionManager.scheduleReconnect(this);
-    }
+	private void handleGracefulClose() {
+		logger.info("Received end of stream for block node {}", BlockNodeConnectionManager.blockNodeName(nodeConf));
+		blockNodeConnectionManager.handleEndOfStreamSuccess(this);
+	}
 
     /**
      * If connection is active sends a request to the block node, otherwise does nothing.
@@ -106,11 +111,15 @@ public class BlockNodeConnection {
         if (isActive) {
             requireNonNull(request);
             requestObserver.onNext(request);
-        }
+        } else {
+			logger.error("Cannot send request to block node {}: connection is not active", BlockNodeConnectionManager.blockNodeName(
+					nodeConf));
+			throw new IllegalStateException("Connection is not active for node " + BlockNodeConnectionManager.blockNodeName(nodeConf));
+		}
     }
 
     /**
-     * If connection is active it closes it, otherwise does nothing.
+     * Idempotent operation that closes this connection (if active)
      */
     public void close() {
         if (isActive) {
@@ -129,11 +138,11 @@ public class BlockNodeConnection {
     }
 
     /**
-     * Returns the block node configuration this connection.
+     * Returns the block node configuration for this connection.
      *
      * @return the block node configuration
      */
     public BlockNodeConfig getNodeConfig() {
-        return node;
+        return nodeConf;
     }
 }

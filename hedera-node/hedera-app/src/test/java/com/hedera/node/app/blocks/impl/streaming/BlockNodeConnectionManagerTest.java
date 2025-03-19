@@ -39,9 +39,6 @@ class BlockNodeConnectionManagerTest {
     @LoggingSubject
     BlockNodeConnectionManager blockNodeConnectionManager;
 
-    @LoggingTarget
-    private LogCaptor logCaptor;
-
     @Mock
     ConfigProvider mockConfigProvider;
 
@@ -114,10 +111,10 @@ class BlockNodeConnectionManagerTest {
     }
 
     @Test
-    void testEstablishConnections_PrioritizesNodes() {
+    void testEstablishConnection_PrioritizesNodes() {
 
         // Establishing connections indirectly via waitForConnections
-        blockNodeConnectionManager.waitForConnections(Duration.ofSeconds(5));
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
         List<String> infoLogs = logCaptor.infoLogs();
         assertThat(infoLogs.get(0)).contains("Establishing connections to block nodes");

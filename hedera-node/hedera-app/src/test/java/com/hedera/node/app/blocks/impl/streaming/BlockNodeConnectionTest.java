@@ -7,13 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.google.protobuf.ByteString;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
@@ -60,9 +61,12 @@ class BlockNodeConnectionTest {
 
     @Test
     void testNewBlockNodeConnection() {
+		given(nodeConfig.address()).willReturn("localhost");
+		given(nodeConfig.port()).willReturn(12345);
+
         assertEquals(nodeConfig, blockNodeConnection.getNodeConfig());
         assertFalse(blockNodeConnection.isActive());
-        assertThat(logCaptor.infoLogs()).contains("BlockNodeConnection INITIALIZED");
+        assertThat(logCaptor.infoLogs()).contains("BlockNodeConnection localhost:12345 INITIALIZED");
     }
 
     @Test
@@ -132,29 +136,7 @@ class BlockNodeConnectionTest {
                 .build();
         capturedObserver.onNext(response);
 
-        assertThat(logCaptor.infoLogs()).contains("Block acknowledgment received for a full block: block_number: 1234");
-    }
-
-    @Test
-    void testGrpcClientStreamObserver_OnNext_ItemAckResponse() {
-        when(grpcServiceClient.bidi(any(), any(StreamObserver.class))).thenReturn(requestObserver);
-        blockNodeConnection.establishStream();
-
-        final var captor = ArgumentCaptor.forClass(StreamObserver.class);
-        verify(grpcServiceClient).bidi(any(), captor.capture());
-        final var capturedObserver = captor.getValue();
-        assertNotNull(capturedObserver);
-
-        final var response = PublishStreamResponse.newBuilder()
-                .setAcknowledgement(PublishStreamResponse.Acknowledgement.newBuilder()
-                        .setItemAck(PublishStreamResponse.ItemAcknowledgement.newBuilder()
-                                .setItemsHash(ByteString.fromHex("1234"))
-                                .build()))
-                .build();
-        capturedObserver.onNext(response);
-
-        assertThat(logCaptor.infoLogs())
-                .contains("Item acknowledgement received for a batch of block items: items_hash: \"\\0224\"");
+        assertThat(logCaptor.infoLogs()).contains("Block acknowledgment received for block 1234");
     }
 
     @Test
@@ -177,7 +159,7 @@ class BlockNodeConnectionTest {
 
         assertThat(logCaptor.infoLogs())
                 .contains(
-                        "Error returned from block node at block number 1234: status: STREAM_ITEMS_TIMEOUT\nblock_number: 1234");
+                        "Received end of stream status STREAM_ITEMS_TIMEOUT for block number 1234");
     }
 
     @Test
@@ -194,9 +176,9 @@ class BlockNodeConnectionTest {
 
         capturedObserver.onCompleted();
 
-        assertThat(logCaptor.infoLogs()).contains("Stream completed for block node localhost:12345");
+        assertThat(logCaptor.infoLogs()).contains("Received end of stream for block node localhost:12345");
         assertFalse(blockNodeConnection.isActive());
-        verify(blockNodeConnectionManager, times(1)).handleConnectionError(nodeConfig);
+        verify(blockNodeConnectionManager).handleEndOfStreamSuccess(blockNodeConnection);
     }
 
     @Test
@@ -221,7 +203,7 @@ class BlockNodeConnectionTest {
                                 .startsWith(
                                         "Error in block node stream localhost:12345: Status{code=ABORTED, description=null, cause=null} io.grpc.StatusRuntimeException: ABORTED"));
         assertFalse(blockNodeConnection.isActive());
-        verify(blockNodeConnectionManager, times(1)).handleConnectionError(nodeConfig);
-        verify(blockNodeConnectionManager, times(1)).scheduleReconnect(blockNodeConnection);
+		verify(blockNodeConnectionManager).handleConnectionError(eq(blockNodeConnection), notNull());
+        verify(blockNodeConnectionManager).scheduleReconnect(blockNodeConnection);
     }
 }
