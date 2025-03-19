@@ -225,6 +225,9 @@ public class VirtualLeafBytes<V> {
      */
     public void writeTo(final WritableSequentialData out) {
         final long pos = out.position();
+        if (keyBytes.toHex().equals("0027")) {
+            System.out.println("");
+        }
         ProtoWriterTools.writeTag(out, FIELD_LEAFRECORD_PATH);
         out.writeLong(path);
         ProtoWriterTools.writeDelimited(
@@ -234,7 +237,12 @@ public class VirtualLeafBytes<V> {
             ProtoWriterTools.writeDelimited(
                     out, FIELD_LEAFRECORD_VALUE, Math.toIntExact(localValueBytes.length()), localValueBytes::writeTo);
         }
-        assert out.position() == pos + getSizeInBytes();
+
+        if (out.position() != pos + getSizeInBytes()) {
+            System.out.println("");
+        }
+
+        assert out.position() == pos + getSizeInBytes() : "pos=" + pos + ", out.position()=" + out.position() + ", size=" + getSizeInBytes();
     }
 
     public Hash hash(final HashBuilder builder) {

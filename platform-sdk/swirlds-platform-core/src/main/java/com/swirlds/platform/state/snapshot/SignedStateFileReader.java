@@ -75,6 +75,7 @@ public final class SignedStateFileReader {
         MerkleNodeState merkleNodeState;
 
         // TODO: add comments
+        // move to stateUtils ?
         if (stateRoot instanceof VirtualMap virtualMap) {
             merkleNodeState = stateRootFunction.apply(virtualMap);
         } else {

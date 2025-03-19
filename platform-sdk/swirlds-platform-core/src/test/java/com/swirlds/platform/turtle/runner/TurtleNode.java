@@ -142,7 +142,9 @@ public class TurtleNode {
                         nodeId,
                         AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
                         RosterUtils.buildRosterHistory(initialState.get().getState(), platformStateFacade),
-                        platformStateFacade)
+                        platformStateFacade,
+                        // FIXME
+                        null)
                 .withModel(model)
                 .withRandomBuilder(new RandomBuilder(randotron.nextLong()))
                 .withKeysAndCerts(privateKeys)

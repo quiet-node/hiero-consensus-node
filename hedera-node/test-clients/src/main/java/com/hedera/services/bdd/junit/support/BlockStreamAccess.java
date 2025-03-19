@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.support;
 
-import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_BLOCK_STREAM_INFO;
-import static com.hedera.node.app.blocks.impl.BlockImplUtils.combine;
-import static com.hedera.node.app.blocks.impl.ConcurrentStreamingTreeHasher.rootHashFrom;
-import static com.hedera.node.app.hapi.utils.CommonUtils.noThrowSha384HashOf;
-import static com.hedera.node.app.records.impl.BlockRecordInfoUtils.blockHashByBlockNumber;
 import static java.util.Comparator.comparing;
-import static java.util.Objects.requireNonNull;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
@@ -19,10 +12,8 @@ import com.hedera.hapi.block.stream.output.SingletonUpdateChange;
 import com.hedera.hapi.block.stream.output.StateChange;
 import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.node.state.addressbook.Node;
-import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.hedera.node.app.blocks.StreamingTreeHasher;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.merkle.StateUtils;
@@ -53,107 +44,6 @@ public enum BlockStreamAccess {
 
     private static final String UNCOMPRESSED_FILE_EXT = ".blk";
     private static final String COMPRESSED_FILE_EXT = UNCOMPRESSED_FILE_EXT + ".gz";
-
-    public static void main(String[] args) {
-        final String HEALTHY_NODE_FOLDER =
-                "hedera-node/test-clients/build/hapi-test/node2/data/blockStreams/block-0.0.5";
-        final String ISS_NODE_FOLDER = "hedera-node/test-clients/build/hapi-test/node3/data/blockStreams/block-0.0.6";
-        final String HEALTHY_NODE_LABEL = "HEALTHY node";
-        final String ISS_NODE_LABEL = "ISS node";
-
-        final var healthyNodeBlockFilePath =
-                Path.of(HEALTHY_NODE_FOLDER + "/000000000000000000000000000000000050.blk.gz");
-        final var issNodeBlockFilePath = Path.of(ISS_NODE_FOLDER + "/000000000000000000000000000000000050.blk.gz");
-
-        final var resultOfHealthyAll = BLOCK_STREAM_ACCESS.readBlocks(Path.of(HEALTHY_NODE_FOLDER));
-
-        for (Block block : resultOfHealthyAll) {
-            a:
-            for (BlockItem item : block.items()) {
-                if (item.hasStateChanges()) {
-                    for (StateChange change : item.stateChanges().stateChanges()) {
-                        if (change.hasMapUpdate()) {
-                            //                        if (change.hasSingletonUpdate()) {
-                            System.out.println(
-                                    block.items().getFirst().blockHeader().number() + " " + change);
-                            break a;
-                        }
-                    }
-                }
-            }
-        }
-
-        final var resultOfHealthy =
-                BLOCK_STREAM_ACCESS.readBlocks(healthyNodeBlockFilePath).getFirst();
-        final var resultOfIss =
-                BLOCK_STREAM_ACCESS.readBlocks(issNodeBlockFilePath).getFirst();
-
-        assertEquals(resultOfHealthy.items().size(), resultOfIss.items().size());
-
-        //        for (int i = 0; i < resultOfHealthy.items().size(); i++) {
-        //            System.out.println("Block (" + HEALTHY_NODE_LABEL + ")= "
-        //                    + resultOfHealthy.items().get(i));
-        //            System.out.println(
-        //                    "Block (" + ISS_NODE_LABEL + ")= " + resultOfIss.items().get(i));
-        //                        assertEquals(resultOfHealthy.items().get(i), resultOfIss.items().get(i));
-        //        }
-
-        System.out.println("\nCalculating hash:\n");
-
-        final var healthyNodeBlockStreamInfo = lastBlockStreamInfoFrom(List.of(resultOfHealthy));
-        System.out.println(
-                "startBlockHash (" + HEALTHY_NODE_LABEL + ") = " + startBlockHashFrom(healthyNodeBlockStreamInfo));
-
-        final var issNodeBlockStreamInfo = lastBlockStreamInfoFrom(List.of(resultOfIss));
-        System.out.println("startBlockHash (" + ISS_NODE_LABEL + ") = " + startBlockHashFrom(issNodeBlockStreamInfo));
-    }
-
-    private static Bytes startBlockHashFrom(@NonNull final BlockStreamInfo blockStreamInfo) {
-        requireNonNull(blockStreamInfo);
-        // Three of the four ingredients in the block hash are directly in the BlockStreamInfo; that is,
-        // the previous block hash, the input tree root hash, and the start of block state hash
-
-        final var prevBlockHash = blockHashByBlockNumber(
-                blockStreamInfo.trailingBlockHashes(),
-                blockStreamInfo.blockNumber() - 1,
-                blockStreamInfo.blockNumber() - 1);
-        requireNonNull(prevBlockHash);
-        final var leftParent = combine(prevBlockHash, blockStreamInfo.inputTreeRootHash());
-        // The fourth ingredient, the output tree root hash, is not directly in the BlockStreamInfo, but
-        // we can recompute it based on the tree hash information and the fact the last output item in
-        // the block was devoted to putting the BlockStreamInfo itself into the state
-        final var outputTreeRootHash = outputTreeRootHashFrom(blockStreamInfo);
-        final var rightParent = combine(outputTreeRootHash, blockStreamInfo.startOfBlockStateHash());
-        return combine(leftParent, rightParent);
-    }
-
-    /**
-     * Given a {@link BlockStreamInfo} context, computes the output tree root hash that must have been
-     * computed at the end of the block that the context describes, assuming the final output block item
-     * was the state change that put the context into the state.
-     *
-     * @param blockStreamInfo the context to use
-     * @return the inferred output tree root hash
-     */
-    private static @NonNull Bytes outputTreeRootHashFrom(@NonNull final BlockStreamInfo blockStreamInfo) {
-        // This was the last state change in the block
-        final var blockStreamInfoChange = StateChange.newBuilder()
-                .stateId(STATE_ID_BLOCK_STREAM_INFO.protoOrdinal())
-                .singletonUpdate(SingletonUpdateChange.newBuilder()
-                        .blockStreamInfoValue(blockStreamInfo)
-                        .build())
-                .build();
-        // And this was the last output block item
-        final var lastStateChanges = BlockItem.newBuilder()
-                .stateChanges(new StateChanges(blockStreamInfo.blockEndTime(), List.of(blockStreamInfoChange)))
-                .build();
-        // So we can combine this last leaf's has with the size and rightmost hashes
-        // store from the pending output tree to recompute its final root hash
-        final var penultimateOutputTreeStatus = new StreamingTreeHasher.Status(
-                blockStreamInfo.numPrecedingOutputItems(), blockStreamInfo.rightmostPrecedingOutputTreeHashes());
-        final var lastLeafHash = noThrowSha384HashOf(BlockItem.PROTOBUF.toBytes(lastStateChanges));
-        return rootHashFrom(penultimateOutputTreeStatus, lastLeafHash);
-    }
 
     /**
      * Reads all files matching the block file pattern from the given path and returns them in
@@ -214,11 +104,6 @@ public enum BlockStreamAccess {
                 .sorted(Map.Entry.comparingByKey())
                 .map(Map.Entry::getValue)
                 .toList();
-    }
-
-    public static BlockStreamInfo lastBlockStreamInfoFrom(@NonNull final List<Block> blocks) {
-        return computeSingletonValueFromUpdates(
-                blocks, SingletonUpdateChange::blockStreamInfoValueOrThrow, "BlockStreamService", "BLOCK_STREAM_INFO");
     }
 
     /**

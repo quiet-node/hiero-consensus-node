@@ -3,13 +3,10 @@ package com.swirlds.platform.state.iss.internal;
 
 import static com.swirlds.common.utility.Threshold.SUPER_MAJORITY;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
-import static com.swirlds.logging.legacy.LogMarker.STATE_TO_DISK;
 
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.platform.NodeId;
-import com.swirlds.common.utility.StackTrace;
 import com.swirlds.platform.metrics.IssMetrics;
-import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
@@ -55,8 +52,6 @@ public class RoundHashValidator {
      * this value is never changed.
      */
     private HashValidityStatus status = HashValidityStatus.UNDECIDED;
-
-    private VirtualMap virtualMap;
 
     /**
      * Create an object that validates this node's hash for a round.
@@ -107,17 +102,17 @@ public class RoundHashValidator {
      * Report the hash computed for this round by this node. This method can be called as soon as the self hash
      * is known and does not need to wait for consensus.
      *
-     * @param virtualMap
+     * @param selfStateHash
+     * 		the hash computed by this node
      * @return if the execution of this method caused us to reach a conclusion on the validity of the hash. After this
-     * method returns true, then {@link #getStatus()} will return a value that is not
-     * {@link HashValidityStatus#UNDECIDED}.
+     * 		method returns true, then {@link #getStatus()} will return a value that is not
+     *        {@link HashValidityStatus#UNDECIDED}.
      */
-    public boolean reportSelfHash(VirtualMap virtualMap) {
+    public boolean reportSelfHash(@NonNull final Hash selfStateHash) {
         if (this.selfStateHash != null) {
             throw new IllegalStateException("self hash reported more than once");
         }
-        this.selfStateHash = Objects.requireNonNull(virtualMap.getHash(), "selfStateHash must not be null");
-        this.virtualMap = virtualMap;
+        this.selfStateHash = Objects.requireNonNull(selfStateHash, "selfStateHash must not be null");
 
         return decide();
     }
@@ -166,13 +161,6 @@ public class RoundHashValidator {
             if (hashFinder.getConsensusHash().equals(selfStateHash)) {
                 status = HashValidityStatus.VALID;
             } else {
-                logger.error(
-                        STATE_TO_DISK.getMarker(),
-                        "fc version: {}",
-                        this.virtualMap.getRoot().getFastCopyVersion());
-                logger.error(STATE_TO_DISK.getMarker(), "consensus hash: {}", this.hashFinder.getConsensusHash());
-                logger.error(STATE_TO_DISK.getMarker(), "self state hash: {}", this.selfStateHash);
-                logger.error(STATE_TO_DISK.getMarker(), "stacktrace: {}", StackTrace.getStackTrace());
                 status = HashValidityStatus.SELF_ISS;
             }
             return true;

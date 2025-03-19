@@ -355,7 +355,8 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                         selfId,
                         canonicalEventStreamLoc(selfId.id(), state),
                         rosterHistory,
-                        platformStateFacade)
+                        platformStateFacade,
+                        hedera.stateRootFromVirtualMap())
                 .withPlatformContext(platformContext)
                 .withConfiguration(platformConfig)
                 .withKeysAndCerts(keysAndCerts)

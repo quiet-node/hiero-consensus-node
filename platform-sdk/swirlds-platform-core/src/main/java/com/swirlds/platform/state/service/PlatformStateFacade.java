@@ -10,10 +10,10 @@ import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchem
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.PlatformStateModifier;
@@ -21,11 +21,10 @@ import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -301,91 +300,8 @@ public class PlatformStateFacade {
      */
     @NonNull
     public String getInfoString(@NonNull final State state, final int hashDepth) {
-        final var merkleNodeState = (MerkleNodeState) state;
-        final var services = merkleNodeState.getServices();
-
-        //        Map<Bytes, Pair<String, String>> keysToFind = new HashMap<>();
-        //        services.forEach((key, value) -> {
-        //            value.forEach((s, stateMetadata) -> {
-        //                final String serviceName = stateMetadata.serviceName();
-        //                final String stateKey = stateMetadata.stateDefinition().stateKey();
-        //                Bytes virtualKey = StateUtils.getVirtualMapKey(serviceName, stateKey);
-        //                keysToFind.put(virtualKey, Pair.of(serviceName, stateKey));
-        //            });
-        //        });
-
-        List<String> states = new ArrayList<>();
-
-        //        MerkleIterator<MerkleNode> merkleNodeIterator = state.getRoot().treeIterator();
-        //        while (merkleNodeIterator.hasNext()) {
-        //            MerkleNode next = merkleNodeIterator.next();
-        //            if (next instanceof VirtualLeafNode leafNode) {
-        //                Bytes key = leafNode.getKey();
-        //                if (keysToFind.containsKey(key)) {
-        //                    Pair<String, String> nameAndKey = keysToFind.get(key);
-        //                    states.add(nameAndKey.left() + "." + nameAndKey.right() + ": " + leafNode.getHash());
-        //                }
-        //            }
-        //            if (next instanceof VirtualInternalNode internalNode) {
-        //                states.add("internal node | path= " + internalNode.getPath() + " hash=" +
-        // internalNode.getHash());
-        //            }
-        //        }
-
-        final String guiltyContents = services.entrySet().stream()
-                .flatMap(entry -> {
-                    final String serviceName = entry.getKey();
-                    final ReadableStates readableStates = state.getReadableStates(serviceName);
-                    return entry.getValue().entrySet().stream()
-                            .filter(innerEntry -> {
-                                final String stateKey = innerEntry.getKey();
-                                final var metadata = innerEntry.getValue();
-                                return metadata.stateDefinition().singleton() && "BLOCK_STREAM_INFO".equals(stateKey);
-                            })
-                            .map(innerEntry -> {
-                                final BlockStreamInfo blockStreamInfo = (BlockStreamInfo) readableStates
-                                        .getSingleton(innerEntry.getKey())
-                                        .get();
-                                return blockStreamInfo.toString();
-                            });
-                })
-                .findFirst()
-                .orElse("No BlockStreamInfo found");
-
-        //        final VirtualMap vm = (VirtualMap) state.getRoot();
-        //        final RecordAccessor recordAccessor = vm.getRoot().getRecords();
-
-        //        final StringBuilder sb = new StringBuilder();
-        //        InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
-        //            final VirtualLeafBytes<?> virtualLeafBytes = recordAccessor.findLeafRecord(pair.left());
-        //            final var hash = recordAccessor.findHash(virtualLeafBytes.path());
-        //            sb.append("k=")
-        //                    .append(pair.left())
-        //                    .append(";v=")
-        //                    .append(pair.right())
-        //                    .append(";path=")
-        //                    .append(virtualLeafBytes.path())
-        //                    .append(";hash=")
-        //                    .append(hash)
-        //                    .append("\n");
-        //        };
-
-        //        try {
-        //            VirtualMapMigration.extractVirtualMapData(AdHocThreadManager.getStaticThreadManager(), vm,
-        // handler, 1);
-        //        } catch (InterruptedException e) {
-        //            throw new RuntimeException(e);
-        //        }
-
-        return createInfoString(
-                        hashDepth,
-                        readablePlatformStateStore(state),
-                        state.getHash(),
-                        merkleNodeState.getRoot(),
-                        states)
-                .concat("\n")
-                //                .concat("\n" + sb)
-                .concat("\n" + guiltyContents);
+        final MerkleNodeState merkleNodeState = (MerkleNodeState) state;
+        return createInfoString(hashDepth, readablePlatformStateStore(state), merkleNodeState.getHash(), merkleNodeState.getRoot());
     }
 
     private PlatformStateAccessor readablePlatformStateStore(@NonNull final State state) {

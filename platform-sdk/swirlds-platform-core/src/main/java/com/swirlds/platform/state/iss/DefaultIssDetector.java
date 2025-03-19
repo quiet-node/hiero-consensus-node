@@ -30,7 +30,6 @@ import com.swirlds.platform.system.state.notifications.IssNotification.IssType;
 import com.swirlds.platform.util.MarkerFileWriter;
 import com.swirlds.platform.wiring.components.StateAndRound;
 import com.swirlds.state.lifecycle.HapiUtils;
-import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
@@ -229,8 +228,8 @@ public class DefaultIssDetector implements IssDetector {
 
             final List<IssNotification> issNotifications = new ArrayList<>(shiftRoundDataWindow(roundNumber));
 
-            final IssNotification selfHashCheckResult = checkSelfStateHash(
-                    roundNumber, (VirtualMap) state.get().getState().getRoot());
+            final IssNotification selfHashCheckResult =
+                    checkSelfStateHash(roundNumber, state.get().getState().getHash());
             if (selfHashCheckResult != null) {
                 issNotifications.add(selfHashCheckResult);
             }
@@ -362,18 +361,18 @@ public class DefaultIssDetector implements IssDetector {
      * Checks the validity of the self state hash for a round.
      *
      * @param round the round of the state
-     * @param virtualMap1  the hash of the state
+     * @param hash  the hash of the state
      * @return an ISS notification, or null if no ISS occurred
      */
     @Nullable
-    private IssNotification checkSelfStateHash(final long round, @NonNull final VirtualMap virtualMap1) {
+    private IssNotification checkSelfStateHash(final long round, @NonNull final Hash hash) {
         final RoundHashValidator roundHashValidator = roundData.get(round);
         if (roundHashValidator == null) {
             throw new IllegalStateException(
                     "Hash reported for round " + round + ", but that round is not being tracked");
         }
 
-        final boolean decided = roundHashValidator.reportSelfHash(virtualMap1);
+        final boolean decided = roundHashValidator.reportSelfHash(hash);
         if (decided) {
             return checkValidity(roundHashValidator);
         }
@@ -400,8 +399,7 @@ public class DefaultIssDetector implements IssDetector {
             shiftRoundDataWindow(roundNumber);
 
             final Hash stateHash = state.get().getState().getHash();
-            final IssNotification issNotification = checkSelfStateHash(
-                    roundNumber, (VirtualMap) state.get().getState().getRoot());
+            final IssNotification issNotification = checkSelfStateHash(roundNumber, stateHash);
 
             return issNotification == null ? null : List.of(issNotification);
         }
