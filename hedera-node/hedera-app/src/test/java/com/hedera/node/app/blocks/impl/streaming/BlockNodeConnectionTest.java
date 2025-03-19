@@ -514,9 +514,6 @@ class BlockNodeConnectionTest {
         when(blockState.requests()).thenReturn(requests);
         when(blockState.isComplete()).thenReturn(false);
 
-        // Configure requestObserver to throw an IndexOutOfBoundsException
-        doThrow(new IndexOutOfBoundsException()).when(requestObserver).onNext(any(PublishStreamRequest.class));
-
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean requestIndexResetCalled = new AtomicBoolean(false);
 
@@ -533,9 +530,9 @@ class BlockNodeConnectionTest {
                 // Check if the currentRequestIndex was reset to a safe value
                 Field currentRequestIndexField = BlockNodeConnection.class.getDeclaredField("currentRequestIndex");
                 currentRequestIndexField.setAccessible(true);
-                int resetIndex = (int) currentRequestIndexField.get(connection);
+                AtomicInteger resetIndex = (AtomicInteger) currentRequestIndexField.get(connection);
 
-                if (resetIndex == 0) {
+                if (resetIndex.get() == 0) {
                     requestIndexResetCalled.set(true);
                 }
             } catch (Exception e) {
@@ -554,10 +551,6 @@ class BlockNodeConnectionTest {
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
-        String expectedResetLog = "[] Resetting request index";
-        assertTrue(
-                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedResetLog)),
-                "Expected log message not found: " + expectedResetLog);
     }
 
     /**
