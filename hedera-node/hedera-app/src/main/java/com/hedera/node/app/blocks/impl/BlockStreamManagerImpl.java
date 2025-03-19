@@ -13,6 +13,7 @@ import static com.hedera.node.app.blocks.schemas.V0560BlockStreamSchema.BLOCK_ST
 import static com.hedera.node.app.hapi.utils.CommonUtils.sha384DigestOrThrow;
 import static com.hedera.node.app.records.BlockRecordService.EPOCH;
 import static com.hedera.node.app.records.impl.BlockRecordInfoUtils.HASH_SIZE;
+import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -23,6 +24,8 @@ import com.hedera.hapi.block.stream.output.BlockHeader;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
+import com.hedera.hapi.node.state.token.NodeActivity;
+import com.hedera.hapi.node.state.token.NodeRewards;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
@@ -33,6 +36,7 @@ import com.hedera.node.app.hapi.utils.CommonUtils;
 import com.hedera.node.app.info.DiskStartupNetworks;
 import com.hedera.node.app.info.DiskStartupNetworks.InfoType;
 import com.hedera.node.app.records.impl.BlockRecordInfoUtils;
+import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockRecordStreamConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
@@ -61,6 +65,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -118,6 +124,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     // If not null, the part of the block preceding a possible first transaction
     @Nullable
     private PreTxnItems preTxnItems;
+
+    private long roundsSoFarInStakingPeriod = 0;
+    private SortedMap<Long, Long> missedNodeJudges;
 
     /**
      * Represents the part of a block preceding a possible first transaction; we defer writing this part until
@@ -245,6 +254,11 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             blockHashManager.startBlock(blockStreamInfo, lastBlockHash);
             runningHashManager.startBlock(blockStreamInfo);
 
+            // Update the node reward info
+            final var nodeRewardInfo = nodeRewardInfoFrom(state);
+            roundsSoFarInStakingPeriod = nodeRewardInfo.numRoundsInStakingPeriod();
+            missedNodeJudges = missedNodeJudgesFrom(nodeRewardInfo.nodeActivities());
+
             inputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
             outputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
             blockNumber = blockStreamInfo.blockNumber() + 1;
@@ -348,6 +362,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     asTimestamp(lastHandleTime)));
             ((CommittableWritableStates) writableState).commit();
 
+            // Update the judge info for node rewards
+            updateNodeRewardState(state);
+
             worker.addItem(boundaryStateChangeListener.flushChanges());
             worker.sync();
 
@@ -405,6 +422,22 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             requireNonNull(fatalShutdownFuture).complete(null);
         }
         return closesBlock || lastNonEmptyRoundNumber == 0;
+    }
+
+    private void updateNodeRewardState(final @NonNull State state) {
+        final var writableTokenState = state.getWritableStates(TokenService.NAME);
+        final var nodeRewardsState = writableTokenState.<NodeRewards>getSingleton(NODE_REWARDS_KEY);
+        final var nodeActivities = missedNodeJudges.entrySet().stream()
+                .map(entry -> NodeActivity.newBuilder()
+                        .nodeId(entry.getKey())
+                        .numMissedJudgeRounds(entry.getValue())
+                        .build())
+                .toList();
+        nodeRewardsState.put(NodeRewards.newBuilder()
+                .nodeActivities(nodeActivities)
+                .numRoundsInStakingPeriod(roundsSoFarInStakingPeriod)
+                .build());
+        ((CommittableWritableStates) writableTokenState).commit();
     }
 
     @Override
@@ -529,6 +562,19 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final var blockStreamInfoState =
                 state.getReadableStates(BlockStreamService.NAME).<BlockStreamInfo>getSingleton(BLOCK_STREAM_INFO_KEY);
         return requireNonNull(blockStreamInfoState.get());
+    }
+
+    private @NonNull NodeRewards nodeRewardInfoFrom(@NonNull final State state) {
+        final var nodeRewardInfoState =
+                state.getReadableStates(TokenService.NAME).<NodeRewards>getSingleton(NODE_REWARDS_KEY);
+        return requireNonNull(nodeRewardInfoState.get());
+    }
+
+    private SortedMap<Long, Long> missedNodeJudgesFrom(final List<NodeActivity> nodeActivities) {
+        final var missedRoundsMap = new TreeMap<Long, Long>();
+        nodeActivities.forEach(
+                nodeActivity -> missedRoundsMap.put(nodeActivity.nodeId(), nodeActivity.numMissedJudgeRounds()));
+        return missedRoundsMap;
     }
 
     private boolean shouldCloseBlock(final long roundNumber, final int roundsPerBlock) {
@@ -789,5 +835,11 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 .completeOnTimeout(null, timeout.toSeconds(), TimeUnit.SECONDS)
                 .join();
         log.fatal("Block stream fatal shutdown complete");
+    }
+
+    @Override
+    public void updateNodeRewardInfo(final List<Long> missedNodeJudges) {
+        missedNodeJudges.forEach(node -> this.missedNodeJudges.merge(node, 1L, Long::sum));
+        roundsSoFarInStakingPeriod++;
     }
 }

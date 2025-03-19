@@ -10,6 +10,7 @@ import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Maintains the state and process objects needed to produce the block stream.
@@ -24,7 +25,6 @@ import java.time.Instant;
  */
 public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener {
     Bytes ZERO_BLOCK_HASH = Bytes.wrap(new byte[48]);
-
     /**
      * The types of work that may be identified as pending within a block.
      */
@@ -139,4 +139,13 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
      * @param timeout the maximum time to wait for block stream shutdown
      */
     void awaitFatalShutdown(@NonNull Duration timeout);
+
+    /**
+     * Records the nodes that missed creating judges during the last round. This information is
+     * accumulated and recorded in node rewards state for each block. This also increments the number
+     * of rounds in the staking period.
+     *
+     * @param missedNodeJudges the nodes that missed creating judges
+     */
+    void updateNodeRewardInfo(List<Long> missedNodeJudges);
 }

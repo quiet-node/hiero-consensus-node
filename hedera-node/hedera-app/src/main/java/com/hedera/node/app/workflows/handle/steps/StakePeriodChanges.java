@@ -128,8 +128,14 @@ public class StakePeriodChanges {
             @NonNull final Instant currentConsensusTime,
             @NonNull final Instant previousConsensusTime,
             @NonNull final TokenContext tokenContext) {
-        final var stakingPeriod =
-                tokenContext.configuration().getConfigData(StakingConfig.class).periodMins();
+        return isNextStakingPeriod(currentConsensusTime, previousConsensusTime,
+                tokenContext.configuration().getConfigData(StakingConfig.class).periodMins());
+    }
+
+    public static boolean isNextStakingPeriod(
+            @NonNull final Instant currentConsensusTime,
+            @NonNull final Instant previousConsensusTime,
+            final long stakingPeriod) {
         if (stakingPeriod == DEFAULT_STAKING_PERIOD_MINS) {
             return isLaterUtcDay(currentConsensusTime, previousConsensusTime);
         } else {

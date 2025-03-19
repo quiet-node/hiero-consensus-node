@@ -42,6 +42,7 @@ import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.transaction.ThrottleDefinitions;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
@@ -130,6 +131,7 @@ import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadableRosterStore;
+import com.swirlds.platform.state.service.ReadableRosterStoreImpl;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.Round;
@@ -1306,7 +1308,25 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     }
 
     private boolean manageBlockEndRound(@NonNull final Round round, @NonNull final State state) {
+        final var missedNodeJudges = getMissedNodeJudgesForRound(state);
+        daggerApp.blockStreamManager().updateNodeRewardInfo(missedNodeJudges);
         return daggerApp.blockStreamManager().endRound(state, round.getRoundNum());
+    }
+
+    private List<Long> getMissedNodeJudgesForRound(final State state) {
+        final var readablePlatformState =
+                state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
+        final var rosterState = state.getReadableStates(RosterService.NAME);
+        final var rosterStore = new ReadableRosterStoreImpl(rosterState);
+        final var nodeIds = requireNonNull(rosterStore.getActiveRoster()).rosterEntries().stream()
+                .map(RosterEntry::nodeId)
+                .toList();
+        final var judges =
+                requireNonNull(readablePlatformState.get()).consensusSnapshot().judges();
+        // find all the entries of nodeIds that are not in judges
+        return nodeIds.stream()
+                .filter(nodeId -> judges.stream().noneMatch(judge -> judge.creatorId() == nodeId))
+                .toList();
     }
 
     /**

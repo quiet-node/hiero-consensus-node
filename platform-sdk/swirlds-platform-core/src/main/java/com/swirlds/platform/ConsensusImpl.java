@@ -8,6 +8,7 @@ import static com.swirlds.platform.consensus.ConsensusConstants.FIRST_CONSENSUS_
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.event.EventConsensusData;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
+import com.hedera.hapi.platform.state.Judge;
 import com.hedera.hapi.util.HapiUtils;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
@@ -146,19 +147,33 @@ public class ConsensusImpl implements Consensus {
 
     private static final Logger logger = LogManager.getLogger(ConsensusImpl.class);
 
-    /** Consensus configuration */
+    /**
+     * Consensus configuration
+     */
     private final ConsensusConfig config;
-    /** wall clock time */
+    /**
+     * wall clock time
+     */
     private final Time time;
-    /** the only roster currently, until roster changes are implemented */
+    /**
+     * the only roster currently, until roster changes are implemented
+     */
     private final Roster roster;
-    /** the total weight of all roster entries. */
+    /**
+     * the total weight of all roster entries.
+     */
     private final long rosterTotalWeight;
-    /** roster indices map. */
+    /**
+     * roster indices map.
+     */
     private final Map<Long, Integer> rosterIndicesMap;
-    /** metrics related to consensus */
+    /**
+     * metrics related to consensus
+     */
     private final ConsensusMetrics consensusMetrics;
-    /** used for searching the hashgraph */
+    /**
+     * used for searching the hashgraph
+     */
     private final AncestorSearch search = new AncestorSearch();
     /**
      * recently added events. this list is used for recalculating metadata once a new round is
@@ -166,7 +181,9 @@ public class ConsensusImpl implements Consensus {
      * list.
      */
     private final List<EventImpl> recentEvents = new LinkedList<>();
-    /** stores all round information */
+    /**
+     * stores all round information
+     */
     private final ConsensusRounds rounds;
     /**
      * Number of events that have reached consensus order. This is used for setting consensus order
@@ -187,15 +204,25 @@ public class ConsensusImpl implements Consensus {
      * round for events
      */
     private InitJudges initJudges = null;
-    /** The ancient mode used to determine if an event is ancient or not. */
+    /**
+     * The ancient mode used to determine if an event is ancient or not.
+     */
     private final AncientMode ancientMode;
-    /** The marker file writer */
+    /**
+     * The marker file writer
+     */
     private final MarkerFileWriter markerFileWriter;
-    /** The rate limited logger for rounds without a super majority of weight on judges */
+    /**
+     * The rate limited logger for rounds without a super majority of weight on judges
+     */
     private final RateLimitedLogger noSuperMajorityLogger;
-    /** The rate limited logger for rounds with no judge */
+    /**
+     * The rate limited logger for rounds with no judge
+     */
     private final RateLimitedLogger noJudgeLogger;
-    /** The rate limited logger for coin rounds */
+    /**
+     * The rate limited logger for coin rounds
+     */
     private final RateLimitedLogger coinRoundLogger;
 
     /**
@@ -208,7 +235,7 @@ public class ConsensusImpl implements Consensus {
      *
      * @param platformContext  the platform context containing configuration
      * @param consensusMetrics metrics related to consensus
-     * @param roster      the global address book, which never changes
+     * @param roster           the global address book, which never changes
      */
     public ConsensusImpl(
             @NonNull final PlatformContext platformContext,
@@ -249,7 +276,9 @@ public class ConsensusImpl implements Consensus {
         lastConsensusTime = PbjConverter.fromPbjTimestamp(snapshot.consensusTimestamp());
     }
 
-    /** Reset this instance to a state of a newly created instance */
+    /**
+     * Reset this instance to a state of a newly created instance
+     */
     private void reset() {
         recentEvents.clear();
         rounds.reset();
@@ -578,7 +607,7 @@ public class ConsensusImpl implements Consensus {
      * </ol>
      *
      * @param candidateWitness the witness being voted on
-     * @param stronglySeen the witnesses VR-1 that the voting witness can strongly see
+     * @param stronglySeen     the witnesses VR-1 that the voting witness can strongly see
      * @return the outcome of the vote
      */
     @NonNull
@@ -620,9 +649,9 @@ public class ConsensusImpl implements Consensus {
      *       signature of the event)
      * </ol>
      *
-     * @param votingWitness the witness that is voting
+     * @param votingWitness    the witness that is voting
      * @param candidateWitness the witness being voted on
-     * @param countingVote the counting vote
+     * @param countingVote     the counting vote
      */
     private void coinVote(
             @NonNull final EventImpl votingWitness,
@@ -636,7 +665,9 @@ public class ConsensusImpl implements Consensus {
         votingWitness.setVote(candidateWitness, vote);
     }
 
-    /** Logs the outcome of voting */
+    /**
+     * Logs the outcome of voting
+     */
     private void logVote(
             @NonNull final EventImpl votingWitness,
             @NonNull final CandidateWitness candidateWitness,
@@ -701,18 +732,20 @@ public class ConsensusImpl implements Consensus {
         // the current round just had its fame decided.
         // Note: more witnesses may be added to this round in the future, but they'll all be
         // instantly marked as not famous.
-        final List<EventImpl> judges = roundElections.findAllJudges();
+        final List<Map.Entry<NodeId, EventImpl>> judges = roundElections.findAllJudges();
+        final var judgeValues = judges.stream().map(Map.Entry::getValue).toList();
         final long decidedRoundNumber = rounds.getElectionRoundNumber();
 
         // Check for no judges or super majority conditions.
-        checkJudges(judges, decidedRoundNumber);
+        checkJudges(judgeValues, decidedRoundNumber);
 
         // update the round and ancient threshold values since fame has been decided for a new round
         rounds.currentElectionDecided();
 
         // all events that reach consensus during this method call, in consensus order
         final List<PlatformEvent> consensusEvents =
-                findConsensusEvents(judges, decidedRoundNumber, ConsensusUtils.generateWhitening(judges)).stream()
+                findConsensusEvents(judgeValues, decidedRoundNumber, ConsensusUtils.generateWhitening(judgeValues))
+                        .stream()
                         .map(EventImpl::getBaseEvent)
                         .toList();
         // all rounds before this round are now decided, and appropriate events marked consensus
@@ -724,8 +757,10 @@ public class ConsensusImpl implements Consensus {
             if (lastConsensusTime == null) {
                 // if this is the first round ever, and there are no events (which is usually the case)
                 // we take the median of all the judge created times
-                final List<Instant> judgeTimes =
-                        judges.stream().map(EventImpl::getTimeCreated).sorted().toList();
+                final List<Instant> judgeTimes = judgeValues.stream()
+                        .map(EventImpl::getTimeCreated)
+                        .sorted()
+                        .toList();
                 lastConsensusTime = judgeTimes.get(judgeTimes.size() / 2);
             } else {
                 // if we have reached consensus before, we simply increase the lastConsensusTime by the min amount
@@ -736,16 +771,23 @@ public class ConsensusImpl implements Consensus {
         final long nonAncientThreshold = rounds.getAncientThreshold();
         final long nonExpiredThreshold = rounds.getExpiredThreshold();
 
+        final List<Judge> judgeList = judges.stream()
+                .map(entry -> Judge.newBuilder()
+                        .creatorId(entry.getKey().id())
+                        .judgeHash(ConsensusUtils.getHashBytes(entry.getValue()))
+                        .build())
+                .toList();
         return new ConsensusRound(
                 roster,
                 consensusEvents,
                 new EventWindow(decidedRoundNumber, nonAncientThreshold, nonExpiredThreshold, ancientMode),
-                new ConsensusSnapshot(
-                        decidedRoundNumber,
-                        ConsensusUtils.getHashBytes(judges),
-                        rounds.getMinimumJudgeInfoList(),
-                        numConsensus,
-                        PbjConverter.toPbjTimestamp(lastConsensusTime)),
+                ConsensusSnapshot.newBuilder()
+                        .consensusTimestamp(PbjConverter.toPbjTimestamp(lastConsensusTime))
+                        .round(decidedRoundNumber)
+                        .judges(judgeList)
+                        .minimumJudgeInfoList(rounds.getMinimumJudgeInfoList())
+                        .nextConsensusNumber(numConsensus)
+                        .build(),
                 pcesMode,
                 time.now());
     }
@@ -783,10 +825,10 @@ public class ConsensusImpl implements Consensus {
      * consensus roundReceived and timestamp set. This should not be called on any round greater
      * than R until after it has been called on round R.
      *
-     * @param judges the judges for this round
+     * @param judges       the judges for this round
      * @param decidedRound the info for the round with the unique famous witnesses, which is also
-     *     the round received for these events reaching consensus now
-     * @param whitening a XOR of all judge hashes in this round
+     *                     the round received for these events reaching consensus now
+     * @param whitening    a XOR of all judge hashes in this round
      */
     private @NonNull List<EventImpl> findConsensusEvents(
             @NonNull final List<EventImpl> judges, final long decidedRound, @NonNull final byte[] whitening) {
@@ -814,8 +856,8 @@ public class ConsensusImpl implements Consensus {
     /**
      * Set event.isConsensus to true, set its consensusTimestamp, and record speed statistics.
      *
-     * @param event the event to modify, with event.getRecTimes() containing all the times judges
-     *     first saw it
+     * @param event         the event to modify, with event.getRecTimes() containing all the times judges
+     *                      first saw it
      * @param receivedRound the round in which event was received
      */
     private static void setIsConsensusTrue(@NonNull final EventImpl event, final long receivedRound) {
@@ -838,7 +880,7 @@ public class ConsensusImpl implements Consensus {
      * transaction can be given a later timestamp than the last.
      *
      * @param events the events to set (such that a for(EventImpl e:events) loop visits them in
-     *     consensus order)
+     *               consensus order)
      */
     private void setConsensusOrder(@NonNull final Collection<EventImpl> events) {
         for (final EventImpl e : events) {
@@ -876,6 +918,7 @@ public class ConsensusImpl implements Consensus {
      * Check if this event is relevant for consensus calculation. If an event has a round of -infinity we don't care
      * about what it sees. This is a performance optimization, to stop traversing the part of the graph that has no
      * impact on consensus.
+     *
      * @param e the event to check
      * @return true if this event is relevant for consensus
      */
@@ -993,8 +1036,8 @@ public class ConsensusImpl implements Consensus {
      * The witness y created by m that is seen by event x through an event z created by m2 (function
      * from SWIRLDS-TR-2020-01). This result is not memoized.
      *
-     * @param x the event being queried
-     * @param m the creator of y, the event seen
+     * @param x  the event being queried
+     * @param m  the creator of y, the event seen
      * @param m2 the creator of z, the intermediate event through which x sees y
      * @return the event y that is created by m and seen by x through an event by m2
      */
@@ -1205,7 +1248,7 @@ public class ConsensusImpl implements Consensus {
      *
      * @param x the event being queried
      * @return the earliest witness that is an ancestor of x in the same round as x, or null if x is
-     *     null
+     * null
      */
     private @Nullable EventImpl firstWitnessS(@Nullable final EventImpl x) {
         if (x == null) {
@@ -1235,7 +1278,7 @@ public class ConsensusImpl implements Consensus {
      * @param x the event being queried
      * @param m the member ID of the creator
      * @return event by m that x strongly sees in the round before the created round of x, or null
-     *     if none
+     * if none
      */
     private @Nullable EventImpl stronglySeeS1(@Nullable final EventImpl x, final long m) {
         return timedStronglySeeP(firstWitnessS(x), m);
@@ -1248,8 +1291,8 @@ public class ConsensusImpl implements Consensus {
      * @param x the event being queried
      * @param m the member ID of the creator
      * @return firstSelfWitnessS(lastSee ( x, m)), which is the first witness in round r that is a
-     *     self-ancestor of x, where r is the round of the last event by m that is seen by x, or
-     *     null if none
+     * self-ancestor of x, where r is the round of the last event by m that is seen by x, or
+     * null if none
      */
     private @Nullable EventImpl firstSee(@Nullable final EventImpl x, final long m) {
         return firstSelfWitnessS(lastSee(x, m));
@@ -1257,6 +1300,7 @@ public class ConsensusImpl implements Consensus {
 
     /**
      * Get the weigh of a node by its ID
+     *
      * @param nodeId the ID of the node
      * @return the weight of the node, or 0 if the node is not in the address book
      */
@@ -1269,6 +1313,7 @@ public class ConsensusImpl implements Consensus {
 
     /**
      * Get the weight of a node by its index
+     *
      * @param nodeIndex the index of the node
      * @return the weight of the node
      */
@@ -1278,7 +1323,8 @@ public class ConsensusImpl implements Consensus {
 
     /**
      * Check the index in the address book of the creator of the event
-     * @param e the event whose creator to check
+     *
+     * @param e     the event whose creator to check
      * @param index the index
      * @return true if this creator is in the address book and has the given index
      */
