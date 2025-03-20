@@ -171,7 +171,7 @@ public class SystemTransactions {
     /**
      * Sets up genesis state for the system.
      *
-     * @param now   the current time
+     * @param now the current time
      * @param state the state to set up
      */
     public void doGenesisSetup(@NonNull final Instant now, @NonNull final State state) {
@@ -533,13 +533,13 @@ public class SystemTransactions {
      * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
      * no other side effects.
      *
-     * @param state         the state to execute the transaction against
-     * @param now           the time to execute the transaction at
-     * @param creatorInfo   the node info of the creator of the transaction
-     * @param payerId       the payer of the transaction
-     * @param body          the transaction to execute
+     * @param state the state to execute the transaction against
+     * @param now the time to execute the transaction at
+     * @param creatorInfo the node info of the creator of the transaction
+     * @param payerId the payer of the transaction
+     * @param body the transaction to execute
      * @param nextEntityNum if not zero, the next entity number to use for the transaction
-     * @param onSuccess     the action to take after the transaction is successfully dispatched
+     * @param onSuccess the action to take after the transaction is successfully dispatched
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeSystem(

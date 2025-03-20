@@ -155,6 +155,9 @@ public class HandleWorkflow {
     @Nullable
     private final AtomicBoolean systemEntitiesCreatedFlag;
 
+    @Nullable
+    private final AtomicBoolean systemEntitiesCreatedFlag;
+
     // The last second since the epoch at which the metrics were updated; this does not affect transaction handling
     private long lastMetricUpdateSecond;
     // The last second for which this workflow has confirmed all scheduled transactions are executed
@@ -229,8 +232,8 @@ public class HandleWorkflow {
     /**
      * Handles the next {@link Round}
      *
-     * @param state                     the writable {@link State} that this round will work on
-     * @param round                     the next {@link Round} that needs to be processed
+     * @param state the writable {@link State} that this round will work on
+     * @param round the next {@link Round} that needs to be processed
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     public void handleRound(
@@ -330,8 +333,8 @@ public class HandleWorkflow {
      * Applies all effects of the events in the given round to the given state, writing stream items
      * that capture these effects in the process.
      *
-     * @param state                     the state to apply the effects to
-     * @param round                     the round to apply the effects of
+     * @param state the state to apply the effects to
+     * @param round the round to apply the effects of
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     private void handleEvents(
@@ -410,10 +413,10 @@ public class HandleWorkflow {
      * executing the workflow for the transaction. This produces a stream of records that are then passed to the
      * {@link BlockRecordManager} to be externalized.
      *
-     * @param state          the writable {@link State} that this transaction will work on
-     * @param creator        the {@link NodeInfo} of the creator of the transaction
-     * @param txn            the {@link ConsensusTransaction} to be handled
-     * @param txnVersion     the software version for the event containing the transaction
+     * @param state the writable {@link State} that this transaction will work on
+     * @param creator the {@link NodeInfo} of the creator of the transaction
+     * @param txn the {@link ConsensusTransaction} to be handled
+     * @param txnVersion the software version for the event containing the transaction
      * @param userTxnHandled whether a user transaction has been handled in this round
      * @return {@code true} if the transaction was a user transaction, {@code false} if a system transaction
      */
@@ -505,7 +508,7 @@ public class HandleWorkflow {
      * time to the latest time known to have been processed; and the {@link #lastExecutedSecond} value to the last
      * second of the interval for which all scheduled transactions were executed.
      *
-     * @param state          the state to execute scheduled transactions from
+     * @param state the state to execute scheduled transactions from
      * @param executionStart the start of the interval to execute transactions in
      * @param consensusNow   the consensus time at which the user transaction triggering this execution was processed
      * @param creatorInfo    the node info of the user transaction creator
@@ -600,7 +603,7 @@ public class HandleWorkflow {
      * Type inference helper to compute the base builder for a {@link ParentTxn} derived from a
      * {@link ExecutableTxn}.
      *
-     * @param <T>           the type of the stream builder
+     * @param <T> the type of the stream builder
      * @param executableTxn the executable transaction to compute the base builder for
      * @param parentTxn     the user transaction derived from the executable transaction
      * @return the base builder for the user transaction
@@ -617,8 +620,8 @@ public class HandleWorkflow {
      * should be set to the current time.
      *
      * @param state the state to purge
-     * @param then  the last time the purge was triggered
-     * @param now   the current time
+     * @param then the last time the purge was triggered
+     * @param now the current time
      */
     private void purgeScheduling(@NonNull final State state, final Instant then, final Instant now) {
         if (!Instant.EPOCH.equals(then) && then.getEpochSecond() < now.getEpochSecond()) {
@@ -643,7 +646,7 @@ public class HandleWorkflow {
      *
      * @param parentTxn  the user transaction to execute
      * @param txnVersion the software version for the event containing the transaction
-     * @param state      the state to commit any direct changes against
+     * @param state the state to commit any direct changes against
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeSubmittedParent(
@@ -735,7 +738,7 @@ public class HandleWorkflow {
      * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
      * no other side effects.
      *
-     * @param state        the state to execute the transaction against
+     * @param state the state to execute the transaction against
      * @param consensusNow the time to execute the transaction at
      * @return the stream output from executing the transaction
      */
@@ -789,10 +792,10 @@ public class HandleWorkflow {
      * Commits an action with side effects while capturing its key/value state changes and writing them to the
      * block stream.
      *
-     * @param writableStates         the writable states to commit the action to
+     * @param writableStates the writable states to commit the action to
      * @param entityIdWritableStates if not null, the writable states for the entity ID service
-     * @param now                    the consensus timestamp of the action
-     * @param action                 the action to commit
+     * @param now the consensus timestamp of the action
+     * @param action the action to commit
      */
     private void doStreamingKVChanges(
             @NonNull final WritableStates writableStates,
@@ -843,8 +846,8 @@ public class HandleWorkflow {
      * information. The record builder is initialized with the transaction, transaction bytes, transaction ID,
      * exchange rate, and memo.
      *
-     * @param builder         the base builder
-     * @param txnInfo         the transaction information
+     * @param builder the base builder
+     * @param txnInfo the transaction information
      * @param exchangeRateSet the active exchange rate set
      * @return the initialized base builder
      */

@@ -1344,4 +1344,9 @@ public class ConsensusImpl implements Consensus {
     public long getFameDecidedBelow() {
         return rounds.getFameDecidedBelow();
     }
+
+    @Override
+    public ConsensusRounds getRounds() {
+        return rounds;
+    }
 }
