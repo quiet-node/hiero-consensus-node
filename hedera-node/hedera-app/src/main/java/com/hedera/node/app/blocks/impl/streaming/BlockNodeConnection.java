@@ -54,12 +54,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private volatile Thread requestWorker;
 
     public BlockNodeConnection(
-            BlockNodeConfig nodeConfig,
-            BlockNodeConnectionManager blockNodeConnectionManager,
-            BlockStreamStateManager blockStreamStateManager) {
-        this.node = nodeConfig;
-        this.blockNodeConnectionManager = blockNodeConnectionManager;
-        this.blockStreamStateManager = blockStreamStateManager;
+            @NonNull final BlockNodeConfig nodeConfig,
+            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
+            @NonNull final BlockStreamStateManager blockStreamStateManager) {
+        this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
+        this.blockNodeConnectionManager =
+                requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
+        this.blockStreamStateManager =
+                requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.channel = createNewChannel();
     }
 

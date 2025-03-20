@@ -2,11 +2,14 @@
 package com.hedera.node.app.blocks;
 
 import com.hedera.node.app.blocks.impl.BlockStreamManagerImpl;
+import com.hedera.node.app.blocks.impl.streaming.BlockNodeConfigExtractor;
+import com.hedera.node.app.blocks.impl.streaming.BlockNodeConfigExtractorImpl;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager;
 import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager;
 import com.hedera.node.app.blocks.impl.streaming.FileAndGrpcBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.GrpcBlockItemWriter;
+import com.hedera.node.app.blocks.impl.streaming.NoOpBlockNodeConfigExtractor;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.swirlds.state.lifecycle.info.NodeInfo;
@@ -22,22 +25,36 @@ public class BlockStreamModule {
 
     @Provides
     @Singleton
-    public BlockStreamStateManager provideBlockStreamStateManager(ConfigProvider configProvider) {
-        return new BlockStreamStateManager(configProvider);
+    public BlockNodeConfigExtractor provideBlockNodeConfigExtractor(@NonNull final ConfigProvider configProvider) {
+        final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
+        if (blockStreamConfig.streamToBlockNodes()) {
+            return new BlockNodeConfigExtractorImpl(blockStreamConfig.blockNodeConnectionFileDir());
+        } else {
+            return new NoOpBlockNodeConfigExtractor();
+        }
+    }
+
+    @Provides
+    @Singleton
+    public BlockStreamStateManager provideBlockStreamStateManager(
+            @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor) {
+        return new BlockStreamStateManager(blockNodeConfigExtractor);
     }
 
     @Provides
     @Singleton
     public BlockNodeConnectionManager provideBlockNodeConnectionManager(
-            ConfigProvider configProvider, BlockStreamStateManager blockStreamStateManager) {
-        BlockNodeConnectionManager manager = new BlockNodeConnectionManager(configProvider, blockStreamStateManager);
+            @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
+            @NonNull final BlockStreamStateManager blockStreamStateManager) {
+        BlockNodeConnectionManager manager =
+                new BlockNodeConnectionManager(blockNodeConfigExtractor, blockStreamStateManager);
         blockStreamStateManager.setBlockNodeConnectionManager(manager);
         return manager;
     }
 
     @Provides
     @Singleton
-    public BlockStreamManager provideBlockStreamManager(BlockStreamManagerImpl impl) {
+    public BlockStreamManager provideBlockStreamManager(@NonNull final BlockStreamManagerImpl impl) {
         return impl;
     }
 

@@ -5,10 +5,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.protoc.BlockItemSet;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
-import com.hedera.node.config.ConfigProvider;
-import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,15 +34,10 @@ public class BlockStreamStateManager {
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
      *
-     * @param configProvider the configuration provider
+     * @param blockNodeConfigExtractor the block node configuration extractor
      */
-    public BlockStreamStateManager(@NonNull final ConfigProvider configProvider) {
-        requireNonNull(configProvider, "configProvider must not be null");
-        final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
-
-        BlockNodeConfigExtractor blockNodeConfigurations =
-                new BlockNodeConfigExtractor(blockStreamConfig.blockNodeConnectionFileDir());
-        this.blockItemBatchSize = blockNodeConfigurations.getBlockItemBatchSize();
+    public BlockStreamStateManager(@Nullable final BlockNodeConfigExtractor blockNodeConfigExtractor) {
+        this.blockItemBatchSize = blockNodeConfigExtractor.getBlockItemBatchSize();
     }
 
     /**
@@ -52,8 +46,8 @@ public class BlockStreamStateManager {
      * @param blockNodeConnectionManager the block node connection manager
      */
     public void setBlockNodeConnectionManager(@NonNull BlockNodeConnectionManager blockNodeConnectionManager) {
-        requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
-        this.blockNodeConnectionManager = blockNodeConnectionManager;
+        this.blockNodeConnectionManager =
+                requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
     }
 
     /**

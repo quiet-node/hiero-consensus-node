@@ -4,8 +4,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
-import com.hedera.node.config.ConfigProvider;
-import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
@@ -39,7 +37,7 @@ public class BlockNodeConnectionManager {
     private final Random random = new Random();
 
     private final Map<BlockNodeConfig, BlockNodeConnection> activeConnections;
-    private BlockNodeConfigExtractor blockNodeConfigurations;
+    private final BlockNodeConfigExtractor blockNodeConfigurations;
     private final BlockStreamStateManager blockStreamStateManager;
 
     private final Object connectionLock = new Object();
@@ -49,22 +47,17 @@ public class BlockNodeConnectionManager {
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
-     * @param configProvider the configuration provider
+     * @param blockNodeConfigExtractor the block node configuration extractor
      * @param blockStreamStateManager the block stream state manager
      */
     public BlockNodeConnectionManager(
-            @NonNull final ConfigProvider configProvider,
+            @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
-        requireNonNull(configProvider);
-        requireNonNull(blockStreamStateManager);
+        this.blockNodeConfigurations =
+                requireNonNull(blockNodeConfigExtractor, "blockNodeConfigExtractor must not be null");
+        this.blockStreamStateManager =
+                requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.activeConnections = new ConcurrentHashMap<>();
-        this.blockStreamStateManager = blockStreamStateManager;
-
-        final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
-        if (!blockStreamConfig.streamToBlockNodes()) {
-            return;
-        }
-        this.blockNodeConfigurations = new BlockNodeConfigExtractor(blockStreamConfig.blockNodeConnectionFileDir());
     }
 
     /**

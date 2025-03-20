@@ -3,7 +3,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,9 +12,6 @@ import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
-import com.hedera.node.config.ConfigProvider;
-import com.hedera.node.config.VersionedConfigImpl;
-import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -39,10 +35,10 @@ class BlockNodeConnectionManagerTest {
     private LogCaptor logCaptor;
 
     @Mock
-    ConfigProvider mockConfigProvider;
+    private Supplier<Void> mockSupplier;
 
     @Mock
-    private Supplier<Void> mockSupplier;
+    BlockNodeConfigExtractorImpl blockNodeConfigExtractorImpl;
 
     @Mock
     BlockNodeConnection mockConnection;
@@ -52,12 +48,7 @@ class BlockNodeConnectionManagerTest {
 
     @BeforeEach
     public void setUp() {
-        final var config = HederaTestConfigBuilder.create()
-                .withValue("blockStream.writerMode", "FILE_AND_GRPC")
-                .withValue("blockStream.blockNodeConnectionFileDir", "./src/test/resources/bootstrap")
-                .getOrCreateConfig();
-        given(mockConfigProvider.getConfiguration()).willReturn(new VersionedConfigImpl(config, 1));
-        blockNodeConnectionManager = new BlockNodeConnectionManager(mockConfigProvider, mockStateManager);
+        blockNodeConnectionManager = new BlockNodeConnectionManager(blockNodeConfigExtractorImpl, mockStateManager);
     }
 
     @Test
