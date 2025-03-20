@@ -155,9 +155,6 @@ public class HandleWorkflow {
     @Nullable
     private final AtomicBoolean systemEntitiesCreatedFlag;
 
-    @Nullable
-    private final AtomicBoolean systemEntitiesCreatedFlag;
-
     // The last second since the epoch at which the metrics were updated; this does not affect transaction handling
     private long lastMetricUpdateSecond;
     // The last second for which this workflow has confirmed all scheduled transactions are executed
