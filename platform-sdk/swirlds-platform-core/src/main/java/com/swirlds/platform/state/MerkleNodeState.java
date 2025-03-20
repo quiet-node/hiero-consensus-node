@@ -9,6 +9,7 @@ import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -25,6 +26,10 @@ public interface MerkleNodeState extends State {
      */
     default MerkleNode getRoot() {
         return (MerkleNode) this;
+    }
+
+    default Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
+        throw new UnsupportedOperationException();
     }
 
     /**

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.datasource;
 
+import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
+
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.FieldDefinition;
 import com.hedera.pbj.runtime.FieldType;
@@ -19,6 +21,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.Objects;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Virtual leaf record bytes.
@@ -45,6 +49,8 @@ import java.util.Objects;
  * </pre>
  */
 public class VirtualLeafBytes<V> {
+
+    private static final Logger logger = LogManager.getLogger(VirtualLeafBytes.class);
 
     public static final FieldDefinition FIELD_LEAFRECORD_PATH =
             new FieldDefinition("path", FieldType.FIXED64, false, true, false, 1);
@@ -208,9 +214,6 @@ public class VirtualLeafBytes<V> {
             valueBytesLen = Math.toIntExact(valueBytes.length());
         } else if (value != null) {
             valueBytesLen = valueCodec.measureRecord(value);
-        } else {
-            // Null value
-            valueBytesLen = 0;
         }
         if (valueBytesLen >= 0) {
             size += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, valueBytesLen);
@@ -225,9 +228,6 @@ public class VirtualLeafBytes<V> {
      */
     public void writeTo(final WritableSequentialData out) {
         final long pos = out.position();
-        if (keyBytes.toHex().equals("0027")) {
-            System.out.println("");
-        }
         ProtoWriterTools.writeTag(out, FIELD_LEAFRECORD_PATH);
         out.writeLong(path);
         ProtoWriterTools.writeDelimited(
@@ -237,12 +237,8 @@ public class VirtualLeafBytes<V> {
             ProtoWriterTools.writeDelimited(
                     out, FIELD_LEAFRECORD_VALUE, Math.toIntExact(localValueBytes.length()), localValueBytes::writeTo);
         }
-
-        if (out.position() != pos + getSizeInBytes()) {
-            System.out.println("");
-        }
-
-        assert out.position() == pos + getSizeInBytes() : "pos=" + pos + ", out.position()=" + out.position() + ", size=" + getSizeInBytes();
+        assert out.position() == pos + getSizeInBytes()
+                : "pos=" + pos + ", out.position()=" + out.position() + ", size=" + getSizeInBytes();
     }
 
     public Hash hash(final HashBuilder builder) {

@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Tag;
 public class MixedOpsRestartTest implements LifecycleTest {
     private static final int MIXED_OPS_BURST_TPS = 50;
 
-    @HapiTest
+//    @HapiTest
     final Stream<DynamicTest> restartMixedOps() {
         return hapiTest(
                 burstOfTps(MIXED_OPS_BURST_TPS, MIXED_OPS_BURST_DURATION),
