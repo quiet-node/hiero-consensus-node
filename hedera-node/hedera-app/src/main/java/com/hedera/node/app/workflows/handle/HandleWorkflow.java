@@ -101,7 +101,6 @@ import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -110,7 +109,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -286,50 +284,46 @@ public class HandleWorkflow {
         }
     }
 
-    private void handleNodeRewards(final @NonNull State state,
-                                   final @NonNull Instant currentTime) {
+    private void handleNodeRewards(final @NonNull State state, final @NonNull Instant currentTime) {
         final var config = configProvider.getConfiguration();
         final var isNextStakingPeriod = checkIfNextStakingPeriod(state, currentTime);
 
         if (isNextStakingPeriod) {
             final var writableStates = state.getWritableStates(TokenService.NAME);
             final var nodeRewardStore = new WritableNodeRewardsStoreImpl(writableStates);
-            final var activeRoster = requireNonNull(new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME)).getActiveRoster());
+            final var activeRoster = requireNonNull(
+                    new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME)).getActiveRoster());
             final var nodeConfig = config.getConfigData(NodesConfig.class);
-            final var activeNodeIds = nodeRewardStore.getActiveNodeIds(
-                    activeRoster.rosterEntries(),
-                    nodeConfig);
-
+            final var activeNodeIds = nodeRewardStore.getActiveNodeIds(activeRoster.rosterEntries(), nodeConfig);
 
             final var accountStore = new ReadableAccountStoreImpl(
                     state.getReadableStates(TokenService.NAME),
-                   new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME)));
-            final var nodeRewardsAccount = entityIdFactory.newAccountId(config.getConfigData(AccountsConfig.class).nodeRewardAccount());
-            final var payerBalance = requireNonNull(accountStore.getAccountById(nodeRewardsAccount)).tinybarBalance();
+                    new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME)));
+            final var nodeRewardsAccountId = entityIdFactory.newAccountId(
+                    config.getConfigData(AccountsConfig.class).nodeRewardAccount());
+            final var payerBalance = requireNonNull(accountStore.getAccountById(nodeRewardsAccountId))
+                    .tinybarBalance();
             final var avgNodeFeesCollected = 0L;
-            final var totalReward = nodeRewardStore.calculateTotalReward(
-                    activeNodeIds,
-                    avgNodeFeesCollected,
-                    payerBalance,
-                    nodeConfig);
-            systemTransactions.dispatchNodeRewards(state, currentTime, activeNodeIds, totalReward);
-
-            doStreamingKVChanges(writableStates,
-                    null,
-                    currentTime,
-                    nodeRewardStore.resetNodeActivities());
+            final var totalReward =
+                    nodeRewardStore.calculateTotalReward(activeNodeIds, avgNodeFeesCollected, payerBalance, nodeConfig);
+            systemTransactions.dispatchNodeRewards(
+                    state, currentTime, activeNodeIds, totalReward, nodeRewardsAccountId);
+            nodeRewardStore.reset();
+            ((CommittableWritableStates) writableStates).commit();
         }
     }
 
     private boolean checkIfNextStakingPeriod(final State state, final Instant currentTime) {
-        final var networkRewardsStore = new ReadableNetworkStakingRewardsStoreImpl(state.getReadableStates(TokenService.NAME));
+        final var networkRewardsStore =
+                new ReadableNetworkStakingRewardsStoreImpl(state.getReadableStates(TokenService.NAME));
         final var lastPaidTime = networkRewardsStore.get().lastNodeRewardPayment();
-        final var stakePeriodMins = configProvider.getConfiguration().getConfigData(StakingConfig.class).periodMins();
+        final var stakePeriodMins = configProvider
+                .getConfiguration()
+                .getConfigData(StakingConfig.class)
+                .periodMins();
 
         return StakePeriodChanges.isNextStakingPeriod(
-                lastPaidTime == null ? currentTime : asInstant(lastPaidTime),
-                currentTime,
-                stakePeriodMins);
+                lastPaidTime == null ? currentTime : asInstant(lastPaidTime), currentTime, stakePeriodMins);
     }
 
     /**
@@ -446,8 +440,7 @@ public class HandleWorkflow {
         if (streamMode != RECORDS) {
             type = switch (blockStreamManager.pendingWork()) {
                 case POST_UPGRADE_WORK -> POST_UPGRADE_TRANSACTION;
-                default -> ORDINARY_TRANSACTION;
-            };
+                default -> ORDINARY_TRANSACTION;};
         }
         final var userTxn =
                 parentTxnFactory.createUserTxn(state, creator, txn, consensusNow, type, stateSignatureTxnCallback);
@@ -926,7 +919,7 @@ public class HandleWorkflow {
             if (tssConfig.historyEnabled()) {
                 final Bytes currentMetadata = tssConfig.hintsEnabled()
                         ? new ReadableHintsStoreImpl(state.getReadableStates(HintsService.NAME))
-                        .getActiveVerificationKey()
+                                .getActiveVerificationKey()
                         : HintsService.DISABLED_HINTS_METADATA;
                 final var historyWritableStates = state.getWritableStates(HistoryService.NAME);
                 final var historyStore = new WritableHistoryStoreImpl(historyWritableStates);

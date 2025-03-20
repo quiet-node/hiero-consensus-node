@@ -1,25 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.token.impl;
 
-import com.hedera.hapi.node.state.token.NetworkStakingRewards;
+import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
+import static java.util.Objects.requireNonNull;
+
+import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
 import com.hedera.node.app.service.token.ReadableNetworkStakingRewardsStore;
-import com.hedera.node.app.service.token.ReadableNodeRewardsStore;
-import com.swirlds.state.spi.ReadableSingletonState;
-import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
-import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link ReadableNetworkStakingRewardsStore}.
  */
 public class WritableNodeRewardsStoreImpl extends ReadableNodeRewardsStoreImpl {
 
-    /** The underlying data storage class that holds staking reward data for all nodes. */
+    /**
+     * The underlying data storage class that holds staking reward data for all nodes.
+     */
     private final WritableSingletonState<NodeRewards> nodeRewardsState;
 
     /**
@@ -34,6 +33,7 @@ public class WritableNodeRewardsStoreImpl extends ReadableNodeRewardsStoreImpl {
 
     /**
      * Persists the node rewards data to the underlying storage.
+     *
      * @param nodeRewards The node rewards data to persist.
      */
     public void put(@NonNull final NodeRewards nodeRewards) {
@@ -41,7 +41,10 @@ public class WritableNodeRewardsStoreImpl extends ReadableNodeRewardsStoreImpl {
         nodeRewardsState.put(nodeRewards);
     }
 
-    public void resetNodeActivities() {
-        nodeRewardsState.put(NodeRewards.newBuilder().build());
+    public void reset() {
+        nodeRewardsState.put(NodeRewards.newBuilder()
+                .numRoundsInStakingPeriod(0)
+                .nodeActivities(NodeActivity.DEFAULT)
+                .build());
     }
 }

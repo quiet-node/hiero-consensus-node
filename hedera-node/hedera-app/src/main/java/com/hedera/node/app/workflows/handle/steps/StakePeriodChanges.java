@@ -128,7 +128,9 @@ public class StakePeriodChanges {
             @NonNull final Instant currentConsensusTime,
             @NonNull final Instant previousConsensusTime,
             @NonNull final TokenContext tokenContext) {
-        return isNextStakingPeriod(currentConsensusTime, previousConsensusTime,
+        return isNextStakingPeriod(
+                currentConsensusTime,
+                previousConsensusTime,
                 tokenContext.configuration().getConfigData(StakingConfig.class).periodMins());
     }
 

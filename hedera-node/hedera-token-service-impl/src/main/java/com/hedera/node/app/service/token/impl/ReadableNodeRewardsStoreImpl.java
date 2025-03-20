@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.token.impl;
 
+import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
+import static java.util.Objects.requireNonNull;
+
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
@@ -10,13 +13,9 @@ import com.hedera.node.config.data.NodesConfig;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Default implementation of {@link ReadableNetworkStakingRewardsStore}.
@@ -46,10 +45,11 @@ public class ReadableNodeRewardsStoreImpl implements ReadableNodeRewardsStore {
         return requireNonNull(nodeRewardsState.get()).numRoundsInStakingPeriod();
     }
 
-    public Long calculateTotalReward(final List<Long> activeNodeIds,
-                                     final long avgNodeFeeCollected,
-                                     final long payerBalance,
-                                     final NodesConfig nodeConfig) {
+    public Long calculateTotalReward(
+            final List<Long> activeNodeIds,
+            final long avgNodeFeeCollected,
+            final long payerBalance,
+            final NodesConfig nodeConfig) {
         final var rewardPerNode = Math.min(nodeConfig.minNodeReward() - avgNodeFeeCollected, 0L);
         final var totalRewardToBePaid = activeNodeIds.size() * rewardPerNode;
         return Math.min(totalRewardToBePaid, payerBalance);
@@ -59,25 +59,21 @@ public class ReadableNodeRewardsStoreImpl implements ReadableNodeRewardsStore {
         final List<Long> activeNodeIds = new ArrayList<>();
         final var activePercent = nodeConfig.activeRoundsPercent();
 
-        final var nodeActivities =  get().nodeActivities()
-                .stream()
+        final var nodeActivities = get().nodeActivities().stream()
                 .collect(Collectors.toMap(NodeActivity::nodeId, NodeActivity::numMissedJudgeRounds));
 
         for (var entry : rosterEntries) {
             if (!nodeActivities.containsKey(entry.nodeId())) {
                 activeNodeIds.add(entry.nodeId());
-            } else if (isActive(nodeActivities.get(entry.nodeId()),
-                    activePercent,
-                    numRoundsInStakingPeriod())) {
+            } else if (isActive(nodeActivities.get(entry.nodeId()), activePercent, numRoundsInStakingPeriod())) {
                 activeNodeIds.add(entry.nodeId());
             }
         }
         return activeNodeIds;
     }
 
-    private boolean isActive(final long numRoundsMissedNodeJudges,
-                             final int activePercent,
-                             final long numRoundsInStakingPeriod) {
+    private boolean isActive(
+            final long numRoundsMissedNodeJudges, final int activePercent, final long numRoundsInStakingPeriod) {
         return numRoundsMissedNodeJudges <= numRoundsInStakingPeriod * activePercent / 100;
     }
 }

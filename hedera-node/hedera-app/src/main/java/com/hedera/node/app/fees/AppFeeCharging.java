@@ -94,8 +94,7 @@ public class AppFeeCharging implements FeeCharging {
         final var feesToCharge = shouldWaiveServiceFee ? fees.withoutServiceComponent() : fees;
         switch (ctx.category()) {
             case USER, NODE -> ctx.charge(
-                    result.payerOrThrow().accountIdOrThrow(), feesToCharge,
-                    result.creatorId(), null);
+                    result.payerOrThrow().accountIdOrThrow(), feesToCharge, result.creatorId(), null);
             default -> ctx.charge(result.payerOrThrow().accountIdOrThrow(), feesToCharge, null);
         }
     }

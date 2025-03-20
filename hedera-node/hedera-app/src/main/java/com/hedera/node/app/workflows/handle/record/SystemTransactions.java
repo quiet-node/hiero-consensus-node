@@ -5,23 +5,10 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS_BUT_MISSING_EXPECTED_OPERATION;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
 import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STATE_KEY;
-import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
-import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.NODES_KEY;
 import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.parseEd25519NodeAdminKeysFrom;
-import static com.hedera.node.app.service.consensus.impl.ConsensusServiceImpl.TOPICS_KEY;
-import static com.hedera.node.app.service.contract.impl.schemas.V0490ContractSchema.BYTECODE_KEY;
-import static com.hedera.node.app.service.contract.impl.schemas.V0490ContractSchema.STORAGE_KEY;
-import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.BLOBS_KEY;
 import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.dispatchSynthFileUpdate;
 import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.parseConfigList;
-import static com.hedera.node.app.service.schedule.impl.schemas.V0570ScheduleSchema.SCHEDULED_COUNTS_KEY;
-import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ACCOUNTS_KEY;
-import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ALIASES_KEY;
-import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.NFTS_KEY;
-import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.STAKING_INFO_KEY;
-import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TOKENS_KEY;
-import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TOKEN_RELS_KEY;
-import static com.hedera.node.app.service.token.impl.schemas.V0530TokenSchema.AIRDROPS_KEY;
+import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.dispatchSynthCryptoTransfer;
 import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.spi.workflows.DispatchOptions.independentDispatch;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
@@ -46,7 +33,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.ServiceEndpoint;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.common.EntityNumber;
-import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.hapi.node.token.CryptoCreateTransactionBody;
 import com.hedera.hapi.node.transaction.TransactionBody;
@@ -55,14 +41,10 @@ import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.records.BlockRecordManager;
-import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.app.service.addressbook.ReadableNodeStore;
 import com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema;
-import com.hedera.node.app.service.consensus.ConsensusService;
-import com.hedera.node.app.service.contract.ContractService;
 import com.hedera.node.app.service.file.impl.FileServiceImpl;
 import com.hedera.node.app.service.file.impl.schemas.V0490FileSchema;
-import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.BlocklistParser;
 import com.hedera.node.app.service.token.impl.WritableStakingInfoStore;
@@ -102,6 +84,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -188,7 +171,7 @@ public class SystemTransactions {
     /**
      * Sets up genesis state for the system.
      *
-     * @param now the current time
+     * @param now   the current time
      * @param state the state to set up
      */
     public void doGenesisSetup(@NonNull final Instant now, @NonNull final State state) {
@@ -373,15 +356,26 @@ public class SystemTransactions {
         }
     }
 
-    public void dispatchNodeRewards(final State state,
-                                    final Instant currentTime,
-                                    final List<Long> activeNodeIds,
-                                    final long totalReward) {
-        final var rewardPerNode = totalReward / activeNodeIds.size();
-        for(final var nodeId : activeNodeIds) {
-            dispatchProcessor.dispatch(
-                    parentTxnFactory.nodeRewards(nodeId, rewardPerNode),
-                    independentDispatch(NODE, ORDINARY_TRANSACTION));
+    public void dispatchNodeRewards(
+            final State state,
+            final Instant now,
+            final List<Long> activeNodeIds,
+            final long totalReward,
+            final AccountID nodeRewardsAccountId) {
+        final var systemContext = newSystemContext(now, state, dispatch -> {});
+        final var networkInfo = systemContext.networkInfo();
+        final var activeNodeAccountIds = activeNodeIds.stream()
+                .map(id -> requireNonNull(networkInfo.nodeInfo(id)))
+                .map(NodeInfo::accountId)
+                .toList();
+        final List<List<AccountID>> chunks = new ArrayList<>();
+        for (int i = 0; i < activeNodeAccountIds.size(); i += 10) {
+            chunks.add(activeNodeAccountIds.subList(i, Math.min(i + 10, activeNodeAccountIds.size())));
+        }
+        final var rewardPerNode = totalReward / activeNodeAccountIds.size();
+        for (List<AccountID> chunk : chunks) {
+            final var debitAmount = chunks.size() * rewardPerNode;
+            dispatchSynthCryptoTransfer(systemContext, chunk, nodeRewardsAccountId, rewardPerNode, debitAmount);
         }
     }
 
@@ -441,6 +435,7 @@ public class SystemTransactions {
 
     /**
      * Returns the timestamp to use for startup work state change consensus time in the block stream.
+     *
      * @param roundTime the round timestamp
      */
     public Instant startupWorkConsTimeFor(@NonNull final Instant roundTime) {
@@ -538,13 +533,13 @@ public class SystemTransactions {
      * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
      * no other side effects.
      *
-     * @param state the state to execute the transaction against
-     * @param now the time to execute the transaction at
-     * @param creatorInfo the node info of the creator of the transaction
-     * @param payerId the payer of the transaction
-     * @param body the transaction to execute
+     * @param state         the state to execute the transaction against
+     * @param now           the time to execute the transaction at
+     * @param creatorInfo   the node info of the creator of the transaction
+     * @param payerId       the payer of the transaction
+     * @param body          the transaction to execute
      * @param nextEntityNum if not zero, the next entity number to use for the transaction
-     * @param onSuccess the action to take after the transaction is successfully dispatched
+     * @param onSuccess     the action to take after the transaction is successfully dispatched
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeSystem(
