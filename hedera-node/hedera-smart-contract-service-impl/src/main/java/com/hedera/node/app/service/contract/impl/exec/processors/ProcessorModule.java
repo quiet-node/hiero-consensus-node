@@ -27,6 +27,7 @@ import org.hyperledger.besu.evm.EvmSpecVersion;
 import org.hyperledger.besu.evm.contractvalidation.ContractValidationRule;
 import org.hyperledger.besu.evm.contractvalidation.MaxCodeSizeRule;
 import org.hyperledger.besu.evm.contractvalidation.PrefixCodeRule;
+import org.hyperledger.besu.evm.internal.EvmConfiguration;
 
 @Module(includes = {HtsTranslatorsModule.class, HasTranslatorsModule.class, HssTranslatorsModule.class})
 public interface ProcessorModule {
@@ -37,8 +38,8 @@ public interface ProcessorModule {
     @Provides
     @Singleton
     @IntoSet
-    static ContractValidationRule provideMaxCodeSizeRule() {
-        return MaxCodeSizeRule.from(EvmSpecVersion.defaultVersion());
+    static ContractValidationRule provideMaxCodeSizeRule(@NonNull final EvmConfiguration evmConfiguration) {
+        return MaxCodeSizeRule.from(EvmSpecVersion.defaultVersion(), evmConfiguration);
     }
 
     @Provides
