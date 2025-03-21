@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.datasource;
 
-import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
-
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.FieldDefinition;
 import com.hedera.pbj.runtime.FieldType;
@@ -21,8 +19,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.Objects;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Virtual leaf record bytes.
@@ -49,8 +45,6 @@ import org.apache.logging.log4j.Logger;
  * </pre>
  */
 public class VirtualLeafBytes<V> {
-
-    private static final Logger logger = LogManager.getLogger(VirtualLeafBytes.class);
 
     public static final FieldDefinition FIELD_LEAFRECORD_PATH =
             new FieldDefinition("path", FieldType.FIXED64, false, true, false, 1);
