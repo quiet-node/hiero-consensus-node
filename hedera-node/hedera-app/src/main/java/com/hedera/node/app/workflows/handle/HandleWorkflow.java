@@ -303,17 +303,20 @@ public class HandleWorkflow {
             final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
             final var nodeRewardStore = new WritableNodeRewardsStoreImpl(writableStates);
             final var nodeConfig = config.getConfigData(NodesConfig.class);
-            final var activeNodeIds =
-                    nodeRewardStore.getActiveNodeIds(requireNonNull(rosterStore.getActiveRoster()).rosterEntries(), nodeConfig.activeRoundsPercent());
+            final var activeNodeIds = nodeRewardStore.getActiveNodeIds(
+                    requireNonNull(rosterStore.getActiveRoster()).rosterEntries(), nodeConfig.activeRoundsPercent());
 
             // And pay whatever rewards the network can afford
-            final var rewardsAccountId = entityIdFactory.newAccountId(config.getConfigData(AccountsConfig.class).nodeRewardAccount());
-            final var accountStore = new ReadableAccountStoreImpl(writableStates, new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME)));
+            final var rewardsAccountId = entityIdFactory.newAccountId(
+                    config.getConfigData(AccountsConfig.class).nodeRewardAccount());
+            final var accountStore = new ReadableAccountStoreImpl(
+                    writableStates, new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME)));
             final long rewardBalance = requireNonNull(accountStore.getAccountById(rewardsAccountId))
                     .tinybarBalance();
             // TODO: Calculate the average node fees collected
             final long avgNodeFeesEarned = 0L;
-            final long totalReward = Math.min(rewardBalance, activeNodeIds.size() * Math.max(0, nodeConfig.minNodeReward() - avgNodeFeesEarned));
+            final long totalReward = Math.min(
+                    rewardBalance, activeNodeIds.size() * Math.max(0, nodeConfig.minNodeReward() - avgNodeFeesEarned));
             if (totalReward > 0) {
                 systemTransactions.dispatchNodeRewards(state, now, activeNodeIds, totalReward, rewardsAccountId);
             }
@@ -322,7 +325,11 @@ public class HandleWorkflow {
 
         // Record this as the last time node rewards were paid
         final var rewardsStore = new WritableNetworkStakingRewardsStore(writableStates);
-        rewardsStore.put(rewardsStore.get().copyBuilder().lastNodeRewardPaymentsTime(asTimestamp(now)).build());
+        rewardsStore.put(rewardsStore
+                .get()
+                .copyBuilder()
+                .lastNodeRewardPaymentsTime(asTimestamp(now))
+                .build());
         ((CommittableWritableStates) writableStates).commit();
     }
 
@@ -341,7 +348,8 @@ public class HandleWorkflow {
      * @param now the current time
      * @return whether the last time node rewards were paid was a different staking period
      */
-    private LastNodeRewardsPaymentTime classifyLastNodeRewardsPaymentTime(@NonNull final State state, @NonNull final Instant now) {
+    private LastNodeRewardsPaymentTime classifyLastNodeRewardsPaymentTime(
+            @NonNull final State state, @NonNull final Instant now) {
         final var networkRewardsStore =
                 new ReadableNetworkStakingRewardsStoreImpl(state.getReadableStates(TokenService.NAME));
         final var lastPaidTime = networkRewardsStore.get().lastNodeRewardPaymentsTime();
@@ -352,7 +360,9 @@ public class HandleWorkflow {
                 .getConfiguration()
                 .getConfigData(StakingConfig.class)
                 .periodMins();
-        return isNextStakingPeriod(asInstant(lastPaidTime), now, stakePeriodMins) ? LastNodeRewardsPaymentTime.PREVIOUS_PERIOD : LastNodeRewardsPaymentTime.CURRENT_PERIOD;
+        return isNextStakingPeriod(asInstant(lastPaidTime), now, stakePeriodMins)
+                ? LastNodeRewardsPaymentTime.PREVIOUS_PERIOD
+                : LastNodeRewardsPaymentTime.CURRENT_PERIOD;
     }
 
     /**

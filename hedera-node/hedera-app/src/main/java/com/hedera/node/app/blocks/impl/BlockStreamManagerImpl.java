@@ -74,7 +74,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
@@ -261,7 +260,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var nodeRewardInfo = nodeRewardInfoFrom(state);
             roundsThisStakingPeriod = nodeRewardInfo.numRoundsInStakingPeriod();
             missedJudgeCounts.clear();
-            nodeRewardInfo.nodeActivities().forEach(activity -> missedJudgeCounts.put(activity.nodeId(), activity.numMissedJudgeRounds()));
+            nodeRewardInfo
+                    .nodeActivities()
+                    .forEach(activity -> missedJudgeCounts.put(activity.nodeId(), activity.numMissedJudgeRounds()));
 
             inputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
             outputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
