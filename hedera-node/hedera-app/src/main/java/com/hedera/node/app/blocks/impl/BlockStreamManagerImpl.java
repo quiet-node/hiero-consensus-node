@@ -83,8 +83,6 @@ import org.apache.logging.log4j.Logger;
 public class BlockStreamManagerImpl implements BlockStreamManager {
     private static final Logger log = LogManager.getLogger(BlockStreamManagerImpl.class);
 
-    private static final String FATAL_SHUTDOWN_BASE_MSG = "Waiting for fatal shutdown of block stream to complete";
-
     private final int roundsPerBlock;
     private final Duration blockPeriod;
     private final int hashCombineBatchSize;
