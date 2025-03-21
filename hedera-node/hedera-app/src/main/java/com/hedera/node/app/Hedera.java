@@ -1303,7 +1303,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     }
 
     private boolean manageBlockEndRound(@NonNull final Round round, @NonNull final State state) {
-        // Record any missed node judges for this round from the platform state
         return daggerApp.blockStreamManager().endRound(state, round.getRoundNum());
     }
 
