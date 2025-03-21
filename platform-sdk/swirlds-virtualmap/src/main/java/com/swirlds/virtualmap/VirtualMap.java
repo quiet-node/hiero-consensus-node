@@ -116,14 +116,14 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
 
     @Override
     public void setHash(Hash hash) {
-        if (hash != null) {
-            logger.error(
-                    EXCEPTION.getMarker(),
-                    "fc version: {} | hash: {} | stacktrace: {} ",
-                    getRoot().getFastCopyVersion(),
-                    hash,
-                    StackTrace.getStackTrace());
-        }
+//        if (hash != null) {
+//            logger.error(
+//                    EXCEPTION.getMarker(),
+//                    "fc version: {} | hash: {} | stacktrace: {} ",
+//                    getRoot().getFastCopyVersion(),
+//                    hash,
+//                    StackTrace.getStackTrace());
+//        }
         super.setHash(hash);
     }
 
