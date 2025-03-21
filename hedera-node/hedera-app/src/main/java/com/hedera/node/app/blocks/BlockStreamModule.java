@@ -46,7 +46,7 @@ public class BlockStreamModule {
     public BlockNodeConnectionManager provideBlockNodeConnectionManager(
             @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
-        BlockNodeConnectionManager manager =
+        final BlockNodeConnectionManager manager =
                 new BlockNodeConnectionManager(blockNodeConfigExtractor, blockStreamStateManager);
         blockStreamStateManager.setBlockNodeConnectionManager(manager);
         return manager;

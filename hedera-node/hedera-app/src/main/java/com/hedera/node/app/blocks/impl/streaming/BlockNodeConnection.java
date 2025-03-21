@@ -115,7 +115,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         while (isActive.get()) {
             try {
                 // Get the current block state
-                BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber.get());
+                final BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber.get());
 
                 // If block state is null, check if we're behind
                 if (blockState == null && currentBlockNumber.get() != -1) {
@@ -215,21 +215,23 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void processAvailableRequests(BlockState blockState) {
-        List<PublishStreamRequest> requests = blockState.requests();
-        while (currentRequestIndex.get() < requests.size()) {
-            if (!isActive.get()) {
-                return;
+        synchronized (isActiveLock) {
+            List<PublishStreamRequest> requests = blockState.requests();
+            while (currentRequestIndex.get() < requests.size()) {
+                if (!isActive.get()) {
+                    return;
+                }
+                PublishStreamRequest request = requests.get(currentRequestIndex.get());
+                logger.debug(
+                        "[] Sending request for block {} request index {} to node {}:{}, items: {}",
+                        currentBlockNumber.get(),
+                        currentRequestIndex.get(),
+                        node.address(),
+                        node.port(),
+                        request.getBlockItems().getBlockItemsCount());
+                sendRequest(request);
+                currentRequestIndex.incrementAndGet();
             }
-            PublishStreamRequest request = requests.get(currentRequestIndex.get());
-            logger.debug(
-                    "[] Sending request for block {} request index {} to node {}:{}, items: {}",
-                    currentBlockNumber.get(),
-                    currentRequestIndex.get(),
-                    node.address(),
-                    node.port(),
-                    request.getBlockItems().getBlockItemsCount());
-            sendRequest(request);
-            currentRequestIndex.incrementAndGet();
         }
     }
 
