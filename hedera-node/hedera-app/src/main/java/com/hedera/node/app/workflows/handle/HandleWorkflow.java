@@ -5,6 +5,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.BUSY;
 import static com.hedera.hapi.util.HapiUtils.asInstant;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
 import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.GENESIS_WORK;
+import static com.hedera.node.app.hapi.fees.pricing.FeeSchedules.USD_TO_TINYCENTS;
 import static com.hedera.node.app.records.schemas.V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartEvent;
@@ -52,8 +53,6 @@ import com.hedera.node.app.records.BlockRecordManager;
 import com.hedera.node.app.records.BlockRecordService;
 import com.hedera.node.app.roster.ActiveRosters;
 import com.hedera.node.app.roster.RosterService;
-import com.hedera.node.app.service.addressbook.AddressBookService;
-import com.hedera.node.app.service.addressbook.impl.ReadableNodeStoreImpl;
 import com.hedera.node.app.service.schedule.ExecutableTxn;
 import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.schedule.impl.WritableScheduleStoreImpl;
@@ -105,10 +104,10 @@ import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -291,8 +290,9 @@ public class HandleWorkflow {
 
     /**
      * If the consensus time just crossed a stake period, rewards sufficiently active nodes for the previous period.
+     *
      * @param state the state
-     * @param now the current consensus time
+     * @param now   the current consensus time
      */
     private void rewardActiveNodesIfNewPeriod(@NonNull final State state, @NonNull final Instant now) {
         final var config = configProvider.getConfiguration();
@@ -320,31 +320,27 @@ public class HandleWorkflow {
                     config.getConfigData(AccountsConfig.class).nodeRewardAccount());
             final var entityCounters = new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME));
             final var accountStore = new ReadableAccountStoreImpl(writableStates, entityCounters);
-            final long rewardBalance = requireNonNull(accountStore.getAccountById(rewardsAccountId))
+            final long rewardAccountBalance = requireNonNull(accountStore.getAccountById(rewardsAccountId))
                     .tinybarBalance();
-            final var nodeStore =
-                    new ReadableNodeStoreImpl(state.getReadableStates(AddressBookService.NAME), entityCounters);
-            final long firstRewardEligibleNum =
-                    config.getConfigData(LedgerConfig.class).numSystemAccounts() + 1;
-            final int numRewardEligibleNodes = (int) currentRoster.stream()
-                    .filter(entry -> Optional.ofNullable(nodeStore.get(entry.nodeId()))
-                            .map(node -> node.accountIdOrThrow().accountNumOrThrow() >= firstRewardEligibleNum)
-                            .orElse(false))
-                    .count();
             final long prePaidRewards = nodesConfig.adjustNodeFees()
-                    ? nodeRewardStore.get().feesCollectedByRewardEligibleNodes() / numRewardEligibleNodes
+                    ? nodeRewardStore.get().feesCollectedByRewardEligibleNodes() / currentRoster.size()
                     : 0L;
-            final long totalReward = Math.min(
-                    rewardBalance, activeNodeIds.size() * Math.max(0, nodesConfig.minNodeReward() - prePaidRewards));
-            if (totalReward > 0) {
-                systemTransactions.dispatchNodeRewards(
-                        state,
-                        now,
-                        activeNodeIds,
-                        totalReward,
-                        rewardsAccountId,
-                        config.getConfigData(LedgerConfig.class).numSystemAccounts() + 1);
-            }
+
+            final var targetPayInTinyCents = BigInteger.valueOf(nodesConfig.targetUsdNodeRewards())
+                    .multiply(USD_TO_TINYCENTS.toBigInteger())
+                    .divide(BigInteger.valueOf(nodesConfig.numPeriodsToTargetUsd()));
+            final long nodeReward = exchangeRateManager.getTinybarsFromTinyCents(targetPayInTinyCents.longValue(), now);
+            final var perNodeReward = Math.max(nodesConfig.minNodeReward(), nodeReward - prePaidRewards);
+            System.out.println(" nodeReward: " + nodeReward + ", perNodeReward: " + perNodeReward + ", prePaidRewards: "
+                    + prePaidRewards);
+            systemTransactions.dispatchNodeRewards(
+                    state,
+                    now,
+                    activeNodeIds,
+                    perNodeReward,
+                    rewardsAccountId,
+                    config.getConfigData(LedgerConfig.class).numSystemAccounts() + 1,
+                    rewardAccountBalance);
         }
         // Record this as the last time node rewards were paid
         final var rewardsStore = new WritableNetworkStakingRewardsStore(writableStates);
@@ -369,8 +365,9 @@ public class HandleWorkflow {
 
     /**
      * Checks if the last time node rewards were paid was a different staking period.
+     *
      * @param state the state
-     * @param now the current time
+     * @param now   the current time
      * @return whether the last time node rewards were paid was a different staking period
      */
     private LastNodeRewardsPaymentTime classifyLastNodeRewardsPaymentTime(

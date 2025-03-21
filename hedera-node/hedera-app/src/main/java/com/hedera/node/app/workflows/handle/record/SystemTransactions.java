@@ -15,7 +15,7 @@ import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategor
 import static com.hedera.node.app.util.FileUtilities.createFileID;
 import static com.hedera.node.app.workflows.handle.HandleOutput.failInvalidStreamItems;
 import static com.hedera.node.app.workflows.handle.HandleWorkflow.ALERT_MESSAGE;
-import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
+import static com.hedera.node.app.workflows.handle.TransactionType.INTERNAL_TRANSACTION;
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
@@ -359,20 +359,22 @@ public class SystemTransactions {
     /**
      * Dispatches a synthetic node reward crypto transfer for the given active node accounts.
      *
-     * @param state The state.
-     * @param now The current time.
-     * @param activeNodeIds The list of active node ids.
-     * @param totalReward The total reward.
-     * @param nodeRewardsAccountId The node rewards account id.
+     * @param state                          The state.
+     * @param now                            The current time.
+     * @param activeNodeIds                  The list of active node ids.
+     * @param rewardAccountBalance           The reward account balance.
+     * @param perNodeReward                  The per node reward.
+     * @param nodeRewardsAccountId           The node rewards account id.
      * @param firstEligibleNodeAccountNumber The first eligible node account number.
      */
     public void dispatchNodeRewards(
             @NonNull final State state,
             @NonNull final Instant now,
             @NonNull final List<Long> activeNodeIds,
-            final long totalReward,
+            final long perNodeReward,
             @NonNull final AccountID nodeRewardsAccountId,
-            final long firstEligibleNodeAccountNumber) {
+            final long firstEligibleNodeAccountNumber,
+            final long rewardAccountBalance) {
         requireNonNull(state);
         requireNonNull(now);
         requireNonNull(activeNodeIds);
@@ -384,10 +386,16 @@ public class SystemTransactions {
                 .map(NodeInfo::accountId)
                 .filter(id -> id.accountNumOrThrow() >= firstEligibleNodeAccountNumber)
                 .toList();
+        if (activeNodeAccountIds.isEmpty()) {
+            return;
+        }
         log.info("Found active node accounts {}", activeNodeAccountIds);
+        final long totalReward = Math.min(rewardAccountBalance, activeNodeAccountIds.size() * perNodeReward);
+        log.info("Reward account balance {}", rewardAccountBalance);
         final long rewardPerNode = totalReward / activeNodeAccountIds.size();
-        dispatchSynthNodeRewards(
-                systemContext, activeNodeAccountIds, nodeRewardsAccountId, rewardPerNode, -totalReward);
+        if (rewardPerNode > 0) {
+            dispatchSynthNodeRewards(systemContext, activeNodeAccountIds, nodeRewardsAccountId, rewardPerNode);
+        }
     }
 
     /**
@@ -474,7 +482,16 @@ public class SystemTransactions {
         return new SystemContext() {
             @Override
             public void dispatchAdmin(@NonNull final Consumer<TransactionBody.Builder> spec) {
-                dispatchCreation(spec, 0);
+                requireNonNull(spec);
+                final var builder = TransactionBody.newBuilder()
+                        .transactionValidDuration(validDuration)
+                        .transactionID(TransactionID.newBuilder()
+                                .accountID(systemAdminId)
+                                .transactionValidStart(asTimestamp(now()))
+                                .nonce(nextDispatchNonce.getAndIncrement())
+                                .build());
+                spec.accept(builder);
+                dispatch(builder.build(), 0);
             }
 
             @Override
@@ -494,6 +511,10 @@ public class SystemTransactions {
             @Override
             public void dispatchCreation(@NonNull final TransactionBody body, final long entityNum) {
                 requireNonNull(body);
+                dispatch(body, entityNum);
+            }
+
+            private void dispatch(final @NonNull TransactionBody body, final long entityNum) {
                 // System dispatches never have child transactions, so one nano is enough to separate them
                 final var now = nextConsTime.getAndUpdate(then -> then.plusNanos(1));
                 if (streamMode == BOTH) {
@@ -563,7 +584,7 @@ public class SystemTransactions {
             @NonNull final Configuration config,
             @NonNull final Consumer<Dispatch> onSuccess) {
         final var parentTxn =
-                parentTxnFactory.createSystemTxn(state, creatorInfo, now, ORDINARY_TRANSACTION, payerId, body);
+                parentTxnFactory.createSystemTxn(state, creatorInfo, now, INTERNAL_TRANSACTION, payerId, body);
         parentTxn.initBaseBuilder(exchangeRateManager.exchangeRates());
         final var dispatch = parentTxnFactory.createDispatch(parentTxn, parentTxn.baseBuilder(), ignore -> true, NODE);
         blockStreamManager.setLastHandleTime(parentTxn.consensusNow());

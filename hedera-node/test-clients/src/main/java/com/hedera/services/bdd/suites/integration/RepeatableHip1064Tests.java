@@ -7,6 +7,7 @@ import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.REPEATA
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileCreate;
 import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.mutateSingleton;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doWithStartupConfig;
@@ -17,6 +18,8 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilStartOfNex
 import static com.hedera.services.bdd.spec.utilops.streams.assertions.SelectedItemsAssertion.SELECTED_ITEMS_KEY;
 import static com.hedera.services.bdd.suites.HapiSuite.CIVILIAN_PAYER;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
+import static com.hedera.services.bdd.suites.HapiSuite.NODE_REWARD;
+import static com.hedera.services.bdd.suites.HapiSuite.ONE_HBAR;
 import static com.hedera.services.bdd.suites.HapiSuite.TINY_PARTS_PER_WHOLE;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.CryptoTransfer;
 import static java.util.stream.Collectors.toMap;
@@ -29,6 +32,7 @@ import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.RepeatableHapiTest;
 import com.hedera.services.bdd.junit.TargetEmbeddedMode;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
+import com.hedera.services.bdd.spec.transactions.token.TokenMovement;
 import com.hedera.services.bdd.spec.utilops.streams.assertions.VisibleItemsValidator;
 import com.hederahashgraph.api.proto.java.AccountAmount;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -78,12 +82,11 @@ public class RepeatableHip1064Tests {
                                 nodeRewardsValidator(expectedNodeRewards::get),
                                 // We expect one node rewards payment in this test
                                 1,
-                                (spec, item) -> {
-                                    return item.getRecord().getTransferList().getAccountAmountsList().stream()
-                                            .anyMatch(aa ->
-                                                    aa.getAccountID().getAccountNum() == 801L && aa.getAmount() < 0L);
-                                }),
+                                (spec, item) -> item.getRecord().getTransferList().getAccountAmountsList().stream()
+                                        .anyMatch(aa ->
+                                                aa.getAccountID().getAccountNum() == 801L && aa.getAmount() < 0L)),
                         Duration.ofSeconds(1)),
+                cryptoTransfer(TokenMovement.movingHbar(100000 * ONE_HBAR).between(GENESIS, NODE_REWARD)),
                 // Start a new period
                 waitUntilStartOfNextStakingPeriod(1),
                 // Collect some node fees with a non-system payer
@@ -104,11 +107,13 @@ public class RepeatableHip1064Tests {
                         target -> doWithStartupConfig(
                                 "nodes.numPeriodsToTargetUsd",
                                 numPeriods -> doingContextual(spec -> {
-                                    final long targetTinybars = spec.ratesProvider()
-                                            .toTbWithActiveRates(Long.parseLong(target) * 100 * TINY_PARTS_PER_WHOLE);
-                                    final long targetReward = targetTinybars / Integer.parseInt(numPeriods);
+                                    final long targetReward = (Long.parseLong(target) * 100 * TINY_PARTS_PER_WHOLE)
+                                            / Integer.parseInt(numPeriods);
+                                    final long targetTinybars =
+                                            spec.ratesProvider().toTbWithActiveRates(targetReward);
                                     final long prePaidRewards = expectedNodeFees.get() / 4;
-                                    expectedNodeRewards.set(targetReward - prePaidRewards);
+                                    expectedNodeRewards.set(targetTinybars - prePaidRewards);
+                                    System.out.println("Expected node rewards: " + expectedNodeRewards.get());
                                 }))),
                 // Start a new period and leave only node1 as inactive
                 mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
@@ -129,7 +134,7 @@ public class RepeatableHip1064Tests {
                 cryptoCreate("nobody").payingWith(GENESIS));
     }
 
-    private static VisibleItemsValidator nodeRewardsValidator(@NonNull final LongSupplier expectedTotalRewards) {
+    private static VisibleItemsValidator nodeRewardsValidator(@NonNull final LongSupplier expectedPerNodeReward) {
         return (spec, records) -> {
             final var items = records.get(SELECTED_ITEMS_KEY);
             assertNotNull(items, "No reward payments found");
@@ -137,9 +142,11 @@ public class RepeatableHip1064Tests {
             final var payment = items.getFirst();
             assertEquals(CryptoTransfer, payment.function());
             final var op = payment.body().getCryptoTransfer();
-            final long expectedPerNode = expectedTotalRewards.getAsLong();
+            System.out.println("BODY: " + op);
+            final long expectedPerNode = expectedPerNodeReward.getAsLong();
             final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
                     .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
+            assertEquals(3, bodyAdjustments.size());
             // node2 and node3 only expected to receive (node0 is system, node1 was inactive)
             final long expectedDebit = -2 * expectedPerNode;
             assertEquals(
@@ -149,7 +156,6 @@ public class RepeatableHip1064Tests {
             // node3 credit
             assertEquals(expectedPerNode, bodyAdjustments.get(6L));
             System.out.println(op.getTransfers());
-            assertEquals(3, bodyAdjustments.size());
             System.out.println(payment.transactionRecord());
         };
     }

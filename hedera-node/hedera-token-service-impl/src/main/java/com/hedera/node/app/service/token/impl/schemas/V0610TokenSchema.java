@@ -14,6 +14,7 @@ import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -48,19 +49,20 @@ public class V0610TokenSchema extends Schema {
      * @param activeNodeAccountIds The list of node account ids.
      * @param payerId The payer account id.
      * @param creditPerNode The credit per node.
-     * @param payerDebit The debit amount.
      */
     public static void dispatchSynthNodeRewards(
             @NonNull final SystemContext systemContext,
             @NonNull final List<AccountID> activeNodeAccountIds,
             @NonNull final AccountID payerId,
-            final long creditPerNode,
-            final long payerDebit) {
+            final long creditPerNode) {
+        final long payerDebit = -(creditPerNode * activeNodeAccountIds.size());
+        final var amounts = new ArrayList<>(accountAmountsFrom(activeNodeAccountIds, creditPerNode));
+        amounts.add(asAccountAmount(payerId, payerDebit));
+
         systemContext.dispatchAdmin(b -> b.memo("Synthetic node rewards")
                 .cryptoTransfer(CryptoTransferTransactionBody.newBuilder()
                         .transfers(TransferList.newBuilder()
-                                .accountAmounts(accountAmountsFrom(activeNodeAccountIds, creditPerNode))
-                                .accountAmounts(asAccountAmount(payerId, payerDebit))
+                                .accountAmounts(amounts)
                                 .build()))
                 .build());
     }
