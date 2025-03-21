@@ -825,9 +825,12 @@ class BlockStreamManagerImplTest {
         blockStreamInfoState = new WritableSingletonStateBase<>(BLOCK_STREAM_INFO_KEY, infoRef::get, infoRef::set);
         nodeRewardsRef.set(NodeRewards.newBuilder().build());
         given(readableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY))
-                .willReturn(new WritableSingletonStateBase<>(NODE_REWARDS_KEY, nodeRewardsRef::get, nodeRewardsRef::set));
-        lenient().when(writableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY))
-                .thenReturn(new WritableSingletonStateBase<>(NODE_REWARDS_KEY, nodeRewardsRef::get, nodeRewardsRef::set));
+                .willReturn(
+                        new WritableSingletonStateBase<>(NODE_REWARDS_KEY, nodeRewardsRef::get, nodeRewardsRef::set));
+        lenient()
+                .when(writableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY))
+                .thenReturn(
+                        new WritableSingletonStateBase<>(NODE_REWARDS_KEY, nodeRewardsRef::get, nodeRewardsRef::set));
     }
 
     private void givenEndOfRoundSetup() {

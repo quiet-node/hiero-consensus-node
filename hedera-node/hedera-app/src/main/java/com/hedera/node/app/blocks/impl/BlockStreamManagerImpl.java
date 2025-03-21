@@ -41,6 +41,7 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockRecordStreamConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
+import com.hedera.node.config.data.NodesConfig;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.node.config.types.DiskNetworkExport;
@@ -119,6 +120,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private StreamingTreeHasher outputTreeHasher;
     private BlockStreamManagerTask worker;
     private final boolean hintsEnabled;
+    private final ConfigProvider configProvider;
     // If not null, the part of the block preceding a possible first transaction
     @Nullable
     private PreTxnItems preTxnItems;
@@ -184,7 +186,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.executor = (ForkJoinPool) requireNonNull(executor);
         this.boundaryStateChangeListener = requireNonNull(boundaryStateChangeListener);
         this.platformStateFacade = platformStateFacade;
-        requireNonNull(configProvider);
+        this.configProvider = requireNonNull(configProvider);
         final var config = configProvider.getConfiguration();
         this.hintsEnabled = config.getConfigData(TssConfig.class).hintsEnabled();
         this.hapiVersion = hapiVersionFrom(config);
@@ -254,13 +256,17 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             blockHashManager.startBlock(blockStreamInfo, lastBlockHash);
             runningHashManager.startBlock(blockStreamInfo);
 
-            // Update the node reward info from state
-            final var nodeRewardInfo = nodeRewardInfoFrom(state);
-            roundsThisStakingPeriod = nodeRewardInfo.numRoundsInStakingPeriod();
-            missedJudgeCounts.clear();
-            nodeRewardInfo
-                    .nodeActivities()
-                    .forEach(activity -> missedJudgeCounts.put(activity.nodeId(), activity.numMissedJudgeRounds()));
+            if (configProvider
+                    .getConfiguration()
+                    .getConfigData(NodesConfig.class)
+                    .nodeRewardsEnabled()) {
+                missedJudgeCounts.clear();
+                final var nodeRewardInfo = nodeRewardInfoFrom(state);
+                roundsThisStakingPeriod = nodeRewardInfo.numRoundsInStakingPeriod();
+                nodeRewardInfo
+                        .nodeActivities()
+                        .forEach(activity -> missedJudgeCounts.put(activity.nodeId(), activity.numMissedJudgeRounds()));
+            }
 
             inputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
             outputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
@@ -365,8 +371,14 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     asTimestamp(lastHandleTime)));
             ((CommittableWritableStates) writableState).commit();
 
-            // Persist the judge info in node rewards
-            updateNodeRewardState(state);
+            final long nodeFeesCollected = boundaryStateChangeListener.getAndResetNodeFeesThisBlock();
+            if (configProvider
+                    .getConfiguration()
+                    .getConfigData(NodesConfig.class)
+                    .nodeRewardsEnabled()) {
+                // Persist the judge info and collected fees in node rewards
+                updateNodeRewardState(state, nodeFeesCollected);
+            }
 
             worker.addItem(boundaryStateChangeListener.flushChanges());
             worker.sync();
@@ -434,8 +446,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
      * each node.
      *
      * @param state the state to update
+     * @param nodeFeesCollected the fees collected into reward-eligible node accounts
      */
-    private void updateNodeRewardState(final @NonNull State state) {
+    private void updateNodeRewardState(@NonNull final State state, final long nodeFeesCollected) {
         final var writableTokenState = state.getWritableStates(TokenService.NAME);
         final var nodeRewardsState = writableTokenState.<NodeRewards>getSingleton(NODE_REWARDS_KEY);
         final var nodeActivities = missedJudgeCounts.entrySet().stream()
@@ -444,9 +457,12 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                         .numMissedJudgeRounds(entry.getValue())
                         .build())
                 .toList();
+        final long newNodeFeesCollected =
+                requireNonNull(nodeRewardsState.get()).feesCollectedByRewardEligibleNodes() + nodeFeesCollected;
         nodeRewardsState.put(NodeRewards.newBuilder()
                 .nodeActivities(nodeActivities)
                 .numRoundsInStakingPeriod(roundsThisStakingPeriod)
+                .feesCollectedByRewardEligibleNodes(newNodeFeesCollected)
                 .build());
         ((CommittableWritableStates) writableTokenState).commit();
     }
@@ -489,6 +505,14 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         requireNonNull(nodeIds);
         nodeIds.forEach(node -> missedJudgeCounts.merge(node, 1L, Long::sum));
         roundsThisStakingPeriod++;
+        System.out.println("BOOP  - recording missing round judges (rounds=" + roundsThisStakingPeriod + ")");
+    }
+
+    @Override
+    public void resetNodeRewards() {
+        missedJudgeCounts.clear();
+        roundsThisStakingPeriod = 0;
+        System.out.println("BOOP  - resetting node rewards");
     }
 
     /**
