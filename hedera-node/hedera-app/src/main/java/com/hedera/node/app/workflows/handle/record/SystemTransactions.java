@@ -88,6 +88,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -358,29 +359,33 @@ public class SystemTransactions {
     /**
      * Dispatches a synthetic node reward crypto transfer for the given active node accounts.
      *
-     * @param state                The state.
-     * @param now                  The current time.
-     * @param activeNodeIds        The list of active node ids.
-     * @param totalReward          The total reward.
+     * @param state The state.
+     * @param now The current time.
+     * @param activeNodeIds The list of active node ids.
+     * @param totalReward The total reward.
      * @param nodeRewardsAccountId The node rewards account id.
+     * @param firstEligibleNodeAccountNumber The first eligible node account number.
      */
     public void dispatchNodeRewards(
-            final State state,
-            final Instant now,
-            final List<Long> activeNodeIds,
+            @NonNull final State state,
+            @NonNull final Instant now,
+            @NonNull final List<Long> activeNodeIds,
             final long totalReward,
-            final AccountID nodeRewardsAccountId) {
+            @NonNull final AccountID nodeRewardsAccountId,
+            final long firstEligibleNodeAccountNumber) {
+        requireNonNull(state);
+        requireNonNull(now);
+        requireNonNull(activeNodeIds);
+        requireNonNull(nodeRewardsAccountId);
         final var systemContext = newSystemContext(now, state, dispatch -> {});
         final var activeNodeAccountIds = activeNodeIds.stream()
-                .map(id ->
-                        requireNonNull(systemContext.networkInfo().nodeInfo(id)).accountId())
-                .filter(id -> id.accountNum() > 100)
+                .map(id -> systemContext.networkInfo().nodeInfo(id))
+                .filter(Objects::nonNull)
+                .map(NodeInfo::accountId)
+                .filter(id -> id.accountNumOrThrow() >= firstEligibleNodeAccountNumber)
                 .toList();
-        if (activeNodeAccountIds.isEmpty()) {
-            log.info("No active node accounts found for node rewards dispatch");
-            return;
-        }
-        final var rewardPerNode = totalReward / activeNodeAccountIds.size();
+        log.info("Found active node accounts {}", activeNodeAccountIds);
+        final long rewardPerNode = totalReward / activeNodeAccountIds.size();
         dispatchSynthNodeRewards(
                 systemContext, activeNodeAccountIds, nodeRewardsAccountId, rewardPerNode, -totalReward);
     }

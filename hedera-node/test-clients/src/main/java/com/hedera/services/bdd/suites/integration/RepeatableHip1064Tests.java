@@ -8,23 +8,34 @@ import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileCreate;
-import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.viewSingleton;
+import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.mutateSingleton;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doWithStartupConfig;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.recordStreamMustIncludePassFrom;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.selectedItems;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilStartOfNextStakingPeriod;
+import static com.hedera.services.bdd.spec.utilops.streams.assertions.SelectedItemsAssertion.SELECTED_ITEMS_KEY;
 import static com.hedera.services.bdd.suites.HapiSuite.CIVILIAN_PAYER;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.TINY_PARTS_PER_WHOLE;
+import static com.hederahashgraph.api.proto.java.HederaFunctionality.CryptoTransfer;
+import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.RepeatableHapiTest;
 import com.hedera.services.bdd.junit.TargetEmbeddedMode;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
+import com.hedera.services.bdd.spec.utilops.streams.assertions.VisibleItemsValidator;
+import com.hederahashgraph.api.proto.java.AccountAmount;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicTest;
@@ -62,29 +73,25 @@ public class RepeatableHip1064Tests {
         final AtomicLong expectedNodeFees = new AtomicLong(0);
         final AtomicLong expectedNodeRewards = new AtomicLong(0);
         return hapiTest(
+                recordStreamMustIncludePassFrom(
+                        selectedItems(
+                                nodeRewardsValidator(expectedNodeRewards::get),
+                                // We expect one node rewards payment in this test
+                                1,
+                                (spec, item) -> {
+                                    return item.getRecord().getTransferList().getAccountAmountsList().stream()
+                                            .anyMatch(aa ->
+                                                    aa.getAccountID().getAccountNum() == 801L && aa.getAmount() < 0L);
+                                }),
+                        Duration.ofSeconds(1)),
                 // Start a new period
                 waitUntilStartOfNextStakingPeriod(1),
                 // Collect some node fees with a non-system payer
-                viewSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
-                    System.out.println("BEFORE: " + nodeRewards);
-                }),
-                viewSingleton("TokenService", "STAKING_NETWORK_REWARDS", (stakingRewards) -> {
-                    System.out.println("WTF: " + stakingRewards);
-                }),
                 cryptoCreate(CIVILIAN_PAYER),
-                viewSingleton("TokenService", "STAKING_NETWORK_REWARDS", (stakingRewards) -> {
-                    System.out.println("WTF2: " + stakingRewards);
-                }),
-                viewSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
-                    System.out.println("AFTER : " + nodeRewards);
-                }),
                 fileCreate("something")
                         .contents("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
                         .payingWith(CIVILIAN_PAYER)
                         .via("notFree"),
-                viewSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
-                    System.out.println("AGAIN : " + nodeRewards);
-                }),
                 // Collects ~1.8M tinybar in node fees; so ~450k tinybar per node
                 getTxnRecord("notFree")
                         .exposingTo(r -> expectedNodeFees.set(r.getTransferList().getAccountAmountsList().stream()
@@ -103,13 +110,47 @@ public class RepeatableHip1064Tests {
                                     final long prePaidRewards = expectedNodeFees.get() / 4;
                                     expectedNodeRewards.set(targetReward - prePaidRewards);
                                 }))),
-                // Start a new period
-                viewSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
+                // Start a new period and leave only node1 as inactive
+                mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
                     assertEquals(2, nodeRewards.numRoundsInStakingPeriod());
+                    assertEquals(4, nodeRewards.nodeActivities().size());
                     assertEquals(expectedNodeFees.get(), nodeRewards.feesCollectedByRewardEligibleNodes());
+                    return nodeRewards
+                            .copyBuilder()
+                            .nodeActivities(NodeActivity.newBuilder()
+                                    .nodeId(1)
+                                    .numMissedJudgeRounds(2)
+                                    .build())
+                            .build();
                 }),
                 waitUntilStartOfNextStakingPeriod(1),
                 // Trigger another round with a transaction with no fees (superuser payer)
+                // so the network should pay rewards
                 cryptoCreate("nobody").payingWith(GENESIS));
+    }
+
+    private static VisibleItemsValidator nodeRewardsValidator(@NonNull final LongSupplier expectedTotalRewards) {
+        return (spec, records) -> {
+            final var items = records.get(SELECTED_ITEMS_KEY);
+            assertNotNull(items, "No reward payments found");
+            assertEquals(1, items.size());
+            final var payment = items.getFirst();
+            assertEquals(CryptoTransfer, payment.function());
+            final var op = payment.body().getCryptoTransfer();
+            final long expectedPerNode = expectedTotalRewards.getAsLong();
+            final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
+                    .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
+            // node2 and node3 only expected to receive (node0 is system, node1 was inactive)
+            final long expectedDebit = -2 * expectedPerNode;
+            assertEquals(
+                    expectedDebit, bodyAdjustments.get(spec.startupProperties().getLong("accounts.nodeRewardAccount")));
+            // node2 credit
+            assertEquals(expectedPerNode, bodyAdjustments.get(5L));
+            // node3 credit
+            assertEquals(expectedPerNode, bodyAdjustments.get(6L));
+            System.out.println(op.getTransfers());
+            assertEquals(3, bodyAdjustments.size());
+            System.out.println(payment.transactionRecord());
+        };
     }
 }

@@ -301,7 +301,6 @@ public class HandleWorkflow {
             return;
         }
         final var lastNodeRewardsPaymentTime = classifyLastNodeRewardsPaymentTime(state, now);
-        System.out.println("lastNodeRewardsPaymentTime: " + lastNodeRewardsPaymentTime);
         if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.CURRENT_PERIOD) {
             return;
         }
@@ -338,7 +337,13 @@ public class HandleWorkflow {
             final long totalReward = Math.min(
                     rewardBalance, activeNodeIds.size() * Math.max(0, nodesConfig.minNodeReward() - prePaidRewards));
             if (totalReward > 0) {
-                systemTransactions.dispatchNodeRewards(state, now, activeNodeIds, totalReward, rewardsAccountId);
+                systemTransactions.dispatchNodeRewards(
+                        state,
+                        now,
+                        activeNodeIds,
+                        totalReward,
+                        rewardsAccountId,
+                        config.getConfigData(LedgerConfig.class).numSystemAccounts() + 1);
             }
         }
         // Record this as the last time node rewards were paid
@@ -380,9 +385,12 @@ public class HandleWorkflow {
                 .getConfiguration()
                 .getConfigData(StakingConfig.class)
                 .periodMins();
-        return isNextStakingPeriod(asInstant(lastPaidTime), now, stakePeriodMins)
-                ? LastNodeRewardsPaymentTime.PREVIOUS_PERIOD
-                : LastNodeRewardsPaymentTime.CURRENT_PERIOD;
+        final boolean isNextPeriod = isNextStakingPeriod(now, asInstant(lastPaidTime), stakePeriodMins);
+        final var answer =
+                isNextPeriod ? LastNodeRewardsPaymentTime.PREVIOUS_PERIOD : LastNodeRewardsPaymentTime.CURRENT_PERIOD;
+        System.out.println("lastPaidTime: " + asInstant(lastPaidTime) + ", now: " + now + ", isNextPeriod: "
+                + isNextPeriod + ", answer: " + answer);
+        return answer;
     }
 
     /**

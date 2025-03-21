@@ -505,14 +505,12 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         requireNonNull(nodeIds);
         nodeIds.forEach(node -> missedJudgeCounts.merge(node, 1L, Long::sum));
         roundsThisStakingPeriod++;
-        System.out.println("BOOP  - recording missing round judges (rounds=" + roundsThisStakingPeriod + ")");
     }
 
     @Override
     public void resetNodeRewards() {
         missedJudgeCounts.clear();
         roundsThisStakingPeriod = 0;
-        System.out.println("BOOP  - resetting node rewards");
     }
 
     /**
