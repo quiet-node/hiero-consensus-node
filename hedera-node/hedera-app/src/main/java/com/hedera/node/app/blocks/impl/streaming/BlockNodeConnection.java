@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager.blockNodeName;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
@@ -8,6 +9,7 @@ import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
 import org.apache.logging.log4j.LogManager;
@@ -40,14 +42,12 @@ public class BlockNodeConnection {
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
-        logger.info("BlockNodeConnection {} INITIALIZED", BlockNodeConnectionManager.blockNodeName(nodeConf));
+        logger.info("BlockNodeConnection {} INITIALIZED", blockNodeName(nodeConf));
     }
 
     public void establishStream() {
         if (requestObserver != null) {
-            logger.error(
-                    "Stream is already established for block node {}",
-                    BlockNodeConnectionManager.blockNodeName(nodeConf));
+            logger.error("Stream is already established for block node {}", blockNodeName(nodeConf));
             return;
         }
 
@@ -89,14 +89,20 @@ public class BlockNodeConnection {
 
     private void handleStreamFailure(Throwable t) {
         isActive = false;
+
+        final Status status = Status.fromThrowable(t);
+        logger.error("Error in block stream to node {}: ({})", blockNodeName(getNodeConfig()), status, t);
+
         blockNodeConnectionManager.handleConnectionError(this, t);
     }
 
     private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
+        isActive = false;
         logger.info(
                 "Received end of stream status {} for block number {}",
                 endOfStream.getStatus(),
                 endOfStream.getBlockNumber());
+
         if (!endOfStream.getStatus().equals(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS)) {
             blockNodeConnectionManager.handleStreamError(this, endOfStream);
         } else {
@@ -105,7 +111,9 @@ public class BlockNodeConnection {
     }
 
     private void handleGracefulClose() {
-        logger.info("Received end of stream for block node {}", BlockNodeConnectionManager.blockNodeName(nodeConf));
+        isActive = false;
+        logger.info("Received end of stream for block node {}", blockNodeName(nodeConf));
+
         blockNodeConnectionManager.handleEndOfStreamSuccess(this);
     }
 
@@ -119,11 +127,8 @@ public class BlockNodeConnection {
             requireNonNull(request);
             requestObserver.onNext(request);
         } else {
-            logger.error(
-                    "Cannot send request to block node {}: connection is not active",
-                    BlockNodeConnectionManager.blockNodeName(nodeConf));
-            throw new IllegalStateException(
-                    "Connection is not active for node " + BlockNodeConnectionManager.blockNodeName(nodeConf));
+            logger.error("Cannot send request to block node {}: connection is not active", blockNodeName(nodeConf));
+            throw new IllegalStateException("Connection is not active for node " + blockNodeName(nodeConf));
         }
     }
 

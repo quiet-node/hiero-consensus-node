@@ -2,6 +2,7 @@
 package com.hedera.node.app.blocks.impl.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -56,14 +57,14 @@ class BlockNodeConnectionTest {
 
     @BeforeEach
     public void setUp() {
+        given(nodeConfig.address()).willReturn("localhost");
+        given(nodeConfig.port()).willReturn(12345);
+
         blockNodeConnection = new BlockNodeConnection(nodeConfig, grpcServiceClient, blockNodeConnectionManager);
     }
 
     @Test
     void testNewBlockNodeConnection() {
-        given(nodeConfig.address()).willReturn("localhost");
-        given(nodeConfig.port()).willReturn(12345);
-
         assertEquals(nodeConfig, blockNodeConnection.getNodeConfig());
         assertFalse(blockNodeConnection.isActive());
         assertThat(logCaptor.infoLogs()).contains("BlockNodeConnection localhost:12345 INITIALIZED");
@@ -92,7 +93,8 @@ class BlockNodeConnectionTest {
     void testSendRequest_NotActiveConnection() {
         assertFalse(blockNodeConnection.isActive());
 
-        blockNodeConnection.sendRequest(PublishStreamRequest.getDefaultInstance());
+        assertThatExceptionOfType(IllegalStateException.class)
+                .isThrownBy(() -> blockNodeConnection.sendRequest(PublishStreamRequest.getDefaultInstance()));
 
         verifyNoInteractions(requestObserver);
     }
@@ -136,7 +138,7 @@ class BlockNodeConnectionTest {
                 .build();
         capturedObserver.onNext(response);
 
-        assertThat(logCaptor.infoLogs()).contains("Block acknowledgment received for block 1234");
+        assertThat(logCaptor.infoLogs()).contains("Block acknowledgement received for block 1234");
     }
 
     @Test
@@ -196,13 +198,13 @@ class BlockNodeConnectionTest {
 
         capturedObserver.onError(new StatusRuntimeException(Status.ABORTED));
 
+        assertThat(logCaptor.errorLogs()).isNotEmpty();
         assertThat(logCaptor.errorLogs())
                 .matches(
                         logs -> logs.getFirst()
                                 .startsWith(
-                                        "Error in block node stream localhost:12345: Status{code=ABORTED, description=null, cause=null} io.grpc.StatusRuntimeException: ABORTED"));
+                                        "Error in block stream to node localhost:12345: (Status{code=ABORTED, description=null, cause=null}) io.grpc.StatusRuntimeException: ABORTED"));
         assertFalse(blockNodeConnection.isActive());
         verify(blockNodeConnectionManager).handleConnectionError(eq(blockNodeConnection), notNull());
-        verify(blockNodeConnectionManager).scheduleReconnect(blockNodeConnection);
     }
 }

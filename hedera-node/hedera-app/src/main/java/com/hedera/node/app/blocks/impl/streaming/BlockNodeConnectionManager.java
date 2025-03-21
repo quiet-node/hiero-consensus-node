@@ -15,7 +15,6 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import io.grpc.Status;
 import io.helidon.common.tls.Tls;
 import io.helidon.webclient.grpc.GrpcClient;
 import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
@@ -32,6 +31,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -114,14 +114,7 @@ public class BlockNodeConnectionManager {
     public void handleEndOfStreamSuccess(
             @NonNull final BlockNodeConnection connection, @Nullable final Long blockNumber) {
         requireNonNull(connection);
-
         updateLatestBlock(connection, blockNumber);
-
-        disconnectFromNode(connection);
-
-        if (connection.isActive()) {
-            connection.close();
-        }
     }
 
     static String blockNodeName(@Nullable final BlockNodeConfig node) {
@@ -143,14 +136,10 @@ public class BlockNodeConnectionManager {
      * @param connection the connection that received the error
      * @param thrown the error that occurred
      */
-    public void handleConnectionError(@NonNull final BlockNodeConnection connection, @NonNull final Throwable thrown) {
-        final Status status = Status.fromThrowable(thrown);
-        logger.error(
-                "Error in block stream to node {} (status {})",
-                blockNodeName(connection.getNodeConfig()),
-                status,
-                thrown);
-
+    public void handleConnectionError(
+            @NonNull final BlockNodeConnection connection,
+            // This isn't used yet, but will be once the code for responding to specific error codes is introduced
+            @SuppressWarnings("unused") @NonNull final Throwable thrown) {
         synchronized (connectionLock) {
             // If available, make the secondary connection the primary connection
             if (connection == primary && !isRetrying(secondary) && !secondaryActive()) {
@@ -190,10 +179,9 @@ public class BlockNodeConnectionManager {
                 blockNodeName(connection.getNodeConfig()),
                 endOfStream.getStatus());
 
-        disconnectFromNode(connection);
-        if (primary == connection) {
+        if (Objects.equals(primary, connection)) {
             primary = null;
-        } else if (secondary == connection) {
+        } else if (Objects.equals(secondary, connection)) {
             secondary = null;
         }
 
@@ -400,16 +388,6 @@ public class BlockNodeConnectionManager {
         } catch (URISyntaxException | RuntimeException e) {
             logger.error("Failed to connect to block node {}", blockNodeName(node), e);
         }
-    }
-
-    private void disconnectFromNode(@NonNull BlockNodeConnection connection) {
-        synchronized (connectionLock) {
-            if (connection.isActive()) {
-                connection.close();
-            }
-        }
-
-        logger.info("Disconnected from block node {}", connection.getNodeConfig());
     }
 
     private Optional<BlockNodeConnection> getActiveConnection() {

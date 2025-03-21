@@ -16,7 +16,6 @@ import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
-import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.node.internal.network.BlockNodeConfig;
@@ -38,25 +37,16 @@ class BlockNodeConnectionManagerTest {
     private LogCaptor logCaptor;
 
     @LoggingSubject
-    BlockNodeConnectionManager blockNodeConnectionManager;
+    private BlockNodeConnectionManager blockNodeConnectionManager;
 
     @Mock
-    ConfigProvider mockConfigProvider;
+    private ConfigProvider mockConfigProvider;
 
     @Mock
     private Supplier<Void> mockSupplier;
 
     @Mock
-    BlockNodeConnection mockConnection;
-
-    @Mock
-    private BlockNodeConnectionConfig mockBlockNodeConnectionConfig;
-
-    @Mock
-    private BlockStreamConfig mockBlockStreamConfig;
-
-    @Mock
-    private BlockNodeConfigExtractor mockNodeConfigExtractor;
+    private BlockNodeConnection mockConnection;
 
     @BeforeEach
     public void setUp() {
