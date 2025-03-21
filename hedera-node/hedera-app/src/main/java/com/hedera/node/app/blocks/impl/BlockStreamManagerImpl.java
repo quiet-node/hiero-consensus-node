@@ -126,10 +126,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     @Nullable
     private PreTxnItems preTxnItems;
     // The number of rounds so far in the staking period
-    private long roundsSoFarInStakingPeriod = 0;
+    private long roundsThisStakingPeriod = 0;
     // The number of rounds each node missed creating judge. This is updated from state at the start of every round
     // and will be written back to state at the end of every block
-    private SortedMap<Long, Long> missedNodeJudges;
+    private final SortedMap<Long, Long> missedJudgeCounts = new TreeMap<>();
 
     /**
      * Represents the part of a block preceding a possible first transaction; we defer writing this part until
@@ -259,8 +259,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
             // Update the node reward info from state
             final var nodeRewardInfo = nodeRewardInfoFrom(state);
-            roundsSoFarInStakingPeriod = nodeRewardInfo.numRoundsInStakingPeriod();
-            missedNodeJudges = missedNodeJudgesFrom(nodeRewardInfo.nodeActivities());
+            roundsThisStakingPeriod = nodeRewardInfo.numRoundsInStakingPeriod();
+            missedJudgeCounts.clear();
+            nodeRewardInfo.nodeActivities().forEach(activity -> missedJudgeCounts.put(activity.nodeId(), activity.numMissedJudgeRounds()));
 
             inputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
             outputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
@@ -438,7 +439,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private void updateNodeRewardState(final @NonNull State state) {
         final var writableTokenState = state.getWritableStates(TokenService.NAME);
         final var nodeRewardsState = writableTokenState.<NodeRewards>getSingleton(NODE_REWARDS_KEY);
-        final var nodeActivities = missedNodeJudges.entrySet().stream()
+        final var nodeActivities = missedJudgeCounts.entrySet().stream()
                 .map(entry -> NodeActivity.newBuilder()
                         .nodeId(entry.getKey())
                         .numMissedJudgeRounds(entry.getValue())
@@ -446,7 +447,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 .toList();
         nodeRewardsState.put(NodeRewards.newBuilder()
                 .nodeActivities(nodeActivities)
-                .numRoundsInStakingPeriod(roundsSoFarInStakingPeriod)
+                .numRoundsInStakingPeriod(roundsThisStakingPeriod)
                 .build());
         ((CommittableWritableStates) writableTokenState).commit();
     }
@@ -485,9 +486,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     }
 
     @Override
-    public void recordMissingJudges(final List<Long> judges) {
-        judges.forEach(node -> this.missedNodeJudges.merge(node, 1L, Long::sum));
-        roundsSoFarInStakingPeriod++;
+    public void recordMissingRoundJudges(@NonNull final List<Long> nodeIds) {
+        requireNonNull(nodeIds);
+        nodeIds.forEach(node -> missedJudgeCounts.merge(node, 1L, Long::sum));
+        roundsThisStakingPeriod++;
     }
 
     /**
@@ -590,17 +592,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final var nodeRewardInfoState =
                 state.getReadableStates(TokenService.NAME).<NodeRewards>getSingleton(NODE_REWARDS_KEY);
         return requireNonNull(nodeRewardInfoState.get());
-    }
-
-    /**
-     * Gets the missed node judges map from the given node activities.
-     * @param nodeActivities the node activities
-     * @return the missed node judges map
-     */
-    private SortedMap<Long, Long> missedNodeJudgesFrom(final List<NodeActivity> nodeActivities) {
-        return nodeActivities.stream()
-                .collect(Collectors.toMap(
-                        NodeActivity::nodeId, NodeActivity::numMissedJudgeRounds, (a, b) -> b, TreeMap::new));
     }
 
     private boolean shouldCloseBlock(final long roundNumber, final int roundsPerBlock) {

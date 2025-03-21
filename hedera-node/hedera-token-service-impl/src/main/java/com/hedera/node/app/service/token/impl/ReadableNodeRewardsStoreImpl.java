@@ -3,6 +3,7 @@ package com.hedera.node.app.service.token.impl;
 
 import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.state.token.NodeActivity;
@@ -12,8 +13,9 @@ import com.hedera.node.app.service.token.ReadableNodeRewardsStore;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
+
+import java.math.BigInteger;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Default implementation of {@link ReadableNetworkStakingRewardsStore}.
@@ -39,30 +41,22 @@ public class ReadableNodeRewardsStoreImpl implements ReadableNodeRewardsStore {
         return requireNonNull(nodeRewardsState.get());
     }
 
-    public long numRoundsInStakingPeriod() {
-        return requireNonNull(nodeRewardsState.get()).numRoundsInStakingPeriod();
-    }
-
     /**
-     * Returns the list of active node ids based on the active percent. A node is considered active if it has missed
-     * less than the active percent of the total number of rounds in the staking period.
+     * Returns the list of active node ids based on the minimum percentage of rounds an "active" node would have
+     * created judges in.
      * @param rosterEntries The list of roster entries.
-     * @param activePercent The active percent.
+     * @param minJudgeRoundPercentage The minimum percentage of rounds an "active" node would have created judges in
      * @return The list of active node ids.
      */
-    public List<Long> getActiveNodeIds(final List<RosterEntry> rosterEntries, final int activePercent) {
-        final var nodeActivities = get().nodeActivities().stream()
-                .collect(Collectors.toMap(NodeActivity::nodeId, NodeActivity::numMissedJudgeRounds));
-
+    public List<Long> getActiveNodeIds(@NonNull final List<RosterEntry> rosterEntries, final int minJudgeRoundPercentage) {
+        requireNonNull(rosterEntries);
+        final long roundsLastPeriod = requireNonNull(nodeRewardsState.get()).numRoundsInStakingPeriod();
+        final long maxMissedJudges = BigInteger.valueOf(roundsLastPeriod).multiply(BigInteger.valueOf(100 - minJudgeRoundPercentage)).divide(BigInteger.valueOf(100)).longValueExact();
+        final var missedJudgeCounts = get().nodeActivities().stream()
+                .collect(toMap(NodeActivity::nodeId, NodeActivity::numMissedJudgeRounds));
         return rosterEntries.stream()
                 .map(RosterEntry::nodeId)
-                .filter(nodeId -> !nodeActivities.containsKey(nodeId)
-                        || isActive(nodeActivities.get(nodeId), activePercent, numRoundsInStakingPeriod()))
+                .filter(nodeId -> missedJudgeCounts.getOrDefault(nodeId, 0L) <= maxMissedJudges)
                 .toList();
-    }
-
-    private boolean isActive(
-            final long numRoundsMissedNodeJudges, final int activePercent, final long numRoundsInStakingPeriod) {
-        return numRoundsMissedNodeJudges <= numRoundsInStakingPeriod * activePercent / 100;
     }
 }

@@ -41,7 +41,7 @@ public class WritableNodeRewardsStoreImpl extends ReadableNodeRewardsStoreImpl {
         nodeRewardsState.put(nodeRewards);
     }
 
-    public void reset() {
+    public void resetCountsForNewPaymentPeriod() {
         nodeRewardsState.put(NodeRewards.newBuilder()
                 .numRoundsInStakingPeriod(0)
                 .nodeActivities(NodeActivity.DEFAULT)

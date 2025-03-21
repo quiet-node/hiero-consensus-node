@@ -74,5 +74,5 @@ message NetworkStakingRewards {
      * The last time a node reward payment was made. This will be set at the
      * end of a staking period.
      */
-    proto.Timestamp last_node_reward_payment = 5;
+    proto.Timestamp last_node_reward_payments_time = 5;
 }

@@ -145,7 +145,7 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
      * accumulated and recorded in node rewards state for each block. This also increments the number
      * of rounds in the staking period.
      *
-     * @param missedNodeJudges the nodes that missed creating judges
+     * @param nodeIds the nodes that missed creating judges
      */
-    void recordMissingJudges(List<Long> missedNodeJudges);
+    void recordMissingRoundJudges(@NonNull List<Long> nodeIds);
 }

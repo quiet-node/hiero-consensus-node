@@ -15,6 +15,7 @@ import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartU
 import static com.hedera.node.app.state.merkle.VersionUtils.isSoOrdered;
 import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
 import static com.hedera.node.app.workflows.handle.TransactionType.POST_UPGRADE_TRANSACTION;
+import static com.hedera.node.app.workflows.handle.steps.StakePeriodChanges.isNextStakingPeriod;
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
@@ -272,7 +273,7 @@ public class HandleWorkflow {
             requireNonNull(systemEntitiesCreatedFlag).set(true);
         }
 
-        payNodeRewards(state, round.getConsensusTimestamp());
+        rewardActiveNodesIfNewPeriod(state, round.getConsensusTimestamp());
         reconcileTssState(state, round.getConsensusTimestamp());
         recordCache.resetRoundReceipts();
         try {
@@ -284,85 +285,74 @@ public class HandleWorkflow {
         }
     }
 
-    private void payNodeRewards(final @NonNull State state, final @NonNull Instant now) {
-        if (!checkIfNextStakingPeriod(state, now)) {
+    /**
+     * If the consensus time just crossed a stake period, rewards sufficiently active nodes for the previous period.
+     * @param state the state
+     * @param now the current consensus time
+     */
+    private void rewardActiveNodesIfNewPeriod(@NonNull final State state, @NonNull final Instant now) {
+        final var lastNodeRewardsPaymentTime = classifyLastNodeRewardsPaymentTime(state, now);
+        if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.CURRENT_PERIOD) {
             return;
         }
         final var config = configProvider.getConfiguration();
-        final var nodeConfig = config.getConfigData(NodesConfig.class);
-        final var accountsConfig = config.getConfigData(AccountsConfig.class);
+        final var writableStates = state.getWritableStates(TokenService.NAME);
+        // Don't try to pay rewards in the genesis edge case
+        if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.PREVIOUS_PERIOD) {
+            // Identify the nodes active in the last staking period
+            final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+            final var nodeRewardStore = new WritableNodeRewardsStoreImpl(writableStates);
+            final var nodeConfig = config.getConfigData(NodesConfig.class);
+            final var activeNodeIds =
+                    nodeRewardStore.getActiveNodeIds(requireNonNull(rosterStore.getActiveRoster()).rosterEntries(), nodeConfig.activeRoundsPercent());
 
-        final var tokenWritableStates = state.getWritableStates(TokenService.NAME);
-        final var entityIdState = state.getReadableStates(EntityIdService.NAME);
-        final var rosterState = state.getReadableStates(RosterService.NAME);
+            // And pay whatever rewards the network can afford
+            final var rewardsAccountId = entityIdFactory.newAccountId(config.getConfigData(AccountsConfig.class).nodeRewardAccount());
+            final var accountStore = new ReadableAccountStoreImpl(writableStates, new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME)));
+            final long rewardBalance = requireNonNull(accountStore.getAccountById(rewardsAccountId))
+                    .tinybarBalance();
+            // TODO: Calculate the average node fees collected
+            final long avgNodeFeesEarned = 0L;
+            final long totalReward = Math.min(rewardBalance, activeNodeIds.size() * Math.max(0, nodeConfig.minNodeReward() - avgNodeFeesEarned));
+            if (totalReward > 0) {
+                systemTransactions.dispatchNodeRewards(state, now, activeNodeIds, totalReward, rewardsAccountId);
+            }
+            nodeRewardStore.resetCountsForNewPaymentPeriod();
+        }
 
-        final var nodeRewardStore = new WritableNodeRewardsStoreImpl(tokenWritableStates);
-        final var stakingRewardsStore = new WritableNetworkStakingRewardsStore(tokenWritableStates);
-        final var entityIdStore = new ReadableEntityIdStoreImpl(entityIdState);
-        final var accountStore = new ReadableAccountStoreImpl(tokenWritableStates, entityIdStore);
-        final var rosterStore = new ReadableRosterStoreImpl(rosterState);
-
-        final var activeRoster = requireNonNull(rosterStore.getActiveRoster());
-        final var activeNodeIds =
-                nodeRewardStore.getActiveNodeIds(activeRoster.rosterEntries(), nodeConfig.activeRoundsPercent());
-
-        final var nodeRewardsAccountId = entityIdFactory.newAccountId(accountsConfig.nodeRewardAccount());
-        final var payerBalance = requireNonNull(accountStore.getAccountById(nodeRewardsAccountId))
-                .tinybarBalance();
-        // TODO: Calculate the average node fees collected
-        final var avgNodeFeesCollected = 0L;
-        final var totalReward = calculateTotalReward(activeNodeIds, avgNodeFeesCollected, payerBalance, nodeConfig);
-        systemTransactions.dispatchNodeRewards(state, now, activeNodeIds, totalReward, nodeRewardsAccountId);
-        // reset the node activities and number of rounds in staking period
-        nodeRewardStore.reset();
-
-        // update the last node reward payment time
-        final var stakingRewards = stakingRewardsStore.get();
-        final var copy = stakingRewards.copyBuilder();
-        stakingRewardsStore.put(copy.lastNodeRewardPayment(asTimestamp(now)).build());
-
-        ((CommittableWritableStates) tokenWritableStates).commit();
+        // Record this as the last time node rewards were paid
+        final var rewardsStore = new WritableNetworkStakingRewardsStore(writableStates);
+        rewardsStore.put(rewardsStore.get().copyBuilder().lastNodeRewardPaymentsTime(asTimestamp(now)).build());
+        ((CommittableWritableStates) writableStates).commit();
     }
 
     /**
-     * Calculates the total reward to be paid to the active nodes. The total reward to be paid is the minimum of the
-     * total reward to be paid and the node reward account balance.
-     *
-     * @param activeNodeIds       the list of active node ids
-     * @param avgNodeFeeCollected the average node fee collected
-     * @param payerBalance        the balance of the node reward account
-     * @param nodeConfig          the node configuration
-     * @return the total reward to be paid
+     * The possible times at which the last time node rewards were paid.
      */
-    private static long calculateTotalReward(
-            final List<Long> activeNodeIds,
-            final long avgNodeFeeCollected,
-            final long payerBalance,
-            final NodesConfig nodeConfig) {
-        final var rewardPerNode = Math.min(nodeConfig.minNodeReward() - avgNodeFeeCollected, 0L);
-        final var totalRewardToBePaid = activeNodeIds.size() * rewardPerNode;
-        return Math.min(totalRewardToBePaid, payerBalance);
+    private enum LastNodeRewardsPaymentTime {
+        NEVER,
+        PREVIOUS_PERIOD,
+        CURRENT_PERIOD,
     }
 
     /**
-     * Checks if the current consensus time has crossed the staking period boundary.
+     * Checks if the last time node rewards were paid was a different staking period.
      * @param state the state
-     * @param currentTime the current time
-     * @return {@code true} if the current consensus time has crossed the staking period boundary,
-     * {@code false} otherwise
+     * @param now the current time
+     * @return whether the last time node rewards were paid was a different staking period
      */
-    private boolean checkIfNextStakingPeriod(final State state, final Instant currentTime) {
+    private LastNodeRewardsPaymentTime classifyLastNodeRewardsPaymentTime(@NonNull final State state, @NonNull final Instant now) {
         final var networkRewardsStore =
                 new ReadableNetworkStakingRewardsStoreImpl(state.getReadableStates(TokenService.NAME));
-        final var lastPaidTime = networkRewardsStore.get().lastNodeRewardPayment();
-        final var stakePeriodMins = configProvider
+        final var lastPaidTime = networkRewardsStore.get().lastNodeRewardPaymentsTime();
+        if (lastPaidTime == null) {
+            return LastNodeRewardsPaymentTime.NEVER;
+        }
+        final long stakePeriodMins = configProvider
                 .getConfiguration()
                 .getConfigData(StakingConfig.class)
                 .periodMins();
-
-        // On upgrade, the last paid time will be null, so we should use the current time as the last paid time
-        return StakePeriodChanges.isNextStakingPeriod(
-                lastPaidTime == null ? currentTime : asInstant(lastPaidTime), currentTime, stakePeriodMins);
+        return isNextStakingPeriod(asInstant(lastPaidTime), now, stakePeriodMins) ? LastNodeRewardsPaymentTime.PREVIOUS_PERIOD : LastNodeRewardsPaymentTime.CURRENT_PERIOD;
     }
 
     /**
