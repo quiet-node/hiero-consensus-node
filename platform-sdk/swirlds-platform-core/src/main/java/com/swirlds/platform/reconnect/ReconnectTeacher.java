@@ -184,13 +184,6 @@ public class ReconnectTeacher {
                         The following state will be sent to the learner:
                         {}""",
                 () -> platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
-
-        logger.info(
-                RECONNECT.getMarker(),
-                """
-                        The following PLATFORM state will be sent to the learner:
-                        {}""",
-                () -> platformStateFacade.platformStateOf(signedState.getState()));
     }
 
     private void logReconnectFinish() {

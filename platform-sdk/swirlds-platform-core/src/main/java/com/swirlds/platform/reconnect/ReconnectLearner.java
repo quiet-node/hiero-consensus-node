@@ -2,7 +2,6 @@
 package com.swirlds.platform.reconnect;
 
 import static com.swirlds.common.formatting.StringFormattingUtils.formattedList;
-import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.logging.legacy.LogMarker.RECONNECT;
 
 import com.hedera.hapi.node.state.roster.Roster;
@@ -17,7 +16,6 @@ import com.swirlds.logging.legacy.payload.ReconnectDataUsagePayload;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.metrics.ReconnectMetrics;
 import com.swirlds.platform.network.Connection;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -158,32 +156,6 @@ public class ReconnectLearner {
         try {
             receiveSignatures();
             reservedSignedState = reconnect();
-
-            final var signedState = reservedSignedState.get();
-            logger.error(
-                    EXCEPTION.getMarker(),
-                    "(SHOULD BE RESERVED AND SIGNED) isVerifiable={}, sigSet#size={}, signingWeight={}, total weight={}, roster={}",
-                    signedState.isVerifiable(),
-                    signedState.getSigSet().size(),
-                    signedState.getSigningWeight(),
-                    RosterUtils.computeTotalWeight(roster),
-                    roster);
-
-            try {
-                signedState.pruneInvalidSignatures(roster);
-                logger.error(
-                        EXCEPTION.getMarker(),
-                        "(PRUNED INVALID SIGNATURES) isVerifiable={}, sigSet#size={}, signingWeight={}, total weight={}, roster={}",
-                        signedState.isVerifiable(),
-                        signedState.getSigSet().size(),
-                        signedState.getSigningWeight(),
-                        RosterUtils.computeTotalWeight(roster),
-                        roster);
-                signedState.throwIfNotVerifiable();
-            } catch (final Exception e) {
-                logger.error(EXCEPTION.getMarker(), "STATE IS NOT VERIFIABLE");
-            }
-
             validator.validate(reservedSignedState.get(), roster, stateValidationData);
             ReconnectUtils.endReconnectHandshake(connection);
             return reservedSignedState;
@@ -251,22 +223,8 @@ public class ReconnectLearner {
                 false,
                 false,
                 platformStateFacade);
-
-        logger.info(
-                RECONNECT.getMarker(),
-                """
-                        The following state received from learner:
-                        {}""",
-                () -> platformStateFacade.getInfoString(newSignedState.getState(), 5));
-
         newSignedState.init(platformContext);
         SignedStateFileReader.registerServiceStates(newSignedState);
-
-        logger.info(
-                RECONNECT.getMarker(),
-                "Received platform state: {}",
-                platformStateFacade.platformStateOf(merkleNodeState));
-
         newSignedState.setSigSet(sigSet);
 
         final double mbReceived = connection.getDis().getSyncByteCounter().getMebiBytes();
