@@ -46,6 +46,7 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.transaction.ThrottleDefinitions;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.hapi.platform.state.Judge;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.hapi.util.HapiUtils;
 import com.hedera.hapi.util.UnknownHederaFunctionality;
@@ -153,6 +154,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.InstantSource;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -162,6 +164,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -1308,24 +1311,26 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     }
 
     private boolean manageBlockEndRound(@NonNull final Round round, @NonNull final State state) {
-        final var missedNodeJudges = getMissedNodeJudgesForRound(state);
-        daggerApp.blockStreamManager().updateNodeRewardInfo(missedNodeJudges);
+        // Record any missed node judges for this round from the platform state
+        daggerApp.blockStreamManager().recordMissingJudges(getMissedNodeJudgesForRound(state));
         return daggerApp.blockStreamManager().endRound(state, round.getRoundNum());
     }
 
+    /**
+     * Returns the node IDs of the nodes that did not create a judge in the current round.
+     * @param state the state
+     * @return the node IDs of the nodes that did not create a judge in the current round
+     */
     private List<Long> getMissedNodeJudgesForRound(final State state) {
         final var readablePlatformState =
                 state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
-        final var rosterState = state.getReadableStates(RosterService.NAME);
-        final var rosterStore = new ReadableRosterStoreImpl(rosterState);
-        final var nodeIds = requireNonNull(rosterStore.getActiveRoster()).rosterEntries().stream()
+        final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+        final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judges().stream()
+                .map(Judge::creatorId)
+                .collect(Collectors.toCollection(HashSet::new));
+        return requireNonNull(rosterStore.getActiveRoster()).rosterEntries().stream()
                 .map(RosterEntry::nodeId)
-                .toList();
-        final var judges =
-                requireNonNull(readablePlatformState.get()).consensusSnapshot().judges();
-        // find all the entries of nodeIds that are not in judges
-        return nodeIds.stream()
-                .filter(nodeId -> judges.stream().noneMatch(judge -> judge.creatorId() == nodeId))
+                .filter(nodeId -> !judges.contains(nodeId))
                 .toList();
     }
 

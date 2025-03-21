@@ -8,7 +8,7 @@ import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STAT
 import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.parseEd25519NodeAdminKeysFrom;
 import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.dispatchSynthFileUpdate;
 import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.parseConfigList;
-import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.dispatchSynthCryptoTransfer;
+import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.dispatchSynthNodeRewards;
 import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.spi.workflows.DispatchOptions.independentDispatch;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
@@ -84,7 +84,6 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -171,7 +170,7 @@ public class SystemTransactions {
     /**
      * Sets up genesis state for the system.
      *
-     * @param now the current time
+     * @param now   the current time
      * @param state the state to set up
      */
     public void doGenesisSetup(@NonNull final Instant now, @NonNull final State state) {
@@ -356,6 +355,15 @@ public class SystemTransactions {
         }
     }
 
+    /**
+     * Dispatches a synthetic node reward crypto transfer for the given active node accounts.
+     *
+     * @param state                The state.
+     * @param now                  The current time.
+     * @param activeNodeIds        The list of active node ids.
+     * @param totalReward          The total reward.
+     * @param nodeRewardsAccountId The node rewards account id.
+     */
     public void dispatchNodeRewards(
             final State state,
             final Instant now,
@@ -363,20 +371,18 @@ public class SystemTransactions {
             final long totalReward,
             final AccountID nodeRewardsAccountId) {
         final var systemContext = newSystemContext(now, state, dispatch -> {});
-        final var networkInfo = systemContext.networkInfo();
         final var activeNodeAccountIds = activeNodeIds.stream()
-                .map(id -> requireNonNull(networkInfo.nodeInfo(id)))
-                .map(NodeInfo::accountId)
+                .map(id ->
+                        requireNonNull(systemContext.networkInfo().nodeInfo(id)).accountId())
+                .filter(id -> id.accountNum() > 100)
                 .toList();
-        final List<List<AccountID>> chunks = new ArrayList<>();
-        for (int i = 0; i < activeNodeAccountIds.size(); i += 10) {
-            chunks.add(activeNodeAccountIds.subList(i, Math.min(i + 10, activeNodeAccountIds.size())));
+        if (activeNodeAccountIds.isEmpty()) {
+            log.info("No active node accounts found for node rewards dispatch");
+            return;
         }
         final var rewardPerNode = totalReward / activeNodeAccountIds.size();
-        for (List<AccountID> chunk : chunks) {
-            final var debitAmount = chunks.size() * rewardPerNode;
-            dispatchSynthCryptoTransfer(systemContext, chunk, nodeRewardsAccountId, rewardPerNode, debitAmount);
-        }
+        dispatchSynthNodeRewards(
+                systemContext, activeNodeAccountIds, nodeRewardsAccountId, rewardPerNode, -totalReward);
     }
 
     /**
@@ -533,13 +539,13 @@ public class SystemTransactions {
      * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
      * no other side effects.
      *
-     * @param state the state to execute the transaction against
-     * @param now the time to execute the transaction at
-     * @param creatorInfo the node info of the creator of the transaction
-     * @param payerId the payer of the transaction
-     * @param body the transaction to execute
+     * @param state         the state to execute the transaction against
+     * @param now           the time to execute the transaction at
+     * @param creatorInfo   the node info of the creator of the transaction
+     * @param payerId       the payer of the transaction
+     * @param body          the transaction to execute
      * @param nextEntityNum if not zero, the next entity number to use for the transaction
-     * @param onSuccess the action to take after the transaction is successfully dispatched
+     * @param onSuccess     the action to take after the transaction is successfully dispatched
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeSystem(

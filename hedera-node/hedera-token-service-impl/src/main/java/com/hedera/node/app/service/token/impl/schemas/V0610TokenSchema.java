@@ -42,26 +42,39 @@ public class V0610TokenSchema extends Schema {
         }
     }
 
-    public static void dispatchSynthCryptoTransfer(
+    /**
+     * Dispatches a synthetic node reward crypto transfer.
+     * @param systemContext The system context.
+     * @param activeNodeAccountIds The list of node account ids.
+     * @param payerId The payer account id.
+     * @param creditPerNode The credit per node.
+     * @param payerDebit The debit amount.
+     */
+    public static void dispatchSynthNodeRewards(
             @NonNull final SystemContext systemContext,
-            @NonNull final List<AccountID> nodeAccountIds,
+            @NonNull final List<AccountID> activeNodeAccountIds,
             @NonNull final AccountID payerId,
             final long creditPerNode,
-            final long debitAmount) {
-        systemContext.dispatchAdmin(b -> b.cryptoTransfer(CryptoTransferTransactionBody.newBuilder()
+            final long payerDebit) {
+        systemContext.dispatchAdmin(b -> b.memo("Synthetic node rewards")
+                .cryptoTransfer(CryptoTransferTransactionBody.newBuilder()
                         .transfers(TransferList.newBuilder()
-                                .accountAmounts(accountAmountsFrom(nodeAccountIds, creditPerNode))
-                                .accountAmounts(asAccountAmount(payerId, debitAmount))
+                                .accountAmounts(accountAmountsFrom(activeNodeAccountIds, creditPerNode))
+                                .accountAmounts(asAccountAmount(payerId, payerDebit))
                                 .build()))
                 .build());
     }
 
-    private static List<AccountAmount> accountAmountsFrom(@NonNull final List<AccountID> nodeIds, final long amount) {
-        return nodeIds.stream()
-                .map(nodeId -> AccountAmount.newBuilder()
-                        .accountID(nodeId)
-                        .amount(amount)
-                        .build())
+    /**
+     * Creates a list of {@link AccountAmount} from a list of {@link AccountID} and an amount.
+     * @param nodeAccountIds The list of node account ids.
+     * @param amount The amount.
+     * @return The list of {@link AccountAmount}.
+     */
+    private static List<AccountAmount> accountAmountsFrom(
+            @NonNull final List<AccountID> nodeAccountIds, final long amount) {
+        return nodeAccountIds.stream()
+                .map(nodeAccountId -> asAccountAmount(nodeAccountId, amount))
                 .toList();
     }
 }

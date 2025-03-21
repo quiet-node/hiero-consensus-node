@@ -9,11 +9,9 @@ import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
 import com.hedera.node.app.service.token.ReadableNetworkStakingRewardsStore;
 import com.hedera.node.app.service.token.ReadableNodeRewardsStore;
-import com.hedera.node.config.data.NodesConfig;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,31 +43,22 @@ public class ReadableNodeRewardsStoreImpl implements ReadableNodeRewardsStore {
         return requireNonNull(nodeRewardsState.get()).numRoundsInStakingPeriod();
     }
 
-    public Long calculateTotalReward(
-            final List<Long> activeNodeIds,
-            final long avgNodeFeeCollected,
-            final long payerBalance,
-            final NodesConfig nodeConfig) {
-        final var rewardPerNode = Math.min(nodeConfig.minNodeReward() - avgNodeFeeCollected, 0L);
-        final var totalRewardToBePaid = activeNodeIds.size() * rewardPerNode;
-        return Math.min(totalRewardToBePaid, payerBalance);
-    }
-
-    public List<Long> getActiveNodeIds(final List<RosterEntry> rosterEntries, final NodesConfig nodeConfig) {
-        final List<Long> activeNodeIds = new ArrayList<>();
-        final var activePercent = nodeConfig.activeRoundsPercent();
-
+    /**
+     * Returns the list of active node ids based on the active percent. A node is considered active if it has missed
+     * less than the active percent of the total number of rounds in the staking period.
+     * @param rosterEntries The list of roster entries.
+     * @param activePercent The active percent.
+     * @return The list of active node ids.
+     */
+    public List<Long> getActiveNodeIds(final List<RosterEntry> rosterEntries, final int activePercent) {
         final var nodeActivities = get().nodeActivities().stream()
                 .collect(Collectors.toMap(NodeActivity::nodeId, NodeActivity::numMissedJudgeRounds));
 
-        for (var entry : rosterEntries) {
-            if (!nodeActivities.containsKey(entry.nodeId())) {
-                activeNodeIds.add(entry.nodeId());
-            } else if (isActive(nodeActivities.get(entry.nodeId()), activePercent, numRoundsInStakingPeriod())) {
-                activeNodeIds.add(entry.nodeId());
-            }
-        }
-        return activeNodeIds;
+        return rosterEntries.stream()
+                .map(RosterEntry::nodeId)
+                .filter(nodeId -> !nodeActivities.containsKey(nodeId)
+                        || isActive(nodeActivities.get(nodeId), activePercent, numRoundsInStakingPeriod()))
+                .toList();
     }
 
     private boolean isActive(

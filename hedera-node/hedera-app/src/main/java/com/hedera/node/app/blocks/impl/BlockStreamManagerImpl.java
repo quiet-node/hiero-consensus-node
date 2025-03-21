@@ -74,6 +74,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
@@ -124,8 +125,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     // If not null, the part of the block preceding a possible first transaction
     @Nullable
     private PreTxnItems preTxnItems;
-
+    // The number of rounds so far in the staking period
     private long roundsSoFarInStakingPeriod = 0;
+    // The number of rounds each node missed creating judge. This is updated from state at the start of every round
+    // and will be written back to state at the end of every block
     private SortedMap<Long, Long> missedNodeJudges;
 
     /**
@@ -254,7 +257,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             blockHashManager.startBlock(blockStreamInfo, lastBlockHash);
             runningHashManager.startBlock(blockStreamInfo);
 
-            // Update the node reward info
+            // Update the node reward info from state
             final var nodeRewardInfo = nodeRewardInfoFrom(state);
             roundsSoFarInStakingPeriod = nodeRewardInfo.numRoundsInStakingPeriod();
             missedNodeJudges = missedNodeJudgesFrom(nodeRewardInfo.nodeActivities());
@@ -362,7 +365,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     asTimestamp(lastHandleTime)));
             ((CommittableWritableStates) writableState).commit();
 
-            // Update the judge info for node rewards
+            // Persist the judge info in node rewards
             updateNodeRewardState(state);
 
             worker.addItem(boundaryStateChangeListener.flushChanges());
@@ -424,6 +427,14 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         return closesBlock || lastNonEmptyRoundNumber == 0;
     }
 
+    /**
+     * Updates the node reward state in the given state. This method will be called at the end of every block.
+     * <p>
+     * This method updates the number of rounds in the staking period and the number of missed judge rounds for
+     * each node.
+     *
+     * @param state the state to update
+     */
     private void updateNodeRewardState(final @NonNull State state) {
         final var writableTokenState = state.getWritableStates(TokenService.NAME);
         final var nodeRewardsState = writableTokenState.<NodeRewards>getSingleton(NODE_REWARDS_KEY);
@@ -471,6 +482,12 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     @Override
     public @Nullable Bytes blockHashByBlockNumber(final long blockNo) {
         return blockHashManager.hashOfBlock(blockNo);
+    }
+
+    @Override
+    public void recordMissingJudges(final List<Long> judges) {
+        judges.forEach(node -> this.missedNodeJudges.merge(node, 1L, Long::sum));
+        roundsSoFarInStakingPeriod++;
     }
 
     /**
@@ -564,17 +581,26 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         return requireNonNull(blockStreamInfoState.get());
     }
 
+    /**
+     * Gets the node reward info state from the given state.
+     * @param state the state
+     * @return the node reward info state
+     */
     private @NonNull NodeRewards nodeRewardInfoFrom(@NonNull final State state) {
         final var nodeRewardInfoState =
                 state.getReadableStates(TokenService.NAME).<NodeRewards>getSingleton(NODE_REWARDS_KEY);
         return requireNonNull(nodeRewardInfoState.get());
     }
 
+    /**
+     * Gets the missed node judges map from the given node activities.
+     * @param nodeActivities the node activities
+     * @return the missed node judges map
+     */
     private SortedMap<Long, Long> missedNodeJudgesFrom(final List<NodeActivity> nodeActivities) {
-        final var missedRoundsMap = new TreeMap<Long, Long>();
-        nodeActivities.forEach(
-                nodeActivity -> missedRoundsMap.put(nodeActivity.nodeId(), nodeActivity.numMissedJudgeRounds()));
-        return missedRoundsMap;
+        return nodeActivities.stream()
+                .collect(Collectors.toMap(
+                        NodeActivity::nodeId, NodeActivity::numMissedJudgeRounds, (a, b) -> b, TreeMap::new));
     }
 
     private boolean shouldCloseBlock(final long roundNumber, final int roundsPerBlock) {
@@ -835,11 +861,5 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 .completeOnTimeout(null, timeout.toSeconds(), TimeUnit.SECONDS)
                 .join();
         log.fatal("Block stream fatal shutdown complete");
-    }
-
-    @Override
-    public void updateNodeRewardInfo(final List<Long> missedNodeJudges) {
-        missedNodeJudges.forEach(node -> this.missedNodeJudges.merge(node, 1L, Long::sum));
-        roundsSoFarInStakingPeriod++;
     }
 }

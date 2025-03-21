@@ -147,5 +147,5 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
      *
      * @param missedNodeJudges the nodes that missed creating judges
      */
-    void updateNodeRewardInfo(List<Long> missedNodeJudges);
+    void recordMissingJudges(List<Long> missedNodeJudges);
 }

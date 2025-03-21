@@ -27,9 +27,10 @@ option java_package = "com.hederahashgraph.api.proto.java";
 option java_multiple_files = true;
 
 /**
- * A record of node "active" status.<br/>
+ * A record of node rewards status.<br/>
  * This is used to record the number of "active" nodes in a staking
  * period based on number of judges each node created in that period.
+ * It also records the number of rounds so far in the staking period.
  *
  * A Node SHALL be considered "active" if it produced "judges" according
  * to the consensus algorithm in a percentage of rounds, during the
@@ -54,15 +55,14 @@ message NodeRewards {
 }
 
 /**
- * A record of judge rounds for a single node.<br/>
+ * A record of judge rounds missed by a single node.<br/>
  * This records, for a single node, the number of rounds so far, during this staking
- * period that contained at least one judge created by that node.
+ * period that missed creating judges. This is used to determine if the node is
+ * "active" or not.
  *
  * This message SHALL NOT record the total number of rounds in a staking
  * period.<br/>
- * This message SHALL record a count of rounds for a single node.<br/>
- * This message SHALL contain the number of rounds that contain at
- * least one judge from the node identified.
+ * This message SHALL record a count of rounds for a single node that missed creating judges.
  */
 message NodeActivity {
   /**

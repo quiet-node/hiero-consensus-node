@@ -164,8 +164,7 @@ message ConsensusSnapshot {
     proto.Timestamp consensus_timestamp = 5;
 
     /*
-     * A list of judges.
-     * This list MUST be deterministically ordered.
+     * A list of judges in a round.<br/>
      */
     repeated Judge judges = 6;
 }

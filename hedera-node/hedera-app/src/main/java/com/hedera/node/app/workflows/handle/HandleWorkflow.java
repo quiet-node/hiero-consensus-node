@@ -229,8 +229,8 @@ public class HandleWorkflow {
     /**
      * Handles the next {@link Round}
      *
-     * @param state the writable {@link State} that this round will work on
-     * @param round the next {@link Round} that needs to be processed
+     * @param state                     the writable {@link State} that this round will work on
+     * @param round                     the next {@link Round} that needs to be processed
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     public void handleRound(
@@ -272,7 +272,7 @@ public class HandleWorkflow {
             requireNonNull(systemEntitiesCreatedFlag).set(true);
         }
 
-        handleNodeRewards(state, round.getConsensusTimestamp());
+        payNodeRewards(state, round.getConsensusTimestamp());
         reconcileTssState(state, round.getConsensusTimestamp());
         recordCache.resetRoundReceipts();
         try {
@@ -284,35 +284,73 @@ public class HandleWorkflow {
         }
     }
 
-    private void handleNodeRewards(final @NonNull State state, final @NonNull Instant currentTime) {
-        final var config = configProvider.getConfiguration();
-        final var isNextStakingPeriod = checkIfNextStakingPeriod(state, currentTime);
-
-        if (isNextStakingPeriod) {
-            final var writableStates = state.getWritableStates(TokenService.NAME);
-            final var nodeRewardStore = new WritableNodeRewardsStoreImpl(writableStates);
-            final var activeRoster = requireNonNull(
-                    new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME)).getActiveRoster());
-            final var nodeConfig = config.getConfigData(NodesConfig.class);
-            final var activeNodeIds = nodeRewardStore.getActiveNodeIds(activeRoster.rosterEntries(), nodeConfig);
-
-            final var accountStore = new ReadableAccountStoreImpl(
-                    state.getReadableStates(TokenService.NAME),
-                    new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME)));
-            final var nodeRewardsAccountId = entityIdFactory.newAccountId(
-                    config.getConfigData(AccountsConfig.class).nodeRewardAccount());
-            final var payerBalance = requireNonNull(accountStore.getAccountById(nodeRewardsAccountId))
-                    .tinybarBalance();
-            final var avgNodeFeesCollected = 0L;
-            final var totalReward =
-                    nodeRewardStore.calculateTotalReward(activeNodeIds, avgNodeFeesCollected, payerBalance, nodeConfig);
-            systemTransactions.dispatchNodeRewards(
-                    state, currentTime, activeNodeIds, totalReward, nodeRewardsAccountId);
-            nodeRewardStore.reset();
-            ((CommittableWritableStates) writableStates).commit();
+    private void payNodeRewards(final @NonNull State state, final @NonNull Instant now) {
+        if (!checkIfNextStakingPeriod(state, now)) {
+            return;
         }
+        final var config = configProvider.getConfiguration();
+        final var nodeConfig = config.getConfigData(NodesConfig.class);
+        final var accountsConfig = config.getConfigData(AccountsConfig.class);
+
+        final var tokenWritableStates = state.getWritableStates(TokenService.NAME);
+        final var entityIdState = state.getReadableStates(EntityIdService.NAME);
+        final var rosterState = state.getReadableStates(RosterService.NAME);
+
+        final var nodeRewardStore = new WritableNodeRewardsStoreImpl(tokenWritableStates);
+        final var stakingRewardsStore = new WritableNetworkStakingRewardsStore(tokenWritableStates);
+        final var entityIdStore = new ReadableEntityIdStoreImpl(entityIdState);
+        final var accountStore = new ReadableAccountStoreImpl(tokenWritableStates, entityIdStore);
+        final var rosterStore = new ReadableRosterStoreImpl(rosterState);
+
+        final var activeRoster = requireNonNull(rosterStore.getActiveRoster());
+        final var activeNodeIds =
+                nodeRewardStore.getActiveNodeIds(activeRoster.rosterEntries(), nodeConfig.activeRoundsPercent());
+
+        final var nodeRewardsAccountId = entityIdFactory.newAccountId(accountsConfig.nodeRewardAccount());
+        final var payerBalance = requireNonNull(accountStore.getAccountById(nodeRewardsAccountId))
+                .tinybarBalance();
+        // TODO: Calculate the average node fees collected
+        final var avgNodeFeesCollected = 0L;
+        final var totalReward = calculateTotalReward(activeNodeIds, avgNodeFeesCollected, payerBalance, nodeConfig);
+        systemTransactions.dispatchNodeRewards(state, now, activeNodeIds, totalReward, nodeRewardsAccountId);
+        // reset the node activities and number of rounds in staking period
+        nodeRewardStore.reset();
+
+        // update the last node reward payment time
+        final var stakingRewards = stakingRewardsStore.get();
+        final var copy = stakingRewards.copyBuilder();
+        stakingRewardsStore.put(copy.lastNodeRewardPayment(asTimestamp(now)).build());
+
+        ((CommittableWritableStates) tokenWritableStates).commit();
     }
 
+    /**
+     * Calculates the total reward to be paid to the active nodes. The total reward to be paid is the minimum of the
+     * total reward to be paid and the node reward account balance.
+     *
+     * @param activeNodeIds       the list of active node ids
+     * @param avgNodeFeeCollected the average node fee collected
+     * @param payerBalance        the balance of the node reward account
+     * @param nodeConfig          the node configuration
+     * @return the total reward to be paid
+     */
+    private static long calculateTotalReward(
+            final List<Long> activeNodeIds,
+            final long avgNodeFeeCollected,
+            final long payerBalance,
+            final NodesConfig nodeConfig) {
+        final var rewardPerNode = Math.min(nodeConfig.minNodeReward() - avgNodeFeeCollected, 0L);
+        final var totalRewardToBePaid = activeNodeIds.size() * rewardPerNode;
+        return Math.min(totalRewardToBePaid, payerBalance);
+    }
+
+    /**
+     * Checks if the current consensus time has crossed the staking period boundary.
+     * @param state the state
+     * @param currentTime the current time
+     * @return {@code true} if the current consensus time has crossed the staking period boundary,
+     * {@code false} otherwise
+     */
     private boolean checkIfNextStakingPeriod(final State state, final Instant currentTime) {
         final var networkRewardsStore =
                 new ReadableNetworkStakingRewardsStoreImpl(state.getReadableStates(TokenService.NAME));
@@ -322,6 +360,7 @@ public class HandleWorkflow {
                 .getConfigData(StakingConfig.class)
                 .periodMins();
 
+        // On upgrade, the last paid time will be null, so we should use the current time as the last paid time
         return StakePeriodChanges.isNextStakingPeriod(
                 lastPaidTime == null ? currentTime : asInstant(lastPaidTime), currentTime, stakePeriodMins);
     }
@@ -330,8 +369,8 @@ public class HandleWorkflow {
      * Applies all effects of the events in the given round to the given state, writing stream items
      * that capture these effects in the process.
      *
-     * @param state the state to apply the effects to
-     * @param round the round to apply the effects of
+     * @param state                     the state to apply the effects to
+     * @param round                     the round to apply the effects of
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     private void handleEvents(
@@ -410,10 +449,10 @@ public class HandleWorkflow {
      * executing the workflow for the transaction. This produces a stream of records that are then passed to the
      * {@link BlockRecordManager} to be externalized.
      *
-     * @param state the writable {@link State} that this transaction will work on
-     * @param creator the {@link NodeInfo} of the creator of the transaction
-     * @param txn the {@link ConsensusTransaction} to be handled
-     * @param txnVersion the software version for the event containing the transaction
+     * @param state          the writable {@link State} that this transaction will work on
+     * @param creator        the {@link NodeInfo} of the creator of the transaction
+     * @param txn            the {@link ConsensusTransaction} to be handled
+     * @param txnVersion     the software version for the event containing the transaction
      * @param userTxnHandled whether a user transaction has been handled in this round
      * @return {@code true} if the transaction was a user transaction, {@code false} if a system transaction
      */
@@ -505,7 +544,7 @@ public class HandleWorkflow {
      * time to the latest time known to have been processed; and the {@link #lastExecutedSecond} value to the last
      * second of the interval for which all scheduled transactions were executed.
      *
-     * @param state the state to execute scheduled transactions from
+     * @param state          the state to execute scheduled transactions from
      * @param executionStart the start of the interval to execute transactions in
      * @param consensusNow   the consensus time at which the user transaction triggering this execution was processed
      * @param creatorInfo    the node info of the user transaction creator
@@ -600,7 +639,7 @@ public class HandleWorkflow {
      * Type inference helper to compute the base builder for a {@link ParentTxn} derived from a
      * {@link ExecutableTxn}.
      *
-     * @param <T> the type of the stream builder
+     * @param <T>           the type of the stream builder
      * @param executableTxn the executable transaction to compute the base builder for
      * @param parentTxn     the user transaction derived from the executable transaction
      * @return the base builder for the user transaction
@@ -617,8 +656,8 @@ public class HandleWorkflow {
      * should be set to the current time.
      *
      * @param state the state to purge
-     * @param then the last time the purge was triggered
-     * @param now the current time
+     * @param then  the last time the purge was triggered
+     * @param now   the current time
      */
     private void purgeScheduling(@NonNull final State state, final Instant then, final Instant now) {
         if (!Instant.EPOCH.equals(then) && then.getEpochSecond() < now.getEpochSecond()) {
@@ -643,7 +682,7 @@ public class HandleWorkflow {
      *
      * @param parentTxn  the user transaction to execute
      * @param txnVersion the software version for the event containing the transaction
-     * @param state the state to commit any direct changes against
+     * @param state      the state to commit any direct changes against
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeSubmittedParent(
@@ -735,7 +774,7 @@ public class HandleWorkflow {
      * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
      * no other side effects.
      *
-     * @param state the state to execute the transaction against
+     * @param state        the state to execute the transaction against
      * @param consensusNow the time to execute the transaction at
      * @return the stream output from executing the transaction
      */
@@ -789,10 +828,10 @@ public class HandleWorkflow {
      * Commits an action with side effects while capturing its key/value state changes and writing them to the
      * block stream.
      *
-     * @param writableStates the writable states to commit the action to
+     * @param writableStates         the writable states to commit the action to
      * @param entityIdWritableStates if not null, the writable states for the entity ID service
-     * @param now the consensus timestamp of the action
-     * @param action the action to commit
+     * @param now                    the consensus timestamp of the action
+     * @param action                 the action to commit
      */
     private void doStreamingKVChanges(
             @NonNull final WritableStates writableStates,
@@ -843,8 +882,8 @@ public class HandleWorkflow {
      * information. The record builder is initialized with the transaction, transaction bytes, transaction ID,
      * exchange rate, and memo.
      *
-     * @param builder the base builder
-     * @param txnInfo the transaction information
+     * @param builder         the base builder
+     * @param txnInfo         the transaction information
      * @param exchangeRateSet the active exchange rate set
      * @return the initialized base builder
      */
