@@ -14,7 +14,9 @@ import static com.hedera.node.app.hapi.utils.CommonUtils.sha384DigestOrThrow;
 import static com.hedera.node.app.records.BlockRecordService.EPOCH;
 import static com.hedera.node.app.records.impl.BlockRecordInfoUtils.HASH_SIZE;
 import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
+import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.stream.BlockItem;
@@ -24,8 +26,11 @@ import com.hedera.hapi.block.stream.output.BlockHeader;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
+import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
+import com.hedera.hapi.platform.state.Judge;
+import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
@@ -36,6 +41,7 @@ import com.hedera.node.app.hapi.utils.CommonUtils;
 import com.hedera.node.app.info.DiskStartupNetworks;
 import com.hedera.node.app.info.DiskStartupNetworks.InfoType;
 import com.hedera.node.app.records.impl.BlockRecordInfoUtils;
+import com.hedera.node.app.roster.RosterService;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockRecordStreamConfig;
@@ -49,6 +55,8 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.concurrent.AbstractTask;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.platform.state.service.PlatformStateService;
+import com.swirlds.platform.state.service.ReadableRosterStoreImpl;
 import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.state.State;
@@ -62,6 +70,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -326,6 +335,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
     @Override
     public boolean endRound(@NonNull final State state, final long roundNum) {
+        // Track missing judges in this round
+        missingJudgesInLastRoundOf(state).forEach(nodeId -> missedJudgeCounts.merge(nodeId, 1L, Long::sum));
+        roundsThisStakingPeriod++;
+
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
         if (closesBlock) {
             // If there were no user or node transactions in the block, this writes all
@@ -440,6 +453,24 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     }
 
     /**
+     * Returns the IDs of the nodes that did not create a judge in the current round.
+     * @param state the state
+     * @return the IDs of the nodes that did not create a judge in the current round
+     */
+    private List<Long> missingJudgesInLastRoundOf(@NonNull final State state) {
+        final var readablePlatformState =
+                state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
+        final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+        final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judges().stream()
+                .map(Judge::creatorId)
+                .collect(toCollection(HashSet::new));
+        return requireNonNull(rosterStore.getActiveRoster()).rosterEntries().stream()
+                .map(RosterEntry::nodeId)
+                .filter(nodeId -> !judges.contains(nodeId))
+                .toList();
+    }
+
+    /**
      * Updates the node reward state in the given state. This method will be called at the end of every block.
      * <p>
      * This method updates the number of rounds in the staking period and the number of missed judge rounds for
@@ -498,13 +529,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     @Override
     public @Nullable Bytes blockHashByBlockNumber(final long blockNo) {
         return blockHashManager.hashOfBlock(blockNo);
-    }
-
-    @Override
-    public void recordMissingRoundJudges(@NonNull final List<Long> nodeIds) {
-        requireNonNull(nodeIds);
-        nodeIds.forEach(node -> missedJudgeCounts.merge(node, 1L, Long::sum));
-        roundsThisStakingPeriod++;
     }
 
     @Override

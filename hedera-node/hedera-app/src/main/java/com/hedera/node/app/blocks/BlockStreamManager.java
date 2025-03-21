@@ -10,7 +10,6 @@ import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Maintains the state and process objects needed to produce the block stream.
@@ -144,13 +143,4 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
      * Resets state associated to node rewards.
      */
     void resetNodeRewards();
-
-    /**
-     * Records the nodes that missed creating judges during the last round. This information is
-     * accumulated and recorded in node rewards state for each block. This also increments the number
-     * of rounds in the staking period.
-     *
-     * @param nodeIds the nodes that missed creating judges
-     */
-    void recordMissingRoundJudges(@NonNull List<Long> nodeIds);
 }

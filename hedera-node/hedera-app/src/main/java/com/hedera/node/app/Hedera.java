@@ -28,7 +28,6 @@ import static com.swirlds.platform.system.status.PlatformStatus.STARTING_UP;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.stream.Collectors.toCollection;
 
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.SingletonUpdateChange;
@@ -43,11 +42,9 @@ import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.node.state.roster.Roster;
-import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.transaction.ThrottleDefinitions;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
-import com.hedera.hapi.platform.state.Judge;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.hapi.util.HapiUtils;
 import com.hedera.hapi.util.UnknownHederaFunctionality;
@@ -133,7 +130,6 @@ import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadableRosterStore;
-import com.swirlds.platform.state.service.ReadableRosterStoreImpl;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.Round;
@@ -155,7 +151,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.InstantSource;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -1309,26 +1304,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
 
     private boolean manageBlockEndRound(@NonNull final Round round, @NonNull final State state) {
         // Record any missed node judges for this round from the platform state
-        daggerApp.blockStreamManager().recordMissingRoundJudges(missingJudgesInLastRoundOf(state));
         return daggerApp.blockStreamManager().endRound(state, round.getRoundNum());
-    }
-
-    /**
-     * Returns the IDs of the nodes that did not create a judge in the current round.
-     * @param state the state
-     * @return the IDs of the nodes that did not create a judge in the current round
-     */
-    private List<Long> missingJudgesInLastRoundOf(@NonNull final State state) {
-        final var readablePlatformState =
-                state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
-        final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
-        final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judges().stream()
-                .map(Judge::creatorId)
-                .collect(toCollection(HashSet::new));
-        return requireNonNull(rosterStore.getActiveRoster()).rosterEntries().stream()
-                .map(RosterEntry::nodeId)
-                .filter(nodeId -> !judges.contains(nodeId))
-                .toList();
     }
 
     /**
