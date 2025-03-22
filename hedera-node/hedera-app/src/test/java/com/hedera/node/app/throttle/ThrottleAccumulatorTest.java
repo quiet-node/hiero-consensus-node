@@ -18,8 +18,10 @@ import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STAT
 import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
 import static com.hedera.node.app.service.schedule.impl.schemas.V0490ScheduleSchema.SCHEDULES_BY_ID_KEY;
 import static com.hedera.node.app.throttle.ThrottleAccumulator.ThrottleType.FRONTEND_THROTTLE;
+import static com.hedera.node.app.throttle.ThrottleAccumulator.ThrottleType.NOOP_THROTTLE;
 import static com.hedera.pbj.runtime.ProtoTestTools.getThreadLocalDataBuffer;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -194,6 +196,23 @@ class ThrottleAccumulatorTest {
     private Function<SemanticVersion, SoftwareVersion> softwareVersionFactory = ServicesSoftwareVersion::new;
     private final HederaConfig hederaConfig =
             HederaTestConfigBuilder.create().getOrCreateConfig().getConfigData(HederaConfig.class);
+
+    @Test
+    void noOpThrottlesNeverThrottleAnything() {
+        subject = new ThrottleAccumulator(
+                () -> CAPACITY_SPLIT,
+                configProvider::getConfiguration,
+                NOOP_THROTTLE,
+                throttleMetrics,
+                gasThrottle,
+                softwareVersionFactory);
+        assertFalse(subject.checkAndEnforceThrottle(transactionInfo, TIME_INSTANT, state));
+        assertFalse(subject.checkAndEnforceThrottle(
+                TRANSACTION_GET_RECEIPT, TIME_INSTANT, query, state, AccountID.DEFAULT));
+        assertFalse(subject.shouldThrottleNOfUnscaled(1, CRYPTO_TRANSFER, TIME_INSTANT));
+        assertDoesNotThrow(() -> subject.leakCapacityForNOfUnscaled(1, CRYPTO_TRANSFER));
+        assertDoesNotThrow(() -> subject.leakUnusedGasPreviouslyReserved(transactionInfo, 1L));
+    }
 
     @Test
     void worksAsExpectedForKnownQueries() throws IOException, ParseException {
@@ -399,7 +418,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void checkAndClaimThrottlesByGasAndTotalAllowedGasPerSecNotSetOrZero(
             ThrottleAccumulator.ThrottleType throttleType) {
         // given
@@ -423,7 +442,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerBehavesAsExpectedForFungibleMint(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -466,7 +485,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerBehavesAsExpectedForNftMint(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -512,7 +531,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerBehavesAsExpectedForMultiBucketOp(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -557,7 +576,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void handlesThrottleExemption(ThrottleAccumulator.ThrottleType throttleType) throws IOException, ParseException {
         // given
         subject = new ThrottleAccumulator(
@@ -595,7 +614,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void computesNumImplicitCreationsIfNotAlreadyKnown(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -640,7 +659,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void ifLazyCreationEnabledComputesNumImplicitCreationsIfNotAlreadyKnown(
             ThrottleAccumulator.ThrottleType throttleType) throws IOException, ParseException {
         // given
@@ -686,7 +705,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void cryptoTransfersWithNoAutoAccountCreationsAreThrottledAsExpected(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -730,7 +749,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerAllowsCryptoTransfersWithAutoAccountCreationsAsExpected(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -773,7 +792,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerAllowsCryptoTransfersWithAutoAssociationsAsExpected(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -817,7 +836,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerRejectsCryptoTransfersWithAutoAccountCreationsAsExpected(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -859,7 +878,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerRejectsCryptoTransfersWithAutoAssociationsAsExpected(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -902,7 +921,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerRejectsCryptoTransfersWithMissingCryptoCreateThrottle(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -944,7 +963,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void ethereumTransactionWithNoAutoAccountCreationsAreThrottledAsExpected(
             ThrottleAccumulator.ThrottleType throttleType) throws IOException, ParseException {
         // given
@@ -991,7 +1010,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void ethereumTransactionWithAutoAccountCreationsButNoLazyCreationsAreThrottledAsExpected(
             ThrottleAccumulator.ThrottleType throttleType) throws IOException, ParseException {
         // given
@@ -1038,7 +1057,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerAllowsEthereumTransactionWithAutoAccountCreationsAsExpected(
             ThrottleAccumulator.ThrottleType throttleType) throws IOException, ParseException {
         // given
@@ -1085,7 +1104,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void managerRejectsEthereumTransactionWithMissingCryptoCreateThrottle(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -1134,7 +1153,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void alwaysThrottlesContractCallWhenGasThrottleIsNotDefined(ThrottleAccumulator.ThrottleType throttleType) {
         // given
         subject = new ThrottleAccumulator(
@@ -1168,7 +1187,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void alwaysThrottlesContractCallWhenGasThrottleReturnsTrue(ThrottleAccumulator.ThrottleType throttleType) {
         // given
         subject = new ThrottleAccumulator(
@@ -1204,7 +1223,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void alwaysThrottlesContractCreateWhenGasThrottleIsNotDefined(ThrottleAccumulator.ThrottleType throttleType) {
         // given
         subject = new ThrottleAccumulator(
@@ -1238,7 +1257,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void alwaysThrottlesContractCreateWhenGasThrottleReturnsTrue(ThrottleAccumulator.ThrottleType throttleType) {
         // given
         subject = new ThrottleAccumulator(
@@ -1279,7 +1298,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void alwaysThrottlesEthereumTxnWhenGasThrottleIsNotDefined(ThrottleAccumulator.ThrottleType throttleType) {
         // given
         subject = new ThrottleAccumulator(
@@ -1313,7 +1332,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void alwaysThrottlesEthereumTxnWhenGasThrottleReturnsTrue(ThrottleAccumulator.ThrottleType throttleType) {
         // given
         subject = new ThrottleAccumulator(
@@ -1355,7 +1374,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void gasLimitThrottleReturnsCorrectObject(ThrottleAccumulator.ThrottleType throttleType) {
         // given
         subject = new ThrottleAccumulator(
@@ -1380,7 +1399,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void constructsExpectedBucketsFromTestResource(ThrottleAccumulator.ThrottleType throttleType)
             throws IOException, ParseException {
         // given
@@ -1413,7 +1432,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void alwaysRejectsIfNoThrottle(ThrottleAccumulator.ThrottleType throttleType) {
         subject = new ThrottleAccumulator(
                 () -> CAPACITY_SPLIT,
@@ -1437,7 +1456,7 @@ class ThrottleAccumulatorTest {
     }
 
     @ParameterizedTest
-    @EnumSource
+    @EnumSource(value = ThrottleAccumulator.ThrottleType.class, mode = EnumSource.Mode.EXCLUDE, names = "NOOP_THROTTLE")
     void verifyLeakUnusedGas(ThrottleAccumulator.ThrottleType throttleType) throws IOException, ParseException {
         subject = new ThrottleAccumulator(
                 () -> CAPACITY_SPLIT,

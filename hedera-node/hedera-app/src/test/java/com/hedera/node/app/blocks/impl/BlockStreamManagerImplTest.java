@@ -47,7 +47,6 @@ import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
-import com.hedera.node.app.records.BlockRecordService;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.data.BlockStreamConfig;
@@ -178,7 +177,7 @@ class BlockStreamManagerImplTest {
                         BlockStreamInfo.newBuilder()
                                 .creationSoftwareVersion(
                                         SemanticVersion.newBuilder().major(1).build())
-                                .lastIntervalProcessTime(new Timestamp(1234567, 890))
+                                .lastHandleTime(new Timestamp(1234567, 890))
                                 .build(),
                         CREATION_VERSION));
     }
@@ -190,7 +189,7 @@ class BlockStreamManagerImplTest {
                 BlockStreamManagerImpl.classifyPendingWork(
                         BlockStreamInfo.newBuilder()
                                 .creationSoftwareVersion(CREATION_VERSION)
-                                .lastIntervalProcessTime(new Timestamp(1234567, 890))
+                                .lastHandleTime(new Timestamp(1234567, 890))
                                 .build(),
                         CREATION_VERSION));
     }
@@ -204,6 +203,7 @@ class BlockStreamManagerImplTest {
                                 .postUpgradeWorkDone(true)
                                 .creationSoftwareVersion(CREATION_VERSION)
                                 .lastIntervalProcessTime(new Timestamp(1234567, 890))
+                                .lastHandleTime(new Timestamp(1234567, 890))
                                 .build(),
                         CREATION_VERSION));
     }
@@ -319,7 +319,7 @@ class BlockStreamManagerImplTest {
                 true,
                 SemanticVersion.DEFAULT,
                 CONSENSUS_THEN,
-                BlockRecordService.EPOCH);
+                CONSENSUS_THEN);
         final var actualBlockInfo = infoRef.get();
         assertEquals(expectedBlockInfo, actualBlockInfo);
 
@@ -543,7 +543,7 @@ class BlockStreamManagerImplTest {
                 false,
                 SemanticVersion.DEFAULT,
                 CONSENSUS_THEN,
-                BlockRecordService.EPOCH);
+                CONSENSUS_THEN);
         final var actualBlockInfo = infoRef.get();
         assertEquals(expectedBlockInfo, actualBlockInfo);
 
@@ -878,6 +878,7 @@ class BlockStreamManagerImplTest {
                 .trailingBlockHashes(appendHash(N_MINUS_2_BLOCK_HASH, Bytes.EMPTY, 256))
                 .trailingOutputHashes(resultHashes)
                 .lastIntervalProcessTime(CONSENSUS_THEN)
+                .lastHandleTime(CONSENSUS_THEN)
                 .blockTime(asTimestamp(CONSENSUS_NOW.minusSeconds(5))) // Add block time to track last block creation
                 .build();
     }

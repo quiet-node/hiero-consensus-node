@@ -22,15 +22,12 @@ import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.state.token.AccountPendingAirdrop;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
-import com.hedera.node.app.ids.AppEntityIdFactory;
 import com.hedera.node.app.ids.EntityIdService;
-import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.ids.schemas.V0490EntityIdSchema;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.node.app.service.token.impl.schemas.V0530TokenSchema;
 import com.hedera.node.app.services.MigrationContextImpl;
-import com.hedera.node.app.spi.fixtures.info.FakeNetworkInfo;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.StateDefinition;
@@ -103,24 +100,11 @@ class V0530TokenSchemaTest {
                         ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().build(),
                         c -> {}));
-        final var entityIdStore = new WritableEntityIdStore(newStates);
-
-        final var networkInfo = new FakeNetworkInfo();
         final var config = buildConfig(DEFAULT_NUM_SYSTEM_ACCOUNTS, true);
 
         final var schema = new V0530TokenSchema();
         schema.migrate(new MigrationContextImpl(
-                previousStates,
-                newStates,
-                config,
-                config,
-                networkInfo,
-                entityIdStore,
-                null,
-                0L,
-                new HashMap<>(),
-                startupNetworks,
-                new AppEntityIdFactory(config)));
+                previousStates, newStates, config, config, null, 0L, new HashMap<>(), startupNetworks));
 
         final var updatedStates = newStates.get(STAKING_INFO_KEY);
         // sets minStake on all nodes to 0
