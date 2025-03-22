@@ -105,8 +105,7 @@ public class CryptoTransferValidator {
             validateTrue(
                     hbarTransfers.stream()
                             .filter(aa -> aa.amount() < 0)
-                            .anyMatch(
-                                    aa -> nodeRewardAccountId.equals(aa.accountID())),
+                            .anyMatch(aa -> nodeRewardAccountId.equals(aa.accountID())),
                     TRANSFER_LIST_SIZE_LIMIT_EXCEEDED);
         }
 

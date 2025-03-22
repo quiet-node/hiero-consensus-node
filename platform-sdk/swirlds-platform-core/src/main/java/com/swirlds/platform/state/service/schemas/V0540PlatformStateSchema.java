@@ -12,7 +12,6 @@ import com.swirlds.platform.config.BasicConfig;
 import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.state.service.WritablePlatformStateStore;
 import com.swirlds.platform.system.SoftwareVersion;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
@@ -21,7 +20,6 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Defines the {@link PlatformState} singleton and initializes it at genesis.

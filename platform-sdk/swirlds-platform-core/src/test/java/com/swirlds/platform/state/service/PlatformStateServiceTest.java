@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.BDDMockito.given;
 
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
-import com.swirlds.platform.state.service.schemas.V059RosterLifecycleTransitionSchema;
 import com.swirlds.platform.state.service.schemas.V0610PlatformStateSchema;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;

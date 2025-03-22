@@ -66,6 +66,9 @@ public final class ConsensusUtils {
         return whitening;
     }
 
+    /**
+     * @return The base hash of the event
+     */
     public static @NonNull Bytes getHashBytes(@NonNull final EventImpl event) {
         return event.getBaseHash().getBytes();
     }

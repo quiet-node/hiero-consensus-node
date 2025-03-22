@@ -132,7 +132,7 @@ public class RoundElections {
      *
      * @return all the judges for this round
      */
-    public @NonNull List<Map.Entry<NodeId, EventImpl>> findAllJudges() {
+    public @NonNull List<EventImpl> findAllJudges() {
         if (!isDecided()) {
             throw new IllegalStateException("Cannot find all judges if the round has not been decided yet");
         }
@@ -146,15 +146,14 @@ public class RoundElections {
             uniqueFamous.merge(
                     election.getWitness().getCreatorId(), election.getWitness(), RoundElections::uniqueFamous);
         }
-        final List<Map.Entry<NodeId, EventImpl>> allJudges = new ArrayList<>(uniqueFamous.entrySet());
+        final List<EventImpl> allJudges = new ArrayList<>(uniqueFamous.values());
         if (allJudges.isEmpty()) {
             throw new IllegalStateException("No judges found in round " + round);
         }
-        allJudges.sort(Comparator.comparingLong(e -> e.getKey().id()));
+        allJudges.sort(Comparator.comparingLong(e -> e.getCreatorId().id()));
         minGeneration = Long.MAX_VALUE;
         minBirthRound = Long.MAX_VALUE;
-        for (final Map.Entry<NodeId, EventImpl> entry : allJudges) {
-            final EventImpl judge = entry.getValue();
+        for (final EventImpl judge : allJudges) {
             minGeneration = Math.min(minGeneration, judge.getGeneration());
             minBirthRound = Math.min(minBirthRound, judge.getBirthRound());
             judge.setJudgeTrue();

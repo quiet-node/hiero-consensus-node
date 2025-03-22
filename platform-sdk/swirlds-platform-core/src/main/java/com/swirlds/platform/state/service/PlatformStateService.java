@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
-import com.swirlds.platform.state.service.schemas.V059RosterLifecycleTransitionSchema;
 import com.swirlds.platform.state.service.schemas.V0610PlatformStateSchema;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
