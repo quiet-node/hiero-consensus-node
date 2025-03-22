@@ -276,8 +276,6 @@ public class HandleWorkflow {
             requireNonNull(systemEntitiesCreatedFlag).set(true);
         }
 
-        rewardActiveNodesIfNewPeriod(state, round.getConsensusTimestamp());
-        reconcileTssState(state, round.getConsensusTimestamp());
         recordCache.resetRoundReceipts();
         try {
             handleEvents(state, round, stateSignatureTxnCallback);
@@ -286,6 +284,9 @@ public class HandleWorkflow {
             // to the state so these transactions cannot be replayed in future rounds
             recordCache.commitRoundReceipts(state, round.getConsensusTimestamp());
         }
+        final var lastAssignedConsensusTime = boundaryStateChangeListener.lastConsensusTimeOrThrow();
+        reconcileTssState(state, lastAssignedConsensusTime);
+        maybeRewardActiveNodes(state, lastAssignedConsensusTime.plusNanos(1));
     }
 
     /**
@@ -294,7 +295,7 @@ public class HandleWorkflow {
      * @param state the state
      * @param now   the current consensus time
      */
-    private void rewardActiveNodesIfNewPeriod(@NonNull final State state, @NonNull final Instant now) {
+    private void maybeRewardActiveNodes(@NonNull final State state, @NonNull final Instant now) {
         final var config = configProvider.getConfiguration();
         final var nodesConfig = config.getConfigData(NodesConfig.class);
         if (!nodesConfig.nodeRewardsEnabled()) {
