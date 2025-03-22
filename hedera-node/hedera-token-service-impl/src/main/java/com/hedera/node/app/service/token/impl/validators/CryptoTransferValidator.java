@@ -100,12 +100,14 @@ public class CryptoTransferValidator {
         final var hbarTransfers = transfers.accountAmounts();
 
         // If the payer is node rewards account, we are dispatching synthetic node rewards. So skip checking the limits.
-        final var isNodeRewardPayer = hbarTransfers.stream()
-                .filter(aa -> aa.amount() < 0)
-                .anyMatch(
-                        aa -> aa.accountID().equals(entityIdFactory.newAccountId(accountsConfig.nodeRewardAccount())));
-        if (!isNodeRewardPayer) {
-            validateTrue(hbarTransfers.size() <= ledgerConfig.transfersMaxLen(), TRANSFER_LIST_SIZE_LIMIT_EXCEEDED);
+        if (hbarTransfers.size() > ledgerConfig.transfersMaxLen()) {
+            final var nodeRewardAccountId = entityIdFactory.newAccountId(accountsConfig.nodeRewardAccount());
+            validateTrue(
+                    hbarTransfers.stream()
+                            .filter(aa -> aa.amount() < 0)
+                            .anyMatch(
+                                    aa -> nodeRewardAccountId.equals(aa.accountID())),
+                    TRANSFER_LIST_SIZE_LIMIT_EXCEEDED);
         }
 
         // Validate that allowances are enabled, or that no hbar transfers are an allowance transfer

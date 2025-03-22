@@ -65,7 +65,6 @@ public class EventualAssertionResult {
      * Completes the result as a success.
      */
     public void pass() {
-        System.out.println("BOOP");
         this.result = AssertionResult.newSuccess();
         ready.countDown();
     }

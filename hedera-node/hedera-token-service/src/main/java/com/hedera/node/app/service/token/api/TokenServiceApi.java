@@ -202,7 +202,7 @@ public interface TokenServiceApi {
      * @param fees the fees to charge
      * @param recordBuilder the record builder to record the fees in
      * @param cb if not null, a map to record the balance adjustments in
-     * @param onNodeFee
+     * @param onNodeFee a callback to receive the node fee disbursement
      */
     void chargeFees(
             @NonNull AccountID payer,
@@ -210,7 +210,7 @@ public interface TokenServiceApi {
             @NonNull Fees fees,
             @NonNull FeeStreamBuilder recordBuilder,
             @Nullable ObjLongConsumer<AccountID> cb,
-            LongConsumer onNodeFee);
+            @NonNull LongConsumer onNodeFee);
 
     /**
      * Refunds the given fees to the given receiver, and records those fees in the given record builder.

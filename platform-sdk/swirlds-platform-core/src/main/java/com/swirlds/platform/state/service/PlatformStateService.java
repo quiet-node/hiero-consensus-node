@@ -6,6 +6,7 @@ import static java.util.Objects.requireNonNull;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.state.service.schemas.V059RosterLifecycleTransitionSchema;
+import com.swirlds.platform.state.service.schemas.V0610PlatformStateSchema;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.Schema;
@@ -35,7 +36,7 @@ public enum PlatformStateService implements Service {
     private static final Collection<Schema> SCHEMAS = List.of(
             new V0540PlatformStateSchema(
                     config -> requireNonNull(APP_VERSION_FN.get()).apply(config)),
-            new V059RosterLifecycleTransitionSchema());
+            new V0610PlatformStateSchema());
 
     public static final String NAME = "PlatformStateService";
 

@@ -27,9 +27,6 @@ import java.util.function.Supplier;
  * Defines the {@link PlatformState} singleton and initializes it at genesis.
  */
 public class V0540PlatformStateSchema extends Schema {
-    private static final Supplier<AddressBook> UNAVAILABLE_DISK_ADDRESS_BOOK = () -> {
-        throw new IllegalStateException("No disk address book available");
-    };
     private static final Function<Configuration, SoftwareVersion> UNAVAILABLE_VERSION_FN = config -> {
         throw new IllegalStateException("No version information available");
     };

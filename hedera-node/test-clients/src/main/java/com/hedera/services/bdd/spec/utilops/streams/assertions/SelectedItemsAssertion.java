@@ -45,7 +45,6 @@ public class SelectedItemsAssertion implements RecordStreamAssertion {
         final var entry = RecordStreamEntry.from(item);
         selectedEntries.add(entry);
         if (selectedEntries.size() == expectedCount) {
-            System.out.println("BOOP");
             validator.assertValid(
                     spec, Map.of(SELECTED_ITEMS_KEY, new VisibleItems(new AtomicInteger(), selectedEntries)));
             return true;

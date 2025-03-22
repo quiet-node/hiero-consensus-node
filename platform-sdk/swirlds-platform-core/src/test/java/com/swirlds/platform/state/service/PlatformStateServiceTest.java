@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.given;
 
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.state.service.schemas.V059RosterLifecycleTransitionSchema;
+import com.swirlds.platform.state.service.schemas.V0610PlatformStateSchema;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,6 @@ class PlatformStateServiceTest {
         final var schemas = captor.getAllValues();
         assertEquals(2, schemas.size());
         assertInstanceOf(V0540PlatformStateSchema.class, schemas.getFirst());
-        assertInstanceOf(V059RosterLifecycleTransitionSchema.class, schemas.getLast());
+        assertInstanceOf(V0610PlatformStateSchema.class, schemas.getLast());
     }
 }

@@ -331,8 +331,6 @@ public class HandleWorkflow {
                     .divide(BigInteger.valueOf(nodesConfig.numPeriodsToTargetUsd()));
             final long nodeReward = exchangeRateManager.getTinybarsFromTinyCents(targetPayInTinyCents.longValue(), now);
             final var perNodeReward = Math.max(nodesConfig.minNodeReward(), nodeReward - prePaidRewards);
-            System.out.println(" nodeReward: " + nodeReward + ", perNodeReward: " + perNodeReward + ", prePaidRewards: "
-                    + prePaidRewards);
             systemTransactions.dispatchNodeRewards(
                     state,
                     now,
@@ -383,11 +381,7 @@ public class HandleWorkflow {
                 .getConfigData(StakingConfig.class)
                 .periodMins();
         final boolean isNextPeriod = isNextStakingPeriod(now, asInstant(lastPaidTime), stakePeriodMins);
-        final var answer =
-                isNextPeriod ? LastNodeRewardsPaymentTime.PREVIOUS_PERIOD : LastNodeRewardsPaymentTime.CURRENT_PERIOD;
-        System.out.println("lastPaidTime: " + asInstant(lastPaidTime) + ", now: " + now + ", isNextPeriod: "
-                + isNextPeriod + ", answer: " + answer);
-        return answer;
+        return isNextPeriod ? LastNodeRewardsPaymentTime.PREVIOUS_PERIOD : LastNodeRewardsPaymentTime.CURRENT_PERIOD;
     }
 
     /**
