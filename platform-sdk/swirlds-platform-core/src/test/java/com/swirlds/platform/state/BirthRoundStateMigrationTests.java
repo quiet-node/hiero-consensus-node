@@ -12,11 +12,8 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.Judge;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.platform.event.AncientMode;
-import com.swirlds.platform.state.service.PbjConverter;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.BasicSoftwareVersion;
@@ -26,6 +23,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.utility.CommonUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,7 +76,7 @@ class BirthRoundStateMigrationTests {
                 .judges(judges)
                 .minimumJudgeInfoList(minimumJudgeInfoList)
                 .nextConsensusNumber(nextConsensusNumber)
-                .consensusTimestamp(PbjConverter.toPbjTimestamp(consensusTimestamp))
+                .consensusTimestamp(CommonUtils.toPbjTimestamp(consensusTimestamp))
                 .build();
 
         return new RandomSignedStateGenerator(random)

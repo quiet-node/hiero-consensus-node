@@ -4,14 +4,15 @@ package com.swirlds.platform.consensus;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.Judge;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
-import com.swirlds.platform.event.AncientMode;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.state.service.PbjConverter;
-import com.swirlds.platform.system.events.EventConstants;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.LongStream;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.event.EventConstants;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.ConsensusConstants;
+import org.hiero.consensus.model.utility.CommonUtils;
 
 /**
  * Utility class for generating "synthetic" snapshots
@@ -58,7 +59,7 @@ public final class SyntheticSnapshot {
                 .minimumJudgeInfoList(minimumJudgeInfos)
                 .nextConsensusNumber(lastConsensusOrder + 1)
                 .consensusTimestamp(
-                        PbjConverter.toPbjTimestamp(ConsensusUtils.calcMinTimestampForNextEvent(roundTimestamp)))
+                        CommonUtils.toPbjTimestamp(ConsensusUtils.calcMinTimestampForNextEvent(roundTimestamp)))
                 .build();
     }
 
@@ -79,7 +80,7 @@ public final class SyntheticSnapshot {
                                 ? EventConstants.FIRST_GENERATION
                                 : ConsensusConstants.ROUND_FIRST)))
                 .nextConsensusNumber(ConsensusConstants.FIRST_CONSENSUS_NUMBER)
-                .consensusTimestamp(PbjConverter.toPbjTimestamp(Instant.EPOCH))
+                .consensusTimestamp(CommonUtils.toPbjTimestamp(Instant.EPOCH))
                 .build();
     }
 }
