@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.datasource;
 
-import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
-
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.FieldDefinition;
 import com.hedera.pbj.runtime.FieldType;
