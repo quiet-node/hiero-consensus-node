@@ -1207,7 +1207,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         requireNonNull(blockStreamInfo);
         // Three of the four ingredients in the block hash are directly in the BlockStreamInfo; that is,
         // the previous block hash, the input tree root hash, and the start of block state hash
-        final var prevBlockHash = blockStreamInfo.blockNumber() == 0L
+        final var prevBlockHash = blockStreamInfo.blockNumber() <= 0L
                 ? ZERO_BLOCK_HASH
                 : blockHashByBlockNumber(
                         blockStreamInfo.trailingBlockHashes(),
