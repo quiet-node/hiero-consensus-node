@@ -346,6 +346,22 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         5,
                         TimeUnit.SECONDS);
             }
+            case STREAM_ITEMS_BEHIND -> {
+                // The block node is "behind" the publisher.
+                // The consensus node has sent a block later than this block node
+                // can process. We should restart the stream at the block immediately
+                // following the block where the node fell behind.
+                // Restart the stream at the block immediately following where the node fell behind
+                long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
+                logger.warn(
+                        "[{}] Block node {}:{} reported it is behind. Will restart stream at block {}",
+                        Thread.currentThread().getName(),
+                        node.address(),
+                        node.port(),
+                        restartBlockNumber);
+
+                restartStreamAtBlock(restartBlockNumber);
+            }
             default -> {
                 // By default, restart after the last verified block + 1
                 long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;

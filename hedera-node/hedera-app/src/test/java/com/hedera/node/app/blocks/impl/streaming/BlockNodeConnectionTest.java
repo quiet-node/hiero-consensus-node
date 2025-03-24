@@ -680,10 +680,10 @@ class BlockNodeConnectionTest {
     }
 
     /**
-     * Tests the onNext method handling a PublishStreamResponse with an EndOfStream.
+     * Tests the onNext method handling a PublishStreamResponse with STREAM_ITEMS_INTERNAL_ERROR EndOfStream.
      */
     @Test
-    void testOnNext_WithEndOfStream() {
+    void testOnNext_WithEndOfStream_InternalError() {
         // Arrange
         final BlockNodeConnection connectionSpy = spy(connection);
         final PublishStreamResponse.EndOfStream endOfStream = PublishStreamResponse.EndOfStream.newBuilder()
@@ -700,12 +700,41 @@ class BlockNodeConnectionTest {
         verify(requestObserver).onCompleted();
         verify(scheduler).schedule(any(Runnable.class), eq(5L), eq(TimeUnit.SECONDS));
 
-        // Verify log messages for end of stream
-        final String expectedLog = "Received EndOfStream from block node";
+        // Verify log messages for internal error
+        final String expectedWarningLog = "Block node " + TEST_ADDRESS + ":" + TEST_PORT
+                + " reported internal error at block " + TEST_BLOCK_NUMBER + ". Will attempt reconnect after delay.";
         assertTrue(
-                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog))
-                        || logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
-                "Expected log message not found: " + expectedLog);
+                logCaptor.warnLogs().stream().anyMatch(log -> log.contains(expectedWarningLog)),
+                "Expected warning log message not found: " + expectedWarningLog);
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse with STREAM_ITEMS_BEHIND EndOfStream.
+     */
+    @Test
+    void testOnNext_WithEndOfStream_Behind() {
+        // Arrange
+        final BlockNodeConnection connectionSpy = spy(connection);
+        final PublishStreamResponse.EndOfStream endOfStream = PublishStreamResponse.EndOfStream.newBuilder()
+                .setBlockNumber(TEST_BLOCK_NUMBER)
+                .setStatus(PublishStreamResponseCode.STREAM_ITEMS_BEHIND)
+                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().setEndStream(endOfStream).build();
+
+        // Act
+        connectionSpy.onNext(response);
+
+        // Assert connection ends and restart is attempted with last verified block number + 1
+        verify(requestObserver).onCompleted();
+        verify(connectionSpy).restartStreamAtBlock(TEST_BLOCK_NUMBER + 1);
+
+        // Verify log messages for behind error
+        final String expectedWarningLog = "Block node " + TEST_ADDRESS + ":" + TEST_PORT
+                + " reported it is behind. Will restart stream at block " + (TEST_BLOCK_NUMBER + 1);
+        assertTrue(
+                logCaptor.warnLogs().stream().anyMatch(log -> log.contains(expectedWarningLog)),
+                "Expected warning log message not found: " + expectedWarningLog);
     }
 
     /**
