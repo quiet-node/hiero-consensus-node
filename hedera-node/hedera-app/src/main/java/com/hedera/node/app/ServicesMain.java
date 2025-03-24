@@ -43,6 +43,7 @@ import com.hedera.node.app.state.ConsensusStateEventHandlerImpl;
 import com.hedera.node.app.tss.TssBlockHashSigner;
 import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
+import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.Network;
 import com.hedera.node.internal.network.NodeMetadata;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
