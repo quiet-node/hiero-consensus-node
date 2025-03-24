@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -27,6 +28,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,6 +62,9 @@ class BlockNodeConnectionTest {
     @Mock
     private BlockState blockState;
 
+    @Mock
+    private ScheduledExecutorService scheduler;
+
     @LoggingTarget
     private LogCaptor logCaptor;
 
@@ -71,7 +76,7 @@ class BlockNodeConnectionTest {
         when(nodeConfig.address()).thenReturn(TEST_ADDRESS);
         when(nodeConfig.port()).thenReturn(TEST_PORT);
 
-        connection = new BlockNodeConnection(nodeConfig, connectionManager, blockStreamStateManager);
+        connection = new BlockNodeConnection(nodeConfig, connectionManager, blockStreamStateManager, scheduler);
 
         // Set requestObserver via reflection to avoid establishing an actual gRPC connection
         Field requestObserverField = BlockNodeConnection.class.getDeclaredField("requestObserver");

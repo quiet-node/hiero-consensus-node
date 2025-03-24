@@ -76,7 +76,7 @@ public class BlockNodeConnectionManager {
     private void connectToNode(@NonNull BlockNodeConfig node) {
         synchronized (connectionLock) {
             try {
-                BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
+                BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager, scheduler);
                 connection.establishStream();
                 connection.getIsActiveLock().lock();
                 try {

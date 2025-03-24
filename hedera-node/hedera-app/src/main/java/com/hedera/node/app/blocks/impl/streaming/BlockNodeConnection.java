@@ -27,7 +27,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler;
 
     private final BlockNodeConfig node;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
@@ -56,12 +56,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
-            @NonNull final BlockStreamStateManager blockStreamStateManager) {
+            @NonNull final BlockStreamStateManager blockStreamStateManager,
+            @NonNull final ScheduledExecutorService scheduler) {
         this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
+        this.scheduler = requireNonNull(scheduler, "scheduler must not be null");
         this.channel = createNewChannel();
     }
 
