@@ -45,7 +45,6 @@ module com.hedera.node.app {
     requires com.swirlds.config.extensions;
     requires com.swirlds.logging;
     requires com.swirlds.merkledb;
-    requires com.swirlds.virtualmap;
     requires com.github.benmanes.caffeine;
     requires com.google.common;
     requires io.grpc.netty;

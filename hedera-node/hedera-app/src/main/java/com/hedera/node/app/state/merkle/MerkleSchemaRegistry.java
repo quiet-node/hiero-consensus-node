@@ -162,7 +162,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
             @NonNull final Configuration appConfig,
             @NonNull final Configuration platformConfig,
             @NonNull final Map<String, Object> sharedValues,
-            @NonNull final Metrics metrics,
             @NonNull final MigrationStateChanges migrationStateChanges,
             @NonNull final StartupNetworks startupNetworks,
             @NonNull final PlatformStateFacade platformStateFacade) {
