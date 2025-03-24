@@ -696,9 +696,9 @@ class BlockNodeConnectionTest {
         // Act
         connectionSpy.onNext(response);
 
-        // Assert connection ends and restarts after the last verified block number
+        // Assert connection ends and restart is scheduled after 5s with the last verified block number + 1
         verify(requestObserver).onCompleted();
-        verify(connectionSpy).restartStreamAtBlock(endOfStream.getBlockNumber() + 1L);
+        verify(scheduler).schedule(any(Runnable.class), eq(5L), eq(TimeUnit.SECONDS));
 
         // Verify log messages for end of stream
         final String expectedLog = "Received EndOfStream from block node";

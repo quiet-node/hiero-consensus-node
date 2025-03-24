@@ -12,7 +12,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -317,6 +316,36 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
 
         switch (responseCode) {
+            case STREAM_ITEMS_INTERNAL_ERROR -> {
+                // The block node had an internal error and cannot continue processing.
+                // We should wait for a short period before attempting to reconnect
+                // to avoid overwhelming the node if it's having issues
+                logger.warn(
+                        "[{}] Block node {}:{} reported internal error at block {}. Will attempt reconnect after delay.",
+                        Thread.currentThread().getName(),
+                        node.address(),
+                        node.port(),
+                        blockNumber);
+
+                // Schedule a delayed reconnect after the last verified block + 1
+                long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
+
+                // Schedule stream restart after some delay
+                // FUTURE: here we could add exponential backoff logic and or establishing the stream to other
+                // connections from config
+                scheduler.schedule(
+                        () -> {
+                            logger.debug(
+                                    "[{}] Attempting reconnect after internal error for node {}:{} at block {}",
+                                    Thread.currentThread().getName(),
+                                    node.address(),
+                                    node.port(),
+                                    restartBlockNumber);
+                            restartStreamAtBlock(restartBlockNumber);
+                        },
+                        5,
+                        TimeUnit.SECONDS);
+            }
             default -> {
                 // By default, restart after the last verified block + 1
                 long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
