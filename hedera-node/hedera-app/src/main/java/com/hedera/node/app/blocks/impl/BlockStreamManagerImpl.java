@@ -898,4 +898,14 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 .join();
         log.fatal("Block stream fatal shutdown complete");
     }
+
+    @VisibleForTesting
+    public SortedMap<Long, Long> getMissedJudgeCounts() {
+        return missedJudgeCounts;
+    }
+
+    @VisibleForTesting
+    public long getRoundsThisStakingPeriod() {
+        return roundsThisStakingPeriod;
+    }
 }

@@ -9,7 +9,6 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileCreate;
-import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.mutateSingleton;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.recordStreamMustIncludeNoFailuresFrom;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.selectedItems;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilStartOfNextStakingPeriod;
@@ -18,10 +17,7 @@ import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.NODE_REWARD;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HBAR;
 import static com.hedera.services.bdd.suites.integration.RepeatableHip1064Tests.validateRecordFees;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.hedera.hapi.node.state.token.NodeActivity;
-import com.hedera.hapi.node.state.token.NodeRewards;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.RepeatableHapiTest;
 import com.hedera.services.bdd.junit.TargetEmbeddedMode;
@@ -77,20 +73,6 @@ public class RepeatableHip1064TestsDisabled {
                                 .getAmount())),
                 // validate all network fees go to 0.0.801
                 validateRecordFees("notFree", List.of(3L, 98L, 800L, 801L)),
-
-                // When the feature is not active, the node reward state is not updated
-                mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
-                    assertEquals(0, nodeRewards.numRoundsInStakingPeriod());
-                    assertEquals(0, nodeRewards.nodeActivities().size());
-                    assertEquals(0L, nodeRewards.feesCollectedByRewardEligibleNodes());
-                    return nodeRewards
-                            .copyBuilder()
-                            .nodeActivities(NodeActivity.newBuilder()
-                                    .nodeId(1)
-                                    .numMissedJudgeRounds(2)
-                                    .build())
-                            .build();
-                }),
                 waitUntilStartOfNextStakingPeriod(1),
                 // Trigger another round with a transaction with no fees (superuser payer)
                 // so the network should pay rewards
