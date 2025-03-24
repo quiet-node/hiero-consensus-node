@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.event.source;
 
+import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.common.test.fixtures.TransactionGenerator;
 import com.swirlds.platform.internal.EventImpl;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Random;
+import org.hiero.consensus.model.event.PlatformEvent;
 
 /**
  * An AbstractEventSource that will periodically fork.
@@ -27,6 +31,9 @@ public class ForkingEventSource extends AbstractEventSource {
      */
     private ArrayList<LinkedList<EventImpl>> branches;
 
+    private Map<GossipEvent, Integer> branchIndexMap = new HashMap<>();
+    private Map<GossipEvent, Boolean> isSingleEventInBranchMap = new HashMap<>();
+
     /**
      * The index of the event that was last given out as the "latest" event.
      */
@@ -42,6 +49,12 @@ public class ForkingEventSource extends AbstractEventSource {
 
     public ForkingEventSource(final long weight) {
         this(true, DEFAULT_TRANSACTION_GENERATOR, weight);
+    }
+
+    public ForkingEventSource(final Map<GossipEvent, Integer> branchIndexMap, final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+        this(true, DEFAULT_TRANSACTION_GENERATOR, DEFAULT_WEIGHT);
+        this.branchIndexMap = branchIndexMap;
+        this.isSingleEventInBranchMap = isSingleEventInBranchMap;
     }
 
     public ForkingEventSource(
@@ -119,6 +132,11 @@ public class ForkingEventSource extends AbstractEventSource {
 
         currentBranch = random.nextInt(branches.size());
         final LinkedList<EventImpl> events = branches.get(currentBranch);
+        System.out.println("number of events in the branch: " + events.size());
+        if(events.size() == 2) {
+            int a = 5;
+        }
+        System.out.println("getRecent event in forking event source " + events);
 
         if (events.size() == 0) {
             return null;
@@ -128,6 +146,7 @@ public class ForkingEventSource extends AbstractEventSource {
             return events.getLast();
         }
 
+        System.out.println("Returned event from getRecentEvents in ForkingEventSource " + events.get(index));
         return events.get(index);
     }
 
@@ -161,6 +180,7 @@ public class ForkingEventSource extends AbstractEventSource {
     @Override
     public void setLatestEvent(final Random random, final EventImpl event) {
         if (shouldFork(random)) {
+            System.out.println("Forking");
             fork(random);
         }
 
@@ -170,8 +190,20 @@ public class ForkingEventSource extends AbstractEventSource {
             currentBranch = 0;
         }
 
+        if(currentBranch == 9) {
+            int c = 5;
+        }
         final LinkedList<EventImpl> branch = branches.get(currentBranch);
         branch.addFirst(event);
+//        if(branch.size() > 1) {
+//        event.getBaseEvent().setBranchIndex(currentBranch);
+//        }
+        branchIndexMap.put(event.getBaseEvent().getGossipEvent(), currentBranch);
+        if (branch.size() == 1) {
+            isSingleEventInBranchMap.put(event.getBaseEvent().getGossipEvent(), true);
+        } else {
+            isSingleEventInBranchMap.put(event.getBaseEvent().getGossipEvent(), false);
+        }
         pruneEventList(branch);
     }
 }

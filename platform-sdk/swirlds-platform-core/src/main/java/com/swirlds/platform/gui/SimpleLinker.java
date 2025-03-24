@@ -141,6 +141,9 @@ public class SimpleLinker {
         final EventImpl otherParent = otherParents.isEmpty() ? null : getParentToLink(event, otherParents.get(0));
 
         final EventImpl linkedEvent = new EventImpl(event, selfParent, otherParent);
+        if(event.getBranchIndex() != -1) {
+            linkedEvent.getBaseEvent().setBranchIndex(event.getBranchIndex());
+        }
         EventCounter.incrementLinkedEventCount();
 
         final EventDescriptorWrapper eventDescriptorWrapper = event.getDescriptor();

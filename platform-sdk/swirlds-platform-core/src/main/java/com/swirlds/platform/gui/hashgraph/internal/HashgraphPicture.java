@@ -23,8 +23,13 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.Serial;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,6 +52,17 @@ public class HashgraphPicture extends JPanel {
 
     private AddressBookMetadata nonExpandedMetadata;
     private AddressBookMetadata expandedMetadata;
+//    private Set<EventDescriptorWrapper> selfParents = new HashSet<>();
+//    private Map<EventDescriptorWrapper, >
+//    private Map<EventImpl, Long> eventCount = new HashMap<>();
+//    private Map<Integer, Integer> xToY = new HashMap<>();
+    private List<EventImpl> events = new ArrayList<>();
+    int refreshCounter = 0;
+    Map<EventImpl, Integer> eventFirstOccurence = new HashMap<>();
+    Map<Long, List<EventImpl>> branchIndexToEvents = new HashMap<>();
+    Map<Long, Integer> branchIndexToY = new HashMap<>();
+    Map<Long, Integer> branchIndexToX = new HashMap<>();
+    private final Map<EventImpl, Integer> eventToX = new HashMap<>();
 
     public HashgraphPicture(final HashgraphGuiSource hashgraphSource, final HashgraphPictureOptions options) {
         this.hashgraphSource = hashgraphSource;
@@ -100,7 +116,7 @@ public class HashgraphPicture extends JPanel {
                     .filter(e -> addressBook.getIndexOfNodeId(e.getCreatorId()) < numMem)
                     .toList();
 
-            pictureMetadata = new PictureMetadata(fm, this.getSize(), currentMetadata, events);
+            pictureMetadata = new PictureMetadata(fm, this.getSize(), currentMetadata, events, branchIndexToX, branchIndexToY, eventToX);
 
             selector.setMetadata(pictureMetadata);
             selector.setEventsInPicture(events);
@@ -132,6 +148,7 @@ public class HashgraphPicture extends JPanel {
             for (final EventImpl event : events) {
                 drawEventCircle(g, event, options, d);
             }
+            refreshCounter++;
         } catch (final Exception e) {
             logger.error(EXCEPTION.getMarker(), "error while painting", e);
         }
@@ -151,17 +168,27 @@ public class HashgraphPicture extends JPanel {
         }
         if (e1 != null && e1.getGeneration() >= pictureMetadata.getMinGen()) {
             g.drawLine(
-                    pictureMetadata.xpos(e2, event),
+                    pictureMetadata.xpos(e2, event, false),
                     pictureMetadata.ypos(event),
-                    pictureMetadata.xpos(e2, event),
+                    pictureMetadata.xpos(e2, event, false),
                     pictureMetadata.ypos(e1));
+
+//                branchIndexToX.put(event.getBaseEvent().getBranchIndex(), pictureMetadata.xpos(e2, event, false) + 10);
+//                final var lastX = branchIndexToX.get(event.getBaseEvent().getBranchIndex());
+//                eventToX.put(event, lastX + 10);
+//                branchIndexToY.put(event.getBaseEvent().getBranchIndex(), pictureMetadata.ypos(event));
         }
         if (e2 != null && e2.getGeneration() >= pictureMetadata.getMinGen()) {
             g.drawLine(
-                    pictureMetadata.xpos(e2, event),
+                    pictureMetadata.xpos(e2, event, false),
                     pictureMetadata.ypos(event),
-                    pictureMetadata.xpos(event, e2),
+                    pictureMetadata.xpos(event, e2, false),
                     pictureMetadata.ypos(e2));
+
+//                branchIndexToX.put(event.getBaseEvent().getBranchIndex(), pictureMetadata.xpos(event, e2, false) + 10);
+//                final var lastX = branchIndexToX.get(event.getBaseEvent().getBranchIndex());
+//                eventToX.put(event, lastX + 10);
+//                branchIndexToY.put(event.getBaseEvent().getBranchIndex(), pictureMetadata.ypos(e2));
         }
     }
 
@@ -187,10 +214,34 @@ public class HashgraphPicture extends JPanel {
         }
         g.setColor(color);
 
-        final int xPos = pictureMetadata.xpos(e2, event) - d / 2;
+        final int xPos = pictureMetadata.xpos(e2, event, false) - d / 2;
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
-        g.fillOval(xPos, yPos, d, d);
+        if(branchIndexToX.containsKey(event.getBaseEvent().getBranchIndex())) {
+            branchIndexToX.put(event.getBaseEvent().getBranchIndex(), xPos);
+
+            final var lastX = branchIndexToX.get(event.getBaseEvent().getBranchIndex());
+
+            eventToX.put(event, lastX);
+        } else if (event.getBaseEvent().getBranchIndex() != -1) {
+            eventToX.put(event, xPos);
+            branchIndexToX.put(event.getBaseEvent().getBranchIndex(), xPos);
+        }
+
+        branchIndexToY.put(event.getBaseEvent().getBranchIndex(), yPos);
+
+        eventFirstOccurence.put(event, refreshCounter);
+
+        if(event.getBaseEvent().getBranchIndex() != -1L){
+            final var newXPos = eventToX.get(event);
+            final var newYPos = branchIndexToY.get(event.getBaseEvent().getBranchIndex());
+            g.fillOval(newXPos, newYPos, d, d);
+        } else {
+            g.fillOval(xPos, yPos, d, d);
+        }
+
+        events.add(event);
+
         g.setFont(g.getFont().deriveFont(Font.BOLD));
 
         String s = "";
@@ -235,9 +286,15 @@ public class HashgraphPicture extends JPanel {
         if (options.writeBirthRound()) {
             s += " " + event.getBirthRound();
         }
+
+        if (options.showBranches() && hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(event.getBaseEvent().getGossipEvent()) &&
+                !hashgraphSource.getEventStorage().getIsSingleEventInBranchMap().get(event.getBaseEvent().getGossipEvent())) {
+            s += " " + "branch " + hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent());
+        }
+
         if (!s.isEmpty()) {
             final Rectangle2D rect = fm.getStringBounds(s, g);
-            final int x = (int) (pictureMetadata.xpos(e2, event) - rect.getWidth() / 2. - fa / 4.);
+            final int x = (int) (pictureMetadata.xpos(e2, event, true) - rect.getWidth() / 2. - fa / 4.);
             final int y = (int) (pictureMetadata.ypos(event) + rect.getHeight() / 2. - fd / 2);
             g.setColor(HashgraphGuiConstants.LABEL_OUTLINE);
             g.drawString(s, x - 1, y - 1);

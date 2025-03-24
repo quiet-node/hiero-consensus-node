@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.gui;
 
+import com.hedera.hapi.platform.event.GossipEvent;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.consensus.SyntheticSnapshot;
@@ -12,11 +13,13 @@ import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.awt.FlowLayout;
 import java.util.List;
+import java.util.Map;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
+import org.hiero.consensus.gossip.Gossip;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
@@ -40,6 +43,28 @@ public class TestGuiSource {
             @NonNull final AddressBook addressBook,
             @NonNull final GuiEventProvider eventProvider) {
         this.eventStorage = new GuiEventStorage(platformContext.getConfiguration(), addressBook);
+        this.guiSource = new StandardGuiSource(addressBook, eventStorage);
+        this.eventProvider = eventProvider;
+        this.ancientMode = platformContext
+                .getConfiguration()
+                .getConfigData(EventConfig.class)
+                .getAncientMode();
+    }
+
+    /**
+     * Construct a {@link TestGuiSource} with the given platform context, address book, and event provider.
+     *
+     * @param platformContext the platform context
+     * @param addressBook     the address book
+     * @param eventProvider   the event provider
+     */
+    public TestGuiSource(
+            @NonNull final PlatformContext platformContext,
+            @NonNull final AddressBook addressBook,
+            @NonNull final GuiEventProvider eventProvider,
+            @NonNull final Map<GossipEvent, Integer> branchIndexMap,
+            @NonNull final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+        this.eventStorage = new GuiEventStorage(platformContext.getConfiguration(), addressBook, branchIndexMap, isSingleEventInBranchMap);
         this.guiSource = new StandardGuiSource(addressBook, eventStorage);
         this.eventProvider = eventProvider;
         this.ancientMode = platformContext

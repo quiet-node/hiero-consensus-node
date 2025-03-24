@@ -4,7 +4,9 @@ package com.swirlds.platform.gui.hashgraph.internal;
 import com.swirlds.platform.internal.EventImpl;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Metadata that is used to aid in drawing a {@code HashgraphPicture}
@@ -23,12 +25,22 @@ public class PictureMetadata {
     private final double r;
     private final long minGen;
     private final long maxGen;
+    private final  Map<Long, Integer> branchIndexToX;
+    private final  Map<Long, Integer> branchIndexToY;
+    private final Map<EventImpl, Integer> eventToX;
+    private int lastX;
 
     public PictureMetadata(
             final FontMetrics fm,
             final Dimension pictureDimension,
             final AddressBookMetadata addressBookMetadata,
-            final List<EventImpl> events) {
+            final List<EventImpl> events,
+            final Map<Long, Integer> branchIndexToX,
+            final Map<Long, Integer> branchIndexToY,
+            final Map<EventImpl, Integer> eventToX) {
+        this.branchIndexToX = branchIndexToX;
+        this.branchIndexToY = branchIndexToY;
+        this.eventToX = eventToX;
         this.addressBookMetadata = addressBookMetadata;
         final int fa = fm.getMaxAscent();
         final int fd = fm.getMaxDescent();
@@ -73,24 +85,31 @@ public class PictureMetadata {
     }
 
     /** find x position on the screen for event e2 which has an other-parent of e1 (or null if none) */
-    public int xpos(final EventImpl e1, final EventImpl e2) {
-        // the gap between left side of screen and leftmost column
-        // is marginFraction times the gap between columns (and similarly for right side)
-        final double marginFraction = 0.5;
-        // gap between columns
-        final int betweenGap = (int) (width / (addressBookMetadata.getNumColumns() - 1 + 2 * marginFraction));
-        // gap between leftmost column and left edge (and similar on right)
-        final int sideGap = (int) (betweenGap * marginFraction);
+    public int xpos(final EventImpl e1, final EventImpl e2, final boolean isText) {
+                // the gap between left side of screen and leftmost column
+                // is marginFraction times the gap between columns (and similarly for right side)
+                final double marginFraction = 0.5;
+                // gap between columns
+                final int betweenGap = (int) (width / (addressBookMetadata.getNumColumns() - 1 + 2 * marginFraction));
+                // gap between leftmost column and left edge (and similar on right)
+                final int sideGap = (int) (betweenGap * marginFraction);
 
-        // find the column for e2 next to the column for e1
-        return sideGap + addressBookMetadata.mems2col(e1, e2) * betweenGap;
+                // find the column for e2 next to the column for e1
+                final int xPos = sideGap + addressBookMetadata.mems2col(e1, e2) * betweenGap;
+
+                return xPos;
     }
 
     /**
      * find y position on the screen for an event
      */
     public int ypos(final EventImpl event) {
-        return (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
+//        if (event.getBaseEvent().getBranchIndex() == -1 || !branchIndexToY.containsKey(event.getBaseEvent().getBranchIndex())) {
+            return (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
+//        } else {
+//            return branchIndexToY.get(event.getBaseEvent().getBranchIndex());
+//            return (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - event.getBaseEvent().getBranchIndex() - minGen)));
+//        }
     }
 
     /**

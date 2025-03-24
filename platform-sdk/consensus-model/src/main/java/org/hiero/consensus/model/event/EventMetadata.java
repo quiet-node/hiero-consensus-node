@@ -65,6 +65,8 @@ public class EventMetadata extends AbstractHashable {
      */
     private final long birthRound;
 
+    private long branchIndex = -1;
+
     /**
      * Create a EventMetadata object
      *
@@ -152,6 +154,14 @@ public class EventMetadata extends AbstractHashable {
     @NonNull
     public NodeId getCreatorId() {
         return creatorId;
+    }
+
+    public long getBranchIndex() {
+        return branchIndex;
+    }
+
+    public void setBranchIndex(long branchIndex) {
+        this.branchIndex = branchIndex;
     }
 
     /**

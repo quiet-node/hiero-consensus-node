@@ -3,6 +3,7 @@ package com.swirlds.platform.gui;
 
 import static org.hiero.consensus.model.event.EventConstants.FIRST_GENERATION;
 
+import com.hedera.hapi.platform.event.GossipEvent;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.config.api.Configuration;
@@ -17,7 +18,9 @@ import com.swirlds.platform.roster.RosterRetriever;
 import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
@@ -36,6 +39,8 @@ public class GuiEventStorage {
     private final SimpleLinker linker;
     private final Configuration configuration;
     private ConsensusRound lastConsensusRound;
+    private final Map<GossipEvent, Integer> branchIndexMap;
+    private final Map<GossipEvent, Boolean> isSingleEventInBranchMap;
 
     /**
      * Creates an empty instance
@@ -52,6 +57,28 @@ public class GuiEventStorage {
                 platformContext, new NoOpConsensusMetrics(), RosterRetriever.buildRoster(addressBook));
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
+        this.branchIndexMap = new HashMap<>();
+        this.isSingleEventInBranchMap = new HashMap<>();
+    }
+
+    /**
+     * Creates an empty instance
+     *
+     * @param configuration this node's configuration
+     * @param addressBook   the network's address book
+     */
+    public GuiEventStorage(@NonNull final Configuration configuration, @NonNull final AddressBook addressBook, final Map<GossipEvent, Integer> branchIndexMap,
+            final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+
+        this.configuration = Objects.requireNonNull(configuration);
+        final PlatformContext platformContext = PlatformContext.create(configuration);
+
+        this.consensus = new ConsensusImpl(
+                platformContext, new NoOpConsensusMetrics(), RosterRetriever.buildRoster(addressBook));
+        this.linker =
+                new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
+        this.branchIndexMap = branchIndexMap;
+        this.isSingleEventInBranchMap = isSingleEventInBranchMap;
     }
 
     /**
@@ -71,6 +98,8 @@ public class GuiEventStorage {
                 .mapToLong(EventImpl::getGeneration)
                 .max()
                 .orElse(FIRST_GENERATION);
+        this.branchIndexMap = new HashMap<>();
+        this.isSingleEventInBranchMap = new HashMap<>();
     }
 
     /**
@@ -141,5 +170,13 @@ public class GuiEventStorage {
      */
     public synchronized @Nullable ConsensusRound getLastConsensusRound() {
         return lastConsensusRound;
+    }
+
+    public Map<GossipEvent, Integer> getBranchIndexMap() {
+        return branchIndexMap;
+    }
+
+    public Map<GossipEvent, Boolean> getIsSingleEventInBranchMap() {
+        return isSingleEventInBranchMap;
     }
 }

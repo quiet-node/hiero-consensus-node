@@ -114,6 +114,9 @@ public class PlatformEvent implements ConsensusEvent, Hashable {
     public @NonNull PlatformEvent copyGossipedData() {
         final PlatformEvent platformEvent = new PlatformEvent(gossipEvent);
         platformEvent.setHash(getHash());
+        if(getBranchIndex()!=-1) {
+            platformEvent.setBranchIndex(getBranchIndex());
+        }
         return platformEvent;
     }
 
@@ -194,6 +197,14 @@ public class PlatformEvent implements ConsensusEvent, Hashable {
      */
     public int getTransactionCount() {
         return metadata.getTransactions().size();
+    }
+
+    public long getBranchIndex() {
+        return metadata.getBranchIndex();
+    }
+
+    public void setBranchIndex(long branchIndex) {
+        metadata.setBranchIndex(branchIndex);
     }
 
     /**

@@ -6,8 +6,13 @@ import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.internal.EventImpl;
 import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * A {@link HashgraphGuiSource} that retrieves events from a stream of events
@@ -42,10 +47,11 @@ public class StandardGuiSource implements HashgraphGuiSource {
     @Override
     @NonNull
     public List<EventImpl> getEvents(final long startGeneration, final int numGenerations) {
-        return eventStorage.getNonAncientEvents().stream()
+        final var events =  eventStorage.getNonAncientEvents().stream()
                 .filter(e ->
                         e.getGeneration() >= startGeneration && e.getGeneration() < startGeneration + numGenerations)
                 .toList();
+        return events;
     }
 
     /**
