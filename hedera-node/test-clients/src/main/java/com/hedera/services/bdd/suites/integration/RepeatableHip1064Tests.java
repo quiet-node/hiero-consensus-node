@@ -9,6 +9,7 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileCreate;
+import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.mutateSingleton;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doWithStartupConfig;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
@@ -32,11 +33,14 @@ import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.RepeatableHapiTest;
 import com.hedera.services.bdd.junit.TargetEmbeddedMode;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
+import com.hedera.services.bdd.spec.SpecOperation;
 import com.hedera.services.bdd.spec.transactions.token.TokenMovement;
+import com.hedera.services.bdd.spec.utilops.UtilVerbs;
 import com.hedera.services.bdd.spec.utilops.streams.assertions.VisibleItemsValidator;
 import com.hederahashgraph.api.proto.java.AccountAmount;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
@@ -102,6 +106,8 @@ public class RepeatableHip1064Tests {
                                 .findFirst()
                                 .orElseThrow()
                                 .getAmount())),
+                // validate all network fees go to 0.0.801
+                validateRecordFees("notFree", List.of(3L, 801L)),
                 doWithStartupConfig(
                         "nodes.targetUsdNodeRewards",
                         target -> doWithStartupConfig(
@@ -134,7 +140,28 @@ public class RepeatableHip1064Tests {
                 cryptoCreate("nobody").payingWith(GENESIS));
     }
 
-    private static VisibleItemsValidator nodeRewardsValidator(@NonNull final LongSupplier expectedPerNodeReward) {
+    static SpecOperation validateRecordFees(final String record, List<Long> expectedFeeAccounts) {
+        return UtilVerbs.withOpContext((spec, opLog) -> {
+            var fileCreate = getTxnRecord(record);
+            allRunFor(spec, fileCreate);
+            var response = fileCreate.getResponseRecord();
+            assertEquals(
+                    response.getTransferList().getAccountAmountsList().stream()
+                            .filter(aa -> aa.getAmount() < 0)
+                            .count(),
+                    1);
+            // When the feature is disabled the node fees go to node. Network fee is split between 98, 800 and 801
+            assertEquals(
+                    expectedFeeAccounts,
+                    response.getTransferList().getAccountAmountsList().stream()
+                            .filter(aa -> aa.getAmount() > 0)
+                            .map(aa -> aa.getAccountID().getAccountNum())
+                            .sorted()
+                            .toList());
+        });
+    }
+
+    static VisibleItemsValidator nodeRewardsValidator(@NonNull final LongSupplier expectedPerNodeReward) {
         return (spec, records) -> {
             final var items = records.get(SELECTED_ITEMS_KEY);
             assertNotNull(items, "No reward payments found");
@@ -142,7 +169,6 @@ public class RepeatableHip1064Tests {
             final var payment = items.getFirst();
             assertEquals(CryptoTransfer, payment.function());
             final var op = payment.body().getCryptoTransfer();
-            System.out.println("BODY: " + op);
             final long expectedPerNode = expectedPerNodeReward.getAsLong();
             final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
                     .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
@@ -155,8 +181,6 @@ public class RepeatableHip1064Tests {
             assertEquals(expectedPerNode, bodyAdjustments.get(5L));
             // node3 credit
             assertEquals(expectedPerNode, bodyAdjustments.get(6L));
-            System.out.println(op.getTransfers());
-            System.out.println(payment.transactionRecord());
         };
     }
 }

@@ -207,6 +207,7 @@ class HandleWorkflowTest {
                 .getOrCreateConfig();
         given(configProvider.getConfiguration()).willReturn(new VersionedConfigImpl(config, 1L));
         given(boundaryStateChangeListener.lastConsensusTimeOrThrow()).willReturn(NOW);
+        given(round.getConsensusTimestamp()).willReturn(NOW);
         subject = new HandleWorkflow(
                 networkInfo,
                 stakePeriodChanges,

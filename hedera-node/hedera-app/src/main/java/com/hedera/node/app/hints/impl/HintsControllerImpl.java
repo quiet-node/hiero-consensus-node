@@ -245,7 +245,6 @@ public class HintsControllerImpl implements HintsController {
             @NonNull final WritableHintsStore hintsStore,
             @NonNull final CRSState crsState,
             @NonNull final TssConfig tssConfig) {
-        log.info(" NOW {} - CRS contribution end time {}", now, asInstant(crsState.contributionEndTimeOrThrow()));
         if (crsState.stage() == GATHERING_CONTRIBUTIONS) {
             final var delay = tssConfig.crsFinalizationDelay();
             final var updatedState = crsState.copyBuilder()
