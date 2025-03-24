@@ -407,8 +407,7 @@ public class StateChangesValidator implements BlockStreamValidator {
                 expectedNumTokenRelations.size(), actualCounts.numTokenRelations(), "Token relation counts mismatch");
         assertEquals(expectedNumAccounts.size(), actualCounts.numAccounts(), "Account counts mismatch");
         assertEquals(expectedNumAliases.size(), actualCounts.numAliases(), "Alias counts mismatch");
-        //        assertEquals(expectedNumStakingInfos.size(), actualCounts.numStakingInfos(), "Staking info counts
-        // mismatch");
+        assertEquals(expectedNumStakingInfos.size(), actualCounts.numStakingInfos(), "Staking info counts mismatch");
         assertEquals(expectedNumNfts.size(), actualCounts.numNfts(), "Nft counts mismatch");
 
         assertEquals(
