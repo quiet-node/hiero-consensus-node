@@ -47,7 +47,6 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ACCOUN
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_RENEWAL_PERIOD;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.MISSING_TOKEN_SYMBOL;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
-import static org.hiero.consensus.model.utility.CommonUtils.unhex;
 
 import com.esaulpaugh.headlong.abi.Address;
 import com.hedera.services.bdd.junit.HapiTest;
@@ -65,6 +64,7 @@ import com.hederahashgraph.api.proto.java.TokenID;
 import com.hederahashgraph.api.proto.java.TokenPauseStatus;
 import com.hederahashgraph.api.proto.java.TokenSupplyType;
 import com.hederahashgraph.api.proto.java.TokenType;
+import java.util.HexFormat;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -174,8 +174,8 @@ public class CreatePrecompileSuite {
                                     .exposingResultTo(result -> {
                                         log.info(EXPLICIT_CREATE_RESULT, result[0]);
                                         final var res = (Address) result[0];
-                                        createTokenNum.set(numberOfLongZero(
-                                                unhex(res.toString().substring(2))));
+                                        createTokenNum.set(numberOfLongZero(HexFormat.of()
+                                                .parseHex(res.toString().substring(2))));
                                     })
                                     .hasKnownStatus(SUCCESS),
                             newKeyNamed(TOKEN_CREATE_CONTRACT_AS_KEY).shape(CONTRACT.signedWith(TOKEN_CREATE_CONTRACT)),
@@ -273,8 +273,8 @@ public class CreatePrecompileSuite {
                             .exposingResultTo(result -> {
                                 log.info("Explicit create result is" + " {}", result[0]);
                                 final var res = (Address) result[0];
-                                createdNftTokenNum.set(
-                                        numberOfLongZero(unhex(res.toString().substring(2))));
+                                createdNftTokenNum.set(numberOfLongZero(
+                                        HexFormat.of().parseHex(res.toString().substring(2))));
                             })
                             .hasKnownStatus(SUCCESS);
 
@@ -357,8 +357,8 @@ public class CreatePrecompileSuite {
                                 .exposingResultTo(result -> {
                                     log.info(EXPLICIT_CREATE_RESULT, result[0]);
                                     final var res = (Address) result[0];
-                                    createTokenNum.set(numberOfLongZero(
-                                            unhex(res.toString().substring(2))));
+                                    createTokenNum.set(numberOfLongZero(HexFormat.of()
+                                            .parseHex(res.toString().substring(2))));
                                 })
                                 .hasKnownStatus(SUCCESS))),
                 sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
@@ -403,8 +403,8 @@ public class CreatePrecompileSuite {
                             .exposingResultTo(result -> {
                                 log.info("Explicit create result is" + " {}", result[0]);
                                 final var res = (Address) result[0];
-                                createdTokenNum.set(
-                                        numberOfLongZero(unhex(res.toString().substring(2))));
+                                createdTokenNum.set(numberOfLongZero(
+                                        HexFormat.of().parseHex(res.toString().substring(2))));
                             })
                             .refusingEthConversion()
                             .hasKnownStatus(SUCCESS);
@@ -510,8 +510,8 @@ public class CreatePrecompileSuite {
                                     .exposingResultTo(result -> {
                                         log.info(EXPLICIT_CREATE_RESULT, result[0]);
                                         final var res = (Address) result[0];
-                                        createdTokenNum.set(numberOfLongZero(
-                                                unhex(res.toString().substring(2))));
+                                        createdTokenNum.set(numberOfLongZero(HexFormat.of()
+                                                .parseHex(res.toString().substring(2))));
                                     })
                                     .hasKnownStatus(SUCCESS));
                 }),
@@ -598,8 +598,8 @@ public class CreatePrecompileSuite {
                                 .exposingResultTo(result -> {
                                     log.info(EXPLICIT_CREATE_RESULT, result[0]);
                                     final var res = (Address) result[0];
-                                    createdTokenNum.set(numberOfLongZero(
-                                            unhex(res.toString().substring(2))));
+                                    createdTokenNum.set(numberOfLongZero(HexFormat.of()
+                                            .parseHex(res.toString().substring(2))));
                                 }),
                         newKeyNamed(TOKEN_CREATE_CONTRACT_AS_KEY).shape(CONTRACT.signedWith(TOKEN_CREATE_CONTRACT)))),
                 getTxnRecord(FIRST_CREATE_TXN).andAllChildRecords().logged(),
@@ -662,8 +662,8 @@ public class CreatePrecompileSuite {
                                 .exposingResultTo(result -> {
                                     log.info(EXPLICIT_CREATE_RESULT, result[0]);
                                     final var res = (Address) result[0];
-                                    createdTokenNum.set(numberOfLongZero(
-                                            unhex(res.toString().substring(2))));
+                                    createdTokenNum.set(numberOfLongZero(HexFormat.of()
+                                            .parseHex(res.toString().substring(2))));
                                 })
                                 .hasKnownStatus(SUCCESS))),
                 getTxnRecord(FIRST_CREATE_TXN).andAllChildRecords().logged(),
@@ -1056,8 +1056,8 @@ public class CreatePrecompileSuite {
                                 .exposingResultTo(result -> {
                                     log.info(EXPLICIT_CREATE_RESULT, result[0]);
                                     final var res = (Address) result[0];
-                                    createTokenNum.set(numberOfLongZero(
-                                            unhex(res.toString().substring(2))));
+                                    createTokenNum.set(numberOfLongZero(HexFormat.of()
+                                            .parseHex(res.toString().substring(2))));
                                 })
                                 .hasKnownStatus(SUCCESS))),
                 withOpContext((spec, opLog) -> allRunFor(
