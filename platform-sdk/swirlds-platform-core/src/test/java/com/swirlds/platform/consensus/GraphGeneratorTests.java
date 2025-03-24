@@ -771,4 +771,33 @@ public class GraphGeneratorTests {
             assertNotEquals(removalNode, removalEvent.getCreatorId());
         }
     }
+
+    /**
+     * Tests if the node removal functionality works as expected.
+     */
+    @Test
+    @Tag(TestComponentTags.PLATFORM)
+    @Tag(TestComponentTags.CONSENSUS)
+    @DisplayName("Node Remove Test")
+    void birthRoundMigrationTest() {
+        final int numberOfEvents = 10_000;
+        final PlatformContext generationContext = DEFAULT_PLATFORM_CONTEXT;
+        final PlatformContext birthRoundContext = BIRTH_ROUND_PLATFORM_CONTEXT;
+        final StandardGraphGenerator generator = new StandardGraphGenerator(
+                generationContext,
+                0,
+                new StandardEventSource(),
+                new StandardEventSource(),
+                new StandardEventSource(),
+                new StandardEventSource());
+        generator.generateEvents(numberOfEvents / 2);
+
+        final NodeId removalNode = RosterUtils.getNodeId(generator.getRoster(), 0);
+        generator.removeNode(removalNode);
+
+        final List<EventImpl> postRemovalEvents = generator.generateEvents(numberOfEvents / 2);
+        for (final EventImpl removalEvent : postRemovalEvents) {
+            assertNotEquals(removalNode, removalEvent.getCreatorId());
+        }
+    }
 }
