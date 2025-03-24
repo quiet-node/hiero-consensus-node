@@ -48,7 +48,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
      * @param appConfig The system configuration to use at the time of migration
      * @param platformConfig The platform configuration to use for subsequent object initializations
      * This is only used in genesis case
-     * @param metrics The metrics to use for the migrations
      * @param startupNetworks The startup networks to use for the migrations
      * @param storeMetricsService The store metrics service to use for the migrations
      * @param configProvider The config provider to use for the migrations

@@ -276,7 +276,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     .isInstanceOf(NullPointerException.class);
         }
 
-
         @Test
         @DisplayName("Calling migrate with a currentVersion < previousVersion throws IAE")
         void currentVersionLessThanPreviousVersionThrows() {
