@@ -92,7 +92,7 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 BalancesConfig.class,
                 BlockRecordStreamConfig.class,
                 BlockStreamConfig.class,
-				BlockNodeConnectionConfig.class,
+                BlockNodeConnectionConfig.class,
                 BootstrapConfig.class,
                 CacheConfig.class,
                 ConsensusConfig.class,

@@ -56,7 +56,7 @@ public class BootstrapConfigProviderImpl extends ConfigProviderBase {
                 .withConfigDataType(AccountsConfig.class)
                 .withConfigDataType(TssConfig.class)
                 .withConfigDataType(ContractsConfig.class)
-				.withConfigDataType(BlockNodeConnectionConfig.class)
+                .withConfigDataType(BlockNodeConnectionConfig.class)
                 .withConverter(Bytes.class, new BytesConverter())
                 .withConverter(SemanticVersion.class, new SemanticVersionConverter())
                 .withConverter(LongPair.class, new LongPairConverter());
