@@ -63,6 +63,8 @@ public class HashgraphPicture extends JPanel {
     Map<Long, Integer> branchIndexToY = new HashMap<>();
     Map<Long, Integer> branchIndexToX = new HashMap<>();
     private final Map<EventImpl, Integer> eventToX = new HashMap<>();
+    private final Map<EventImpl, Boolean> eventAlreadyMarked = new HashMap<>();
+    private final Map<Integer, List<Integer>> branchIndexToxCoordinates = new HashMap<>();
 
     public HashgraphPicture(final HashgraphGuiSource hashgraphSource, final HashgraphPictureOptions options) {
         this.hashgraphSource = hashgraphSource;
@@ -217,22 +219,46 @@ public class HashgraphPicture extends JPanel {
         final int xPos = pictureMetadata.xpos(e2, event, false) - d / 2;
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
-        if(branchIndexToX.containsKey(event.getBaseEvent().getBranchIndex())) {
-            branchIndexToX.put(event.getBaseEvent().getBranchIndex(), xPos);
+        if(eventToX.containsKey(event)) {
+//            final int newXPos = branchIndexToX.get(event.getBaseEvent().getBranchIndex());
+//            branchIndexToX.put(event.getBaseEvent().getBranchIndex(), newXPos + 30);
 
-            final var lastX = branchIndexToX.get(event.getBaseEvent().getBranchIndex());
+//            final var lastX = branchIndexToX.get(event.getBaseEvent().getBranchIndex());
+            final var lastX = eventToX.get(event);
 
-            eventToX.put(event, lastX);
-        } else if (event.getBaseEvent().getBranchIndex() != -1) {
-            eventToX.put(event, xPos);
-            branchIndexToX.put(event.getBaseEvent().getBranchIndex(), xPos);
+//            if (!eventAlreadyMarked.get(event)) {
+//                eventToX.put(event, lastX + 30);
+//            }
+        } else if(hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(event.getBaseEvent().getGossipEvent())) {
+//            final var lastX = eventToX.
+            final var branchIndex = hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent());
+            var xCoordinates = branchIndexToxCoordinates.get(branchIndex);
+            if(xCoordinates != null) {
+                eventToX.put(event, !xCoordinates.isEmpty() ? xCoordinates.getLast() + 30 : xPos);
+
+//                final var lastX = eventToX.getOrDefault(event.getOtherParent(), xPos);
+                xCoordinates.add(xCoordinates.getLast() + 30);
+//            eventAlreadyMarked.put(event, true);
+                branchIndexToxCoordinates.put(branchIndex, xCoordinates);
+            } else {
+                eventToX.put(event, xPos);
+
+                if (xCoordinates == null) {
+                    xCoordinates = new ArrayList<>();
+                }
+
+                xCoordinates.add(xPos);
+                branchIndexToxCoordinates.put(branchIndex, xCoordinates);
+            }
+
+//            branchIndexToX.put(event.getBaseEvent().getBranchIndex(), xPos);
         }
 
         branchIndexToY.put(event.getBaseEvent().getBranchIndex(), yPos);
 
         eventFirstOccurence.put(event, refreshCounter);
 
-        if(event.getBaseEvent().getBranchIndex() != -1L){
+        if(eventToX.containsKey(event)){
             final var newXPos = eventToX.get(event);
             final var newYPos = branchIndexToY.get(event.getBaseEvent().getBranchIndex());
             g.fillOval(newXPos, newYPos, d, d);
@@ -294,7 +320,13 @@ public class HashgraphPicture extends JPanel {
 
         if (!s.isEmpty()) {
             final Rectangle2D rect = fm.getStringBounds(s, g);
-            final int x = (int) (pictureMetadata.xpos(e2, event, true) - rect.getWidth() / 2. - fa / 4.);
+
+            int x;
+            if(eventToX.containsKey(event)) {
+                x = (int) (eventToX.get(event) - rect.getWidth() / 2. - fa / 4.);
+            } else {
+                x = (int) (pictureMetadata.xpos(e2, event, true) - rect.getWidth() / 2. - fa / 4.);
+            }
             final int y = (int) (pictureMetadata.ypos(event) + rect.getHeight() / 2. - fd / 2);
             g.setColor(HashgraphGuiConstants.LABEL_OUTLINE);
             g.drawString(s, x - 1, y - 1);
