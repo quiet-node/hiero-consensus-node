@@ -47,6 +47,8 @@ public class VirtualReconnectUtils {
             final byte[] leafValueBytes = new byte[leafValueLen];
             in.readFully(leafValueBytes, 0, leafValueLen);
             leafValue = Bytes.wrap(leafValueBytes);
+        } else if (leafValueLen == 0) {
+            leafValue = Bytes.EMPTY;
         } else {
             leafValue = Bytes.EMPTY;
         }
@@ -64,7 +66,7 @@ public class VirtualReconnectUtils {
             out.writeInt(Math.toIntExact(value.length()));
             value.writeTo(out);
         } else {
-            out.writeInt(0);
+            out.writeInt(-1);
         }
     }
 }

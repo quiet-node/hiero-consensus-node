@@ -206,12 +206,15 @@ public class VirtualLeafBytes<V> {
         size += ProtoWriterTools.sizeOfTag(FIELD_LEAFRECORD_PATH);
         size += Long.BYTES;
         size += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, Math.toIntExact(keyBytes.length()));
-        int valueBytesLen = -1;
+        final int valueBytesLen;
         // Don't call valueBytes() as it may trigger value serialization to Bytes
         if (valueBytes != null) {
             valueBytesLen = Math.toIntExact(valueBytes.length());
         } else if (value != null) {
             valueBytesLen = valueCodec.measureRecord(value);
+        } else {
+            // Null value
+            valueBytesLen = -1;
         }
         if (valueBytesLen >= 0) {
             size += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, valueBytesLen);
