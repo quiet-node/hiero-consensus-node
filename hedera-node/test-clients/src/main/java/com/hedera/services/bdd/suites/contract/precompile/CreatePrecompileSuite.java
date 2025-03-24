@@ -47,7 +47,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ACCOUN
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_RENEWAL_PERIOD;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.MISSING_TOKEN_SYMBOL;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
-import static com.swirlds.common.utility.CommonUtils.unhex;
+import static org.hiero.consensus.model.utility.CommonUtils.unhex;
 
 import com.esaulpaugh.headlong.abi.Address;
 import com.hedera.services.bdd.junit.HapiTest;
@@ -80,7 +80,6 @@ import org.junit.jupiter.api.Tag;
 // The only way an eth account to create a token is the admin key to be of a contractId type.
 @Tag(SMART_CONTRACT)
 public class CreatePrecompileSuite {
-    public static final String ACCOUNT_2 = "account2";
     public static final String CONTRACT_ADMIN_KEY = "contractAdminKey";
     public static final String ACCOUNT_TO_ASSOCIATE = "account3";
     public static final String ACCOUNT_TO_ASSOCIATE_KEY = "associateKey";
