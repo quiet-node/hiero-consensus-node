@@ -16,6 +16,7 @@ import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.merkle.singleton.WritableSingletonStateImpl;
 import com.swirlds.state.spi.WritableStates;
 import java.time.Instant;
+import org.hiero.consensus.model.utility.CommonUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,20 +49,16 @@ class WritablePlatformStateStoreTest {
     void verifySetAllFrom() {
         final var platformState = randomPlatformState(randotron);
         store.setAllFrom(platformState);
-        assertEquals(
-                platformState.getCreationSoftwareVersion().getPbjSemanticVersion(),
-                store.getCreationSoftwareVersion().getPbjSemanticVersion());
+        assertEquals(platformState.getCreationSoftwareVersion(), store.getCreationSoftwareVersion());
         assertEquals(platformState.getSnapshot().round(), store.getRound());
         assertEquals(platformState.getLegacyRunningEventHash(), store.getLegacyRunningEventHash());
         assertEquals(
-                PbjConverter.fromPbjTimestamp(platformState.getSnapshot().consensusTimestamp()),
+                CommonUtils.fromPbjTimestamp(platformState.getSnapshot().consensusTimestamp()),
                 store.getConsensusTimestamp());
         assertEquals(platformState.getRoundsNonAncient(), store.getRoundsNonAncient());
         assertEquals(platformState.getSnapshot(), store.getSnapshot());
         assertEquals(platformState.getFreezeTime(), store.getFreezeTime());
-        assertEquals(
-                platformState.getFirstVersionInBirthRoundMode().getPbjSemanticVersion(),
-                store.getFirstVersionInBirthRoundMode().getPbjSemanticVersion());
+        assertEquals(platformState.getFirstVersionInBirthRoundMode(), store.getFirstVersionInBirthRoundMode());
         assertEquals(platformState.getLastRoundBeforeBirthRoundMode(), store.getLastRoundBeforeBirthRoundMode());
         assertEquals(
                 platformState.getLowestJudgeGenerationBeforeBirthRoundMode(),
@@ -71,10 +68,8 @@ class WritablePlatformStateStoreTest {
     @Test
     void verifyCreationSoftwareVersion() {
         final var version = nextInt(1, 100);
-        store.setCreationSoftwareVersion(new BasicSoftwareVersion(version));
-        assertEquals(
-                version,
-                store.getCreationSoftwareVersion().getPbjSemanticVersion().major());
+        store.setCreationSoftwareVersion(new BasicSoftwareVersion(version).getPbjSemanticVersion());
+        assertEquals(version, store.getCreationSoftwareVersion().major());
     }
 
     @Test
@@ -129,10 +124,8 @@ class WritablePlatformStateStoreTest {
     @Test
     void verifyFirstVersionInBirthRoundMode() {
         final var version = nextInt(1, 100);
-        store.setFirstVersionInBirthRoundMode(new BasicSoftwareVersion(version));
-        assertEquals(
-                version,
-                store.getFirstVersionInBirthRoundMode().getPbjSemanticVersion().major());
+        store.setFirstVersionInBirthRoundMode(new BasicSoftwareVersion(version).getPbjSemanticVersion());
+        assertEquals(version, store.getFirstVersionInBirthRoundMode().major());
     }
 
     @Test

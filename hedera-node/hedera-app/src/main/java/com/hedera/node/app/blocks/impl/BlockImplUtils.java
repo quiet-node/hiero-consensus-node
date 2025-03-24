@@ -65,11 +65,11 @@ import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_UPGRA
 import static com.hedera.node.app.records.impl.BlockRecordInfoUtils.HASH_SIZE;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.crypto.DigestType;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.function.IntFunction;
+import org.hiero.consensus.model.crypto.DigestType;
 
 /**
  * Utility methods for block implementation.
@@ -209,8 +209,8 @@ public class BlockImplUtils {
                     };
                     case "HintsService" -> switch (stateKey) {
                         case "HINTS_KEY_SETS" -> STATE_ID_HINTS_KEY_SETS.protoOrdinal();
-                        case "ACTIVE_HINTS_CONSTRUCTION" -> STATE_ID_ACTIVE_HINTS_CONSTRUCTION.protoOrdinal();
-                        case "NEXT_HINTS_CONSTRUCTION" -> STATE_ID_NEXT_HINTS_CONSTRUCTION.protoOrdinal();
+                        case "ACTIVE_HINT_CONSTRUCTION" -> STATE_ID_ACTIVE_HINTS_CONSTRUCTION.protoOrdinal();
+                        case "NEXT_HINT_CONSTRUCTION" -> STATE_ID_NEXT_HINTS_CONSTRUCTION.protoOrdinal();
                         case "PREPROCESSING_VOTES" -> STATE_ID_PREPROCESSING_VOTES.protoOrdinal();
                         case "CRS_STATE" -> STATE_ID_CRS_STATE.protoOrdinal();
                         case "CRS_PUBLICATIONS" -> STATE_ID_CRS_PUBLICATIONS.protoOrdinal();

@@ -12,11 +12,9 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.PlatformStateModifier;
-import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableStates;
@@ -25,6 +23,8 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.hashgraph.Round;
 
 /**
  * This class is an entry point for the platform state. Though the class itself is stateless, given an instance of {@link State},
@@ -110,7 +110,7 @@ public class PlatformStateFacade {
      * @return the version of the state if it was deserialized, otherwise null
      */
     @Nullable
-    public SoftwareVersion creationSoftwareVersionOf(@NonNull final State state) {
+    public SemanticVersion creationSoftwareVersionOf(@NonNull final State state) {
         requireNonNull(state);
         if (isPlatformStateEmpty(state)) {
             return null;
@@ -185,7 +185,7 @@ public class PlatformStateFacade {
      * @return the number of non-ancient rounds, or zero if the state is a genesis state
      */
     @Nullable
-    public SoftwareVersion firstVersionInBirthRoundModeOf(@NonNull final State state) {
+    public SemanticVersion firstVersionInBirthRoundModeOf(@NonNull final State state) {
         return readablePlatformStateStore(state).getFirstVersionInBirthRoundMode();
     }
 
@@ -288,7 +288,7 @@ public class PlatformStateFacade {
      * @param creationVersion the creation version
      */
     public void setCreationSoftwareVersionTo(@NonNull final State state, @NonNull SoftwareVersion creationVersion) {
-        getWritablePlatformStateOf(state).setCreationSoftwareVersion(creationVersion);
+        getWritablePlatformStateOf(state).setCreationSoftwareVersion(creationVersion.getPbjSemanticVersion());
     }
 
     /**
