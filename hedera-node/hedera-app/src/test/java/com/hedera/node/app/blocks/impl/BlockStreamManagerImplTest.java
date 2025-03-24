@@ -13,6 +13,8 @@ import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
 import static com.hedera.node.app.hapi.utils.CommonUtils.noThrowSha384HashOf;
 import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.NODE_REWARDS_KEY;
 import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
+import static com.swirlds.platform.state.service.schemas.V0540RosterBaseSchema.ROSTER_KEY;
+import static com.swirlds.platform.state.service.schemas.V0540RosterBaseSchema.ROSTER_STATES_KEY;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -41,14 +43,22 @@ import com.hedera.hapi.block.stream.output.TransactionResult;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
+import com.hedera.hapi.node.state.primitives.ProtoBytes;
+import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.node.state.roster.RosterEntry;
+import com.hedera.hapi.node.state.roster.RosterState;
+import com.hedera.hapi.node.state.roster.RoundRosterPair;
 import com.hedera.hapi.node.state.token.NodeRewards;
 import com.hedera.hapi.platform.event.EventTransaction;
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
+import com.hedera.hapi.platform.state.Judge;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
+import com.hedera.node.app.roster.RosterService;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
@@ -57,12 +67,15 @@ import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.platform.state.service.PlatformStateService;
+import com.swirlds.platform.state.service.WritableRosterStore;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.MapWritableKVState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
@@ -152,6 +165,7 @@ class BlockStreamManagerImplTest {
     private final AtomicReference<PlatformState> stateRef = new AtomicReference<>();
     private final AtomicReference<BlockStreamInfo> infoRef = new AtomicReference<>();
     private final AtomicReference<NodeRewards> nodeRewardsRef = new AtomicReference<>();
+    private final AtomicReference<RosterState> rosterStateRef = new AtomicReference<>();
 
     private WritableSingletonStateBase<BlockStreamInfo> blockStreamInfoState;
 
@@ -818,15 +832,35 @@ class BlockStreamManagerImplTest {
                 TEST_PLATFORM_STATE_FACADE);
         given(state.getReadableStates(BlockStreamService.NAME)).willReturn(readableStates);
         given(state.getReadableStates(PlatformStateService.NAME)).willReturn(readableStates);
-        given(state.getReadableStates(TokenService.NAME)).willReturn(readableStates);
+        lenient().when(state.getReadableStates(TokenService.NAME)).thenReturn(readableStates);
+        given(state.getReadableStates(RosterService.NAME)).willReturn(readableStates);
         lenient().when(state.getWritableStates(TokenService.NAME)).thenReturn(writableStates);
         infoRef.set(blockStreamInfo);
         stateRef.set(platformState);
         blockStreamInfoState = new WritableSingletonStateBase<>(BLOCK_STREAM_INFO_KEY, infoRef::get, infoRef::set);
         nodeRewardsRef.set(NodeRewards.newBuilder().build());
-        given(readableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY))
-                .willReturn(
+        rosterStateRef.set(RosterState.newBuilder()
+                .roundRosterPairs(RoundRosterPair.newBuilder()
+                        .roundNumber(0)
+                        .activeRosterHash(Bytes.wrap("ACTIVE"))
+                        .build())
+                .build());
+        lenient()
+                .when(readableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY))
+                .thenReturn(
                         new WritableSingletonStateBase<>(NODE_REWARDS_KEY, nodeRewardsRef::get, nodeRewardsRef::set));
+        given(readableStates.<RosterState>getSingleton(ROSTER_STATES_KEY))
+                .willReturn(
+                        new WritableSingletonStateBase<>(ROSTER_STATES_KEY, rosterStateRef::get, rosterStateRef::set));
+        final WritableKVState<ProtoBytes, Roster> rosters = MapWritableKVState.<ProtoBytes, Roster>builder(
+                        WritableRosterStore.ROSTER_KEY)
+                .build();
+        rosters.put(
+                ProtoBytes.newBuilder().value(Bytes.wrap("ACTIVE")).build(),
+                Roster.newBuilder()
+                        .rosterEntries(RosterEntry.newBuilder().nodeId(0L).build())
+                        .build());
+        given(readableStates.<ProtoBytes, Roster>get(ROSTER_KEY)).willReturn(rosters);
         lenient()
                 .when(writableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY))
                 .thenReturn(
@@ -893,6 +927,9 @@ class BlockStreamManagerImplTest {
     private PlatformState platformStateWithFreezeTime(@Nullable final Instant freezeTime) {
         return PlatformState.newBuilder()
                 .creationSoftwareVersion(CREATION_VERSION)
+                .consensusSnapshot(ConsensusSnapshot.newBuilder()
+                        .judges(new Judge(0, Bytes.wrap("test")))
+                        .build())
                 .freezeTime(freezeTime == null ? null : asTimestamp(freezeTime))
                 .build();
     }

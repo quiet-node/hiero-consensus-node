@@ -78,7 +78,7 @@ class CryptoTransferHandlerTestBase extends StepsBase {
     @BeforeEach
     public void setUp() {
         super.setUp();
-        validator = new CryptoTransferValidator(new AppEntityIdFactory(configProvider.getConfiguration()));
+        validator = new CryptoTransferValidator(new AppEntityIdFactory(configuration));
         tokenAirdropValidator = new TokenAirdropValidator();
         subject = new CryptoTransferHandler(validator);
         tokenAirdropHandler = new TokenAirdropHandler(tokenAirdropValidator, validator);

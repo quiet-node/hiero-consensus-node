@@ -613,7 +613,7 @@ class TokenServiceApiImplTest {
             // When we try to charge a payer account that DOES exist, then we get an IllegalStateException
             assertThatThrownBy(() -> subject.chargeFees(EOA_ACCOUNT_ID, NODE_ACCOUNT_ID, fees, rb, null, onNodeFee))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessage("Node reward account %s does not exist", unknownAccountId);
+                    .hasMessage("Node rewards account %s does not exist", unknownAccountId);
         }
 
         @Test

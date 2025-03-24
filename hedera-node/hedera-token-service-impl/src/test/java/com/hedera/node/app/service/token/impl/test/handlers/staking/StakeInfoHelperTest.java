@@ -15,8 +15,10 @@ import static com.hedera.node.app.service.token.impl.test.handlers.staking.EndOf
 import static com.hedera.node.app.service.token.impl.test.handlers.staking.EndOfStakingPeriodUpdaterTest.STAKING_INFO_2;
 import static com.hedera.node.app.service.token.impl.test.handlers.staking.EndOfStakingPeriodUpdaterTest.STAKING_INFO_3;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 
 import com.hedera.hapi.node.state.common.EntityNumber;
+import com.hedera.hapi.node.state.token.NetworkStakingRewards;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.service.token.impl.WritableNetworkStakingRewardsStore;
@@ -103,6 +105,8 @@ class StakeInfoHelperTest {
         infoStore = new WritableStakingInfoStore(newStates, entityIdStore);
         // Platform address book has node Ids 2, 4, 8
         final var networkInfo = new FakeNetworkInfo();
+
+        given(rewardsStore.get()).willReturn(NetworkStakingRewards.DEFAULT);
 
         // Should update the state to mark node 1 and 3 as deleted
         subject.adjustPostUpgradeStakes(networkInfo, DEFAULT_CONFIG, infoStore, rewardsStore);
