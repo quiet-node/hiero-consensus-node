@@ -46,7 +46,7 @@ public class RepeatableHip1064TestsDisabled {
     @BeforeAll
     static void beforeAll(@NonNull final TestLifecycle testLifecycle) {
         testLifecycle.overrideInClass(Map.of(
-                "nodes.nodeRewardsEnabled", "true",
+                "nodes.nodeRewardsEnabled", "false",
                 "ledger.numSystemAccounts", "3"));
     }
 
