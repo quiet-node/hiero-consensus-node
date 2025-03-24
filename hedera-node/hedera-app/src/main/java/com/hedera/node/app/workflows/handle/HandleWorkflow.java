@@ -104,6 +104,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -284,7 +285,8 @@ public class HandleWorkflow {
             // to the state so these transactions cannot be replayed in future rounds
             recordCache.commitRoundReceipts(state, round.getConsensusTimestamp());
         }
-        final var lastAssignedConsensusTime = boundaryStateChangeListener.lastConsensusTimeOrThrow();
+        final var lastAssignedConsensusTime = Collections.max(
+                List.of(boundaryStateChangeListener.lastConsensusTimeOrThrow(), round.getConsensusTimestamp()));
         reconcileTssState(state, lastAssignedConsensusTime);
         maybeRewardActiveNodes(state, lastAssignedConsensusTime.plusNanos(1));
     }
