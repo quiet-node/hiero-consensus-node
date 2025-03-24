@@ -332,16 +332,24 @@ public class HandleWorkflow {
             final var targetPayInTinyCents = BigInteger.valueOf(nodesConfig.targetUsdNodeRewards())
                     .multiply(USD_TO_TINYCENTS.toBigInteger())
                     .divide(BigInteger.valueOf(nodesConfig.numPeriodsToTargetUsd()));
+            final var minimumRewardInTinyCents = Math.max(
+                    0L,
+                    BigInteger.valueOf(nodesConfig.minNodeReward())
+                            .multiply(USD_TO_TINYCENTS.toBigInteger())
+                            .longValue());
             final long nodeReward = exchangeRateManager.getTinybarsFromTinyCents(targetPayInTinyCents.longValue(), now);
-            final var perNodeReward = Math.max(nodesConfig.minNodeReward(), nodeReward - prePaidRewards);
+            final var perActiveNodeReward = Math.max(minimumRewardInTinyCents, nodeReward - prePaidRewards);
+
             systemTransactions.dispatchNodeRewards(
                     state,
                     now,
                     activeNodeIds,
-                    perNodeReward,
+                    perActiveNodeReward,
                     rewardsAccountId,
                     config.getConfigData(LedgerConfig.class).numSystemAccounts() + 1,
-                    rewardAccountBalance);
+                    rewardAccountBalance,
+                    minimumRewardInTinyCents,
+                    rosterStore.getActiveRoster().rosterEntries());
         }
         // Record this as the last time node rewards were paid
         final var rewardsStore = new WritableNetworkStakingRewardsStore(writableStates);

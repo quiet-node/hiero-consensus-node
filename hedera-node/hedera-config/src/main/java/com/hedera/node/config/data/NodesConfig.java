@@ -14,9 +14,9 @@ import com.swirlds.config.api.ConfigProperty;
  * @param gossipFqdnRestricted Whether the FQDN is restricted for gossip
  * @param enableDAB Whether DAB is enabled
  * @param maxFqdnSize The maximum FQDN size
- * @param nodeRewardsEnabled feature flag for all node reward payments (HIP-1064)
+ * @param nodeRewardsEnabled feature flag for enabling node reward payments (HIP-1064)
  * @param updateAccountIdAllowed Whether the account ID can be updated
- * @param minNodeReward A minimum daily node reward amount (applies even to inactive nodes)
+ * @param minNodeReward A minimum daily node reward amount in USD (applies even to inactive nodes)
  * @param targetUsdNodeRewards The target USD node rewards
  * @param numPeriodsToTargetUsd The number of periods to achieve the target USD node rewards
  * @param adjustNodeFees Whether node fees can be reduced by the average node fees already collected during that period

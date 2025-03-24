@@ -265,6 +265,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             blockHashManager.startBlock(blockStreamInfo, lastBlockHash);
             runningHashManager.startBlock(blockStreamInfo);
 
+            // read the node rewards info from state at start of every block. So, we can commit the accumulated changes
+            // at end of every block
             if (configProvider
                     .getConfiguration()
                     .getConfigData(NodesConfig.class)
@@ -385,11 +387,11 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             ((CommittableWritableStates) writableState).commit();
 
             final long nodeFeesCollected = boundaryStateChangeListener.getAndResetNodeFeesThisBlock();
+            // Persist the judge info and collected fees in node rewards state
             if (configProvider
                     .getConfiguration()
                     .getConfigData(NodesConfig.class)
                     .nodeRewardsEnabled()) {
-                // Persist the judge info and collected fees in node rewards
                 updateNodeRewardState(state, nodeFeesCollected);
             }
 

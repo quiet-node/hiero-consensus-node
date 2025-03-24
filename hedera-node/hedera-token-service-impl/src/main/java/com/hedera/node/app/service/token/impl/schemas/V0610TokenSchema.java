@@ -45,10 +45,11 @@ public class V0610TokenSchema extends Schema {
 
     /**
      * Dispatches a synthetic node reward crypto transfer.
-     * @param systemContext The system context.
+     *
+     * @param systemContext        The system context.
      * @param activeNodeAccountIds The list of node account ids.
-     * @param payerId The payer account id.
-     * @param creditPerNode The credit per node.
+     * @param payerId              The payer account id.
+     * @param creditPerNode        The credit per node.
      */
     public static void dispatchSynthNodeRewards(
             @NonNull final SystemContext systemContext,
@@ -68,9 +69,49 @@ public class V0610TokenSchema extends Schema {
     }
 
     /**
+     * Dispatches a synthetic node reward crypto transfer.
+     *
+     * @param systemContext          The system context.
+     * @param activeNodeAccountIds   The list of node account ids.
+     * @param payerId                The payer account id.
+     * @param creditPerNode          The credit per active node.
+     * @param inactiveNodeAccountIds The list of inactive node account ids.
+     * @param inactiveNodeCredit     The credit for inactive nodes.
+     */
+    public static void dispatchSynthNodeRewards(
+            @NonNull final SystemContext systemContext,
+            @NonNull final List<AccountID> activeNodeAccountIds,
+            @NonNull final AccountID payerId,
+            final long creditPerNode,
+            @NonNull final List<AccountID> inactiveNodeAccountIds,
+            final long inactiveNodeCredit) {
+        if (creditPerNode <= 0L && inactiveNodeCredit <= 0L) {
+            return;
+        }
+        final long payerDebit =
+                -((creditPerNode * activeNodeAccountIds.size()) + (inactiveNodeCredit * inactiveNodeAccountIds.size()));
+        final var amounts = new ArrayList<AccountAmount>();
+        if (creditPerNode > 0L) {
+            amounts.addAll(accountAmountsFrom(activeNodeAccountIds, creditPerNode));
+        }
+        if (inactiveNodeCredit > 0L) {
+            amounts.addAll(accountAmountsFrom(inactiveNodeAccountIds, inactiveNodeCredit));
+        }
+        amounts.add(asAccountAmount(payerId, payerDebit));
+
+        systemContext.dispatchAdmin(b -> b.memo("Synthetic node rewards")
+                .cryptoTransfer(CryptoTransferTransactionBody.newBuilder()
+                        .transfers(TransferList.newBuilder()
+                                .accountAmounts(amounts)
+                                .build()))
+                .build());
+    }
+
+    /**
      * Creates a list of {@link AccountAmount} from a list of {@link AccountID} and an amount.
+     *
      * @param nodeAccountIds The list of node account ids.
-     * @param amount The amount.
+     * @param amount         The amount.
      * @return The list of {@link AccountAmount}.
      */
     private static List<AccountAmount> accountAmountsFrom(

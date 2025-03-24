@@ -33,6 +33,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.ServiceEndpoint;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.common.EntityNumber;
+import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.hapi.node.token.CryptoCreateTransactionBody;
 import com.hedera.hapi.node.transaction.TransactionBody;
@@ -362,10 +363,12 @@ public class SystemTransactions {
      * @param state                          The state.
      * @param now                            The current time.
      * @param activeNodeIds                  The list of active node ids.
-     * @param rewardAccountBalance           The reward account balance.
      * @param perNodeReward                  The per node reward.
      * @param nodeRewardsAccountId           The node rewards account id.
      * @param firstEligibleNodeAccountNumber The first eligible node account number.
+     * @param rewardAccountBalance           The reward account balance.
+     * @param minNodeReward                  The minimum node reward.
+     * @param rosterEntries                  The list of roster entries.
      */
     public void dispatchNodeRewards(
             @NonNull final State state,
@@ -374,7 +377,9 @@ public class SystemTransactions {
             final long perNodeReward,
             @NonNull final AccountID nodeRewardsAccountId,
             final long firstEligibleNodeAccountNumber,
-            final long rewardAccountBalance) {
+            final long rewardAccountBalance,
+            final long minNodeReward,
+            final List<RosterEntry> rosterEntries) {
         requireNonNull(state);
         requireNonNull(now);
         requireNonNull(activeNodeIds);
@@ -386,15 +391,56 @@ public class SystemTransactions {
                 .map(NodeInfo::accountId)
                 .filter(id -> id.accountNumOrThrow() >= firstEligibleNodeAccountNumber)
                 .toList();
-        if (activeNodeAccountIds.isEmpty()) {
+        final var inactiveNodeAccountIds = rosterEntries.stream()
+                .map(RosterEntry::nodeId)
+                .filter(id -> !activeNodeIds.contains(id))
+                .map(id -> systemContext.networkInfo().nodeInfo(id))
+                .filter(Objects::nonNull)
+                .map(NodeInfo::accountId)
+                .filter(id -> id.accountNumOrThrow() >= firstEligibleNodeAccountNumber)
+                .toList();
+        if (activeNodeAccountIds.isEmpty() && (minNodeReward <= 0 || inactiveNodeAccountIds.isEmpty())) {
+            // No eligible rewards to distribute
             return;
         }
         log.info("Found active node accounts {}", activeNodeAccountIds);
-        final long totalReward = Math.min(rewardAccountBalance, activeNodeAccountIds.size() * perNodeReward);
-        log.info("Reward account balance {}", rewardAccountBalance);
-        final long rewardPerNode = totalReward / activeNodeAccountIds.size();
-        if (rewardPerNode > 0) {
-            dispatchSynthNodeRewards(systemContext, activeNodeAccountIds, nodeRewardsAccountId, rewardPerNode);
+        if (minNodeReward > 0 && !inactiveNodeAccountIds.isEmpty()) {
+            log.info(
+                    "Found inactive node accounts {} that will receive minimum node reward {}",
+                    inactiveNodeAccountIds,
+                    minNodeReward);
+        }
+        // Check if rewardAccountBalance is enough to distribute rewards. If the balance is not enough, distribute
+        // rewards to active nodes only. If the balance is enough, distribute rewards to both active and inactive nodes.
+        final var activeTotal = activeNodeAccountIds.size() * perNodeReward;
+        final var inactiveTotal = minNodeReward > 0 ? inactiveNodeAccountIds.size() * minNodeReward : 0L;
+
+        if (rewardAccountBalance <= activeTotal) {
+            final long rewardPerActiveNode = rewardAccountBalance / activeNodeAccountIds.size();
+            log.info(
+                    "Balance insufficient for all, rewarding active nodes only: {} tinybars each", rewardPerActiveNode);
+            if (rewardPerActiveNode > 0) {
+                dispatchSynthNodeRewards(
+                        systemContext, activeNodeAccountIds, nodeRewardsAccountId, rewardPerActiveNode);
+            }
+        } else {
+            final long rewardPerActiveNode =
+                    activeNodeAccountIds.isEmpty() ? 0 : activeTotal / activeNodeAccountIds.size();
+            final long totalInactiveNodesReward =
+                    Math.min(Math.max(0, rewardAccountBalance - activeTotal), inactiveTotal);
+            final long rewardPerInactiveNode =
+                    inactiveNodeAccountIds.isEmpty() ? 0 : totalInactiveNodesReward / inactiveNodeAccountIds.size();
+            log.info(
+                    "Paying active nodes {} tinybars each, inactive nodes {} tinybars each",
+                    rewardPerActiveNode,
+                    rewardPerInactiveNode);
+            dispatchSynthNodeRewards(
+                    systemContext,
+                    activeNodeAccountIds,
+                    nodeRewardsAccountId,
+                    rewardPerActiveNode,
+                    inactiveNodeAccountIds,
+                    rewardPerInactiveNode);
         }
     }
 
