@@ -367,11 +367,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             // Capture values needed for async block proof creation
             final var capturedBlockNumber = blockNumber;
             final var capturedLastBlockHash = lastBlockHash;
-            final var capturedInputHash = inputHash;
-            final var capturedBlockStartStateHash = blockStartStateHash;
             final var capturedOutputTreeHasher = outputTreeHasher;
             final var capturedWriter = writer;
-            final var capturedBlockStreamInfo = blockStreamInfo;
 
             // Start async block completion, chained with previous block's proof
             blockProofFuture = blockProofFuture.thenRunAsync(
@@ -379,13 +376,13 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                         // Compute block hash
                         final var outputHash =
                                 capturedOutputTreeHasher.rootHash().join();
-                        final var leftParent = combine(capturedLastBlockHash, capturedInputHash);
-                        final var rightParent = combine(outputHash, capturedBlockStartStateHash);
+                        final var leftParent = combine(capturedLastBlockHash, inputHash);
+                        final var rightParent = combine(outputHash, blockStartStateHash);
                         final var blockHash = combine(leftParent, rightParent);
                         final var pendingProof = BlockProof.newBuilder()
                                 .block(capturedBlockNumber)
                                 .previousBlockRootHash(capturedLastBlockHash)
-                                .startOfBlockStateRootHash(capturedBlockStartStateHash);
+                                .startOfBlockStateRootHash(blockStartStateHash);
 
                         // Special case when signing with hinTS and this is the freeze round; we will have to wait until
                         // after restart to gossip partial signatures and sign this block
@@ -398,7 +395,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                         }
 
                         // Append block hash to trailing hashes
-                        blockHashManager.appendBlockHash(capturedBlockStreamInfo, blockHash);
+                        blockHashManager.appendBlockHash(blockStreamInfo, blockHash);
 
                         // Create and add pending block
                         pendingBlocks.add(new PendingBlock(
@@ -406,12 +403,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                                 blockHash,
                                 pendingProof,
                                 capturedWriter,
-                                new MerkleSiblingHash(false, capturedInputHash),
+                                new MerkleSiblingHash(false, inputHash),
                                 new MerkleSiblingHash(false, rightParent)));
-
-                        blockHashSigner.signFuture(blockHash).thenAcceptAsync(signature -> {
-                            finishProofWithSignature(blockHash, signature);
-                        });
 
                         // Update in-memory state for the next block
                         lastBlockHash = blockHash;

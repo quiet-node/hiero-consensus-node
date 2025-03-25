@@ -313,7 +313,7 @@ class BlockStreamManagerImplTest {
                         Bytes.EMPTY,
                         Bytes.EMPTY,
                         Bytes.fromHex(
-                                "cc0035e4316242d512df04802a3424c9737350130f04dd2346c65f0fa23d81871250058396b0aac850341903e2ec60c4")),
+                                "dda122623c97d82bfad19873fedd61db98605b434fc8a36a71a7fe99aa017ab45238ceed20a4ae97dbaca7fb728980e3")),
                 Timestamp.DEFAULT,
                 true,
                 SemanticVersion.DEFAULT,
@@ -329,10 +329,7 @@ class BlockStreamManagerImplTest {
         final var proofItem = lastAItem.get();
         assertNotNull(proofItem);
         final var item = BlockItem.PROTOBUF.parse(proofItem);
-        assertTrue(item.hasBlockProof());
-        final var proof = item.blockProofOrThrow();
-        assertEquals(N_BLOCK_NO, proof.block());
-        assertEquals(FIRST_FAKE_SIGNATURE, proof.blockSignature());
+        assertFalse(item.hasBlockProof());
     }
 
     @Test
@@ -545,7 +542,7 @@ class BlockStreamManagerImplTest {
                         Bytes.EMPTY,
                         Bytes.EMPTY,
                         Bytes.fromHex(
-                                "cc0035e4316242d512df04802a3424c9737350130f04dd2346c65f0fa23d81871250058396b0aac850341903e2ec60c4")),
+                                "dda122623c97d82bfad19873fedd61db98605b434fc8a36a71a7fe99aa017ab45238ceed20a4ae97dbaca7fb728980e3")),
                 Timestamp.DEFAULT,
                 false,
                 SemanticVersion.DEFAULT,
@@ -554,14 +551,11 @@ class BlockStreamManagerImplTest {
         final var actualBlockInfo = infoRef.get();
         assertEquals(expectedBlockInfo, actualBlockInfo);
 
-        // Assert the block proof was written
+        // Assert the block proof was not written
         final var proofItem = lastAItem.get();
         assertNotNull(proofItem);
         final var item = BlockItem.PROTOBUF.parse(proofItem);
-        assertTrue(item.hasBlockProof());
-        final var proof = item.blockProofOrThrow();
-        assertEquals(N_BLOCK_NO, proof.block());
-        assertEquals(FIRST_FAKE_SIGNATURE, proof.blockSignature());
+        assertFalse(item.hasBlockProof());
     }
 
     @Test
@@ -678,6 +672,7 @@ class BlockStreamManagerImplTest {
         subject.startRound(round, state);
 
         // And another round at t=1
+        given(mockEvent.getConsensusTimestamp()).willReturn(Instant.ofEpochSecond(1001));
         given(round.getConsensusTimestamp()).willReturn(Instant.ofEpochSecond(1001));
         subject.startRound(round, state);
         subject.endRound(state, ROUND_NO);
@@ -686,6 +681,7 @@ class BlockStreamManagerImplTest {
         verify(aWriter, never()).closeBlock();
 
         // When starting another round at t=3 (after period)
+        given(mockEvent.getConsensusTimestamp()).willReturn(Instant.ofEpochSecond(1003));
         given(round.getConsensusTimestamp()).willReturn(Instant.ofEpochSecond(1003));
         subject.startRound(round, state);
         subject.endRound(state, ROUND_NO);
