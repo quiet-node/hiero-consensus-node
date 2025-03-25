@@ -16,16 +16,15 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.event.EventCore;
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.RosterStateId;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.merkle.crypto.internal.MerkleCryptoEngine;
 import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.notification.NotificationEngine;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.demo.merkle.map.FCMFamily;
 import com.swirlds.demo.merkle.map.internal.ExpectedFCMFamily;
@@ -36,24 +35,14 @@ import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.Metric;
 import com.swirlds.platform.ParameterProvider;
-import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
-import com.swirlds.platform.consensus.ConsensusSnapshot;
-import com.swirlds.platform.consensus.EventWindow;
 import com.swirlds.platform.crypto.KeyGeneratingException;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.crypto.PlatformSigner;
 import com.swirlds.platform.crypto.PublicStores;
-import com.swirlds.platform.event.AncientMode;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.internal.ConsensusRound;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.Round;
-import com.swirlds.platform.system.transaction.ConsensusTransaction;
-import com.swirlds.platform.system.transaction.Transaction;
-import com.swirlds.platform.system.transaction.TransactionWrapper;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.MapWritableStates;
@@ -67,10 +56,22 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.ConsensusRound;
+import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.hashgraph.Round;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.transaction.ConsensusTransaction;
+import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
+import org.hiero.consensus.model.transaction.Transaction;
+import org.hiero.consensus.model.transaction.TransactionWrapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 class PlatformTestingToolStateTest {
 
@@ -142,7 +143,7 @@ class PlatformTestingToolStateTest {
         when(transaction.getApplicationTransaction()).thenReturn(Bytes.wrap(testTransactionWrapper.toByteArray()));
 
         // When
-        main.stateLifecycles.onHandleConsensusRound(round, state, consumer);
+        main.consensusStateEventHandler.onHandleConsensusRound(round, state, consumer);
 
         // Then
         assertThat(consumedSystemTransactions).isEmpty();
@@ -158,7 +159,7 @@ class PlatformTestingToolStateTest {
         when(transaction.getApplicationTransaction()).thenReturn(stateSignatureTransactionBytes);
 
         // When
-        main.stateLifecycles.onHandleConsensusRound(round, state, consumer);
+        main.consensusStateEventHandler.onHandleConsensusRound(round, state, consumer);
 
         // Then
         assertThat(consumedSystemTransactions).hasSize(1);
@@ -174,7 +175,7 @@ class PlatformTestingToolStateTest {
         when(transaction.getApplicationTransaction()).thenReturn(stateSignatureTransactionBytes);
 
         // When
-        main.stateLifecycles.onHandleConsensusRound(round, state, consumer);
+        main.consensusStateEventHandler.onHandleConsensusRound(round, state, consumer);
 
         // Then
         assertThat(consumedSystemTransactions).hasSize(1);
@@ -204,10 +205,15 @@ class PlatformTestingToolStateTest {
         when(thirdConsensusTransaction.getApplicationTransaction()).thenReturn(stateSignatureTransactionBytes);
 
         round = new ConsensusRound(
-                roster, List.of(platformEvent), eventWindow, new ConsensusSnapshot(), false, Instant.now());
+                roster,
+                List.of(platformEvent),
+                eventWindow,
+                Mockito.mock(ConsensusSnapshot.class),
+                false,
+                Instant.now());
 
         // When
-        main.stateLifecycles.onHandleConsensusRound(round, state, consumer);
+        main.consensusStateEventHandler.onHandleConsensusRound(round, state, consumer);
 
         // Then
         assertThat(consumedSystemTransactions).hasSize(3);
@@ -228,7 +234,7 @@ class PlatformTestingToolStateTest {
         platformEvent = new PlatformEvent(gossipEvent);
 
         // When
-        main.stateLifecycles.onPreHandle(platformEvent, state, consumer);
+        main.consensusStateEventHandler.onPreHandle(platformEvent, state, consumer);
 
         // Then
         assertThat(consumedSystemTransactions).isEmpty();
@@ -247,7 +253,7 @@ class PlatformTestingToolStateTest {
         platformEvent = new PlatformEvent(gossipEvent);
 
         // When
-        main.stateLifecycles.onPreHandle(platformEvent, state, consumer);
+        main.consensusStateEventHandler.onPreHandle(platformEvent, state, consumer);
 
         // Then
         assertThat(consumedSystemTransactions).hasSize(1);
@@ -272,7 +278,7 @@ class PlatformTestingToolStateTest {
         platformEvent = new PlatformEvent(gossipEvent);
 
         // When
-        main.stateLifecycles.onPreHandle(platformEvent, state, consumer);
+        main.consensusStateEventHandler.onPreHandle(platformEvent, state, consumer);
 
         // Then
         assertThat(consumedSystemTransactions).hasSize(3);
@@ -285,7 +291,7 @@ class PlatformTestingToolStateTest {
         givenRoundAndEvent();
 
         // When
-        final boolean result = main.stateLifecycles.onSealConsensusRound(round, state);
+        final boolean result = main.consensusStateEventHandler.onSealConsensusRound(round, state);
 
         // Then
         assertThat(result).isTrue();
@@ -299,7 +305,12 @@ class PlatformTestingToolStateTest {
                         .iterator());
 
         round = new ConsensusRound(
-                roster, List.of(platformEvent), eventWindow, new ConsensusSnapshot(), false, Instant.now());
+                roster,
+                List.of(platformEvent),
+                eventWindow,
+                Mockito.mock(ConsensusSnapshot.class),
+                false,
+                Instant.now());
     }
 
     private TestTransactionWrapper getTransactionWithRandomType(final int transactionSize) {
@@ -325,6 +336,7 @@ class PlatformTestingToolStateTest {
         final Platform platform = mock(Platform.class);
         final InitTrigger initTrigger = InitTrigger.GENESIS;
         final PlatformContext platformContext = mock(PlatformContext.class);
+        final SemanticVersion softwareVersion = new BasicSoftwareVersion(1).getPbjSemanticVersion();
 
         givenPlatform(platform, platformContext, nodeId);
         givenPlatformContextConfig(platformContext, config);
@@ -335,7 +347,7 @@ class PlatformTestingToolStateTest {
         when(parameterProviderInstance.getParameters()).thenReturn(new String[] {config});
 
         state.initChildren();
-        main.stateLifecycles.onStateInitialized(state, platform, initTrigger, new BasicSoftwareVersion(1));
+        main.consensusStateEventHandler.onStateInitialized(state, platform, initTrigger, softwareVersion);
         main.init(platform, nodeId);
     }
 

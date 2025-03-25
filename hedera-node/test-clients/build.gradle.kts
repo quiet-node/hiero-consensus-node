@@ -81,20 +81,34 @@ val prCheckTags =
         "hapiTestSmartContract" to "SMART_CONTRACT",
         "hapiTestNDReconnect" to "ND_RECONNECT",
         "hapiTestTimeConsuming" to "LONG_RUNNING",
+        "hapiTestIss" to "ISS",
         "hapiTestMisc" to
-            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING)",
+            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING|ISS)",
     )
 val prCheckStartPorts =
     mapOf(
         "hapiTestAdhoc" to "25000",
-        "hapiTestCrypto" to "26000",
-        "hapiTestToken" to "27000",
-        "hapiTestRestart" to "28000",
-        "hapiTestSmartContract" to "29000",
-        "hapiTestNDReconnect" to "30000",
-        "hapiTestTimeConsuming" to "31000",
-        "hapiTestMisc" to "32000",
+        "hapiTestCrypto" to "25200",
+        "hapiTestToken" to "25400",
+        "hapiTestRestart" to "25600",
+        "hapiTestSmartContract" to "25800",
+        "hapiTestNDReconnect" to "26000",
+        "hapiTestTimeConsuming" to "26200",
+        "hapiTestIss" to "26400",
+        "hapiTestMisc" to "26800",
     )
+val prCheckPropOverrides =
+    mapOf(
+        "hapiTestAdhoc" to
+            "tss.hintsEnabled=true,tss.historyEnabled=false,blockStream.blockPeriod=1s",
+        "hapiTestCrypto" to "tss.hintsEnabled=true,blockStream.blockPeriod=1s",
+        "hapiTestSmartContract" to "tss.historyEnabled=false",
+    )
+val prCheckPrepareUpgradeOffsets = mapOf("hapiTestAdhoc" to "PT30S")
+val prCheckNumHistoryProofsToObserve = mapOf("hapiTestAdhoc" to "0", "hapiTestSmartContract" to "0")
+// Use to override the default network size for a specific test task
+val prCheckNetSizeOverrides =
+    mapOf("hapiTestAdhoc" to "2", "hapiTestToken" to "3", "hapiTestSmartContract" to "4")
 
 tasks {
     prCheckTags.forEach { (taskName, _) -> register(taskName) { dependsOn("testSubprocess") } }
@@ -113,8 +127,10 @@ tasks.register<Test>("testSubprocess") {
             .joinToString("|")
     useJUnitPlatform {
         includeTags(
-            if (ciTagExpression.isBlank()) "none()|!(EMBEDDED|REPEATABLE)"
-            else "(${ciTagExpression}|STREAM_VALIDATION|LOG_VALIDATION)&!(EMBEDDED|REPEATABLE)"
+            if (ciTagExpression.isBlank()) "none()|!(EMBEDDED|REPEATABLE|ISS)"
+            // We don't want to run typical stream or log validation for an ISS case
+            else if (ciTagExpression.contains("ISS")) "(${ciTagExpression})&!(EMBEDDED|REPEATABLE)"
+            else "(${ciTagExpression}|STREAM_VALIDATION|LOG_VALIDATION)&!(EMBEDDED|REPEATABLE|ISS)"
         )
     }
 
@@ -127,6 +143,41 @@ tasks.register<Test>("testSubprocess") {
             .findFirst()
             .orElse("")
     systemProperty("hapi.spec.initial.port", initialPort)
+
+    // Gather overrides into a single comma‐separated list
+    val testOverrides =
+        gradle.startParameter.taskNames
+            .mapNotNull { prCheckPropOverrides[it] }
+            .joinToString(separator = ",")
+    // Only set the system property if non-empty
+    if (testOverrides.isNotBlank()) {
+        systemProperty("hapi.spec.test.overrides", testOverrides)
+    }
+
+    val maxHistoryProofsToObserve =
+        gradle.startParameter.taskNames
+            .mapNotNull { prCheckNumHistoryProofsToObserve[it]?.toIntOrNull() }
+            .maxOrNull()
+    if (maxHistoryProofsToObserve != null) {
+        systemProperty("hapi.spec.numHistoryProofsToObserve", maxHistoryProofsToObserve.toString())
+    }
+
+    val prepareUpgradeOffsets =
+        gradle.startParameter.taskNames
+            .mapNotNull { prCheckPrepareUpgradeOffsets[it] }
+            .joinToString(",")
+    if (prepareUpgradeOffsets.isNotEmpty()) {
+        systemProperty("hapi.spec.prepareUpgradeOffsets", prepareUpgradeOffsets)
+    }
+
+    val networkSize =
+        gradle.startParameter.taskNames
+            .stream()
+            .map { prCheckNetSizeOverrides[it] ?: "" }
+            .filter { it.isNotBlank() }
+            .findFirst()
+            .orElse("4")
+    systemProperty("hapi.spec.network.size", networkSize)
 
     // Default quiet mode is "false" unless we are running in CI or set it explicitly to "true"
     systemProperty(
@@ -179,8 +230,8 @@ tasks.register<Test>("testEmbedded") {
     useJUnitPlatform {
         includeTags(
             if (ciTagExpression.isBlank())
-                "none()|!(RESTART|ND_RECONNECT|UPGRADE|REPEATABLE|ONLY_SUBPROCESS)"
-            else "(${ciTagExpression}|STREAM_VALIDATION|LOG_VALIDATION)&(!INTEGRATION)"
+                "none()|!(RESTART|ND_RECONNECT|UPGRADE|REPEATABLE|ONLY_SUBPROCESS|ISS)"
+            else "(${ciTagExpression}|STREAM_VALIDATION|LOG_VALIDATION)&!(INTEGRATION|ISS)"
         )
     }
 
@@ -231,8 +282,8 @@ tasks.register<Test>("testRepeatable") {
     useJUnitPlatform {
         includeTags(
             if (ciTagExpression.isBlank())
-                "none()|!(RESTART|ND_RECONNECT|UPGRADE|EMBEDDED|NOT_REPEATABLE|ONLY_SUBPROCESS)"
-            else "(${ciTagExpression}|STREAM_VALIDATION|LOG_VALIDATION)&(!INTEGRATION)"
+                "none()|!(RESTART|ND_RECONNECT|UPGRADE|EMBEDDED|NOT_REPEATABLE|ONLY_SUBPROCESS|ISS)"
+            else "(${ciTagExpression}|STREAM_VALIDATION|LOG_VALIDATION)&!(INTEGRATION|ISS)"
         )
     }
 

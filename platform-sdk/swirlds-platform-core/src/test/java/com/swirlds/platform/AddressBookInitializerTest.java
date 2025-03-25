@@ -21,18 +21,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.utility.FileUtils;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.config.AddressBookConfig_;
 import com.swirlds.platform.roster.RosterRetriever;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
-import com.swirlds.platform.state.StateLifecycles;
 import com.swirlds.platform.state.address.AddressBookInitializer;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.signed.SignedState;
@@ -53,6 +53,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
+import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ class AddressBookInitializerTest {
     Path testDirectory;
 
     @Mock
-    StateLifecycles stateLifecycles;
+    ConsensusStateEventHandler consensusStateEventHandler;
 
     @BeforeEach
     public void setUp() {
@@ -88,7 +89,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(true),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         final AddressBook signedStateAddressBook = buildAddressBook(signedState.getRoster());
@@ -120,7 +121,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(false),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         final AddressBook signedStateAddressBook = buildAddressBook(signedState.getRoster());
@@ -149,7 +150,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(false),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         final AddressBook signedStateAddressBook = buildAddressBook(signedState.getRoster());
@@ -178,7 +179,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(false),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         final AddressBook signedStateAddressBook = buildAddressBook(signedState.getRoster());
@@ -210,7 +211,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(false),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         final AddressBook signedStateAddressBook = buildAddressBook(signedState.getRoster());
@@ -257,7 +258,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(false),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         final AddressBook signedStateAddressBook = buildAddressBook(signedState.getRoster());
@@ -290,7 +291,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(false),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         assertEquals(
@@ -321,7 +322,7 @@ class AddressBookInitializerTest {
                 signedState,
                 configAddressBook,
                 getPlatformContext(false),
-                stateLifecycles,
+                consensusStateEventHandler,
                 TEST_PLATFORM_STATE_FACADE);
         final AddressBook inititializedAddressBook = initializer.getCurrentAddressBook();
         assertNotEquals(
@@ -426,8 +427,8 @@ class AddressBookInitializerTest {
             @Nullable final AddressBook previousAddressBook,
             boolean fromGenesis) {
         final SignedState signedState = mock(SignedState.class);
-        final SoftwareVersion softwareVersion = getMockSoftwareVersion(2);
-        configureUpdateWeightForStateLifecycles(weightValue);
+        final SemanticVersion softwareVersion = getMockSoftwareVersion(2).getPbjSemanticVersion();
+        configureUpdateWeightForStateEventHandler(weightValue);
         final MerkleNodeState state = mock(MerkleNodeState.class);
         final ReadableStates readableStates = mock(ReadableStates.class);
         final PlatformStateAccessor platformState = mock(PlatformStateAccessor.class);
@@ -446,7 +447,7 @@ class AddressBookInitializerTest {
      *
      * @param scenario The scenario to load.
      */
-    private void configureUpdateWeightForStateLifecycles(int scenario) {
+    private void configureUpdateWeightForStateEventHandler(int scenario) {
 
         final AtomicReference<AddressBook> configAddressBook = new AtomicReference<>();
 
@@ -480,7 +481,7 @@ class AddressBookInitializerTest {
                 stubber = doAnswer(foo -> copyWithWeightChanges(configAddressBook.get(), 10));
         }
 
-        stubber.when(stateLifecycles)
+        stubber.when(consensusStateEventHandler)
                 .onUpdateWeight(
                         any(),
                         argThat(confAB -> {

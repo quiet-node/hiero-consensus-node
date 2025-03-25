@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.standalone;
 
-import com.hedera.node.app.annotations.MaxSignedTxnSize;
 import com.hedera.node.app.authorization.AuthorizerInjectionModule;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
 import com.hedera.node.app.config.ConfigProviderImpl;
 import com.hedera.node.app.fees.AppFeeCharging;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.hints.HintsService;
+import com.hedera.node.app.history.HistoryService;
 import com.hedera.node.app.platform.PlatformStateModule;
 import com.hedera.node.app.service.contract.impl.ContractServiceImpl;
 import com.hedera.node.app.service.file.impl.FileServiceImpl;
@@ -69,7 +69,13 @@ public interface ExecutorComponent {
         Builder hintsService(HintsService hintsService);
 
         @BindsInstance
+        Builder historyService(HistoryService historyService);
+
+        @BindsInstance
         Builder configProviderImpl(ConfigProviderImpl configProvider);
+
+        @BindsInstance
+        Builder disableThrottles(boolean disableThrottles);
 
         @BindsInstance
         Builder bootstrapConfigProviderImpl(BootstrapConfigProviderImpl bootstrapConfigProvider);
@@ -79,9 +85,6 @@ public interface ExecutorComponent {
 
         @BindsInstance
         Builder throttleFactory(Throttle.Factory throttleFactory);
-
-        @BindsInstance
-        Builder maxSignedTxnSize(@MaxSignedTxnSize int maxSignedTxnSize);
 
         @BindsInstance
         Builder appContext(AppContext appContext);

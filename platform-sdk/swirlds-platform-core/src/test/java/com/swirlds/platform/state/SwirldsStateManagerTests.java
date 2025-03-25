@@ -2,7 +2,7 @@
 package com.swirlds.platform.state;
 
 import static com.swirlds.common.test.fixtures.RandomUtils.nextInt;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.Reservable;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
@@ -19,11 +18,12 @@ import com.swirlds.platform.SwirldsPlatform;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.BasicSoftwareVersion;
-import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
+import org.hiero.consensus.model.hashgraph.Round;
+import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,7 +51,7 @@ class SwirldsStateManagerTests {
                 NodeId.of(0L),
                 mock(StatusActionSubmitter.class),
                 new BasicSoftwareVersion(1),
-                FAKE_MERKLE_STATE_LIFECYCLES,
+                FAKE_CONSENSUS_STATE_EVENT_HANDLER,
                 platformStateFacade);
         swirldStateManager.setInitialState(initialState);
     }
@@ -128,7 +128,7 @@ class SwirldsStateManagerTests {
 
     private static MerkleNodeState newState(PlatformStateFacade platformStateFacade) {
         final MerkleNodeState state = new TestMerkleStateRoot();
-        FAKE_MERKLE_STATE_LIFECYCLES.initPlatformState(state);
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
 
         platformStateFacade.setCreationSoftwareVersionTo(state, new BasicSoftwareVersion(nextInt(1, 100)));
 

@@ -37,6 +37,7 @@ import com.hedera.node.app.service.contract.impl.exec.scope.ActiveContractVerifi
 import com.hedera.node.app.service.contract.impl.exec.scope.ActiveContractVerificationStrategy.UseTopLevelSigs;
 import com.hedera.node.app.service.contract.impl.exec.scope.HandleHederaNativeOperations;
 import com.hedera.node.app.service.contract.impl.exec.scope.HederaNativeOperations;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import com.swirlds.state.spi.WritableKVState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -207,6 +208,14 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      * {@inheritDoc}
      */
     @Override
+    public @NonNull EntityIdFactory entityIdFactory() {
+        return nativeOperations.entityIdFactory();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public @NonNull Bytes getCode(@NonNull final ContractID contractID) {
         requireNonNull(contractID);
         final var numberedBytecode = contractStateStore.getBytecode(contractID);
@@ -362,7 +371,7 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      */
     @Override
     public @Nullable Address getAddress(final long number) {
-        final AccountID accountID = AccountID.newBuilder().accountNum(number).build();
+        final AccountID accountID = entityIdFactory().newAccountId(number);
         final var account = nativeOperations.getAccount(accountID);
         if (account != null) {
             if (account.deleted()) {
@@ -370,14 +379,14 @@ public class DispatchingEvmFrameState implements EvmFrameState {
             }
 
             final var evmAddress = extractEvmAddress(account.alias());
-            return evmAddress == null ? asLongZeroAddress(number) : pbjToBesuAddress(evmAddress);
+            return evmAddress == null ? asLongZeroAddress(entityIdFactory(), number) : pbjToBesuAddress(evmAddress);
         }
-        final var token = nativeOperations.getToken(number);
-        final var schedule = nativeOperations.getSchedule(number);
+        final var token = nativeOperations.getToken(entityIdFactory().newTokenId(number));
+        final var schedule = nativeOperations.getSchedule(entityIdFactory().newScheduleId(number));
         if (token != null || schedule != null) {
             // If the token or schedule  is deleted or expired, the system contract executed by the redirect
             // bytecode will fail with a more meaningful error message, so don't check that here
-            return asLongZeroAddress(number);
+            return asLongZeroAddress(entityIdFactory(), number);
         }
         throw new IllegalArgumentException("No account, token or schedule has number " + number);
     }
@@ -474,7 +483,7 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      */
     @Override
     public Optional<ExceptionalHaltReason> tryLazyCreation(@NonNull final Address address) {
-        if (isLongZero(address)) {
+        if (isLongZero(nativeOperations.entityIdFactory(), address)) {
             return Optional.of(INVALID_ALIAS_KEY);
         }
         final var number = maybeMissingNumberOf(address, nativeOperations);
@@ -534,6 +543,22 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      * {@inheritDoc}
      */
     @Override
+    public void trackSelfDestructBeneficiary(
+            @NonNull final Address deleted, @NonNull final Address beneficiary, @NonNull final MessageFrame frame) {
+        requireNonNull(deleted);
+        requireNonNull(beneficiary);
+
+        final var beneficiaryAccount = getAccount(beneficiary);
+        final var deletedAccount = (AbstractProxyEvmAccount) requireNonNull(getAccount(deleted));
+
+        nativeOperations.trackSelfDestructBeneficiary(
+                deletedAccount.hederaId(), ((AbstractProxyEvmAccount) beneficiaryAccount).hederaId(), frame);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public @Nullable Account getAccount(@NonNull final Address address) {
         return getMutableAccount(address);
     }
@@ -547,7 +572,7 @@ public class DispatchingEvmFrameState implements EvmFrameState {
         if (number == MISSING_ENTITY_NUMBER) {
             return null;
         }
-        final AccountID accountID = AccountID.newBuilder().accountNum(number).build();
+        final AccountID accountID = entityIdFactory().newAccountId(number);
         final var account = nativeOperations.getAccount(accountID);
         if (account != null) {
             if (account.deleted() || account.expiredAndPendingRemoval() || isNotPriority(address, account)) {
@@ -559,13 +584,14 @@ public class DispatchingEvmFrameState implements EvmFrameState {
                 return new ProxyEvmAccount(account.accountId(), this);
             }
         }
-        final var token = nativeOperations.getToken(number);
+        final var token = nativeOperations.getToken(entityIdFactory().newTokenId(number));
         if (token != null) {
             // If the token is deleted or expired, the system contract executed by the redirect
             // bytecode will fail with a more meaningful error message, so don't check that here
             return new TokenEvmAccount(address, this);
         }
-        final var schedule = nativeOperations.getSchedule(number);
+        final var schedule =
+                nativeOperations.getSchedule(nativeOperations.entityIdFactory().newScheduleId(number));
         if (schedule != null) {
             // If the schedule is deleted or expired, the system contract executed by the redirect
             // bytecode will fail with a more meaningful error message, so don't check that here

@@ -2,12 +2,11 @@
 package com.swirlds.platform.state;
 
 import static com.swirlds.common.test.fixtures.RandomUtils.nextInt;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.registerMerkleStateRootClassIds;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.test.fixtures.io.InputOutputStream;
 import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
 import com.swirlds.common.utility.RuntimeObjectRegistry;
@@ -21,6 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
+import org.hiero.consensus.model.crypto.Hash;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -91,10 +91,10 @@ class StateRegistryTests {
         // Deserialize a state
         final TestMerkleStateRoot stateToSerialize = new TestMerkleStateRoot();
         final TestPlatformStateFacade platformStateFacade = new TestPlatformStateFacade(softwareVersionSupplier);
-        FAKE_MERKLE_STATE_LIFECYCLES.initPlatformState(stateToSerialize);
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(stateToSerialize);
         final var platformState = platformStateFacade.getWritablePlatformStateOf(stateToSerialize);
         platformState.bulkUpdate(v -> {
-            v.setCreationSoftwareVersion(new BasicSoftwareVersion(version.minor()));
+            v.setCreationSoftwareVersion(new BasicSoftwareVersion(version.minor()).getPbjSemanticVersion());
             v.setLegacyRunningEventHash(new Hash());
         });
 

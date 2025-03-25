@@ -12,22 +12,20 @@ import static com.swirlds.platform.event.preconsensus.PcesUtilities.getDatabaseD
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.concurrent.ExecutorFactory;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.crypto.Signature;
 import com.swirlds.common.notification.NotificationEngine;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.component.framework.WiringConfig;
 import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.model.WiringModelBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.SwirldsPlatform;
-import com.swirlds.platform.consensus.ConsensusSnapshot;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.crypto.PlatformSigner;
-import com.swirlds.platform.event.PlatformEvent;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileReader;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
@@ -39,8 +37,8 @@ import com.swirlds.platform.gossip.sync.config.SyncConfig;
 import com.swirlds.platform.pool.TransactionPoolNexus;
 import com.swirlds.platform.roster.RosterHistory;
 import com.swirlds.platform.scratchpad.Scratchpad;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.StateLifecycles;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.iss.IssScratchpad;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -62,6 +60,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Builds a {@link SwirldsPlatform} instance.
@@ -74,7 +74,7 @@ public final class PlatformBuilder {
     private final SoftwareVersion softwareVersion;
     private final ReservedSignedState initialState;
 
-    private final StateLifecycles<MerkleNodeState> stateLifecycles;
+    private final ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler;
     private final PlatformStateFacade platformStateFacade;
 
     private final NodeId selfId;
@@ -144,7 +144,7 @@ public final class PlatformBuilder {
      * @param swirldName               the name of the swirld, currently used for deciding where to store states on disk
      * @param softwareVersion          the software version of the application
      * @param initialState             the initial state supplied by the application
-     * @param stateLifecycles          the state lifecycle events handler
+     * @param consensusStateEventHandler          the state lifecycle events handler
      * @param selfId                   the ID of this node
      * @param consensusEventStreamName a part of the name of the directory where the consensus event stream is written
      * @param platformStateFacade      the facade to access the platform state
@@ -156,7 +156,7 @@ public final class PlatformBuilder {
             @NonNull final String swirldName,
             @NonNull final SoftwareVersion softwareVersion,
             @NonNull final ReservedSignedState initialState,
-            @NonNull final StateLifecycles stateLifecycles,
+            @NonNull final ConsensusStateEventHandler consensusStateEventHandler,
             @NonNull final NodeId selfId,
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
@@ -166,7 +166,7 @@ public final class PlatformBuilder {
                 swirldName,
                 softwareVersion,
                 initialState,
-                stateLifecycles,
+                consensusStateEventHandler,
                 selfId,
                 consensusEventStreamName,
                 rosterHistory,
@@ -181,7 +181,7 @@ public final class PlatformBuilder {
      * @param swirldName               the name of the swirld, currently used for deciding where to store states on disk
      * @param softwareVersion          the software version of the application
      * @param initialState             the genesis state supplied by application
-     * @param stateLifecycles          the state lifecycle events handler
+     * @param consensusStateEventHandler          the state lifecycle events handler
      * @param selfId                   the ID of this node
      * @param consensusEventStreamName a part of the name of the directory where the consensus event stream is written
      * @param rosterHistory            the roster history provided by the application to use at startup
@@ -192,7 +192,7 @@ public final class PlatformBuilder {
             @NonNull final String swirldName,
             @NonNull final SoftwareVersion softwareVersion,
             @NonNull final ReservedSignedState initialState,
-            @NonNull final StateLifecycles stateLifecycles,
+            @NonNull final ConsensusStateEventHandler consensusStateEventHandler,
             @NonNull final NodeId selfId,
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
@@ -202,7 +202,7 @@ public final class PlatformBuilder {
         this.swirldName = Objects.requireNonNull(swirldName);
         this.softwareVersion = Objects.requireNonNull(softwareVersion);
         this.initialState = Objects.requireNonNull(initialState);
-        this.stateLifecycles = Objects.requireNonNull(stateLifecycles);
+        this.consensusStateEventHandler = Objects.requireNonNull(consensusStateEventHandler);
         this.selfId = Objects.requireNonNull(selfId);
         this.consensusEventStreamName = Objects.requireNonNull(consensusEventStreamName);
         this.rosterHistory = Objects.requireNonNull(rosterHistory);
@@ -443,7 +443,7 @@ public final class PlatformBuilder {
                 selfId,
                 x -> statusActionSubmitterAtomicReference.get().submitStatusAction(x),
                 softwareVersion,
-                stateLifecycles,
+                consensusStateEventHandler,
                 platformStateFacade);
 
         if (model == null) {
@@ -456,7 +456,7 @@ public final class PlatformBuilder {
                     platformContext.getExecutorFactory().createForkJoinPool(parallelism);
             logger.info(STARTUP.getMarker(), "Default platform pool parallelism: {}", parallelism);
 
-            model = WiringModelBuilder.create(platformContext)
+            model = WiringModelBuilder.create(platformContext.getMetrics(), platformContext.getTime())
                     .withJvmAnchorEnabled(true)
                     .withDefaultPool(defaultPool)
                     .withHealthMonitorEnabled(wiringConfig.healthMonitorEnabled())
@@ -472,7 +472,8 @@ public final class PlatformBuilder {
             randomBuilder = new RandomBuilder();
         }
 
-        final PlatformWiring platformWiring = new PlatformWiring(platformContext, model, callbacks);
+        final PlatformWiring platformWiring = new PlatformWiring(
+                platformContext, model, callbacks, initialState.get().isGenesisState());
 
         final PlatformBuildingBlocks buildingBlocks = new PlatformBuildingBlocks(
                 platformWiring,
@@ -503,7 +504,7 @@ public final class PlatformBuilder {
                 new AtomicReference<>(),
                 new AtomicReference<>(),
                 firstPlatform,
-                stateLifecycles,
+                consensusStateEventHandler,
                 platformStateFacade);
 
         return new PlatformComponentBuilder(buildingBlocks);

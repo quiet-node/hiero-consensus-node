@@ -47,6 +47,7 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SENDER_
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SOME_DURATION;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SOME_MEMO;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.assertFailsWith;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.entityIdFactory;
 import static com.hedera.node.app.spi.validation.ExpiryMeta.NA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -88,10 +89,10 @@ import com.hedera.node.app.spi.validation.ExpiryMeta;
 import com.hedera.node.app.spi.validation.ExpiryValidator;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.utility.CommonUtils;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.function.Consumer;
+import org.hiero.consensus.model.utility.CommonUtils;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -153,7 +154,8 @@ class HevmTransactionFactoryTest {
                 attributeValidator,
                 tokenServiceApi,
                 ethereumSignatures,
-                context);
+                context,
+                entityIdFactory);
     }
 
     @Test
@@ -720,7 +722,8 @@ class HevmTransactionFactoryTest {
                 attributeValidator,
                 tokenServiceApi,
                 ethereumSignatures,
-                context);
+                context,
+                entityIdFactory);
     }
 
     private void givenInsteadFailedHydrationSubject() {
@@ -740,7 +743,8 @@ class HevmTransactionFactoryTest {
                 attributeValidator,
                 tokenServiceApi,
                 ethereumSignatures,
-                context);
+                context,
+                entityIdFactory);
     }
 
     private void givenInsteadHydratedEthTxWithWrongChainId(@NonNull final EthTxData ethTxData) {
@@ -760,7 +764,8 @@ class HevmTransactionFactoryTest {
                 attributeValidator,
                 tokenServiceApi,
                 ethereumSignatures,
-                context);
+                context,
+                entityIdFactory);
     }
 
     private void givenInsteadHydratedEthTxWithRightChainId(@NonNull final EthTxData ethTxData) {
@@ -780,6 +785,7 @@ class HevmTransactionFactoryTest {
                 attributeValidator,
                 tokenServiceApi,
                 ethereumSignatures,
-                context);
+                context,
+                entityIdFactory);
     }
 }

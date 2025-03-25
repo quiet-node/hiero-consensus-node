@@ -4,11 +4,12 @@ package com.hedera.node.app.blocks;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.spi.records.BlockRecordInfo;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.state.notifications.StateHashedListener;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
 import java.time.Instant;
+import org.hiero.consensus.model.hashgraph.Round;
 
 /**
  * Maintains the state and process objects needed to produce the block stream.
@@ -69,7 +70,7 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
      * last-started round.
      * @param at the consensus time of the first user transaction
      */
-    void setRoundFirstUserTransactionTime(@NonNull Instant at);
+    void setRoundFirstTransactionTime(@NonNull Instant at);
 
     /**
      * Confirms that the post-upgrade work has been completed.
@@ -125,4 +126,17 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
      * @throws IllegalStateException if the stream is closed
      */
     void writeItem(@NonNull BlockItem item);
+
+    /**
+     * Notifies the block stream manager that a fatal event has occurred, e.g. an ISS. This event should
+     * trigger any essential fatal shutdown logic.
+     */
+    void notifyFatalEvent();
+
+    /**
+     * Synchronous method that, when invoked, blocks until the block stream manager signals a successful
+     * completion of its fatal shutdown logic.
+     * @param timeout the maximum time to wait for block stream shutdown
+     */
+    void awaitFatalShutdown(@NonNull Duration timeout);
 }

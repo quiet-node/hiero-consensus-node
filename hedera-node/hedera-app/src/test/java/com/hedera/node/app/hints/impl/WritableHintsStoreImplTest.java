@@ -40,6 +40,7 @@ import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
 import com.hedera.node.app.roster.ActiveRosters;
 import com.hedera.node.app.spi.AppContext;
 import com.hedera.node.app.version.ServicesSoftwareVersion;
+import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
@@ -83,8 +84,10 @@ class WritableHintsStoreImplTest {
     private static final Bytes C_ROSTER_HASH = Bytes.wrap("C");
     private static final TssConfig TSS_CONFIG = DEFAULT_CONFIG.getConfigData(TssConfig.class);
     private static final Instant CONSENSUS_NOW = Instant.ofEpochSecond(1_234_567L, 890);
-    public static final Configuration WITH_ENABLED_HINTS =
-            HederaTestConfigBuilder.create().withValue("tss.hintsEnabled", true).getOrCreateConfig();
+    public static final Configuration WITH_ENABLED_HINTS_AND_CRS = HederaTestConfigBuilder.create()
+            .withValue("tss.hintsEnabled", true)
+            .withValue("tss.crsEnabled", true)
+            .getOrCreateConfig();
 
     @Mock
     private AppContext appContext;
@@ -383,7 +386,7 @@ class WritableHintsStoreImplTest {
                         ACTIVE_HINT_CONSTRUCTION_KEY, () -> HintsConstruction.DEFAULT, c -> {}));
 
         subject = new WritableHintsStoreImpl(writableStates);
-        subject.setCRSState(crsState);
+        subject.setCrsState(crsState);
         return crsState;
     }
 
@@ -449,7 +452,13 @@ class WritableHintsStoreImplTest {
         Set.of(
                         new EntityIdService(),
                         new HintsServiceImpl(
-                                NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, library, WITH_ENABLED_HINTS))
+                                NO_OP_METRICS,
+                                ForkJoinPool.commonPool(),
+                                appContext,
+                                library,
+                                DEFAULT_CONFIG
+                                        .getConfigData(BlockStreamConfig.class)
+                                        .blockPeriod()))
                 .forEach(servicesRegistry::register);
         final var migrator = new FakeServiceMigrator();
         final var bootstrapConfig = new BootstrapConfigProviderImpl().getConfiguration();
@@ -461,7 +470,6 @@ class WritableHintsStoreImplTest {
                         bootstrapConfig.getConfigData(VersionConfig.class).servicesVersion()),
                 new ConfigProviderImpl().getConfiguration(),
                 DEFAULT_CONFIG,
-                networkInfo,
                 NO_OP_METRICS,
                 startupNetworks,
                 storeMetricsService,

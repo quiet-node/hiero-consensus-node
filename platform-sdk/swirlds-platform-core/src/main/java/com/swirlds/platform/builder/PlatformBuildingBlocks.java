@@ -3,19 +3,17 @@ package com.swirlds.platform.builder;
 
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.notification.NotificationEngine;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.component.framework.model.WiringModel;
-import com.swirlds.platform.consensus.ConsensusSnapshot;
 import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.event.PlatformEvent;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.pool.TransactionPoolNexus;
 import com.swirlds.platform.roster.RosterHistory;
 import com.swirlds.platform.scratchpad.Scratchpad;
-import com.swirlds.platform.state.StateLifecycles;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.iss.IssScratchpad;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -33,6 +31,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * This record contains core utilities and basic objects needed to build a platform. It should not contain any platform
@@ -114,7 +114,7 @@ public record PlatformBuildingBlocks(
         @NonNull AtomicReference<Consumer<SignedState>> loadReconnectStateReference,
         @NonNull AtomicReference<Runnable> clearAllPipelinesForReconnectReference,
         boolean firstPlatform,
-        @NonNull StateLifecycles stateLifecycles,
+        @NonNull ConsensusStateEventHandler consensusStateEventHandler,
         @NonNull PlatformStateFacade platformStateFacade) {
 
     public PlatformBuildingBlocks {

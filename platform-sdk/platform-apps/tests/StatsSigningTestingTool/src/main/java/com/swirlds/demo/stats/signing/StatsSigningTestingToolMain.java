@@ -16,8 +16,8 @@ import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_MICROSECONDS;
 import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_SECONDS;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.registerMerkleStateRootClassIds;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -26,7 +26,6 @@ import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.metrics.SpeedometerMetric;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.threading.framework.StoppableThread;
 import com.swirlds.common.threading.framework.config.StoppableThreadConfiguration;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
@@ -35,7 +34,7 @@ import com.swirlds.demo.stats.signing.algorithms.X25519SigningAlgorithm;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Browser;
 import com.swirlds.platform.ParameterProvider;
-import com.swirlds.platform.state.StateLifecycles;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
@@ -44,6 +43,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * This demo collects statistics on the running of the network and consensus systems. It writes them to the screen, and
@@ -287,13 +287,13 @@ public class StatsSigningTestingToolMain implements SwirldMain<StatsSigningTesti
     @NonNull
     public StatsSigningTestingToolState newStateRoot() {
         final StatsSigningTestingToolState state = new StatsSigningTestingToolState();
-        FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(state);
         return state;
     }
 
     @Override
-    public StateLifecycles<StatsSigningTestingToolState> newStateLifecycles() {
-        return new StatsSigningTestingToolStateLifecycles(() -> sttTransactionPool);
+    public ConsensusStateEventHandler<StatsSigningTestingToolState> newConsensusStateEvenHandler() {
+        return new StatsSigningTestingToolConsensusStateEventHandler(() -> sttTransactionPool);
     }
 
     /**

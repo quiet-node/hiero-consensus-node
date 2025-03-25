@@ -50,7 +50,6 @@ import com.hedera.node.app.workflows.prehandle.PreHandleWorkflow;
 import com.hedera.node.app.workflows.query.QueryWorkflow;
 import com.hedera.node.app.workflows.query.annotations.OperatorQueries;
 import com.hedera.node.app.workflows.query.annotations.UserQueries;
-import com.swirlds.common.crypto.Cryptography;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.listeners.ReconnectCompleteListener;
 import com.swirlds.platform.listeners.StateWriteToDiskCompleteListener;
@@ -64,9 +63,11 @@ import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import dagger.BindsInstance;
 import dagger.Component;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.charset.Charset;
 import java.time.InstantSource;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.inject.Provider;
@@ -111,6 +112,9 @@ public interface HederaInjectionComponent {
 
     AppFeeCharging appFeeCharging();
 
+    @Nullable
+    AtomicBoolean systemEntitiesCreationFlag();
+
     PreHandleWorkflow preHandleWorkflow();
 
     HandleWorkflow handleWorkflow();
@@ -143,6 +147,8 @@ public interface HederaInjectionComponent {
 
     AsyncFatalIssListener fatalIssListener();
 
+    CurrentPlatformStatus currentPlatformStatus();
+
     @Component.Builder
     interface Builder {
         @BindsInstance
@@ -171,9 +177,6 @@ public interface HederaInjectionComponent {
 
         @BindsInstance
         Builder initTrigger(InitTrigger initTrigger);
-
-        @BindsInstance
-        Builder crypto(Cryptography engine);
 
         @BindsInstance
         Builder platform(Platform platform);

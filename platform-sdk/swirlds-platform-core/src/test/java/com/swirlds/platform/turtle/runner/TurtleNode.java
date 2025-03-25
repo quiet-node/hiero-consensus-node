@@ -5,7 +5,7 @@ import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticT
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.getMetricsProvider;
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.setupGlobalMetrics;
 import static com.swirlds.platform.state.signed.StartupStateUtils.getInitialState;
-import static com.swirlds.platform.turtle.runner.TurtleStateLifecycles.TURTLE_STATE_LIFECYCLES;
+import static com.swirlds.platform.turtle.runner.TurtleConsensusStateEventHandler.TURTLE_CONSENSUS_STATE_EVENT_HANDLER;
 
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.swirlds.base.time.Time;
@@ -14,7 +14,6 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.config.FileSystemManagerConfig_;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.RecycleBin;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.component.framework.component.ComponentWiring;
@@ -31,7 +30,6 @@ import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
 import com.swirlds.platform.config.BasicConfig_;
 import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.internal.ConsensusRound;
 import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.BasicSoftwareVersion;
@@ -49,6 +47,8 @@ import com.swirlds.platform.wiring.PlatformWiring;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Path;
 import java.util.List;
+import org.hiero.consensus.model.hashgraph.ConsensusRound;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Encapsulates a single node running in a TURTLE network.
@@ -105,7 +105,7 @@ public class TurtleNode {
                 .withConfiguration(configuration)
                 .build();
 
-        model = WiringModelBuilder.create(platformContext)
+        model = WiringModelBuilder.create(platformContext.getMetrics(), time)
                 .withDeterministicModeEnabled(true)
                 .build();
         final SoftwareVersion softwareVersion = new BasicSoftwareVersion(1);
@@ -118,15 +118,15 @@ public class TurtleNode {
                 RecycleBin.create(metrics, configuration, getStaticThreadManager(), time, fileSystemManager, nodeId);
 
         final var reservedState = getInitialState(
-                configuration,
                 recycleBin,
-                version,
+                version.getPbjSemanticVersion(),
                 TurtleTestingToolState::getStateRootNode,
                 "foo",
                 "bar",
                 nodeId,
                 addressBook,
-                platformStateFacade);
+                platformStateFacade,
+                platformContext);
         final var initialState = reservedState.state();
 
         final PlatformBuilder platformBuilder = PlatformBuilder.create(
@@ -134,7 +134,7 @@ public class TurtleNode {
                         "bar",
                         softwareVersion,
                         initialState,
-                        TURTLE_STATE_LIFECYCLES,
+                        TURTLE_CONSENSUS_STATE_EVENT_HANDLER,
                         nodeId,
                         AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
                         RosterUtils.buildRosterHistory(initialState.get().getState(), platformStateFacade),

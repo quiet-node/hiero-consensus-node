@@ -10,10 +10,14 @@ import com.hedera.services.bdd.junit.hedera.WithBlockNodes;
 import com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode;
 import com.hedera.services.bdd.junit.hedera.embedded.EmbeddedNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
+import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.infrastructure.HapiClients;
 import com.hedera.services.bdd.spec.keys.RepeatableKeyGenerator;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
@@ -61,30 +65,37 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                     switch (embedding) {
                             // Embedding is not applicable for a subprocess network
                         case NA -> {
+                            final int networkSize = Optional.ofNullable(System.getProperty("hapi.spec.network.size"))
+                                    .map(Integer::parseInt)
+                                    .orElse(CLASSIC_HAPI_TEST_NETWORK_SIZE);
                             final var initialPortProperty = System.getProperty("hapi.spec.initial.port");
                             if (!initialPortProperty.isBlank()) {
                                 final var initialPort = Integer.parseInt(initialPortProperty);
-                                SubProcessNetwork.initializeNextPortsForNetwork(
-                                        CLASSIC_HAPI_TEST_NETWORK_SIZE, initialPort);
+                                SubProcessNetwork.initializeNextPortsForNetwork(networkSize, initialPort);
                             }
-                            SubProcessNetwork subProcessNetwork = (SubProcessNetwork)
-                                    SubProcessNetwork.newSharedNetwork(CLASSIC_HAPI_TEST_NETWORK_SIZE);
+                            final var prepareUpgradeOffsetsProperty =
+                                    System.getProperty("hapi.spec.prepareUpgradeOffsets");
+                            if (prepareUpgradeOffsetsProperty != null) {
+                                final List<Duration> offsets = Arrays.stream(prepareUpgradeOffsetsProperty.split(","))
+                                        .map(Duration::parse)
+                                        .sorted()
+                                        .distinct()
+                                        .toList();
+                                if (!offsets.isEmpty()) {
+                                    HapiSpec.doDelayedPrepareUpgrades(offsets);
+                                }
+                            }
+                            SubProcessNetwork subProcessNetwork =
+                                    (SubProcessNetwork) SubProcessNetwork.newSharedNetwork(networkSize);
 
                             // Check test classes for WithBlockNodes annotation
                             log.info("Checking test classes for WithBlockNodes annotation...");
 
                             Set<TestIdentifier> allIdentifiers = new HashSet<>();
                             testPlan.getRoots().forEach(root -> {
-                                log.info("Found root: {}", root.getDisplayName());
                                 allIdentifiers.add(root);
-                                root.getSource().ifPresent(source -> log.info("Root source: {}", source));
-
                                 // Get all descendants of this root
-                                testPlan.getChildren(root.getUniqueId()).forEach(child -> {
-                                    log.info("Found child: {}", child.getDisplayName());
-                                    allIdentifiers.add(child);
-                                    child.getSource().ifPresent(source -> log.info("Child source: {}", source));
-                                });
+                                allIdentifiers.addAll(testPlan.getChildren(root.getUniqueId()));
                             });
 
                             allIdentifiers.stream()

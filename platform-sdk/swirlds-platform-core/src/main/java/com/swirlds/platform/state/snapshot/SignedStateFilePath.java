@@ -2,13 +2,12 @@
 package com.swirlds.platform.state.snapshot;
 
 import static com.swirlds.common.io.utility.FileUtils.getAbsolutePath;
+import static com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
-import static com.swirlds.state.merkle.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
 import static java.nio.file.Files.exists;
 import static java.nio.file.Files.isDirectory;
 
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.platform.NodeId;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -20,6 +19,7 @@ import java.util.TreeMap;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Utility methods for determining the path of signed states on disk.

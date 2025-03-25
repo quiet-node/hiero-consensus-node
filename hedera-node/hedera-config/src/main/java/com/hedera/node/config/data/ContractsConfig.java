@@ -94,10 +94,6 @@ public record ContractsConfig(
                 boolean systemContractUpdateCustomFeesEnabled,
         @ConfigProperty(value = "systemContract.tokenInfo.v2.enabled", defaultValue = "false") @NetworkProperty
                 boolean systemContractTokenInfoV2Enabled,
-        @ConfigProperty(value = "systemContract.precisionLossFixForGas.enabled", defaultValue = "true") @NetworkProperty
-                boolean isGasPrecisionLossFixEnabled,
-        @ConfigProperty(value = "systemContract.canonicalViewGas.enabled", defaultValue = "true") @NetworkProperty
-                boolean isCanonicalViewGasEnabled,
         @ConfigProperty(value = "systemContract.updateNFTsMetadata.enabled", defaultValue = "false") @NetworkProperty
                 boolean systemContractUpdateNFTsMetadataEnabled,
         @ConfigProperty(value = "systemContract.airdropTokens.enabled", defaultValue = "true") @NetworkProperty
@@ -113,7 +109,7 @@ public record ContractsConfig(
                 boolean systemContractSetUnlimitedAutoAssociationsEnabled,
         @ConfigProperty(value = "systemContract.hts.addresses", defaultValue = "359") // 359 = 0x167, 364 = 0x16C
                 Set<Long> callableHTSAddresses,
-        @ConfigProperty(value = "evm.ethTransaction.zeroHapiFees.enabled", defaultValue = "false") @NetworkProperty
+        @ConfigProperty(value = "evm.ethTransaction.zeroHapiFees.enabled", defaultValue = "true") @NetworkProperty
                 boolean evmEthTransactionZeroHapiFeesEnabled,
         @ConfigProperty(value = "evm.allowCallsToNonContractAccounts", defaultValue = "true") @NetworkProperty
                 boolean evmAllowCallsToNonContractAccounts,

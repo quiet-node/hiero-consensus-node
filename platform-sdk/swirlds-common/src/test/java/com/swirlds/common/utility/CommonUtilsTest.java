@@ -2,9 +2,9 @@
 package com.swirlds.common.utility;
 
 import static com.swirlds.common.utility.CommonUtils.byteCountToDisplaySize;
-import static com.swirlds.common.utility.CommonUtils.hex;
 import static com.swirlds.common.utility.CommonUtils.intToBytes;
-import static com.swirlds.common.utility.CommonUtils.unhex;
+import static org.hiero.consensus.model.utility.CommonUtils.hex;
+import static org.hiero.consensus.model.utility.CommonUtils.unhex;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -26,7 +26,7 @@ class CommonUtilsTest {
 
     @Test
     void hexTest() {
-        assertTrue(hex(null).contains("null"), "the output of a null input should indicate its null");
+        assertTrue(hex((byte[]) null).contains("null"), "the output of a null input should indicate its null");
         assertEquals("", hex(new byte[0]), "for an empty array we should get an empty string");
 
         assertEquals(HEX_STRING, hex(HEX_BYTES), "hex value should match");
