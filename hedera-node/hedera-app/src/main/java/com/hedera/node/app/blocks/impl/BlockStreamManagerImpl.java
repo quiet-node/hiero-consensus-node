@@ -384,16 +384,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                                 .previousBlockRootHash(capturedLastBlockHash)
                                 .startOfBlockStateRootHash(blockStartStateHash);
 
-                        // Special case when signing with hinTS and this is the freeze round; we will have to wait until
-                        // after restart to gossip partial signatures and sign this block
-                        if (hintsEnabled && roundNum == freezeRoundNumber) {
-                            pendingBlocks.forEach(block -> block.writer().closeBlock());
-                        } else {
-                            blockHashSigner
-                                    .signFuture(blockHash)
-                                    .thenAcceptAsync(signature -> finishProofWithSignature(blockHash, signature));
-                        }
-
                         // Append block hash to trailing hashes
                         blockHashManager.appendBlockHash(blockStreamInfo, blockHash);
 
@@ -408,6 +398,16 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
                         // Update in-memory state for the next block
                         lastBlockHash = blockHash;
+
+                        // Special case when signing with hinTS and this is the freeze round; we will have to wait until
+                        // after restart to gossip partial signatures and sign this block
+                        if (hintsEnabled && roundNum == freezeRoundNumber) {
+                            pendingBlocks.forEach(block -> block.writer().closeBlock());
+                        } else {
+                            blockHashSigner
+                                    .signFuture(blockHash)
+                                    .thenAcceptAsync(signature -> finishProofWithSignature(blockHash, signature));
+                        }
                     },
                     executor);
 
