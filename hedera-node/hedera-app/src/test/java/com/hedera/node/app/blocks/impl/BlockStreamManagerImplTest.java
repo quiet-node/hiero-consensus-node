@@ -328,13 +328,16 @@ class BlockStreamManagerImplTest {
         assertEquals(expectedBlockInfo, actualBlockInfo);
 
         // Wait for the block proof future to complete
-        subject.getBlockProofFuture().join();
+        subject.getBlockRootHashFuture().join();
 
         // Assert the block proof was written
         final var proofItem = lastAItem.get();
         assertNotNull(proofItem);
         final var item = BlockItem.PROTOBUF.parse(proofItem);
         assertTrue(item.hasBlockProof());
+        final var proof = item.blockProofOrThrow();
+        assertEquals(N_BLOCK_NO, proof.block());
+        assertEquals(FIRST_FAKE_SIGNATURE, proof.blockSignature());
     }
 
     @Test
@@ -428,7 +431,7 @@ class BlockStreamManagerImplTest {
         subject.endRound(state, ROUND_NO);
 
         // Wait for the block proof future to complete
-        subject.getBlockProofFuture().join();
+        subject.getBlockRootHashFuture().join();
 
         final var header = writtenHeader.get();
         assertNotNull(header);
@@ -536,7 +539,7 @@ class BlockStreamManagerImplTest {
         subject.endRound(state, ROUND_NO);
 
         // Wait for the block proof future to complete
-        subject.getBlockProofFuture().join();
+        subject.getBlockRootHashFuture().join();
 
         verify(aWriter).openBlock(N_BLOCK_NO);
 
@@ -704,7 +707,7 @@ class BlockStreamManagerImplTest {
         subject.endRound(state, ROUND_NO);
 
         // Wait for the block proof future to complete
-        subject.getBlockProofFuture().join();
+        subject.getBlockRootHashFuture().join();
 
         // Then block should be closed
         verify(aWriter).closeBlock();
@@ -776,7 +779,7 @@ class BlockStreamManagerImplTest {
         subject.endRound(state, ROUND_NO);
 
         // Wait for the block proof future to complete
-        subject.getBlockProofFuture().join();
+        subject.getBlockRootHashFuture().join();
 
         // Then block should be closed due to freeze, even though period not elapsed
         verify(aWriter).closeBlock();
@@ -823,7 +826,7 @@ class BlockStreamManagerImplTest {
         subject.endRound(state, 2L);
 
         // Wait for the block proof future to complete
-        subject.getBlockProofFuture().join();
+        subject.getBlockRootHashFuture().join();
 
         verify(aWriter).closeBlock();
     }

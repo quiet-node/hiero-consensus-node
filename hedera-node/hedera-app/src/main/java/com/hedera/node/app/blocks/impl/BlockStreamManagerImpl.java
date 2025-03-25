@@ -119,8 +119,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     @Nullable
     private PreTxnItems preTxnItems;
 
-    // Track the future for the current block's proof completion, chained with previous block
-    private CompletableFuture<Void> blockProofFuture = CompletableFuture.completedFuture(null);
+    // Track the future for the current block's root hash computation, chained with previous block
+    private CompletableFuture<Void> blockRootHashFuture = CompletableFuture.completedFuture(null);
 
     /**
      * Represents the part of a block preceding a possible first transaction; we defer writing this part until
@@ -335,6 +335,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             lastNonEmptyRoundNumber = roundNum;
             final var outputTreeStatus = outputTreeHasher.status();
 
+            // Wait for previous block's root hash to complete to ensure lastBlockHash is updated and
+            // the block hash has been appended to blockHashManager.blockHashes()
+            blockRootHashFuture.join();
+
             // Put this block hash context in state via the block stream info
             final var writableState = state.getWritableStates(BlockStreamService.NAME);
             final var blockStreamInfoState = writableState.<BlockStreamInfo>getSingleton(BLOCK_STREAM_INFO_KEY);
@@ -361,17 +365,14 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             // Variables for async block completion
             final var blockStreamInfo = blockStreamInfoFrom(state);
 
-            // Wait for previous block's proof to complete to ensure lastBlockHash is updated
-            blockProofFuture.join();
-
             // Capture values needed for async block proof creation
             final var capturedBlockNumber = blockNumber;
             final var capturedLastBlockHash = lastBlockHash;
             final var capturedOutputTreeHasher = outputTreeHasher;
             final var capturedWriter = writer;
 
-            // Start async block completion, chained with previous block's proof
-            blockProofFuture = blockProofFuture.thenRunAsync(
+            // Start async block completion, chained with previous block's root hash
+            blockRootHashFuture = blockRootHashFuture.thenRunAsync(
                     () -> {
                         // Compute block hash
                         final var outputHash =
@@ -811,8 +812,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     }
 
     @VisibleForTesting
-    CompletableFuture<Void> getBlockProofFuture() {
-        return blockProofFuture;
+    CompletableFuture<Void> getBlockRootHashFuture() {
+        return blockRootHashFuture;
     }
 
     private Bytes computeBlockHash(@NonNull final BlockStreamInfo blockStreamInfo) {
