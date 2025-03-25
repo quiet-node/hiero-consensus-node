@@ -39,6 +39,7 @@ public class BlockNodeConnectionManager {
     private final Map<BlockNodeConfig, BlockNodeConnection> activeConnections;
     private final BlockNodeConfigExtractor blockNodeConfigurations;
     private final BlockStreamStateManager blockStreamStateManager;
+    private BlockAcknowledgementTracker acknowledgementTracker;
 
     private final Object connectionLock = new Object();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -58,6 +59,9 @@ public class BlockNodeConnectionManager {
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.activeConnections = new ConcurrentHashMap<>();
+        // Initialize the block acknowledgment tracker
+        this.acknowledgementTracker = new BlockAcknowledgementTracker(
+                blockStreamStateManager, false /*blockStreamConfig.deleteFilesOnDisk()*/);
     }
 
     /**
@@ -76,7 +80,8 @@ public class BlockNodeConnectionManager {
     private void connectToNode(@NonNull BlockNodeConfig node) {
         synchronized (connectionLock) {
             try {
-                BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
+                BlockNodeConnection connection =
+                        new BlockNodeConnection(node, this, blockStreamStateManager, acknowledgementTracker);
                 connection.establishStream();
                 connection.getIsActiveLock().lock();
                 try {

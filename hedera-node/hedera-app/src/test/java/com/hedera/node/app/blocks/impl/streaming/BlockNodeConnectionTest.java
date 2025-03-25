@@ -55,6 +55,9 @@ class BlockNodeConnectionTest {
     private BlockStreamStateManager blockStreamStateManager;
 
     @Mock
+    private BlockAcknowledgementTracker blockAcknowledgementTracker;
+
+    @Mock
     private StreamObserver<PublishStreamRequest> requestObserver;
 
     @Mock
@@ -71,7 +74,8 @@ class BlockNodeConnectionTest {
         when(nodeConfig.address()).thenReturn(TEST_ADDRESS);
         when(nodeConfig.port()).thenReturn(TEST_PORT);
 
-        connection = new BlockNodeConnection(nodeConfig, connectionManager, blockStreamStateManager);
+        connection = new BlockNodeConnection(
+                nodeConfig, connectionManager, blockStreamStateManager, blockAcknowledgementTracker);
 
         // Set requestObserver via reflection to avoid establishing an actual gRPC connection
         Field requestObserverField = BlockNodeConnection.class.getDeclaredField("requestObserver");
@@ -665,7 +669,7 @@ class BlockNodeConnectionTest {
         // Act
         connection.onNext(response);
 
-        // No specific verification needed - the method doesn't do much with the acknowledgement
+        assertEquals(blockAcknowledgementTracker.getLastVerifiedBlock(), TEST_BLOCK_NUMBER);
 
         // Verify log messages for acknowledgement
         final String expectedLog = "Received acknowledgement";

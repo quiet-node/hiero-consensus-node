@@ -32,6 +32,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final BlockNodeConfig node;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
+    private final BlockAcknowledgementTracker acknowledgmentTracker;
+    private final String connectionId;
 
     // Locks and synchronization objects
     private final Object channelLock = new Object();
@@ -56,12 +58,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
-            @NonNull final BlockStreamStateManager blockStreamStateManager) {
+            @NonNull final BlockStreamStateManager blockStreamStateManager,
+            @NonNull final BlockAcknowledgementTracker acknowledgmentTracker) {
         this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
+        this.acknowledgmentTracker = requireNonNull(acknowledgmentTracker);
+        this.connectionId = generateConnectionId(nodeConfig);
         this.channel = createNewChannel();
     }
 
@@ -289,6 +294,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     node.port(),
                     blockAlreadyExists);
 
+            acknowledgmentTracker.trackBlockAcknowledgement(connectionId, blockNumber);
             // Remove all block states up to and including this block number
             blockStreamStateManager.removeBlockStatesUpTo(blockNumber);
         }
@@ -320,6 +326,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void removeFromActiveConnections(BlockNodeConfig node) {
         blockNodeConnectionManager.disconnectFromNode(node);
+    }
+
+    private String generateConnectionId(BlockNodeConfig nodeConfig) {
+        return nodeConfig.address() + ":" + nodeConfig.port();
     }
 
     /**
