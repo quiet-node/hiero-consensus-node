@@ -304,12 +304,14 @@ public class HandleWorkflow {
             return;
         }
         final var lastNodeRewardsPaymentTime = classifyLastNodeRewardsPaymentTime(state, now);
+        // If we're in the same staking period as the last time node rewards were paid, we don't
+        // need to do anything
         if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.CURRENT_PERIOD) {
             return;
         }
         final var writableStates = state.getWritableStates(TokenService.NAME);
         final var nodeRewardStore = new WritableNodeRewardsStoreImpl(writableStates);
-        // Don't try to pay rewards in the genesis edge case
+        // Don't try to pay rewards in the genesis edge case when LastNodeRewardsPaymentTime.NEVER
         if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.PREVIOUS_PERIOD) {
             // Identify the nodes active in the last staking period
             final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
@@ -335,7 +337,7 @@ public class HandleWorkflow {
             final var minimumRewardInTinyCents = exchangeRateManager.getTinybarsFromTinyCents(
                     Math.max(
                             0L,
-                            BigInteger.valueOf(nodesConfig.minNodeReward())
+                            BigInteger.valueOf(nodesConfig.minNodeRewardUsd())
                                     .multiply(USD_TO_TINYCENTS.toBigInteger())
                                     .longValue()),
                     now);
@@ -369,8 +371,17 @@ public class HandleWorkflow {
      * The possible times at which the last time node rewards were paid.
      */
     private enum LastNodeRewardsPaymentTime {
+        /**
+         * Node rewards have never been paid. In the genesis edge case, we don't need to pay rewards.
+         */
         NEVER,
+        /**
+         * The last time node rewards were paid was in the previous staking period.
+         */
         PREVIOUS_PERIOD,
+        /**
+         * The last time node rewards were paid was in the current staking period.
+         */
         CURRENT_PERIOD,
     }
 

@@ -44,55 +44,46 @@ public class V0610TokenSchema extends Schema {
     }
 
     /**
-     * Dispatches a synthetic node reward crypto transfer.
+     * Dispatches a synthetic node reward crypto transfer for active nodes.
      *
      * @param systemContext        The system context.
      * @param activeNodeAccountIds The list of node account ids.
      * @param payerId              The payer account id.
-     * @param creditPerNode        The credit per node.
+     * @param activeNodeCredit     The credit per active node.
      */
     public static void dispatchSynthNodeRewards(
             @NonNull final SystemContext systemContext,
             @NonNull final List<AccountID> activeNodeAccountIds,
             @NonNull final AccountID payerId,
-            final long creditPerNode) {
-        final long payerDebit = -(creditPerNode * activeNodeAccountIds.size());
-        final var amounts = new ArrayList<>(accountAmountsFrom(activeNodeAccountIds, creditPerNode));
-        amounts.add(asAccountAmount(payerId, payerDebit));
-
-        systemContext.dispatchAdmin(b -> b.memo("Synthetic node rewards")
-                .cryptoTransfer(CryptoTransferTransactionBody.newBuilder()
-                        .transfers(TransferList.newBuilder()
-                                .accountAmounts(amounts)
-                                .build()))
-                .build());
+            final long activeNodeCredit) {
+        dispatchSynthNodeRewards(systemContext, activeNodeAccountIds, payerId, activeNodeCredit, List.of(), 0L);
     }
 
     /**
-     * Dispatches a synthetic node reward crypto transfer.
+     * Dispatches a synthetic node reward crypto transfer for active and inactive nodes.
      *
      * @param systemContext          The system context.
      * @param activeNodeAccountIds   The list of node account ids.
      * @param payerId                The payer account id.
-     * @param creditPerNode          The credit per active node.
+     * @param activeNodeCredit       The credit per active node.
      * @param inactiveNodeAccountIds The list of inactive node account ids.
-     * @param inactiveNodeCredit     The credit for inactive nodes.
+     * @param inactiveNodeCredit     The credit for inactive nodes, which will be the minimum node reward.
      */
     public static void dispatchSynthNodeRewards(
             @NonNull final SystemContext systemContext,
             @NonNull final List<AccountID> activeNodeAccountIds,
             @NonNull final AccountID payerId,
-            final long creditPerNode,
+            final long activeNodeCredit,
             @NonNull final List<AccountID> inactiveNodeAccountIds,
             final long inactiveNodeCredit) {
-        if (creditPerNode <= 0L && inactiveNodeCredit <= 0L) {
+        if (activeNodeCredit <= 0L && inactiveNodeCredit <= 0L) {
             return;
         }
-        final long payerDebit =
-                -((creditPerNode * activeNodeAccountIds.size()) + (inactiveNodeCredit * inactiveNodeAccountIds.size()));
+        final long payerDebit = -((activeNodeCredit * activeNodeAccountIds.size())
+                + (inactiveNodeCredit * inactiveNodeAccountIds.size()));
         final var amounts = new ArrayList<AccountAmount>();
-        if (creditPerNode > 0L) {
-            amounts.addAll(accountAmountsFrom(activeNodeAccountIds, creditPerNode));
+        if (activeNodeCredit > 0L) {
+            amounts.addAll(accountAmountsFrom(activeNodeAccountIds, activeNodeCredit));
         }
         if (inactiveNodeCredit > 0L) {
             amounts.addAll(accountAmountsFrom(inactiveNodeAccountIds, inactiveNodeCredit));

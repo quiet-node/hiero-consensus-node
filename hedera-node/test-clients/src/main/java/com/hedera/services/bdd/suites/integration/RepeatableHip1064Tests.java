@@ -167,14 +167,14 @@ public class RepeatableHip1064Tests {
      */
     @LeakyRepeatableHapiTest(
             value = {NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION},
-            overrides = {"nodes.minNodeReward"})
+            overrides = {"nodes.minNodeRewardUsd"})
     @Order(2)
     final Stream<DynamicTest> inactiveNodesPaidWhenMinRewardsGreaterThanZero() {
         final AtomicLong expectedNodeFees = new AtomicLong(0);
         final AtomicLong expectedNodeRewards = new AtomicLong(0);
         final AtomicLong expectedMinNodeReward = new AtomicLong(0);
         return hapiTest(
-                overriding("nodes.minNodeReward", "10"),
+                overriding("nodes.minNodeRewardUsd", "10"),
                 recordStreamMustIncludePassFrom(
                         selectedItems(
                                 nodeRewardsValidatorWithInactiveNodes(

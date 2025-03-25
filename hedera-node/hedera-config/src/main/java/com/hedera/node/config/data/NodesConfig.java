@@ -16,7 +16,7 @@ import com.swirlds.config.api.ConfigProperty;
  * @param maxFqdnSize The maximum FQDN size
  * @param nodeRewardsEnabled feature flag for enabling node reward payments (HIP-1064)
  * @param updateAccountIdAllowed Whether the account ID can be updated
- * @param minNodeReward A minimum daily node reward amount in USD (applies even to inactive nodes)
+ * @param minNodeRewardUsd A minimum daily node reward amount in USD (applies even to inactive nodes)
  * @param targetUsdNodeRewards The target USD node rewards
  * @param numPeriodsToTargetUsd The number of periods to achieve the target USD node rewards
  * @param adjustNodeFees Whether node fees can be reduced by the average node fees already collected during that period
@@ -34,7 +34,7 @@ public record NodesConfig(
         @ConfigProperty(defaultValue = "false") @NetworkProperty boolean updateAccountIdAllowed,
         /* Node rewards HIP-1064 configurations */
         @ConfigProperty(defaultValue = "false") @NetworkProperty boolean nodeRewardsEnabled,
-        @ConfigProperty(defaultValue = "0") @NetworkProperty long minNodeReward,
+        @ConfigProperty(defaultValue = "0") @NetworkProperty long minNodeRewardUsd,
         @ConfigProperty(defaultValue = "25000") @NetworkProperty long targetUsdNodeRewards,
         @ConfigProperty(defaultValue = "365") @NetworkProperty long numPeriodsToTargetUsd,
         @ConfigProperty(defaultValue = "100000000000000") @NetworkProperty long preservedNodeRewardBalance,

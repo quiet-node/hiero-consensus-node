@@ -359,6 +359,8 @@ public class SystemTransactions {
 
     /**
      * Dispatches a synthetic node reward crypto transfer for the given active node accounts.
+     * If the {@link NodesConfig#minNodeRewardUsd()} is greater than zero, inactive nodes will receive the minimum node
+     * reward.
      *
      * @param state                          The state.
      * @param now                            The current time.
@@ -379,7 +381,7 @@ public class SystemTransactions {
             final long firstEligibleNodeAccountNumber,
             final long rewardAccountBalance,
             final long minNodeReward,
-            final List<RosterEntry> rosterEntries) {
+            @NonNull final List<RosterEntry> rosterEntries) {
         requireNonNull(state);
         requireNonNull(now);
         requireNonNull(activeNodeIds);
@@ -412,35 +414,33 @@ public class SystemTransactions {
         }
         // Check if rewardAccountBalance is enough to distribute rewards. If the balance is not enough, distribute
         // rewards to active nodes only. If the balance is enough, distribute rewards to both active and inactive nodes.
-        final var activeTotal = activeNodeAccountIds.size() * perNodeReward;
-        final var inactiveTotal = minNodeReward > 0 ? inactiveNodeAccountIds.size() * minNodeReward : 0L;
+        final long activeTotal = activeNodeAccountIds.size() * perNodeReward;
+        final long inactiveTotal = minNodeReward > 0 ? inactiveNodeAccountIds.size() * minNodeReward : 0L;
 
         if (rewardAccountBalance <= activeTotal) {
-            final long rewardPerActiveNode = rewardAccountBalance / activeNodeAccountIds.size();
-            log.info(
-                    "Balance insufficient for all, rewarding active nodes only: {} tinybars each", rewardPerActiveNode);
-            if (rewardPerActiveNode > 0) {
-                dispatchSynthNodeRewards(
-                        systemContext, activeNodeAccountIds, nodeRewardsAccountId, rewardPerActiveNode);
+            final long activeNodeReward = rewardAccountBalance / activeNodeAccountIds.size();
+            log.info("Balance insufficient for all, rewarding active nodes only: {} tinybars each", activeNodeReward);
+            if (activeNodeReward > 0) {
+                dispatchSynthNodeRewards(systemContext, activeNodeAccountIds, nodeRewardsAccountId, activeNodeReward);
             }
         } else {
-            final long rewardPerActiveNode =
+            final long activeNodeReward =
                     activeNodeAccountIds.isEmpty() ? 0 : activeTotal / activeNodeAccountIds.size();
             final long totalInactiveNodesReward =
                     Math.min(Math.max(0, rewardAccountBalance - activeTotal), inactiveTotal);
-            final long rewardPerInactiveNode =
+            final long inactiveNodeReward =
                     inactiveNodeAccountIds.isEmpty() ? 0 : totalInactiveNodesReward / inactiveNodeAccountIds.size();
             log.info(
                     "Paying active nodes {} tinybars each, inactive nodes {} tinybars each",
-                    rewardPerActiveNode,
-                    rewardPerInactiveNode);
+                    activeNodeReward,
+                    inactiveNodeReward);
             dispatchSynthNodeRewards(
                     systemContext,
                     activeNodeAccountIds,
                     nodeRewardsAccountId,
-                    rewardPerActiveNode,
+                    activeNodeReward,
                     inactiveNodeAccountIds,
-                    rewardPerInactiveNode);
+                    inactiveNodeReward);
         }
     }
 
