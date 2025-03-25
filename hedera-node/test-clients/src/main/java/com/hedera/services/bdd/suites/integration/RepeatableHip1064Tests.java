@@ -30,11 +30,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
+import com.hedera.node.app.hapi.utils.forensics.RecordStreamEntry;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.LeakyRepeatableHapiTest;
 import com.hedera.services.bdd.junit.RepeatableHapiTest;
 import com.hedera.services.bdd.junit.TargetEmbeddedMode;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
+import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.SpecOperation;
 import com.hedera.services.bdd.spec.transactions.token.TokenMovement;
 import com.hedera.services.bdd.spec.utilops.UtilVerbs;
@@ -49,13 +51,16 @@ import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestMethodOrder;
 
-@Order(4)
+@Order(6)
 @Tag(INTEGRATION)
 @HapiTestLifecycle
 @TargetEmbeddedMode(REPEATABLE)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RepeatableHip1064Tests {
     @BeforeAll
     static void beforeAll(@NonNull final TestLifecycle testLifecycle) {
@@ -79,6 +84,7 @@ public class RepeatableHip1064Tests {
      * </ol>
      */
     @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
+    @Order(1)
     final Stream<DynamicTest> paysAdjustedFeesToAllEligibleActiveAccountsAtStartOfNewPeriod() {
         final AtomicLong expectedNodeFees = new AtomicLong(0);
         final AtomicLong expectedNodeRewards = new AtomicLong(0);
@@ -86,7 +92,9 @@ public class RepeatableHip1064Tests {
                 recordStreamMustIncludePassFrom(
                         selectedItems(
                                 nodeRewardsValidator(expectedNodeRewards::get),
-                                // We expect one node rewards payment in this test
+                                // We expect two node rewards payments in this test.
+                                // But first staking period all nodes are inactive and minReward is 0.
+                                // So no synthetic node rewards payment is expected.
                                 1,
                                 (spec, item) -> item.getRecord().getTransferList().getAccountAmountsList().stream()
                                         .anyMatch(aa ->
@@ -159,11 +167,8 @@ public class RepeatableHip1064Tests {
      */
     @LeakyRepeatableHapiTest(
             value = {NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION},
-            overrides = {
-                "nodes.minNodeReward",
-                "nodes.nodeRewardsEnabled",
-                "ledger.numSystemAccounts",
-            })
+            overrides = {"nodes.minNodeReward"})
+    @Order(2)
     final Stream<DynamicTest> inactiveNodesPaidWhenMinRewardsGreaterThanZero() {
         final AtomicLong expectedNodeFees = new AtomicLong(0);
         final AtomicLong expectedNodeRewards = new AtomicLong(0);
@@ -174,13 +179,15 @@ public class RepeatableHip1064Tests {
                         selectedItems(
                                 nodeRewardsValidatorWithInactiveNodes(
                                         expectedNodeRewards::get, expectedMinNodeReward::get),
-                                // We expect one node rewards payment in this test
-                                1,
+                                // We expect two node rewards payments in this test.
+                                // First staking period all nodes are inactive and minReward is 10.
+                                // Second staking period, two nodes are active and one node is inactive
+                                2,
                                 (spec, item) -> item.getRecord().getTransferList().getAccountAmountsList().stream()
                                         .anyMatch(aa ->
                                                 aa.getAccountID().getAccountNum() == 801L && aa.getAmount() < 0L)),
                         Duration.ofSeconds(1)),
-                cryptoTransfer(TokenMovement.movingHbar(100000 * ONE_HBAR).between(GENESIS, NODE_REWARD)),
+                cryptoTransfer(TokenMovement.movingHbar(10000000 * ONE_HBAR).between(GENESIS, NODE_REWARD)),
                 // Start a new period
                 waitUntilStartOfNextStakingPeriod(1),
                 // Collect some node fees with a non-system payer
@@ -197,7 +204,7 @@ public class RepeatableHip1064Tests {
                                 .orElseThrow()
                                 .getAmount())),
                 // validate all network fees go to 0.0.801
-                validateRecordFees("notFree", List.of(3L, 801L)),
+                validateRecordFees("notFree", List.of(3L, 98L, 800L, 801L)),
                 doWithStartupConfig(
                         "nodes.targetUsdNodeRewards",
                         target -> doWithStartupConfig(
@@ -208,20 +215,11 @@ public class RepeatableHip1064Tests {
                                     final long targetTinybars =
                                             spec.ratesProvider().toTbWithActiveRates(targetReward);
                                     final long prePaidRewards = expectedNodeFees.get() / 4;
+                                    final long minRewardTinybars = spec.ratesProvider()
+                                            .toTbWithActiveRates((10L * 100 * TINY_PARTS_PER_WHOLE));
+
                                     expectedNodeRewards.set(targetTinybars - prePaidRewards);
-                                    System.out.println(
-                                            "Expected node rewards for active nodes: " + expectedNodeRewards.get());
-                                }))),
-                doWithStartupConfig(
-                        "nodes.minNodeReward",
-                        target -> doWithStartupConfig(
-                                "nodes.minNodeReward",
-                                numPeriods -> doingContextual(spec -> {
-                                    final long minReward = (Long.parseLong(target) * 100 * TINY_PARTS_PER_WHOLE);
-                                    final long minRewardTinybars =
-                                            spec.ratesProvider().toTbWithActiveRates(minReward);
                                     expectedMinNodeReward.set(minRewardTinybars);
-                                    System.out.println("Expected min node reward: " + expectedMinNodeReward.get());
                                 }))),
                 // Start a new period and leave only node1 as inactive
                 mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
@@ -291,25 +289,57 @@ public class RepeatableHip1064Tests {
         return (spec, records) -> {
             final var items = records.get(SELECTED_ITEMS_KEY);
             assertNotNull(items, "No reward payments found");
-            assertEquals(1, items.size());
-            final var payment = items.getFirst();
-            assertEquals(CryptoTransfer, payment.function());
-            final var op = payment.body().getCryptoTransfer();
-            final long expectedPerNode = expectedPerNodeReward.getAsLong();
-            final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
-                    .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
-            assertEquals(4, bodyAdjustments.size());
-            // node2 and node3 only expected to receive (node0 is system, node1 was inactive)
-            final long expectedDebit = -2 * expectedPerNode - expectedMinNodeReward.getAsLong();
-            assertEquals(
-                    expectedDebit, bodyAdjustments.get(spec.startupProperties().getLong("accounts.nodeRewardAccount")));
-            System.out.println("Body adjustments: " + bodyAdjustments);
-            // node2 credit
-            assertEquals(expectedPerNode, bodyAdjustments.get(5L));
-            // node3 credit
-            assertEquals(expectedPerNode, bodyAdjustments.get(6L));
-            // node1 credit
-            assertEquals(expectedMinNodeReward.getAsLong(), bodyAdjustments.get(4L));
+            assertEquals(2, items.size());
+
+            final var firstRecord = items.getFirst();
+            final var secondRecord = items.entries().get(1);
+
+            assertEquals(CryptoTransfer, firstRecord.function());
+            assertEquals(CryptoTransfer, secondRecord.function());
+
+            validateFirstRecord(spec, firstRecord, expectedMinNodeReward);
+            validateSecondRecord(spec, secondRecord, expectedPerNodeReward, expectedMinNodeReward);
         };
+    }
+
+    private static void validateSecondRecord(
+            final HapiSpec spec,
+            final RecordStreamEntry secondRecord,
+            final LongSupplier expectedPerNodeReward,
+            final LongSupplier expectedMinNodeReward) {
+        final var op = secondRecord.body().getCryptoTransfer();
+        final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
+                .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
+        assertEquals(4, bodyAdjustments.size());
+        // node2 and node3 and node1 (inactive) will receive rewards
+        final long expectedDebit = -2 * expectedPerNodeReward.getAsLong() - expectedMinNodeReward.getAsLong();
+        System.out.println("Body adjustments for second record: " + bodyAdjustments);
+        assertEquals(
+                expectedDebit, bodyAdjustments.get(spec.startupProperties().getLong("accounts.nodeRewardAccount")));
+        // node2 credit is active reward as it is active
+        assertEquals(expectedPerNodeReward.getAsLong(), bodyAdjustments.get(5L));
+        // node3 credit is active reward as it is active
+        assertEquals(expectedPerNodeReward.getAsLong(), bodyAdjustments.get(6L));
+        // node1 credit is min reward as it is inactive
+        assertEquals(expectedMinNodeReward.getAsLong(), bodyAdjustments.get(4L));
+    }
+
+    private static void validateFirstRecord(
+            final HapiSpec spec, final RecordStreamEntry firstRecord, final LongSupplier expectedMinNodeReward) {
+        final var op = firstRecord.body().getCryptoTransfer();
+        final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
+                .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
+        assertEquals(4, bodyAdjustments.size());
+        // node2 and node3 and node1 (inactive) will receive rewards
+        final long expectedDebit = -3 * expectedMinNodeReward.getAsLong();
+        System.out.println("Body adjustments for first record: " + bodyAdjustments);
+        assertEquals(
+                expectedDebit, bodyAdjustments.get(spec.startupProperties().getLong("accounts.nodeRewardAccount")));
+        // node2 credit
+        assertEquals(expectedMinNodeReward.getAsLong(), bodyAdjustments.get(5L));
+        // node3 credit
+        assertEquals(expectedMinNodeReward.getAsLong(), bodyAdjustments.get(6L));
+        // node1 credit
+        assertEquals(expectedMinNodeReward.getAsLong(), bodyAdjustments.get(4L));
     }
 }
