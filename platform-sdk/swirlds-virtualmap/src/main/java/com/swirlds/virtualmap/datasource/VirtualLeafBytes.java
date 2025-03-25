@@ -19,8 +19,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.Objects;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Virtual leaf record bytes.
@@ -47,8 +45,6 @@ import org.apache.logging.log4j.Logger;
  * </pre>
  */
 public class VirtualLeafBytes<V> {
-
-    private static final Logger logger = LogManager.getLogger(VirtualLeafBytes.class);
 
     public static final FieldDefinition FIELD_LEAFRECORD_PATH =
             new FieldDefinition("path", FieldType.FIXED64, false, true, false, 1);
@@ -206,12 +202,15 @@ public class VirtualLeafBytes<V> {
         size += ProtoWriterTools.sizeOfTag(FIELD_LEAFRECORD_PATH);
         size += Long.BYTES;
         size += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, Math.toIntExact(keyBytes.length()));
-        int valueBytesLen = -1;
+        final int valueBytesLen;
         // Don't call valueBytes() as it may trigger value serialization to Bytes
         if (valueBytes != null) {
             valueBytesLen = Math.toIntExact(valueBytes.length());
         } else if (value != null) {
             valueBytesLen = valueCodec.measureRecord(value);
+        } else {
+            // Null value
+            valueBytesLen = -1;
         }
         if (valueBytesLen >= 0) {
             size += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, valueBytesLen);
