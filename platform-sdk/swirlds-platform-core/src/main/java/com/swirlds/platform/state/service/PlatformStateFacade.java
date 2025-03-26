@@ -342,9 +342,11 @@ public class PlatformStateFacade {
                     states.add(nameAndKey.left() + "." + nameAndKey.right() + ": " + leafNode.getHash());
                 }
             }
-            if (next instanceof VirtualInternalNode internalNode) {
-                states.add("internal node | path= " + internalNode.getPath() + " hash=" + internalNode.getHash());
-            }
+//            if (next instanceof VirtualInternalNode internalNode) {
+//                Hash hash = internalNode.getHash();
+//                String hashString = hash == null ? "null" : hash.toString().substring(0, 16);
+//                states.add("i | path= " + internalNode.getPath() + " hash=" + hashString);
+//            }
         }
 
         final VirtualMap vm = (VirtualMap) merkleNodeState.getRoot();
@@ -354,14 +356,17 @@ public class PlatformStateFacade {
         InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
             final VirtualLeafBytes<?> virtualLeafBytes = recordAccessor.findLeafRecord(pair.left());
             final var hash = recordAccessor.findHash(virtualLeafBytes.path());
+            String valueString = pair.right().toString();
+            String hashString = hash == null ? "null" : hash.toString().substring(0, 16);
+            String trimmedValueString = valueString.length() > 16 ? valueString.substring(0, 16) : valueString;
             sb.append("k=")
                     .append(pair.left())
                     .append(";v=")
-                    .append(pair.right())
+                    .append(trimmedValueString)
                     .append(";path=")
                     .append(virtualLeafBytes.path())
                     .append(";hash=")
-                    .append(hash)
+                    .append(hashString)
                     .append("\n");
         };
 

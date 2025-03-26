@@ -51,8 +51,9 @@ public class MerkleStateUtils {
 //                .addRow("Last round before BR:", platformState.getLastRoundBeforeBirthRoundMode())
 //                .addRow("Lowest Judge Gen before BR", platformState.getLowestJudgeGenerationBeforeBirthRoundMode())
 //                .render(sb);
-
-        sb.append("\n");
+        sb.append("\n\n");
+        sb.append("Round:" + platformState.getRound());
+        sb.append("\n\n");
         new MerkleTreeVisualizer(state).setStates(states).setDepth(hashDepth).render(sb);
         return sb.toString();
     }
