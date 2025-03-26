@@ -261,7 +261,7 @@ public class VirtualPipeline {
             return;
         }
 
-        logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Register copy {}", copy.getFastCopyVersion());
+        logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "Register copy {}", copy.getFastCopyVersion());
 
         undestroyedCopies.getAndIncrement();
         copies.add(copy);
@@ -305,7 +305,7 @@ public class VirtualPipeline {
             return;
         }
 
-        logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Destroy copy {}", copy.getFastCopyVersion());
+        logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "Destroy copy {}", copy.getFastCopyVersion());
 
         final int remainingCopies = undestroyedCopies.decrementAndGet();
         if (remainingCopies < 0) {
@@ -526,12 +526,12 @@ public class VirtualPipeline {
                 break;
             }
             if ((next == copies.getFirst()) && shouldBeFlushed(copy)) {
-                logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Flush {}", copy.getFastCopyVersion());
+                logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "Flush {}", copy.getFastCopyVersion());
                 flush(copy);
                 copies.remove(next);
             } else if (canBeMerged(next)) {
                 assert !copy.isMerged();
-                logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Merge {}", copy.getFastCopyVersion());
+                logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "Merge {}", copy.getFastCopyVersion());
                 merge(next);
                 copies.remove(next);
             }
@@ -540,6 +540,7 @@ public class VirtualPipeline {
             statistics.setNodeCacheSize(totalSize);
             next = next.getNext();
         }
+        logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "Virtual pipeline size {}", copies.getSize());
     }
 
     private void doWork() {
