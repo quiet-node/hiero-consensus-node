@@ -638,7 +638,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             @NonNull final Configuration platformConfig) {
         requireNonNull(state);
         requireNonNull(platformConfig);
-        withListeners(state);
         this.configProvider = new ConfigProviderImpl(trigger == GENESIS, metrics);
         this.genesisNetworkSupplier = () -> startupNetworks().genesisNetworkOrThrow(platformConfig);
         final var deserializedVersion = platformStateFacade.creationSemanticVersionOf(state);
@@ -653,6 +652,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 deserializedVersion == null ? "<NONE>" : deserializedVersion);
         if (trigger != GENESIS) {
             requireNonNull(deserializedVersion, "Deserialized version cannot be null for trigger " + trigger);
+            withListeners(state);
         }
         final var savedStateVersion =
                 deserializedVersion == null ? null : new ServicesSoftwareVersion(deserializedVersion);

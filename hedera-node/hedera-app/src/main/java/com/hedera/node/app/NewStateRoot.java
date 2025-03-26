@@ -49,9 +49,10 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -95,7 +96,7 @@ public class NewStateRoot implements MerkleNodeState {
     /**
      * Listeners to be notified of state changes on {@link NewStateRoot.MerkleWritableStates#commit()} calls for any service.
      */
-    private final Set<StateChangeListener> listeners = new HashSet<>();
+    private final List<StateChangeListener> listeners = new ArrayList<>();
 
     private Configuration configuration;
 
