@@ -37,6 +37,7 @@ public record NodesConfig(
         @ConfigProperty(defaultValue = "0") @NetworkProperty long minNodeRewardUsd,
         @ConfigProperty(defaultValue = "25000") @NetworkProperty long targetUsdNodeRewards,
         @ConfigProperty(defaultValue = "365") @NetworkProperty long numPeriodsToTargetUsd,
-        @ConfigProperty(defaultValue = "100000000000000") @NetworkProperty long preservedNodeRewardBalance,
+        @ConfigProperty(defaultValue = "100000000000000") @NetworkProperty long minNodeRewardBalance,
         @ConfigProperty(defaultValue = "true") @NetworkProperty boolean adjustNodeFees,
-        @ConfigProperty(defaultValue = "10") @NetworkProperty int activeRoundsPercent) {}
+        @ConfigProperty(defaultValue = "10") @NetworkProperty int activeRoundsPercent,
+        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean preserveMinNodeRewardBalance) {}

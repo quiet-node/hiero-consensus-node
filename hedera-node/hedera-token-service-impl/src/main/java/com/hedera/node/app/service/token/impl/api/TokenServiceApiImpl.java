@@ -590,8 +590,8 @@ public class TokenServiceApiImpl implements TokenServiceApi {
         long balance = amount;
 
         final var nodeRewardAccount = lookupAccount("Node rewards", nodeRewardAccountID);
-        if (!nodesConfig.nodeRewardsEnabled()
-                || nodeRewardAccount.tinybarBalance() > nodesConfig.preservedNodeRewardBalance()) {
+        if (!nodesConfig.preserveMinNodeRewardBalance()
+                || nodeRewardAccount.tinybarBalance() > nodesConfig.minNodeRewardBalance()) {
             // We only pay node and staking rewards if the feature is enabled
             if (stakingConfig.isEnabled()) {
                 final long nodeReward = (stakingConfig.feesNodeRewardPercentage() * amount) / 100;

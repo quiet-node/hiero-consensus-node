@@ -65,7 +65,9 @@ import org.junit.jupiter.api.TestMethodOrder;
 public class RepeatableHip1064Tests {
     @BeforeAll
     static void beforeAll(@NonNull final TestLifecycle testLifecycle) {
-        testLifecycle.overrideInClass(Map.of("nodes.nodeRewardsEnabled", "true"));
+        testLifecycle.overrideInClass(Map.of(
+                "nodes.nodeRewardsEnabled", "true",
+                "nodes.preserveMinNodeRewardBalance", "true"));
         testLifecycle.doAdhoc(
                 nodeUpdate("0").declineReward(false),
                 nodeUpdate("1").declineReward(false),

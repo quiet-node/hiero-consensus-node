@@ -43,7 +43,7 @@ public class RepeatableHip1064TestsDisabled {
     static void beforeAll(@NonNull final TestLifecycle testLifecycle) {
         testLifecycle.overrideInClass(Map.of(
                 "nodes.nodeRewardsEnabled", "false",
-                "ledger.numSystemAccounts", "3"));
+                "nodes.preserveMinNodeRewardBalance", "false"));
     }
 
     @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
