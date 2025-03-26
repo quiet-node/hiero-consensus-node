@@ -383,7 +383,7 @@ public class SystemTransactions {
 
     /**
      * Dispatches a synthetic node reward crypto transfer for the given active node accounts.
-     * If the {@link NodesConfig#minNodeRewardUsd()} is greater than zero, inactive nodes will receive the minimum node
+     * If the {@link NodesConfig#minPerPeriodNodeRewardUsd()} is greater than zero, inactive nodes will receive the minimum node
      * reward.
      *
      * @param state                The state.

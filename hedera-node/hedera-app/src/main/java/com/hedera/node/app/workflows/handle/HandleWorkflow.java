@@ -330,13 +330,13 @@ public class HandleWorkflow {
                     ? nodeRewardStore.get().feesCollectedByRewardEligibleNodes() / currentRoster.size()
                     : 0L;
 
-            final var targetPayInTinyCents = BigInteger.valueOf(nodesConfig.targetUsdNodeRewards())
+            final var targetPayInTinyCents = BigInteger.valueOf(nodesConfig.targetYearlyNodeRewardsUsd())
                     .multiply(USD_TO_TINYCENTS.toBigInteger())
                     .divide(BigInteger.valueOf(nodesConfig.numPeriodsToTargetUsd()));
             final var minimumRewardInTinyCents = exchangeRateManager.getTinybarsFromTinyCents(
                     Math.max(
                             0L,
-                            BigInteger.valueOf(nodesConfig.minNodeRewardUsd())
+                            BigInteger.valueOf(nodesConfig.minPerPeriodNodeRewardUsd())
                                     .multiply(USD_TO_TINYCENTS.toBigInteger())
                                     .longValue()),
                     now);

@@ -37,7 +37,8 @@ public class V0610TokenSchema extends Schema {
 
     @Override
     public void migrate(@NonNull final MigrationContext ctx) {
-        if (ctx.isGenesis()) {
+        final var previousStates = ctx.previousStates();
+        if (ctx.isGenesis() || !previousStates.contains(NODE_REWARDS_KEY)) {
             final var nodeRewardsState = ctx.newStates().getSingleton(NODE_REWARDS_KEY);
             nodeRewardsState.put(NodeRewards.DEFAULT);
         }

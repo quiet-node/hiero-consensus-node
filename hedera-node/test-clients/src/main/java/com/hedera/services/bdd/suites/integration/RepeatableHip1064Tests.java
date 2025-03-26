@@ -126,7 +126,7 @@ public class RepeatableHip1064Tests {
                 // validate all network fees go to 0.0.801
                 validateRecordFees("notFree", List.of(3L, 801L)),
                 doWithStartupConfig(
-                        "nodes.targetUsdNodeRewards",
+                        "nodes.targetYearlyNodeRewardsUsd",
                         target -> doWithStartupConfig(
                                 "nodes.numPeriodsToTargetUsd",
                                 numPeriods -> doingContextual(spec -> {
@@ -136,7 +136,6 @@ public class RepeatableHip1064Tests {
                                             spec.ratesProvider().toTbWithActiveRates(targetReward);
                                     final long prePaidRewards = expectedNodeFees.get() / 4;
                                     expectedNodeRewards.set(targetTinybars - prePaidRewards);
-                                    System.out.println("Expected node rewards: " + expectedNodeRewards.get());
                                 }))),
                 // Start a new period and leave only node1 as inactive
                 mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
@@ -174,14 +173,14 @@ public class RepeatableHip1064Tests {
      */
     @LeakyRepeatableHapiTest(
             value = {NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION},
-            overrides = {"nodes.minNodeRewardUsd"})
+            overrides = {"nodes.minPerPeriodNodeRewardUsd"})
     @Order(2)
     final Stream<DynamicTest> inactiveNodesPaidWhenMinRewardsGreaterThanZero() {
         final AtomicLong expectedNodeFees = new AtomicLong(0);
         final AtomicLong expectedNodeRewards = new AtomicLong(0);
         final AtomicLong expectedMinNodeReward = new AtomicLong(0);
         return hapiTest(
-                overriding("nodes.minNodeRewardUsd", "10"),
+                overriding("nodes.minPerPeriodNodeRewardUsd", "10"),
                 recordStreamMustIncludePassFrom(
                         selectedItems(
                                 nodeRewardsValidatorWithInactiveNodes(
@@ -214,7 +213,7 @@ public class RepeatableHip1064Tests {
                 // validate all network fees go to 0.0.801
                 validateRecordFees("notFree", List.of(3L, 98L, 800L, 801L)),
                 doWithStartupConfig(
-                        "nodes.targetUsdNodeRewards",
+                        "nodes.targetYearlyNodeRewardsUsd",
                         target -> doWithStartupConfig(
                                 "nodes.numPeriodsToTargetUsd",
                                 numPeriods -> doingContextual(spec -> {
@@ -228,6 +227,76 @@ public class RepeatableHip1064Tests {
 
                                     expectedNodeRewards.set(targetTinybars - prePaidRewards);
                                     expectedMinNodeReward.set(minRewardTinybars);
+                                }))),
+                // Start a new period and leave only node1 as inactive
+                mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
+                    assertEquals(2, nodeRewards.numRoundsInStakingPeriod());
+                    assertEquals(4, nodeRewards.nodeActivities().size());
+                    assertEquals(expectedNodeFees.get(), nodeRewards.feesCollectedByRewardEligibleNodes());
+                    return nodeRewards
+                            .copyBuilder()
+                            .nodeActivities(NodeActivity.newBuilder()
+                                    .nodeId(1)
+                                    .numMissedJudgeRounds(2)
+                                    .build())
+                            .build();
+                }),
+                waitUntilStartOfNextStakingPeriod(1),
+                // Trigger another round with a transaction with no fees (superuser payer)
+                // so the network should pay rewards
+                cryptoCreate("nobody").payingWith(GENESIS));
+    }
+
+    @LeakyRepeatableHapiTest(
+            value = {NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION},
+            overrides = {"nodes.preserveMinNodeRewardBalance"})
+    @Order(3)
+    final Stream<DynamicTest> preserveNodeRewardBalanceHasEffectWhenFeatureEnabled() {
+        final AtomicLong expectedNodeFees = new AtomicLong(0);
+        final AtomicLong expectedNodeRewards = new AtomicLong(0);
+        return hapiTest(
+                overriding("nodes.preserveMinNodeRewardBalance", "false"),
+                recordStreamMustIncludePassFrom(
+                        selectedItems(
+                                nodeRewardsValidator(expectedNodeRewards::get),
+                                // We expect two node rewards payments in this test.
+                                // But first staking period all nodes are inactive and minReward is 0.
+                                // So no synthetic node rewards payment is expected.
+                                1,
+                                (spec, item) -> item.getRecord().getTransferList().getAccountAmountsList().stream()
+                                        .anyMatch(aa ->
+                                                aa.getAccountID().getAccountNum() == 801L && aa.getAmount() < 0L)),
+                        Duration.ofSeconds(1)),
+                cryptoTransfer(TokenMovement.movingHbar(100000 * ONE_HBAR).between(GENESIS, NODE_REWARD)),
+                nodeUpdate("0").declineReward(true),
+                // Start a new period
+                waitUntilStartOfNextStakingPeriod(1),
+                // Collect some node fees with a non-system payer
+                cryptoCreate(CIVILIAN_PAYER),
+                fileCreate("something")
+                        .contents("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                        .payingWith(CIVILIAN_PAYER)
+                        .via("notFree"),
+                // Collects ~1.8M tinybar in node fees; so ~450k tinybar per node
+                getTxnRecord("notFree")
+                        .exposingTo(r -> expectedNodeFees.set(r.getTransferList().getAccountAmountsList().stream()
+                                .filter(a -> a.getAccountID().getAccountNum() == 3L)
+                                .findFirst()
+                                .orElseThrow()
+                                .getAmount())),
+                // validate all network fees go to 0.0.801
+                validateRecordFees("notFree", List.of(3L, 98L, 800L, 801L)),
+                doWithStartupConfig(
+                        "nodes.targetYearlyNodeRewardsUsd",
+                        target -> doWithStartupConfig(
+                                "nodes.numPeriodsToTargetUsd",
+                                numPeriods -> doingContextual(spec -> {
+                                    final long targetReward = (Long.parseLong(target) * 100 * TINY_PARTS_PER_WHOLE)
+                                            / Integer.parseInt(numPeriods);
+                                    final long targetTinybars =
+                                            spec.ratesProvider().toTbWithActiveRates(targetReward);
+                                    final long prePaidRewards = expectedNodeFees.get() / 4;
+                                    expectedNodeRewards.set(targetTinybars - prePaidRewards);
                                 }))),
                 // Start a new period and leave only node1 as inactive
                 mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
@@ -280,7 +349,6 @@ public class RepeatableHip1064Tests {
             final long expectedPerNode = expectedPerNodeReward.getAsLong();
             final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
                     .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
-            System.out.println("Body adjustments: " + bodyAdjustments);
             assertEquals(3, bodyAdjustments.size());
             // node2 and node3 only expected to receive (node0 is system, node1 was inactive)
             final long expectedDebit = -2 * expectedPerNode;
@@ -322,7 +390,6 @@ public class RepeatableHip1064Tests {
         assertEquals(4, bodyAdjustments.size());
         // node2 and node3 and node1 (inactive) will receive rewards
         final long expectedDebit = -2 * expectedPerNodeReward.getAsLong() - expectedMinNodeReward.getAsLong();
-        System.out.println("Body adjustments for second record: " + bodyAdjustments);
         assertEquals(
                 expectedDebit, bodyAdjustments.get(spec.startupProperties().getLong("accounts.nodeRewardAccount")));
         // node2 credit is active reward as it is active
@@ -341,7 +408,6 @@ public class RepeatableHip1064Tests {
         assertEquals(4, bodyAdjustments.size());
         // node2 and node3 and node1 (inactive) will receive rewards
         final long expectedDebit = -3 * expectedMinNodeReward.getAsLong();
-        System.out.println("Body adjustments for first record: " + bodyAdjustments);
         assertEquals(
                 expectedDebit, bodyAdjustments.get(spec.startupProperties().getLong("accounts.nodeRewardAccount")));
         // node2 credit
