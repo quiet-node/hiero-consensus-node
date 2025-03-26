@@ -9,7 +9,7 @@ import static java.util.Arrays.asList;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
-import com.hedera.hapi.platform.state.Judge;
+import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
@@ -49,14 +49,14 @@ public final class PlatformStateUtils {
             minimumJudgeInfo.add(new MinimumJudgeInfo(random.nextLong(), random.nextLong()));
         }
         final var judges = asList(
-                new Judge(0L, randomHashBytes(random)),
-                new Judge(1L, randomHashBytes(random)),
-                new Judge(2L, randomHashBytes(random)));
+                new JudgeId(0L, randomHashBytes(random)),
+                new JudgeId(1L, randomHashBytes(random)),
+                new JudgeId(2L, randomHashBytes(random)));
         platformStateFacade.setSnapshotTo(
                 state,
                 ConsensusSnapshot.newBuilder()
                         .round(random.nextLong())
-                        .judges(judges)
+                        .judgeIds(judges)
                         .minimumJudgeInfoList(minimumJudgeInfo)
                         .nextConsensusNumber(random.nextLong())
                         .consensusTimestamp(CommonUtils.toPbjTimestamp(randomInstant(random)))

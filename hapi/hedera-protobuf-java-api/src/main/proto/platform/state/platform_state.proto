@@ -164,15 +164,16 @@ message ConsensusSnapshot {
     proto.Timestamp consensus_timestamp = 5;
 
     /*
-     * A list of judges in a round.<br/>
+     * A list of judge creator ids and its hashes in a round.<br/>
      */
-    repeated Judge judges = 6;
+    repeated JudgeId judge_ids = 6;
 }
 
 /**
- * A judge information
+ * A judge information that includes the creator node ID and the
+ * SHA-384 hash value of the judge.
  */
-message Judge {
+message JudgeId {
     /**
      * The creator node ID who created this judge.
      */

@@ -52,7 +52,7 @@ import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
 import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
-import com.hedera.hapi.platform.state.Judge;
+import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
@@ -968,7 +968,7 @@ class BlockStreamManagerImplTest {
         return PlatformState.newBuilder()
                 .creationSoftwareVersion(CREATION_VERSION)
                 .consensusSnapshot(ConsensusSnapshot.newBuilder()
-                        .judges(List.of(new Judge(0, Bytes.wrap("test"))))
+                        .judgeIds(List.of(new JudgeId(0, Bytes.wrap("test"))))
                         .build())
                 .freezeTime(freezeTime == null ? null : asTimestamp(freezeTime))
                 .build();

@@ -2,7 +2,7 @@
 package com.swirlds.platform.consensus;
 
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
-import com.hedera.hapi.platform.state.Judge;
+import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
@@ -52,7 +52,7 @@ public final class SyntheticSnapshot {
                 .toList();
         return ConsensusSnapshot.newBuilder()
                 .round(round)
-                .judges(List.of(Judge.newBuilder()
+                .judgeIds(List.of(JudgeId.newBuilder()
                         .creatorId(judge.getCreatorId().id())
                         .judgeHash(judge.getHash().getBytes())
                         .build()))
@@ -73,7 +73,7 @@ public final class SyntheticSnapshot {
     public static @NonNull ConsensusSnapshot getGenesisSnapshot(@NonNull final AncientMode ancientMode) {
         return ConsensusSnapshot.newBuilder()
                 .round(ConsensusConstants.ROUND_FIRST)
-                .judges(List.of())
+                .judgeIds(List.of())
                 .minimumJudgeInfoList(List.of(new MinimumJudgeInfo(
                         ConsensusConstants.ROUND_FIRST,
                         ancientMode == AncientMode.GENERATION_THRESHOLD

@@ -29,7 +29,7 @@ import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
-import com.hedera.hapi.platform.state.Judge;
+import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
@@ -463,8 +463,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final var readablePlatformState =
                 state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
         final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
-        final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judges().stream()
-                .map(Judge::creatorId)
+        final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judgeIds().stream()
+                .map(JudgeId::creatorId)
                 .collect(toCollection(HashSet::new));
         return requireNonNull(rosterStore.getActiveRoster()).rosterEntries().stream()
                 .map(RosterEntry::nodeId)
