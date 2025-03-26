@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -75,56 +74,41 @@ class BlockNodeConnectionTest {
     private MockedStatic<BlockStreamServiceGrpc> mockedGrpc;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws InterruptedException {
         given(nodeConfig.address()).willReturn("localhost");
         given(nodeConfig.port()).willReturn(12345);
 
-        blockNodeConnection = new BlockNodeConnection(nodeConfig, grpcServiceClient, blockNodeConnectionManager);
+        channel = mock(ManagedChannel.class);
+
+        // Create static mocks that will persist throughout the test
+        mockedChannel = mockStatic(ManagedChannelBuilder.class);
+        mockedGrpc = mockStatic(BlockStreamServiceGrpc.class);
+
+        // Setup channel builder chain since it's needed by constructor
+        mockedChannel
+                .when(() -> ManagedChannelBuilder.forAddress("localhost", 12345))
+                .thenReturn(nettyChannelBuilder);
+        lenient().when(nettyChannelBuilder.usePlaintext()).thenReturn(nettyChannelBuilder);
+        lenient().when(nettyChannelBuilder.build()).thenReturn(channel);
+
+        // Setup channel shutdown chain
+        lenient().when(channel.shutdown()).thenReturn(channel);
+        lenient()
+                .when(channel.awaitTermination(any(Long.class), any(TimeUnit.class)))
+                .thenReturn(true);
+
+        blockNodeConnection = new BlockNodeConnection(nodeConfig, blockNodeConnectionManager);
     }
 
-	public void setUp2() throws InterruptedException {
-		// Basic setup that's needed for all tests
-		lenient().when(nodeConfig.address()).thenReturn("localhost");
-		lenient().when(nodeConfig.port()).thenReturn(12345);
-
-		channel = mock(ManagedChannel.class);
-
-		// Create static mocks that will persist throughout the test
-		mockedChannel = mockStatic(ManagedChannelBuilder.class);
-		mockedGrpc = mockStatic(BlockStreamServiceGrpc.class);
-
-		// Setup channel builder chain since it's needed by constructor
-		mockedChannel
-				.when(() -> ManagedChannelBuilder.forAddress("localhost", 12345))
-				.thenReturn(nettyChannelBuilder);
-		lenient().when(nettyChannelBuilder.usePlaintext()).thenReturn(nettyChannelBuilder);
-		lenient().when(nettyChannelBuilder.build()).thenReturn(channel);
-
-		// Setup channel shutdown chain
-		lenient().when(channel.shutdown()).thenReturn(channel);
-		lenient()
-				.when(channel.awaitTermination(any(Long.class), any(TimeUnit.class)))
-				.thenReturn(true);
-
-		blockNodeConnection = new BlockNodeConnection(nodeConfig, blockNodeConnectionManager);
-	}
-
-	private void setupGrpcMocks() {
-		// Setup for tests that need gRPC functionality
-		mockedGrpc.when(() -> BlockStreamServiceGrpc.newStub(channel)).thenReturn(grpcStub);
-
-		when(grpcStub.publishBlockStream(any())).thenReturn(requestObserver);
-	}
-
-	@AfterEach
-	void tearDown() {
-		if (mockedChannel != null) {
-			mockedChannel.close();
-		}
-		if (mockedGrpc != null) {
-			mockedGrpc.close();
-		}
-	}
+    @AfterEach
+    void tearDown() {
+        if (mockedChannel != null) {
+            mockedChannel.close();
+        }
+        if (mockedGrpc != null) {
+            mockedGrpc.close();
+        }
+    }
 
     @Test
     void testNewBlockNodeConnection() {
@@ -261,5 +245,12 @@ class BlockNodeConnectionTest {
                                         "Error in block stream to node localhost:12345: (Status{code=ABORTED, description=null, cause=null}) io.grpc.StatusRuntimeException: ABORTED"));
         assertFalse(blockNodeConnection.isActive());
         verify(blockNodeConnectionManager).handleConnectionError(eq(blockNodeConnection), notNull());
+    }
+
+    private void setupGrpcMocks() {
+        // Setup for tests that need gRPC functionality
+        mockedGrpc.when(() -> BlockStreamServiceGrpc.newStub(channel)).thenReturn(grpcStub);
+
+        when(grpcStub.publishBlockStream(any())).thenReturn(requestObserver);
     }
 }

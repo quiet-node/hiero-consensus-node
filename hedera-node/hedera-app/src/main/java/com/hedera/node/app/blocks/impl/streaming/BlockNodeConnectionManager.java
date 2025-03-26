@@ -16,8 +16,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -94,60 +92,12 @@ public class BlockNodeConnectionManager {
         }
     }
 
-	/**
-	 * @return the gRPC endpoint for publish block stream
-	 */
-	public String getGrpcEndPoint() {
-		return GRPC_END_POINT;
-	}
-
     /**
      * @return the gRPC endpoint for publish block stream
      */
-    private void establishConnections() {
-		logger.info("Establishing connections to block nodes");
-
-		List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes().stream()
-				.filter(node -> !activeConnections.containsKey(node))
-				.toList();
-
-		availableNodes.forEach(this::connectToNode);
+    public String getGrpcEndPoint() {
+        return GRPC_END_POINT;
     }
-
-    private void connectToNode(@NonNull BlockNodeConfig node) {
-		logger.info("Connecting to block node {}:{}", node.address(), node.port());
-		try {
-			BlockNodeConnection connection = new BlockNodeConnection(node, this);
-			connection.establishStream();
-			synchronized (connectionLock) {
-				activeConnections.put(node, connection);
-			}
-			logger.info("Successfully connected to block node {}:{}", node.address(), node.port());
-		} catch (Exception e) {
-			logger.error("Failed to connect to block node {}:{}", node.address(), node.port(), e);
-		}
-    }
-
-	private synchronized void disconnectFromNode(@NonNull BlockNodeConfig node) {
-		synchronized (connectionLock) {
-			BlockNodeConnection connection = activeConnections.remove(node);
-			if (connection != null) {
-				connection.close();
-				logger.info("Disconnected from block node {}:{}", node.address(), node.port());
-			}
-		}
-	}
-
-	private void streamBlockToConnections(@NonNull BlockState block) {
-		long blockNumber = block.blockNumber();
-		// Get currently active connections
-		List<BlockNodeConnection> connectionsToStream;
-		synchronized (connectionLock) {
-			connectionsToStream = activeConnections.values().stream()
-					.filter(BlockNodeConnection::isActive)
-					.toList();
-		}
-	}
 
     public void handleEndOfStreamSuccess(@NonNull final BlockNodeConnection connection) {
         handleEndOfStreamSuccess(connection, null);
@@ -157,10 +107,6 @@ public class BlockNodeConnectionManager {
             @NonNull final BlockNodeConnection connection, @Nullable final Long blockNumber) {
         requireNonNull(connection);
         updateLatestBlock(connection, blockNumber);
-    }
-
-    static String blockNodeName(@Nullable final BlockNodeConfig node) {
-        return node != null ? node.address() + ":" + node.port() : "null";
     }
 
     /**
@@ -248,7 +194,6 @@ public class BlockNodeConnectionManager {
                         () -> {
                             connection.establishStream();
                             synchronized (connectionLock) {
-								activeConnections.put(connection.getNodeConfig(), connection);
                                 connectionsInRetry.remove(connection.getNodeConfig());
                             }
                             return true;
@@ -342,6 +287,10 @@ public class BlockNodeConnectionManager {
         }
     }
 
+    static String blockNodeName(@Nullable final BlockNodeConfig node) {
+        return node != null ? node.address() + ":" + node.port() : "null";
+    }
+
     /**
      * Attempts to establish a connection to a block node based on priority.
      */
@@ -378,6 +327,31 @@ public class BlockNodeConnectionManager {
         connectToNode(selectedNode);
     }
 
+    private void rememberConnection(@NonNull BlockNodeConnection connection) {
+        if (!primaryActive()) {
+            primary = connection;
+        } else if (!secondaryActive()) {
+            secondary = connection;
+        } else {
+            logger.warn("Both primary and secondary connections are already established");
+        }
+    }
+
+    private void connectToNode(@NonNull BlockNodeConfig node) {
+        logger.info("Connecting to block node {}:{}", node.address(), node.port());
+        try {
+            BlockNodeConnection connection = new BlockNodeConnection(node, this);
+            connection.establishStream();
+            synchronized (connectionLock) {
+                rememberConnection(connection);
+                connectionsInRetry.remove(node);
+            }
+            logger.info("Successfully connected to block node {}", blockNodeName(node));
+        } catch (Exception e) {
+            logger.error("Failed to connect to block node {}", blockNodeName(node), e);
+        }
+    }
+
     private Long getLatestBlock(@NonNull final BlockNodeConnection connection) {
         return latestBlocks.get(connection.getNodeConfig());
     }
@@ -394,42 +368,6 @@ public class BlockNodeConnectionManager {
                     blockNodeName(connection.getNodeConfig()),
                     blockNumber,
                     latestBlock);
-        }
-    }
-
-    private void connectToNode(@NonNull BlockNodeConfig node) {
-        logger.info("Connecting to block node {}", blockNodeName(node));
-        try {
-            final GrpcClient client = GrpcClient.builder()
-                    // (FUTURE) Add TLS support?
-                    .tls(Tls.builder().enabled(false).build())
-                    .baseUri(new URI("http://" + node.address() + ":" + node.port()))
-                    .protocolConfig(GrpcClientProtocolConfig.builder()
-                            .abortPollTimeExpired(false)
-                            .build())
-                    .keepAlive(true)
-                    .build();
-
-            final GrpcServiceClient grpcServiceClient = client.serviceClient(GrpcServiceDescriptor.builder()
-                    .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
-                    .putMethod(
-                            GRPC_END_POINT,
-                            GrpcClientMethodDescriptor.bidirectional(
-                                            BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
-                                    .requestType(PublishStreamRequest.class)
-                                    .responseType(PublishStreamResponse.class)
-                                    .build())
-                    .build());
-
-            final BlockNodeConnection connection = new BlockNodeConnection(node, grpcServiceClient, this);
-            connection.establishStream();
-            synchronized (connectionLock) {
-                // The connection may not be in here, but in case it is, remove it
-                connectionsInRetry.remove(node);
-            }
-            logger.info("Successfully connected to block node {}", blockNodeName(node));
-        } catch (URISyntaxException | RuntimeException e) {
-            logger.error("Failed to connect to block node {}", blockNodeName(node), e);
         }
     }
 
@@ -491,7 +429,7 @@ public class BlockNodeConnectionManager {
             // (FUTURE) Add sent batches/items to a cache
         }
 
-        logger.info("Successfully streamed block {} to {}", blockNumber, conn.getNodeConfig());
+        logger.info("Successfully streamed block {} to {}", blockNumber, blockNodeName(conn.getNodeConfig()));
     }
 
     private boolean isRetrying(BlockNodeConnection connection) {
