@@ -55,14 +55,12 @@ import com.hedera.node.app.history.HistoryLibrary;
 import com.hedera.node.app.history.impl.HistoryLibraryImpl;
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.info.DiskStartupNetworks;
-import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
 import com.hedera.services.bdd.junit.support.BlockStreamAccess;
 import com.hedera.services.bdd.junit.support.BlockStreamValidator;
 import com.hedera.services.bdd.spec.HapiSpec;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.utility.MerkleTreeVisualizer;
@@ -95,6 +93,7 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.crypto.Hash;
 import org.junit.jupiter.api.Assertions;
 
 /**
@@ -236,7 +235,7 @@ public class StateChangesValidator implements BlockStreamValidator {
         final var versionConfig = bootstrapConfig.getConfigData(VersionConfig.class);
         final var servicesVersion = versionConfig.servicesVersion();
         final var metrics = new NoOpMetrics();
-        final var hedera = ServicesMain.newHedera(metrics, new PlatformStateFacade(ServicesSoftwareVersion::new));
+        final var hedera = ServicesMain.newHedera(metrics, new PlatformStateFacade());
         this.state = hedera.newStateRoot();
         final var platformConfig = ServicesMain.buildPlatformConfig();
         hedera.initializeStatesApi(state, GENESIS, platformConfig);

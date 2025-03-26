@@ -23,11 +23,11 @@ import static com.swirlds.platform.state.service.PlatformStateService.PLATFORM_S
 import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
 import static com.swirlds.platform.system.InitTrigger.GENESIS;
 import static com.swirlds.platform.system.InitTrigger.RECONNECT;
-import static com.swirlds.platform.system.status.PlatformStatus.ACTIVE;
-import static com.swirlds.platform.system.status.PlatformStatus.STARTING_UP;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.hiero.consensus.model.status.PlatformStatus.ACTIVE;
+import static org.hiero.consensus.model.status.PlatformStatus.STARTING_UP;
 
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.SingletonUpdateChange;
@@ -112,14 +112,10 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.constructable.RuntimeConstructable;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.crypto.Signature;
 import com.swirlds.common.notification.NotificationEngine;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
 import com.swirlds.platform.listeners.PlatformStatusChangeListener;
 import com.swirlds.platform.listeners.PlatformStatusChangeNotification;
 import com.swirlds.platform.listeners.ReconnectCompleteListener;
@@ -133,14 +129,10 @@ import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadableRosterStore;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.SwirldMain;
-import com.swirlds.platform.system.events.Event;
 import com.swirlds.platform.system.state.notifications.AsyncFatalIssListener;
 import com.swirlds.platform.system.state.notifications.StateHashedListener;
-import com.swirlds.platform.system.status.PlatformStatus;
-import com.swirlds.platform.system.transaction.Transaction;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StartupNetworks;
@@ -163,6 +155,14 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.constructable.RuntimeConstructable;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.event.Event;
+import org.hiero.consensus.model.hashgraph.Round;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.status.PlatformStatus;
+import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
+import org.hiero.consensus.model.transaction.Transaction;
 
 /*
  ****************        ****************************************************************************************
@@ -254,6 +254,12 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * (once in constructor to register schemas, again inside Dagger component).
      */
     private final HistoryService historyService;
+
+    /**
+     * The util service singleton, kept as a field here to avoid constructing twice
+     * (once in constructor to register schemas, again inside Dagger component).
+     */
+    private final UtilServiceImpl utilServiceImpl;
 
     /**
      * The file service singleton, kept as a field here to avoid constructing twice
@@ -485,6 +491,11 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         boundaryStateChangeListener = new BoundaryStateChangeListener(storeMetricsService, configSupplier);
         hintsService = hintsServiceFactory.apply(appContext, bootstrapConfig);
         historyService = historyServiceFactory.apply(appContext, bootstrapConfig);
+        utilServiceImpl = new UtilServiceImpl(appContext, (txnBytes, config) -> daggerApp
+                .transactionChecker()
+                .parseSignedAndCheck(
+                        txnBytes, config.getConfigData(HederaConfig.class).transactionMaxBytes())
+                .txBody());
         contractServiceImpl = new ContractServiceImpl(appContext, metrics);
         scheduleServiceImpl = new ScheduleServiceImpl(appContext);
         blockStreamService = new BlockStreamService();
@@ -501,7 +512,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                         new FreezeServiceImpl(),
                         scheduleServiceImpl,
                         new TokenServiceImpl(appContext),
-                        new UtilServiceImpl(),
+                        utilServiceImpl,
                         new RecordCacheService(),
                         new BlockRecordService(),
                         blockStreamService,
@@ -912,7 +923,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             @NonNull final Event event,
             @NonNull final State state,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
-        final var readableStoreFactory = new ReadableStoreFactory(state, ignore -> getSoftwareVersion());
+        final var readableStoreFactory = new ReadableStoreFactory(state);
         final var creatorInfo =
                 daggerApp.networkInfo().nodeInfo(event.getCreatorId().id());
         if (creatorInfo == null) {
@@ -1037,6 +1048,10 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         return configProvider;
     }
 
+    public BootstrapConfigProviderImpl bootstrapConfigProvider() {
+        return bootstrapConfigProvider;
+    }
+
     public BlockStreamManager blockStreamManager() {
         return daggerApp.blockStreamManager();
     }
@@ -1127,8 +1142,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .round();
         final var initialStateHash = new InitialStateHash(initialStateHashFuture, roundNum);
 
-        final var rosterStore =
-                new ReadableStoreFactory(state, ignore -> getSoftwareVersion()).getStore(ReadableRosterStore.class);
+        final var rosterStore = new ReadableStoreFactory(state).getStore(ReadableRosterStore.class);
         final var networkInfo = new StateNetworkInfo(
                 platform.getSelfId().id(),
                 state,
@@ -1136,22 +1150,18 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 configProvider,
                 () -> requireNonNull(genesisNetworkSupplier).get());
         final var blockHashSigner = blockHashSignerFactory.apply(hintsService, historyService, configProvider);
-        final int maxSignedTxnSize = configProvider
-                .getConfiguration()
-                .getConfigData(HederaConfig.class)
-                .transactionMaxBytes();
         // Fully qualified so as to not confuse javadoc
         daggerApp = DaggerHederaInjectionComponent.builder()
                 .configProviderImpl(configProvider)
                 .bootstrapConfigProviderImpl(bootstrapConfigProvider)
                 .fileServiceImpl(fileServiceImpl)
                 .contractServiceImpl(contractServiceImpl)
+                .utilServiceImpl(utilServiceImpl)
                 .scheduleService(scheduleServiceImpl)
                 .initTrigger(trigger)
                 .softwareVersion(version.getPbjSemanticVersion())
                 .self(networkInfo.selfNodeInfo())
                 .platform(platform)
-                .maxSignedTxnSize(maxSignedTxnSize)
                 .currentPlatformStatus(new CurrentPlatformStatusImpl(platform))
                 .servicesRegistry(servicesRegistry)
                 .instantSource(appContext.instantSource())

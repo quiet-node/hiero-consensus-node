@@ -15,12 +15,6 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import io.helidon.common.tls.Tls;
-import io.helidon.webclient.grpc.GrpcClient;
-import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
-import io.helidon.webclient.grpc.GrpcClientProtocolConfig;
-import io.helidon.webclient.grpc.GrpcServiceClient;
-import io.helidon.webclient.grpc.GrpcServiceDescriptor;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -100,12 +94,60 @@ public class BlockNodeConnectionManager {
         }
     }
 
+	/**
+	 * @return the gRPC endpoint for publish block stream
+	 */
+	public String getGrpcEndPoint() {
+		return GRPC_END_POINT;
+	}
+
     /**
      * @return the gRPC endpoint for publish block stream
      */
-    public String getGrpcEndPoint() {
-        return GRPC_END_POINT;
+    private void establishConnections() {
+		logger.info("Establishing connections to block nodes");
+
+		List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes().stream()
+				.filter(node -> !activeConnections.containsKey(node))
+				.toList();
+
+		availableNodes.forEach(this::connectToNode);
     }
+
+    private void connectToNode(@NonNull BlockNodeConfig node) {
+		logger.info("Connecting to block node {}:{}", node.address(), node.port());
+		try {
+			BlockNodeConnection connection = new BlockNodeConnection(node, this);
+			connection.establishStream();
+			synchronized (connectionLock) {
+				activeConnections.put(node, connection);
+			}
+			logger.info("Successfully connected to block node {}:{}", node.address(), node.port());
+		} catch (Exception e) {
+			logger.error("Failed to connect to block node {}:{}", node.address(), node.port(), e);
+		}
+    }
+
+	private synchronized void disconnectFromNode(@NonNull BlockNodeConfig node) {
+		synchronized (connectionLock) {
+			BlockNodeConnection connection = activeConnections.remove(node);
+			if (connection != null) {
+				connection.close();
+				logger.info("Disconnected from block node {}:{}", node.address(), node.port());
+			}
+		}
+	}
+
+	private void streamBlockToConnections(@NonNull BlockState block) {
+		long blockNumber = block.blockNumber();
+		// Get currently active connections
+		List<BlockNodeConnection> connectionsToStream;
+		synchronized (connectionLock) {
+			connectionsToStream = activeConnections.values().stream()
+					.filter(BlockNodeConnection::isActive)
+					.toList();
+		}
+	}
 
     public void handleEndOfStreamSuccess(@NonNull final BlockNodeConnection connection) {
         handleEndOfStreamSuccess(connection, null);
@@ -206,6 +248,7 @@ public class BlockNodeConnectionManager {
                         () -> {
                             connection.establishStream();
                             synchronized (connectionLock) {
+								activeConnections.put(connection.getNodeConfig(), connection);
                                 connectionsInRetry.remove(connection.getNodeConfig());
                             }
                             return true;

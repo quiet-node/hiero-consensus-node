@@ -46,7 +46,6 @@ import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.state.DeduplicationCache;
 import com.hedera.node.app.store.ReadableStoreFactory;
-import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.node.app.workflows.TransactionScenarioBuilder;
 import com.hedera.node.app.workflows.dispatcher.TransactionDispatcher;
@@ -55,8 +54,6 @@ import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.platform.system.transaction.Transaction;
-import com.swirlds.platform.system.transaction.TransactionWrapper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,6 +62,8 @@ import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.hiero.consensus.model.transaction.Transaction;
+import org.hiero.consensus.model.transaction.TransactionWrapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -144,7 +143,7 @@ final class PreHandleWorkflowImplTest extends AppTestBase implements Scenarios {
                         new AtomicReference<>(EntityNumber.newBuilder().build()),
                         ENTITY_COUNTS_KEY,
                         new AtomicReference<>(EntityCounts.DEFAULT)));
-        storeFactory = new ReadableStoreFactory(fakeMerkleState, ServicesSoftwareVersion::new);
+        storeFactory = new ReadableStoreFactory(fakeMerkleState);
 
         final var config = new VersionedConfigImpl(HederaTestConfigBuilder.createConfig(), DEFAULT_CONFIG_VERSION);
         when(configProvider.getConfiguration()).thenReturn(config);
@@ -634,8 +633,8 @@ final class PreHandleWorkflowImplTest extends AppTestBase implements Scenarios {
             final var txBytes = asByteArray(batchTxInfo.transaction());
             final Transaction platformTx = createAppPayloadWrapper(txBytes);
             when(sigFuture.get(anyLong(), any())).thenReturn(new SignatureVerificationImpl(payerKey, null, true));
-            when(transactionChecker.parseAndCheck(any(Bytes.class), anyInt()))
-                    .thenReturn(batchTxInfo)
+            when(transactionChecker.parseAndCheck(any(Bytes.class), anyInt())).thenReturn(batchTxInfo);
+            when(transactionChecker.parseSignedAndCheck(any(Bytes.class), anyInt()))
                     .thenReturn(innerTxInfo);
             when(signatureVerifier.verify(any(), any())).thenReturn(Map.of(payerKey, sigFuture));
             final var previousResult = new PreHandleResult(
