@@ -61,7 +61,7 @@ public final class SignedStateFileWriter {
             @NonNull final PlatformStateFacade platformStateFacade)
             throws IOException {
         final StateConfig stateConfig = platformContext.getConfiguration().getConfigData(StateConfig.class);
-        final String platformInfo = platformStateFacade.getInfoString(state, stateConfig.debugHashDepth());
+        final String platformInfo = "";// platformStateFacade.getInfoString(state, stateConfig.debugHashDepth());
 
         logger.info(
                 STATE_TO_DISK.getMarker(),

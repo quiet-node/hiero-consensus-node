@@ -59,16 +59,16 @@ public class ConsensusStateEventHandlerImpl implements ConsensusStateEventHandle
     public boolean onSealConsensusRound(@NonNull final Round round, @NonNull final MerkleNodeState state) {
         requireNonNull(state);
         requireNonNull(round);
-        long roundNum = round.getRoundNum();
-        if(!rounds.contains(roundNum) && hedera.appContext.selfNodeInfoSupplier().get().accountId().hasAccountNum() &&
-        hedera.appContext.selfNodeInfoSupplier().get().accountId().accountNum() == 3 ) {
-            logger.info(STATE_HASH.getMarker(), hedera.platformStateFacade.getInfoString(state, 1));
-            rounds.add(roundNum);
-        }
-
-        if(rounds.size() == 2) {
-            rounds.removeIf(next -> !next.equals(roundNum));
-        }
+//        long roundNum = round.getRoundNum();
+//        if(!rounds.contains(roundNum) && hedera.appContext.selfNodeInfoSupplier().get().accountId().hasAccountNum() &&
+//        hedera.appContext.selfNodeInfoSupplier().get().accountId().accountNum() == 3 ) {
+//            logger.info(STATE_HASH.getMarker(), hedera.platformStateFacade.getInfoString(state, 1));
+//            rounds.add(roundNum);
+//        }
+//
+//        if(rounds.size() == 2) {
+//            rounds.removeIf(next -> !next.equals(roundNum));
+//        }
 
 
         return hedera.onSealConsensusRound(round, state);

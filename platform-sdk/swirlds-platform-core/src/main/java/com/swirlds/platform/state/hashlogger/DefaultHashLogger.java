@@ -99,7 +99,7 @@ public class DefaultHashLogger implements HashLogger {
      */
     @NonNull
     private Message generateLogMessage(@NonNull final SignedState signedState) {
-        final String platformInfo = platformStateFacade.getInfoString(signedState.getState(), depth);
+        final String platformInfo = ""; //platformStateFacade.getInfoString(signedState.getState(), depth);
 
         return MESSAGE_FACTORY.newMessage(
                 """
