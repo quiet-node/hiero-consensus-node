@@ -152,9 +152,17 @@ public class NewStateRoot implements MerkleNodeState {
         this.merkleCryptography = merkleCryptography;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
         this.roundSupplier = roundSupplier;
+
+        this.virtualMap.registerMetrics(metrics);
     }
 
     // State interface impl
+
+    @Override
+    public boolean release() {
+        virtualMap.release();
+        return true;
+    }
 
     /**
      * {@inheritDoc}
