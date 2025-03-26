@@ -89,7 +89,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -285,14 +284,19 @@ public class SystemTransactions {
                                 .build());
                 stack.commitFullStack();
             });
-            systemContext.dispatchAdmin(b -> b.nodeCreate(NodeCreateTransactionBody.newBuilder()
-                    .adminKey(adminKey)
-                    .accountId(nodeInfo.accountId())
-                    .description(formatNodeName(nodeInfo.nodeId()))
-                    .gossipEndpoint(nodeInfo.gossipEndpoints())
-                    .gossipCaCertificate(nodeInfo.sigCertBytes())
-                    .serviceEndpoint(hapiEndpoints)
-                    .build()));
+            systemContext.dispatchAdmin(b -> {
+                final var isSystemAccount = nodeInfo.nodeId() <= ledgerConfig.numSystemAccounts();
+                final var nodeCreate = NodeCreateTransactionBody.newBuilder()
+                        .adminKey(adminKey)
+                        .accountId(nodeInfo.accountId())
+                        .description(formatNodeName(nodeInfo.nodeId()))
+                        .gossipEndpoint(nodeInfo.gossipEndpoints())
+                        .gossipCaCertificate(nodeInfo.sigCertBytes())
+                        .serviceEndpoint(hapiEndpoints)
+                        .declineReward(isSystemAccount)
+                        .build();
+                b.nodeCreate(nodeCreate);
+            });
         }
         networkInfo.updateFrom(state);
     }
@@ -355,6 +359,26 @@ public class SystemTransactions {
         if (autoNodeAdminKeyUpdates.tryIfPresent(adminConfig.upgradeSysFilesLoc(), systemContext)) {
             dispatch.stack().commitFullStack();
         }
+        // Dispatch node updates for all the nodes whose node account's account number is less
+        // than 100, with decline_reward set to true
+        final var ledgerConfig = config.getConfigData(LedgerConfig.class);
+        final var nodeStore = dispatch.handleContext().storeFactory().readableStore(ReadableNodeStore.class);
+        for (int i = 0; i < nodeStore.sizeOfState(); i++) {
+            final var nodeInfo = networkInfo.nodeInfo(i);
+            if (nodeInfo != null) {
+                final var declineReward = nodeInfo.accountId().accountNumOrThrow() <= ledgerConfig.numSystemAccounts();
+                log.info(
+                        "Dispatching node update for node {} with node account id {} decline_reward set to {}",
+                        nodeInfo.nodeId(),
+                        nodeInfo.accountId(),
+                        declineReward);
+                systemContext.dispatchAdmin(b -> b.nodeUpdate(NodeUpdateTransactionBody.newBuilder()
+                        .nodeId(nodeInfo.nodeId())
+                        .declineReward(declineReward)
+                        .build()));
+            }
+        }
+        dispatch.stack().commitFullStack();
     }
 
     /**
@@ -362,15 +386,14 @@ public class SystemTransactions {
      * If the {@link NodesConfig#minNodeRewardUsd()} is greater than zero, inactive nodes will receive the minimum node
      * reward.
      *
-     * @param state                          The state.
-     * @param now                            The current time.
-     * @param activeNodeIds                  The list of active node ids.
-     * @param perNodeReward                  The per node reward.
-     * @param nodeRewardsAccountId           The node rewards account id.
-     * @param firstEligibleNodeAccountNumber The first eligible node account number.
-     * @param rewardAccountBalance           The reward account balance.
-     * @param minNodeReward                  The minimum node reward.
-     * @param rosterEntries                  The list of roster entries.
+     * @param state                The state.
+     * @param now                  The current time.
+     * @param activeNodeIds        The list of active node ids.
+     * @param perNodeReward        The per node reward.
+     * @param nodeRewardsAccountId The node rewards account id.
+     * @param rewardAccountBalance The reward account balance.
+     * @param minNodeReward        The minimum node reward.
+     * @param rosterEntries        The list of roster entries.
      */
     public void dispatchNodeRewards(
             @NonNull final State state,
@@ -378,7 +401,6 @@ public class SystemTransactions {
             @NonNull final List<Long> activeNodeIds,
             final long perNodeReward,
             @NonNull final AccountID nodeRewardsAccountId,
-            final long firstEligibleNodeAccountNumber,
             final long rewardAccountBalance,
             final long minNodeReward,
             @NonNull final List<RosterEntry> rosterEntries) {
@@ -389,17 +411,15 @@ public class SystemTransactions {
         final var systemContext = newSystemContext(now, state, dispatch -> {});
         final var activeNodeAccountIds = activeNodeIds.stream()
                 .map(id -> systemContext.networkInfo().nodeInfo(id))
-                .filter(Objects::nonNull)
+                .filter(nodeInfo -> nodeInfo != null && !nodeInfo.declineReward())
                 .map(NodeInfo::accountId)
-                .filter(id -> id.accountNumOrThrow() >= firstEligibleNodeAccountNumber)
                 .toList();
         final var inactiveNodeAccountIds = rosterEntries.stream()
                 .map(RosterEntry::nodeId)
                 .filter(id -> !activeNodeIds.contains(id))
                 .map(id -> systemContext.networkInfo().nodeInfo(id))
-                .filter(Objects::nonNull)
+                .filter(nodeInfo -> nodeInfo != null && !nodeInfo.declineReward())
                 .map(NodeInfo::accountId)
-                .filter(id -> id.accountNumOrThrow() >= firstEligibleNodeAccountNumber)
                 .toList();
         if (activeNodeAccountIds.isEmpty() && (minNodeReward <= 0 || inactiveNodeAccountIds.isEmpty())) {
             // No eligible rewards to distribute

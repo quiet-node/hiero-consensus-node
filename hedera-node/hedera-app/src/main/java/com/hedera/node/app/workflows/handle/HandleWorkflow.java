@@ -83,7 +83,6 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.ConsensusConfig;
-import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NodesConfig;
 import com.hedera.node.config.data.SchedulingConfig;
 import com.hedera.node.config.data.StakingConfig;
@@ -350,7 +349,6 @@ public class HandleWorkflow {
                     activeNodeIds,
                     perActiveNodeReward,
                     rewardsAccountId,
-                    config.getConfigData(LedgerConfig.class).numSystemAccounts() + 1,
                     rewardAccountBalance,
                     minimumRewardInTinyCents,
                     rosterStore.getActiveRoster().rosterEntries());

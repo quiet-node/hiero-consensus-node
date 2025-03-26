@@ -9,6 +9,7 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileCreate;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.nodeUpdate;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.mutateSingleton;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doWithStartupConfig;
@@ -64,15 +65,18 @@ import org.junit.jupiter.api.TestMethodOrder;
 public class RepeatableHip1064Tests {
     @BeforeAll
     static void beforeAll(@NonNull final TestLifecycle testLifecycle) {
-        testLifecycle.overrideInClass(Map.of(
-                "nodes.nodeRewardsEnabled", "true",
-                "ledger.numSystemAccounts", "3"));
+        testLifecycle.overrideInClass(Map.of("nodes.nodeRewardsEnabled", "true"));
+        testLifecycle.doAdhoc(
+                nodeUpdate("0").declineReward(false),
+                nodeUpdate("1").declineReward(false),
+                nodeUpdate("2").declineReward(false),
+                nodeUpdate("3").declineReward(false));
     }
 
     /**
      * Given,
      * <ol>
-     *     <li>All nodes except {@code node0} have non-system accounts; and,</li>
+     *     <li>All nodes except {@code node0} have non-system accounts; So node0 will declineRewards and,</li>
      *     <li>All nodes except {@code node1} were active in a period {@code P}; and,</li>
      *     <li>Fees of amount {@code C} were collected by node accounts in {@code P}; and,</li>
      *     <li>The target node reward payment for 365 periods in USD is {@code T}.</li>
@@ -101,6 +105,7 @@ public class RepeatableHip1064Tests {
                                                 aa.getAccountID().getAccountNum() == 801L && aa.getAmount() < 0L)),
                         Duration.ofSeconds(1)),
                 cryptoTransfer(TokenMovement.movingHbar(100000 * ONE_HBAR).between(GENESIS, NODE_REWARD)),
+                nodeUpdate("0").declineReward(true),
                 // Start a new period
                 waitUntilStartOfNextStakingPeriod(1),
                 // Collect some node fees with a non-system payer
@@ -187,6 +192,7 @@ public class RepeatableHip1064Tests {
                                         .anyMatch(aa ->
                                                 aa.getAccountID().getAccountNum() == 801L && aa.getAmount() < 0L)),
                         Duration.ofSeconds(1)),
+                nodeUpdate("0").declineReward(true),
                 cryptoTransfer(TokenMovement.movingHbar(10000000 * ONE_HBAR).between(GENESIS, NODE_REWARD)),
                 // Start a new period
                 waitUntilStartOfNextStakingPeriod(1),
@@ -272,6 +278,7 @@ public class RepeatableHip1064Tests {
             final long expectedPerNode = expectedPerNodeReward.getAsLong();
             final Map<Long, Long> bodyAdjustments = op.getTransfers().getAccountAmountsList().stream()
                     .collect(toMap(aa -> aa.getAccountID().getAccountNum(), AccountAmount::getAmount));
+            System.out.println("Body adjustments: " + bodyAdjustments);
             assertEquals(3, bodyAdjustments.size());
             // node2 and node3 only expected to receive (node0 is system, node1 was inactive)
             final long expectedDebit = -2 * expectedPerNode;

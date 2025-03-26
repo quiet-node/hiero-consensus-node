@@ -746,7 +746,7 @@ public class ConsensusImpl implements Consensus {
         final long nonAncientThreshold = rounds.getAncientThreshold();
         final long nonExpiredThreshold = rounds.getExpiredThreshold();
 
-        final var identifiedJudges = judges.stream()
+        final List<Judge> identifiedJudges = judges.stream()
                 .map(event ->
                         new Judge(event.getCreatorId().id(), event.getBaseHash().getBytes()))
                 .toList();
