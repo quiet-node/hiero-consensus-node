@@ -305,7 +305,7 @@ public class VirtualPipeline {
             return;
         }
 
-        logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "Destroy copy {}", copy.getFastCopyVersion());
+        //logger.info(VIRTUAL_MERKLE_STATS.getMarker(), "Destroy copy {}", copy.getFastCopyVersion());
 
         final int remainingCopies = undestroyedCopies.decrementAndGet();
         if (remainingCopies < 0) {
