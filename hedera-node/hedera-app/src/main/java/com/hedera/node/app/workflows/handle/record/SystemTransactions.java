@@ -370,8 +370,9 @@ public class SystemTransactions {
         final var ledgerConfig = config.getConfigData(LedgerConfig.class);
         final var nodeStore = dispatch.handleContext().storeFactory().readableStore(ReadableNodeStore.class);
         for (int i = 0; i < nodeStore.sizeOfState(); i++) {
+            final var node = nodeStore.get(i);
             final var nodeInfo = networkInfo.nodeInfo(i);
-            if (nodeInfo != null) {
+            if (nodeInfo != null && node != null && !node.deleted()) {
                 final var declineReward = nodeInfo.accountId().accountNumOrThrow() <= ledgerConfig.numSystemAccounts();
                 log.info(
                         "Dispatching node update for node {} with node account id {} decline_reward set to {}",
