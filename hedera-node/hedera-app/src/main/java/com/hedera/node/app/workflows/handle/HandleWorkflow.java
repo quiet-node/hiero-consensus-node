@@ -756,12 +756,13 @@ public class HandleWorkflow {
                             .config()
                             .getConfigData(ConsensusConfig.class)
                             .handleMaxPrecedingRecords();
+                    final var schedulingConfig = parentTxn.config().getConfigData(SchedulingConfig.class);
                     doStreamingKVChanges(
                             writableTokenStates,
                             // Ensure that even if the user txn has preceding children, these state changes still have
                             // an earlier consensus time; since in fact they are, in fact, committed first
                             writableEntityIdStates,
-                            parentTxn.consensusNow().minusNanos(maxPrecedingRecords + 1),
+                            parentTxn.consensusNow().minusNanos(schedulingConfig.reservedSystemTxnNanos()),
                             () -> stakeInfoHelper.adjustPostUpgradeStakes(
                                     networkInfo,
                                     parentTxn.config(),
