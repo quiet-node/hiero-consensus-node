@@ -4,6 +4,7 @@ package com.hedera.node.app.workflows;
 import static com.hedera.node.app.throttle.ThrottleAccumulator.ThrottleType.BACKEND_THROTTLE;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
 import com.hedera.node.app.throttle.ThrottleMetrics;
 import com.hedera.node.app.throttle.annotations.BackendThrottle;
@@ -37,8 +38,8 @@ public interface WorkflowsInjectionModule {
     @Provides
     @Nullable
     @Singleton
-    static AtomicBoolean provideMaybeSystemEntitiesCreatedFlag(@NonNull final InitTrigger initTrigger) {
-        return initTrigger == InitTrigger.GENESIS ? new AtomicBoolean(false) : null;
+    static AtomicBoolean provideMaybeSystemEntitiesCreatedFlag(@NonNull final EntityCounts entityCounts) {
+        return entityCounts.numAccounts() == 0 ? new AtomicBoolean(false) : null;
     }
 
     @Provides

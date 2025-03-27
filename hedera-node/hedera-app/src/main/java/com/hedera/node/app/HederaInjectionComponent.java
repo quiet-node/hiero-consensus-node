@@ -3,6 +3,7 @@ package com.hedera.node.app;
 
 import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.node.app.annotations.MaxSignedTxnSize;
 import com.hedera.node.app.authorization.AuthorizerInjectionModule;
 import com.hedera.node.app.blocks.BlockHashSigner;
@@ -177,6 +178,9 @@ public interface HederaInjectionComponent {
 
         @BindsInstance
         Builder initTrigger(InitTrigger initTrigger);
+
+        @BindsInstance
+        Builder entityCounts(EntityCounts entityCounts);
 
         @BindsInstance
         Builder platform(Platform platform);

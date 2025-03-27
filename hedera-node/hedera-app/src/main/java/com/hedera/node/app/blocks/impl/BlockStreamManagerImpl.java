@@ -4,7 +4,6 @@ package com.hedera.node.app.blocks.impl;
 import static com.hedera.hapi.node.base.BlockHashAlgorithm.SHA2_384;
 import static com.hedera.hapi.util.HapiUtils.asInstant;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
-import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.GENESIS_WORK;
 import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.NONE;
 import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.POST_UPGRADE_WORK;
 import static com.hedera.node.app.blocks.impl.BlockImplUtils.appendHash;
@@ -404,7 +403,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             }
             requireNonNull(fatalShutdownFuture).complete(null);
         }
-        return closesBlock || lastNonEmptyRoundNumber == 0;
+        return closesBlock;
     }
 
     @Override
@@ -511,9 +510,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final BlockStreamInfo blockStreamInfo, @NonNull final SemanticVersion version) {
         requireNonNull(version);
         requireNonNull(blockStreamInfo);
-        if (EPOCH.equals(blockStreamInfo.lastHandleTimeOrElse(EPOCH))) {
-            return GENESIS_WORK;
-        } else if (impliesPostUpgradeWorkPending(blockStreamInfo, version)) {
+        if (impliesPostUpgradeWorkPending(blockStreamInfo, version)) {
             return POST_UPGRADE_WORK;
         } else {
             return NONE;
@@ -541,7 +538,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         }
 
         // During freeze round, we should close the block regardless of other conditions
-        if (roundNumber == freezeRoundNumber) {
+        // or round number is 1 as round 1 is written to disk.
+        if (roundNumber == freezeRoundNumber || roundNumber == 1) {
             return true;
         }
 
