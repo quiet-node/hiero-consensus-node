@@ -30,6 +30,6 @@ class Version034FeatureFlagsTest {
         given(stack.isEmpty()).willReturn(true);
         final var config = HederaTestConfigBuilder.create().getOrCreateConfig();
         given(frame.getContextVariable(CONFIG_CONTEXT_VARIABLE)).willReturn(config);
-        assertTrue(subject.isImplicitCreationEnabled(frame));
+        assertTrue(subject.isImplicitCreationEnabled());
     }
 }

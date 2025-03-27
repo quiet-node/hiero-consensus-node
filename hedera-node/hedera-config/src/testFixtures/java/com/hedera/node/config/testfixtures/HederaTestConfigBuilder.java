@@ -25,7 +25,6 @@ import com.hedera.node.config.converter.SemanticVersionConverter;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.ApiPermissionConfig;
 import com.hedera.node.config.data.AtomicBatchConfig;
-import com.hedera.node.config.data.AutoCreationConfig;
 import com.hedera.node.config.data.AutoRenew2Config;
 import com.hedera.node.config.data.AutoRenewConfig;
 import com.hedera.node.config.data.BalancesConfig;
@@ -43,7 +42,6 @@ import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.GrpcConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.JumboTransactionsConfig;
-import com.hedera.node.config.data.LazyCreationConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NettyConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
@@ -143,7 +141,6 @@ public final class HederaTestConfigBuilder {
                 // These data types, converters, and validators are defined by services.
                 .withConfigDataType(AccountsConfig.class)
                 .withConfigDataType(ApiPermissionConfig.class)
-                .withConfigDataType(AutoCreationConfig.class)
                 .withConfigDataType(AutoRenew2Config.class)
                 .withConfigDataType(AutoRenewConfig.class)
                 .withConfigDataType(BalancesConfig.class)
@@ -159,7 +156,6 @@ public final class HederaTestConfigBuilder {
                 .withConfigDataType(FilesConfig.class)
                 .withConfigDataType(GrpcConfig.class)
                 .withConfigDataType(HederaConfig.class)
-                .withConfigDataType(LazyCreationConfig.class)
                 .withConfigDataType(LedgerConfig.class)
                 .withConfigDataType(NettyConfig.class)
                 .withConfigDataType(NetworkAdminConfig.class)

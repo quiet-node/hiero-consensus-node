@@ -667,8 +667,7 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
                 .withAlias(Bytes.wrap("alias"))
                 .build();
         given(handleContext.body()).willReturn(txn);
-        final var config = HederaTestConfigBuilder.create()
-                .getOrCreateConfig();
+        final var config = HederaTestConfigBuilder.create().getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);
         setupExpiryValidator();
 
@@ -686,8 +685,7 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
         given(handleContext.body()).willReturn(txn);
         given(handleContext.payer()).willReturn(idFactory.newAccountId(id.accountNum()));
         given(handleContext.consensusNow()).willReturn(consensusInstant);
-        final var config = HederaTestConfigBuilder.create()
-                .getOrCreateConfig();
+        final var config = HederaTestConfigBuilder.create().getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);
         setupExpiryValidator();
 

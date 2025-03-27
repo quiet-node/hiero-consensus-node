@@ -24,7 +24,6 @@ import com.hedera.node.config.converter.SemanticVersionConverter;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.ApiPermissionConfig;
 import com.hedera.node.config.data.AtomicBatchConfig;
-import com.hedera.node.config.data.AutoCreationConfig;
 import com.hedera.node.config.data.AutoRenew2Config;
 import com.hedera.node.config.data.AutoRenewConfig;
 import com.hedera.node.config.data.BalancesConfig;
@@ -42,7 +41,6 @@ import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.GrpcConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.JumboTransactionsConfig;
-import com.hedera.node.config.data.LazyCreationConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NettyConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
@@ -85,7 +83,6 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 AddressBookConfig.class,
                 NodesConfig.class,
                 ApiPermissionConfig.class,
-                AutoCreationConfig.class,
                 AutoRenew2Config.class,
                 AutoRenewConfig.class,
                 BalancesConfig.class,
@@ -102,7 +99,6 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 FilesConfig.class,
                 GrpcConfig.class,
                 HederaConfig.class,
-                LazyCreationConfig.class,
                 LedgerConfig.class,
                 NettyConfig.class,
                 NetworkAdminConfig.class,
