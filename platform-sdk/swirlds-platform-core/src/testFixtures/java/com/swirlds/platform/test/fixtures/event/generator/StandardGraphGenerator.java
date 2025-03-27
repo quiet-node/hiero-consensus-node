@@ -98,7 +98,7 @@ public class StandardGraphGenerator extends AbstractGraphGenerator {
     /**
      * The platform context containing configuration for the internal consensus.
      */
-    private final PlatformContext platformContext;
+    private PlatformContext platformContext;
 
     /**
      * The linker for events to use with the internal consensus.
@@ -494,7 +494,8 @@ public class StandardGraphGenerator extends AbstractGraphGenerator {
         }
     }
 
-    public void birthRoundMigration() {
+    public void birthRoundMigration(@NonNull final PlatformContext birthRoundContext) {
+        this.platformContext = birthRoundContext;
         // save all non-ancient events
         final List<EventImpl> nonAncientEvents = linker.getSortedNonAncientEvents();
         // reinitialize the internal consensus with the last snapshot

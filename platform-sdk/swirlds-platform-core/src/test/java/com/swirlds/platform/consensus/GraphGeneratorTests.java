@@ -781,10 +781,8 @@ public class GraphGeneratorTests {
     @DisplayName("Node Remove Test")
     void birthRoundMigrationTest() {
         final int numberOfEvents = 10_000;
-        final PlatformContext generationContext = DEFAULT_PLATFORM_CONTEXT;
-        final PlatformContext birthRoundContext = BIRTH_ROUND_PLATFORM_CONTEXT;
         final StandardGraphGenerator generator = new StandardGraphGenerator(
-                generationContext,
+                DEFAULT_PLATFORM_CONTEXT,
                 0,
                 new StandardEventSource(),
                 new StandardEventSource(),
@@ -793,7 +791,7 @@ public class GraphGeneratorTests {
         generator.generateEvents(numberOfEvents / 2);
 
         final NodeId removalNode = RosterUtils.getNodeId(generator.getRoster(), 0);
-        generator.removeNode(removalNode);
+        generator.birthRoundMigration(BIRTH_ROUND_PLATFORM_CONTEXT);
 
         final List<EventImpl> postRemovalEvents = generator.generateEvents(numberOfEvents / 2);
         for (final EventImpl removalEvent : postRemovalEvents) {
