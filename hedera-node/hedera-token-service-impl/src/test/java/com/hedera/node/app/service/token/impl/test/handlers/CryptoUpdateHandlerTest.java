@@ -505,7 +505,6 @@ class CryptoUpdateHandlerTest extends CryptoHandlerTestBase {
         givenTxnWith(txn);
 
         final var config = HederaTestConfigBuilder.create()
-                .withValue("entities.limitTokenAssociations", true)
                 .withValue("tokens.maxPerAccount", 11)
                 .getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);

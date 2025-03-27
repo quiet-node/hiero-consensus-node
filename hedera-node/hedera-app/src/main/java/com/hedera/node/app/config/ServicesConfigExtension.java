@@ -33,7 +33,6 @@ import com.hedera.node.config.data.BootstrapConfig;
 import com.hedera.node.config.data.CacheConfig;
 import com.hedera.node.config.data.ConsensusConfig;
 import com.hedera.node.config.data.ContractsConfig;
-import com.hedera.node.config.data.CryptoCreateWithAliasConfig;
 import com.hedera.node.config.data.EntitiesConfig;
 import com.hedera.node.config.data.ExpiryConfig;
 import com.hedera.node.config.data.FeesConfig;
@@ -92,7 +91,6 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 CacheConfig.class,
                 ConsensusConfig.class,
                 ContractsConfig.class,
-                CryptoCreateWithAliasConfig.class,
                 EntitiesConfig.class,
                 ExpiryConfig.class,
                 FeesConfig.class,

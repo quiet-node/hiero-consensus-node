@@ -14,7 +14,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_RENEWAL_PERIOD;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_SEND_RECORD_THRESHOLD;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.KEY_REQUIRED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.MEMO_TOO_LONG;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.NOT_SUPPORTED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.PROXY_ACCOUNT_ID_FIELD_IS_DEPRECATED;
 import static com.hedera.hapi.node.base.SubType.DEFAULT;
 import static com.hedera.node.app.service.token.impl.test.handlers.util.StateBuilderUtil.ACCOUNTS;
@@ -220,7 +219,6 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
         given(handleContext.payer()).willReturn(id);
         final var config = HederaTestConfigBuilder.create()
                 .withValue("ledger.maxAutoAssociations", 5000)
-                .withValue("entities.limitTokenAssociations", false)
                 .withValue("tokens.maxPerAccount", 1000)
                 .withValue("hedera.shard", shard)
                 .withValue("hedera.realm", realm)
@@ -660,22 +658,6 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
     }
 
     @Test
-    void validateAliasNotSupport() {
-        txn = new CryptoCreateBuilder()
-                .withStakedAccountId(3)
-                .withKey(null)
-                .withAlias(Bytes.wrap("alias"))
-                .build();
-        given(handleContext.body()).willReturn(txn);
-        final var config = HederaTestConfigBuilder.create().getOrCreateConfig();
-        given(handleContext.configuration()).willReturn(config);
-        setupExpiryValidator();
-
-        final var msg = assertThrows(HandleException.class, () -> subject.handle(handleContext));
-        assertEquals(NOT_SUPPORTED, msg.getStatus());
-    }
-
-    @Test
     void validateAliasInvalid() {
         txn = new CryptoCreateBuilder()
                 .withStakedAccountId(3)
@@ -784,7 +766,6 @@ class CryptoCreateHandlerTest extends CryptoHandlerTestBase {
     private void setupConfig() {
         final var config = HederaTestConfigBuilder.create()
                 .withValue("ledger.maxAutoAssociations", 5000)
-                .withValue("entities.limitTokenAssociations", false)
                 .withValue("tokens.maxPerAccount", 1000)
                 .getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);
