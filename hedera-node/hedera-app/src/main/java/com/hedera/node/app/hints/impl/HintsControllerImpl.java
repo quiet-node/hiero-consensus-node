@@ -30,7 +30,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.HashMap;
@@ -46,7 +45,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -106,11 +104,9 @@ public class HintsControllerImpl implements HintsController {
      * @param hintsKey the hinTS key
      * @param isValid whether the key is valid
      */
-    private record Validation(int partyId, @NonNull Bytes hintsKey, boolean isValid) {
-    }
+    private record Validation(int partyId, @NonNull Bytes hintsKey, boolean isValid) {}
 
-    public record CRSValidation(@NonNull Bytes crs, long weightContributedSoFar) {
-    }
+    public record CRSValidation(@NonNull Bytes crs, long weightContributedSoFar) {}
 
     public HintsControllerImpl(
             final long selfId,
@@ -739,6 +735,5 @@ public class HintsControllerImpl implements HintsController {
      * @param crs the updated CRS
      * @param proof the proof of the update
      */
-    public record CrsUpdateOutput(@NonNull Bytes crs, @NonNull Bytes proof) {
-    }
+    public record CrsUpdateOutput(@NonNull Bytes crs, @NonNull Bytes proof) {}
 }
