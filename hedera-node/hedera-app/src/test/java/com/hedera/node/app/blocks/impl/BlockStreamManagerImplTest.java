@@ -68,6 +68,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -170,7 +171,8 @@ class BlockStreamManagerImplTest {
                                         SemanticVersion.newBuilder().major(1).build())
                                 .lastHandleTime(new Timestamp(1234567, 890))
                                 .build(),
-                        CREATION_VERSION));
+                        CREATION_VERSION,
+                        new AtomicBoolean(true)));
     }
 
     @Test
@@ -182,7 +184,8 @@ class BlockStreamManagerImplTest {
                                 .creationSoftwareVersion(CREATION_VERSION)
                                 .lastHandleTime(new Timestamp(1234567, 890))
                                 .build(),
-                        CREATION_VERSION));
+                        CREATION_VERSION,
+                        new AtomicBoolean(true)));
     }
 
     @Test
@@ -196,7 +199,8 @@ class BlockStreamManagerImplTest {
                                 .lastIntervalProcessTime(new Timestamp(1234567, 890))
                                 .lastHandleTime(new Timestamp(1234567, 890))
                                 .build(),
-                        CREATION_VERSION));
+                        CREATION_VERSION,
+                        new AtomicBoolean(true)));
     }
 
     @Test
@@ -210,7 +214,8 @@ class BlockStreamManagerImplTest {
                 boundaryStateChangeListener,
                 hashInfo,
                 SemanticVersion.DEFAULT,
-                TEST_PLATFORM_STATE_FACADE);
+                TEST_PLATFORM_STATE_FACADE,
+                new AtomicBoolean(true));
         assertSame(Instant.EPOCH, subject.lastIntervalProcessTime());
         subject.setLastIntervalProcessTime(CONSENSUS_NOW);
         assertEquals(CONSENSUS_NOW, subject.lastIntervalProcessTime());
@@ -231,7 +236,8 @@ class BlockStreamManagerImplTest {
                 boundaryStateChangeListener,
                 hashInfo,
                 SemanticVersion.DEFAULT,
-                TEST_PLATFORM_STATE_FACADE);
+                TEST_PLATFORM_STATE_FACADE,
+                new AtomicBoolean(true));
         assertThrows(IllegalStateException.class, () -> subject.startRound(round, state));
     }
 
@@ -806,7 +812,8 @@ class BlockStreamManagerImplTest {
                 boundaryStateChangeListener,
                 hashInfo,
                 SemanticVersion.DEFAULT,
-                TEST_PLATFORM_STATE_FACADE);
+                TEST_PLATFORM_STATE_FACADE,
+                new AtomicBoolean(true));
         given(state.getReadableStates(BlockStreamService.NAME)).willReturn(readableStates);
         given(state.getReadableStates(PlatformStateService.NAME)).willReturn(readableStates);
         infoRef.set(blockStreamInfo);
