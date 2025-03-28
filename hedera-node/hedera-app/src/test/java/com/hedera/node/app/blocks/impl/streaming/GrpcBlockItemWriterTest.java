@@ -18,22 +18,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class GrpcBlockItemWriterTest {
 
     @Mock
-    private BlockNodeConnectionManager blockNodeConnectionManager;
-
-    @Mock
     private BlockStreamStateManager blockStreamStateManager;
 
     @Test
     void testGrpcBlockItemWriterConstructor() {
-        final GrpcBlockItemWriter grpcBlockItemWriter =
-                new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
+        final GrpcBlockItemWriter grpcBlockItemWriter = new GrpcBlockItemWriter(blockStreamStateManager);
         assertThat(grpcBlockItemWriter).isNotNull();
     }
 
     @Test
     void testOpenBlockNegativeBlockNumber() {
-        GrpcBlockItemWriter grpcBlockItemWriter =
-                new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
+        GrpcBlockItemWriter grpcBlockItemWriter = new GrpcBlockItemWriter(blockStreamStateManager);
 
         assertThatThrownBy(() -> grpcBlockItemWriter.openBlock(-1), "Block number must be non-negative")
                 .isInstanceOf(IllegalArgumentException.class);
@@ -41,8 +36,7 @@ class GrpcBlockItemWriterTest {
 
     @Test
     void testWriteItem() {
-        GrpcBlockItemWriter grpcBlockItemWriter =
-                new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
+        GrpcBlockItemWriter grpcBlockItemWriter = new GrpcBlockItemWriter(blockStreamStateManager);
 
         // Create BlockProof as easiest way to build object from BlockStreams
         Bytes bytes = Bytes.wrap(new byte[] {1, 2, 3, 4, 5});
@@ -57,8 +51,7 @@ class GrpcBlockItemWriterTest {
 
     @Test
     void testCloseBlock() {
-        GrpcBlockItemWriter grpcBlockItemWriter =
-                new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
+        GrpcBlockItemWriter grpcBlockItemWriter = new GrpcBlockItemWriter(blockStreamStateManager);
 
         grpcBlockItemWriter.closeBlock();
 
