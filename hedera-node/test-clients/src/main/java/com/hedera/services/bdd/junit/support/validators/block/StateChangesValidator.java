@@ -149,12 +149,12 @@ public class StateChangesValidator implements BlockStreamValidator {
                 .normalize();
         final var validator = new StateChangesValidator(
                 Bytes.fromHex(
-                        "00e8337bc1e1c5730c1a7f2dde8c53ed22f8664cd18069b71be52161a34071d6913d619f8867520e611dca03a2f71d15"),
+                        "8a54ee8f9aaa45a5da523ee3814c19a1bdbc3b74589285c54e714b3507406c63d9dcd7aaca41bd04a1d0a978510c3020"),
                 node0Dir.resolve("output/swirlds.log"),
                 node0Dir.resolve("data/config/application.properties"),
                 node0Dir.resolve("data/config"),
                 HintsEnabled.YES,
-                HistoryEnabled.YES);
+                HistoryEnabled.NO);
         final var blocks =
                 BlockStreamAccess.BLOCK_STREAM_ACCESS.readBlocks(node0Dir.resolve("data/blockStreams/block-0.0.3"));
         validator.validateBlocks(blocks);
@@ -528,7 +528,10 @@ public class StateChangesValidator implements BlockStreamValidator {
                     mapState.remove(mapKeyFor(stateChange.mapDeleteOrThrow().keyOrThrow()));
                     final var keyToRemove =
                             mapKeyFor(stateChange.mapDeleteOrThrow().keyOrThrow());
-                    entityChanges.get(stateName).remove(keyToRemove);
+                    final var maybeTrackedKeys = entityChanges.get(stateName);
+                    if (maybeTrackedKeys != null) {
+                        maybeTrackedKeys.remove(keyToRemove);
+                    }
                     stateChangesSummary.countMapDelete(serviceName, stateKey);
                 }
                 case QUEUE_PUSH -> {
