@@ -21,16 +21,15 @@ public class FileAndGrpcBlockItemWriter implements BlockItemWriter {
      * @param configProvider configuration provider
      * @param nodeInfo information about the current node
      * @param fileSystem the file system to use for writing block files
-     * @param blockNodeConnectionManager the block node connection manager
+     * @param blockStreamStateManager the block stream state manager
      */
     public FileAndGrpcBlockItemWriter(
             @NonNull final ConfigProvider configProvider,
             @NonNull final NodeInfo nodeInfo,
             @NonNull final FileSystem fileSystem,
-            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
         this.fileBlockItemWriter = new FileBlockItemWriter(configProvider, nodeInfo, fileSystem);
-        this.grpcBlockItemWriter = new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
+        this.grpcBlockItemWriter = new GrpcBlockItemWriter(blockStreamStateManager);
     }
 
     @Override

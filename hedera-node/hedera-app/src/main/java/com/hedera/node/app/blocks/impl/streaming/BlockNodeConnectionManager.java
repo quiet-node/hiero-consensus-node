@@ -231,7 +231,6 @@ public class BlockNodeConnectionManager {
     }
 
     public void openBlock(long blockNumber) {
-        blockStreamStateManager.openBlock(blockNumber);
         synchronized (connectionLock) {
             List<BlockNodeConnection> connections = new ArrayList<>(activeConnections.values());
             for (BlockNodeConnection connection : connections) {

@@ -60,6 +60,8 @@ public class BlockStreamStateManager {
         // Create a new block state
         blockStates.put(blockNumber, BlockState.from(blockNumber));
         this.blockNumber = blockNumber;
+
+        blockNodeConnectionManager.openBlock(blockNumber);
     }
 
     /**
