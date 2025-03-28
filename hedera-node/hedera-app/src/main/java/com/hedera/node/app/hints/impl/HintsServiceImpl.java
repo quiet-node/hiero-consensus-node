@@ -60,6 +60,12 @@ public class HintsServiceImpl implements HintsService {
     }
 
     @Override
+    public void initCurrentRoster(@NonNull final Roster roster) {
+        requireNonNull(roster);
+        currentRoster.set(roster);
+    }
+
+    @Override
     public boolean isReady() {
         return component.signingContext().isReady();
     }

@@ -1142,12 +1142,14 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         final var initialStateHash = new InitialStateHash(initialStateHashFuture, roundNum);
 
         final var rosterStore = new ReadableStoreFactory(state).getStore(ReadableRosterStore.class);
+        final var currentRoster = requireNonNull(rosterStore.getActiveRoster());
         final var networkInfo = new StateNetworkInfo(
                 platform.getSelfId().id(),
                 state,
-                requireNonNull(rosterStore.getActiveRoster()),
+                currentRoster,
                 configProvider,
                 () -> requireNonNull(genesisNetworkSupplier).get());
+        hintsService.initCurrentRoster(currentRoster);
         final var blockHashSigner = blockHashSignerFactory.apply(hintsService, historyService, configProvider);
         // Fully qualified so as to not confuse javadoc
         daggerApp = DaggerHederaInjectionComponent.builder()
