@@ -96,12 +96,12 @@ class HintsServiceImplTest {
     }
 
     @Test
-    void callPurgeAfterHandoff() {
+    void handoffIsNoop() {
         given(activeRosters.phase()).willReturn(ActiveRosters.Phase.HANDOFF);
 
         subject.reconcile(activeRosters, hintsStore, CONSENSUS_NOW, tssConfig, true);
 
-        verify(hintsStore).updateForHandoff(activeRosters);
+        verifyNoInteractions(hintsStore);
     }
 
     @Test

@@ -145,23 +145,6 @@ public class WritableHintsStoreImpl extends ReadableHintsStoreImpl implements Wr
     }
 
     @Override
-    public void updateForHandoff(@NonNull final ActiveRosters activeRosters) {
-        if (activeRosters.phase() != HANDOFF) {
-            throw new IllegalArgumentException("Not in handoff phase");
-        }
-        if (requireNonNull(nextConstruction.get()).targetRosterHash().equals(activeRosters.currentRosterHash())) {
-            // The next construction is becoming the active one; so purge obsolete votes now
-            purgeVotes(requireNonNull(activeConstruction.get()), activeRosters::findRelatedRoster);
-            // If the active construction's party size was different than the current roster's, purge its hinTS keys
-            final int newActiveSize = partySizeForRoster(activeRosters.currentRoster());
-            purgeHintsKeysIfNotForPartySize(
-                    newActiveSize, requireNonNull(activeConstruction.get()), activeRosters::findRelatedRoster);
-            activeConstruction.put(nextConstruction.get());
-            nextConstruction.put(HintsConstruction.DEFAULT);
-        }
-    }
-
-    @Override
     public boolean updateAtHandoff(
             @NonNull final Bytes adoptedRosterHash, @NonNull final Roster previousRoster, final boolean forceHandoff) {
         requireNonNull(adoptedRosterHash);

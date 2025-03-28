@@ -66,11 +66,6 @@ public interface WritableHintsStore extends ReadableHintsStore {
     HintsConstruction setPreprocessingStartTime(long constructionId, @NonNull Instant now);
 
     /**
-     * Purges any state no longer needed after a given handoff.
-     */
-    void updateForHandoff(@NonNull ActiveRosters activeRosters);
-
-    /**
      * Updates state for a handoff to the given roster hash.
      * @param adoptedRosterHash the adopted roster hash
      * @param previousRoster the previous roster

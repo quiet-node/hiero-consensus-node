@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
@@ -169,7 +170,7 @@ class V0540RosterSchemaTest {
 
         subject.restart(ctx);
 
-        verify(rosterStore).getActiveRoster();
+        verify(rosterStore, times(2)).getActiveRoster();
         verify(rosterStore).getCandidateRoster();
         verify(rosterStore).adoptCandidateRoster(ROUND_NO + 1L);
     }
@@ -183,11 +184,14 @@ class V0540RosterSchemaTest {
         given(rosterStoreFactory.apply(writableStates)).willReturn(rosterStore);
         given(ctx.platformConfig()).willReturn(DEFAULT_CONFIG);
         given(startupNetworks.overrideNetworkFor(ROUND_NO, DEFAULT_CONFIG)).willReturn(Optional.of(NETWORK));
+        given(rosterStore.getActiveRoster()).willReturn(ROSTER);
+        given(rosterStore.getCurrentRosterHash()).willReturn(Bytes.EMPTY);
 
         subject.restart(ctx);
 
         verify(rosterStore).putActiveRoster(ROSTER, ROUND_NO + 1L);
         verify(startupNetworks).setOverrideRound(ROUND_NO);
+        verify(onAdopt).accept(ROSTER, Bytes.EMPTY);
     }
 
     @Test
@@ -204,6 +208,8 @@ class V0540RosterSchemaTest {
         given(startupNetworks.overrideNetworkFor(ROUND_NO, DEFAULT_CONFIG)).willReturn(Optional.of(NETWORK));
         final var adaptedRoster = new Roster(
                 List.of(RosterEntry.newBuilder().nodeId(1L).weight(42L).build()));
+        given(rosterStore.getActiveRoster()).willReturn(adaptedRoster);
+        given(rosterStore.getCurrentRosterHash()).willReturn(Bytes.EMPTY);
 
         subject.restart(ctx);
 
