@@ -5,17 +5,22 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
 import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
+import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import io.grpc.Status;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import io.grpc.stub.StreamObserver;
+import io.helidon.common.tls.Tls;
+import io.helidon.webclient.grpc.GrpcClient;
+import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
+import io.helidon.webclient.grpc.GrpcClientProtocolConfig;
 import io.helidon.webclient.grpc.GrpcServiceClient;
+import io.helidon.webclient.grpc.GrpcServiceDescriptor;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -28,6 +33,9 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
+    private static final String GRPC_END_POINT =
+            BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
+
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private final BlockNodeConfig node;
@@ -50,7 +58,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final Object newRequestAvailable = new Object();
 
     // Volatile connection state
-    private final GrpcServiceClient grpcServiceClient;
+    private volatile GrpcServiceClient grpcServiceClient;
     private StreamObserver<PublishStreamRequest> requestObserver;
     private volatile Thread requestWorker;
 
@@ -58,38 +66,61 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * Construct a new BlockNodeConnection.
      *
      * @param nodeConfig the configuration for the block node
-     * @param grpcServiceClient the gRPC service client
      * @param blockNodeConnectionManager the connection manager for block node connections
      * @param blockStreamStateManager the block stream state manager for block node connections
      */
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
-            @NonNull final GrpcServiceClient grpcServiceClient,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
         this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
-        this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
+        this.grpcServiceClient = createNewGrpcClient();
+    }
+
+    @Nullable
+    private GrpcServiceClient createNewGrpcClient() {
+        final GrpcClient client = GrpcClient.builder()
+                .tls(Tls.builder().enabled(false).build())
+                .baseUri("http://" + node.address() + ":" + node.port())
+                .protocolConfig(GrpcClientProtocolConfig.builder()
+                        .abortPollTimeExpired(false)
+                        .pollWaitTime(Duration.ofSeconds(30))
+                        .build())
+                .keepAlive(true)
+                .build();
+
+        return client.serviceClient(GrpcServiceDescriptor.builder()
+                .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
+                .putMethod(
+                        GRPC_END_POINT,
+                        GrpcClientMethodDescriptor.bidirectional(BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
+                                .requestType(PublishStreamRequest.class)
+                                .responseType(PublishStreamResponse.class)
+                                .marshallerSupplier(new RequestResponseMarshaller.Supplier())
+                                .build())
+                .build());
     }
 
     public Void establishStream() {
         synchronized (isActiveLock) {
             synchronized (channelLock) {
                 // Ensure any existing channel is properly shutdown
-                if (channel != null && !channel.isShutdown()) {
+                /*if (channel != null && !channel.isShutdown()) {
                     try {
                         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         logger.warn("Interrupted while shutting down channel");
                     }
-                }
+                }*/
 
-                // Create new channel and stub
-                requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
+                // Create a new gRPC Client and request observer
+                this.grpcServiceClient = createNewGrpcClient();
+                requestObserver = grpcServiceClient.bidi(GRPC_END_POINT, this);
 
                 isActive.set(true);
                 startRequestWorker();
@@ -211,11 +242,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockState.requests().size());
     }
 
-    private boolean needToWaitForMoreRequests(BlockState blockState) {
+    private boolean needToWaitForMoreRequests(@NonNull BlockState blockState) {
         return currentRequestIndex.get() >= blockState.requests().size() && !blockState.isComplete();
     }
 
-    private void processAvailableRequests(BlockState blockState) {
+    private void processAvailableRequests(@NonNull BlockState blockState) {
         synchronized (isActiveLock) {
             List<PublishStreamRequest> requests = blockState.requests();
             while (currentRequestIndex.get() < requests.size()) {
@@ -229,7 +260,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         currentRequestIndex.get(),
                         node.address(),
                         node.port(),
-                        request.getBlockItems().getBlockItemsCount());
+                        request.blockItems().blockItems().size());
                 sendRequest(request);
                 currentRequestIndex.incrementAndGet();
             }
@@ -260,7 +291,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     }
 
                     // Ensure any existing channel is properly shutdown
-                    if (channel != null) {
+                    /*if (channel != null) {
                         try {
                             channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
                         } catch (InterruptedException e) {
@@ -269,7 +300,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         } finally {
                             channel = null;
                         }
-                    }
+                    }*/
                 }
                 stopWorkerThread();
                 removeFromActiveConnections(node);
@@ -363,7 +394,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     }
 
                     // Ensure any existing channel is properly shutdown
-                    if (channel != null) {
+                    /*if (channel != null) {
                         try {
                             channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
                         } catch (InterruptedException e) {
@@ -372,7 +403,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         } finally {
                             channel = null;
                         }
-                    }
+                    }*/
                 }
                 stopWorkerThread();
             }

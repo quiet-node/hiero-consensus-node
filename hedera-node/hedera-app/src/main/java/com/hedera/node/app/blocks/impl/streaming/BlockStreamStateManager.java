@@ -3,13 +3,11 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.protoc.BlockItemSet;
-import com.hedera.hapi.block.protoc.PublishStreamRequest;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.hedera.hapi.block.BlockItemSet;
+import com.hedera.hapi.block.PublishStreamRequest;
+import com.hedera.hapi.block.stream.BlockItem;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
@@ -58,7 +56,7 @@ public class BlockStreamStateManager {
     public void openBlock(long blockNumber) {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
         // Create a new block state
-        blockStates.put(blockNumber, BlockState.from(blockNumber));
+        blockStates.put(blockNumber, new BlockState(blockNumber, new ArrayList<>()));
         this.blockNumber = blockNumber;
 
         blockNodeConnectionManager.openBlock(blockNumber);
@@ -71,17 +69,17 @@ public class BlockStreamStateManager {
      * @param bytes the item bytes to add
      * @throws IllegalStateException if no block is currently open
      */
-    public void addItem(final long blockNumber, @NonNull Bytes bytes) {
+    public void addItem(final long blockNumber, @NonNull BlockItem bytes) {
         requireNonNull(bytes, "bytes must not be null");
         BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        blockState.itemBytes().add(bytes);
+        blockState.items().add(bytes);
 
         // If we have enough items, create a new request
-        if (blockState.itemBytes().size() >= blockItemBatchSize) {
+        if (blockState.items().size() >= blockItemBatchSize) {
             createRequestFromCurrentItems(blockState);
         }
     }
@@ -90,23 +88,13 @@ public class BlockStreamStateManager {
      * Creates a new PublishStreamRequest from the current items in the block.
      */
     private void createRequestFromCurrentItems(@NonNull BlockState blockState) {
-        List<com.hedera.hapi.block.stream.protoc.BlockItem> protocBlockItems = new ArrayList<>();
-        for (Bytes batchItem : blockState.itemBytes()) {
-            try {
-                protocBlockItems.add(com.hedera.hapi.block.stream.protoc.BlockItem.parseFrom(batchItem.toByteArray()));
-            } catch (IOException e) {
-                logger.error("Failed to parse block item", e);
-                throw new RuntimeException(e);
-            }
-        }
-
         // Create BlockItemSet by adding all items at once
-        BlockItemSet itemSet =
-                BlockItemSet.newBuilder().addAllBlockItems(protocBlockItems).build();
+        final BlockItemSet itemSet =
+                BlockItemSet.newBuilder().blockItems(blockState.items()).build();
 
         // Create the request and add it to the list
-        PublishStreamRequest request =
-                PublishStreamRequest.newBuilder().setBlockItems(itemSet).build();
+        final PublishStreamRequest request =
+                PublishStreamRequest.newBuilder().blockItems(itemSet).build();
 
         blockState.requests().add(request);
         logger.debug(
@@ -115,7 +103,7 @@ public class BlockStreamStateManager {
                 blockState.requests().size());
 
         // Clear the item bytes list
-        blockState.itemBytes().clear();
+        blockState.items().clear();
 
         // Notify the connection manager
         blockNodeConnectionManager.notifyConnectionsOfNewRequest();
@@ -133,11 +121,11 @@ public class BlockStreamStateManager {
         }
 
         // Check if there are remaining items
-        if (!blockState.itemBytes().isEmpty()) {
+        if (!blockState.items().isEmpty()) {
             logger.debug(
                     "Creating request from remaining items in block {} size {}",
                     blockNumber,
-                    blockState.itemBytes().size());
+                    blockState.items().size());
             createRequestFromCurrentItems(blockState);
         }
 
@@ -170,11 +158,11 @@ public class BlockStreamStateManager {
         }
 
         // If there are remaining items we will create a request from them while the BlockProof is pending
-        if (!blockState.itemBytes().isEmpty()) {
+        if (!blockState.items().isEmpty()) {
             logger.debug(
                     "Prior to BlockProof, creating request from items in block {} size {}",
                     blockNumber,
-                    blockState.itemBytes().size());
+                    blockState.items().size());
             createRequestFromCurrentItems(blockState);
         }
     }

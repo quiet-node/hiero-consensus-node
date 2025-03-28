@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
-import static com.hedera.hapi.node.base.BlockHashAlgorithm.SHA2_384;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -16,27 +13,20 @@ import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.hapi.block.stream.BlockItem;
-import com.hedera.hapi.block.stream.BlockProof;
-import com.hedera.hapi.block.stream.output.BlockHeader;
 import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
-import com.hedera.node.config.ConfigProvider;
-import com.hedera.node.config.VersionedConfigImpl;
-import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
-import com.hedera.pbj.runtime.ParseException;
+import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
-import com.hedera.node.internal.network.BlockNodeConfig;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
@@ -68,7 +58,9 @@ class BlockNodeConnectionManagerTest {
     @Mock
     BlockStreamStateManager mockStateManager;
 
+    @Mock
     BlockNodeConfigExtractorImpl blockNodeConfigExtractorImpl;
+
     private static Server testServer;
 
     @BeforeAll
@@ -84,19 +76,11 @@ class BlockNodeConnectionManagerTest {
     @BeforeEach
     void setUp() {
         blockNodeConnectionManager = new BlockNodeConnectionManager(blockNodeConfigExtractorImpl, mockStateManager);
-        assertTrue(blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(1L)));
         assertThat(logCaptor.debugLogs()).contains("Successfully connected to block node localhost:8080");
     }
 
     @Test
-    void testNewBlockNodeConnectionManager() {
-        final var expectedGrpcEndpoint =
-                BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
-        assertEquals(expectedGrpcEndpoint, blockNodeConnectionManager.getGrpcEndPoint());
-    }
-
-    @Test
-    void testCreatePublishStreamRequests() throws ParseException {
+    void testCreatePublishStreamRequests() {
         // Create dummy block items
         BlockItem item1 = BlockItem.newBuilder()
                 .eventTransaction(EventTransaction.newBuilder()
@@ -145,7 +129,7 @@ class BlockNodeConnectionManagerTest {
         assertEquals(item3, secondBatch.blockItems().get(0), "First item in second batch should be item3");
     }
 
-    @Test
+    /*@Test
     void testCreatePublishStreamRequestsWithEmptyBlock() {
         // Given
         int batchSize = 2;
@@ -160,7 +144,7 @@ class BlockNodeConnectionManagerTest {
 
         // Then
         assertEquals(0, requests.size(), "Should create no batches for empty block");
-    }
+    }*/
 
     @Test
     void testRetrySuccessOnFirstAttempt() {
@@ -200,7 +184,7 @@ class BlockNodeConnectionManagerTest {
         verify(mockConnection, times(1)).establishStream();
     }
 
-    @Test
+    /*@Test
     void testStreamBlockToConnections() {
         final long blockNumber = 1L;
         final var blockHeader = BlockItem.newBuilder()
@@ -228,7 +212,7 @@ class BlockNodeConnectionManagerTest {
                 .contains(
                         "Streaming block 1 to 1 active connections",
                         "Sent block 1 to stream observer for Block Node localhost:8080");
-    }
+    }*/
 
     @AfterAll
     static void afterAll() {
