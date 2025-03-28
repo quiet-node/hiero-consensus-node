@@ -2,9 +2,13 @@
 package com.hedera.services.bdd.junit.support.validators.block;
 
 import com.hedera.hapi.block.stream.Block;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.hedera.services.bdd.junit.support.BlockStreamAccess;
 import com.hedera.services.bdd.junit.support.BlockStreamValidator;
 import com.hedera.services.bdd.spec.HapiSpec;
 import edu.umd.cs.findbugs.annotations.NonNull;
+
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -12,6 +16,8 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Assertions;
+
+import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.workingDirFor;
 
 /**
  * A validator that ensures block numbers are sequential and not repeated in the block stream.
@@ -26,6 +32,16 @@ public class BlockNumberSequenceValidator implements BlockStreamValidator {
             return new BlockNumberSequenceValidator();
         }
     };
+
+    public static void main(String[] args) {
+        final var node0Dir = Paths.get("hedera-node/test-clients")
+                .resolve(workingDirFor(0, "hapi"))
+                .toAbsolutePath()
+                .normalize();
+        final var blocks =
+                BlockStreamAccess.BLOCK_STREAM_ACCESS.readBlocks(node0Dir.resolve("data/blockStreams/block-0.0.3"));
+        new BlockNumberSequenceValidator().validateBlocks(blocks);
+    }
 
     @Override
     public void validateBlocks(@NonNull final List<Block> blocks) {
