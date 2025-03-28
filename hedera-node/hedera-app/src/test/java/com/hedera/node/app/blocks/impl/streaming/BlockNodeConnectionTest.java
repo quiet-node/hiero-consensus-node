@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.notNull;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -67,7 +66,6 @@ class BlockNodeConnectionTest {
     NettyChannelBuilder nettyChannelBuilder;
 
     private ManagedChannel channel;
-    private io.grpc.ClientCall clientCall;
 
     // Keep static mocks as class fields
     private MockedStatic<ManagedChannelBuilder> mockedChannel;
@@ -75,8 +73,8 @@ class BlockNodeConnectionTest {
 
     @BeforeEach
     public void setUp() throws InterruptedException {
-        given(nodeConfig.address()).willReturn("localhost");
-        given(nodeConfig.port()).willReturn(12345);
+        lenient().when(nodeConfig.address()).thenReturn("localhost");
+        lenient().when(nodeConfig.port()).thenReturn(12345);
 
         channel = mock(ManagedChannel.class);
 
@@ -112,8 +110,12 @@ class BlockNodeConnectionTest {
 
     @Test
     void testNewBlockNodeConnection() {
+        setupGrpcMocks();
+
         assertEquals(nodeConfig, blockNodeConnection.getNodeConfig());
         assertFalse(blockNodeConnection.isActive());
+        blockNodeConnection.establishStream();
+        assertTrue(blockNodeConnection.isActive());
         assertThat(logCaptor.infoLogs()).contains("BlockNodeConnection localhost:12345 INITIALIZED");
     }
 
@@ -182,6 +184,8 @@ class BlockNodeConnectionTest {
         verify(grpcStub).publishBlockStream(captor.capture());
         final var responseObserver = captor.getValue();
         assertNotNull(responseObserver);
+
+        blockNodeConnection.onNext(response);
 
         assertThat(logCaptor.infoLogs()).contains("Block acknowledgement received for block 1234");
     }

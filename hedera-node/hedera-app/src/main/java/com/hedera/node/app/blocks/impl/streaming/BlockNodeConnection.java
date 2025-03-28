@@ -50,7 +50,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     public void establishStream() {
         if (requestObserver != null) {
-            logger.error("Stream is already established for block node {}", blockNodeName(nodeConf));
+            logger.info("Stream is already established for block node {}", blockNodeName(nodeConf));
             return;
         }
 
@@ -58,9 +58,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 .usePlaintext() // 🔥🔥 For development only! change to use TLS in production 🔥🔥
                 .build();
         BlockStreamServiceGrpc.BlockStreamServiceStub stub = BlockStreamServiceGrpc.newStub(channel);
-        synchronized (isActiveLock) {
-            requestObserver = stub.publishBlockStream(this);
-            isActive = true;
+        if (stub != null) {
+            synchronized (isActiveLock) {
+                requestObserver = stub.publishBlockStream(this);
+                isActive = true;
+                logger.info("BlockNodeConnection {} INITIALIZED", blockNodeName(nodeConf));
+            }
+        } else {
+            logger.warn("Failed to create stub for block node {}", blockNodeName(nodeConf));
         }
     }
 
@@ -94,15 +99,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             handleEndOfStream(response.getEndStream());
         } else if (response.hasSkipBlock()) {
             logger.info(
-                    "Received SkipBlock from Block Node {}:{}  Block #{}",
-                    nodeConf.address(),
-                    nodeConf.port(),
+                    "Received SkipBlock from Block Node {}  Block #{}",
+                    blockNodeName(nodeConf),
                     response.getSkipBlock().getBlockNumber());
         } else if (response.hasResendBlock()) {
             logger.info(
-                    "Received ResendBlock from Block Node {}:{}  Block #{}",
-                    nodeConf.address(),
-                    nodeConf.port(),
+                    "Received ResendBlock from Block Node {}  Block #{}",
+                    blockNodeName(nodeConf),
                     response.getResendBlock().getBlockNumber());
         }
     }
@@ -153,10 +156,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 throw new IllegalStateException("Connection is not active for node " + blockNodeName(nodeConf));
             }
         }
-    }
-
-    private void scheduleReconnect() {
-        manager.scheduleReconnect(this);
     }
 
     /**

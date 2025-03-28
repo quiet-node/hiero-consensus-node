@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -130,8 +131,8 @@ public class BlockNodeConnectionManager {
             @SuppressWarnings("unused") @NonNull final Throwable thrown) {
         synchronized (connectionLock) {
             // If available, make the secondary connection the primary connection
-            if (connection == primary && !isRetrying(secondary) && !secondaryActive()) {
-                secondary = primary;
+            if (Objects.equals(connection, primary) && !secondaryActive()) {
+                primary = secondary;
             }
             connectionsInRetry.putIfAbsent(connection.getNodeConfig(), connection);
         }
@@ -183,9 +184,11 @@ public class BlockNodeConnectionManager {
         requireNonNull(connection);
 
         // Avoid duplicate retry attempts
-        if (connectionsInRetry.containsKey(connection.getNodeConfig())) {
-            logger.info("Skipping reconnect, already in retry: {}", blockNodeName(connection.getNodeConfig()));
-            return;
+        synchronized (connectionLock) {
+            if (connectionsInRetry.containsKey(connection.getNodeConfig())) {
+                logger.info("Skipping reconnect, already in retry: {}", blockNodeName(connection.getNodeConfig()));
+                return;
+            }
         }
 
         retryExecutor.execute(() -> {
@@ -311,20 +314,38 @@ public class BlockNodeConnectionManager {
             // Skip over any nodes that have less priority than the current minimum
             if (priority >= currentMinPriority) continue;
 
-            final List<BlockNodeConfig> nodesInGroup = new ArrayList<>(priorityGroups.get(priority));
-            Collections.shuffle(nodesInGroup);
-            selectedNode = nodesInGroup.getFirst();
-            if (!connectionsInRetry.containsKey(selectedNode)) {
+            // Filter nodes not in retry, and select one randomly
+            final List<BlockNodeConfig> nextPriorityGroup = priorityGroups.get(priority).stream()
+                    .filter(node -> {
+                        synchronized (connectionLock) {
+                            return !isRetrying(node);
+                        }
+                    })
+                    .toList();
+            final List<BlockNodeConfig> availableNodesInGroup = new ArrayList<>(nextPriorityGroup);
+            if (!availableNodesInGroup.isEmpty()) {
+                final var randomIndex = IntStream.range(0, availableNodesInGroup.size())
+                        .findAny()
+                        .orElseThrow();
+                selectedNode = availableNodesInGroup.get(randomIndex);
                 break;
             }
         }
-
         if (selectedNode == null) {
             throw new IllegalStateException(
                     "No available block node found for connection. Check configuration and network status.");
         }
 
         connectToNode(selectedNode);
+        if (!primaryActive()) {
+            synchronized (connectionLock) {
+                connectionsInRetry.put(selectedNode, NoOpConnection.INSTANCE);
+            }
+
+            // Now that we have put the current connection in retry, we can try again to establish a new connection. If
+            // there are no successful connections made, eventually this recursive call will throw an exception
+            establishConnection();
+        }
     }
 
     private void rememberConnection(@NonNull BlockNodeConnection connection) {
@@ -338,7 +359,7 @@ public class BlockNodeConnectionManager {
     }
 
     private void connectToNode(@NonNull BlockNodeConfig node) {
-        logger.info("Connecting to block node {}:{}", node.address(), node.port());
+        logger.info("Connecting to block node {}", blockNodeName(node));
         try {
             BlockNodeConnection connection = new BlockNodeConnection(node, this);
             connection.establishStream();
@@ -458,5 +479,58 @@ public class BlockNodeConnectionManager {
 
     private boolean connectionActive(BlockNodeConnection connection) {
         return connection != null && !isRetrying(connection) && connection.isActive();
+    }
+
+    // This class exists solely to avoid checking for null every time we reference a connection in connectionsInRetry
+    private static class NoOpConnection extends BlockNodeConnection {
+        static final NoOpConnection INSTANCE;
+
+        static {
+            INSTANCE = new NoOpConnection();
+        }
+
+        private NoOpConnection() {
+            super(null, null);
+        }
+
+        @Override
+        public void establishStream() {
+            // No-op
+        }
+
+        @Override
+        public void onNext(PublishStreamResponse response) {
+            // No-op
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            // No-op
+        }
+
+        @Override
+        public void onCompleted() {
+            // No-op
+        }
+
+        @Override
+        public void sendRequest(@NonNull final PublishStreamRequest request) {
+            // No-op
+        }
+
+        @Override
+        public boolean isActive() {
+            return false;
+        }
+
+        @Override
+        public void close() {
+            // No-op
+        }
+
+        @Override
+        public BlockNodeConfig getNodeConfig() {
+            return BlockNodeConfig.DEFAULT;
+        }
     }
 }
