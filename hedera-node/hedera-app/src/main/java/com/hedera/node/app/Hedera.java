@@ -1179,7 +1179,9 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .blockHashSigner(blockHashSigner)
                 .appContext(appContext)
                 .platformStateFacade(platformStateFacade)
-                .entityCounts(state.getReadableStates(EntityIdService.NAME).<EntityCounts>getSingleton(ENTITY_COUNTS_KEY).get())
+                .entityCounts(state.getReadableStates(EntityIdService.NAME)
+                        .<EntityCounts>getSingleton(ENTITY_COUNTS_KEY)
+                        .get())
                 .build();
         // Initialize infrastructure for fees, exchange rates, and throttles from the working state
         daggerApp.initializer().accept(state);

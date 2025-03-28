@@ -65,16 +65,16 @@ class IssHandlingTest implements LifecycleTest {
                 assertHgcaaLogContains(
                         NodeSelector.byNodeId(ISS_NODE_ID), "ledger.transfers.maxLen = 5", Duration.ofSeconds(10)),
                 // Submit a transaction within the normal allowed transfers.maxLen limit
-//                cryptoTransfer(movingHbar(6L)
-//                                .distributing(
-//                                        GENESIS,
-//                                        SHARD_AND_REALM + "3",
-//                                        SHARD_AND_REALM + "4",
-//                                        SHARD_AND_REALM + "5",
-//                                        SHARD_AND_REALM + "6",
-//                                        SHARD_AND_REALM + "7",
-//                                        SHARD_AND_REALM + "8"))
-//                        .signedBy(GENESIS),
+                cryptoTransfer(movingHbar(6L)
+                                .distributing(
+                                        GENESIS,
+                                        SHARD_AND_REALM + "3",
+                                        SHARD_AND_REALM + "4",
+                                        SHARD_AND_REALM + "5",
+                                        SHARD_AND_REALM + "6",
+                                        SHARD_AND_REALM + "7",
+                                        SHARD_AND_REALM + "8"))
+                        .signedBy(GENESIS),
                 // Verify we actually got an ISS in node1
                 assertHgcaaLogContains(NodeSelector.byNodeId(ISS_NODE_ID), "ISS detected", Duration.ofSeconds(60)),
                 // Verify the block stream manager completed its fatal shutdown process

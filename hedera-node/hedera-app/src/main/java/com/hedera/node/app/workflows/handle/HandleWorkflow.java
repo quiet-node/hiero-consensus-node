@@ -252,8 +252,11 @@ public class HandleWorkflow {
                 };
         if (isGenesis) {
             final var genesisEventTime = round.iterator().next().getConsensusTimestamp();
-            var entitycounts = state.getReadableStates(EntityIdService.NAME).<EntityCounts>getSingleton(ENTITY_COUNTS_KEY).get();
-            logger.info("Doing genesis setup before {} {} {}", genesisEventTime, systemEntitiesCreatedFlag, entitycounts);
+            var entitycounts = state.getReadableStates(EntityIdService.NAME)
+                    .<EntityCounts>getSingleton(ENTITY_COUNTS_KEY)
+                    .get();
+            logger.info(
+                    "Doing genesis setup before {} {} {}", genesisEventTime, systemEntitiesCreatedFlag, entitycounts);
             systemTransactions.doGenesisSetup(genesisEventTime, state);
             if (streamMode != RECORDS) {
                 blockStreamManager.confirmPendingWorkFinished();

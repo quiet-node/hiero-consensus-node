@@ -32,7 +32,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.withSettings;
 
-import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.RecordFileItem;
 import com.hedera.hapi.block.stream.output.BlockHeader;
@@ -45,7 +44,6 @@ import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
-import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.config.ConfigProvider;
@@ -54,7 +52,6 @@ import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.hedera.services.bdd.junit.support.BlockStreamAccess;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.state.State;
@@ -64,8 +61,6 @@ import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -159,30 +154,6 @@ class BlockStreamManagerImplTest {
     private WritableSingletonStateBase<BlockStreamInfo> blockStreamInfoState;
 
     private BlockStreamManagerImpl subject;
-
-    public static void main(String[] args) {
-        Path path = Paths.get("/home/driley/git/hedera-services/hedera-node/test-clients/build/hapi-test/node1/data/blockStreams/block-0.0.4/000000000000000000000000000000000004.blk.gz");
-        final var blocks =
-                BlockStreamAccess.BLOCK_STREAM_ACCESS.readBlocks(path);
-        boolean printStateChanges = false;
-        for (Block block : blocks) {
-            for (BlockItem item : block.items()) {
-                if (item.hasRoundHeader()) {
-                    System.out.println("Round Header: " + item.roundHeader());
-                    if (item.roundHeader().roundNumber() == 52) {
-                        printStateChanges = true;
-                    }
-                }
-                if (printStateChanges && item.hasStateChanges()) {
-                    System.out.println("State Changes: " + item.stateChanges());
-                }
-                if (printStateChanges && item.hasTransactionResult()) {
-                    System.out.println("Transaction Result: " + item.transactionResult());
-                }
-            }
-        }
-
-    }
 
     @BeforeEach
     void setUp() {
