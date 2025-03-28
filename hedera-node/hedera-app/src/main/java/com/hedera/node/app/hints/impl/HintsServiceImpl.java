@@ -71,6 +71,22 @@ public class HintsServiceImpl implements HintsService {
     }
 
     @Override
+    public void manageRosterAdoption(
+            @NonNull final WritableHintsStore hintsStore,
+            @NonNull final Roster previousRoster,
+            @NonNull final Bytes adoptedRosterHash,
+            final boolean forceHandoff) {
+        requireNonNull(hintsStore);
+        requireNonNull(previousRoster);
+        requireNonNull(adoptedRosterHash);
+        if (hintsStore.updateAtHandoff(adoptedRosterHash, previousRoster, forceHandoff)) {
+            final var activeConstruction = requireNonNull(hintsStore.getActiveConstruction());
+            component.signingContext().setConstruction(activeConstruction);
+            logger.info("Updated hinTS construction in signing context to #{}", activeConstruction.constructionId());
+        }
+    }
+
+    @Override
     public void reconcile(
             @NonNull final ActiveRosters activeRosters,
             @NonNull final WritableHintsStore hintsStore,
@@ -90,7 +106,9 @@ public class HintsServiceImpl implements HintsService {
                     controller.advanceConstruction(now, hintsStore, isActive);
                 }
             }
-            case HANDOFF -> hintsStore.updateForHandoff(activeRosters);
+            case HANDOFF -> {
+                // No-op
+            }
         }
         currentRoster.set(activeRosters.findRelatedRoster(activeRosters.currentRosterHash()));
     }

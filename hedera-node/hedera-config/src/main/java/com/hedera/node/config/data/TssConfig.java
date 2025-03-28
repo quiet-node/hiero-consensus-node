@@ -21,4 +21,5 @@ public record TssConfig(
         @ConfigProperty(defaultValue = "data/keys/tss") @NodeProperty String tssKeysPath,
         @ConfigProperty(defaultValue = "1024") @NetworkProperty int initialCrsParties,
         @ConfigProperty(defaultValue = "false") @NetworkProperty boolean hintsEnabled,
-        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean historyEnabled) {}
+        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean historyEnabled,
+        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean forceHandoffs) {}

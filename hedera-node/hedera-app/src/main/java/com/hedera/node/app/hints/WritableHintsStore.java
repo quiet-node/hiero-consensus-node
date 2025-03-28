@@ -5,6 +5,7 @@ import com.hedera.hapi.node.state.hints.CRSState;
 import com.hedera.hapi.node.state.hints.HintsConstruction;
 import com.hedera.hapi.node.state.hints.PreprocessedKeys;
 import com.hedera.hapi.node.state.hints.PreprocessingVote;
+import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.services.auxiliary.hints.CrsPublicationTransactionBody;
 import com.hedera.node.app.roster.ActiveRosters;
 import com.hedera.node.config.data.TssConfig;
@@ -68,6 +69,15 @@ public interface WritableHintsStore extends ReadableHintsStore {
      * Purges any state no longer needed after a given handoff.
      */
     void updateForHandoff(@NonNull ActiveRosters activeRosters);
+
+    /**
+     * Updates state for a handoff to the given roster hash.
+     * @param adoptedRosterHash the adopted roster hash
+     * @param previousRoster the previous roster
+     * @param forceHandoff whether to force the handoff when the adopted roster hash doesn't match the next construction
+     * @return whether the handoff changed the hinTS scheme
+     */
+    boolean updateAtHandoff(@NonNull Bytes adoptedRosterHash, @NonNull Roster previousRoster, boolean forceHandoff);
 
     /**
      * Sets the {@link CRSState} for the network.

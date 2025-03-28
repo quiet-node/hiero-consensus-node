@@ -66,6 +66,15 @@ public class FakeHintsService implements HintsService {
     }
 
     @Override
+    public void manageRosterAdoption(
+            @NonNull final WritableHintsStore hintsStore,
+            @NonNull final Roster previousRoster,
+            @NonNull final Bytes adoptedRosterHash,
+            final boolean forceHandoff) {
+        delegate.manageRosterAdoption(hintsStore, previousRoster, adoptedRosterHash, forceHandoff);
+    }
+
+    @Override
     public void reconcile(
             @NonNull final ActiveRosters activeRosters,
             @NonNull final WritableHintsStore hintsStore,
