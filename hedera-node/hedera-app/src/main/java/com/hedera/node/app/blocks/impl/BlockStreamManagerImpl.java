@@ -372,7 +372,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             // Special case when signing with hinTS and this is the freeze round; we will have to wait until
             // after restart to gossip partial signatures and sign this block
             if (hintsEnabled && roundNum == freezeRoundNumber) {
-                pendingBlocks.forEach(block -> block.writer().closeBlock());
+                pendingBlocks.forEach(block -> block.writer().closeCompleteBlock());
             } else {
                 blockHashSigner
                         .signFuture(blockHash)
@@ -399,7 +399,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             pendingBlocks.forEach(block -> log.fatal("Skipping incomplete block proof for block {}", block.number()));
             if (writer != null) {
                 log.fatal("Prematurely closing block {}", blockNumber);
-                writer.closeBlock();
+                writer.closeCompleteBlock();
                 writer = null;
             }
             requireNonNull(fatalShutdownFuture).complete(null);
@@ -478,7 +478,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     .siblingHashes(siblingHashes.stream().flatMap(List::stream).toList());
             final var proofItem = BlockItem.newBuilder().blockProof(proof).build();
             block.writer().writePbjItemAndBytes(proofItem, BlockItem.PROTOBUF.toBytes(proofItem));
-            block.writer().closeBlock();
+            block.writer().closeCompleteBlock();
             if (block.number() != blockNumber) {
                 siblingHashes.removeFirst();
             }
