@@ -82,6 +82,7 @@ public class HgcaaLogValidator {
                 List.of("Proof future for construction", "must wait until previous finished"),
                 List.of("Ignoring forced handoff to incomplete construction"),
                 List.of("Completing signing attempt without obtaining a signature"),
+                List.of("No pending blocks found"),
                 List.of("Forcing handoff to construction", "with different target roster"));
 
         private int numProblems = 0;

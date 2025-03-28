@@ -38,6 +38,10 @@ public interface BlockItemWriter {
      */
     void writeItem(@NonNull byte[] bytes);
 
+    /**
+     * Writes a PBJ item to the destination stream.
+     * @param item the item to write
+     */
     void writePbjItem(@NonNull final BlockItem item);
 
     /**

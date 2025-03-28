@@ -149,7 +149,7 @@ public class StateChangesValidator implements BlockStreamValidator {
                 .normalize();
         final var validator = new StateChangesValidator(
                 Bytes.fromHex(
-                        "8a54ee8f9aaa45a5da523ee3814c19a1bdbc3b74589285c54e714b3507406c63d9dcd7aaca41bd04a1d0a978510c3020"),
+                        "c6dd05de914b1e1638afca1a59d37c08eacf36409cd7479df8eaceff1aa2dd8ad45e94e23b061bc688d34caff06ccd0e"),
                 node0Dir.resolve("output/swirlds.log"),
                 node0Dir.resolve("data/config/application.properties"),
                 node0Dir.resolve("data/config"),
