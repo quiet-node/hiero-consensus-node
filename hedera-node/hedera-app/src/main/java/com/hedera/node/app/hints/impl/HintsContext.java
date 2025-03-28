@@ -3,6 +3,7 @@ package com.hedera.node.app.hints.impl;
 
 import static com.hedera.node.app.roster.RosterTransitionWeights.atLeastOneThirdOfTotal;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toMap;
 
 import com.hedera.hapi.node.state.hints.HintsConstruction;
@@ -14,6 +15,7 @@ import com.hedera.node.app.hints.HintsLibrary;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +27,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The hinTS context that can be used to request hinTS signatures using the latest
@@ -33,6 +37,10 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class HintsContext {
+    private static final Logger log = LoggerFactory.getLogger(HintsContext.class);
+
+    private static final Duration SIGNING_ATTEMPT_TIMEOUT = Duration.ofSeconds(10);
+
     private final HintsLibrary library;
 
     @Nullable
@@ -181,14 +189,23 @@ public class HintsContext {
                 @NonNull final Bytes aggregationKey,
                 @NonNull final Map<Long, Integer> partyIds,
                 @NonNull final Bytes verificationKey,
-                final Roster currentRoster,
-                final Runnable onCompletion) {
+                @NonNull final Roster currentRoster,
+                @NonNull final Runnable onCompletion) {
             this.thresholdWeight = thresholdWeight;
+            requireNonNull(onCompletion);
             this.aggregationKey = requireNonNull(aggregationKey);
             this.partyIds = requireNonNull(partyIds);
             this.verificationKey = requireNonNull(verificationKey);
             this.currentRoster = requireNonNull(currentRoster);
-            executor.schedule(onCompletion, 10, java.util.concurrent.TimeUnit.SECONDS);
+            executor.schedule(
+                    () -> {
+                        if (!future.isDone()) {
+                            log.warn("Completing signing attempt without obtaining a signature");
+                        }
+                        onCompletion.run();
+                    },
+                    SIGNING_ATTEMPT_TIMEOUT.getSeconds(),
+                    SECONDS);
         }
 
         /**
