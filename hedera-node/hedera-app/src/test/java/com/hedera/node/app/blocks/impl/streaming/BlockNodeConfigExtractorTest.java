@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.hedera.node.app.blocks.impl;
+package com.hedera.node.app.blocks.impl.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.hedera.node.app.blocks.impl.streaming.BlockNodeConfigExtractorImpl;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,5 +46,12 @@ class BlockNodeConfigExtractorTest {
         assertThatThrownBy(() -> new BlockNodeConfigExtractorImpl("invalid/path"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Failed to read block node configuration");
+    }
+
+    @Test
+    void testNoOpBlockNodeConfigExtractor() {
+        final NoOpBlockNodeConfigExtractor noOpBlockNodeConfigExtractor = new NoOpBlockNodeConfigExtractor();
+        assertThat(noOpBlockNodeConfigExtractor.getAllNodes()).isEqualTo(List.of());
+        assertThat(noOpBlockNodeConfigExtractor.getBlockItemBatchSize()).isEqualTo(0);
     }
 }
