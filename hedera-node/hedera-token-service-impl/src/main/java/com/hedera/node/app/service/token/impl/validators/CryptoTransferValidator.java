@@ -28,7 +28,6 @@ import com.hedera.hapi.node.base.TokenTransferList;
 import com.hedera.hapi.node.base.TransferList;
 import com.hedera.hapi.node.token.CryptoTransferTransactionBody;
 import com.hedera.node.app.spi.workflows.PreCheckException;
-import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.TokensConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -77,13 +76,11 @@ public class CryptoTransferValidator {
      * All validations needed for the crypto transfer operation, that include state or config.
      * @param op the crypto transfer operation
      * @param ledgerConfig the ledger config
-     * @param hederaConfig the hedera config
      * @param tokensConfig the tokens config
      */
     public void validateSemantics(
             @NonNull final CryptoTransferTransactionBody op,
             @NonNull final LedgerConfig ledgerConfig,
-            @NonNull final HederaConfig hederaConfig,
             @NonNull final TokensConfig tokensConfig) {
         final var transfers = op.transfersOrElse(TransferList.DEFAULT);
 

@@ -375,31 +375,6 @@ class ContractUpdateHandlerTest extends ContractHandlerTestBase {
     }
 
     @Test
-    void maxAutomaticTokenAssociationsNegativeWithDisabledFlag() {
-        when(configuration.getConfigData(LedgerConfig.class)).thenReturn(ledgerConfig);
-        when(configuration.getConfigData(EntitiesConfig.class)).thenReturn(entitiesConfig);
-        when(context.configuration()).thenReturn(configuration);
-
-        when(accountStore.getContractById(targetContract)).thenReturn(contract);
-        when(contract.key()).thenReturn(Key.newBuilder().build());
-
-        given(context.storeFactory()).willReturn(storeFactory);
-        given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
-        final var txn = TransactionBody.newBuilder()
-                .contractUpdateInstance(ContractUpdateTransactionBody.newBuilder()
-                        .contractID(targetContract)
-                        .adminKey(adminKey)
-                        .memo("memo")
-                        .maxAutomaticTokenAssociations(-1))
-                .transactionID(transactionID)
-                .build();
-
-        when(context.body()).thenReturn(txn);
-
-        assertFailsWith(INVALID_MAX_AUTO_ASSOCIATIONS, () -> subject.handle(context));
-    }
-
-    @Test
     void maxAutomaticTokenAssociationsNegativeWithEnabledFlag() {
         when(configuration.getConfigData(LedgerConfig.class)).thenReturn(ledgerConfig);
         when(configuration.getConfigData(EntitiesConfig.class)).thenReturn(entitiesConfig);
