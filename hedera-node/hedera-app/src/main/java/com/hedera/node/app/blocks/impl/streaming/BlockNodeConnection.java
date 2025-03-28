@@ -32,7 +32,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final BlockNodeConfig node;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
-    private final BlockAcknowledgementTracker acknowledgmentTracker;
     private final String connectionId;
 
     // Locks and synchronization objects
@@ -65,14 +64,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
-            @NonNull final BlockStreamStateManager blockStreamStateManager,
-            @NonNull final BlockAcknowledgementTracker acknowledgmentTracker) {
+            @NonNull final BlockStreamStateManager blockStreamStateManager) {
         this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
-        this.acknowledgmentTracker = requireNonNull(acknowledgmentTracker);
         this.connectionId = generateConnectionId(nodeConfig);
         this.channel = createNewChannel();
     }
@@ -290,26 +287,29 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
-            var blockAck = acknowledgement.getBlockAck();
-            var blockNumber = blockAck.getBlockNumber();
-            var blockAlreadyExists = blockAck.getBlockAlreadyExists();
+            final var blockAck = acknowledgement.getBlockAck();
+            final var blockNumber = blockAck.getBlockNumber();
+            final var blockAlreadyExists = blockAck.getBlockAlreadyExists();
 
-            logger.debug(
-                    "Received acknowledgement for block {} from node {}:{}, blockAlreadyExists: {}",
-                    blockNumber,
-                    node.address(),
-                    node.port(),
-                    blockAlreadyExists);
+            if (blockAlreadyExists) {
+                logger.warn("Block {} already exists on block node {}", blockNumber, connectionId);
+            } else {
+                logger.debug(
+                        "Block {} acknowledged and successfully processed by block node {}", blockNumber, connectionId);
+            }
 
-            acknowledgmentTracker.trackBlockAcknowledgement(connectionId, blockNumber);
+            // Update the last verified block by the current connection
+            blockNodeConnectionManager.updateLastVerifiedBlock(connectionId, blockNumber);
             // Remove all block states up to and including this block number
             blockStreamStateManager.removeBlockStatesUpTo(blockNumber);
+        } else {
+            logger.warn("Unknown acknowledgement received: {}", acknowledgement);
         }
     }
 
     private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
-        var blockNumber = endOfStream.getBlockNumber();
-        var responseCode = endOfStream.getStatus();
+        final var blockNumber = endOfStream.getBlockNumber();
+        final var responseCode = endOfStream.getStatus();
 
         logger.debug(
                 "[{}] Received EndOfStream from block node {}:{} at block {} with PublishStreamResponseCode {}",

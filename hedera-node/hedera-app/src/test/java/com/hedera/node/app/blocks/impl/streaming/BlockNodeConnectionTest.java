@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,9 +56,6 @@ class BlockNodeConnectionTest {
     private BlockStreamStateManager blockStreamStateManager;
 
     @Mock
-    private BlockAcknowledgementTracker blockAcknowledgementTracker;
-
-    @Mock
     private StreamObserver<PublishStreamRequest> requestObserver;
 
     @Mock
@@ -74,8 +72,7 @@ class BlockNodeConnectionTest {
         when(nodeConfig.address()).thenReturn(TEST_ADDRESS);
         when(nodeConfig.port()).thenReturn(TEST_PORT);
 
-        connection = new BlockNodeConnection(
-                nodeConfig, connectionManager, blockStreamStateManager, blockAcknowledgementTracker);
+        connection = new BlockNodeConnection(nodeConfig, connectionManager, blockStreamStateManager);
 
         // Set requestObserver via reflection to avoid establishing an actual gRPC connection
         Field requestObserverField = BlockNodeConnection.class.getDeclaredField("requestObserver");
@@ -146,12 +143,11 @@ class BlockNodeConnectionTest {
         assertTrue(workerStopped.get(), "Worker thread did not run to completion");
 
         // Verify log messages
-        final String expectedWaitingLog =
-                "[] Waiting for new block to be available for node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedWaitingLog = "[] Waiting for new block to be available for node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
-        final String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedClosedLog = "Closed connection to block node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
@@ -219,12 +215,11 @@ class BlockNodeConnectionTest {
         assertTrue(validBlockState.get(), "Block state was not set to valid");
 
         // Verify log messages indicate waiting for a new block
-        final String expectedWaitingLog =
-                "[] Waiting for new block to be available for node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedWaitingLog = "[] Waiting for new block to be available for node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
-        final String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedClosedLog = "Closed connection to block node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
@@ -290,16 +285,16 @@ class BlockNodeConnectionTest {
 
         // Verify log messages indicate waiting for new requests
         final String expectedProcessingLog =
-                "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_ADDRESS + ":" + TEST_PORT;
+                "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
                 "Expected log message not found: " + expectedProcessingLog);
         final String expectedWaitingLog = "[] Waiting for new requests to be available for block " + TEST_BLOCK_NUMBER
-                + " on node " + TEST_ADDRESS + ":" + TEST_PORT;
+                + " on node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
-        final String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedClosedLog = "Closed connection to block node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
@@ -364,7 +359,7 @@ class BlockNodeConnectionTest {
 
         // Verify log messages indicate processing of requests
         final String expectedProcessingLog =
-                "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_ADDRESS + ":" + TEST_PORT;
+                "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
                 "Expected log message not found: " + expectedProcessingLog);
@@ -372,7 +367,7 @@ class BlockNodeConnectionTest {
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedSendingLog)),
                 "Expected log message not found: " + expectedSendingLog);
-        final String expectedClosedLog = "Closed connection to block node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedClosedLog = "Closed connection to block node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedClosedLog)),
                 "Expected log message not found: " + expectedClosedLog);
@@ -487,8 +482,7 @@ class BlockNodeConnectionTest {
         assertTrue(workerExited.get(), "Worker did not exit after InterruptedException");
 
         // Verify log messages for handling the InterruptedException
-        final String expectedErrorLog =
-                "[] Request worker thread interrupted for node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedErrorLog = "[] Request worker thread interrupted for node " + generateConnectionId();
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
@@ -541,7 +535,7 @@ class BlockNodeConnectionTest {
         assertTrue(workerContinued.get(), "Worker did not continue after generic exception");
 
         // Verify log messages for handling the generic exception
-        final String expectedErrorLog = "[] Error in request worker thread for node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedErrorLog = "[] Error in request worker thread for node " + generateConnectionId();
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
@@ -596,7 +590,7 @@ class BlockNodeConnectionTest {
         assertTrue(requestIndexResetCalled.get(), "Request index was not reset after IndexOutOfBoundsException");
 
         // Verify log messages for handling the IndexOutOfBoundsException
-        final String expectedErrorLog = "[] Error in request worker thread for node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedErrorLog = "[] Error in request worker thread for node " + generateConnectionId();
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
@@ -669,10 +663,16 @@ class BlockNodeConnectionTest {
         // Act
         connection.onNext(response);
 
-        assertEquals(blockAcknowledgementTracker.getLastVerifiedBlock(), TEST_BLOCK_NUMBER);
+        verify(connectionManager, times(1)).updateLastVerifiedBlock(generateConnectionId(), TEST_BLOCK_NUMBER);
+        verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
+
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
+                .isNull();
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
 
         // Verify log messages for acknowledgement
-        final String expectedLog = "Received acknowledgement";
+        final String expectedLog =
+                "Block " + TEST_BLOCK_NUMBER + " acknowledged and successfully processed by block node";
         assertTrue(
                 logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
                         || logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
@@ -722,7 +722,7 @@ class BlockNodeConnectionTest {
         verify(connectionManager).disconnectFromNode(nodeConfig);
 
         // Verify log messages for onError
-        final String expectedLog = "[] Error on stream from block node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedLog = "[] Error on stream from block node " + generateConnectionId();
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
@@ -740,9 +740,13 @@ class BlockNodeConnectionTest {
         verify(connectionManager).disconnectFromNode(nodeConfig);
 
         // Verify log messages for onCompleted
-        final String expectedLog = "[] Stream completed for block node " + TEST_ADDRESS + ":" + TEST_PORT;
+        final String expectedLog = "[] Stream completed for block node " + generateConnectionId();
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
+    }
+
+    private String generateConnectionId() {
+        return TEST_ADDRESS + ":" + TEST_PORT;
     }
 }

@@ -6,9 +6,11 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -37,9 +39,10 @@ public class BlockNodeConnectionManager {
     private final Random random = new Random();
 
     private final Map<BlockNodeConfig, BlockNodeConnection> activeConnections;
+    private final Map<String, Long> lastVerifiedBlockPerConnection;
+
     private final BlockNodeConfigExtractor blockNodeConfigurations;
     private final BlockStreamStateManager blockStreamStateManager;
-    private BlockAcknowledgementTracker acknowledgementTracker;
 
     private final Object connectionLock = new Object();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -59,9 +62,7 @@ public class BlockNodeConnectionManager {
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.activeConnections = new ConcurrentHashMap<>();
-        // Initialize the block acknowledgment tracker
-        this.acknowledgementTracker = new BlockAcknowledgementTracker(
-                blockStreamStateManager, false /*blockStreamConfig.deleteFilesOnDisk()*/);
+        this.lastVerifiedBlockPerConnection = new HashMap<>();
     }
 
     /**
@@ -80,8 +81,7 @@ public class BlockNodeConnectionManager {
     private void connectToNode(@NonNull BlockNodeConfig node) {
         synchronized (connectionLock) {
             try {
-                BlockNodeConnection connection =
-                        new BlockNodeConnection(node, this, blockStreamStateManager, acknowledgementTracker);
+                final BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
                 connection.establishStream();
                 connection.getIsActiveLock().lock();
                 try {
@@ -268,5 +268,28 @@ public class BlockNodeConnectionManager {
                 }
             }
         }
+    }
+
+    /**
+     * @param connectionId the connection id to update the last verified block for
+     * @param blockNumber the block number of the last verified block
+     */
+    public void updateLastVerifiedBlock(@NonNull final String connectionId, @Nullable final Long blockNumber) {
+        requireNonNull(connectionId);
+
+        final Long latestBlock = getLatestBlock(connectionId);
+        if (blockNumber != null && blockNumber > latestBlock) {
+            lastVerifiedBlockPerConnection.put(connectionId, blockNumber);
+        } else {
+            logger.warn(
+                    "Attempted to update connection {} with invalid block number {} (highest {})",
+                    connectionId,
+                    blockNumber,
+                    latestBlock);
+        }
+    }
+
+    private Long getLatestBlock(@NonNull final String connectionId) {
+        return lastVerifiedBlockPerConnection.get(connectionId);
     }
 }

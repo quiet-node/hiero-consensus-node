@@ -26,6 +26,9 @@ class BlockStreamStateManagerTest {
     @Mock
     private BlockNodeConfigExtractor blockNodeConfigExtractor;
 
+    @Mock
+    private BlockNodeConnectionManager blockNodeConnectionManager;
+
     private BlockStreamStateManager blockStreamStateManager;
 
     @BeforeEach
@@ -34,7 +37,9 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
-    void testRegisterNewBlock() {
+    void testOpenNewBlock() {
+        // given
+        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
         // when
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
 
@@ -53,6 +58,7 @@ class BlockStreamStateManagerTest {
     @Test
     void testCleanUpBlockState() {
         // given
+        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
 
         // when
@@ -64,6 +70,8 @@ class BlockStreamStateManagerTest {
 
     @Test
     void testMaintainMultipleBlockStates() {
+        // given
+        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
         // when
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER2);
