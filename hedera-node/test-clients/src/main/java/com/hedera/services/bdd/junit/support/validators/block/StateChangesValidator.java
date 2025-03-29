@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.support.validators.block;
 
+import static com.hedera.hapi.block.stream.SchemeUsed.LATEST_ACTIVE_SCHEME;
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_ACTIVE_HINTS_CONSTRUCTION;
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_ACTIVE_PROOF_CONSTRUCTION;
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_FILES;
+import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_NEXT_HINTS_CONSTRUCTION;
 import static com.hedera.hapi.util.HapiUtils.asInstant;
 import static com.hedera.node.app.blocks.impl.BlockImplUtils.combine;
 import static com.hedera.node.app.hapi.utils.CommonUtils.noThrowSha384HashOf;
@@ -259,7 +261,8 @@ public class StateChangesValidator implements BlockStreamValidator {
         var startOfStateHash = requireNonNull(genesisStateHash).getBytes();
 
         final int n = blocks.size();
-        final AtomicReference<Bytes> verificationKey = new AtomicReference<>();
+        final AtomicReference<Bytes> activeVerificationKey = new AtomicReference<>();
+        final AtomicReference<Bytes> nextVerificationKey = new AtomicReference<>();
         final int lastVerifiableIndex =
                 blocks.reversed().stream().filter(b -> b.items().getLast().hasBlockProof()).findFirst().stream()
                         .mapToInt(b ->
@@ -308,12 +311,26 @@ public class StateChangesValidator implements BlockStreamValidator {
                     }
                     lastStateChanges = changes;
                     lastStateChangesTime = at;
-                    applyStateChanges(item.stateChangesOrThrow(), (newVerificationKey) -> {
-                        logger.info(
-                                "Found new active verification key inside block #{}",
-                                block.items().getFirst().blockHeaderOrThrow().number());
-                        verificationKey.set(newVerificationKey);
-                    });
+                    applyStateChanges(
+                            item.stateChangesOrThrow(),
+                            (newActiveVk) -> {
+                                logger.info(
+                                        "Found new active verification key inside block #{}",
+                                        block.items()
+                                                .getFirst()
+                                                .blockHeaderOrThrow()
+                                                .number());
+                                activeVerificationKey.set(newActiveVk);
+                            },
+                            (newNextVk) -> {
+                                logger.info(
+                                        "Found new next verification key inside block #{}",
+                                        block.items()
+                                                .getFirst()
+                                                .blockHeaderOrThrow()
+                                                .number());
+                                nextVerificationKey.set(newNextVk);
+                            });
                 }
                 servicesWritten.forEach(name -> ((CommittableWritableStates) state.getWritableStates(name)).commit());
             }
@@ -332,7 +349,13 @@ public class StateChangesValidator implements BlockStreamValidator {
                 if (shouldVerifyProof) {
                     final var expectedBlockHash =
                             computeBlockHash(startOfStateHash, previousBlockHash, inputTreeHasher, outputTreeHasher);
-                    validateBlockProof(i, firstBlockRound, blockProof, expectedBlockHash, verificationKey.get());
+                    validateBlockProof(
+                            i,
+                            firstBlockRound,
+                            blockProof,
+                            expectedBlockHash,
+                            activeVerificationKey.get(),
+                            nextVerificationKey.get());
                     previousBlockHash = expectedBlockHash;
                 } else {
                     previousBlockHash = requireNonNull(
@@ -458,10 +481,11 @@ public class StateChangesValidator implements BlockStreamValidator {
             final long firstRound,
             @NonNull final BlockProof proof,
             @NonNull final Bytes blockHash,
-            @Nullable final Bytes verificationKey) {
+            @Nullable final Bytes activeVk,
+            @Nullable final Bytes nextVk) {
         assertEquals(number, proof.block());
         if (hintsLibrary != null) {
-            requireNonNull(verificationKey);
+            requireNonNull(activeVk);
         }
         var provenHash = blockHash;
         final var siblingHashes = proof.siblingHashes();
@@ -471,11 +495,17 @@ public class StateChangesValidator implements BlockStreamValidator {
                 provenHash = combine(provenHash, siblingHash.siblingHash());
             }
         }
-        if (verificationKey != null) {
+        if (activeVk != null) {
             requireNonNull(hintsLibrary);
             final var signature = proof.blockSignature();
-            logger.info("Verifying signature for block #{} (start round #{})", number, firstRound);
-            final var verified = hintsLibrary.verifyAggregate(signature, provenHash, verificationKey, 1, 3);
+            final var schemeUsed = proof.schemeUsedOrThrow();
+            logger.info(
+                    "Verifying signature for block #{} (start round #{}) under key from {}",
+                    number,
+                    firstRound,
+                    schemeUsed);
+            final var vk = schemeUsed == LATEST_ACTIVE_SCHEME ? activeVk : requireNonNull(nextVk);
+            final var verified = hintsLibrary.verifyAggregate(signature, provenHash, vk, 1, 3);
             assertTrue(verified, "Block proof signature verification failed for " + proof);
         } else {
             final var expectedSignature = Bytes.wrap(noThrowSha384HashOf(provenHash.toByteArray()));
@@ -491,7 +521,9 @@ public class StateChangesValidator implements BlockStreamValidator {
     }
 
     private void applyStateChanges(
-            @NonNull final StateChanges stateChanges, @NonNull final Consumer<Bytes> onNewVerificationKey) {
+            @NonNull final StateChanges stateChanges,
+            @NonNull final Consumer<Bytes> onNewActiveVk,
+            @NonNull final Consumer<Bytes> onNewNextVk) {
         for (final var stateChange : stateChanges.stateChanges()) {
             final var stateName = stateNameOf(stateChange.stateId());
             final var delimIndex = stateName.indexOf('.');
@@ -523,14 +555,23 @@ public class StateChangesValidator implements BlockStreamValidator {
                                     "Chain of trust verification failed for " + construction);
                         }
                     }
-                    if (hintsLibrary != null
-                            && stateChange.stateId() == STATE_ID_ACTIVE_HINTS_CONSTRUCTION.protoOrdinal()) {
-                        final var construction = (HintsConstruction) singleton;
-                        if (construction.hasHintsScheme()) {
-                            onNewVerificationKey.accept(construction
-                                    .hintsSchemeOrThrow()
-                                    .preprocessedKeysOrThrow()
-                                    .verificationKey());
+                    if (hintsLibrary != null) {
+                        if (stateChange.stateId() == STATE_ID_ACTIVE_HINTS_CONSTRUCTION.protoOrdinal()) {
+                            final var construction = (HintsConstruction) singleton;
+                            if (construction.hasHintsScheme()) {
+                                onNewActiveVk.accept(construction
+                                        .hintsSchemeOrThrow()
+                                        .preprocessedKeysOrThrow()
+                                        .verificationKey());
+                            }
+                        } else if (stateChange.stateId() == STATE_ID_NEXT_HINTS_CONSTRUCTION.protoOrdinal()) {
+                            final var construction = (HintsConstruction) singleton;
+                            if (construction.hasHintsScheme()) {
+                                onNewNextVk.accept(construction
+                                        .hintsSchemeOrThrow()
+                                        .preprocessedKeysOrThrow()
+                                        .verificationKey());
+                            }
                         }
                     }
                 }
