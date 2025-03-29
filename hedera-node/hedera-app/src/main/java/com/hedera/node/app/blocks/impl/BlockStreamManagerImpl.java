@@ -289,8 +289,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             blockNumber = blockStreamInfo.blockNumber() + 1;
             if (hintsEnabled && !attemptedPendingBlockSigning) {
                 final var hasBeenFrozen = requireNonNull(state.getReadableStates(PlatformStateService.NAME)
-                        .<PlatformState>getSingleton(V0540PlatformStateSchema.PLATFORM_STATE_KEY)
-                        .get())
+                                .<PlatformState>getSingleton(V0540PlatformStateSchema.PLATFORM_STATE_KEY)
+                                .get())
                         .hasLastFrozenTime();
                 if (hasBeenFrozen) {
                     final var path = blockDirFor(configProvider.getConfiguration(), networkInfo.selfNodeInfo());
@@ -298,27 +298,33 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                             "Attempting to sign any pending blocks contiguous to #{} still on disk @ {}",
                             blockNumber,
                             path.toAbsolutePath());
-                    final var onDiskPendingBlocks = loadContiguousPendingBlocks(path, blockNumber);
-                    final List<Bytes> blockHashes = new ArrayList<>();
-                    onDiskPendingBlocks.forEach(block -> {
-                        try {
-                            final var pendingWriter = writerSupplier.get();
-                            pendingWriter.openBlock(block.number());
-                            block.items().forEach(item -> pendingWriter.writeItem(BlockItem.PROTOBUF.toBytes(item).toByteArray()));
-                            final var blockHash = block.blockHash();
-                            pendingBlocks.add(new PendingBlock(
-                                    block.number(),
-                                    block.contentsPath(),
-                                    blockHash,
-                                    block.proofBuilder(),
-                                    pendingWriter,
-                                    block.siblingHashesIfUseful()));
-                            log.info("Recovered pending block #{}, gossiping partial signature", block.number());
-                            blockHashes.add(blockHash);
-                        } catch (Exception e) {
-                            log.warn("Failed to recover pending block #{}", block.number(), e);
-                        }
-                    });
+                    try {
+                        final var onDiskPendingBlocks = loadContiguousPendingBlocks(path, blockNumber);
+                        final List<Bytes> blockHashes = new ArrayList<>();
+                        onDiskPendingBlocks.forEach(block -> {
+                            try {
+                                final var pendingWriter = writerSupplier.get();
+                                pendingWriter.openBlock(block.number());
+                                block.items()
+                                        .forEach(item -> pendingWriter.writeItem(
+                                                BlockItem.PROTOBUF.toBytes(item).toByteArray()));
+                                final var blockHash = block.blockHash();
+                                pendingBlocks.add(new PendingBlock(
+                                        block.number(),
+                                        block.contentsPath(),
+                                        blockHash,
+                                        block.proofBuilder(),
+                                        pendingWriter,
+                                        block.siblingHashesIfUseful()));
+                                log.info("Recovered pending block #{}", block.number());
+                                blockHashes.add(blockHash);
+                            } catch (Exception e) {
+                                log.warn("Failed to recover pending block #{}", block.number(), e);
+                            }
+                        });
+                    } catch (Exception e) {
+                        log.warn("Failed to load pending blocks", e);
+                    }
                 }
                 attemptedPendingBlockSigning = true;
             }

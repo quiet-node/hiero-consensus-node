@@ -150,6 +150,7 @@ public class FileBlockItemWriter implements BlockItemWriter {
          */
         public BlockProof.Builder proofBuilder() {
             return BlockProof.newBuilder()
+                    .block(pendingProof().block())
                     .previousBlockRootHash(pendingProof.previousBlockHash())
                     .startOfBlockStateRootHash(pendingProof.startOfBlockStateRootHash());
         }
