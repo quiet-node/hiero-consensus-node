@@ -133,7 +133,12 @@ public class HintsServiceImpl implements HintsService {
         if (!isReady()) {
             throw new IllegalStateException("hinTS service not ready to sign block hash " + blockHash);
         }
-        final var signing = component.signings().computeIfAbsent(blockHash, b -> component
+        var signing = component.signings().get(blockHash);
+        if (signing != null && signing.future().isDone()) {
+            // No need to submit our signature if we've already accumulated enough valid ones
+            return signing.future();
+        }
+        signing = component.signings().computeIfAbsent(blockHash, b -> component
                 .signingContext()
                 .newSigning(b, requireNonNull(currentRoster.get()), () -> component
                         .signings()

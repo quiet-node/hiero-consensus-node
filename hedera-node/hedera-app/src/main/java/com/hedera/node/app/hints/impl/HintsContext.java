@@ -223,9 +223,11 @@ public class HintsContext {
                     .orElse(0L);
             final var totalWeight = weightOfSignatures.addAndGet(weight);
             if (totalWeight >= thresholdWeight && completed.compareAndSet(false, true)) {
-                final var aggregatedSignature =
-                        library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures);
-                future.complete(aggregatedSignature);
+                CompletableFuture.runAsync(() -> {
+                    final var aggregatedSignature =
+                            library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures);
+                    future.complete(aggregatedSignature);
+                });
             }
         }
     }
