@@ -212,6 +212,42 @@ message BlockProof {
      * the value of `block_signature`.
      */
     repeated MerkleSiblingHash sibling_hashes = 5;
+
+    oneof verification_source {
+        /**
+         * The published hinTS scheme this signature verifies under.
+         */
+        SchemeUsed scheme_used = 6;
+
+        /**
+         * The explicit hinTS key this signature verifies under; useful when
+         * the verifier can easily check whether a chain-of-trust proof
+         * exists for a key, but does does not have any context of the
+         * latest hinTS schemes published in the block stream.
+         */
+        bytes verification_key = 7;
+    }
+}
+
+/**
+ * Which hinTS verification key published in the block stream block stream
+ * that this signature claims to verify under; the only choices are either
+ * the last published active scheme or the last published next scheme. It
+ * is useful to remember that at network genesis, the  chain-of-trust proof
+ * for the first active hinTS scheme will be published quite a bit later in
+ * the block stream than the scheme itself. Hence at genesis, a verifier that
+ * enforces chain-of-trust proofs will need to wait to start verifying
+ * signatures until the genesis proof is available.
+ */
+enum SchemeUsed {
+    /**
+     * The signature verifies under the last published active scheme.
+     */
+    LATEST_ACTIVE_SCHEME = 0;
+    /**
+     * The signature verifies under the last published next scheme.
+     */
+    LATEST_NEXT_SCHEME = 1;
 }
 
 /**

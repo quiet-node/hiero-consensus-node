@@ -90,6 +90,7 @@ class BlockStreamManagerImplTest {
     private static final long N_MINUS_2_BLOCK_NO = 664L;
     private static final long N_MINUS_1_BLOCK_NO = 665L;
     private static final long N_BLOCK_NO = 666L;
+    private static final BlockHashSigner.SchemeIds SCHEME_IDS = new BlockHashSigner.SchemeIds(1L, 2L);
     private static final Instant CONSENSUS_NOW = Instant.ofEpochSecond(1_234_567L);
     private static final Timestamp CONSENSUS_THEN = new Timestamp(890, 0);
     private static final Hash FAKE_START_OF_BLOCK_STATE_HASH = new Hash(new byte[48]);
@@ -265,6 +266,7 @@ class BlockStreamManagerImplTest {
         assertFalse(subject.hasLedgerId());
 
         given(blockHashSigner.isReady()).willReturn(true);
+        given(blockHashSigner.currentSchemeIds()).willReturn(SCHEME_IDS);
         // Start the round that will be block N
         subject.startRound(round, state);
         assertTrue(subject.hasLedgerId());
@@ -396,6 +398,7 @@ class BlockStreamManagerImplTest {
         assertFalse(subject.hasLedgerId());
 
         given(blockHashSigner.isReady()).willReturn(true);
+        given(blockHashSigner.currentSchemeIds()).willReturn(SCHEME_IDS);
         // Start the round that will be block N
         subject.startRound(round, state);
         assertTrue(subject.hasLedgerId());
@@ -491,6 +494,7 @@ class BlockStreamManagerImplTest {
         subject.initLastBlockHash(FAKE_RESTART_BLOCK_HASH);
 
         given(blockHashSigner.isReady()).willReturn(true);
+        given(blockHashSigner.currentSchemeIds()).willReturn(SCHEME_IDS);
         // Start the round that will be block N
         subject.startRound(round, state);
 
@@ -562,6 +566,7 @@ class BlockStreamManagerImplTest {
     @SuppressWarnings("unchecked")
     void supportsMultiplePendingBlocksWithIndirectProofAsExpected() throws ParseException {
         given(blockHashSigner.isReady()).willReturn(true);
+        given(blockHashSigner.currentSchemeIds()).willReturn(SCHEME_IDS);
         givenSubjectWith(
                 1,
                 0,
@@ -653,6 +658,7 @@ class BlockStreamManagerImplTest {
         given(boundaryStateChangeListener.boundaryTimestampOrThrow()).willReturn(Timestamp.DEFAULT);
         given(round.getRoundNum()).willReturn(ROUND_NO);
         given(blockHashSigner.isReady()).willReturn(true);
+        given(blockHashSigner.currentSchemeIds()).willReturn(SCHEME_IDS);
 
         given(mockEvent.getConsensusTimestamp()).willReturn(Instant.ofEpochSecond(1000));
 
@@ -730,6 +736,7 @@ class BlockStreamManagerImplTest {
         given(boundaryStateChangeListener.boundaryTimestampOrThrow()).willReturn(Timestamp.DEFAULT);
         given(round.getRoundNum()).willReturn(ROUND_NO);
         given(blockHashSigner.isReady()).willReturn(true);
+        given(blockHashSigner.currentSchemeIds()).willReturn(SCHEME_IDS);
 
         // Set up the signature future to complete immediately and run the callback synchronously
         given(blockHashSigner.signFuture(any())).willReturn(mockSigningFuture);
@@ -768,6 +775,7 @@ class BlockStreamManagerImplTest {
         givenEndOfRoundSetup();
         given(boundaryStateChangeListener.boundaryTimestampOrThrow()).willReturn(Timestamp.DEFAULT);
         given(blockHashSigner.isReady()).willReturn(true);
+        given(blockHashSigner.currentSchemeIds()).willReturn(SCHEME_IDS);
 
         // Set up the signature future to complete immediately and run the callback synchronously
         given(blockHashSigner.signFuture(any())).willReturn(mockSigningFuture);

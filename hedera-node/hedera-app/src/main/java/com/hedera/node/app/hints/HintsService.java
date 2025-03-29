@@ -76,11 +76,6 @@ public interface HintsService extends Service, BlockHashSigner {
     void initCurrentRoster(@NonNull Roster roster);
 
     /**
-     * Initializes hinTS signing from the next construction in the given {@link ReadableHintsStore}.
-     */
-    void initSigningForNextScheme(@NonNull ReadableHintsStore hintsStore);
-
-    /**
      * Initializes hinTS signing from the next construction in the given {@link WritableHintsStore}.
      *
      * @param hintsStore the hints store
