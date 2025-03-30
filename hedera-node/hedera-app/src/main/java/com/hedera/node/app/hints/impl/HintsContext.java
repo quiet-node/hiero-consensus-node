@@ -14,8 +14,10 @@ import com.hedera.node.app.hints.HintsLibrary;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -169,12 +171,19 @@ public class HintsContext {
         private final long thresholdWeight;
         private final Bytes aggregationKey;
         private final Bytes verificationKey;
+        private final Map<Long, Long> nodeWeights;
         private final Map<Long, Integer> partyIds;
         private final CompletableFuture<Bytes> future = new CompletableFuture<>();
         private final ConcurrentMap<Integer, Bytes> signatures = new ConcurrentHashMap<>();
         private final AtomicLong weightOfSignatures = new AtomicLong();
-        private final Roster currentRoster;
         private final AtomicBoolean completed = new AtomicBoolean();
+
+        /**
+         * A possible result of the signing process.
+         * @param partyIds the parties whose partial signatures were used
+         * @param aggregatedSignature the aggregated signature
+         */
+        public record Result(@NonNull Set<Integer> partyIds, @NonNull Bytes aggregatedSignature) {}
 
         public Signing(
                 final long thresholdWeight,
@@ -187,7 +196,8 @@ public class HintsContext {
             this.aggregationKey = requireNonNull(aggregationKey);
             this.partyIds = requireNonNull(partyIds);
             this.verificationKey = requireNonNull(verificationKey);
-            this.currentRoster = requireNonNull(currentRoster);
+            this.nodeWeights = requireNonNull(currentRoster).rosterEntries().stream()
+                    .collect(toMap(RosterEntry::nodeId, RosterEntry::weight));
             executor.schedule(onCompletion, 10, java.util.concurrent.TimeUnit.SECONDS);
         }
 
@@ -200,6 +210,33 @@ public class HintsContext {
         }
 
         /**
+         * If the given node's valid partial signature is <i>likely</i> to trigger aggregation at consensus,
+         * optimistically precomputes the result of the aggregation with the already known valid signatures
+         * plus the given signature.
+         * @param nodeId the node ID
+         * @param signature the pre-validated partial signature
+         * @param crs the final CRS used by the network
+         * @return an optimistic result, or null if this signature is not likely to trigger aggregation at consensus
+         */
+        public @Nullable Result resultIfLikelyToTriggerAggregation(
+                final long nodeId, @NonNull final Bytes signature, @NonNull final Bytes crs) {
+            requireNonNull(crs);
+            requireNonNull(signature);
+            if (completed.get()) {
+                return null;
+            }
+            final long weight = weightOfSignatures.get();
+            if (weight < thresholdWeight && (weight + nodeWeights.get(nodeId)) >= thresholdWeight) {
+                final HashMap<Integer, Bytes> optimisticSignatures = new HashMap<>(signatures);
+                optimisticSignatures.put(partyIds.get(nodeId), signature);
+                final var aggregatedSignature =
+                        library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures);
+                return new Result(optimisticSignatures.keySet(), aggregatedSignature);
+            }
+            return null;
+        }
+
+        /**
          * Incorporates a node's pre-validated partial signature into the aggregation. If including this node's
          * weight passes the required threshold, completes the future returned from {@link #future()} with the
          * aggregated signature.
@@ -207,8 +244,13 @@ public class HintsContext {
          * @param crs the final CRS used by the network
          * @param nodeId the node ID
          * @param signature the pre-validated partial signature
+         * @param optimisticResult if not null, an optimistic aggregation result for a particular set of signers
          */
-        public void incorporateValid(@NonNull final Bytes crs, final long nodeId, @NonNull final Bytes signature) {
+        public void incorporateValid(
+                @NonNull final Bytes crs,
+                final long nodeId,
+                @NonNull final Bytes signature,
+                @Nullable final Result optimisticResult) {
             requireNonNull(crs);
             requireNonNull(signature);
             if (completed.get()) {
@@ -216,18 +258,18 @@ public class HintsContext {
             }
             final var partyId = partyIds.get(nodeId);
             signatures.put(partyId, signature);
-            final var weight = currentRoster.rosterEntries().stream()
-                    .filter(e -> e.nodeId() == nodeId)
-                    .mapToLong(RosterEntry::weight)
-                    .findFirst()
-                    .orElse(0L);
-            final var totalWeight = weightOfSignatures.addAndGet(weight);
+            final long weight = nodeWeights.getOrDefault(nodeId, 0L);
+            final long totalWeight = weightOfSignatures.addAndGet(weight);
             if (totalWeight >= thresholdWeight && completed.compareAndSet(false, true)) {
-                CompletableFuture.runAsync(() -> {
-                    final var aggregatedSignature =
-                            library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures);
-                    future.complete(aggregatedSignature);
-                });
+                if (optimisticResult != null && optimisticResult.partyIds().equals(signatures.keySet())) {
+                    future.complete(optimisticResult.aggregatedSignature());
+                } else {
+                    CompletableFuture.runAsync(() -> {
+                        final var aggregatedSignature =
+                                library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures);
+                        future.complete(aggregatedSignature);
+                    });
+                }
             }
         }
     }

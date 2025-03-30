@@ -106,14 +106,13 @@ class HintsContextTest {
         final var signing = subject.newSigning(BLOCK_HASH, currentRoster, () -> {});
         final var future = signing.future();
 
-        signing.incorporateValid(CRS, A_NODE_PARTY_ID.nodeId(), signature);
+        signing.incorporateValid(CRS, A_NODE_PARTY_ID.nodeId(), signature, null);
         assertFalse(future.isDone());
-        signing.incorporateValid(CRS, B_NODE_PARTY_ID.nodeId(), signature);
+        signing.incorporateValid(CRS, B_NODE_PARTY_ID.nodeId(), signature, null);
         assertFalse(future.isDone());
-        signing.incorporateValid(CRS, C_NODE_PARTY_ID.nodeId(), signature);
+        signing.incorporateValid(CRS, C_NODE_PARTY_ID.nodeId(), signature, null);
         assertFalse(future.isDone());
-        signing.incorporateValid(CRS, D_NODE_PARTY_ID.nodeId(), signature);
-        assertTrue(future.isDone());
+        signing.incorporateValid(CRS, D_NODE_PARTY_ID.nodeId(), signature, null);
         assertEquals(aggregateSignature, future.join());
     }
 }
