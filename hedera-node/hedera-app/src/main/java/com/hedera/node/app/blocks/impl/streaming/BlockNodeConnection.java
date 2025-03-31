@@ -5,8 +5,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.PublishStreamResponse.BlockAcknowledgement;
-import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.stub.StreamObserver;
@@ -210,7 +208,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 if (!isActive.get()) {
                     return;
                 }
-                PublishStreamRequest request = requests.get(currentRequestIndex.get());
+                final PublishStreamRequest request = requests.get(currentRequestIndex.get());
                 logger.debug(
                         "[] Sending request for block {} request index {} to node {}:{}, items: {}",
                         currentBlockNumber.get(),
@@ -254,7 +252,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
-    private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
+    private void handleAcknowledgement(@NonNull PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
             var blockAck = acknowledgement.blockAck();
             var blockNumber = blockAck.blockNumber();
@@ -276,7 +274,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
-    private void handleEndOfStream(EndOfStream endOfStream) {
+    private void handleEndOfStream(@NonNull PublishStreamResponse.EndOfStream endOfStream) {
         var blockNumber = endOfStream.blockNumber();
         var responseCode = endOfStream.status();
 
@@ -498,7 +496,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     @Override
-    public void onNext(PublishStreamResponse response) {
+    public void onNext(@NonNull PublishStreamResponse response) {
         if (response.hasAcknowledgement()) {
             handleAcknowledgement(response.acknowledgement());
         } else if (response.hasEndStream()) {
