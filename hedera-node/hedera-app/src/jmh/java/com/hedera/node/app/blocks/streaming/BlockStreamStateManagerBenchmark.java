@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.streaming;
 
-import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.platform.event.EventTransaction;
-import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager;
 import com.hedera.node.app.blocks.impl.streaming.BlockState;
+import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +28,7 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 /**
- * JMH Benchmark for measuring the performance of the {@link BlockNodeConnectionManager#createPublishStreamRequests} method.
+ * JMH Benchmark for measuring the performance of the {@link BlockStreamStateManager#addItem} method.
  */
 @BenchmarkMode({Mode.AverageTime})
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -37,9 +36,8 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 @Fork(value = 1)
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 1)
-public class BlockNodeConnectionManagerBenchmark {
+public class BlockStreamStateManagerBenchmark {
 
-    private static final int BATCH_SIZE = 256;
     private BlockState block;
 
     @Param({"10000"})
@@ -53,8 +51,8 @@ public class BlockNodeConnectionManagerBenchmark {
 
     @Benchmark
     public void benchmarkCreatePublishStreamRequests(Blackhole blackhole) {
-        List<PublishStreamRequest> requests = BlockNodeConnectionManager.createPublishStreamRequests(block, BATCH_SIZE);
-        blackhole.consume(requests);
+        BlockStreamStateManager.createRequestFromCurrentItems(block);
+        blackhole.consume(block.requests());
     }
 
     /**
@@ -94,7 +92,7 @@ public class BlockNodeConnectionManagerBenchmark {
      */
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
-                .include(BlockNodeConnectionManagerBenchmark.class.getSimpleName())
+                .include(BlockStreamStateManagerBenchmark.class.getSimpleName())
                 .build();
         new Runner(opt).run();
     }
