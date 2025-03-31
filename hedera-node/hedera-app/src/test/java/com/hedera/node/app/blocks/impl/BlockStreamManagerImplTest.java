@@ -44,6 +44,7 @@ import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
+import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.config.ConfigProvider;
@@ -119,6 +120,9 @@ class BlockStreamManagerImplTest {
     private BoundaryStateChangeListener boundaryStateChangeListener;
 
     @Mock
+    private BlockStreamManager.Lifecycle lifecycle;
+
+    @Mock
     private BlockItemWriter aWriter;
 
     @Mock
@@ -129,9 +133,6 @@ class BlockStreamManagerImplTest {
 
     @Mock
     private CompletableFuture<Bytes> mockSigningFuture;
-
-    @Mock
-    private ConsensusEvent consensusEvent;
 
     private WritableStates writableStates;
 
@@ -215,7 +216,8 @@ class BlockStreamManagerImplTest {
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
-                new AtomicBoolean(true));
+                new AtomicBoolean(true),
+                lifecycle);
         assertSame(Instant.EPOCH, subject.lastIntervalProcessTime());
         subject.setLastIntervalProcessTime(CONSENSUS_NOW);
         assertEquals(CONSENSUS_NOW, subject.lastIntervalProcessTime());
@@ -237,7 +239,8 @@ class BlockStreamManagerImplTest {
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
-                new AtomicBoolean(true));
+                new AtomicBoolean(true),
+                lifecycle);
         assertThrows(IllegalStateException.class, () -> subject.startRound(round, state));
     }
 
@@ -813,7 +816,8 @@ class BlockStreamManagerImplTest {
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
-                new AtomicBoolean(true));
+                new AtomicBoolean(true),
+                lifecycle);
         given(state.getReadableStates(BlockStreamService.NAME)).willReturn(readableStates);
         given(state.getReadableStates(PlatformStateService.NAME)).willReturn(readableStates);
         infoRef.set(blockStreamInfo);
