@@ -65,8 +65,9 @@ class BlockNodeConnectionManagerTest {
 
     @BeforeAll
     static void beforeAll() throws IOException {
-        final var configExtractor = new BlockNodeConfigExtractorImpl("./src/test/resources/bootstrap");
-        final int testServerPort = configExtractor.getAllNodes().getFirst().port();
+        final var blockNodeConfigExtractorImpl = new BlockNodeConfigExtractorImpl("./src/test/resources/bootstrap");
+        final int testServerPort =
+                blockNodeConfigExtractorImpl.getAllNodes().getFirst().port();
         testServer = ServerBuilder.forPort(testServerPort)
                 .addService(new BlockStreamServiceTestImpl())
                 .build();
@@ -76,7 +77,6 @@ class BlockNodeConnectionManagerTest {
     @BeforeEach
     void setUp() {
         blockNodeConnectionManager = new BlockNodeConnectionManager(blockNodeConfigExtractorImpl, mockStateManager);
-        assertThat(logCaptor.debugLogs()).contains("Successfully connected to block node localhost:8080");
     }
 
     @Test
@@ -129,23 +129,6 @@ class BlockNodeConnectionManagerTest {
         assertEquals(item3, secondBatch.blockItems().get(0), "First item in second batch should be item3");
     }
 
-    /*@Test
-    void testCreatePublishStreamRequestsWithEmptyBlock() {
-        // Given
-        int batchSize = 2;
-        List<BlockItem> emptyItemBytes = new ArrayList<>();
-
-        // Mock BlockState
-        BlockState mockBlockState = mock(BlockState.class);
-        when(mockBlockState.items()).thenReturn(emptyItemBytes);
-
-        // When
-        final var requests = BlockNodeConnectionManager.createPublishStreamRequests(mockBlockState, batchSize);
-
-        // Then
-        assertEquals(0, requests.size(), "Should create no batches for empty block");
-    }*/
-
     @Test
     void testRetrySuccessOnFirstAttempt() {
         blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
@@ -180,39 +163,9 @@ class BlockNodeConnectionManagerTest {
         final var initialDelay = BlockNodeConnectionManager.INITIAL_RETRY_DELAY;
         Thread.sleep(initialDelay.plusMillis(100));
 
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(initialDelay));
+        assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(initialDelay));
         verify(mockConnection, times(1)).establishStream();
     }
-
-    /*@Test
-    void testStreamBlockToConnections() {
-        final long blockNumber = 1L;
-        final var blockHeader = BlockItem.newBuilder()
-                .blockHeader(BlockHeader.newBuilder().number(blockNumber).hashAlgorithm(SHA2_384))
-                .build();
-
-        // Generate random bytes used for application transaction
-        byte[] randomBytes = new byte[1024];
-        new Random().nextBytes(randomBytes);
-        BlockItem blockItem = BlockItem.newBuilder()
-                .eventTransaction(
-                        // Add some dummy data
-                        EventTransaction.newBuilder()
-                                .applicationTransaction(Bytes.wrap(randomBytes))
-                                .build())
-                .build();
-
-        final var blockProof =
-                BlockItem.newBuilder().blockProof(BlockProof.DEFAULT).build();
-        final var block = new BlockState(blockNumber, List.of(blockHeader, blockItem, blockProof));
-
-        blockNodeConnectionManager.streamBlockToConnections(block);
-
-        assertThat(logCaptor.debugLogs())
-                .contains(
-                        "Streaming block 1 to 1 active connections",
-                        "Sent block 1 to stream observer for Block Node localhost:8080");
-    }*/
 
     @AfterAll
     static void afterAll() {

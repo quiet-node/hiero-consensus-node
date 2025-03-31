@@ -66,17 +66,17 @@ public class BlockStreamStateManager {
      * Adds a new item to the current block.
      *
      * @param blockNumber the block number
-     * @param bytes the item bytes to add
+     * @param blockItem the block item to add
      * @throws IllegalStateException if no block is currently open
      */
-    public void addItem(final long blockNumber, @NonNull BlockItem bytes) {
-        requireNonNull(bytes, "bytes must not be null");
+    public void addItem(final long blockNumber, @NonNull BlockItem blockItem) {
+        requireNonNull(blockItem, "blockItem must not be null");
         BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        blockState.items().add(bytes);
+        blockState.items().add(blockItem);
 
         // If we have enough items, create a new request
         if (blockState.items().size() >= blockItemBatchSize) {
@@ -102,7 +102,7 @@ public class BlockStreamStateManager {
                 blockState.blockNumber(),
                 blockState.requests().size());
 
-        // Clear the item bytes list
+        // Clear the items list
         blockState.items().clear();
 
         // Notify the connection manager

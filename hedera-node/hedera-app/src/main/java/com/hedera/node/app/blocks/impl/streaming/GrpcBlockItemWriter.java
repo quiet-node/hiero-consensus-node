@@ -46,14 +46,6 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
         throw new UnsupportedOperationException("writeItem is not supported in this implementation");
     }
 
-    /*@Override
-    public void writePbjItem(@NonNull BlockItem item) {
-        if (currentBlock == null) {
-            throw new IllegalStateException("Received block item before opening block");
-        }
-        currentBlock.items().add(item);
-    }*/
-
     @Override
     public void closeBlock() {
         blockStreamStateManager.closeBlock(blockNumber);
