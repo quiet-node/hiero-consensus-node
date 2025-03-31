@@ -22,7 +22,7 @@ public interface PcesFileWriter {
      *
      * @param event the event to write
      */
-    void writeEvent(@NonNull final GossipEvent event) throws IOException;
+    long writeEvent(@NonNull final GossipEvent event) throws IOException;
 
     /**
      * Flush the file.

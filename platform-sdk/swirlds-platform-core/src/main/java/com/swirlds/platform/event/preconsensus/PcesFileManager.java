@@ -9,6 +9,7 @@ import static org.hiero.consensus.model.event.AncientMode.GENERATION_THRESHOLD;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.units.UnitConstants;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.eventhandling.EventConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -45,12 +46,14 @@ public class PcesFileManager {
      */
     private final Time time;
 
-    private final PcesMetrics metrics;
+    private final PcesMetrics pcesMetrics;
 
     /**
      * The root directory where event files are stored.
      */
     private final Path databaseDirectory;
+
+    private final Metrics metrics;
 
     /**
      * The current origin round.
@@ -102,7 +105,8 @@ public class PcesFileManager {
 
         this.time = platformContext.getTime();
         this.files = Objects.requireNonNull(files);
-        this.metrics = new PcesMetrics(platformContext.getMetrics());
+        this.metrics = platformContext.getMetrics();
+        this.pcesMetrics = new PcesMetrics(platformContext.getMetrics());
         this.minimumRetentionPeriod = preconsensusEventStreamConfig.minimumRetentionPeriod();
         this.databaseDirectory = getDatabaseDirectory(platformContext, selfId);
 
@@ -125,16 +129,18 @@ public class PcesFileManager {
         totalFileByteCount = files.getTotalFileByteCount();
 
         if (files.getFileCount() > 0) {
-            metrics.getPreconsensusEventFileOldestIdentifier()
+            pcesMetrics
+                    .getPreconsensusEventFileOldestIdentifier()
                     .set(files.getFirstFile().getLowerBound());
-            metrics.getPreconsensusEventFileYoungestIdentifier()
+            pcesMetrics
+                    .getPreconsensusEventFileYoungestIdentifier()
                     .set(files.getLastFile().getUpperBound());
             final Duration age = Duration.between(files.getFirstFile().getTimestamp(), time.now());
-            metrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
+            pcesMetrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
         } else {
-            metrics.getPreconsensusEventFileOldestIdentifier().set(NO_LOWER_BOUND);
-            metrics.getPreconsensusEventFileYoungestIdentifier().set(NO_LOWER_BOUND);
-            metrics.getPreconsensusEventFileOldestSeconds().set(0);
+            pcesMetrics.getPreconsensusEventFileOldestIdentifier().set(NO_LOWER_BOUND);
+            pcesMetrics.getPreconsensusEventFileYoungestIdentifier().set(NO_LOWER_BOUND);
+            pcesMetrics.getPreconsensusEventFileOldestSeconds().set(0);
         }
         updateFileSizeMetrics();
     }
@@ -226,7 +232,7 @@ public class PcesFileManager {
         }
 
         files.addFile(descriptor);
-        metrics.getPreconsensusEventFileYoungestIdentifier().set(descriptor.getUpperBound());
+        pcesMetrics.getPreconsensusEventFileYoungestIdentifier().set(descriptor.getUpperBound());
 
         return descriptor;
     }
@@ -250,9 +256,9 @@ public class PcesFileManager {
 
         // Update metrics
         totalFileByteCount += file.fileSize();
-        metrics.getPreconsensusEventFileRate().cycle();
-        metrics.getPreconsensusEventAverageFileSpan().update(file.getSpan());
-        metrics.getPreconsensusEventAverageUnUtilizedFileSpan().update(file.getUnUtilizedSpan());
+        pcesMetrics.getPreconsensusEventFileRate().cycle();
+        pcesMetrics.getPreconsensusEventAverageFileSpan().update(file.getSpan());
+        pcesMetrics.getPreconsensusEventAverageUnUtilizedFileSpan().update(file.getUnUtilizedSpan());
         updateFileSizeMetrics();
     }
 
@@ -279,10 +285,11 @@ public class PcesFileManager {
         }
 
         if (files.getFileCount() > 0) {
-            metrics.getPreconsensusEventFileOldestIdentifier()
+            pcesMetrics
+                    .getPreconsensusEventFileOldestIdentifier()
                     .set(files.getFirstFile().getLowerBound());
             final Duration age = Duration.between(files.getFirstFile().getTimestamp(), time.now());
-            metrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
+            pcesMetrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
         }
 
         updateFileSizeMetrics();
@@ -292,11 +299,12 @@ public class PcesFileManager {
      * Update metrics with the latest data on file size.
      */
     private void updateFileSizeMetrics() {
-        metrics.getPreconsensusEventFileCount().set(files.getFileCount());
-        metrics.getPreconsensusEventFileTotalSizeGB().set(totalFileByteCount * UnitConstants.BYTES_TO_GIBIBYTES);
+        pcesMetrics.getPreconsensusEventFileCount().set(files.getFileCount());
+        pcesMetrics.getPreconsensusEventFileTotalSizeGB().set(totalFileByteCount * UnitConstants.BYTES_TO_GIBIBYTES);
 
         if (files.getFileCount() > 0) {
-            metrics.getPreconsensusEventFileAverageSizeMB()
+            pcesMetrics
+                    .getPreconsensusEventFileAverageSizeMB()
                     .set(((double) totalFileByteCount) / files.getFileCount() * UnitConstants.BYTES_TO_MEBIBYTES);
         }
     }

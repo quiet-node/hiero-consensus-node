@@ -51,10 +51,12 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     }
 
     @Override
-    public void writeEvent(@NonNull final GossipEvent event) throws IOException {
-        buffer.putInt(GossipEvent.PROTOBUF.measureRecord(event));
+    public long writeEvent(@NonNull final GossipEvent event) throws IOException {
+        final int value = GossipEvent.PROTOBUF.measureRecord(event);
+        buffer.putInt(value);
         GossipEvent.PROTOBUF.write(event, writableSequentialData);
         flipWriteClear();
+        return value;
     }
 
     /**
