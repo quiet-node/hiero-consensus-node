@@ -66,7 +66,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
-        this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");;
+        this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.connectionId = generateConnectionId(nodeConfig);
     }
 
