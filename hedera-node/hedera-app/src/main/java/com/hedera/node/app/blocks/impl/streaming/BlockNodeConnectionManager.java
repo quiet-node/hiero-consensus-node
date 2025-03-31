@@ -10,7 +10,6 @@ import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import io.helidon.common.socket.SocketOptions;
 import io.helidon.common.tls.Tls;
 import io.helidon.webclient.grpc.GrpcClient;
 import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
@@ -88,14 +87,11 @@ public class BlockNodeConnectionManager {
         final GrpcClient client = GrpcClient.builder()
                 .tls(Tls.builder().enabled(false).build())
                 .baseUri("http://" + node.address() + ":" + node.port())
-                .socketOptions(SocketOptions.builder().socketReuseAddress(true).build())
                 .protocolConfig(GrpcClientProtocolConfig.builder()
                         .abortPollTimeExpired(false)
                         .pollWaitTime(Duration.ofSeconds(30))
                         .build())
                 .keepAlive(true)
-                .connectionCacheSize(0)
-                .shareConnectionCache(true)
                 .build();
 
         return client.serviceClient(GrpcServiceDescriptor.builder()
