@@ -3,14 +3,13 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
-import com.hedera.hapi.block.protoc.PublishStreamRequest;
-import com.hedera.hapi.block.protoc.PublishStreamResponse;
+import com.hedera.hapi.block.PublishStreamRequest;
+import com.hedera.hapi.block.PublishStreamResponse;
+import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
+import io.helidon.webclient.grpc.GrpcServiceClient;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +28,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final ScheduledExecutorService scheduler;
 
     private final BlockNodeConfig node;
+    private final GrpcServiceClient grpcServiceClient;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
 
@@ -48,7 +48,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final Object newRequestAvailable = new Object();
 
     // Volatile connection state
-    private volatile ManagedChannel channel;
     private volatile StreamObserver<PublishStreamRequest> requestObserver;
     private volatile Thread requestWorker;
 
@@ -58,46 +57,30 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param nodeConfig the configuration for the block node
      * @param blockNodeConnectionManager the connection manager for block node connections
      * @param blockStreamStateManager the block stream state manager for block node connections
+     * @param grpcServiceClient the gRPC client to establish the bidirectional streaming to block node connections
      */
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager,
+            @NonNull final GrpcServiceClient grpcServiceClient,
             @NonNull final ScheduledExecutorService scheduler) {
         this.node = requireNonNull(nodeConfig, "nodeConfig must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
+        this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.scheduler = requireNonNull(scheduler, "scheduler must not be null");
-        this.channel = createNewChannel();
     }
 
-    private ManagedChannel createNewChannel() {
-        return ManagedChannelBuilder.forAddress(node.address(), node.port())
-                .usePlaintext() // 🔥🔥 For development only! change to use TLS in production 🔥🔥
-                .build();
-    }
-
+    /**
+     * Establish the bidirectional streaming to block nodes.
+     */
     public Void establishStream() {
-        logger.debug("Establishing stream to block node {}:{}", node.address(), node.port());
         synchronized (isActiveLock) {
             synchronized (channelLock) {
-                // Ensure any existing channel is properly shutdown
-                if (channel != null && !channel.isShutdown()) {
-                    try {
-                        channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        logger.warn("Interrupted while shutting down channel");
-                    }
-                }
-
-                // Create new channel and stub
-                channel = createNewChannel();
-                BlockStreamServiceGrpc.BlockStreamServiceStub stub = BlockStreamServiceGrpc.newStub(channel);
-
-                requestObserver = stub.publishBlockStream(this);
+                requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
                 isActive.set(true);
                 startRequestWorker();
             }
@@ -218,11 +201,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockState.requests().size());
     }
 
-    private boolean needToWaitForMoreRequests(BlockState blockState) {
+    private boolean needToWaitForMoreRequests(@NonNull BlockState blockState) {
         return currentRequestIndex.get() >= blockState.requests().size() && !blockState.isComplete();
     }
 
-    private void processAvailableRequests(BlockState blockState) {
+    private void processAvailableRequests(@NonNull BlockState blockState) {
         synchronized (isActiveLock) {
             List<PublishStreamRequest> requests = blockState.requests();
             while (currentRequestIndex.get() < requests.size()) {
@@ -236,7 +219,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         currentRequestIndex.get(),
                         node.address(),
                         node.port(),
-                        request.getBlockItems().getBlockItemsCount());
+                        request.blockItems().blockItems().size());
                 sendRequest(request);
                 currentRequestIndex.incrementAndGet();
             }
@@ -265,17 +248,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         }
                         requestObserver = null;
                     }
-
-                    if (channel != null) {
-                        try {
-                            channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            logger.warn("Interrupted while shutting down channel during stream failure");
-                        } finally {
-                            channel = null;
-                        }
-                    }
                 }
                 stopWorkerThread();
                 removeFromActiveConnections(node);
@@ -286,9 +258,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void handleAcknowledgement(PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
-            var blockAck = acknowledgement.getBlockAck();
-            var blockNumber = blockAck.getBlockNumber();
-            var blockAlreadyExists = blockAck.getBlockAlreadyExists();
+            var blockAck = acknowledgement.blockAck();
+            var blockNumber = blockAck.blockNumber();
+            var blockAlreadyExists = blockAck.blockAlreadyExists();
 
             logger.debug(
                     "Received acknowledgement for block {} from node {}:{}, blockAlreadyExists: {}",
@@ -302,9 +274,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
-    private void handleEndOfStream(PublishStreamResponse.EndOfStream endOfStream) {
-        var blockNumber = endOfStream.getBlockNumber();
-        var responseCode = endOfStream.getStatus();
+    private void handleEndOfStream(EndOfStream endOfStream) {
+        var blockNumber = endOfStream.blockNumber();
+        var responseCode = endOfStream.status();
 
         logger.debug(
                 "[{}] Received EndOfStream from block node {}:{} at block {} with PublishStreamResponseCode {}",
@@ -424,17 +396,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                             logger.warn("Error while completing request observer", e);
                         }
                         requestObserver = null;
-                    }
-
-                    if (channel != null) {
-                        try {
-                            channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            logger.warn("Interrupted while shutting down channel during close");
-                        } finally {
-                            channel = null;
-                        }
                     }
                 }
                 stopWorkerThread();
@@ -589,21 +550,21 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     @Override
     public void onNext(PublishStreamResponse response) {
         if (response.hasAcknowledgement()) {
-            handleAcknowledgement(response.getAcknowledgement());
+            handleAcknowledgement(response.acknowledgement());
         } else if (response.hasEndStream()) {
-            handleEndOfStream(response.getEndStream());
+            handleEndOfStream(response.endStream());
         } else if (response.hasSkipBlock()) {
             logger.debug(
                     "Received SkipBlock from Block Node {}:{}  Block #{}",
                     node.address(),
                     node.port(),
-                    response.getSkipBlock().getBlockNumber());
+                    response.skipBlock().blockNumber());
         } else if (response.hasResendBlock()) {
             logger.debug(
                     "Received ResendBlock from Block Node {}:{}  Block #{}",
                     node.address(),
                     node.port(),
-                    response.getResendBlock().getBlockNumber());
+                    response.resendBlock().blockNumber());
         }
     }
 

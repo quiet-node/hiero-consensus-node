@@ -40,13 +40,13 @@ class GrpcBlockItemWriterTest {
 
         // Create BlockProof as easiest way to build object from BlockStreams
         Bytes bytes = Bytes.wrap(new byte[] {1, 2, 3, 4, 5});
-        final var proof = new BlockProof.Builder().blockSignature(bytes).siblingHashes(new ArrayList<>());
-        final var blockProof = BlockItem.PROTOBUF.toBytes(
-                BlockItem.newBuilder().blockProof(proof).build());
+        final var proof = BlockItem.newBuilder()
+                .blockProof(BlockProof.newBuilder().blockSignature(bytes).siblingHashes(new ArrayList<>()))
+                .build();
 
-        grpcBlockItemWriter.writePbjItem(blockProof);
+        grpcBlockItemWriter.writePbjItem(proof);
 
-        verify(blockStreamStateManager).addItem(0L, blockProof);
+        verify(blockStreamStateManager).addItem(0L, proof);
     }
 
     @Test

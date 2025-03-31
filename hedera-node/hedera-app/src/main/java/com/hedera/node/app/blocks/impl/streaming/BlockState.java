@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
-import com.hedera.hapi.block.protoc.PublishStreamRequest;
-import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.hedera.hapi.block.PublishStreamRequest;
+import com.hedera.hapi.block.stream.BlockItem;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class BlockState {
     private final long blockNumber;
-    private final List<Bytes> itemBytes;
+    private final List<BlockItem> items;
     private final List<PublishStreamRequest> requests;
     private boolean isComplete;
 
@@ -21,21 +21,11 @@ public class BlockState {
      *
      * @param blockNumber the block number
      */
-    public BlockState(long blockNumber) {
+    public BlockState(long blockNumber, @NonNull List<BlockItem> items) {
         this.blockNumber = blockNumber;
-        this.itemBytes = new ArrayList<>();
+        this.items = items;
         this.requests = new ArrayList<>();
         this.isComplete = false;
-    }
-
-    /**
-     * Create a new block state for a block number
-     *
-     * @param blockNumber the block number
-     * @return the block state for the specified block number
-     */
-    public static @NonNull BlockState from(long blockNumber) {
-        return new BlockState(blockNumber);
     }
 
     /**
@@ -52,8 +42,8 @@ public class BlockState {
      *
      * @return the list of item bytes
      */
-    public List<Bytes> itemBytes() {
-        return itemBytes;
+    public List<BlockItem> items() {
+        return items;
     }
 
     /**

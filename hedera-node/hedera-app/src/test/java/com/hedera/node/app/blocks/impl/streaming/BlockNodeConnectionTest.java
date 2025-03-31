@@ -13,16 +13,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.hedera.hapi.block.protoc.BlockItemSet;
-import com.hedera.hapi.block.protoc.PublishStreamRequest;
-import com.hedera.hapi.block.protoc.PublishStreamResponse;
-import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
+import com.hedera.hapi.block.BlockItemSet;
+import com.hedera.hapi.block.PublishStreamRequest;
+import com.hedera.hapi.block.PublishStreamResponse;
+import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
+import com.hedera.hapi.block.PublishStreamResponse.BlockAcknowledgement;
+import com.hedera.hapi.block.PublishStreamResponseCode;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import io.grpc.stub.StreamObserver;
+import io.helidon.webclient.grpc.GrpcServiceClient;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -60,6 +63,9 @@ class BlockNodeConnectionTest {
     private StreamObserver<PublishStreamRequest> requestObserver;
 
     @Mock
+    private GrpcServiceClient grpcServiceClient;
+
+    @Mock
     private BlockState blockState;
 
     @Mock
@@ -76,7 +82,8 @@ class BlockNodeConnectionTest {
         when(nodeConfig.address()).thenReturn(TEST_ADDRESS);
         when(nodeConfig.port()).thenReturn(TEST_PORT);
 
-        connection = new BlockNodeConnection(nodeConfig, connectionManager, blockStreamStateManager, scheduler);
+        connection = new BlockNodeConnection(
+                nodeConfig, connectionManager, blockStreamStateManager, grpcServiceClient, scheduler);
 
         // Set requestObserver via reflection to avoid establishing an actual gRPC connection
         Field requestObserverField = BlockNodeConnection.class.getDeclaredField("requestObserver");
@@ -324,8 +331,8 @@ class BlockNodeConnectionTest {
         when(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).thenReturn(blockState);
         when(blockState.requests()).thenReturn(requests);
         when(blockState.isComplete()).thenReturn(true);
-        when(request1.getBlockItems()).thenReturn(blockItems);
-        when(request2.getBlockItems()).thenReturn(blockItems);
+        when(request1.blockItems()).thenReturn(blockItems);
+        when(request2.blockItems()).thenReturn(blockItems);
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicBoolean processedRequests = new AtomicBoolean(false);
@@ -396,7 +403,7 @@ class BlockNodeConnectionTest {
         when(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).thenReturn(blockState);
         when(blockState.requests()).thenReturn(requests);
         when(blockState.isComplete()).thenReturn(true);
-        when(request1.getBlockItems()).thenReturn(blockItems);
+        when(request1.blockItems()).thenReturn(blockItems);
 
         // For the next block, return null to stop the loop
         when(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER + 1)).thenReturn(null);
@@ -656,14 +663,14 @@ class BlockNodeConnectionTest {
     @Test
     void testOnNext_WithAcknowledgement() {
         // Arrange
-        final PublishStreamResponse.Acknowledgement acknowledgement = PublishStreamResponse.Acknowledgement.newBuilder()
-                .setBlockAck(PublishStreamResponse.BlockAcknowledgement.newBuilder()
-                        .setBlockNumber(TEST_BLOCK_NUMBER)
-                        .setBlockAlreadyExists(false)
+        final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
+                .blockAck(BlockAcknowledgement.newBuilder()
+                        .blockNumber(TEST_BLOCK_NUMBER)
+                        .blockAlreadyExists(false)
                         .build())
                 .build();
         final PublishStreamResponse response = PublishStreamResponse.newBuilder()
-                .setAcknowledgement(acknowledgement)
+                .acknowledgement(acknowledgement)
                 .build();
 
         // Act
@@ -687,11 +694,11 @@ class BlockNodeConnectionTest {
         // Arrange
         final BlockNodeConnection connectionSpy = spy(connection);
         final PublishStreamResponse.EndOfStream endOfStream = PublishStreamResponse.EndOfStream.newBuilder()
-                .setBlockNumber(TEST_BLOCK_NUMBER)
-                .setStatus(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
+                .blockNumber(TEST_BLOCK_NUMBER)
+                .status(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
                 .build();
         final PublishStreamResponse response =
-                PublishStreamResponse.newBuilder().setEndStream(endOfStream).build();
+                PublishStreamResponse.newBuilder().endStream(endOfStream).build();
 
         // Act
         connectionSpy.onNext(response);
@@ -716,11 +723,11 @@ class BlockNodeConnectionTest {
         // Arrange
         final BlockNodeConnection connectionSpy = spy(connection);
         final PublishStreamResponse.EndOfStream endOfStream = PublishStreamResponse.EndOfStream.newBuilder()
-                .setBlockNumber(TEST_BLOCK_NUMBER)
-                .setStatus(PublishStreamResponseCode.STREAM_ITEMS_BEHIND)
+                .blockNumber(TEST_BLOCK_NUMBER)
+                .status(PublishStreamResponseCode.STREAM_ITEMS_BEHIND)
                 .build();
         final PublishStreamResponse response =
-                PublishStreamResponse.newBuilder().setEndStream(endOfStream).build();
+                PublishStreamResponse.newBuilder().endStream(endOfStream).build();
 
         // Act
         connectionSpy.onNext(response);
