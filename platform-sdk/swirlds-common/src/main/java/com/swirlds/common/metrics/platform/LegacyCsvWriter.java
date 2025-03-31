@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.model.node.NodeId;
@@ -242,6 +241,12 @@ public class LegacyCsvWriter {
         }
         if (changedAfterInit && inconsistent.compareAndSet(false, changedAfterInit)) {
             reportInconsistentState(snapshots);
+            try {
+                Files.delete(csvFilePath);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            init(snapshots);
         }
 
         final ContentBuilder builder = new ContentBuilder();
@@ -270,18 +275,6 @@ public class LegacyCsvWriter {
 
     private void reportInconsistentState(final Collection<Snapshot> snapshots) {
         logger.warn("Some metrics were not exported due to changes after LegacyCsvWriter initialization.");
-        if (logger.isTraceEnabled()) {
-            // Collect metrics that will not be exported
-            final String willNotBeExported = snapshots.stream()
-                    .map(Snapshot::metric)
-                    .map(m -> Pair.of(m.getCategory(), m.getName()))
-                    .filter(p -> !indexLookup.containsKey(p))
-                    .map(p -> "[" + p.key() + "-" + p.right() + "]")
-                    .collect(Collectors.joining(","));
-            logger.trace(
-                    "The following metrics will not be exported because they were not part of the initialization:{}",
-                    willNotBeExported);
-        }
     }
 
     private void addSnapshotData(final ContentBuilder builder, final Snapshot snapshot) {
