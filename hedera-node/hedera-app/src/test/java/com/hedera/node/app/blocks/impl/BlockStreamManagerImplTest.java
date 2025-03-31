@@ -264,10 +264,10 @@ class BlockStreamManagerImplTest {
         subject.startRound(round, state);
         assertTrue(subject.hasLedgerId());
         assertSame(POST_UPGRADE_WORK, subject.pendingWork());
-        subject.confirmPendingWorkFinished();
+        subject.confirmPostUpgradeWorkFinished();
         assertSame(NONE, subject.pendingWork());
         // We don't fail hard on duplicate calls to confirm post-upgrade work
-        assertDoesNotThrow(() -> subject.confirmPendingWorkFinished());
+        assertDoesNotThrow(() -> subject.confirmPostUpgradeWorkFinished());
 
         // Assert the internal state of the subject has changed as expected and the writer has been opened
         verify(boundaryStateChangeListener).setBoundaryTimestamp(CONSENSUS_NOW);
@@ -395,10 +395,10 @@ class BlockStreamManagerImplTest {
         subject.startRound(round, state);
         assertTrue(subject.hasLedgerId());
         assertSame(POST_UPGRADE_WORK, subject.pendingWork());
-        subject.confirmPendingWorkFinished();
+        subject.confirmPostUpgradeWorkFinished();
         assertSame(NONE, subject.pendingWork());
         // We don't fail hard on duplicate calls to confirm post-upgrade work
-        assertDoesNotThrow(() -> subject.confirmPendingWorkFinished());
+        assertDoesNotThrow(() -> subject.confirmPostUpgradeWorkFinished());
 
         // Assert the internal state of the subject has changed as expected and the writer has been opened
         verify(boundaryStateChangeListener).setBoundaryTimestamp(CONSENSUS_NOW);

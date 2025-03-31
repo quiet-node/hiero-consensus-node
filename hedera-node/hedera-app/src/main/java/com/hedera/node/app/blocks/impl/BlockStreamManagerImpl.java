@@ -273,7 +273,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     }
 
     @Override
-    public void confirmPendingWorkFinished() {
+    public void confirmPostUpgradeWorkFinished() {
         if (pendingWork == NONE) {
             // Should never happen but throwing IllegalStateException might make the situation even worse, so just log
             log.error("HandleWorkflow confirmed finished work but none was pending");

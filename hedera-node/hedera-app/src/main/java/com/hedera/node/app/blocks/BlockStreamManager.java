@@ -71,7 +71,7 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
     /**
      * Confirms that the post-upgrade work has been completed.
      */
-    void confirmPendingWorkFinished();
+    void confirmPostUpgradeWorkFinished();
 
     /**
      * Returns whether post-upgrade work is pending.

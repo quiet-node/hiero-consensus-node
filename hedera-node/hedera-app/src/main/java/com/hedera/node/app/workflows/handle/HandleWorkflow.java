@@ -258,9 +258,6 @@ public class HandleWorkflow {
             logger.info(
                     "Doing genesis setup before {} {} {}", genesisEventTime, systemEntitiesCreatedFlag, entitycounts);
             systemTransactions.doGenesisSetup(genesisEventTime, state);
-            if (streamMode != RECORDS) {
-                blockStreamManager.confirmPendingWorkFinished();
-            }
             logger.info(SYSTEM_ENTITIES_CREATED_MSG);
             requireNonNull(systemEntitiesCreatedFlag).set(true);
         }
@@ -653,7 +650,7 @@ public class HandleWorkflow {
                     logger.info("Doing post-upgrade setup @ {}", parentTxn.consensusNow());
                     systemTransactions.doPostUpgradeSetup(dispatch);
                     if (streamMode != RECORDS) {
-                        blockStreamManager.confirmPendingWorkFinished();
+                        blockStreamManager.confirmPostUpgradeWorkFinished();
                     }
                 }
                 hollowAccountCompletions.completeHollowAccounts(parentTxn, dispatch);
