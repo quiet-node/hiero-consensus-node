@@ -39,7 +39,6 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
             .withDescription("number of events have been written per second")
             .withFormat(FORMAT_9_6);
 
-
     private static final Counter.Config event_bytes_written_total =
             new Config("platform", "DefaultInlinePcesWriter_event_bytes_written_total");
     // Write Latency
@@ -108,7 +107,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
 
                 long sync_time = System.nanoTime();
                 commonPcesWriter.getCurrentMutableFile().sync();
-                metrics.getOrCreate(events_sync_time).set(Duration.ofNanos(sync_time - System.nanoTime()));
+                metrics.getOrCreate(events_sync_time).set(Duration.ofNanos(System.nanoTime() - sync_time));
             }
             long endTime = System.nanoTime();
             metrics.getOrCreate(events_written_total).increment();
