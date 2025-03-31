@@ -211,7 +211,7 @@ public class BlockNodeSimulatorController {
 
     /**
      * Shutdown all simulated block nodes to simulate connection drops.
-     * The servers can be restarted using {@link #restartAllSimulators()}.
+     * The servers can be restarted using {@link #startAllSimulators()}.
      */
     public void shutdownAllSimulators() {
         shutdownSimulatorPorts.clear();
@@ -226,7 +226,7 @@ public class BlockNodeSimulatorController {
 
     /**
      * Shutdown a specific simulated block node to simulate a connection drop.
-     * The server can be restarted using {@link #restartSimulator(int)}.
+     * The server can be restarted using {@link #startSimulator(int)}.
      *
      * @param index the index of the simulated block node (0-based)
      */
@@ -243,29 +243,29 @@ public class BlockNodeSimulatorController {
     }
 
     /**
-     * Restart all previously shutdown simulated block nodes.
+     * Start all previously shutdown simulated block nodes.
      * This will recreate the servers on the same ports they were running on before shutdown.
      *
      * @throws IOException if a server fails to start
      */
-    public void restartAllSimulators() throws IOException {
+    public void startAllSimulators() throws IOException {
         for (Map.Entry<Integer, Integer> entry : shutdownSimulatorPorts.entrySet()) {
             int index = entry.getKey();
-            restartSimulator(index);
+            startSimulator(index);
             shutdownSimulatorPorts.remove(index);
         }
 
-        log.info("Restarted simulators");
+        log.info("Started simulators");
     }
 
     /**
-     * Restart a specific previously shutdown simulated block node.
+     * Start a specific previously shutdown simulated block node.
      * This will recreate the server on the same port it was running on before shutdown.
      *
      * @param index the index of the simulated block node (0-based)
      * @throws IOException if the server fails to start
      */
-    public void restartSimulator(int index) throws IOException {
+    public void startSimulator(int index) throws IOException {
         if (!shutdownSimulatorPorts.containsKey(index)) {
             log.error("Simulator {} was not previously shutdown or has already been restarted", index);
             return;

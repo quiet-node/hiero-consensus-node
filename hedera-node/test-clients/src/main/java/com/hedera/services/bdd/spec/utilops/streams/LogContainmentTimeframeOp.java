@@ -64,27 +64,31 @@ public class LogContainmentTimeframeOp extends UtilOp {
         }
 
         final Instant timeoutDeadline = Instant.now().plus(waitTimeout);
-        boolean foundAllPatterns = false;
+        List<String> missingPatterns = null;
 
-        while (Instant.now().isBefore(timeoutDeadline) && !foundAllPatterns) {
-            try {
-                checkLogsForPatterns(spec, startTime);
-                foundAllPatterns = true;
-                break;
-            } catch (AssertionError e) {
-                // If we haven't found all patterns yet and haven't timed out, sleep and retry
-                if (Instant.now().isBefore(timeoutDeadline)) {
-                    doIfNotInterrupted(() -> MILLISECONDS.sleep(1000));
-                } else {
-                    throw e; // Re-throw the last assertion error if we've timed out
-                }
+        while (Instant.now().isBefore(timeoutDeadline)) {
+            missingPatterns = checkLogsForPatterns(spec, startTime);
+            if (missingPatterns.isEmpty()) {
+                return false; // Success - all patterns found
+            }
+
+            // Not all patterns found yet, wait and retry if there's time left
+            if (Instant.now().isBefore(timeoutDeadline)) {
+                doIfNotInterrupted(() -> MILLISECONDS.sleep(1000));
             }
         }
+
+        // If we get here, we timed out without finding all patterns
+        Assertions.fail(String.format(
+                "Did not find all expected log patterns within timeout period of %s. Missing patterns: %s",
+                waitTimeout, String.join(", ", missingPatterns)));
 
         return false;
     }
 
-    private void checkLogsForPatterns(@NonNull final HapiSpec spec, @NonNull final Instant startTime) {
+    private List<String> checkLogsForPatterns(@NonNull final HapiSpec spec, @NonNull final Instant startTime) {
+        List<String> missingPatterns = new ArrayList<>();
+
         spec.targetNetworkOrThrow().nodesFor(selector).forEach(node -> {
             final var logContents = rethrowIO(() -> Files.readString(node.getExternalPath(path)));
             final var logLines = logContents.split("\n");
@@ -92,17 +96,12 @@ public class LogContainmentTimeframeOp extends UtilOp {
             // Filter logs to only those within the timeframe
             List<String> relevantLogs = new ArrayList<>();
             for (String line : logLines) {
-                try {
-                    String timestamp = line.substring(0, 23); // "2025-03-17 21:36:20.275"
-                    LocalDateTime logTime = LocalDateTime.parse(timestamp, LOG_TIMESTAMP_FORMAT);
-                    Instant logInstant = logTime.atZone(ZoneId.systemDefault()).toInstant();
+                String timestamp = line.substring(0, 23); // "2025-03-17 21:36:20.275"
+                LocalDateTime logTime = LocalDateTime.parse(timestamp, LOG_TIMESTAMP_FORMAT);
+                Instant logInstant = logTime.atZone(ZoneId.systemDefault()).toInstant();
 
-                    if (logInstant.isAfter(startTime) && logInstant.isBefore(startTime.plus(timeframe))) {
-                        relevantLogs.add(line);
-                    }
-                } catch (Exception e) {
-                    // Skip malformed lines
-                    continue;
+                if (logInstant.isAfter(startTime) && logInstant.isBefore(startTime.plus(timeframe))) {
+                    relevantLogs.add(line);
                 }
             }
 
@@ -122,12 +121,12 @@ public class LogContainmentTimeframeOp extends UtilOp {
                         break;
                     }
                 }
-                if (!found) {
-                    Assertions.fail(String.format(
-                            "Log for node '%s' does not contain '%s' within timeframe %s to %s",
-                            node.getName(), pattern, startTime, startTime.plus(timeframe)));
+                if (!found && !missingPatterns.contains(pattern)) {
+                    missingPatterns.add(pattern);
                 }
             }
         });
+
+        return missingPatterns;
     }
 }

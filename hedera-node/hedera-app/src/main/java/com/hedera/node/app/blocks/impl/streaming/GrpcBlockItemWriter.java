@@ -14,30 +14,24 @@ import org.apache.logging.log4j.Logger;
  */
 public class GrpcBlockItemWriter implements BlockItemWriter {
     private static final Logger logger = LogManager.getLogger(GrpcBlockItemWriter.class);
-    private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
     private long blockNumber;
 
     /**
      * Construct a new GrpcBlockItemWriter.
      *
-     * @param blockNodeConnectionManager the block stream connection manager
+     * @param blockStreamStateManager the block stream state manager
      */
-    public GrpcBlockItemWriter(
-            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
-            @NonNull final BlockStreamStateManager blockStreamStateManager) {
-        requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
-        requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
-        this.blockStreamStateManager = blockStreamStateManager;
-        this.blockNodeConnectionManager =
-                requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
+    public GrpcBlockItemWriter(@NonNull final BlockStreamStateManager blockStreamStateManager) {
+        this.blockStreamStateManager =
+                requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
     }
 
     @Override
     public void openBlock(long blockNumber) {
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
         this.blockNumber = blockNumber;
-        blockNodeConnectionManager.openBlock(blockNumber);
+        blockStreamStateManager.openBlock(blockNumber);
         logger.debug("Started new block in GrpcBlockItemWriter {}", blockNumber);
     }
 

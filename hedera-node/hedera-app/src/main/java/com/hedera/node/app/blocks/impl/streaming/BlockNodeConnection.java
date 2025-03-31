@@ -52,6 +52,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private volatile StreamObserver<PublishStreamRequest> requestObserver;
     private volatile Thread requestWorker;
 
+    /**
+     * Construct a new BlockNodeConnection.
+     *
+     * @param nodeConfig the configuration for the block node
+     * @param blockNodeConnectionManager the connection manager for block node connections
+     * @param blockStreamStateManager the block stream state manager for block node connections
+     */
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,

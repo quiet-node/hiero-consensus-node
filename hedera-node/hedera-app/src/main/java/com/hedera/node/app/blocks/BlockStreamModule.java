@@ -64,15 +64,14 @@ public class BlockStreamModule {
             @NonNull final ConfigProvider configProvider,
             @NonNull final NodeInfo selfNodeInfo,
             @NonNull final FileSystem fileSystem,
-            @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
         final var config = configProvider.getConfiguration();
         final var blockStreamConfig = config.getConfigData(BlockStreamConfig.class);
         return switch (blockStreamConfig.writerMode()) {
             case FILE -> () -> new FileBlockItemWriter(configProvider, selfNodeInfo, fileSystem);
-            case GRPC -> () -> new GrpcBlockItemWriter(blockNodeConnectionManager, blockStreamStateManager);
-            case FILE_AND_GRPC -> () -> new FileAndGrpcBlockItemWriter(
-                    configProvider, selfNodeInfo, fileSystem, blockNodeConnectionManager, blockStreamStateManager);
+            case GRPC -> () -> new GrpcBlockItemWriter(blockStreamStateManager);
+            case FILE_AND_GRPC -> () ->
+                    new FileAndGrpcBlockItemWriter(configProvider, selfNodeInfo, fileSystem, blockStreamStateManager);
         };
     }
 }

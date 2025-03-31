@@ -7,7 +7,6 @@ import com.hedera.hapi.block.protoc.BlockItemSet;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +35,7 @@ public class BlockStreamStateManager {
      *
      * @param blockNodeConfigExtractor the block node configuration extractor
      */
-    public BlockStreamStateManager(@Nullable final BlockNodeConfigExtractor blockNodeConfigExtractor) {
+    public BlockStreamStateManager(@NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor) {
         this.blockItemBatchSize = blockNodeConfigExtractor.getBlockItemBatchSize();
     }
 
@@ -61,6 +60,8 @@ public class BlockStreamStateManager {
         // Create a new block state
         blockStates.put(blockNumber, BlockState.from(blockNumber));
         this.blockNumber = blockNumber;
+
+        blockNodeConnectionManager.openBlock(blockNumber);
     }
 
     /**
