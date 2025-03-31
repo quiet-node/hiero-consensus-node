@@ -3,21 +3,36 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.hedera.hapi.block.BlockItemSet;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.hapi.block.protoc.PublishStreamRequest;
+import com.hedera.hapi.block.protoc.PublishStreamResponse;
+import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.internal.network.BlockNodeConfig;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import io.grpc.stub.StreamObserver;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,16 +53,29 @@ class BlockNodeConnectionManagerTest {
     private Supplier<Void> mockSupplier;
 
     @Mock
-    BlockNodeConfigExtractorImpl blockNodeConfigExtractorImpl;
-
-    @Mock
     BlockNodeConnection mockConnection;
 
     @Mock
     BlockStreamStateManager mockStateManager;
 
+    @Mock
+    BlockNodeConfigExtractorImpl blockNodeConfigExtractorImpl;
+
+    private static Server testServer;
+
+    @BeforeAll
+    static void beforeAll() throws IOException {
+        final var blockNodeConfigExtractorImpl = new BlockNodeConfigExtractorImpl("./src/test/resources/bootstrap");
+        final int testServerPort =
+                blockNodeConfigExtractorImpl.getAllNodes().getFirst().port();
+        testServer = ServerBuilder.forPort(testServerPort)
+                .addService(new BlockStreamServiceTestImpl())
+                .build();
+        testServer.start();
+    }
+
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         blockNodeConnectionManager = new BlockNodeConnectionManager(blockNodeConfigExtractorImpl, mockStateManager);
     }
 
@@ -59,16 +87,66 @@ class BlockNodeConnectionManagerTest {
     }
 
     @Test
-    void testRetry_SuccessOnFirstAttempt() {
+    void testCreatePublishStreamRequests() {
+        // Create dummy block items
+        BlockItem item1 = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(Bytes.wrap("tx1"))
+                        .build())
+                .build();
+        BlockItem item2 = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(Bytes.wrap("tx2"))
+                        .build())
+                .build();
+        BlockItem item3 = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(Bytes.wrap("tx3"))
+                        .build())
+                .build();
+
+        // Create bytes from block items
+        List<BlockItem> itemBytes = new ArrayList<>();
+        itemBytes.add(item1);
+        itemBytes.add(item2);
+        itemBytes.add(item3);
+
+        BlockState mockBlock = mock(BlockState.class);
+        when(mockBlock.items()).thenReturn(itemBytes);
+
+        // When
+        int batchSize = 2;
+        final var requests = BlockNodeConnectionManager.createPublishStreamRequests(mockBlock, batchSize);
+
+        // Then
+        // Should create 2 batches: [item1, item2] and [item3]
+        assertEquals(2, requests.size(), "Should create 2 batches");
+
+        // Verify first batch contains 2 items
+        BlockItemSet firstBatch = requests.get(0).blockItems();
+        assertEquals(2, firstBatch.blockItems().size(), "First batch should contain 2 items");
+
+        // Verify second batch contains 1 item
+        BlockItemSet secondBatch = requests.get(1).blockItems();
+        assertEquals(1, secondBatch.blockItems().size(), "Second batch should contain 1 item");
+
+        // Verify the items in batches
+        assertEquals(item1, firstBatch.blockItems().get(0), "First item in first batch should be item1");
+        assertEquals(item2, firstBatch.blockItems().get(1), "Second item in first batch should be item2");
+        assertEquals(item3, secondBatch.blockItems().get(0), "First item in second batch should be item3");
+    }
+
+    @Test
+    void testRetrySuccessOnFirstAttempt() {
         blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(1)).get();
 
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
+        assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
     }
 
     @Test
-    void testRetry_SuccessOnRetry() {
+    void testRetrySuccessOnRetry() {
         when(mockSupplier.get())
                 .thenThrow(new RuntimeException("First attempt failed"))
                 .thenReturn(null);
@@ -76,8 +154,8 @@ class BlockNodeConnectionManagerTest {
         blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(2)).get();
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
-        assertThat(logCaptor.infoLogs())
+        assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
+        assertThat(logCaptor.debugLogs())
                 .containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY.multipliedBy(2)));
     }
 
@@ -92,8 +170,13 @@ class BlockNodeConnectionManagerTest {
         final var initialDelay = BlockNodeConnectionManager.INITIAL_RETRY_DELAY;
         Thread.sleep(initialDelay.plusMillis(100));
 
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(initialDelay));
+        assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(initialDelay));
         verify(mockConnection, times(1)).establishStream();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        testServer.shutdownNow();
     }
 
     private List<String> generateExpectedRetryLogs(Duration delay) {
@@ -105,5 +188,30 @@ class BlockNodeConnectionManagerTest {
         }
 
         return logs;
+    }
+
+    private static class BlockStreamServiceTestImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
+        private static final Logger logger = LogManager.getLogger(BlockStreamServiceTestImpl.class);
+
+        @Override
+        public StreamObserver<PublishStreamRequest> publishBlockStream(
+                StreamObserver<PublishStreamResponse> responseObserver) {
+            return new StreamObserver<>() {
+                @Override
+                public void onNext(PublishStreamRequest request) {
+                    // no-op
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    // no-op
+                }
+
+                @Override
+                public void onCompleted() {
+                    responseObserver.onCompleted();
+                }
+            };
+        }
     }
 }

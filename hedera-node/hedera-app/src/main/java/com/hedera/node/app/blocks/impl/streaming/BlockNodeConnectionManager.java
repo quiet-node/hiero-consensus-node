@@ -3,9 +3,19 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.block.BlockItemSet;
+import com.hedera.hapi.block.PublishStreamRequest;
+import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import io.helidon.common.tls.Tls;
+import io.helidon.webclient.grpc.GrpcClient;
+import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
+import io.helidon.webclient.grpc.GrpcClientProtocolConfig;
+import io.helidon.webclient.grpc.GrpcServiceClient;
+import io.helidon.webclient.grpc.GrpcServiceDescriptor;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
 import java.time.Instant;
@@ -31,9 +41,9 @@ import org.apache.logging.log4j.Logger;
 public class BlockNodeConnectionManager {
     public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(5);
     private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
+    private static final long RETRY_BACKOFF_MULTIPLIER = 2;
     private static final String GRPC_END_POINT =
             BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
-    private static final long RETRY_BACKOFF_MULTIPLIER = 2;
 
     // Add a random number generator for jitter
     private final Random random = new Random();
@@ -69,7 +79,7 @@ public class BlockNodeConnectionManager {
      * Attempts to establish connections to block nodes based on priority and configuration.
      */
     private void establishConnections() {
-        logger.info("Establishing connections to block nodes");
+        logger.debug("Establishing connections to block nodes");
 
         List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes().stream()
                 .filter(node -> !activeConnections.containsKey(node))
@@ -78,10 +88,35 @@ public class BlockNodeConnectionManager {
         availableNodes.forEach(this::connectToNode);
     }
 
+    private GrpcServiceClient createNewGrpcClient(@NonNull BlockNodeConfig node) {
+        final GrpcClient client = GrpcClient.builder()
+                .tls(Tls.builder().enabled(false).build())
+                .baseUri("http://" + node.address() + ":" + node.port())
+                .protocolConfig(GrpcClientProtocolConfig.builder()
+                        .abortPollTimeExpired(false)
+                        .pollWaitTime(Duration.ofSeconds(30))
+                        .build())
+                .keepAlive(true)
+                .build();
+
+        return client.serviceClient(GrpcServiceDescriptor.builder()
+                .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
+                .putMethod(
+                        GRPC_END_POINT,
+                        GrpcClientMethodDescriptor.bidirectional(BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
+                                .requestType(PublishStreamRequest.class)
+                                .responseType(PublishStreamResponse.class)
+                                .marshallerSupplier(new RequestResponseMarshaller.Supplier())
+                                .build())
+                .build());
+    }
+
     private void connectToNode(@NonNull BlockNodeConfig node) {
         synchronized (connectionLock) {
             try {
-                final BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
+                final GrpcServiceClient grpcClient = createNewGrpcClient(node);
+                final BlockNodeConnection connection =
+                        new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient);
                 connection.establishStream();
                 connection.getIsActiveLock().lock();
                 try {
@@ -166,7 +201,7 @@ public class BlockNodeConnectionManager {
             try {
                 // Apply jitter: use a random value between 50-100% of the calculated delay
                 final long jitteredDelayMs = delay.toMillis() / 2 + random.nextLong(delay.toMillis() / 2 + 1);
-                logger.info("Retrying in {} ms", jitteredDelayMs);
+                logger.debug("Retrying in {} ms", jitteredDelayMs);
                 Thread.sleep(jitteredDelayMs);
                 action.get();
                 return;
@@ -187,7 +222,7 @@ public class BlockNodeConnectionManager {
             if (!awaitTermination) {
                 logger.error("Failed to shut down streaming executor within 10 seconds");
             } else {
-                logger.info("Successfully shut down streaming executor");
+                logger.debug("Successfully shut down streaming executor");
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -209,12 +244,13 @@ public class BlockNodeConnectionManager {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         establishConnections();
 
+        final var deadline = Instant.now().plus(timeout);
         scheduler.scheduleAtFixedRate(
                 () -> {
                     synchronized (connectionLock) {
                         if (!activeConnections.isEmpty()) {
                             future.complete(true);
-                        } else if (Instant.now().isAfter(Instant.now().plus(timeout))) {
+                        } else if (Instant.now().isAfter(deadline)) {
                             future.complete(false);
                         }
                     }
@@ -224,15 +260,6 @@ public class BlockNodeConnectionManager {
                 TimeUnit.SECONDS);
 
         return future.join();
-    }
-
-    /**
-     * Returns the gRPC endpoint for the block stream service.
-     *
-     * @return the gRPC endpoint
-     */
-    public String getGrpcEndPoint() {
-        return GRPC_END_POINT;
     }
 
     public void openBlock(long blockNumber) {
@@ -268,6 +295,14 @@ public class BlockNodeConnectionManager {
                 }
             }
         }
+    }
+
+    /**
+     * Returns the gRPC endpoint for the block stream service.
+     * @return the gRPC endpoint
+     */
+    public String getGrpcEndPoint() {
+        return GRPC_END_POINT;
     }
 
     /**
