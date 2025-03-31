@@ -3,7 +3,6 @@ package com.hedera.node.app.workflows.handle;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.BUSY;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
-import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
 import static com.hedera.node.app.records.schemas.V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartEvent;
@@ -30,7 +29,6 @@ import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
-import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.hapi.util.HapiUtils;
@@ -250,14 +248,12 @@ public class HandleWorkflow {
                             .equals(Instant.EPOCH);
                     case BLOCKS, BOTH -> systemEntitiesCreatedFlag != null && !systemEntitiesCreatedFlag.get();
                 };
+        boolean systemTransactionsDispatched = false;
         if (isGenesis) {
             final var genesisEventTime = round.iterator().next().getConsensusTimestamp();
-            var entitycounts = state.getReadableStates(EntityIdService.NAME)
-                    .<EntityCounts>getSingleton(ENTITY_COUNTS_KEY)
-                    .get();
-            logger.info(
-                    "Doing genesis setup before {} {} {}", genesisEventTime, systemEntitiesCreatedFlag, entitycounts);
+            logger.info("Doing genesis setup before {}", genesisEventTime);
             systemTransactions.doGenesisSetup(genesisEventTime, state);
+            systemTransactionsDispatched = true;
             logger.info(SYSTEM_ENTITIES_CREATED_MSG);
             requireNonNull(systemEntitiesCreatedFlag).set(true);
         }
@@ -266,7 +262,7 @@ public class HandleWorkflow {
                 configProvider.getConfiguration().getConfigData(TssConfig.class), state, round.getConsensusTimestamp());
         recordCache.resetRoundReceipts();
         try {
-            handleEvents(state, round, stateSignatureTxnCallback);
+            handleEvents(state, round, systemTransactionsDispatched, stateSignatureTxnCallback);
         } finally {
             // Even if there is an exception somewhere, we need to commit the receipts of any handled transactions
             // to the state so these transactions cannot be replayed in future rounds
@@ -280,13 +276,15 @@ public class HandleWorkflow {
      *
      * @param state the state to apply the effects to
      * @param round the round to apply the effects of
+     * @param systemTransactionsDispatched whether system transactions have been dispatched
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     private void handleEvents(
             @NonNull final State state,
             @NonNull final Round round,
+            final boolean systemTransactionsDispatched,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
-        boolean userTransactionsHandled = false;
+        boolean transactionsDispatched = systemTransactionsDispatched;
         for (final var event : round) {
             if (streamMode != RECORDS) {
                 final var headerItem = BlockItem.newBuilder()
@@ -324,13 +322,13 @@ public class HandleWorkflow {
             for (final var it = event.consensusTransactionIterator(); it.hasNext(); ) {
                 final var platformTxn = it.next();
                 try {
-                    userTransactionsHandled |= handlePlatformTransaction(
+                    transactionsDispatched |= handlePlatformTransaction(
                             state,
                             creator,
                             platformTxn,
                             event.getSoftwareVersion(),
                             simplifiedStateSignatureTxnCallback,
-                            userTransactionsHandled);
+                            transactionsDispatched);
                 } catch (final Exception e) {
                     logger.fatal(
                             "Possibly CATASTROPHIC failure while running the handle workflow. "
@@ -348,7 +346,7 @@ public class HandleWorkflow {
         // implementation of ConsensusStateEventHandler#onSealConsensusRound(), since the BlockStreamManager cannot do
         // its
         // end-of-block work until the platform has finished all its state changes.
-        if (userTransactionsHandled && streamMode != BLOCKS) {
+        if (transactionsDispatched && streamMode != BLOCKS) {
             blockRecordManager.endRound(state);
         }
     }
