@@ -80,6 +80,13 @@ class BlockNodeConnectionManagerTest {
     }
 
     @Test
+    void testNewBlockNodeConnectionManager() {
+        final var expectedGrpcEndpoint =
+                BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
+        assertEquals(expectedGrpcEndpoint, blockNodeConnectionManager.getGrpcEndPoint());
+    }
+
+    @Test
     void testCreatePublishStreamRequests() {
         // Create dummy block items
         BlockItem item1 = BlockItem.newBuilder()

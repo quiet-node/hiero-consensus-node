@@ -5,9 +5,18 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.BlockItemSet;
 import com.hedera.hapi.block.PublishStreamRequest;
+import com.hedera.hapi.block.PublishStreamResponse;
+import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import io.helidon.common.socket.SocketOptions;
+import io.helidon.common.tls.Tls;
+import io.helidon.webclient.grpc.GrpcClient;
+import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
+import io.helidon.webclient.grpc.GrpcClientProtocolConfig;
+import io.helidon.webclient.grpc.GrpcServiceClient;
+import io.helidon.webclient.grpc.GrpcServiceDescriptor;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,6 +41,8 @@ public class BlockNodeConnectionManager {
     public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(5);
     private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
+    private static final String GRPC_END_POINT =
+            BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
 
     // Add a random number generator for jitter
     private final Random random = new Random();
@@ -73,10 +84,38 @@ public class BlockNodeConnectionManager {
         availableNodes.forEach(this::connectToNode);
     }
 
+    private GrpcServiceClient createNewGrpcClient(@NonNull BlockNodeConfig node) {
+        final GrpcClient client = GrpcClient.builder()
+                .tls(Tls.builder().enabled(false).build())
+                .baseUri("http://" + node.address() + ":" + node.port())
+                .socketOptions(SocketOptions.builder().socketReuseAddress(true).build())
+                .protocolConfig(GrpcClientProtocolConfig.builder()
+                        .abortPollTimeExpired(false)
+                        .pollWaitTime(Duration.ofSeconds(30))
+                        .build())
+                .keepAlive(true)
+                .connectionCacheSize(0)
+                .shareConnectionCache(true)
+                .build();
+
+        return client.serviceClient(GrpcServiceDescriptor.builder()
+                .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
+                .putMethod(
+                        GRPC_END_POINT,
+                        GrpcClientMethodDescriptor.bidirectional(BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
+                                .requestType(PublishStreamRequest.class)
+                                .responseType(PublishStreamResponse.class)
+                                .marshallerSupplier(new RequestResponseMarshaller.Supplier())
+                                .build())
+                .build());
+    }
+
     private void connectToNode(@NonNull BlockNodeConfig node) {
         synchronized (connectionLock) {
             try {
-                final BlockNodeConnection connection = new BlockNodeConnection(node, this, blockStreamStateManager);
+                final GrpcServiceClient grpcClient = createNewGrpcClient(node);
+                final BlockNodeConnection connection =
+                        new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient);
                 connection.establishStream();
                 connection.getIsActiveLock().lock();
                 try {
@@ -317,5 +356,13 @@ public class BlockNodeConnectionManager {
                 }
             }
         }
+    }
+
+    /**
+     * Returns the gRPC endpoint for the block stream service.
+     * @return the gRPC endpoint
+     */
+    public String getGrpcEndPoint() {
+        return GRPC_END_POINT;
     }
 }

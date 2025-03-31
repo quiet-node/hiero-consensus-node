@@ -24,6 +24,7 @@ import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import io.grpc.stub.StreamObserver;
+import io.helidon.webclient.grpc.GrpcServiceClient;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -60,6 +61,9 @@ class BlockNodeConnectionTest {
     private StreamObserver<PublishStreamRequest> requestObserver;
 
     @Mock
+    private GrpcServiceClient grpcServiceClient;
+
+    @Mock
     private BlockState blockState;
 
     @LoggingTarget
@@ -73,7 +77,7 @@ class BlockNodeConnectionTest {
         when(nodeConfig.address()).thenReturn(TEST_ADDRESS);
         when(nodeConfig.port()).thenReturn(TEST_PORT);
 
-        connection = new BlockNodeConnection(nodeConfig, connectionManager, blockStreamStateManager);
+        connection = new BlockNodeConnection(nodeConfig, connectionManager, blockStreamStateManager, grpcServiceClient);
 
         // Set requestObserver via reflection to avoid establishing an actual gRPC connection
         Field requestObserverField = BlockNodeConnection.class.getDeclaredField("requestObserver");
