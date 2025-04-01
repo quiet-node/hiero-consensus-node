@@ -148,7 +148,8 @@ public class StateNetworkInfo implements NetworkInfo {
                         node.weight(),
                         node.gossipEndpoint(),
                         node.gossipCaCertificate(),
-                        node.serviceEndpoint());
+                        node.serviceEndpoint(),
+                        node.declineReward());
                 nodeInfos.put(node.nodeId(), nodeInfo);
             }
         } else {
@@ -172,7 +173,7 @@ public class StateNetworkInfo implements NetworkInfo {
                                     AccountID.newBuilder()
                                             .accountNum(rosterEntry.nodeId() + 3)
                                             .build()));
-                    log.warn("Node {} not found in node store", rosterEntry.nodeId());
+                    log.error("Roster includes a node {} that is not found in node store", rosterEntry.nodeId());
                 }
             }
         }
