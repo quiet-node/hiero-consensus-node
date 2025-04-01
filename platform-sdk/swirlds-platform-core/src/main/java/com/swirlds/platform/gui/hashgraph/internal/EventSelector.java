@@ -73,10 +73,10 @@ public class EventSelector implements MouseListener {
 
         stronglySeen.clear();
         for (final EventImpl e : eventsInPicture) {
-            final int xEvent = metadata.xpos(null, e, false);
+            final int xEvent = metadata.xpos(null, e);
             final int yEvent = metadata.ypos(e);
             final double distanceSquared = Math.pow(xEvent - xClicked, 2) + Math.pow(yEvent - yClicked, 2);
-            if (distanceSquared <= rSquared) {
+            if (distanceSquared <= rSquared - 10) {
                 if (selectedEvent == e) {
                     selectedEvent = null;
                 } else {

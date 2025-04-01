@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.gui.hashgraph.internal;
 
+import com.hedera.hapi.platform.event.GossipEvent;
+import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.internal.EventImpl;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
@@ -25,23 +27,27 @@ public class PictureMetadata {
     private final double r;
     private final long minGen;
     private final long maxGen;
-    private final  Map<Long, Integer> branchIndexToX;
-    private final  Map<Long, Integer> branchIndexToY;
-    private final Map<EventImpl, Integer> eventToX;
-    private int lastX;
+
+    private final HashgraphGuiSource hashgraphSource;
+    private Map<Integer, Integer> branchIndexToY;
+    private final Map<GossipEvent, Integer> eventToX;
+    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToxCoordinates;
+
 
     public PictureMetadata(
             final FontMetrics fm,
             final Dimension pictureDimension,
             final AddressBookMetadata addressBookMetadata,
             final List<EventImpl> events,
-            final Map<Long, Integer> branchIndexToX,
-            final Map<Long, Integer> branchIndexToY,
-            final Map<EventImpl, Integer> eventToX) {
-        this.branchIndexToX = branchIndexToX;
+            final HashgraphGuiSource hashgraphSource,
+            final Map<Integer, Map<GossipEvent, Integer>> branchIndexToxCoordinates,
+            final Map<Integer, Integer> branchIndexToY,
+            final Map<GossipEvent, Integer> eventToX) {
+        this.addressBookMetadata = addressBookMetadata;
+        this.hashgraphSource = hashgraphSource;
+        this.branchIndexToxCoordinates = branchIndexToxCoordinates;
         this.branchIndexToY = branchIndexToY;
         this.eventToX = eventToX;
-        this.addressBookMetadata = addressBookMetadata;
         final int fa = fm.getMaxAscent();
         final int fd = fm.getMaxDescent();
         final int textLineHeight = fa + fd;
@@ -85,31 +91,97 @@ public class PictureMetadata {
     }
 
     /** find x position on the screen for event e2 which has an other-parent of e1 (or null if none) */
-    public int xpos(final EventImpl e1, final EventImpl e2, final boolean isText) {
-                // the gap between left side of screen and leftmost column
-                // is marginFraction times the gap between columns (and similarly for right side)
-                final double marginFraction = 0.5;
-                // gap between columns
-                final int betweenGap = (int) (width / (addressBookMetadata.getNumColumns() - 1 + 2 * marginFraction));
-                // gap between leftmost column and left edge (and similar on right)
-                final int sideGap = (int) (betweenGap * marginFraction);
+    public int xpos(final EventImpl e1, final EventImpl e2) {
+        // the gap between left side of screen and leftmost column
+        // is marginFraction times the gap between columns (and similarly for right side)
+        final double marginFraction = 0.5;
+        // gap between columns
+        final int betweenGap = (int) (width / (addressBookMetadata.getNumColumns() - 1 + 2 * marginFraction));
+        // gap between leftmost column and left edge (and similar on right)
+        final int sideGap = (int) (betweenGap * marginFraction);
 
-                // find the column for e2 next to the column for e1
-                final int xPos = sideGap + addressBookMetadata.mems2col(e1, e2) * betweenGap;
+        // find the column for e2 next to the column for e1
+        int xPos = sideGap + addressBookMetadata.mems2col(e1, e2) * betweenGap;
 
-                return xPos;
+        final GossipEvent e2GossipEvent = e2.getBaseEvent().getGossipEvent();
+        // we have a branched event
+        if(hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(e2GossipEvent)) {
+//            if(!branchIndexToY.containsKey(hashgraphSource.getEventStorage().getBranchIndexMap().get(e2.getBaseEvent().getGossipEvent()))) {
+//                branchIndexToY.put(hashgraphSource.getEventStorage().getBranchIndexMap()
+//                        .get(e2.getBaseEvent().getGossipEvent()), yPos);
+//            }
+
+            final var branchIndex = hashgraphSource.getEventStorage().getBranchIndexMap().get(e2GossipEvent);
+            var eventToXCoordinatesForGivenBranch = branchIndexToxCoordinates.get(branchIndex);
+
+            if(eventToXCoordinatesForGivenBranch != null) {
+                // event still does not have coordinate
+                if(!eventToXCoordinatesForGivenBranch.containsKey(e2GossipEvent)) {
+                    //get highest value
+                    eventToXCoordinatesForGivenBranch.values().stream().max(Integer::compareTo).ifPresent(x -> {
+                        eventToX.put(e2GossipEvent, x + 10);
+                    });
+                    xPos = eventToX.get(e2GossipEvent);
+                    eventToXCoordinatesForGivenBranch.put(e2GossipEvent, eventToX.get(e2GossipEvent));
+                }
+
+                else {
+//                    if (branchIndexToY.get(branchIndex) > 380) {
+//                        eventToXCoordinatesForGivenBranch.clear();
+//                        eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
+//                        branchIndexToxCoordinates.put(branchIndex, eventToXCoordinatesForGivenBranch);
+//                    } else {
+                        xPos = eventToXCoordinatesForGivenBranch.get(e2GossipEvent);
+//                    }
+                }
+//                else if (eventToXCoordinatesForGivenBranch.size() > 8) {
+//                else if (branchIndexToY.get(branchIndex) > 380) {
+////                    eventToXCoordinatesForGivenBranch.clear();
+//                    final var newEventToXCoordinatesForGivenBranch = new HashMap<GossipEvent, Integer>();
+//
+////                    eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
+//                    newEventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
+//
+////                    branchIndexToxCoordinates.put(branchIndex, eventToXCoordinatesForGivenBranch);
+//                    branchIndexToxCoordinates.put(branchIndex, newEventToXCoordinatesForGivenBranch);
+//                }
+            } else {
+            // that will be the first event of a new branch and coordinates don't exist yet
+                eventToXCoordinatesForGivenBranch = new HashMap<>();
+
+//                var newXPosToUse = xPos;
+//                if(branchIndex > 0) {
+//                    final var xCoord = branchIndexToxCoordinates.get(branchIndex-1);
+//                    newXPosToUse = xCoord.values().stream().min(Integer::compareTo).get();
+//                }
+
+                eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
+
+                branchIndexToxCoordinates.put(branchIndex, eventToXCoordinatesForGivenBranch);
+            }
+        }
+
+        return xPos;
     }
 
     /**
      * find y position on the screen for an event
      */
     public int ypos(final EventImpl event) {
-//        if (event.getBaseEvent().getBranchIndex() == -1 || !branchIndexToY.containsKey(event.getBaseEvent().getBranchIndex())) {
-            return (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
-//        } else {
-//            return branchIndexToY.get(event.getBaseEvent().getBranchIndex());
-//            return (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - event.getBaseEvent().getBranchIndex() - minGen)));
-//        }
+        var yPos = (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
+
+        if (hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(event.getBaseEvent().getGossipEvent())) {
+            if (!branchIndexToY.containsKey(
+                    hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent()))) {
+                branchIndexToY.put(hashgraphSource.getEventStorage().getBranchIndexMap()
+                        .get(event.getBaseEvent().getGossipEvent()), yPos);
+            } else {
+                yPos = branchIndexToY.get(hashgraphSource.getEventStorage().getBranchIndexMap()
+                        .get(event.getBaseEvent().getGossipEvent()));
+            }
+        }
+
+        return yPos;
     }
 
     /**

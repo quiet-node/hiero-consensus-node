@@ -43,6 +43,12 @@ public class ForkingEventSource extends AbstractEventSource {
         this(true, DEFAULT_TRANSACTION_GENERATOR);
     }
 
+    public ForkingEventSource(Map<GossipEvent, Integer> branchIndexMap, Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+        this(true, DEFAULT_TRANSACTION_GENERATOR);
+        this.branchIndexMap = branchIndexMap;
+        this.isSingleEventInBranchMap = isSingleEventInBranchMap;
+    }
+
     public ForkingEventSource(final boolean useFakeHashes) {
         this(useFakeHashes, DEFAULT_TRANSACTION_GENERATOR);
     }

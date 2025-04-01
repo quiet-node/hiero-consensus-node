@@ -45,6 +45,7 @@ public class HashgraphGui {
         final List<EventSource> list = new LinkedList<>();
         for (long i = 0; i < numNetworkNodes; i++) {
             if (i==1) {
+//                list.add(new ForkingEventSource(branchIndexMap, isSingleEventInBranchMap).setForkProbability(0.5).setMaximumBranchCount(2));
                 list.add(new ForkingEventSource(branchIndexMap, isSingleEventInBranchMap).setForkProbability(0.5).setMaximumBranchCount(2));
                 continue;
             }
