@@ -51,6 +51,7 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.Round;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.state.State;
+import com.swirlds.state.merkle.disk.OnDiskWritableQueueState;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableQueueStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -328,6 +329,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
             final NewStateRoot newStateRoot = (NewStateRoot) state;
             newStateRoot.commit();
+            OnDiskWritableQueueState.commitAllQueues();
 
             // If there were no user or node transactions in the block, this writes all
             // the accumulated items starting from the header, sacrificing the benefits

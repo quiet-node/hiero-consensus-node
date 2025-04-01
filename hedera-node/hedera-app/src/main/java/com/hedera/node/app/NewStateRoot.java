@@ -656,10 +656,10 @@ public class NewStateRoot implements MerkleNodeState {
             for (final ReadableSingletonState s : singletonInstances.values()) {
                 ((WritableSingletonStateBase) s).commit();
             }
-            for (final ReadableQueueState q : queueInstances.values()) {
-                ((WritableQueueStateBase) q).commit();
-            }
-//            readableStatesMap.remove(serviceName);
+//            for (final ReadableQueueState q : queueInstances.values()) {
+//                ((WritableQueueStateBase) q).commit();
+//            }
+            //readableStatesMap.remove(serviceName);
         }
 
         /**

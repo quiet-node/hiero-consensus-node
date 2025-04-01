@@ -104,7 +104,7 @@ public class WrappedWritableStates implements WritableStates {
             kvState.commit();
         }
         for (WrappedWritableQueueState<?> queueState : writableQueueStateMap.values()) {
-            //queueState.commit();
+            queueState.commit();
         }
         for (WrappedWritableSingletonState<?> singletonState : writableSingletonStateMap.values()) {
             singletonState.commit();
