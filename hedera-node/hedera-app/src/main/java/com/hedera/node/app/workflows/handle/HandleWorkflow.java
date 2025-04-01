@@ -273,20 +273,20 @@ public class HandleWorkflow {
         recordCache.resetRoundReceipts();
         try {
             handleEvents(state, round, systemTransactionsDispatched, stateSignatureTxnCallback);
+            try {
+                nodeRewardManager.maybeRewardActiveNodes(
+                        state,
+                        boundaryStateChangeListener.lastConsensusTimeOrThrow().plusNanos(1),
+                        systemTransactions);
+            } catch (Exception e) {
+                logger.warn("Failed to reward active nodes", e);
+            }
         } finally {
             // Even if there is an exception somewhere, we need to commit the receipts of any handled transactions
             // to the state so these transactions cannot be replayed in future rounds
             recordCache.commitRoundReceipts(state, round.getConsensusTimestamp());
         }
         reconcileTssState(state, boundaryStateChangeListener.lastConsensusTimeOrThrow(), round.getConsensusTimestamp());
-        try {
-            nodeRewardManager.maybeRewardActiveNodes(
-                    state,
-                    boundaryStateChangeListener.lastConsensusTimeOrThrow().plusNanos(1),
-                    systemTransactions);
-        } catch (Exception e) {
-            logger.warn("Failed to reward active nodes", e);
-        }
     }
 
     /**
