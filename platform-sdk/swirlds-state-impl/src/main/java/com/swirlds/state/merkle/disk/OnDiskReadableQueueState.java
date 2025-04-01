@@ -7,15 +7,14 @@ import static com.swirlds.state.merkle.logging.StateLogger.logQueuePeek;
 
 import com.hedera.pbj.runtime.Codec;
 import com.swirlds.base.utility.Pair;
-import com.swirlds.state.merkle.queue.QueueStateCodec;
 import com.swirlds.state.merkle.queue.QueueNode;
 import com.swirlds.state.merkle.queue.QueueState;
+import com.swirlds.state.merkle.queue.QueueStateCodec;
 import com.swirlds.state.spi.ReadableQueueState;
 import com.swirlds.state.spi.ReadableQueueStateBase;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

@@ -30,7 +30,6 @@ jmhModuleInfo {
 
 testModuleInfo {
     requires("com.swirlds.base.test.fixtures")
-    requires("com.swirlds.state.impl")
     requires("com.swirlds.metrics.impl")
     requires("com.swirlds.common.test.fixtures")
     requires("com.swirlds.platform.core")

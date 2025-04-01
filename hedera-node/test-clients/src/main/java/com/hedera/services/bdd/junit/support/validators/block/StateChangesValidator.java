@@ -291,7 +291,11 @@ public class StateChangesValidator implements BlockStreamValidator {
                 startOfStateHash =
                         CRYPTO.digestTreeSync(stateToBeCopied.getRoot()).getBytes();
 
-                logger.error(EXCEPTION.getMarker(), "Block: {}\n Full info: {}", block, platformStateFacade.getInfoString(stateToBeCopied, 5));
+                logger.error(
+                        EXCEPTION.getMarker(),
+                        "Block: {}\n Full info: {}",
+                        block,
+                        platformStateFacade.getInfoString(stateToBeCopied, 5));
             }
             final StreamingTreeHasher inputTreeHasher = new NaiveStreamingTreeHasher();
             final StreamingTreeHasher outputTreeHasher = new NaiveStreamingTreeHasher();
@@ -462,7 +466,10 @@ public class StateChangesValidator implements BlockStreamValidator {
     }
 
     private void validateBlockProof(
-            @NonNull final BlockProof proof, @NonNull final Bytes blockHash, @Nullable final Bytes verificationKey, MerkleNodeState state) {
+            @NonNull final BlockProof proof,
+            @NonNull final Bytes blockHash,
+            @Nullable final Bytes verificationKey,
+            MerkleNodeState state) {
         var provenHash = blockHash;
         final var siblingHashes = proof.siblingHashes();
         if (!siblingHashes.isEmpty()) {
@@ -477,8 +484,11 @@ public class StateChangesValidator implements BlockStreamValidator {
             assertTrue(verified, "Block proof signature verification failed for " + proof);
         } else {
             final var expectedSignature = Bytes.wrap(noThrowSha384HashOf(provenHash.toByteArray()));
-            assertEquals(expectedSignature, proof.blockSignature(), "Signature mismatch for %s. \n Full info: %s"
-                    .formatted(proof, platformStateFacade.getInfoString(state, 5)));
+            assertEquals(
+                    expectedSignature,
+                    proof.blockSignature(),
+                    "Signature mismatch for %s. \n Full info: %s"
+                            .formatted(proof, platformStateFacade.getInfoString(state, 5)));
         }
     }
 

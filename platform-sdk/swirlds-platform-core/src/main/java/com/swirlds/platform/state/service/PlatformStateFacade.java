@@ -38,13 +38,11 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * This class is an entry point for the platform state. Though the class itself is stateless, given an instance of {@link State},
@@ -321,35 +319,35 @@ public class PlatformStateFacade {
         final MerkleNodeState merkleNodeState = (MerkleNodeState) state;
         final var services = merkleNodeState.getServices();
 
-//        Map<Bytes, Pair<String, String>> keysToFind = new HashMap<>();
-//        services.forEach((key, value) -> {
-//            value.forEach((s, stateMetadata) -> {
-//                final String serviceName = stateMetadata.serviceName();
-//                final String stateKey = stateMetadata.stateDefinition().stateKey();
-//                Bytes virtualKey = StateUtils.getVirtualMapKey(serviceName, stateKey);
-//                keysToFind.put(virtualKey, Pair.of(serviceName, stateKey));
-//            });
-//        });
+        //        Map<Bytes, Pair<String, String>> keysToFind = new HashMap<>();
+        //        services.forEach((key, value) -> {
+        //            value.forEach((s, stateMetadata) -> {
+        //                final String serviceName = stateMetadata.serviceName();
+        //                final String stateKey = stateMetadata.stateDefinition().stateKey();
+        //                Bytes virtualKey = StateUtils.getVirtualMapKey(serviceName, stateKey);
+        //                keysToFind.put(virtualKey, Pair.of(serviceName, stateKey));
+        //            });
+        //        });
 
         List<String> states = new ArrayList<>();
 
-//        MerkleIterator<MerkleNode> merkleNodeIterator =
-//                merkleNodeState.getRoot().treeIterator();
-//        while (merkleNodeIterator.hasNext()) {
-//            MerkleNode next = merkleNodeIterator.next();
-//            if (next instanceof VirtualLeafNode leafNode) {
-//                Bytes key = leafNode.getKey();
-//                if (keysToFind.containsKey(key)) {
-//                    Pair<String, String> nameAndKey = keysToFind.get(key);
-//                    states.add(nameAndKey.left() + "." + nameAndKey.right() + ": " + leafNode.getHash());
-//                }
-//            }
-//            if (next instanceof VirtualInternalNode internalNode) {
-//                Hash hash = internalNode.getHash();
-//                String hashString = hash == null ? "null" : hash.toString().substring(0, 16);
-//                states.add("i | path= " + internalNode.getPath() + " hash=" + hashString);
-//            }
-//        }
+        //        MerkleIterator<MerkleNode> merkleNodeIterator =
+        //                merkleNodeState.getRoot().treeIterator();
+        //        while (merkleNodeIterator.hasNext()) {
+        //            MerkleNode next = merkleNodeIterator.next();
+        //            if (next instanceof VirtualLeafNode leafNode) {
+        //                Bytes key = leafNode.getKey();
+        //                if (keysToFind.containsKey(key)) {
+        //                    Pair<String, String> nameAndKey = keysToFind.get(key);
+        //                    states.add(nameAndKey.left() + "." + nameAndKey.right() + ": " + leafNode.getHash());
+        //                }
+        //            }
+        //            if (next instanceof VirtualInternalNode internalNode) {
+        //                Hash hash = internalNode.getHash();
+        //                String hashString = hash == null ? "null" : hash.toString().substring(0, 16);
+        //                states.add("i | path= " + internalNode.getPath() + " hash=" + hashString);
+        //            }
+        //        }
 
         final VirtualMap vm = (VirtualMap) merkleNodeState.getRoot();
         final RecordAccessor recordAccessor = vm.getRoot().getRecords();
@@ -362,8 +360,7 @@ public class PlatformStateFacade {
             String hashString = hash == null ? "null" : hash.toString().substring(0, 16);
             Bytes bytes = Bytes.fromHex("001a");
 
-            String trimmedValueString =
-                    valueString.length() > 16 ? valueString.substring(0, 16) : valueString;
+            String trimmedValueString = valueString.length() > 16 ? valueString.substring(0, 16) : valueString;
             String finalValueString = bytes.equals(pair.left()) ? valueString : trimmedValueString;
 
             sb.append("k=")
@@ -383,7 +380,6 @@ public class PlatformStateFacade {
             throw new RuntimeException(e);
         }
 
-
         final String transactionReceiptQueueContents = services.entrySet().stream()
                 .flatMap(entry -> {
                     final String serviceName = entry.getKey();
@@ -392,15 +388,14 @@ public class PlatformStateFacade {
                             .filter(innerEntry -> {
                                 final String stateKey = innerEntry.getKey();
                                 final var metadata = innerEntry.getValue();
-                                return metadata.stateDefinition().queue() &&
-                                        "TransactionReceiptQueue".equals(stateKey);
+                                return metadata.stateDefinition().queue() && "TransactionReceiptQueue".equals(stateKey);
                             })
                             .map(innerEntry -> {
                                 OnDiskReadableQueueState<TransactionReceiptEntries> queue =
-                                        (OnDiskReadableQueueState)
-                                                readableStates.getQueue(innerEntry.getKey());
+                                        (OnDiskReadableQueueState) readableStates.getQueue(innerEntry.getKey());
                                 QueueState queueState = queue.getQueueContents().left();
-                                List<TransactionReceiptEntries> contents = queue.getQueueContents().right();
+                                List<TransactionReceiptEntries> contents =
+                                        queue.getQueueContents().right();
                                 List<String> queueContents = new ArrayList<>();
                                 for (TransactionReceiptEntries item : contents) {
                                     if (item != null) {
@@ -410,32 +405,32 @@ public class PlatformStateFacade {
                                     }
                                 }
 
-                                return "TransactionReceiptQueue QueueState= " + queueState + "| Content= " + String.join(", ",
-                                        queueContents);
+                                return "TransactionReceiptQueue QueueState= " + queueState + "| Content= "
+                                        + String.join(", ", queueContents);
                             });
                 })
                 .findFirst()
                 .orElse("No TransactionReceiptQueue found");
 
-//        final String hintsKeySetsContents = getStateContents(services, state, "HINTS_KEY_SETS");
-//        final String hintsCrsPublicationsContents = getStateContents(services, state, "CRS_PUBLICATIONS");
+        //        final String hintsKeySetsContents = getStateContents(services, state, "HINTS_KEY_SETS");
+        //        final String hintsCrsPublicationsContents = getStateContents(services, state, "CRS_PUBLICATIONS");
         final String accountsContents = getStateAccountsContents(services, state, "ACCOUNTS");
 
         return createInfoString(
-                hashDepth,
-                readablePlatformStateStore(state),
-                merkleNodeState.getHash(),
-                merkleNodeState.getRoot(),
-                states)
-//                .concat("\n")
-//                .concat(transactionReceiptQueueContents)
-//                .concat("\n")
-//                .concat(hintsKeySetsContents)
-//                .concat("\n")
-//                .concat(hintsCrsPublicationsContents)
-//                .concat("\n")
-//                .concat(accountsContents)
-//                .concat("\n");
+                        hashDepth,
+                        readablePlatformStateStore(state),
+                        merkleNodeState.getHash(),
+                        merkleNodeState.getRoot(),
+                        states)
+                //                .concat("\n")
+                //                .concat(transactionReceiptQueueContents)
+                //                .concat("\n")
+                //                .concat(hintsKeySetsContents)
+                //                .concat("\n")
+                //                .concat(hintsCrsPublicationsContents)
+                //                .concat("\n")
+                //                .concat(accountsContents)
+                //                .concat("\n");
                 .concat("\n" + sb);
         //        return createInfoString(hashDepth, readablePlatformStateStore(state), merkleNodeState.getHash(),
         // merkleNodeState.getRoot());
@@ -454,9 +449,7 @@ public class PlatformStateFacade {
     }
 
     private String getStateContents(
-            Map<String, Map<String, StateMetadata<?, ?>>> services,
-            State state,
-            String targetStateKey) {
+            Map<String, Map<String, StateMetadata<?, ?>>> services, State state, String targetStateKey) {
 
         return services.entrySet().stream()
                 .flatMap(entry -> {
@@ -466,8 +459,7 @@ public class PlatformStateFacade {
                             .filter(innerEntry -> {
                                 String stateKey = innerEntry.getKey();
                                 var metadata = innerEntry.getValue();
-                                return metadata.stateDefinition().onDisk() &&
-                                        targetStateKey.equals(stateKey);
+                                return metadata.stateDefinition().onDisk() && targetStateKey.equals(stateKey);
                             })
                             .map(innerEntry -> {
                                 OnDiskReadableKVState kvState =
@@ -486,9 +478,7 @@ public class PlatformStateFacade {
     }
 
     private String getStateAccountsContents(
-            Map<String, Map<String, StateMetadata<?, ?>>> services,
-            State state,
-            String targetStateKey) {
+            Map<String, Map<String, StateMetadata<?, ?>>> services, State state, String targetStateKey) {
 
         return services.entrySet().stream()
                 .flatMap(entry -> {
@@ -498,22 +488,22 @@ public class PlatformStateFacade {
                             .filter(innerEntry -> {
                                 String stateKey = innerEntry.getKey();
                                 var metadata = innerEntry.getValue();
-                                return metadata.stateDefinition().onDisk() &&
-                                        targetStateKey.equals(stateKey);
+                                return metadata.stateDefinition().onDisk() && targetStateKey.equals(stateKey);
                             })
                             .map(innerEntry -> {
                                 OnDiskReadableKVState kvState =
                                         (OnDiskReadableKVState) readableStates.get(innerEntry.getKey());
                                 List<Long> kvContents = new ArrayList<>();
-                                kvState.iterateFromDataSource()
-                                        .forEachRemaining(item -> {
-                                            AccountID accountID = (AccountID) item;
-                                            kvContents.add(accountID.accountNum());
-                                        });
+                                kvState.iterateFromDataSource().forEachRemaining(item -> {
+                                    AccountID accountID = (AccountID) item;
+                                    kvContents.add(accountID.accountNum());
+                                });
 
                                 Collections.sort(kvContents);
 
-                                final var kvContentsString = kvContents.stream().map(Object::toString).toList();
+                                final var kvContentsString = kvContents.stream()
+                                        .map(Object::toString)
+                                        .toList();
 
                                 return kvContents.isEmpty()
                                         ? targetStateKey + " kvState= empty"

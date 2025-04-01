@@ -151,6 +151,7 @@ module com.swirlds.platform.core {
     requires com.swirlds.logging;
     requires com.swirlds.merkle;
     requires com.swirlds.merkledb;
+    requires com.swirlds.state.impl;
     requires org.hiero.event.creator.impl;
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.dataformat.yaml;
@@ -163,7 +164,6 @@ module com.swirlds.platform.core {
     requires jdk.net;
     requires org.bouncycastle.pkix;
     requires org.bouncycastle.provider;
-    requires com.swirlds.state.impl;
 
     provides com.swirlds.config.api.ConfigurationExtension with
             com.swirlds.platform.config.PlatformConfigurationExtension;

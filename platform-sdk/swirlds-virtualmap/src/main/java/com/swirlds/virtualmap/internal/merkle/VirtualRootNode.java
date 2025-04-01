@@ -1692,7 +1692,8 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
         String valueString = newLeaf.valueBytes().toString();
         String trimmedValueString = valueString.length() > 16 ? valueString.substring(0, 16) : valueString;
 
-//        logger.info(STARTUP.getMarker(), "path = {}, key = {}, value = {}. Stacktrace: \n {}", leafPath, trimmedKeyString, trimmedValueString, getLimitedStackTrace(20));
+        //        logger.info(STARTUP.getMarker(), "path = {}, key = {}, value = {}. Stacktrace: \n {}", leafPath,
+        // trimmedKeyString, trimmedValueString, getLimitedStackTrace(20));
         cache.putLeaf(newLeaf);
     }
 
@@ -1704,7 +1705,6 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
                 .map(StackTraceElement::toString)
                 .collect(Collectors.joining("\n"));
     }
-
 
     @Override
     public long getFastCopyVersion() {
