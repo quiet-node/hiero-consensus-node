@@ -107,7 +107,7 @@ class BlockNodeConnectionTest {
         AtomicBoolean workerStopped = new AtomicBoolean(false);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             workerStarted.set(true);
 
             // Call the method under test via reflection
@@ -115,7 +115,7 @@ class BlockNodeConnectionTest {
                 Method requestWorkerLoopMethod = BlockNodeConnection.class.getDeclaredMethod("requestWorkerLoop");
                 requestWorkerLoopMethod.setAccessible(true);
                 // Use a separate thread to execute the method so we can interrupt it later
-                Thread methodExecutor = Thread.ofVirtual().start(() -> {
+                Thread methodExecutor = Thread.ofPlatform().start(() -> {
                     try {
                         requestWorkerLoopMethod.invoke(connection);
                     } catch (Exception e) {
@@ -174,7 +174,7 @@ class BlockNodeConnectionTest {
         AtomicBoolean validBlockState = new AtomicBoolean(false);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             workerStarted.set(true);
 
             // Call the method under test via reflection
@@ -183,7 +183,7 @@ class BlockNodeConnectionTest {
                 requestWorkerLoopMethod.setAccessible(true);
 
                 // Use a separate thread to execute the method so we can interrupt it later
-                Thread methodExecutor = Thread.ofVirtual().start(() -> {
+                Thread methodExecutor = Thread.ofPlatform().start(() -> {
                     try {
                         requestWorkerLoopMethod.invoke(connection);
                     } catch (Exception e) {
@@ -248,7 +248,7 @@ class BlockNodeConnectionTest {
         AtomicBoolean notificationReceived = new AtomicBoolean(false);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             workerStarted.set(true);
 
             // Call the method under test via reflection
@@ -256,7 +256,7 @@ class BlockNodeConnectionTest {
                 Method requestWorkerLoopMethod = BlockNodeConnection.class.getDeclaredMethod("requestWorkerLoop");
                 requestWorkerLoopMethod.setAccessible(true);
                 // Use a separate thread to execute the method so we can interrupt it later
-                Thread methodExecutor = Thread.ofVirtual().start(() -> {
+                Thread methodExecutor = Thread.ofPlatform().start(() -> {
                     try {
                         requestWorkerLoopMethod.invoke(connection);
                     } catch (Exception e) {
@@ -332,13 +332,13 @@ class BlockNodeConnectionTest {
         AtomicReference<Long> finalBlockNumber = new AtomicReference<>(0L);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             // Call the method under test via reflection
             try {
                 Method requestWorkerLoopMethod = BlockNodeConnection.class.getDeclaredMethod("requestWorkerLoop");
                 requestWorkerLoopMethod.setAccessible(true);
                 // Use a separate thread to execute the method so we can interrupt it later
-                Thread methodExecutor = Thread.ofVirtual().start(() -> {
+                Thread methodExecutor = Thread.ofPlatform().start(() -> {
                     try {
                         requestWorkerLoopMethod.invoke(connection);
                     } catch (Exception e) {
@@ -405,13 +405,13 @@ class BlockNodeConnectionTest {
         AtomicReference<Long> finalBlockNumber = new AtomicReference<>(0L);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             // Call the method under test via reflection
             try {
                 Method requestWorkerLoopMethod = BlockNodeConnection.class.getDeclaredMethod("requestWorkerLoop");
                 requestWorkerLoopMethod.setAccessible(true);
                 // Use a separate thread to execute the method so we can interrupt it later
-                Thread methodExecutor = Thread.ofVirtual().start(() -> {
+                Thread methodExecutor = Thread.ofPlatform().start(() -> {
                     try {
                         requestWorkerLoopMethod.invoke(connection);
                     } catch (Exception e) {
@@ -469,7 +469,7 @@ class BlockNodeConnectionTest {
         AtomicBoolean workerExited = new AtomicBoolean(false);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             // Call the method under test via reflection
             try {
                 Method requestWorkerLoopMethod = BlockNodeConnection.class.getDeclaredMethod("requestWorkerLoop");
@@ -510,7 +510,7 @@ class BlockNodeConnectionTest {
         AtomicInteger iterationCount = new AtomicInteger(0);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             // Call the method under test via reflection
             try {
                 // Make the isActive field accessible and override it to stop after a few iterations
@@ -567,7 +567,7 @@ class BlockNodeConnectionTest {
         AtomicBoolean requestIndexResetCalled = new AtomicBoolean(false);
 
         // Act - Start the worker thread
-        Thread workerThread = Thread.ofVirtual().name("TestWorker").start(() -> {
+        Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             // Call the method under test via reflection
             try {
                 Method requestWorkerLoopMethod = BlockNodeConnection.class.getDeclaredMethod("requestWorkerLoop");

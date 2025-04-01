@@ -14,7 +14,6 @@ testModuleInfo {
     requires("org.hiero.consensus.model")
     requires("com.swirlds.state.api.test.fixtures")
     requires("com.swirlds.config.extensions.test.fixtures")
-    requires("org.hiero.consensus.model")
     requires("net.i2p.crypto.eddsa")
     requires("org.assertj.core")
     requires("org.junit.jupiter.api")
@@ -22,5 +21,4 @@ testModuleInfo {
     requires("org.mockito")
     requires("org.mockito.junit.jupiter")
     requires("com.google.protobuf")
-    requires("org.hiero.consensus.model")
 }

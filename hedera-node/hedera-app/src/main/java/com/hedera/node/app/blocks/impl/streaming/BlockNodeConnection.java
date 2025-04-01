@@ -90,7 +90,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 stopWorkerThread();
             }
             if (isActive.get()) {
-                requestWorker = Thread.ofVirtual()
+                requestWorker = Thread.ofPlatform()
                         .name("BlockNodeConnection-RequestWorker-" + node.address() + ":" + node.port())
                         .start(this::requestWorkerLoop);
                 logger.debug("Started request worker thread for block node {}:{}", node.address(), node.port());

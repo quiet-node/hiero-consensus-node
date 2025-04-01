@@ -63,8 +63,8 @@ public class FileAndGrpcBlockItemWriter implements BlockItemWriter {
     }
 
     @Override
-    public void performPreBlockProofActions() {
+    public void writePreBlockProofItems() {
         // The FileBlockItemWriter doesn't support performPreBlockProofActions, so we don't call it here
-        this.grpcBlockItemWriter.performPreBlockProofActions();
+        this.grpcBlockItemWriter.writePreBlockProofItems();
     }
 }
