@@ -635,15 +635,14 @@ public class NewStateRoot implements MerkleNodeState {
 
         @Override
         public void commit() {
-            // FIXME: Order is not guaranteed here, but it should be
-            for (final ReadableKVState kv : kvInstances.values()) {
-                ((WritableKVStateBase) kv).commit();
-            }
             for (final ReadableSingletonState s : singletonInstances.values()) {
                 ((WritableSingletonStateBase) s).commit();
             }
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
+            }
+            for (final ReadableKVState kv : kvInstances.values()) {
+                ((WritableKVStateBase) kv).commit();
             }
             readableStatesMap.remove(serviceName);
         }

@@ -120,6 +120,8 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
      */
     boolean endRound(@NonNull State state, long roundNum);
 
+    void accumKvItem(BlockItem blockItem);
+
     /**
      * Writes a block item to the stream.
      * @param item the block item to write
