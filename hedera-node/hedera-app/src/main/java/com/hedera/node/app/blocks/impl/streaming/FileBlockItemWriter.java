@@ -184,8 +184,9 @@ public class FileBlockItemWriter implements BlockItemWriter {
     }
 
     @Override
-    public void performPreBlockProofActions() {
-        throw new UnsupportedOperationException("FileBlockItemWriter does not support pre-block proof actions");
+    public void writePreBlockProofItems() {
+        throw new UnsupportedOperationException(
+                "FileBlockItemWriter does not support writing pre-block proof block items");
     }
 
     /**

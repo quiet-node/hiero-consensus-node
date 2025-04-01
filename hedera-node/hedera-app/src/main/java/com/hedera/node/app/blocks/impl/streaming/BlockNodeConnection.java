@@ -65,7 +65,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
-        this.grpcServiceClient = grpcServiceClient;
+        this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
     }
 
     /**
@@ -88,7 +88,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 stopWorkerThread();
             }
             if (isActive.get()) {
-                requestWorker = Thread.ofVirtual()
+                requestWorker = Thread.ofPlatform()
                         .name("BlockNodeConnection-RequestWorker-" + node.address() + ":" + node.port())
                         .start(this::requestWorkerLoop);
                 logger.debug("Started request worker thread for block node {}:{}", node.address(), node.port());

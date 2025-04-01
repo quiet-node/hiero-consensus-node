@@ -81,16 +81,13 @@ public class BlockStreamStateManager {
         // If we have enough items, create a new request
         if (blockState.items().size() >= blockItemBatchSize) {
             createRequestFromCurrentItems(blockState);
-
-            // Notify the connection manager
-            blockNodeConnectionManager.notifyConnectionsOfNewRequest();
         }
     }
 
     /**
      * Creates a new PublishStreamRequest from the current items in the block.
      */
-    public static void createRequestFromCurrentItems(@NonNull BlockState blockState) {
+    public void createRequestFromCurrentItems(@NonNull BlockState blockState) {
         // Create BlockItemSet by adding all items at once
         final BlockItemSet itemSet =
                 BlockItemSet.newBuilder().blockItems(blockState.items()).build();
@@ -107,6 +104,9 @@ public class BlockStreamStateManager {
 
         // Clear the items list
         blockState.items().clear();
+
+        // Notify the connection manager
+        blockNodeConnectionManager.notifyConnectionsOfNewRequest();
     }
 
     /**
@@ -127,9 +127,6 @@ public class BlockStreamStateManager {
                     blockNumber,
                     blockState.items().size());
             createRequestFromCurrentItems(blockState);
-
-            // Notify the connection manager
-            blockNodeConnectionManager.notifyConnectionsOfNewRequest();
         }
 
         // Mark the block as complete
@@ -154,7 +151,7 @@ public class BlockStreamStateManager {
      * Creates a new request from the current items in the block prior to BlockProof if there are any.
      * @param blockNumber the block number
      */
-    public void performPreBlockProofActions(long blockNumber) {
+    public void streamPreBlockProofItems(long blockNumber) {
         BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
@@ -167,9 +164,6 @@ public class BlockStreamStateManager {
                     blockNumber,
                     blockState.items().size());
             createRequestFromCurrentItems(blockState);
-
-            // Notify the connection manager
-            blockNodeConnectionManager.notifyConnectionsOfNewRequest();
         }
     }
 

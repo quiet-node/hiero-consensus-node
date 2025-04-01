@@ -47,5 +47,5 @@ public interface BlockItemWriter {
     /**
      * Performs any actions that need to be done before the block proof is complete.
      */
-    void performPreBlockProofActions();
+    void writePreBlockProofItems();
 }
