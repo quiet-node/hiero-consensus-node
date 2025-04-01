@@ -23,7 +23,6 @@ import com.hedera.hapi.block.stream.output.BlockHeader;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
-import com.hedera.node.app.NewStateRoot;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
@@ -327,10 +326,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 flushPreUserItems(null);
             }
 
-
-
             // Flush all boundary state changes besides the BlockStreamInfo
-//            worker.addItem(boundaryStateChangeListener.flushChanges());
+            //            worker.addItem(boundaryStateChangeListener.flushChanges());
             worker.sync();
 
             final var inputHash = inputTreeHasher.rootHash().join();

@@ -759,7 +759,7 @@ public class HandleWorkflow {
                 final var stateChangesItem = BlockItem.newBuilder()
                         .stateChanges(new StateChanges(asTimestamp(now), new ArrayList<>(changes)))
                         .build();
-                blockStreamManager.accumKvItem(stateChangesItem); //writeItem(stateChangesItem);
+                blockStreamManager.accumKvItem(stateChangesItem); // writeItem(stateChangesItem);
             }
         }
     }
