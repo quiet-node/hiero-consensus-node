@@ -10,6 +10,7 @@ import com.hedera.node.app.service.contract.impl.exec.FeatureFlags;
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.function.Supplier;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -44,6 +45,16 @@ public class CustomCreate2Operation extends AbstractCustomCreateOperation {
         return featureFlags.isCreate2Enabled(frame);
     }
 
+    /**
+     * Returns the amount of gas the CREATE2 operation will consume.
+     *
+     * @param frame The current frame
+     * @return the amount of gas the CREATE2 operation will consume
+     * <p>Compose the operation cost from {@link GasCalculator#txCreateCost()}, {@link
+     * GasCalculator#memoryExpansionGasCost(MessageFrame, long, long)}, {@link GasCalculator#createKeccakCost(int)}, and
+     * {@link GasCalculator#initcodeCost(int)}. As done in {@link
+     * org.hyperledger.besu.evm.operation.Create2Operation#cost(MessageFrame, Supplier)}
+     */
     @Override
     protected long cost(@NonNull final MessageFrame frame) {
         final int inputOffset = clampedToInt(frame.getStackItem(1));

@@ -135,6 +135,15 @@ public interface ContractServiceModule {
     @ServicesVersionKey(VERSION_051)
     TransactionProcessor bindV051Processor(@ServicesV051 @NonNull final TransactionProcessor processor);
 
+    /**
+     * Provides a singleton instance of {@link CodeFactory} initialized with zero values.
+     *
+     * <p>The values {@code maxEofVersion} and {@code maxContainerSize} are set to 0,
+     * which means the factory defaults to handling only legacy code (EOF version 0)
+     * and sets a strict size limit on EOF code containers.
+     *
+     * @return a singleton instance of {@link CodeFactory} with strict constraints.
+     */
     @Provides
     @Singleton
     static CodeFactory provideCodeFactory() {

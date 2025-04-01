@@ -4,6 +4,7 @@ package com.hedera.node.app.service.contract.impl.test.state;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.has.hbarallowance.HbarAllowanceTranslator.HBAR_ALLOWANCE_PROXY;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.ACCOUNT_CALL_REDIRECT_CONTRACT_BINARY;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.ADDRESS_BYTECODE_PATTERN;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CODE_FACTORY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,7 +16,6 @@ import com.hedera.node.app.service.contract.impl.state.DispatchingEvmFrameState;
 import com.hedera.node.app.service.contract.impl.state.ProxyEvmAccount;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.evm.code.CodeFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +28,6 @@ class ProxyEvmAccountTest {
     private static final AccountID ACCOUNT_ID =
             AccountID.newBuilder().accountNum(ACCOUNT_NUM).build();
     private static final Bytes SOME_PRETEND_CODE = Bytes.wrap("<NOT-REALLY-CODE>");
-    private static final CodeFactory CODE_FACTORY = new CodeFactory(0, 0);
 
     @Mock
     private DispatchingEvmFrameState state;
