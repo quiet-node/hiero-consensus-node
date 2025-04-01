@@ -536,7 +536,9 @@ public class VirtualPipeline {
                 copies.remove(next);
             }
             statistics.setPipelineSize(copies.getSize());
+            logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Pipeline size {}", copies.getSize());
             final long totalSize = currentTotalSize();
+            logger.debug(VIRTUAL_MERKLE_STATS.getMarker(), "Total size {}", totalSize);
             statistics.setNodeCacheSize(totalSize);
             next = next.getNext();
         }
