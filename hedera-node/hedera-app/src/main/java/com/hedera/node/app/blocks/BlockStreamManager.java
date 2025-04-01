@@ -26,20 +26,6 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
     Bytes ZERO_BLOCK_HASH = Bytes.wrap(new byte[48]);
 
     /**
-     * The types of work that may be identified as pending within a block.
-     */
-    enum PendingWork {
-        /**
-         * No work is pending.
-         */
-        NONE,
-        /**
-         * Post-upgrade work is pending.
-         */
-        POST_UPGRADE_WORK
-    }
-
-    /**
      * Lifecycle interface for the block stream manager. This will allow any additional actions that
      * need to take place at start of block and end of block. For example, updating node rewards information.
      */
@@ -91,12 +77,11 @@ public interface BlockStreamManager extends BlockRecordInfo, StateHashedListener
     void confirmPostUpgradeWorkFinished();
 
     /**
-     * Returns whether post-upgrade work is pending.
+     * Returns whether post-upgrade work is done.
      *
-     * @return whether post-upgrade work is pending
+     * @return whether post-upgrade work is done.
      */
-    @NonNull
-    PendingWork pendingWork();
+    boolean isPostUpgradeWorkDone();
 
     /**
      * Sets the last interval process time.

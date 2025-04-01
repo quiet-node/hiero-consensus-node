@@ -141,7 +141,7 @@ public class HandleWorkflow {
     private final CurrentPlatformStatus currentPlatformStatus;
     private final BlockHashSigner blockHashSigner;
 
-    @Nullable
+    @NonNull
     private final AtomicBoolean systemEntitiesCreatedFlag;
 
     // The last second since the epoch at which the metrics were updated; this does not affect transaction handling
@@ -179,7 +179,7 @@ public class HandleWorkflow {
             @NonNull final CongestionMetrics congestionMetrics,
             @NonNull final CurrentPlatformStatus currentPlatformStatus,
             @NonNull final BlockHashSigner blockHashSigner,
-            @Nullable final AtomicBoolean systemEntitiesCreatedFlag,
+            @NonNull final AtomicBoolean systemEntitiesCreatedFlag,
             @NonNull final NodeRewardManager nodeRewardManager) {
         this.networkInfo = requireNonNull(networkInfo);
         this.stakePeriodChanges = requireNonNull(stakePeriodChanges);
@@ -249,7 +249,7 @@ public class HandleWorkflow {
                     case RECORDS -> blockRecordManager
                             .consTimeOfLastHandledTxn()
                             .equals(Instant.EPOCH);
-                    case BLOCKS, BOTH -> systemEntitiesCreatedFlag != null && !systemEntitiesCreatedFlag.get();
+                    case BLOCKS, BOTH -> !systemEntitiesCreatedFlag.get();
                 };
         boolean systemTransactionsDispatched = false;
         if (isGenesis) {
@@ -391,9 +391,7 @@ public class HandleWorkflow {
             }
         }
         if (streamMode != RECORDS) {
-            type = switch (blockStreamManager.pendingWork()) {
-                case POST_UPGRADE_WORK -> POST_UPGRADE_TRANSACTION;
-                default -> ORDINARY_TRANSACTION;};
+            type = blockStreamManager.isPostUpgradeWorkDone() ? ORDINARY_TRANSACTION : POST_UPGRADE_TRANSACTION;
         }
         final var userTxn =
                 parentTxnFactory.createUserTxn(state, creator, txn, consensusNow, type, stateSignatureTxnCallback);

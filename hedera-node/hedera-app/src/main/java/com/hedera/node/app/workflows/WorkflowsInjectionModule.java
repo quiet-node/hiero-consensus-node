@@ -18,7 +18,6 @@ import com.swirlds.platform.system.SoftwareVersion;
 import dagger.Module;
 import dagger.Provides;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import javax.inject.Singleton;
@@ -35,10 +34,9 @@ import javax.inject.Singleton;
         })
 public interface WorkflowsInjectionModule {
     @Provides
-    @Nullable
     @Singleton
     static AtomicBoolean provideMaybeSystemEntitiesCreatedFlag(@NonNull final EntityCounts entityCounts) {
-        return entityCounts.numAccounts() == 0 ? new AtomicBoolean(false) : null;
+        return entityCounts.numAccounts() == 0 ? new AtomicBoolean(false) : new AtomicBoolean(true);
     }
 
     @Provides
