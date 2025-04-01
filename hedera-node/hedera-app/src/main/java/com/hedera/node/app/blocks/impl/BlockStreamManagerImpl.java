@@ -77,8 +77,6 @@ import org.hiero.consensus.model.hashgraph.Round;
 public class BlockStreamManagerImpl implements BlockStreamManager {
     private static final Logger log = LogManager.getLogger(BlockStreamManagerImpl.class);
 
-    private static final String FATAL_SHUTDOWN_BASE_MSG = "Waiting for fatal shutdown of block stream to complete";
-
     private final int roundsPerBlock;
     private final Duration blockPeriod;
     private final int hashCombineBatchSize;
@@ -92,8 +90,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private final BoundaryStateChangeListener boundaryStateChangeListener;
     private final PlatformStateFacade platformStateFacade;
 
+    private final Lifecycle lifecycle;
     private final BlockHashManager blockHashManager;
     private final RunningHashManager runningHashManager;
+    private final boolean streamToBlockNodes;
 
     // The status of pending work
     private PendingWork pendingWork = NONE;
@@ -168,14 +168,15 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final BoundaryStateChangeListener boundaryStateChangeListener,
             @NonNull final InitialStateHash initialStateHash,
             @NonNull final SemanticVersion version,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final Lifecycle lifecycle) {
         this.blockHashSigner = requireNonNull(blockHashSigner);
         this.version = requireNonNull(version);
         this.writerSupplier = requireNonNull(writerSupplier);
         this.executor = (ForkJoinPool) requireNonNull(executor);
         this.boundaryStateChangeListener = requireNonNull(boundaryStateChangeListener);
-        this.platformStateFacade = platformStateFacade;
-        requireNonNull(configProvider);
+        this.platformStateFacade = requireNonNull(platformStateFacade);
+        this.lifecycle = requireNonNull(lifecycle);
         final var config = configProvider.getConfiguration();
         this.hintsEnabled = config.getConfigData(TssConfig.class).hintsEnabled();
         this.hapiVersion = hapiVersionFrom(config);
@@ -183,6 +184,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.roundsPerBlock = blockStreamConfig.roundsPerBlock();
         this.blockPeriod = blockStreamConfig.blockPeriod();
         this.hashCombineBatchSize = blockStreamConfig.hashCombineBatchSize();
+        this.streamToBlockNodes = blockStreamConfig.streamToBlockNodes();
         final var networkAdminConfig = config.getConfigData(NetworkAdminConfig.class);
         this.diskNetworkExport = networkAdminConfig.diskNetworkExport();
         this.diskNetworkExportFile = networkAdminConfig.diskNetworkExportFile();
@@ -245,6 +247,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             blockHashManager.startBlock(blockStreamInfo, lastBlockHash);
             runningHashManager.startBlock(blockStreamInfo);
 
+            lifecycle.onOpenBlock(state);
             inputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
             outputTreeHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
             blockNumber = blockStreamInfo.blockNumber() + 1;
@@ -312,6 +315,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             if (preTxnItems != null) {
                 flushPreUserItems(null);
             }
+            lifecycle.onCloseBlock(state);
             // Flush all boundary state changes besides the BlockStreamInfo
             worker.addItem(boundaryStateChangeListener.flushChanges());
             worker.sync();
@@ -366,6 +370,12 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     writer,
                     new MerkleSiblingHash(false, inputHash),
                     new MerkleSiblingHash(false, rightParent)));
+
+            if (streamToBlockNodes) {
+                // Write any pre-block proof block items
+                writer.writePreBlockProofItems();
+            }
+
             // Update in-memory state to prepare for the next block
             lastBlockHash = blockHash;
             writer = null;
@@ -477,7 +487,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     .blockSignature(blockSignature)
                     .siblingHashes(siblingHashes.stream().flatMap(List::stream).toList());
             final var proofItem = BlockItem.newBuilder().blockProof(proof).build();
-            block.writer().writePbjItem(BlockItem.PROTOBUF.toBytes(proofItem));
+            block.writer().writePbjItemAndBytes(proofItem, BlockItem.PROTOBUF.toBytes(proofItem));
             block.writer().closeBlock();
             if (block.number() != blockNumber) {
                 siblingHashes.removeFirst();
@@ -644,7 +654,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             if (header != null) {
                 writer.openBlock(header.number());
             }
-            writer.writePbjItem(serialized);
+            writer.writePbjItemAndBytes(item, serialized);
 
             next.send();
             return true;
