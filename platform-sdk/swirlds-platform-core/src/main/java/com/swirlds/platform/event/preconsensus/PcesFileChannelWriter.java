@@ -34,12 +34,7 @@ public class PcesFileChannelWriter implements PcesFileWriter {
      * @throws IOException if an error occurs while opening the file
      */
     public PcesFileChannelWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
-        if (syncEveryEvent) {
-            channel = FileChannel.open(
-                    filePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, StandardOpenOption.DSYNC);
-        } else {
-            channel = FileChannel.open(filePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-        }
+        channel = FileChannel.open(filePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
         buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
         writableSequentialData = BufferedData.wrap(buffer);
     }
