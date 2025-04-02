@@ -68,7 +68,7 @@ public class RepeatableHip1064Tests {
         testLifecycle.overrideInClass(Map.of(
                 "nodes.nodeRewardsEnabled", "true",
                 "nodes.preserveMinNodeRewardBalance", "true",
-                "ledger.transfers.maxLen", "1"));
+                "ledger.transfers.maxLen", "2"));
         testLifecycle.doAdhoc(
                 nodeUpdate("0").declineReward(false),
                 nodeUpdate("1").declineReward(false),
