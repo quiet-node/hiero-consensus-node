@@ -18,7 +18,6 @@ import io.helidon.webclient.grpc.GrpcServiceDescriptor;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -70,7 +69,7 @@ public class BlockNodeConnectionManager {
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.activeConnections = new ConcurrentHashMap<>();
-        this.lastVerifiedBlockPerConnection = new HashMap<>();
+        this.lastVerifiedBlockPerConnection = new ConcurrentHashMap<>();
     }
 
     /**
