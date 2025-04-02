@@ -223,7 +223,9 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      */
     @Override
     public @NonNull Hash getTokenRedirectCodeHash(@NonNull final Address address) {
-        return codeFactory.createCode(RedirectBytecodeUtils.tokenProxyBytecodeFor(address), false).getCodeHash();
+        return codeFactory
+                .createCode(RedirectBytecodeUtils.tokenProxyBytecodeFor(address), false)
+                .getCodeHash();
     }
 
     /**
@@ -239,7 +241,9 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      */
     @Override
     public @NonNull Hash getAccountRedirectCodeHash(@Nullable final Address address) {
-        return codeFactory.createCode(RedirectBytecodeUtils.accountProxyBytecodeFor(address), false).getCodeHash();
+        return codeFactory
+                .createCode(RedirectBytecodeUtils.accountProxyBytecodeFor(address), false)
+                .getCodeHash();
     }
 
     /**
@@ -255,7 +259,9 @@ public class DispatchingEvmFrameState implements EvmFrameState {
      */
     @Override
     public @NonNull Hash getScheduleRedirectCodeHash(@Nullable final Address address) {
-        return codeFactory.createCode(RedirectBytecodeUtils.scheduleProxyBytecodeFor(address), false).getCodeHash();
+        return codeFactory
+                .createCode(RedirectBytecodeUtils.scheduleProxyBytecodeFor(address), false)
+                .getCodeHash();
     }
 
     /**
