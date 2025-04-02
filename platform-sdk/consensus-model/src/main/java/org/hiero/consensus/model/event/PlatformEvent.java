@@ -114,7 +114,7 @@ public class PlatformEvent implements ConsensusEvent, Hashable {
     public @NonNull PlatformEvent copyGossipedData() {
         final PlatformEvent platformEvent = new PlatformEvent(gossipEvent);
         platformEvent.setHash(getHash());
-        if(getBranchIndex()!=-1) {
+        if (getBranchIndex() != -1) {
             platformEvent.setBranchIndex(getBranchIndex());
         }
         return platformEvent;

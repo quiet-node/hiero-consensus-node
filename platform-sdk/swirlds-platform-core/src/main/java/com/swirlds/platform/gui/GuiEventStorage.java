@@ -67,7 +67,10 @@ public class GuiEventStorage {
      * @param configuration this node's configuration
      * @param addressBook   the network's address book
      */
-    public GuiEventStorage(@NonNull final Configuration configuration, @NonNull final AddressBook addressBook, final Map<GossipEvent, Integer> branchIndexMap,
+    public GuiEventStorage(
+            @NonNull final Configuration configuration,
+            @NonNull final AddressBook addressBook,
+            final Map<GossipEvent, Integer> branchIndexMap,
             final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
 
         this.configuration = Objects.requireNonNull(configuration);

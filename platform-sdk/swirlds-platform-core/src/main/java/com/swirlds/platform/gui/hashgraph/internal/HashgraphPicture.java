@@ -116,7 +116,15 @@ public class HashgraphPicture extends JPanel {
                     .filter(e -> addressBook.getIndexOfNodeId(e.getCreatorId()) < numMem)
                     .toList();
 
-            pictureMetadata = new PictureMetadata(fm, this.getSize(), currentMetadata, events, hashgraphSource, branchIndexToxCoordinates, branchIndexToY, eventToX);
+            pictureMetadata = new PictureMetadata(
+                    fm,
+                    this.getSize(),
+                    currentMetadata,
+                    events,
+                    hashgraphSource,
+                    branchIndexToxCoordinates,
+                    branchIndexToY,
+                    eventToX);
 
             selector.setMetadata(pictureMetadata);
             selector.setEventsInPicture(events);
@@ -148,10 +156,11 @@ public class HashgraphPicture extends JPanel {
             for (final EventImpl event : events) {
                 drawEventCircle(g, event, options, d);
             }
-//            final var selectedEvent = events.stream().filter(e -> selector.isSelected(e)).toList().getFirst();
-//            if(selectedEvent != null) {
-//                drawEventCircle(g, selectedEvent, options, d);
-//            }
+
+            final var selectedEvent = events.stream().filter(selector::isSelected).toList().getFirst();
+            if(selectedEvent != null) {
+                drawEventCircle(g, selectedEvent, options, d);
+            }
 
             refreshCounter++;
         } catch (final Exception e) {
@@ -181,12 +190,11 @@ public class HashgraphPicture extends JPanel {
             e2 = null;
         }
 
-
         if (e1 != null && e1.getGeneration() >= pictureMetadata.getMinGen()) {
             g.drawLine(
                     pictureMetadata.xpos(e2, event),
                     pictureMetadata.ypos(event),
-                    pictureMetadata.xpos(e2, event),
+                    pictureMetadata.xpos(e2, e1),
                     pictureMetadata.ypos(e1));
         }
         if (e2 != null && e2.getGeneration() >= pictureMetadata.getMinGen()) {
@@ -227,59 +235,9 @@ public class HashgraphPicture extends JPanel {
         final int xPos = pictureMetadata.xpos(e2, event) - d / 2;
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
-//        // we have a branched event
-//       if(hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(event.getBaseEvent().getGossipEvent())) {
-//            if(!branchIndexToY.containsKey(hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent()))) {
-//                branchIndexToY.put(hashgraphSource.getEventStorage().getBranchIndexMap()
-//                        .get(event.getBaseEvent().getGossipEvent()), yPos);
-//            }
-//
-//            final var branchIndex = hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent());
-//            var eventToXCoordinatesForGivenBranch = branchIndexToxCoordinates.get(branchIndex);
-//
-//            if(eventToXCoordinatesForGivenBranch != null) {
-//                // event still does not have coordinate
-//                if(!eventToXCoordinatesForGivenBranch.containsKey(event.getBaseEvent().getGossipEvent())) {
-//                    //get highest value
-//                    eventToXCoordinatesForGivenBranch.values().stream().max(Integer::compareTo).ifPresent(x -> {
-//                        eventToX.put(event.getBaseEvent().getGossipEvent(), x + 20);
-//                    });
-//                    eventToXCoordinatesForGivenBranch.put(event.getBaseEvent().getGossipEvent(), eventToX.get(event.getBaseEvent().getGossipEvent()));
-//                }
-//                else if (eventToXCoordinatesForGivenBranch.size() > 8) {
-//                    eventToXCoordinatesForGivenBranch.clear();
-//
-//                    eventToXCoordinatesForGivenBranch.put(event.getBaseEvent().getGossipEvent(), xPos);
-//
-//                    branchIndexToxCoordinates.put(branchIndex, eventToXCoordinatesForGivenBranch);
-//                }
-//            } else
-//            // that will be first branch of an event and coordinates don't exist yet
-//            {
-//                eventToXCoordinatesForGivenBranch = new HashMap<>();
-//
-//                var newXPosToUse = xPos;
-//                if(branchIndex > 0) {
-////                    final var xCoord = branchIndexToxCoordinates.get(branchIndex-1);
-////                    newXPosToUse = xCoord.getFirst();
-//                }
-//
-//                eventToXCoordinatesForGivenBranch.put(event.getBaseEvent().getGossipEvent(), newXPosToUse);
-//
-//                branchIndexToxCoordinates.put(branchIndex, eventToXCoordinatesForGivenBranch);
-//            }
-//        }
-
         eventFirstOccurence.put(event, refreshCounter);
 
-//        if(hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(event.getBaseEvent().getGossipEvent())){
-//            final var newXPos = branchIndexToxCoordinates.get(hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent()))
-//                    .getOrDefault(event.getBaseEvent().getGossipEvent(), xPos);
-//            final var newYPos = branchIndexToY.get(hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent()));
-//            g.fillOval(newXPos, newYPos, d, d);
-//        } else {
-            g.fillOval(xPos, yPos, d, d);
-//        }
+        g.fillOval(xPos, yPos, d, d);
 
         events.add(event);
 
@@ -328,27 +286,25 @@ public class HashgraphPicture extends JPanel {
             s += " " + event.getBirthRound();
         }
 
-        if (options.showBranches() && hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(event.getBaseEvent().getGossipEvent())
-//                !hashgraphSource.getEventStorage().getIsSingleEventInBranchMap().get(event.getBaseEvent().getGossipEvent())
+        if (options.showBranches()
+                && hashgraphSource
+                        .getEventStorage()
+                        .getBranchIndexMap()
+                        .containsKey(event.getBaseEvent().getGossipEvent())
+        // !hashgraphSource.getEventStorage().getIsSingleEventInBranchMap().get(event.getBaseEvent().getGossipEvent())
         ) {
-            s += " " + "branch " + hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent());
+            s += " " + "branch "
+                    + hashgraphSource
+                            .getEventStorage()
+                            .getBranchIndexMap()
+                            .get(event.getBaseEvent().getGossipEvent());
         }
 
         if (!s.isEmpty()) {
             final Rectangle2D rect = fm.getStringBounds(s, g);
 
-            int x;
-//            if(eventToX.containsKey(event.getBaseEvent().getGossipEvent())) {
-//                x = (int) (eventToX.get(event.getBaseEvent().getGossipEvent()) - rect.getWidth() / 2. - fa / 4.);
-//            } else {
-                x = (int) (pictureMetadata.xpos(e2, event) - rect.getWidth() / 2. - fa / 4.);
-//            }
-            int y;
-//            if(hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(event.getBaseEvent().getGossipEvent())) {
-//                y = (int) (branchIndexToY.get(hashgraphSource.getEventStorage().getBranchIndexMap().get(event.getBaseEvent().getGossipEvent())) + rect.getHeight() / 2.);
-//            } else {
-                y = (int) (pictureMetadata.ypos(event) + rect.getHeight() / 2. - fd / 2);
-//            }
+            final int x = (int) (pictureMetadata.xpos(e2, event) - rect.getWidth() / 2. - fa / 4.);
+            final int y = (int) (pictureMetadata.ypos(event) + rect.getHeight() / 2. - fd / 2);
             g.setColor(HashgraphGuiConstants.LABEL_OUTLINE);
             g.drawString(s, x - 1, y - 1);
             g.drawString(s, x + 1, y - 1);

@@ -15,6 +15,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.LinkedList;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import org.hiero.consensus.model.node.NodeId;
 
@@ -124,9 +125,11 @@ public abstract class AbstractEventSource implements EventSource {
      * Maintain the maximum size of a list of events by removing the last element (if needed). Utility method that is
      * useful for child classes.
      */
-    protected void pruneEventList(final LinkedList<EventImpl> events) {
+    protected Optional<EventImpl> pruneEventList(final LinkedList<EventImpl> events) {
         if (events.size() > getRecentEventRetentionSize()) {
-            events.removeLast();
+            return Optional.of(events.removeLast());
+        } else {
+            return Optional.empty();
         }
     }
 

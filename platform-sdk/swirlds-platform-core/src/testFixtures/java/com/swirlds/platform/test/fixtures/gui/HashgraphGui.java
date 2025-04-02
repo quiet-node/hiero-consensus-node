@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import org.hiero.consensus.model.event.PlatformEvent;
 
 public class HashgraphGui {
     public static void main(final String[] args) {
@@ -28,25 +27,34 @@ public class HashgraphGui {
 
         final Map<GossipEvent, Integer> branchIndexMap = new HashMap<>();
         final Map<GossipEvent, Boolean> isSingleEventInBranchMap = new HashMap<>();
-        final GraphGenerator graphGenerator =
-                new StandardGraphGenerator(platformContext, randotron.nextInt(), generateSources(numNodes, branchIndexMap,
-                        isSingleEventInBranchMap));
+        final GraphGenerator graphGenerator = new StandardGraphGenerator(
+                platformContext,
+                randotron.nextInt(),
+                generateSources(numNodes, branchIndexMap, isSingleEventInBranchMap));
         graphGenerator.reset();
 
         final TestGuiSource guiSource = new TestGuiSource(
-                platformContext, graphGenerator.getAddressBook(), new GeneratorEventProvider(graphGenerator), branchIndexMap,
+                platformContext,
+                graphGenerator.getAddressBook(),
+                new GeneratorEventProvider(graphGenerator),
+                branchIndexMap,
                 isSingleEventInBranchMap);
         guiSource.generateEvents(initialEvents);
         guiSource.runGui();
     }
 
-    private static @NonNull List<EventSource> generateSources(final int numNetworkNodes, final Map<GossipEvent, Integer> branchIndexMap,
+    private static @NonNull List<EventSource> generateSources(
+            final int numNetworkNodes,
+            final Map<GossipEvent, Integer> branchIndexMap,
             final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
         final List<EventSource> list = new LinkedList<>();
         for (long i = 0; i < numNetworkNodes; i++) {
-            if (i==1) {
-//                list.add(new ForkingEventSource(branchIndexMap, isSingleEventInBranchMap).setForkProbability(0.5).setMaximumBranchCount(2));
-                list.add(new ForkingEventSource(branchIndexMap, isSingleEventInBranchMap).setForkProbability(0.5).setMaximumBranchCount(2));
+            if (i == 1) {
+                //                list.add(new ForkingEventSource(branchIndexMap,
+                // isSingleEventInBranchMap).setForkProbability(0.5).setMaximumBranchCount(2));
+                list.add(new ForkingEventSource(branchIndexMap, isSingleEventInBranchMap)
+                        .setForkProbability(0.8)
+                        .setMaximumBranchCount(3));
                 continue;
             }
             list.add(new StandardEventSource(true));
