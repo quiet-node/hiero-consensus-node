@@ -4,6 +4,7 @@ package com.swirlds.platform.event.preconsensus;
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.hedera.pbj.runtime.io.WritableSequentialData;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
+import com.sun.nio.file.ExtendedOpenOption;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,7 +35,8 @@ public class PcesFileChannelWriter implements PcesFileWriter {
      * @throws IOException if an error occurs while opening the file
      */
     public PcesFileChannelWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
-        channel = FileChannel.open(filePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        channel = FileChannel.open(
+                filePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, ExtendedOpenOption.DIRECT);
         buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
         writableSequentialData = BufferedData.wrap(buffer);
     }

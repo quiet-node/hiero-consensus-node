@@ -162,6 +162,7 @@ module com.swirlds.platform.core {
     requires java.scripting;
     requires jdk.management;
     requires jdk.net;
+    requires jdk.unsupported;
     requires org.bouncycastle.pkix;
     requires org.bouncycastle.provider;
 
