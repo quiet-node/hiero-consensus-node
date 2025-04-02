@@ -38,8 +38,6 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfiguration;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.platform.system.events.Event;
-import com.swirlds.platform.system.transaction.Transaction;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -53,6 +51,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.event.Event;
+import org.hiero.consensus.model.transaction.Transaction;
 
 /**
  * Implementation of {@link PreHandleWorkflow}
@@ -181,9 +181,15 @@ public class PreHandleWorkflowImpl implements PreHandleWorkflow {
                     .getConfiguration()
                     .getConfigData(HederaConfig.class)
                     .nodeTransactionMaxBytes();
-            txInfo = previousResult == null
-                    ? transactionChecker.parseAndCheck(applicationTxBytes, maxBytes)
-                    : previousResult.txInfo();
+            if (previousResult == null) {
+                if (InnerTransaction.YES.equals(innerTransaction)) {
+                    txInfo = transactionChecker.parseSignedAndCheck(applicationTxBytes, maxBytes);
+                } else {
+                    txInfo = transactionChecker.parseAndCheck(applicationTxBytes, maxBytes);
+                }
+            } else {
+                txInfo = previousResult.txInfo();
+            }
             if (txInfo == null) {
                 // In particular, a null transaction info means we already know the transaction's final failure status
                 return previousResult;

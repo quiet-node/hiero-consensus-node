@@ -9,8 +9,6 @@ import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.crypto.Cryptography;
 import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.crypto.HashBuilder;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleLeaf;
 import com.swirlds.common.merkle.impl.PartialBinaryMerkleInternal;
@@ -23,6 +21,8 @@ import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.hiero.consensus.model.io.streams.SerializableDataInputStream;
+import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -120,6 +120,7 @@ public class VirtualTestBase {
         System.setProperty("syncCleaningPool", "true");
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds.common.crypto");
+        registry.registerConstructables("org.hiero.consensus.model.crypto");
         registry.registerConstructables("com.swirlds.virtualmap");
         registry.registerConstructables("com.swirlds.virtualmap.test.fixtures");
         registry.registerConstructable(new ClassConstructorPair(TestInternal.class, TestInternal::new));

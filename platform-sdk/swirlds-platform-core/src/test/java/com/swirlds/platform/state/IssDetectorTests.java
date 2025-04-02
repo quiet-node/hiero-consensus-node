@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state;
 
-import static com.swirlds.common.test.fixtures.RandomUtils.randomHash;
+import static com.swirlds.common.test.fixtures.crypto.CryptoRandomUtils.randomHash;
 import static com.swirlds.common.utility.Threshold.MAJORITY;
 import static com.swirlds.common.utility.Threshold.SUPER_MAJORITY;
 import static com.swirlds.platform.state.RoundHashValidatorTests.generateCatastrophicNodeHashes;
@@ -20,10 +20,9 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.platform.NodeId;
+import com.swirlds.common.test.fixtures.GaussianWeightGenerator;
 import com.swirlds.common.test.fixtures.Randotron;
-import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
+import com.swirlds.common.test.fixtures.WeightGenerator;
 import com.swirlds.platform.consensus.ConsensusConfig;
 import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.iss.DefaultIssDetector;
@@ -31,8 +30,6 @@ import com.swirlds.platform.state.iss.IssDetector;
 import com.swirlds.platform.state.iss.internal.HashValidityStatus;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.system.state.notifications.IssNotification;
-import com.swirlds.platform.system.state.notifications.IssNotification.IssType;
 import com.swirlds.platform.test.fixtures.PlatformTest;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
@@ -45,11 +42,17 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.notification.IssNotification;
+import org.hiero.consensus.model.notification.IssNotification.IssType;
+import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("IssDetector Tests")
 class IssDetectorTests extends PlatformTest {
+    private static final WeightGenerator WEIGHT_GENERATOR = new GaussianWeightGenerator(100, 50);
 
     @Test
     @DisplayName("State reservation is released")
@@ -83,8 +86,7 @@ class IssDetectorTests extends PlatformTest {
         final Randotron random = Randotron.create();
         final Roster roster = RandomRosterBuilder.create(random)
                 .withSize(100)
-                .withAverageWeight(100)
-                .withWeightStandardDeviation(50)
+                .withWeightGenerator(WEIGHT_GENERATOR)
                 .build();
 
         final PlatformContext platformContext = createDefaultPlatformContext();
@@ -153,9 +155,8 @@ class IssDetectorTests extends PlatformTest {
         final Randotron random = Randotron.create();
 
         final Roster roster = RandomRosterBuilder.create(random)
-                .withSize(Math.max(10, random.nextInt(1000))) // TODO Kelly why??
-                .withAverageWeight(100)
-                .withWeightStandardDeviation(50)
+                .withSize(Math.max(10, random.nextInt(1000)))
+                .withWeightGenerator(WEIGHT_GENERATOR)
                 .build();
 
         final PlatformContext platformContext = createDefaultPlatformContext();
@@ -310,8 +311,7 @@ class IssDetectorTests extends PlatformTest {
 
         final Roster roster = RandomRosterBuilder.create(random)
                 .withSize(100)
-                .withAverageWeight(100)
-                .withWeightStandardDeviation(50)
+                .withWeightGenerator(WEIGHT_GENERATOR)
                 .build();
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
@@ -427,8 +427,7 @@ class IssDetectorTests extends PlatformTest {
                 .roundsNonAncient();
         final Roster roster = RandomRosterBuilder.create(random)
                 .withSize(100)
-                .withAverageWeight(100)
-                .withWeightStandardDeviation(50)
+                .withWeightGenerator(WEIGHT_GENERATOR)
                 .build();
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
@@ -514,8 +513,7 @@ class IssDetectorTests extends PlatformTest {
                 .roundsNonAncient();
         final Roster roster = RandomRosterBuilder.create(random)
                 .withSize(100)
-                .withAverageWeight(100)
-                .withWeightStandardDeviation(50)
+                .withWeightGenerator(WEIGHT_GENERATOR)
                 .build();
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
@@ -589,8 +587,7 @@ class IssDetectorTests extends PlatformTest {
 
         final Roster roster = RandomRosterBuilder.create(random)
                 .withSize(100)
-                .withAverageWeight(100)
-                .withWeightStandardDeviation(50)
+                .withWeightGenerator(WEIGHT_GENERATOR)
                 .build();
 
         final PlatformContext platformContext = createDefaultPlatformContext();

@@ -2,12 +2,12 @@
 package com.swirlds.virtualmap.benchmark.reconnect;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.test.fixtures.RandomUtils;
 import com.swirlds.virtualmap.test.fixtures.TestKey;
 import com.swirlds.virtualmap.test.fixtures.TestValue;
 import java.util.Random;
 import java.util.function.BiConsumer;
 import java.util.stream.LongStream;
+import org.hiero.consensus.utility.test.fixtures.RandomUtils;
 
 /**
  * A utility class to help build random states.

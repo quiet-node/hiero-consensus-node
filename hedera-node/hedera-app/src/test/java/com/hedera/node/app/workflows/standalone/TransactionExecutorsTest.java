@@ -2,11 +2,11 @@
 package com.hedera.node.app.workflows.standalone;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.records.schemas.V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY;
 import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.NODES_KEY;
 import static com.hedera.node.app.spi.AppContext.Gossip.UNAVAILABLE_GOSSIP;
 import static com.hedera.node.app.spi.fees.NoopFeeCharging.NOOP_FEE_CHARGING;
-import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.util.FileUtilities.createFileID;
 import static com.hedera.node.app.workflows.standalone.TransactionExecutors.MAX_SIGNED_TXN_SIZE_PROPERTY;
 import static com.hedera.node.app.workflows.standalone.TransactionExecutors.TRANSACTION_EXECUTORS;
@@ -85,7 +85,6 @@ import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.crypto.internal.CryptoUtils;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.crypto.CryptoStatic;
@@ -119,6 +118,7 @@ import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 import org.apache.tuweni.bytes.Bytes32;
+import org.hiero.consensus.model.node.NodeId;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
@@ -158,10 +158,9 @@ public class TransactionExecutorsTest {
     private static final String EXPECTED_TRACE_START =
             "{\"pc\":0,\"op\":96,\"gas\":\"0x13458\",\"gasCost\":\"0x3\",\"memSize\":0,\"depth\":1,\"refund\":0,\"opName\":\"PUSH1\"}";
     private static final NodeInfo DEFAULT_NODE_INFO =
-            new NodeInfoImpl(0, idFactory.newAccountId(3L), 10, List.of(), Bytes.EMPTY, List.of());
+            new NodeInfoImpl(0, idFactory.newAccountId(3L), 10, List.of(), Bytes.EMPTY, List.of(), true);
 
     public static final Metrics NO_OP_METRICS = new NoOpMetrics();
-    public static final NetworkInfo FAKE_NETWORK_INFO = fakeNetworkInfo();
 
     @Mock
     private SignatureVerifier signatureVerifier;
@@ -493,7 +492,7 @@ public class TransactionExecutorsTest {
                         new FreezeServiceImpl(),
                         new ScheduleServiceImpl(appContext),
                         new TokenServiceImpl(appContext),
-                        new UtilServiceImpl(),
+                        new UtilServiceImpl(appContext, (signedTxn, config) -> null),
                         new RecordCacheService(),
                         new BlockRecordService(),
                         new FeeService(),
@@ -533,7 +532,8 @@ public class TransactionExecutorsTest {
                         0,
                         List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT),
                         getCertBytes(randomX509Certificate()),
-                        List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT));
+                        List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT),
+                        true);
             }
 
             @NonNull
@@ -545,7 +545,8 @@ public class TransactionExecutorsTest {
                         0,
                         List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT),
                         getCertBytes(randomX509Certificate()),
-                        List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT)));
+                        List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT),
+                        false));
             }
 
             @Override
@@ -556,7 +557,8 @@ public class TransactionExecutorsTest {
                         0,
                         List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT),
                         Bytes.EMPTY,
-                        List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT));
+                        List.of(ServiceEndpoint.DEFAULT, ServiceEndpoint.DEFAULT),
+                        false);
             }
 
             @Override
