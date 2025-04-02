@@ -315,7 +315,7 @@ public class BlockNodeConnectionManager {
     public void updateLastVerifiedBlock(@NonNull final String connectionId, @Nullable final Long blockNumber) {
         requireNonNull(connectionId);
 
-        final Long latestBlock = getLatestBlock(connectionId);
+        final Long latestBlock = lastVerifiedBlockPerConnection.computeIfAbsent(connectionId, key -> -1L);
         if (blockNumber != null && blockNumber > latestBlock) {
             lastVerifiedBlockPerConnection.put(connectionId, blockNumber);
         } else {
@@ -325,9 +325,5 @@ public class BlockNodeConnectionManager {
                     blockNumber,
                     latestBlock);
         }
-    }
-
-    private Long getLatestBlock(@NonNull final String connectionId) {
-        return lastVerifiedBlockPerConnection.get(connectionId);
     }
 }

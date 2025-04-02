@@ -93,7 +93,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 requestWorker = Thread.ofPlatform()
                         .name("BlockNodeConnection-RequestWorker-" + node.address() + ":" + node.port())
                         .start(this::requestWorkerLoop);
-                logger.debug("Started request worker thread for block node {}:{}", node.address(), node.port());
+                logger.debug("Started request worker thread for block node {}", connectionId);
             }
         }
     }
@@ -109,11 +109,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     long lowestAvailableBlock = blockStreamStateManager.getBlockNumber();
                     if (lowestAvailableBlock > currentBlockNumber.get()) {
                         logger.debug(
-                                "[] Block {} state not found and lowest available block is {}, ending stream for node {}:{}",
+                                "[] Block {} state not found and lowest available block is {}, ending stream for node {}",
                                 currentBlockNumber.get(),
                                 lowestAvailableBlock,
-                                node.address(),
-                                node.port());
+                                connectionId);
                         handleStreamFailure();
                         return;
                     }
@@ -121,8 +120,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
                 // Otherwise wait for new block if we're at -1 or the current block isn't available yet
                 if (currentBlockNumber.get() == -1 || blockState == null) {
-                    logger.debug(
-                            "[] Waiting for new block to be available for node {}:{}", node.address(), node.port());
+                    logger.debug("[] Waiting for new block to be available for node {}", connectionId);
                     waitForNewBlock();
                     continue;
                 }
@@ -151,15 +149,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     moveToNextBlock();
                 }
             } catch (InterruptedException e) {
-                logger.error("[] Request worker thread interrupted for node {}:{}", node.address(), node.port());
+                logger.error("[] Request worker thread interrupted for node {}", connectionId);
                 Thread.currentThread().interrupt();
                 return;
             } catch (Exception e) {
-                logger.error("[] Error in request worker thread for node {}:{}", node.address(), node.port(), e);
+                logger.error("[] Error in request worker thread for node {}", connectionId, e);
                 handleStreamFailure();
             }
         }
-        logger.debug("[] Request worker thread exiting for node {}:{}", node.address(), node.port());
+        logger.debug("[] Request worker thread exiting for node {}", connectionId);
     }
 
     private void waitForNewBlock() throws InterruptedException {
@@ -170,11 +168,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void waitForNewRequests() throws InterruptedException {
         logger.debug(
-                "[] Waiting for new requests to be available for block {} on node {}:{}, "
+                "[] Waiting for new requests to be available for block {} on node {}, "
                         + "currentRequestIndex: {}, requestsSize: {}",
                 currentBlockNumber.get(),
-                node.address(),
-                node.port(),
+                connectionId,
                 currentRequestIndex.get(),
                 blockStreamStateManager.getBlockState(currentBlockNumber.get()) != null
                         ? blockStreamStateManager
@@ -189,10 +186,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void logBlockProcessingInfo(BlockState blockState) {
         logger.debug(
-                "[] Processing block {} for node {}:{}, isComplete: {}, requests: {}",
+                "[] Processing block {} for node {}, isComplete: {}, requests: {}",
                 currentBlockNumber.get(),
-                node.address(),
-                node.port(),
+                connectionId,
                 blockState.isComplete(),
                 blockState.requests().size());
     }
@@ -210,11 +206,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 }
                 final PublishStreamRequest request = requests.get(currentRequestIndex.get());
                 logger.debug(
-                        "[] Sending request for block {} request index {} to node {}:{}, items: {}",
+                        "[] Sending request for block {} request index {} to node {}, items: {}",
                         currentBlockNumber.get(),
                         currentRequestIndex.get(),
-                        node.address(),
-                        node.port(),
+                        connectionId,
                         request.blockItems().blockItems().size());
                 sendRequest(request);
                 currentRequestIndex.incrementAndGet();
@@ -224,10 +219,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void moveToNextBlock() {
         logger.debug(
-                "[] Completed sending all requests for block {} to node {}:{}",
-                currentBlockNumber.get(),
-                node.address(),
-                node.port());
+                "[] Completed sending all requests for block {} to node {}", currentBlockNumber.get(), connectionId);
         currentBlockNumber.incrementAndGet();
         currentRequestIndex.set(0);
     }
@@ -279,22 +271,20 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         var responseCode = endOfStream.status();
 
         logger.debug(
-                "[{}] Received EndOfStream from block node {}:{} at block {} with PublishStreamResponseCode {}",
+                "[{}] Received EndOfStream from block node {} at block {} with PublishStreamResponseCode {}",
                 Thread.currentThread().getName(),
-                node.address(),
-                node.port(),
+                connectionId,
                 blockNumber,
                 responseCode);
 
         // For all error codes, restart after the last verified block + 1
         long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
         logger.debug(
-                "[{}] Restarting stream at block {} due to {} for node {}:{}",
+                "[{}] Restarting stream at block {} due to {} for node {}",
                 Thread.currentThread().getName(),
                 restartBlockNumber,
                 responseCode,
-                node.address(),
-                node.port());
+                connectionId);
         endStreamAndRestartAtBlock(restartBlockNumber);
     }
 
@@ -323,7 +313,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void scheduleReconnect() {
-        logger.debug("Scheduling reconnect for block node {}:{}", node.address(), node.port());
+        logger.debug("Scheduling reconnect for block node {}", connectionId);
         setCurrentBlockNumber(-1);
         blockNodeConnectionManager.scheduleReconnect(this);
     }
@@ -347,7 +337,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 stopWorkerThread();
             }
         }
-        logger.debug("Closed connection to block node {}:{}", node.address(), node.port());
+        logger.debug("Closed connection to block node {}", connectionId);
     }
 
     /**
@@ -395,17 +385,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber.get());
             if (blockState != null) {
                 logger.debug(
-                        "Notifying of new request available for node {}:{} - block: {}, requests: {}, isComplete: {}",
-                        node.address(),
-                        node.port(),
+                        "Notifying of new request available for node {} - block: {}, requests: {}, isComplete: {}",
+                        connectionId,
                         currentBlockNumber.get(),
                         blockState.requests().size(),
                         blockState.isComplete());
             } else {
                 logger.debug(
-                        "Notifying of new request available for node {}:{} - block: {} (state not found)",
-                        node.address(),
-                        node.port(),
+                        "Notifying of new request available for node {} - block: {} (state not found)",
+                        connectionId,
                         currentBlockNumber.get());
             }
             newRequestAvailable.notify();
@@ -421,11 +409,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void setCurrentBlockNumber(long blockNumber) {
         currentBlockNumber.set(blockNumber);
         currentRequestIndex.set(0); // Reset the request index when setting a new block
-        logger.debug(
-                "Set current block number to {} for node {}:{}, reset request index to 0",
-                blockNumber,
-                node.address(),
-                node.port());
+        logger.debug("Set current block number to {} for node {}, reset request index to 0", blockNumber, connectionId);
     }
 
     /**
@@ -437,22 +421,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param blockNumber the block number to jump to
      */
     public void jumpToBlock(long blockNumber) {
-        logger.debug(
-                "Setting current block number to {} for node {}:{} without ending stream",
-                blockNumber,
-                node.address(),
-                node.port());
+        logger.debug("Setting current block number to {} for node {} without ending stream", blockNumber, connectionId);
 
         stopWorkerThread();
         setCurrentBlockNumber(blockNumber);
         startRequestWorker();
         notifyNewBlockAvailable();
 
-        logger.debug(
-                "Worker thread restarted and jumped to block {} for node {}:{}",
-                blockNumber,
-                node.address(),
-                node.port());
+        logger.debug("Worker thread restarted and jumped to block {} for node {}", blockNumber, connectionId);
     }
 
     /**
@@ -463,8 +439,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param blockNumber the block number to restart at
      */
     public void endStreamAndRestartAtBlock(long blockNumber) {
-        logger.debug(
-                "Ending stream and restarting at block {} for node {}:{}", blockNumber, node.address(), node.port());
+        logger.debug("Ending stream and restarting at block {} for node {}", blockNumber, connectionId);
 
         synchronized (isActiveLock) {
             synchronized (channelLock) {
@@ -474,7 +449,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             }
         }
 
-        logger.debug("Stream ended and restarted at block {} for node {}:{}", blockNumber, node.address(), node.port());
+        logger.debug("Stream ended and restarted at block {} for node {}", blockNumber, connectionId);
     }
 
     /**
@@ -503,22 +478,20 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             handleEndOfStream(response.endStream());
         } else if (response.hasSkipBlock()) {
             logger.debug(
-                    "Received SkipBlock from Block Node {}:{}  Block #{}",
-                    node.address(),
-                    node.port(),
+                    "Received SkipBlock from Block Node {}  Block #{}",
+                    connectionId,
                     response.skipBlock().blockNumber());
         } else if (response.hasResendBlock()) {
             logger.debug(
-                    "Received ResendBlock from Block Node {}:{}  Block #{}",
-                    node.address(),
-                    node.port(),
+                    "Received ResendBlock from Block Node {}  Block #{}",
+                    connectionId,
                     response.resendBlock().blockNumber());
         }
     }
 
     @Override
     public void onError(Throwable error) {
-        logger.error("[] Error on stream from block node {}:{}", node.address(), node.port(), error);
+        logger.error("[] Error on stream from block node {}", connectionId, error);
         handleStreamFailure();
     }
 
@@ -526,7 +499,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void onCompleted() {
         if (streamCompletionInProgress.compareAndSet(false, true)) {
             try {
-                logger.debug("[] Stream completed for block node {}:{}", node.address(), node.port());
+                logger.debug("[] Stream completed for block node {}", connectionId);
                 handleStreamFailure();
             } finally {
                 streamCompletionInProgress.set(false);
