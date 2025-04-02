@@ -758,7 +758,6 @@ class BlockStreamManagerImplTest {
                         version, // Same version as the subject's
                         true), // Post upgrade work is already done
                 platformStateWithFreezeTime(null),
-                version,
                 aWriter);
         givenEndOfRoundSetup();
         given(round.getConsensusTimestamp()).willReturn(CONSENSUS_NOW);
@@ -786,7 +785,6 @@ class BlockStreamManagerImplTest {
                         previousVersion, // Different version
                         true), // Post upgrade work was done
                 platformStateWithFreezeTime(null),
-                currentVersion,
                 aWriter);
         givenEndOfRoundSetup();
         given(round.getConsensusTimestamp()).willReturn(CONSENSUS_NOW);
@@ -812,7 +810,6 @@ class BlockStreamManagerImplTest {
                         version, // Same version
                         false), // Post upgrade work was not done
                 platformStateWithFreezeTime(null),
-                version,
                 aWriter);
         givenEndOfRoundSetup();
         given(round.getConsensusTimestamp()).willReturn(CONSENSUS_NOW);

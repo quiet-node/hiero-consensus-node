@@ -219,6 +219,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             boundaryStateChangeListener.setBoundaryTimestamp(blockTimestamp);
 
             final var blockStreamInfo = blockStreamInfoFrom(state);
+
             postUpgradeWorkDone = !impliesPostUpgradeWorkPending(blockStreamInfo, version);
             if (!postUpgradeWorkDone && hintsEnabled) {
                 // On upgrade, we need to gossip the signatures for the freeze block
@@ -307,6 +308,13 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var writableState = state.getWritableStates(BlockStreamService.NAME);
             final var blockStreamInfoState = writableState.<BlockStreamInfo>getSingleton(BLOCK_STREAM_INFO_KEY);
             final var boundaryTimestamp = boundaryStateChangeListener.boundaryTimestampOrThrow();
+
+            // Post upgrade work is considered 'not done' only when:
+            // 1. System entities are created (genesis work is done) AND
+            // 2. The current post upgrade work is not done
+            // Otherwise, if genesis work is not done, postUpgradeWorkDone should be true
+            final boolean persistPostUpgradeWorkDone = !systemEntitiesCreatedFlag.get() || postUpgradeWorkDone;
+
             blockStreamInfoState.put(new BlockStreamInfo(
                     blockNumber,
                     blockTimestamp(),
@@ -317,7 +325,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                     outputTreeStatus.numLeaves(),
                     outputTreeStatus.rightmostHashes(),
                     boundaryTimestamp,
-                    postUpgradeWorkDone,
+                    persistPostUpgradeWorkDone,
                     version,
                     asTimestamp(lastIntervalProcessTime),
                     asTimestamp(lastHandleTime)));
@@ -462,8 +470,17 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         }
     }
 
-    private static boolean impliesPostUpgradeWorkPending(
+    private boolean impliesPostUpgradeWorkPending(
             @NonNull final BlockStreamInfo blockStreamInfo, @NonNull final SemanticVersion version) {
+        // Post upgrade work should only be considered pending when:
+        // 1. System entities have been created (systemEntitiesCreatedFlag is true) AND
+        // 2. Either: version doesn't match OR flag in blockStreamInfo indicates work not done
+        if (!systemEntitiesCreatedFlag.get()) {
+            // If genesis work is not done, post upgrade work is considered NOT pending
+            return false;
+        }
+
+        // If system entities are created, check version and persisted flag
         return !version.equals(blockStreamInfo.creationSoftwareVersion()) || !blockStreamInfo.postUpgradeWorkDone();
     }
 
