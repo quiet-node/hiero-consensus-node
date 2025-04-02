@@ -540,7 +540,6 @@ public class ConsensusImpl implements Consensus {
             if (isCoinRound(diff)) {
                 // a coin round. Don't decide.
                 coinVote(votingWitness, candidateWitness, countingVote);
-
                 logVote(
                         votingWitness,
                         candidateWitness,
@@ -548,7 +547,7 @@ public class ConsensusImpl implements Consensus {
                         diff);
                 markerFileWriter.writeMarkerFile(COIN_ROUND_MARKER_FILE);
                 coinRoundLogger.error(
-                        LogMarker.ERROR.getMarker(),
+                        CONSENSUS_VOTING.getMarker(),
                         "Coin round {}, voting witness: {}",
                         roundElections.getRound(),
                         votingWitness);

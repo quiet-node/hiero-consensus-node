@@ -66,8 +66,6 @@ public class EventMetadata extends AbstractHashable {
      */
     private final long birthRound;
 
-    private long branchIndex = -1;
-
     /**
      * Create a EventMetadata object
      *

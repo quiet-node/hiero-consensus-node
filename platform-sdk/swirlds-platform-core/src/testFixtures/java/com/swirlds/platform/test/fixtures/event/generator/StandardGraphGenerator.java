@@ -439,7 +439,6 @@ public class StandardGraphGenerator extends AbstractGraphGenerator {
         // separate from the event that is returned to the caller.  This SimpleLinker wraps the event in an EventImpl
         // and links it. The event must be hashed and have a descriptor built for its use in the SimpleLinker.
         final PlatformEvent copy = e.getBaseEvent().copyGossipedData();
-
         final EventImpl linkedEvent = linker.linkEvent(copy);
         if (linkedEvent == null) {
             return;
