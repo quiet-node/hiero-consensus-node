@@ -101,16 +101,17 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void requestWorkerLoop() {
         while (isActive.get()) {
             try {
+                final var currentBlock = getCurrentBlockNumber();
                 // Get the current block state
-                final BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber.get());
+                final BlockState blockState = blockStreamStateManager.getBlockState(currentBlock);
 
                 // If block state is null, check if we're behind
-                if (blockState == null && currentBlockNumber.get() != -1) {
+                if (blockState == null && currentBlock != -1) {
                     long lowestAvailableBlock = blockStreamStateManager.getBlockNumber();
-                    if (lowestAvailableBlock > currentBlockNumber.get()) {
+                    if (lowestAvailableBlock > currentBlock) {
                         logger.debug(
                                 "[] Block {} state not found and lowest available block is {}, ending stream for node {}",
-                                currentBlockNumber.get(),
+                                currentBlock,
                                 lowestAvailableBlock,
                                 connectionId);
                         handleStreamFailure();
@@ -119,7 +120,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 }
 
                 // Otherwise wait for new block if we're at -1 or the current block isn't available yet
-                if (currentBlockNumber.get() == -1 || blockState == null) {
+                if (currentBlock == -1 || blockState == null) {
                     logger.debug("[] Waiting for new block to be available for node {}", connectionId);
                     waitForNewBlock();
                     continue;
@@ -167,15 +168,16 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void waitForNewRequests() throws InterruptedException {
+        final var currentBlock = getCurrentBlockNumber();
         logger.debug(
                 "[] Waiting for new requests to be available for block {} on node {}, "
                         + "currentRequestIndex: {}, requestsSize: {}",
-                currentBlockNumber.get(),
+                currentBlock,
                 connectionId,
                 currentRequestIndex.get(),
-                blockStreamStateManager.getBlockState(currentBlockNumber.get()) != null
+                blockStreamStateManager.getBlockState(currentBlock) != null
                         ? blockStreamStateManager
-                                .getBlockState(currentBlockNumber.get())
+                                .getBlockState(currentBlock)
                                 .requests()
                                 .size()
                         : 0);
@@ -187,7 +189,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void logBlockProcessingInfo(BlockState blockState) {
         logger.debug(
                 "[] Processing block {} for node {}, isComplete: {}, requests: {}",
-                currentBlockNumber.get(),
+                getCurrentBlockNumber(),
                 connectionId,
                 blockState.isComplete(),
                 blockState.requests().size());
@@ -207,7 +209,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 final PublishStreamRequest request = requests.get(currentRequestIndex.get());
                 logger.debug(
                         "[] Sending request for block {} request index {} to node {}, items: {}",
-                        currentBlockNumber.get(),
+                        getCurrentBlockNumber(),
                         currentRequestIndex.get(),
                         connectionId,
                         request.blockItems().blockItems().size());
@@ -219,7 +221,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void moveToNextBlock() {
         logger.debug(
-                "[] Completed sending all requests for block {} to node {}", currentBlockNumber.get(), connectionId);
+                "[] Completed sending all requests for block {} to node {}", getCurrentBlockNumber(), connectionId);
         currentBlockNumber.incrementAndGet();
         currentRequestIndex.set(0);
     }
@@ -246,21 +248,32 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void handleAcknowledgement(@NonNull PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
-            var blockAck = acknowledgement.blockAck();
-            var blockNumber = blockAck.blockNumber();
-            var blockAlreadyExists = blockAck.blockAlreadyExists();
+            final var blockAck = acknowledgement.blockAck();
+            final var acknowledgementBlockNumber = blockAck.blockNumber();
+            final var currentBlock = getCurrentBlockNumber();
 
-            if (blockAlreadyExists) {
-                logger.warn("Block {} already exists on block node {}", blockNumber, connectionId);
-            } else {
+            if (acknowledgementBlockNumber != currentBlock) {
                 logger.debug(
-                        "Block {} acknowledged and successfully processed by block node {}", blockNumber, connectionId);
+                        "Current block number {} does not match with the acknowledged block number {}",
+                        currentBlock,
+                        acknowledgementBlockNumber);
             }
 
             // Update the last verified block by the current connection
-            blockNodeConnectionManager.updateLastVerifiedBlock(connectionId, blockNumber);
+            blockNodeConnectionManager.updateLastVerifiedBlock(connectionId, acknowledgementBlockNumber);
             // Remove all block states up to and including this block number
-            blockStreamStateManager.removeBlockStatesUpTo(blockNumber);
+            blockStreamStateManager.removeBlockStatesUpTo(acknowledgementBlockNumber);
+
+            final var blockAlreadyExists = blockAck.blockAlreadyExists();
+            if (blockAlreadyExists) {
+                logger.warn("Block {} already exists on block node {}", acknowledgementBlockNumber, connectionId);
+                jumpToBlock(acknowledgementBlockNumber + 1);
+            } else {
+                logger.debug(
+                        "Block {} acknowledged and successfully processed by block node {}",
+                        acknowledgementBlockNumber,
+                        connectionId);
+            }
         } else {
             logger.warn("Unknown acknowledgement received: {}", acknowledgement);
         }
@@ -381,20 +394,21 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     public void notifyNewRequestAvailable() {
+        final var currentBlock = getCurrentBlockNumber();
         synchronized (newRequestAvailable) {
-            BlockState blockState = blockStreamStateManager.getBlockState(currentBlockNumber.get());
+            BlockState blockState = blockStreamStateManager.getBlockState(currentBlock);
             if (blockState != null) {
                 logger.debug(
                         "Notifying of new request available for node {} - block: {}, requests: {}, isComplete: {}",
                         connectionId,
-                        currentBlockNumber.get(),
+                        currentBlock,
                         blockState.requests().size(),
                         blockState.isComplete());
             } else {
                 logger.debug(
                         "Notifying of new request available for node {} - block: {} (state not found)",
                         connectionId,
-                        currentBlockNumber.get());
+                        currentBlock);
             }
             newRequestAvailable.notify();
         }
