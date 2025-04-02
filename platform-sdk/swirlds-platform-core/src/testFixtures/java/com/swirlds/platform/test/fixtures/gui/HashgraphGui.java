@@ -26,33 +26,28 @@ public class HashgraphGui {
                 TestPlatformContextBuilder.create().build();
 
         final Map<GossipEvent, Integer> branchIndexMap = new HashMap<>();
-        final Map<GossipEvent, Boolean> isSingleEventInBranchMap = new HashMap<>();
         final GraphGenerator graphGenerator = new StandardGraphGenerator(
                 platformContext,
                 randotron.nextInt(),
-                generateSources(numNodes, branchIndexMap, isSingleEventInBranchMap));
+                generateSources(numNodes, branchIndexMap));
         graphGenerator.reset();
 
         final TestGuiSource guiSource = new TestGuiSource(
                 platformContext,
                 graphGenerator.getAddressBook(),
                 new GeneratorEventProvider(graphGenerator),
-                branchIndexMap,
-                isSingleEventInBranchMap);
+                branchIndexMap);
         guiSource.generateEvents(initialEvents);
         guiSource.runGui();
     }
 
     private static @NonNull List<EventSource> generateSources(
             final int numNetworkNodes,
-            final Map<GossipEvent, Integer> branchIndexMap,
-            final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+            final Map<GossipEvent, Integer> branchIndexMap) {
         final List<EventSource> list = new LinkedList<>();
         for (long i = 0; i < numNetworkNodes; i++) {
             if (i == 1) {
-                //                list.add(new ForkingEventSource(branchIndexMap,
-                // isSingleEventInBranchMap).setForkProbability(0.5).setMaximumBranchCount(2));
-                list.add(new ForkingEventSource(branchIndexMap, isSingleEventInBranchMap)
+                list.add(new ForkingEventSource(branchIndexMap)
                         .setForkProbability(0.8)
                         .setMaximumBranchCount(3));
                 continue;

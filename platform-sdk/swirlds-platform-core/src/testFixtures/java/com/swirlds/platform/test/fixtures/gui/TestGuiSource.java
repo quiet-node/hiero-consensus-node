@@ -61,10 +61,9 @@ public class TestGuiSource {
             @NonNull final PlatformContext platformContext,
             @NonNull final AddressBook addressBook,
             @NonNull final GuiEventProvider eventProvider,
-            @NonNull final Map<GossipEvent, Integer> branchIndexMap,
-            @NonNull final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+            @NonNull final Map<GossipEvent, Integer> branchIndexMap) {
         this.eventStorage = new GuiEventStorage(
-                platformContext.getConfiguration(), addressBook, branchIndexMap, isSingleEventInBranchMap);
+                platformContext.getConfiguration(), addressBook, branchIndexMap);
         this.guiSource = new StandardGuiSource(addressBook, eventStorage);
         this.eventProvider = eventProvider;
         this.ancientMode = platformContext

@@ -61,7 +61,9 @@ public class HashgraphPicture extends JPanel {
 
     private Map<Integer, Integer> branchIndexToY = new HashMap<>();
     private final Map<GossipEvent, Integer> eventToX = new HashMap<>();
-    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToxCoordinates = new HashMap<>();
+    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToAllXCoordinates = new HashMap<>();
+    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToCurrentXCoordinates = new HashMap<>();
+    private final Map<Integer, Integer> branchIndexToMinimumX = new HashMap<>();
 
     public HashgraphPicture(final HashgraphGuiSource hashgraphSource, final HashgraphPictureOptions options) {
         this.hashgraphSource = hashgraphSource;
@@ -122,9 +124,11 @@ public class HashgraphPicture extends JPanel {
                     currentMetadata,
                     events,
                     hashgraphSource,
-                    branchIndexToxCoordinates,
+                    branchIndexToAllXCoordinates,
+                    branchIndexToCurrentXCoordinates,
                     branchIndexToY,
-                    eventToX);
+                    eventToX,
+                    branchIndexToMinimumX);
 
             selector.setMetadata(pictureMetadata);
             selector.setEventsInPicture(events);
@@ -291,7 +295,6 @@ public class HashgraphPicture extends JPanel {
                         .getEventStorage()
                         .getBranchIndexMap()
                         .containsKey(event.getBaseEvent().getGossipEvent())
-        // !hashgraphSource.getEventStorage().getIsSingleEventInBranchMap().get(event.getBaseEvent().getGossipEvent())
         ) {
             s += " " + "branch "
                     + hashgraphSource

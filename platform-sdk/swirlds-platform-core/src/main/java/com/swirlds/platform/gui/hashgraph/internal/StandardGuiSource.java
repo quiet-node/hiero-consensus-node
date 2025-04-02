@@ -46,6 +46,7 @@ public class StandardGuiSource implements HashgraphGuiSource {
                 .filter(e ->
                         e.getGeneration() >= startGeneration && e.getGeneration() < startGeneration + numGenerations)
                 .toList();
+
         return events;
     }
 

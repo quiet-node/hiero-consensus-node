@@ -31,7 +31,6 @@ public class ForkingEventSource extends AbstractEventSource {
     private ArrayList<LinkedList<EventImpl>> branches;
 
     private Map<GossipEvent, Integer> branchIndexMap = new HashMap<>();
-    private Map<GossipEvent, Boolean> isSingleEventInBranchMap = new HashMap<>();
 
     /**
      * The index of the event that was last given out as the "latest" event.
@@ -43,10 +42,9 @@ public class ForkingEventSource extends AbstractEventSource {
     }
 
     public ForkingEventSource(
-            Map<GossipEvent, Integer> branchIndexMap, Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+            Map<GossipEvent, Integer> branchIndexMap) {
         this(true, DEFAULT_TRANSACTION_GENERATOR);
         this.branchIndexMap = branchIndexMap;
-        this.isSingleEventInBranchMap = isSingleEventInBranchMap;
     }
 
     public ForkingEventSource(final boolean useFakeHashes) {
@@ -187,15 +185,7 @@ public class ForkingEventSource extends AbstractEventSource {
 
         final LinkedList<EventImpl> branch = branches.get(currentBranch);
         branch.addFirst(event);
-        //        if(branch.size() > 1) {
-        //        event.getBaseEvent().setBranchIndex(currentBranch);
-        //        }
         branchIndexMap.put(event.getBaseEvent().getGossipEvent(), currentBranch);
-        if (branch.size() == 1) {
-            isSingleEventInBranchMap.put(event.getBaseEvent().getGossipEvent(), true);
-        } else {
-            isSingleEventInBranchMap.put(event.getBaseEvent().getGossipEvent(), false);
-        }
         final var removedEvent = pruneEventList(branch);
         removedEvent.ifPresent(value -> branchIndexMap.remove(value.getBaseEvent().getGossipEvent()));
     }

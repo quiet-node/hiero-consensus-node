@@ -9,6 +9,7 @@ import java.awt.FontMetrics;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Metadata that is used to aid in drawing a {@code HashgraphPicture}
@@ -29,9 +30,11 @@ public class PictureMetadata {
     private final long maxGen;
 
     private final HashgraphGuiSource hashgraphSource;
-    private Map<Integer, Integer> branchIndexToY;
+    private final Map<Integer, Integer> branchIndexToY;
     private final Map<GossipEvent, Integer> eventToX;
-    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToxCoordinates;
+    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToAllXCoordinates;
+    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToCurrentXCoordinates;
+    private final Map<Integer, Integer> branchIndexToMinimumX;
 
     public PictureMetadata(
             final FontMetrics fm,
@@ -39,14 +42,18 @@ public class PictureMetadata {
             final AddressBookMetadata addressBookMetadata,
             final List<EventImpl> events,
             final HashgraphGuiSource hashgraphSource,
-            final Map<Integer, Map<GossipEvent, Integer>> branchIndexToxCoordinates,
+            final Map<Integer, Map<GossipEvent, Integer>> branchIndexToAllXCoordinates,
+            final Map<Integer, Map<GossipEvent, Integer>> branchIndexToCurrentXCoordinates,
             final Map<Integer, Integer> branchIndexToY,
-            final Map<GossipEvent, Integer> eventToX) {
+            final Map<GossipEvent, Integer> eventToX,
+            final Map<Integer, Integer> branchIndexToMinimumX) {
         this.addressBookMetadata = addressBookMetadata;
         this.hashgraphSource = hashgraphSource;
-        this.branchIndexToxCoordinates = branchIndexToxCoordinates;
+        this.branchIndexToAllXCoordinates = branchIndexToAllXCoordinates;
+        this.branchIndexToCurrentXCoordinates = branchIndexToCurrentXCoordinates;
         this.branchIndexToY = branchIndexToY;
         this.eventToX = eventToX;
+        this.branchIndexToMinimumX = branchIndexToMinimumX;
         final int fa = fm.getMaxAscent();
         final int fd = fm.getMaxDescent();
         final int textLineHeight = fa + fd;
@@ -108,7 +115,8 @@ public class PictureMetadata {
         if (hashgraphSource.getEventStorage().getBranchIndexMap().containsKey(e2GossipEvent)) {
             final var branchIndex =
                     hashgraphSource.getEventStorage().getBranchIndexMap().get(e2GossipEvent);
-            var eventToXCoordinatesForGivenBranch = branchIndexToxCoordinates.get(branchIndex);
+
+            var eventToXCoordinatesForGivenBranch = branchIndexToCurrentXCoordinates.get(branchIndex);
 
             if (eventToXCoordinatesForGivenBranch != null) {
                 // event still does not have coordinate
@@ -119,10 +127,12 @@ public class PictureMetadata {
                             .ifPresent(x -> eventToX.put(e2GossipEvent, x + (int) r));
                     if(eventToX.containsKey(e2GossipEvent)) {
                         xPos = eventToX.get(e2GossipEvent);
-                        eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
-                    } else {
-                        eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
                     }
+//                    xPos = branchIndexToMinimumX.get(branchIndex) + (int) r;
+                    final var eventToAllXCoordinates = branchIndexToAllXCoordinates.get(branchIndex);
+                    eventToAllXCoordinates.put(e2GossipEvent, xPos);
+//                    eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
+                    branchIndexToAllXCoordinates.put(branchIndex, eventToAllXCoordinates);
                 }
                 // event has coordinates
                 else {
@@ -130,10 +140,13 @@ public class PictureMetadata {
                     if (eventToXCoordinatesForGivenBranch.size() > 12) {
                         eventToXCoordinatesForGivenBranch.clear();
 
-                        xPos = xPos - sideGap / 4;
-                        eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
-                        branchIndexToxCoordinates.put(branchIndex,
-                                eventToXCoordinatesForGivenBranch);
+//                        xPos = xPos - sideGap / 4;
+                        xPos = branchIndexToMinimumX.get(branchIndex);
+
+                        final var eventToAllXCoordinates = branchIndexToAllXCoordinates.get(branchIndex);
+                        eventToAllXCoordinates.put(e2GossipEvent, xPos);
+                        branchIndexToAllXCoordinates.put(branchIndex,
+                                eventToAllXCoordinates);
 
                     } else {
                         // event has x coordinate, so just return it
@@ -142,10 +155,22 @@ public class PictureMetadata {
                 }
             } else {
                 // that will be the first event of a new branch and coordinates don't exist yet
-                eventToXCoordinatesForGivenBranch = new HashMap<>();
-                eventToXCoordinatesForGivenBranch.put(e2GossipEvent, xPos);
-                branchIndexToxCoordinates.put(branchIndex, eventToXCoordinatesForGivenBranch);
+                final var eventToAllXCoordinates = new HashMap<GossipEvent, Integer>();
+                eventToAllXCoordinates.put(e2GossipEvent, xPos);
+                branchIndexToAllXCoordinates.put(branchIndex, eventToAllXCoordinates);
+                branchIndexToMinimumX.put(branchIndex, xPos);
             }
+
+            //reload
+            final Map<GossipEvent, Integer> reloadedEventsToX = new HashMap<>();
+            int startingXPosReloaded = branchIndexToMinimumX.get(branchIndex);
+            for(final Entry<GossipEvent, Integer> entry : branchIndexToAllXCoordinates.get(branchIndex).entrySet()) {
+                if(entry.getKey().eventCore().parents().isEmpty() || entry.getKey().eventCore().parents().getFirst().generation() + 1 >= minGen) {
+                    reloadedEventsToX.put(entry.getKey(), startingXPosReloaded);
+                    startingXPosReloaded += (int) r;
+                }
+            }
+            branchIndexToCurrentXCoordinates.put(branchIndex, reloadedEventsToX);
         }
 
         return xPos;

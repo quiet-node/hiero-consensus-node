@@ -40,7 +40,6 @@ public class GuiEventStorage {
     private final Configuration configuration;
     private ConsensusRound lastConsensusRound;
     private final Map<GossipEvent, Integer> branchIndexMap;
-    private final Map<GossipEvent, Boolean> isSingleEventInBranchMap;
 
     /**
      * Creates an empty instance
@@ -58,7 +57,6 @@ public class GuiEventStorage {
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
         this.branchIndexMap = new HashMap<>();
-        this.isSingleEventInBranchMap = new HashMap<>();
     }
 
     /**
@@ -70,8 +68,7 @@ public class GuiEventStorage {
     public GuiEventStorage(
             @NonNull final Configuration configuration,
             @NonNull final AddressBook addressBook,
-            final Map<GossipEvent, Integer> branchIndexMap,
-            final Map<GossipEvent, Boolean> isSingleEventInBranchMap) {
+            final Map<GossipEvent, Integer> branchIndexMap) {
 
         this.configuration = Objects.requireNonNull(configuration);
         final PlatformContext platformContext = PlatformContext.create(configuration);
@@ -81,7 +78,6 @@ public class GuiEventStorage {
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
         this.branchIndexMap = branchIndexMap;
-        this.isSingleEventInBranchMap = isSingleEventInBranchMap;
     }
 
     /**
@@ -102,7 +98,6 @@ public class GuiEventStorage {
                 .max()
                 .orElse(FIRST_GENERATION);
         this.branchIndexMap = new HashMap<>();
-        this.isSingleEventInBranchMap = new HashMap<>();
     }
 
     /**
@@ -177,9 +172,5 @@ public class GuiEventStorage {
 
     public Map<GossipEvent, Integer> getBranchIndexMap() {
         return branchIndexMap;
-    }
-
-    public Map<GossipEvent, Boolean> getIsSingleEventInBranchMap() {
-        return isSingleEventInBranchMap;
     }
 }
