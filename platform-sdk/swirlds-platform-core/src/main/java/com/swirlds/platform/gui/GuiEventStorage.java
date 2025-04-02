@@ -39,7 +39,7 @@ public class GuiEventStorage {
     private final SimpleLinker linker;
     private final Configuration configuration;
     private ConsensusRound lastConsensusRound;
-    private final Map<GossipEvent, Integer> branchIndexMap;
+    private final Map<GossipEvent, Integer> branchIndexes;
 
     /**
      * Creates an empty instance
@@ -56,7 +56,7 @@ public class GuiEventStorage {
                 platformContext, new NoOpConsensusMetrics(), RosterRetriever.buildRoster(addressBook));
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
-        this.branchIndexMap = new HashMap<>();
+        this.branchIndexes = new HashMap<>();
     }
 
     /**
@@ -64,11 +64,12 @@ public class GuiEventStorage {
      *
      * @param configuration this node's configuration
      * @param addressBook   the network's address book
+     * @param branchIndexes map to be used of collecting branched events and their corresponding branch index
      */
     public GuiEventStorage(
             @NonNull final Configuration configuration,
             @NonNull final AddressBook addressBook,
-            final Map<GossipEvent, Integer> branchIndexMap) {
+            @NonNull final Map<GossipEvent, Integer> branchIndexes) {
 
         this.configuration = Objects.requireNonNull(configuration);
         final PlatformContext platformContext = PlatformContext.create(configuration);
@@ -77,7 +78,7 @@ public class GuiEventStorage {
                 platformContext, new NoOpConsensusMetrics(), RosterRetriever.buildRoster(addressBook));
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
-        this.branchIndexMap = branchIndexMap;
+        this.branchIndexes = branchIndexes;
     }
 
     /**
@@ -97,7 +98,7 @@ public class GuiEventStorage {
                 .mapToLong(EventImpl::getGeneration)
                 .max()
                 .orElse(FIRST_GENERATION);
-        this.branchIndexMap = new HashMap<>();
+        this.branchIndexes = new HashMap<>();
     }
 
     /**
@@ -170,7 +171,7 @@ public class GuiEventStorage {
         return lastConsensusRound;
     }
 
-    public Map<GossipEvent, Integer> getBranchIndexMap() {
-        return branchIndexMap;
+    public Map<GossipEvent, Integer> getBranchIndexes() {
+        return branchIndexes;
     }
 }

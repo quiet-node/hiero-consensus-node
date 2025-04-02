@@ -41,8 +41,7 @@ public class ForkingEventSource extends AbstractEventSource {
         this(true, DEFAULT_TRANSACTION_GENERATOR);
     }
 
-    public ForkingEventSource(
-            Map<GossipEvent, Integer> branchIndexMap) {
+    public ForkingEventSource(Map<GossipEvent, Integer> branchIndexMap) {
         this(true, DEFAULT_TRANSACTION_GENERATOR);
         this.branchIndexMap = branchIndexMap;
     }
@@ -187,6 +186,7 @@ public class ForkingEventSource extends AbstractEventSource {
         branch.addFirst(event);
         branchIndexMap.put(event.getBaseEvent().getGossipEvent(), currentBranch);
         final var removedEvent = pruneEventList(branch);
-        removedEvent.ifPresent(value -> branchIndexMap.remove(value.getBaseEvent().getGossipEvent()));
+        removedEvent.ifPresent(
+                value -> branchIndexMap.remove(value.getBaseEvent().getGossipEvent()));
     }
 }

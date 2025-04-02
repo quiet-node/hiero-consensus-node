@@ -30,9 +30,12 @@ import java.io.Serial;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -59,11 +62,16 @@ public class HashgraphPicture extends JPanel {
     int refreshCounter = 0;
     private Map<EventImpl, Integer> eventFirstOccurence = new HashMap<>();
 
-    private Map<Integer, Integer> branchIndexToY = new HashMap<>();
-    private final Map<GossipEvent, Integer> eventToX = new HashMap<>();
-    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToAllXCoordinates = new HashMap<>();
-    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToCurrentXCoordinates = new HashMap<>();
-    private final Map<Integer, Integer> branchIndexToMinimumX = new HashMap<>();
+    /** used to store Y coordinate for each branch */
+    private final Map<Integer, Integer> branchIndexToY = new HashMap<>();
+    /** used to store map of all branched events and their X coordinate for each branch index */
+    private final Map<Integer, Map<GossipEvent, Integer>> allBranchedXCoordinates = new HashMap<>();
+    /** used to store map of branched events that fit the currently displayed range of min and max generations with
+     * their X coordinate for each branch index */
+    private final Map<Integer, Map<GossipEvent, Integer>> displayedBranchedXCoordinates = new HashMap<>();
+    /** used to store the first X coordinate for each branch index, this coordinate is used for shifting / reloading the
+     * branched events */
+    private final Map<Integer, Integer> branchIndexToMinimumXCoordinate = new HashMap<>();
 
     public HashgraphPicture(final HashgraphGuiSource hashgraphSource, final HashgraphPictureOptions options) {
         this.hashgraphSource = hashgraphSource;
@@ -124,11 +132,10 @@ public class HashgraphPicture extends JPanel {
                     currentMetadata,
                     events,
                     hashgraphSource,
-                    branchIndexToAllXCoordinates,
-                    branchIndexToCurrentXCoordinates,
                     branchIndexToY,
-                    eventToX,
-                    branchIndexToMinimumX);
+                    branchIndexToMinimumXCoordinate,
+                    allBranchedXCoordinates,
+                    displayedBranchedXCoordinates);
 
             selector.setMetadata(pictureMetadata);
             selector.setEventsInPicture(events);
@@ -156,19 +163,49 @@ public class HashgraphPicture extends JPanel {
                 drawLinksToParents(g, event);
             }
 
+            // Reload branched events if such exist. Different generations are being display in the Gui,
+            // so we have to reposition branched events in case they fall in or out of the display generation range.
+            if (!hashgraphSource.getEventStorage().getBranchIndexes().isEmpty()) {
+                reloadBranchedEvents();
+            }
+
             // for each event, draw its circle
             for (final EventImpl event : events) {
                 drawEventCircle(g, event, options, d);
             }
 
-            final var selectedEvent = events.stream().filter(selector::isSelected).toList().getFirst();
-            if(selectedEvent != null) {
+            final var selectedEvent =
+                    events.stream().filter(selector::isSelected).toList().getFirst();
+            if (selectedEvent != null) {
+                // if we have a selected event draw it last, so that all labels and lines connected to it can be easily
+                // seen
                 drawEventCircle(g, selectedEvent, options, d);
             }
 
             refreshCounter++;
         } catch (final Exception e) {
             logger.error(EXCEPTION.getMarker(), "error while painting", e);
+        }
+    }
+
+    private void reloadBranchedEvents() {
+        final Set<Integer> uniqueBranchIndexes = new HashSet<>(
+                hashgraphSource.getEventStorage().getBranchIndexes().values());
+        for (final Integer branchIndex : uniqueBranchIndexes) {
+            final Map<GossipEvent, Integer> reloadedXCoordinates = new HashMap<>();
+
+            int startingXCoordinateForBranch = branchIndexToMinimumXCoordinate.get(branchIndex);
+            for (final Entry<GossipEvent, Integer> branchIndexToAllXCoordinatesEntry :
+                    allBranchedXCoordinates.get(branchIndex).entrySet()) {
+                final GossipEvent branchedEvent = branchIndexToAllXCoordinatesEntry.getKey();
+                if (branchedEvent.eventCore().parents().isEmpty()
+                        || branchedEvent.eventCore().parents().getFirst().generation() + 1
+                                >= pictureMetadata.getMinGen()) {
+                    reloadedXCoordinates.put(branchedEvent, startingXCoordinateForBranch);
+                    startingXCoordinateForBranch += pictureMetadata.getD() / 2;
+                }
+            }
+            displayedBranchedXCoordinates.put(branchIndex, reloadedXCoordinates);
         }
     }
 
@@ -293,13 +330,12 @@ public class HashgraphPicture extends JPanel {
         if (options.showBranches()
                 && hashgraphSource
                         .getEventStorage()
-                        .getBranchIndexMap()
-                        .containsKey(event.getBaseEvent().getGossipEvent())
-        ) {
+                        .getBranchIndexes()
+                        .containsKey(event.getBaseEvent().getGossipEvent())) {
             s += " " + "branch "
                     + hashgraphSource
                             .getEventStorage()
-                            .getBranchIndexMap()
+                            .getBranchIndexes()
                             .get(event.getBaseEvent().getGossipEvent());
         }
 
