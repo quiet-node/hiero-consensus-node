@@ -314,7 +314,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
 
         writeItem(boundaryStateChangeListener.flushChanges());
+
         kvAccum.forEach(this::writeItem);
+        worker.sync();
         kvAccum.clear();
 
         if (closesBlock) {
