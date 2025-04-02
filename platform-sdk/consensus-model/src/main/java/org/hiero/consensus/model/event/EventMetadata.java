@@ -157,14 +157,6 @@ public class EventMetadata extends AbstractHashable {
         return creatorId;
     }
 
-    public long getBranchIndex() {
-        return branchIndex;
-    }
-
-    public void setBranchIndex(long branchIndex) {
-        this.branchIndex = branchIndex;
-    }
-
     /**
      * Get the event descriptor for the self parent.
      *

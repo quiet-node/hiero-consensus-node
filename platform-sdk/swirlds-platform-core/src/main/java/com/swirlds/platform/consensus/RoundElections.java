@@ -5,7 +5,6 @@ import static com.swirlds.logging.legacy.LogMarker.CONSENSUS_VOTING;
 
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.swirlds.common.utility.IntReference;
-import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.platform.Utilities;
 import com.swirlds.platform.internal.EventImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -77,11 +76,6 @@ public class RoundElections {
         }
         numUnknownFame.increment();
         elections.add(new CandidateWitness(witness, numUnknownFame, elections.size()));
-        logger.error(
-                LogMarker.ERROR.getMarker(),
-                "Adding witness with creatorId: {} and round created: {}",
-                witness.getCreatorId().id(),
-                witness.getRoundCreated());
     }
 
     /**

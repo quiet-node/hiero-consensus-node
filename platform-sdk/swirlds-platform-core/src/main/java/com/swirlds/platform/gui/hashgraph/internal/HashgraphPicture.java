@@ -28,7 +28,6 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.Serial;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -58,9 +57,6 @@ public class HashgraphPicture extends JPanel {
 
     private AddressBookMetadata nonExpandedMetadata;
     private AddressBookMetadata expandedMetadata;
-    private List<EventImpl> events = new ArrayList<>();
-    int refreshCounter = 0;
-    private Map<EventImpl, Integer> eventFirstOccurence = new HashMap<>();
 
     /** used to store Y coordinate for each branch */
     private final Map<Integer, Integer> branchIndexToY = new HashMap<>();
@@ -181,8 +177,6 @@ public class HashgraphPicture extends JPanel {
                 // seen
                 drawEventCircle(g, selectedEvent, options, d);
             }
-
-            refreshCounter++;
         } catch (final Exception e) {
             logger.error(EXCEPTION.getMarker(), "error while painting", e);
         }
@@ -276,11 +270,7 @@ public class HashgraphPicture extends JPanel {
         final int xPos = pictureMetadata.xpos(e2, event) - d / 2;
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
-        eventFirstOccurence.put(event, refreshCounter);
-
         g.fillOval(xPos, yPos, d, d);
-
-        events.add(event);
 
         g.setFont(g.getFont().deriveFont(Font.BOLD));
 

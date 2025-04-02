@@ -488,7 +488,7 @@ public class GraphGeneratorTests {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true})
+    @ValueSource(booleans = {true, false})
     @Tag(TestComponentTags.PLATFORM)
     @Tag(TestComponentTags.CONSENSUS)
     @DisplayName("Forking Source Test")
@@ -503,7 +503,7 @@ public class GraphGeneratorTests {
                 new StandardEventSource(),
                 new StandardEventSource(),
                 new StandardEventSource(),
-                new ForkingEventSource().setForkProbability(1).setMaximumBranchCount(20));
+                new ForkingEventSource().setForkProbability(0.1).setMaximumBranchCount(2));
 
         final List<EventImpl> events = generator.generateEvents(numberOfEvents);
 

@@ -16,7 +16,7 @@
   ~ DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
   -->
 
-<Configuration status="DEBUG">
+<Configuration status="WARN">
 	<Loggers>
 		<Root level="off">
 		</Root>

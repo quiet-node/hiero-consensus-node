@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
 /**
@@ -118,17 +119,12 @@ public class ForkingEventSource extends AbstractEventSource {
 
     @Override
     public EventImpl getRecentEvent(final Random random, final int index) {
-        if (branches.size() == 0) {
+        if (branches.isEmpty()) {
             return null;
         }
 
         currentBranch = random.nextInt(branches.size());
         final LinkedList<EventImpl> events = branches.get(currentBranch);
-        System.out.println("number of events in the branch: " + events.size());
-        if (events.size() == 2) {
-            int a = 5;
-        }
-        System.out.println("getRecent event in forking event source " + events);
 
         if (events.size() == 0) {
             return null;
@@ -138,7 +134,6 @@ public class ForkingEventSource extends AbstractEventSource {
             return events.getLast();
         }
 
-        System.out.println("Returned event from getRecentEvents in ForkingEventSource " + events.get(index));
         return events.get(index);
     }
 
@@ -172,7 +167,6 @@ public class ForkingEventSource extends AbstractEventSource {
     @Override
     public void setLatestEvent(final Random random, final EventImpl event) {
         if (shouldFork(random)) {
-            System.out.println("Forking");
             fork(random);
         }
 
@@ -185,7 +179,7 @@ public class ForkingEventSource extends AbstractEventSource {
         final LinkedList<EventImpl> branch = branches.get(currentBranch);
         branch.addFirst(event);
         branchIndexMap.put(event.getBaseEvent().getGossipEvent(), currentBranch);
-        final var removedEvent = pruneEventList(branch);
+        final Optional<EventImpl> removedEvent = pruneEventList(branch);
         removedEvent.ifPresent(
                 value -> branchIndexMap.remove(value.getBaseEvent().getGossipEvent()));
     }

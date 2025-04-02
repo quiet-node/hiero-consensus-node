@@ -42,12 +42,10 @@ public class StandardGuiSource implements HashgraphGuiSource {
     @Override
     @NonNull
     public List<EventImpl> getEvents(final long startGeneration, final int numGenerations) {
-        final var events = eventStorage.getNonAncientEvents().stream()
+        return eventStorage.getNonAncientEvents().stream()
                 .filter(e ->
                         e.getGeneration() >= startGeneration && e.getGeneration() < startGeneration + numGenerations)
                 .toList();
-
-        return events;
     }
 
     /**
