@@ -23,8 +23,8 @@ open module com.swirlds.common.test.fixtures {
     requires transitive org.hiero.consensus.model;
     requires com.swirlds.config.extensions.test.fixtures;
     requires com.swirlds.logging;
-    requires com.swirlds.virtualmap;
     requires com.swirlds.platform.core;
+    requires com.swirlds.virtualmap;
     requires org.hiero.consensus.utility.test.fixtures;
     requires org.hiero.consensus.utility;
     requires lazysodium.java;

@@ -3,7 +3,6 @@ module com.swirlds.merkledb.test.fixtures {
     exports com.swirlds.merkledb.test.fixtures;
 
     requires transitive com.hedera.pbj.runtime;
-
     requires transitive com.swirlds.config.api;
     requires transitive com.swirlds.metrics.api;
     requires transitive com.swirlds.virtualmap;
