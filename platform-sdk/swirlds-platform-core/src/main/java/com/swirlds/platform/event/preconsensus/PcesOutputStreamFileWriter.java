@@ -51,9 +51,6 @@ public class PcesOutputStreamFileWriter implements PcesFileWriter {
     @Override
     public long writeEvent(@NonNull final GossipEvent event) throws IOException {
         out.writePbjRecord(event, GossipEvent.PROTOBUF);
-        if (syncEveryEvent) {
-            sync();
-        }
         return GossipEvent.PROTOBUF.measureRecord(event);
     }
 

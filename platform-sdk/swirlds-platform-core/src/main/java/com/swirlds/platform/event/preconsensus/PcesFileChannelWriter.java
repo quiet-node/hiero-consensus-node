@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event.preconsensus;
 
+import com.google.common.collect.Streams;
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.hedera.pbj.runtime.io.WritableSequentialData;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
-import com.sun.nio.file.ExtendedOpenOption;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.stream.Stream;
 
 /**
  * Writes preconsensus events to a file using a {@link FileChannel}.
@@ -27,6 +29,8 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     /** Tracks the size of the file in bytes */
     private int fileSize;
 
+    private final boolean syncEveryEvent;
+
     /**
      * Create a new writer that writes events to a file using a {@link FileChannel}.
      *
@@ -35,9 +39,12 @@ public class PcesFileChannelWriter implements PcesFileWriter {
      * @throws IOException if an error occurs while opening the file
      */
     public PcesFileChannelWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
-        channel = FileChannel.open(
-                filePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, ExtendedOpenOption.DIRECT);
-        buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
+        this.syncEveryEvent = syncEveryEvent;
+        final var defaultFlags = Stream.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        final var extendedFlags = syncEveryEvent ? Stream.of() : Stream.of(StandardOpenOption.DSYNC);
+        final var allFlags = Streams.concat(defaultFlags, extendedFlags).toArray(OpenOption[]::new);
+        channel = FileChannel.open(filePath, allFlags);
+        buffer = ByteBuffer.allocate(BUFFER_CAPACITY);
         writableSequentialData = BufferedData.wrap(buffer);
     }
 
@@ -80,7 +87,10 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     @Override
     public void sync() throws IOException {
         // benchmarks show that this has horrible performance for the channel writer
-        channel.force(false);
+        if (!syncEveryEvent) {
+            // If syncEveryEvent is on, we already told the OS to do this
+            channel.force(false);
+        }
     }
 
     @Override

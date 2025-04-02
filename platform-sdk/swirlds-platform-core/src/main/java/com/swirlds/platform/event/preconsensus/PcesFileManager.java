@@ -53,7 +53,6 @@ public class PcesFileManager {
      */
     private final Path databaseDirectory;
 
-    private final Metrics metrics;
 
     /**
      * The current origin round.
@@ -105,7 +104,6 @@ public class PcesFileManager {
 
         this.time = platformContext.getTime();
         this.files = Objects.requireNonNull(files);
-        this.metrics = platformContext.getMetrics();
         this.pcesMetrics = new PcesMetrics(platformContext.getMetrics());
         this.minimumRetentionPeriod = preconsensusEventStreamConfig.minimumRetentionPeriod();
         this.databaseDirectory = getDatabaseDirectory(platformContext, selfId);
