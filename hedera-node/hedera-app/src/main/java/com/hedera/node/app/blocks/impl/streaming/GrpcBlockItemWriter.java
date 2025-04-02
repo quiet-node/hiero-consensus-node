@@ -53,7 +53,7 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
     }
 
     @Override
-    public void performPreBlockProofActions() {
-        blockStreamStateManager.performPreBlockProofActions(blockNumber);
+    public void writePreBlockProofItems() {
+        blockStreamStateManager.streamPreBlockProofItems(blockNumber);
     }
 }

@@ -2,6 +2,7 @@
 package com.hedera.node.app.blocks;
 
 import com.hedera.node.app.blocks.impl.BlockStreamManagerImpl;
+import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConfigExtractor;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConfigExtractorImpl;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager;
@@ -10,8 +11,10 @@ import com.hedera.node.app.blocks.impl.streaming.FileAndGrpcBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.GrpcBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.NoOpBlockNodeConfigExtractor;
+import com.hedera.node.app.services.NodeRewardManager;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import dagger.Module;
 import dagger.Provides;
@@ -21,11 +24,11 @@ import java.util.function.Supplier;
 import javax.inject.Singleton;
 
 @Module
-public class BlockStreamModule {
+public interface BlockStreamModule {
 
     @Provides
     @Singleton
-    public BlockNodeConfigExtractor provideBlockNodeConfigExtractor(@NonNull final ConfigProvider configProvider) {
+    static BlockNodeConfigExtractor provideBlockNodeConfigExtractor(@NonNull final ConfigProvider configProvider) {
         final var blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
         if (blockStreamConfig.streamToBlockNodes()) {
             return new BlockNodeConfigExtractorImpl(blockStreamConfig.blockNodeConnectionFileDir());
@@ -36,14 +39,14 @@ public class BlockStreamModule {
 
     @Provides
     @Singleton
-    public BlockStreamStateManager provideBlockStreamStateManager(
+    static BlockStreamStateManager provideBlockStreamStateManager(
             @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor) {
         return new BlockStreamStateManager(blockNodeConfigExtractor);
     }
 
     @Provides
     @Singleton
-    public BlockNodeConnectionManager provideBlockNodeConnectionManager(
+    static BlockNodeConnectionManager provideBlockNodeConnectionManager(
             @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
         final BlockNodeConnectionManager manager =
@@ -54,7 +57,7 @@ public class BlockStreamModule {
 
     @Provides
     @Singleton
-    public BlockStreamManager provideBlockStreamManager(@NonNull final BlockStreamManagerImpl impl) {
+    static BlockStreamManager provideBlockStreamManager(@NonNull final BlockStreamManagerImpl impl) {
         return impl;
     }
 
@@ -72,6 +75,24 @@ public class BlockStreamModule {
             case GRPC -> () -> new GrpcBlockItemWriter(blockStreamStateManager);
             case FILE_AND_GRPC -> () ->
                     new FileAndGrpcBlockItemWriter(configProvider, selfNodeInfo, fileSystem, blockStreamStateManager);
+        };
+    }
+
+    @Provides
+    @Singleton
+    static BlockStreamManager.Lifecycle provideBlockStreamManagerLifecycle(
+            @NonNull final NodeRewardManager nodeRewardManager, @NonNull final BoundaryStateChangeListener listener) {
+        return new BlockStreamManager.Lifecycle() {
+            @Override
+            public void onOpenBlock(@NonNull final State state) {
+                listener.resetCollectedNodeFees();
+                nodeRewardManager.onOpenBlock(state);
+            }
+
+            @Override
+            public void onCloseBlock(@NonNull final State state) {
+                nodeRewardManager.onCloseBlock(state, listener.nodeFeesCollected());
+            }
         };
     }
 }

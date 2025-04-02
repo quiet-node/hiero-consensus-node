@@ -3,11 +3,9 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.BlockItemSet;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
-import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.helidon.common.tls.Tls;
@@ -149,68 +147,11 @@ public class BlockNodeConnectionManager {
         }
     }
 
-    public void streamBlockToConnections(@NonNull BlockState block) {
-        long blockNumber = block.blockNumber();
-        // Get currently active connections
-        List<BlockNodeConnection> connectionsToStream;
-        synchronized (connectionLock) {
-            connectionsToStream = activeConnections.values().stream()
-                    .filter(BlockNodeConnection::isActive)
-                    .toList();
-        }
-
-        if (connectionsToStream.isEmpty()) {
-            logger.debug("No active connections to stream block {}", blockNumber);
-            return;
-        }
-
-        logger.debug("Streaming block {} to {} active connections", blockNumber, connectionsToStream.size());
-
-        // Create all batches once
-        List<PublishStreamRequest> batchRequests =
-                createPublishStreamRequests(block, blockNodeConfigurations.getBlockItemBatchSize());
-
-        // Stream prepared batches to each connection
-        for (BlockNodeConnection connection : connectionsToStream) {
-            final var connectionNodeConfig = connection.getNodeConfig();
-            try {
-                for (PublishStreamRequest request : batchRequests) {
-                    connection.sendRequest(request);
-                }
-                logger.debug(
-                        "Sent block {} to stream observer for Block Node {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port());
-            } catch (Exception e) {
-                logger.error(
-                        "Failed to send block {} to stream observer for Block Node {}:{}",
-                        blockNumber,
-                        connectionNodeConfig.address(),
-                        connectionNodeConfig.port(),
-                        e);
-            }
-        }
-    }
-
-    public static @NonNull List<PublishStreamRequest> createPublishStreamRequests(
-            @NonNull final BlockState block, final int blockItemBatchSize) {
-        final int totalItems = block.items().size();
-        // Pre-calculate the expected number of batch requests
-        final int expectedBatchCount = (totalItems + blockItemBatchSize - 1) / blockItemBatchSize;
-        List<PublishStreamRequest> batchRequests = new ArrayList<>(expectedBatchCount);
-        for (int i = 0; i < totalItems; i += blockItemBatchSize) {
-            int end = Math.min(i + blockItemBatchSize, totalItems);
-            List<BlockItem> blockItemsBatch = block.items().subList(i, end);
-
-            // Create BlockItemSet by adding all items at once
-            batchRequests.add(PublishStreamRequest.newBuilder()
-                    .blockItems(new BlockItemSet(blockItemsBatch))
-                    .build());
-        }
-        return batchRequests;
-    }
-
+    /**
+     * Schedules a reconnect for the given Block Node connection.
+     *
+     * @param connection the connection to schedule a reconnect for
+     */
     public void scheduleReconnect(@NonNull final BlockNodeConnection connection) {
         requireNonNull(connection);
 

@@ -87,7 +87,7 @@ public class BlockStreamStateManager {
     /**
      * Creates a new PublishStreamRequest from the current items in the block.
      */
-    private void createRequestFromCurrentItems(@NonNull BlockState blockState) {
+    public void createRequestFromCurrentItems(@NonNull BlockState blockState) {
         // Create BlockItemSet by adding all items at once
         final BlockItemSet itemSet =
                 BlockItemSet.newBuilder().blockItems(blockState.items()).build();
@@ -151,7 +151,7 @@ public class BlockStreamStateManager {
      * Creates a new request from the current items in the block prior to BlockProof if there are any.
      * @param blockNumber the block number
      */
-    public void performPreBlockProofActions(long blockNumber) {
+    public void streamPreBlockProofItems(long blockNumber) {
         BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
