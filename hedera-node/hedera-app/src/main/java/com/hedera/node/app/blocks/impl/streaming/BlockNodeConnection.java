@@ -249,30 +249,35 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void handleAcknowledgement(@NonNull PublishStreamResponse.Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
             final var blockAck = acknowledgement.blockAck();
-            final var acknowledgementBlockNumber = blockAck.blockNumber();
+            final var acknowledgedBlockNumber = blockAck.blockNumber();
+            final var blockAlreadyExists = blockAck.blockAlreadyExists();
             final var currentBlock = getCurrentBlockNumber();
 
-            if (acknowledgementBlockNumber != currentBlock) {
-                logger.debug(
-                        "Current block number {} does not match with the acknowledged block number {}",
-                        currentBlock,
-                        acknowledgementBlockNumber);
-            }
-
             // Update the last verified block by the current connection
-            blockNodeConnectionManager.updateLastVerifiedBlock(connectionId, acknowledgementBlockNumber);
+            blockNodeConnectionManager.updateLastVerifiedBlock(connectionId, acknowledgedBlockNumber);
             // Remove all block states up to and including this block number
-            blockStreamStateManager.removeBlockStatesUpTo(acknowledgementBlockNumber);
+            blockStreamStateManager.removeBlockStatesUpTo(acknowledgedBlockNumber);
 
-            final var blockAlreadyExists = blockAck.blockAlreadyExists();
             if (blockAlreadyExists) {
-                logger.warn("Block {} already exists on block node {}", acknowledgementBlockNumber, connectionId);
-                jumpToBlock(acknowledgementBlockNumber + 1);
+                logger.warn("Block {} already exists on block node {}", acknowledgedBlockNumber, connectionId);
             } else {
                 logger.debug(
                         "Block {} acknowledged and successfully processed by block node {}",
-                        acknowledgementBlockNumber,
+                        acknowledgedBlockNumber,
                         connectionId);
+            }
+
+            if (currentBlock > acknowledgedBlockNumber) {
+                logger.debug(
+                        "Current block number {} is higher than the acknowledged block number {}",
+                        currentBlock,
+                        acknowledgedBlockNumber);
+            } else if (currentBlock < acknowledgedBlockNumber) {
+                logger.debug(
+                        "Consensus node is behind and current block number {} is before the acknowledged block number {}",
+                        currentBlock,
+                        acknowledgedBlockNumber);
+                jumpToBlock(acknowledgedBlockNumber + 1);
             }
         } else {
             logger.warn("Unknown acknowledgement received: {}", acknowledgement);
