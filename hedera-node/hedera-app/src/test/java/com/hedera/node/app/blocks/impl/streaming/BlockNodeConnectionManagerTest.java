@@ -10,19 +10,23 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.hapi.block.protoc.PublishStreamRequest;
+import com.hedera.hapi.block.protoc.PublishStreamResponse;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
-import com.hedera.node.config.ConfigProvider;
-import com.hedera.node.config.VersionedConfigImpl;
-import com.hedera.node.config.data.BlockStreamConfig;
-import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.node.internal.network.BlockNodeConfig;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import io.grpc.stub.StreamObserver;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,23 +44,37 @@ class BlockNodeConnectionManagerTest {
     private BlockNodeConnectionManager blockNodeConnectionManager;
 
     @Mock
-    private ConfigProvider mockConfigProvider;
-
-    @Mock
     private Supplier<Void> mockSupplier;
 
     @Mock
     private BlockNodeConnection mockConnection;
 
+    @Mock
+    private BlockStreamStateManager mockStateManager;
+
+    private static BlockNodeConfigExtractorImpl blockNodeConfigExtractorImpl;
+
+    private static Server testServer;
+
+    @BeforeAll
+    static void beforeAll() throws IOException {
+        blockNodeConfigExtractorImpl = new BlockNodeConfigExtractorImpl("./src/test/resources/bootstrap");
+        final int testServerPort =
+                blockNodeConfigExtractorImpl.getAllNodes().getFirst().port();
+        testServer = ServerBuilder.forPort(testServerPort)
+                .addService(new BlockStreamServiceTestImpl())
+                .build();
+        testServer.start();
+    }
+
     @BeforeEach
-    public void setUp() {
-        final var config = HederaTestConfigBuilder.create()
-                .withConfigDataType(BlockStreamConfig.class)
-                .withValue("blockStream.writerMode", "FILE_AND_GRPC")
-                .withValue("blockNode.blockNodeConnectionFileDir", "./src/test/resources/bootstrap")
-                .getOrCreateConfig();
-        given(mockConfigProvider.getConfiguration()).willReturn(new VersionedConfigImpl(config, 1));
-        blockNodeConnectionManager = new BlockNodeConnectionManager(mockConfigProvider);
+    void setUp() {
+        blockNodeConnectionManager = new BlockNodeConnectionManager(blockNodeConfigExtractorImpl, mockStateManager);
+    }
+
+    @AfterAll
+    static void afterAll() {
+        testServer.shutdownNow();
     }
 
     @Test
@@ -67,16 +85,16 @@ class BlockNodeConnectionManagerTest {
     }
 
     @Test
-    void testRetry_SuccessOnFirstAttempt() {
+    void testRetrySuccessOnFirstAttempt() {
         blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(1)).get();
 
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
+        assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
     }
 
     @Test
-    void testRetry_SuccessOnRetry() {
+    void testRetrySuccessOnRetry() {
         when(mockSupplier.get())
                 .thenThrow(new RuntimeException("First attempt failed"))
                 .thenReturn(null);
@@ -84,31 +102,32 @@ class BlockNodeConnectionManagerTest {
         blockNodeConnectionManager.retry(mockSupplier, INITIAL_DELAY);
 
         verify(mockSupplier, times(2)).get();
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
-        assertThat(logCaptor.infoLogs())
+        assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY));
+        assertThat(logCaptor.debugLogs())
                 .containsAnyElementsOf(generateExpectedRetryLogs(INITIAL_DELAY.multipliedBy(2)));
     }
 
     @Test
-    void testScheduleReconnect() throws InterruptedException {
-        given(mockConnection.getNodeConfig())
-                .willReturn(BlockNodeConfig.newBuilder()
+    void testScheduleReconnect_WithPriority() throws InterruptedException {
+        when(mockConnection.getNodeConfig())
+                .thenReturn(BlockNodeConfig.newBuilder()
                         .address("localhost")
                         .port(8080)
                         .priority(1)
                         .build());
+
         blockNodeConnectionManager.scheduleReconnect(mockConnection);
 
         // There should be no immediate attempt to establish a stream
-        verify(mockConnection, never()).establishStream();
+        verify(mockConnection, times(0)).establishStream();
 
         Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
 
-        final var retryLog = logCaptor.infoLogs().stream()
+        final var retryLog = logCaptor.debugLogs().stream()
                 .filter(log -> log.contains("Retrying in"))
                 .findFirst();
         assertThat(retryLog).isNotEmpty();
-        verify(mockConnection).establishStream();
+        verify(mockConnection, times(1)).establishStream();
     }
 
     @Test
@@ -118,10 +137,10 @@ class BlockNodeConnectionManagerTest {
         blockNodeConnectionManager.scheduleReconnect(mockConnection);
 
         verify(mockConnection, never()).establishStream(); // there should be no immediate attempt to establish a stream
+        final var initialDelay = BlockNodeConnectionManager.INITIAL_RETRY_DELAY;
+        Thread.sleep(initialDelay.plusMillis(100));
 
-        Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
-
-        assertThat(logCaptor.infoLogs()).containsAnyElementsOf(generateExpectedRetryLogs(Duration.ofSeconds(1L)));
+        assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(initialDelay));
         verify(mockConnection, times(1)).establishStream();
     }
 
@@ -146,5 +165,28 @@ class BlockNodeConnectionManagerTest {
         }
 
         return logs;
+    }
+
+    private static class BlockStreamServiceTestImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
+        @Override
+        public StreamObserver<PublishStreamRequest> publishBlockStream(
+                StreamObserver<PublishStreamResponse> responseObserver) {
+            return new StreamObserver<>() {
+                @Override
+                public void onNext(PublishStreamRequest request) {
+                    // no-op
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    // no-op
+                }
+
+                @Override
+                public void onCompleted() {
+                    responseObserver.onCompleted();
+                }
+            };
+        }
     }
 }
