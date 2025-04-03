@@ -4,6 +4,7 @@ package com.hedera.node.app.workflows.handle.record;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS_BUT_MISSING_EXPECTED_OPERATION;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
+import static com.hedera.hapi.util.HapiUtils.functionOf;
 import static com.hedera.node.app.hapi.utils.keys.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STATE_KEY;
 import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.parseEd25519NodeAdminKeysFrom;
@@ -580,6 +581,13 @@ public class SystemTransactions {
                                 .nonce(nextDispatchNonce++)
                                 .build());
                 spec.accept(builder);
+                final var body = builder.build();
+                try {
+                    System.out.println(
+                            "==== SYSTEM DISPATCH ==== FUNCTION ==== " + functionOf(body) + "==== BODY ==== " + body);
+                } catch (final Exception e) {
+                    System.out.println("==== SYSTEM DISPATCH ==== BODY ==== " + body);
+                }
                 dispatch(builder.build(), 0);
             }
 
@@ -594,12 +602,25 @@ public class SystemTransactions {
                                 .nonce(nextDispatchNonce++)
                                 .build());
                 spec.accept(builder);
+                final var body = builder.build();
+                try {
+                    System.out.println(
+                            "==== SYSTEM CREATION ==== FUNCTION ==== " + functionOf(body) + "==== BODY ==== " + body);
+                } catch (final Exception e) {
+                    System.out.println("==== SYSTEM CREATION ==== BODY ==== " + body);
+                }
                 dispatchCreation(builder.build(), entityNum);
             }
 
             @Override
             public void dispatchCreation(@NonNull final TransactionBody body, final long entityNum) {
                 requireNonNull(body);
+                try {
+                    System.out.println(
+                            "==== SYSTEM CREATION ==== FUNCTION ==== " + functionOf(body) + "==== BODY ==== " + body);
+                } catch (final Exception e) {
+                    System.out.println("==== SYSTEM CREATION ==== BODY ==== " + body);
+                }
                 dispatch(body, entityNum);
             }
 
@@ -745,6 +766,12 @@ public class SystemTransactions {
                             entityNum,
                             recordBuilder.status());
                 }
+                try {
+                    System.out.println(
+                            "==== SYSTEM CREATION ==== FUNCTION ==== " + functionOf(body) + "==== BODY ==== " + body);
+                } catch (final Exception e) {
+                    System.out.println("==== SYSTEM CREATION ==== BODY ==== " + body);
+                }
                 controlledNum.put(new EntityNumber(firstUserNum - 1));
                 dispatch.stack().commitFullStack();
             }
@@ -764,6 +791,12 @@ public class SystemTransactions {
                         .dispatch(independentDispatch(systemAdminId, body, StreamBuilder.class));
                 if (!SUCCESSES.contains(streamBuilder.status())) {
                     log.error("Failed to dispatch update transaction {} for - {}", body, streamBuilder.status());
+                }
+                try {
+                    System.out.println(
+                            "==== SYSTEM DISPATCH ==== FUNCTION ==== " + functionOf(body) + "==== BODY ==== " + body);
+                } catch (final Exception e) {
+                    System.out.println("==== SYSTEM DISPATCH ==== BODY ==== " + body);
                 }
             }
 
