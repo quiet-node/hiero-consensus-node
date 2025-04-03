@@ -589,8 +589,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         }
 
         // During freeze round, we should close the block regardless of other conditions
-        // or round number is <= 1 as genesis round should close a block and
-        // round 1 is written to disk.
+        // or round number is <= 1 as round 1 is written to disk.
         if (roundNumber == freezeRoundNumber || roundNumber <= 1) {
             return true;
         }
