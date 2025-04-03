@@ -101,7 +101,7 @@ public class AccessoryUtils {
         }
     }
 
-    private static void setLogLevel(Class<?> cls, Level logLevel) {
+    public static void setLogLevel(Class<?> cls, Level logLevel) {
         ((org.apache.logging.log4j.core.Logger) LogManager.getLogger(cls)).setLevel(logLevel);
     }
 

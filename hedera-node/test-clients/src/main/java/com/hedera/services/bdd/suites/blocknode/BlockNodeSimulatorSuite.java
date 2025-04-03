@@ -7,16 +7,22 @@ import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.utilops.BlockNodeSimulatorVerbs.blockNodeSimulator;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogContainsTimeframe;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.logDiagnosticInfo;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.setLogLevel;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
+import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.OrderedInIsolation;
+import com.hedera.services.bdd.spec.HapiSpec;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -30,10 +36,17 @@ import org.junit.jupiter.api.Tag;
 @Tag(BLOCK_NODE_SIMULATOR)
 @OrderedInIsolation
 public class BlockNodeSimulatorSuite {
+    private static final Logger log = LogManager.getLogger(BlockNodeSimulatorSuite.class);
+    
+    // Common class names that we might want to set logging levels for
+    private static final String BLOCK_NODE_CONNECTION = "com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection";
 
     @HapiTest
     final Stream<DynamicTest> nominalStreamingBlocksNoErrors() {
         return hapiTest(
+                // Example: Set logging levels for multiple classes at once
+                // Node-specific: Enable DEBUG for BlockNodeConnection and TRACE for BlockStreamManager on node 0
+                setLogLevel(byNodeId(0), BLOCK_NODE_CONNECTION, "DEBUG"),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -114,6 +127,7 @@ public class BlockNodeSimulatorSuite {
         AtomicReference<Instant> startTime = new AtomicReference<>();
 
         return hapiTest(
+                setLogLevel(byNodeId(0), BLOCK_NODE_CONNECTION, "DEBUG"),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),

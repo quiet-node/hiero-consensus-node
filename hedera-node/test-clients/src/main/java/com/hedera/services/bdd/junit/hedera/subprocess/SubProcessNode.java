@@ -34,6 +34,8 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,6 +82,11 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
     @Nullable
     private ProcessHandle processHandle;
 
+    /**
+     * The JMX port that this node uses for remote monitoring and management.
+     */
+    private int jmxPort;
+
     public SubProcessNode(
             @NonNull final NodeMetadata metadata,
             @NonNull final GrpcPinger grpcPinger,
@@ -92,6 +99,25 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
         requireNonNull(Hedera.class);
     }
 
+    /**
+     * Get the JMX port for this node.
+     * @return the port used for JMX connections to this node
+     */
+    public int getJmxPort() {
+        return jmxPort;
+    }
+
+    /**
+     * Set the JMX port for this node.
+     * @param jmxPort the port to use for JMX connections
+     */
+    public void setJmxPort(int jmxPort) {
+        this.jmxPort = jmxPort;
+    }
+
+    /**
+     * Start the node as a new process with the current configuration version.
+     */
     @Override
     public SubProcessNode start() {
         return startWithConfigVersion(LifecycleTest.CURRENT_CONFIG_VERSION.get());
@@ -215,7 +241,23 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
         assertStopped();
         assertWorkingDirInitialized();
         destroyAnySubProcessNodeWithId(metadata.nodeId());
-        processHandle = startSubProcessNodeFrom(metadata, configVersion, envOverrides);
+        
+        // Add JMX arguments to enable remote JMX management on the specified port
+        Map<String, String> envWithJmx = new HashMap<>(envOverrides);
+        if (jmxPort > 0) {
+            // These properties enable JMX remote management
+            envWithJmx.put("JVM_ARGS", String.format(
+                "-Dcom.sun.management.jmxremote " +
+                "-Dcom.sun.management.jmxremote.port=%d " +
+                "-Dcom.sun.management.jmxremote.rmi.port=%d " + 
+                "-Dcom.sun.management.jmxremote.local.only=false " +
+                "-Dcom.sun.management.jmxremote.authenticate=false " +
+                "-Dcom.sun.management.jmxremote.ssl=false " +
+                "-Djava.rmi.server.hostname=127.0.0.1",
+                jmxPort, jmxPort));
+        }
+        
+        processHandle = startSubProcessNodeFrom(metadata, configVersion, envWithJmx);
         return this;
     }
 
@@ -227,14 +269,17 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
      * @param gossipPort the new gossip port
      * @param tlsGossipPort the new TLS gossip port
      * @param prometheusPort the new Prometheus port
+     * @param jmxPort the new JMX port
      */
     public void reassignPorts(
             final int grpcPort,
             final int grpcNodeOperatorPort,
             final int gossipPort,
             final int tlsGossipPort,
-            final int prometheusPort) {
+            final int prometheusPort,
+            final int jmxPort) {
         metadata = metadata.withNewPorts(grpcPort, grpcNodeOperatorPort, gossipPort, tlsGossipPort, prometheusPort);
+        this.jmxPort = jmxPort;
     }
 
     /**

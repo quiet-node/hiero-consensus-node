@@ -2638,4 +2638,30 @@ public class UtilVerbs {
                 timeframe,
                 waitTimeout);
     }
+
+    /**
+     * Returns an operation that sets the logging level for a specific class on all nodes.
+     *
+     * @param className the fully qualified class name for which to set the logging level
+     * @param level the logging level to set (e.g., "DEBUG", "INFO", "WARN", "ERROR")
+     * @return the operation that sets the logging level
+     */
+    public static SetLogLevel setLogLevel(@NonNull final String className, @NonNull final String level) {
+        return new SetLogLevel(className, level);
+    }
+    
+    /**
+     * Returns an operation that sets the logging level for a specific class on specific nodes.
+     *
+     * @param selector the selector for the nodes to apply logging levels to
+     * @param className the fully qualified class name for which to set the logging level
+     * @param level the logging level to set (e.g., "DEBUG", "INFO", "WARN", "ERROR")
+     * @return the operation that sets the logging level
+     */
+    public static SetLogLevel setLogLevel(
+            @NonNull final NodeSelector selector,
+            @NonNull final String className,
+            @NonNull final String level) {
+        return new SetLogLevel(selector, className, level);
+    }
 }

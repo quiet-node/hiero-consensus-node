@@ -15,14 +15,23 @@ import com.hedera.services.bdd.spec.infrastructure.HapiClients;
 import com.hedera.services.bdd.spec.keys.RepeatableKeyGenerator;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.platform.engine.TestExecutionResult;
+import org.junit.platform.engine.TestSource;
+import org.junit.platform.engine.support.descriptor.ClassSource;
+import org.junit.platform.engine.support.descriptor.MethodSource;
 import org.junit.platform.launcher.LauncherSession;
 import org.junit.platform.launcher.LauncherSessionListener;
 import org.junit.platform.launcher.TestExecutionListener;
+import org.junit.platform.launcher.TestIdentifier;
 import org.junit.platform.launcher.TestPlan;
 
 /**
@@ -36,7 +45,13 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
 
     @Override
     public void launcherSessionOpened(@NonNull final LauncherSession session) {
+        log.info("Launcher session opened, registering test execution listener");
         session.getLauncher().registerTestExecutionListeners(new SharedNetworkExecutionListener());
+    }
+
+    @Override
+    public void launcherSessionClosed(@NonNull final LauncherSession session) {
+        log.info("Launcher session closed");
     }
 
     /**
@@ -55,6 +70,7 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
 
         @Override
         public void testPlanExecutionStarted(@NonNull final TestPlan testPlan) {
+            log.info("Test plan execution started");
             REPEATABLE_KEY_GENERATOR.set(new RepeatableKeyGenerator());
             embedding = embeddingMode();
             final HederaNetwork network =
@@ -132,6 +148,7 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
 
         @Override
         public void testPlanExecutionFinished(@NonNull final TestPlan testPlan) {
+            log.info("Test plan execution finished");
             if (embedding == Embedding.NA) {
                 HapiClients.tearDown();
             }
