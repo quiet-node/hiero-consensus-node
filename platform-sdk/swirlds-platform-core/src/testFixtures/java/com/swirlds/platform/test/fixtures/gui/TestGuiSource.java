@@ -62,8 +62,9 @@ public class TestGuiSource {
             @NonNull final PlatformContext platformContext,
             @NonNull final AddressBook addressBook,
             @NonNull final GuiEventProvider eventProvider,
-            @NonNull final Map<GossipEvent, Integer> branchIndexes) {
-        this.eventStorage = new GuiEventStorage(platformContext.getConfiguration(), addressBook, branchIndexes);
+            @NonNull final Map<GossipEvent, Integer> branchIndexes,
+            @NonNull final Map<GossipEvent, Long> generations) {
+        this.eventStorage = new GuiEventStorage(platformContext.getConfiguration(), addressBook, branchIndexes, generations);
         this.guiSource = new StandardGuiSource(addressBook, eventStorage);
         this.eventProvider = eventProvider;
         this.ancientMode = platformContext

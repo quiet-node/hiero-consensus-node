@@ -40,6 +40,7 @@ public class GuiEventStorage {
     private final Configuration configuration;
     private ConsensusRound lastConsensusRound;
     private final Map<GossipEvent, Integer> branchIndexes;
+    private final Map<GossipEvent, Long> generations;
 
     /**
      * Creates an empty instance
@@ -57,6 +58,7 @@ public class GuiEventStorage {
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
         this.branchIndexes = new HashMap<>();
+        this.generations = new HashMap<>();
     }
 
     /**
@@ -69,7 +71,8 @@ public class GuiEventStorage {
     public GuiEventStorage(
             @NonNull final Configuration configuration,
             @NonNull final AddressBook addressBook,
-            @NonNull final Map<GossipEvent, Integer> branchIndexes) {
+            @NonNull final Map<GossipEvent, Integer> branchIndexes,
+            @NonNull final Map<GossipEvent, Long> generations) {
 
         this.configuration = Objects.requireNonNull(configuration);
         final PlatformContext platformContext = PlatformContext.create(configuration);
@@ -79,6 +82,7 @@ public class GuiEventStorage {
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
         this.branchIndexes = branchIndexes;
+        this.generations = generations;
     }
 
     /**
@@ -99,6 +103,7 @@ public class GuiEventStorage {
                 .max()
                 .orElse(FIRST_GENERATION);
         this.branchIndexes = new HashMap<>();
+        this.generations = new HashMap<>();
     }
 
     /**
@@ -116,6 +121,8 @@ public class GuiEventStorage {
      */
     public synchronized void handlePreconsensusEvent(@NonNull final PlatformEvent event) {
         maxGeneration = Math.max(maxGeneration, event.getGeneration());
+
+        generations.put(event.getGossipEvent(), event.getGeneration());
 
         // since the gui will modify the event, we need to copy it
         final EventImpl eventImpl = linker.linkEvent(event.copyGossipedData());
@@ -173,5 +180,9 @@ public class GuiEventStorage {
 
     public Map<GossipEvent, Integer> getBranchIndexes() {
         return branchIndexes;
+    }
+
+    public Map<GossipEvent, Long> getGenerations() {
+        return generations;
     }
 }

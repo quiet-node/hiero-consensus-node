@@ -34,18 +34,20 @@ public class HashgraphGui {
         final PlatformContext platformContext =
                 TestPlatformContextBuilder.create().build();
 
-        final Map<GossipEvent, Integer> branchIndexMap = new HashMap<>();
+        final Map<GossipEvent, Integer> eventsToBranchIndexes = new HashMap<>();
+        final Map<GossipEvent, Long> eventsToGenerations = new HashMap<>();
         final GraphGenerator graphGenerator = new StandardGraphGenerator(
                 platformContext,
                 randotron.nextInt(),
-                generateSources(numNodes, branchIndexMap, Arrays.stream(args).anyMatch("branch"::equals)));
+                generateSources(numNodes, eventsToBranchIndexes, Arrays.stream(args).anyMatch("branch"::equals)));
         graphGenerator.reset();
 
         final TestGuiSource guiSource = new TestGuiSource(
                 platformContext,
                 graphGenerator.getAddressBook(),
                 new GeneratorEventProvider(graphGenerator),
-                branchIndexMap);
+                eventsToBranchIndexes,
+                eventsToGenerations);
         guiSource.generateEvents(initialEvents);
         guiSource.runGui();
     }

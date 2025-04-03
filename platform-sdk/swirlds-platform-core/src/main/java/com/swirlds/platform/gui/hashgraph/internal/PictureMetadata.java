@@ -7,8 +7,11 @@ import com.swirlds.platform.internal.EventImpl;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 /**
  * Metadata that is used to aid in drawing a {@code HashgraphPicture}
@@ -134,7 +137,8 @@ public class PictureMetadata {
                     final int maxXCoordinateForBranch = eventToXCoordinatesForDisplayedBranchEvents.values().stream()
                             .max(Integer::compareTo)
                             .orElse(-1);
-                    if (maxXCoordinateForBranch > 0) {
+
+                    if(maxXCoordinateForBranch > 0) {
                         xPos = maxXCoordinateForBranch + (int) r;
                     }
 
@@ -144,28 +148,12 @@ public class PictureMetadata {
                 }
                 // event has X coordinate
                 else {
-                    // events have gone too much to the right, so shift them all to the left
-                    if (eventToXCoordinatesForDisplayedBranchEvents.size() > 12) {
-                        eventToXCoordinatesForDisplayedBranchEvents.clear();
-
-                        xPos = branchIndexToMinimumXCoordinate.get(branchIndex);
-
-//                        final var allBranchXCoordinates = branchIndexToAllXCoordinates.get(branchIndex);
-//                        allBranchXCoordinates.put(e2GossipEvent, xPos);
-//                        branchIndexToAllXCoordinates.put(branchIndex, allBranchXCoordinates);
-
-                        eventToXCoordinatesForDisplayedBranchEvents.put(e2GossipEvent, xPos);
-                        branchIndexToAllXCoordinates.put(branchIndex, eventToXCoordinatesForDisplayedBranchEvents);
-                        branchIndexToCurrentXCoordinates.put(branchIndex, eventToXCoordinatesForDisplayedBranchEvents);
-
-                    } else {
-                        // event has X coordinate and it is in proper position, so just assign it
-                        xPos = eventToXCoordinatesForDisplayedBranchEvents.get(e2GossipEvent);
-                    }
+                    // event has X coordinate and it is in proper position, so just assign it
+                    xPos = eventToXCoordinatesForDisplayedBranchEvents.get(e2GossipEvent);
                 }
             } else {
                 // the event will be the first one of a new branch and X coordinate for it doesn't exist yet
-                final var allBranchXCoordinates = new HashMap<GossipEvent, Integer>();
+                final var allBranchXCoordinates = new LinkedHashMap<GossipEvent, Integer>();
                 allBranchXCoordinates.put(e2GossipEvent, xPos);
                 branchIndexToAllXCoordinates.put(branchIndex, allBranchXCoordinates);
 
