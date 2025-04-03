@@ -7,7 +7,6 @@ import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.utilops.BlockNodeSimulatorVerbs.blockNodeSimulator;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogContainsTimeframe;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.logDiagnosticInfo;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.setLogLevel;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 

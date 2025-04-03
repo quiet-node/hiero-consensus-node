@@ -104,7 +104,6 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private static int nextInternalGossipPort;
     private static int nextExternalGossipPort;
     private static int nextPrometheusPort;
-    private static int nextJmxPort;
     private static boolean nextPortsInitialized = false;
 
     private final Map<Long, AccountID> pendingNodeAccounts = new HashMap<>();
@@ -565,38 +564,16 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         log.info("Reassigning ports for network '{}' starting from {}", name(), nextGrpcPort);
         reinitializePorts();
         log.info("  -> Network '{}' ports now starting from {}", name(), nextGrpcPort);
-        
-        // Find available ports for each node up front to avoid conflicts
-        int size = nodes.size();
-        int[] grpcPorts = new int[size];
-        int[] operatorPorts = new int[size];
-        int[] internalGossipPorts = new int[size];
-        int[] externalGossipPorts = new int[size];
-        int[] prometheusPorts = new int[size];
-        int[] jmxPorts = new int[size];
-        
-        // Find available ports for all nodes
-        for (int i = 0; i < size; i++) {
-            grpcPorts[i] = findAvailablePort();
-            operatorPorts[i] = findAvailablePort();
-            internalGossipPorts[i] = findAvailablePort();
-            externalGossipPorts[i] = findAvailablePort();
-            prometheusPorts[i] = findAvailablePort();
-            jmxPorts[i] = findAvailablePort();
-        }
-        
-        // Assign the ports to each node
-        for (int i = 0; i < size; i++) {
-            final HederaNode node = nodes.get(i);
-            ((SubProcessNode) node).reassignPorts(
-                    grpcPorts[i],
-                    operatorPorts[i],
-                    internalGossipPorts[i],
-                    externalGossipPorts[i],
-                    prometheusPorts[i],
-                    jmxPorts[i]);
-        }
-        
+        nodes.forEach(node -> {
+            final int nodeId = (int) node.getNodeId();
+            ((SubProcessNode) node)
+                    .reassignPorts(
+                            nextGrpcPort + nodeId * 2,
+                            nextNodeOperatorPort + nodeId,
+                            nextInternalGossipPort + nodeId * 2,
+                            nextExternalGossipPort + nodeId * 2,
+                            nextPrometheusPort + nodeId);
+        });
         final var weights = maybeLatestCandidateWeights();
         configTxt = configTxtForLocal(networkName, nodes, nextInternalGossipPort, nextExternalGossipPort, weights);
         refreshOverrideNetworks(ReassignPorts.YES);
@@ -709,25 +686,20 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         final var network = new SubProcessNetwork(
                 name,
                 IntStream.range(0, size)
-                        .mapToObj(nodeId -> {
-                            SubProcessNode node = new SubProcessNode(
-                                    classicMetadataFor(
-                                            nodeId,
-                                            name,
-                                            SUBPROCESS_HOST,
-                                            SHARED_NETWORK_NAME.equals(name) ? null : name,
-                                            nextGrpcPort + nodeId * 2,
-                                            nextNodeOperatorPort + nodeId,
-                                            true,
-                                            nextInternalGossipPort + nodeId * 2,
-                                            nextExternalGossipPort + nodeId * 2,
-                                            nextPrometheusPort + nodeId),
-                                    GRPC_PINGER,
-                                    PROMETHEUS_CLIENT);
-                            // Set the JMX port for this node
-                            node.setJmxPort(nextJmxPort + nodeId);
-                            return node;
-                        })
+                        .mapToObj(nodeId -> new SubProcessNode(
+                                classicMetadataFor(
+                                        nodeId,
+                                        name,
+                                        SUBPROCESS_HOST,
+                                        SHARED_NETWORK_NAME.equals(name) ? null : name,
+                                        nextGrpcPort,
+                                        nextNodeOperatorPort,
+                                        true,
+                                        nextInternalGossipPort,
+                                        nextExternalGossipPort,
+                                        nextPrometheusPort),
+                                GRPC_PINGER,
+                                PROMETHEUS_CLIENT))
                         .toList());
         Runtime.getRuntime().addShutdownHook(new Thread(network::terminate));
         return network;
@@ -827,13 +799,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         //   - gossipPort = 10012, 10014, 10016, 10018
         //   - gossipTlsPort = 10013, 10015, 10017, 10019
         //   - prometheusPort = 10020, 10021, 10022, 10023
-        //   - jmxPort = 10024, 10025, 10026, 10027
         nextGrpcPort = firstGrpcPort;
         nextNodeOperatorPort = nextGrpcPort + 2 * size;
         nextInternalGossipPort = nextNodeOperatorPort + size;
         nextExternalGossipPort = nextInternalGossipPort + 1;
         nextPrometheusPort = nextInternalGossipPort + 2 * size;
-        nextJmxPort = nextPrometheusPort + size;
         nextPortsInitialized = true;
     }
 
@@ -873,7 +843,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         }
     }
 
-    private int findAvailablePort() {
+    public static int findAvailablePort() {
         // Find a random available port between 30000 and 40000
         int attempts = 0;
         while (attempts < 100) {
@@ -925,16 +895,26 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             return;
         }
         
-        log.info("Applying logging levels to node {}: {}", node.getNodeId(), loggingProperties);
+        log.info("Preparing to apply logging levels to node {}: {}", node.getNodeId(), loggingProperties);
 
-        if (node instanceof SubProcessNode) {
+        if (node instanceof SubProcessNode subProcessNode) {
             try {
-                updateLoggingLevelsViaJmx((SubProcessNode) node, loggingProperties);
+                // Wait for node to be ready before attempting to set log levels
+                log.info("Waiting for node {} to be ready before applying logging levels", node.getNodeId());
+                awaitStatus(node, Duration.ofMinutes(2), ACTIVE);
+                
+                // Add a small delay after node is active to ensure JMX is ready
+                Thread.sleep(2000);
+                
+                updateLoggingLevelsViaJmx(subProcessNode, loggingProperties);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("Interrupted while waiting for node {} to be ready", node.getNodeId());
             } catch (Exception e) {
-                log.warn("Failed to update logging levels for node {}: {}", node, e.getMessage());
+                log.error("Failed to update logging levels for node {}: {}", node.getNodeId(), e.getMessage());
             }
         } else {
-            log.warn("Node {} is not a SubProcessNode, cannot apply logging properties", node);
+            log.warn("Node {} is not a SubProcessNode, cannot apply logging properties", node.getNodeId());
         }
     }
     
@@ -947,48 +927,79 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      */
     private void updateLoggingLevelsViaJmx(SubProcessNode node, Map<String, String> loggingProperties) throws Exception {
         final String jmxUrl = "service:jmx:rmi:///jndi/rmi://localhost:" + node.getJmxPort() + "/jmxrmi";
-        log.info("Connecting to JMX at {}", jmxUrl);
+        log.info("Attempting to connect to JMX at {} for node {}", jmxUrl, node.getNodeId());
         
-        JMXConnector connector = null;
-        try {
-            // Connect to the JMX service
-            connector = JMXConnectorFactory.connect(new JMXServiceURL(jmxUrl));
-            MBeanServerConnection connection = connector.getMBeanServerConnection();
-            
-            // Query for the Log4j2 LoggerContext MBean
-            ObjectName loggerContextName = new ObjectName("org.apache.logging.log4j2:type=*,component=LoggerContext,name=*");
-            Set<ObjectName> loggerContextNames = connection.queryNames(loggerContextName, null);
-            
-            if (loggerContextNames.isEmpty()) {
-                throw new IllegalStateException("No Log4j2 LoggerContext MBeans found in JMX");
-            }
-            
-            // Get the first LoggerContext MBean (typically there's only one)
-            ObjectName contextName = loggerContextNames.iterator().next();
-            
-            // For each logger class specified, set its level
-            for (Map.Entry<String, String> entry : loggingProperties.entrySet()) {
-                String className = entry.getKey();
-                String level = entry.getValue();
+        // Add retries for JMX connection
+        int maxRetries = 30;
+        int retryCount = 0;
+        Exception lastException = null;
+        
+        while (retryCount < maxRetries) {
+            JMXConnector connector = null;
+            try {
+                // Connect to the JMX service
+                connector = JMXConnectorFactory.connect(new JMXServiceURL(jmxUrl), null);
+                MBeanServerConnection connection = connector.getMBeanServerConnection();
                 
-                log.info("Setting logger level for {} to {} via JMX", className, level);
+                // Query for the Log4j2 LoggerContext MBean
+                ObjectName loggerContextName = new ObjectName("org.apache.logging.log4j2:type=*,component=LoggerContext,name=*");
+                Set<ObjectName> loggerContextNames = connection.queryNames(loggerContextName, null);
                 
-                // Invoke the setLoggerLevel operation on the LoggerContext MBean
-                connection.invoke(
-                        contextName,
-                        "setLoggerLevel",
-                        new Object[] {className, level},
-                        new String[] {"java.lang.String", "java.lang.String"});
-            }
-            log.info("Successfully updated all logging levels via JMX");
-        } finally {
-            if (connector != null) {
-                try {
-                    connector.close();
-                } catch (IOException e) {
-                    log.warn("Error closing JMX connection", e);
+                if (loggerContextNames.isEmpty()) {
+                    log.warn("No Log4j2 LoggerContext MBeans found in JMX for node {}, retrying... (attempt {}/{})", 
+                            node.getNodeId(), retryCount + 1, maxRetries);
+                    lastException = new IllegalStateException("No Log4j2 LoggerContext MBeans found in JMX");
+                    retryCount++;
+                    Thread.sleep(1000); // Wait a second before retrying
+                    continue;
+                }
+                
+                // Get the first LoggerContext MBean (typically there's only one)
+                ObjectName contextName = loggerContextNames.iterator().next();
+                
+                // For each logger class specified, set its level
+                for (Map.Entry<String, String> entry : loggingProperties.entrySet()) {
+                    String className = entry.getKey();
+                    String level = entry.getValue();
+                    
+                    log.info("Setting logger level for {} to {} via JMX on node {}", 
+                            className, level, node.getNodeId());
+                    
+                    // Invoke the setLoggerLevel operation on the LoggerContext MBean
+                    connection.invoke(
+                            contextName,
+                            "setLoggerLevel",
+                            new Object[] {className, level},
+                            new String[] {"java.lang.String", "java.lang.String"});
+                }
+                
+                log.info("Successfully updated all logging levels via JMX for node {}", node.getNodeId());
+                return; // Success - exit the retry loop
+                
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("Failed to update logging levels for node {} via JMX (attempt {}/{}): {}", 
+                        node.getNodeId(), retryCount + 1, maxRetries, e.getMessage());
+                retryCount++;
+                
+                if (retryCount < maxRetries) {
+                    Thread.sleep(1000); // Wait a second before retrying
+                }
+            } finally {
+                if (connector != null) {
+                    try {
+                        connector.close();
+                    } catch (IOException e) {
+                        log.warn("Error closing JMX connection for node {}", node.getNodeId(), e);
+                    }
                 }
             }
         }
+        
+        // If we got here, all retries failed
+        throw new IllegalStateException(
+                String.format("Failed to update logging levels for node %d after %d attempts", 
+                        node.getNodeId(), maxRetries), 
+                lastException);
     }
 }

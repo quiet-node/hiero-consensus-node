@@ -14,6 +14,7 @@ import static com.hedera.services.bdd.junit.hedera.subprocess.ProcessUtils.condi
 import static com.hedera.services.bdd.junit.hedera.subprocess.ProcessUtils.destroyAnySubProcessNodeWithId;
 import static com.hedera.services.bdd.junit.hedera.subprocess.ProcessUtils.startSubProcessNodeFrom;
 import static com.hedera.services.bdd.junit.hedera.subprocess.StatusLookupAttempt.newLogAttempt;
+import static com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork.findAvailablePort;
 import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.ERROR_REDIRECT_FILE;
 import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.OUTPUT_DIR;
 import static java.util.Objects.requireNonNull;
@@ -97,6 +98,7 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
         this.prometheusClient = requireNonNull(prometheusClient);
         // Just something to keep checkModuleInfo from claiming we don't require com.hedera.node.app
         requireNonNull(Hedera.class);
+        this.jmxPort = findAvailablePort();
     }
 
     /**
@@ -245,12 +247,13 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
         // Add JMX arguments to enable remote JMX management on the specified port
         Map<String, String> envWithJmx = new HashMap<>(envOverrides);
         if (jmxPort > 0) {
+            log.info("Starting node {} with JMX port {}", metadata.nodeId(), jmxPort);
             // These properties enable JMX remote management
             envWithJmx.put("JVM_ARGS", String.format(
                 "-Dcom.sun.management.jmxremote " +
                 "-Dcom.sun.management.jmxremote.port=%d " +
                 "-Dcom.sun.management.jmxremote.rmi.port=%d " + 
-                "-Dcom.sun.management.jmxremote.local.only=false " +
+                "-Dcom.sun.management.jmxremote.local.only=true " +
                 "-Dcom.sun.management.jmxremote.authenticate=false " +
                 "-Dcom.sun.management.jmxremote.ssl=false " +
                 "-Djava.rmi.server.hostname=127.0.0.1",
@@ -269,17 +272,14 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
      * @param gossipPort the new gossip port
      * @param tlsGossipPort the new TLS gossip port
      * @param prometheusPort the new Prometheus port
-     * @param jmxPort the new JMX port
      */
     public void reassignPorts(
             final int grpcPort,
             final int grpcNodeOperatorPort,
             final int gossipPort,
             final int tlsGossipPort,
-            final int prometheusPort,
-            final int jmxPort) {
+            final int prometheusPort) {
         metadata = metadata.withNewPorts(grpcPort, grpcNodeOperatorPort, gossipPort, tlsGossipPort, prometheusPort);
-        this.jmxPort = jmxPort;
     }
 
     /**
