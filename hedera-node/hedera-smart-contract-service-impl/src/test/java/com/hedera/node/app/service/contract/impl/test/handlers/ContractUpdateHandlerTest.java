@@ -429,37 +429,6 @@ class ContractUpdateHandlerTest extends ContractHandlerTestBase {
     }
 
     @Test
-    void maxAutomaticTokenAssociationsBiggerThenMaxConfigFails() {
-        final var maxAutomaticTokenAssociations = 10;
-
-        when(configuration.getConfigData(LedgerConfig.class)).thenReturn(ledgerConfig);
-        when(configuration.getConfigData(EntitiesConfig.class)).thenReturn(entitiesConfig);
-        when(configuration.getConfigData(TokensConfig.class)).thenReturn(tokensConfig);
-        when(ledgerConfig.maxAutoAssociations()).thenReturn(maxAutomaticTokenAssociations + 1);
-        when(entitiesConfig.limitTokenAssociations()).thenReturn(true);
-        when(tokensConfig.maxPerAccount()).thenReturn(maxAutomaticTokenAssociations - 1);
-        when(context.configuration()).thenReturn(configuration);
-
-        when(contract.maxAutoAssociations()).thenReturn(maxAutomaticTokenAssociations - 1);
-        when(contract.key()).thenReturn(Key.newBuilder().build());
-        when(accountStore.getContractById(targetContract)).thenReturn(contract);
-        given(context.storeFactory()).willReturn(storeFactory);
-        given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
-        final var txn = TransactionBody.newBuilder()
-                .contractUpdateInstance(ContractUpdateTransactionBody.newBuilder()
-                        .contractID(targetContract)
-                        .adminKey(adminKey)
-                        .memo("memo")
-                        .maxAutomaticTokenAssociations(maxAutomaticTokenAssociations))
-                .transactionID(transactionID)
-                .build();
-
-        when(context.body()).thenReturn(txn);
-
-        assertFailsWith(REQUESTED_NUM_AUTOMATIC_ASSOCIATIONS_EXCEEDS_ASSOCIATION_LIMIT, () -> subject.handle(context));
-    }
-
-    @Test
     void verifyTheCorrectOutsideValidatorsAndUpdateContractAPIAreCalled() {
         doReturn(attributeValidator).when(context).attributeValidator();
         when(accountStore.getContractById(targetContract)).thenReturn(contract);

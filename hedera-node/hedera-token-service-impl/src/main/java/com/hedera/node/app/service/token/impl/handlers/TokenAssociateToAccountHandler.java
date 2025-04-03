@@ -4,7 +4,6 @@ package com.hedera.node.app.service.token.impl.handlers;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_ACCOUNT_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TOKEN_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.MAX_ENTITIES_IN_PRICE_REGIME_HAVE_BEEN_CREATED;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.TOKENS_PER_ACCOUNT_LIMIT_EXCEEDED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TOKEN_ID_REPEATED_IN_TOKEN_LIST;
 import static com.hedera.hapi.node.base.SubType.DEFAULT;
@@ -146,12 +145,6 @@ public class TokenAssociateToAccountHandler extends BaseTokenHandler implements 
             tokens.add(token);
         }
 
-        // Check that the total number of old and new token IDs wouldn't be bigger than
-        // the max number of token associations allowed per account (if the rel limit is enabled)
-        validateTrue(
-                maxAccountAssociationsAllowTokenRels(tokenConfig, entitiesConfig, account, tokenIds),
-                TOKENS_PER_ACCOUNT_LIMIT_EXCEEDED);
-
         // Check that a token rel doesn't already exist for each new token ID
         for (final TokenID tokenId : tokenIds) {
             final var existingTokenRel = tokenRelStore.get(accountId, tokenId);
@@ -164,24 +157,6 @@ public class TokenAssociateToAccountHandler extends BaseTokenHandler implements 
     private boolean isTotalNumTokenRelsWithinMax(
             final int numNewTokenRels, WritableTokenRelationStore tokenRelStore, long maxNumTokenRels) {
         return tokenRelStore.sizeOfState() + numNewTokenRels <= maxNumTokenRels;
-    }
-
-    /**
-     * Method that checks if the number of token associations for the given account is within the
-     * allowable limit set by the config (if the limit is enabled).
-     *
-     * @return true if tokenAssociationsLimited is false or if the number of token associations is
-     * within the allowed maxTokensPerAccount
-     */
-    private boolean maxAccountAssociationsAllowTokenRels(
-            @NonNull final TokensConfig config,
-            @NonNull final EntitiesConfig entitiesConfig,
-            @NonNull final Account account,
-            @NonNull final List<TokenID> tokenIds) {
-        final var numAssociations = requireNonNull(account).numberAssociations();
-        final var tokenAssociationsLimited = entitiesConfig.limitTokenAssociations();
-        final var maxTokensPerAccount = config.maxPerAccount();
-        return !tokenAssociationsLimited || (numAssociations + tokenIds.size() <= maxTokensPerAccount);
     }
 
     private record Validated(@NonNull Account account, @NonNull List<Token> tokens) {}
