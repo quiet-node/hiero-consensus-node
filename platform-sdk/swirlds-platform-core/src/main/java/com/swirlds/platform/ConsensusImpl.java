@@ -547,7 +547,7 @@ public class ConsensusImpl implements Consensus {
                         diff);
                 markerFileWriter.writeMarkerFile(COIN_ROUND_MARKER_FILE);
                 coinRoundLogger.error(
-                        CONSENSUS_VOTING.getMarker(),
+                        LogMarker.ERROR.getMarker(),
                         "Coin round {}, voting witness: {}",
                         roundElections.getRound(),
                         votingWitness);
@@ -654,7 +654,7 @@ public class ConsensusImpl implements Consensus {
             final long diff) {
         if (logger.isDebugEnabled(CONSENSUS_VOTING.getMarker())) {
             logger.debug(
-                    LogMarker.ERROR.getMarker(),
+                    CONSENSUS_VOTING.getMarker(),
                     "Witness {} voted on {}. vote:{} type:{} diff:{}",
                     votingWitness.shortString(),
                     candidateWitness.getWitness().shortString(),

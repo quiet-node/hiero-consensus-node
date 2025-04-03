@@ -322,7 +322,7 @@ public class HashgraphPicture extends JPanel {
                         .getEventStorage()
                         .getBranchIndexes()
                         .containsKey(event.getBaseEvent().getGossipEvent())) {
-            s += " " + "branch "
+            s += " " + "\\/ "
                     + hashgraphSource
                             .getEventStorage()
                             .getBranchIndexes()
