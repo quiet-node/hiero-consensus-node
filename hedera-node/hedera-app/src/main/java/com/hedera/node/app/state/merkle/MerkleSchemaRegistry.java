@@ -38,7 +38,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.model.crypto.DigestType;
 
 /**
  * An implementation of {@link SchemaRegistry}.

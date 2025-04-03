@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
@@ -22,6 +21,7 @@ import com.swirlds.state.merkle.disk.OnDiskWritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import java.time.Instant;
+import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.consensus.model.utility.CommonUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

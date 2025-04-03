@@ -61,9 +61,17 @@ class StakeInfoHelperTest {
     void setup() {
         entityIdStore = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}),
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}),
                 ENTITY_COUNTS_KEY,
-                new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}))));
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
+                        () -> EntityCounts.newBuilder().build(),
+                        c -> {}))));
     }
 
     @ParameterizedTest
