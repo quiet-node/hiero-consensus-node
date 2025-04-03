@@ -125,38 +125,42 @@ public class PictureMetadata {
             final var branchIndex =
                     hashgraphSource.getEventStorage().getBranchIndexes().get(e2GossipEvent);
 
-            var eventToXCoordinatesForGivenBranch = branchIndexToCurrentXCoordinates.get(branchIndex);
+            var eventToXCoordinatesForDisplayedBranchEvents = branchIndexToCurrentXCoordinates.get(branchIndex);
 
-            if (eventToXCoordinatesForGivenBranch != null) {
+            if (eventToXCoordinatesForDisplayedBranchEvents != null) {
                 // event still does not have X coordinate
-                if (!eventToXCoordinatesForGivenBranch.containsKey(e2GossipEvent)) {
+                if (!eventToXCoordinatesForDisplayedBranchEvents.containsKey(e2GossipEvent)) {
                     // get highest X coordinate from existing branch events and add an offset
-                    final int maxXCoordinateForBranch = eventToXCoordinatesForGivenBranch.values().stream()
+                    final int maxXCoordinateForBranch = eventToXCoordinatesForDisplayedBranchEvents.values().stream()
                             .max(Integer::compareTo)
                             .orElse(-1);
                     if (maxXCoordinateForBranch > 0) {
                         xPos = maxXCoordinateForBranch + (int) r;
                     }
 
-                    final var allBranchXCoordinates = branchIndexToAllXCoordinates.get(branchIndex);
-                    allBranchXCoordinates.put(e2GossipEvent, xPos);
-                    branchIndexToAllXCoordinates.put(branchIndex, allBranchXCoordinates);
+                    final var eventToXCoordinatesForAllBranchedEvents = branchIndexToAllXCoordinates.get(branchIndex);
+                    eventToXCoordinatesForAllBranchedEvents.put(e2GossipEvent, xPos);
+                    branchIndexToAllXCoordinates.put(branchIndex, eventToXCoordinatesForAllBranchedEvents);
                 }
                 // event has X coordinate
                 else {
                     // events have gone too much to the right, so shift them all to the left
-                    if (eventToXCoordinatesForGivenBranch.size() > 12) {
-                        eventToXCoordinatesForGivenBranch.clear();
+                    if (eventToXCoordinatesForDisplayedBranchEvents.size() > 12) {
+                        eventToXCoordinatesForDisplayedBranchEvents.clear();
 
                         xPos = branchIndexToMinimumXCoordinate.get(branchIndex);
 
-                        final var allBranchXCoordinates = branchIndexToAllXCoordinates.get(branchIndex);
-                        allBranchXCoordinates.put(e2GossipEvent, xPos);
-                        branchIndexToAllXCoordinates.put(branchIndex, allBranchXCoordinates);
+//                        final var allBranchXCoordinates = branchIndexToAllXCoordinates.get(branchIndex);
+//                        allBranchXCoordinates.put(e2GossipEvent, xPos);
+//                        branchIndexToAllXCoordinates.put(branchIndex, allBranchXCoordinates);
+
+                        eventToXCoordinatesForDisplayedBranchEvents.put(e2GossipEvent, xPos);
+                        branchIndexToAllXCoordinates.put(branchIndex, eventToXCoordinatesForDisplayedBranchEvents);
+                        branchIndexToCurrentXCoordinates.put(branchIndex, eventToXCoordinatesForDisplayedBranchEvents);
 
                     } else {
                         // event has X coordinate and it is in proper position, so just assign it
-                        xPos = eventToXCoordinatesForGivenBranch.get(e2GossipEvent);
+                        xPos = eventToXCoordinatesForDisplayedBranchEvents.get(e2GossipEvent);
                     }
                 }
             } else {
