@@ -11,13 +11,9 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.state.MutabilityException;
 import com.swirlds.common.FastCopyable;
 import com.swirlds.common.constructable.ConstructableClass;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.exceptions.PlatformException;
-import com.swirlds.common.io.SelfSerializable;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
+import com.swirlds.common.exceptions.ReferenceCountException;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
-import com.swirlds.common.threading.futures.StandardFuture;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.constructable.constructors.VirtualNodeCacheConstructor;
@@ -42,6 +38,11 @@ import java.util.function.ToLongFunction;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.io.SelfSerializable;
+import org.hiero.consensus.model.io.streams.SerializableDataInputStream;
+import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
+import org.hiero.consensus.model.utility.StandardFuture;
 
 /**
  * A cache for virtual merkel trees.
@@ -667,7 +668,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
      * 		copy in the chain), or null if there is not one.
      * @throws NullPointerException
      * 		if the key is null
-     * @throws com.swirlds.common.exceptions.ReferenceCountException
+     * @throws ReferenceCountException
      * 		if the cache has already been released
      */
     public VirtualLeafBytes lookupLeafByKey(final Bytes key) {
@@ -710,7 +711,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
      * 		The path to use to lookup.
      * @return A {@link VirtualLeafBytes} if there is one in the cache (this instance or a previous
      * 		copy in the chain), or null if there is not one.
-     * @throws com.swirlds.common.exceptions.ReferenceCountException
+     * @throws ReferenceCountException
      * 		if the cache has already been released
      */
     public VirtualLeafBytes lookupLeafByPath(final long path) {
@@ -925,7 +926,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
      * 		The path to use to lookup.
      * @return A {@link Hash} if there is one in the cache (this instance or a previous
      * 		copy in the chain), or null if there is not one.
-     * @throws com.swirlds.common.exceptions.ReferenceCountException
+     * @throws ReferenceCountException
      * 		if the cache has already been released
      */
     public Hash lookupHashByPath(final long path) {

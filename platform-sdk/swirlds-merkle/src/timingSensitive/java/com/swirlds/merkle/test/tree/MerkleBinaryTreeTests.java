@@ -123,7 +123,9 @@ class MerkleBinaryTreeTests {
 
     @BeforeAll
     void setUp() throws ConstructableRegistryException {
-        ConstructableRegistry.getInstance().registerConstructables("com.swirlds");
+        final ConstructableRegistry registry = ConstructableRegistry.getInstance();
+        registry.registerConstructables("com.swirlds");
+        registry.registerConstructables("org.hiero.consensus");
     }
 
     protected Stream<Arguments> buildSizeArguments() {

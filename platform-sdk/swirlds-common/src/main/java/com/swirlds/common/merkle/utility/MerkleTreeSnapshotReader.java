@@ -3,7 +3,6 @@ package com.swirlds.common.merkle.utility;
 
 import static com.swirlds.common.io.streams.StreamDebugUtils.deserializeAndDebugOnFailure;
 
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
@@ -13,6 +12,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Set;
+import org.hiero.consensus.model.crypto.Hash;
 
 /**
  * Utility class for reading a snapshot of a Merkle tree from disk.

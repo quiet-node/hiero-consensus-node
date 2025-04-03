@@ -4,21 +4,23 @@ package com.hedera.node.app.workflows.handle.record;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS_BUT_MISSING_EXPECTED_OPERATION;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STATE_KEY;
 import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.parseEd25519NodeAdminKeysFrom;
 import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.dispatchSynthFileUpdate;
 import static com.hedera.node.app.service.file.impl.schemas.V0490FileSchema.parseConfigList;
-import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
+import static com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema.dispatchSynthNodeRewards;
 import static com.hedera.node.app.spi.workflows.DispatchOptions.independentDispatch;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
 import static com.hedera.node.app.util.FileUtilities.createFileID;
 import static com.hedera.node.app.workflows.handle.HandleOutput.failInvalidStreamItems;
 import static com.hedera.node.app.workflows.handle.HandleWorkflow.ALERT_MESSAGE;
-import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
+import static com.hedera.node.app.workflows.handle.TransactionType.INTERNAL_TRANSACTION;
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
 import static com.swirlds.platform.roster.RosterUtils.formatNodeName;
+import static com.swirlds.platform.system.InitTrigger.GENESIS;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.addressbook.NodeCreateTransactionBody;
@@ -32,6 +34,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.ServiceEndpoint;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.common.EntityNumber;
+import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.hapi.node.token.CryptoCreateTransactionBody;
 import com.hedera.hapi.node.transaction.TransactionBody;
@@ -61,6 +64,7 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.BootstrapConfig;
+import com.hedera.node.config.data.ConsensusConfig;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.LedgerConfig;
@@ -71,6 +75,7 @@ import com.hedera.node.config.data.StakingConfig;
 import com.hedera.node.config.types.StreamMode;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.EntityIdFactory;
@@ -87,7 +92,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -118,6 +122,7 @@ public class SystemTransactions {
     private static final EnumSet<ResponseCodeEnum> SUCCESSES =
             EnumSet.of(SUCCESS, SUCCESS_BUT_MISSING_EXPECTED_OPERATION);
 
+    private final InitTrigger initTrigger;
     private final BlocklistParser blocklistParser = new BlocklistParser();
     private final AtomicInteger nextDispatchNonce = new AtomicInteger(1);
     private final FileServiceImpl fileService;
@@ -138,6 +143,7 @@ public class SystemTransactions {
      */
     @Inject
     public SystemTransactions(
+            @NonNull final InitTrigger initTrigger,
             @NonNull final ParentTxnFactory parentTxnFactory,
             @NonNull final FileServiceImpl fileService,
             @NonNull final NetworkInfo networkInfo,
@@ -149,6 +155,7 @@ public class SystemTransactions {
             @NonNull final ExchangeRateManager exchangeRateManager,
             @NonNull final HederaRecordCache recordCache,
             @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory) {
+        this.initTrigger = initTrigger;
         this.fileService = requireNonNull(fileService);
         this.parentTxnFactory = requireNonNull(parentTxnFactory);
         this.networkInfo = networkInfo;
@@ -169,7 +176,7 @@ public class SystemTransactions {
     /**
      * Sets up genesis state for the system.
      *
-     * @param now the current time
+     * @param now   the current time
      * @param state the state to set up
      */
     public void doGenesisSetup(@NonNull final Instant now, @NonNull final State state) {
@@ -201,7 +208,7 @@ public class SystemTransactions {
                     i);
         }
         // For a slightly more intuitive stream, now create the system files (which come next numerically)
-        final var nodeStore = new ReadableStoreFactory(state, softwareVersionFactory).getStore(ReadableNodeStore.class);
+        final var nodeStore = new ReadableStoreFactory(state).getStore(ReadableNodeStore.class);
         fileService.createSystemEntities(systemContext, nodeStore);
         // Create the treasury clones
         for (long i : LongStream.rangeClosed(FIRST_POST_SYSTEM_FILE_ENTITY, ledgerConfig.numReservedSystemEntities())
@@ -280,16 +287,21 @@ public class SystemTransactions {
                                 .rewardSumHistory(Arrays.asList(rewardSumHistory))
                                 .weight(DEFAULT_GENESIS_WEIGHT)
                                 .build());
-                stack.commitSystemStateChanges();
+                stack.commitFullStack();
             });
-            systemContext.dispatchAdmin(b -> b.nodeCreate(NodeCreateTransactionBody.newBuilder()
-                    .adminKey(adminKey)
-                    .accountId(nodeInfo.accountId())
-                    .description(formatNodeName(nodeInfo.nodeId()))
-                    .gossipEndpoint(nodeInfo.gossipEndpoints())
-                    .gossipCaCertificate(nodeInfo.sigCertBytes())
-                    .serviceEndpoint(hapiEndpoints)
-                    .build()));
+            systemContext.dispatchAdmin(b -> {
+                final var isSystemAccount = nodeInfo.nodeId() <= ledgerConfig.numSystemAccounts();
+                final var nodeCreate = NodeCreateTransactionBody.newBuilder()
+                        .adminKey(adminKey)
+                        .accountId(nodeInfo.accountId())
+                        .description(formatNodeName(nodeInfo.nodeId()))
+                        .gossipEndpoint(nodeInfo.gossipEndpoints())
+                        .gossipCaCertificate(nodeInfo.sigCertBytes())
+                        .serviceEndpoint(hapiEndpoints)
+                        .declineReward(isSystemAccount)
+                        .build();
+                b.nodeCreate(nodeCreate);
+            });
         }
         networkInfo.updateFrom(state);
     }
@@ -352,6 +364,110 @@ public class SystemTransactions {
         if (autoNodeAdminKeyUpdates.tryIfPresent(adminConfig.upgradeSysFilesLoc(), systemContext)) {
             dispatch.stack().commitFullStack();
         }
+        // (FUTURE) Remove this 0.61-specific code initiating all system node accounts to decline rewards
+        final var ledgerConfig = config.getConfigData(LedgerConfig.class);
+        final var nodeStore = dispatch.handleContext().storeFactory().readableStore(ReadableNodeStore.class);
+        for (int i = 0; i < nodeStore.sizeOfState(); i++) {
+            final var node = nodeStore.get(i);
+            final var nodeInfo = networkInfo.nodeInfo(i);
+            if (nodeInfo != null && node != null && !node.deleted()) {
+                final var declineReward = nodeInfo.accountId().accountNumOrThrow() <= ledgerConfig.numSystemAccounts();
+                if (declineReward) {
+                    log.info(
+                            "Updating node{} with system node account {} to decline rewards",
+                            nodeInfo.nodeId(),
+                            nodeInfo.accountId());
+                    systemContext.dispatchAdmin(b -> b.nodeUpdate(NodeUpdateTransactionBody.newBuilder()
+                            .nodeId(nodeInfo.nodeId())
+                            .declineReward(true)
+                            .build()));
+                }
+            }
+        }
+        dispatch.stack().commitFullStack();
+    }
+
+    /**
+     * Dispatches a synthetic node reward crypto transfer for the given active node accounts.
+     * If the {@link NodesConfig#minPerPeriodNodeRewardUsd()} is greater than zero, inactive nodes will receive the minimum node
+     * reward.
+     *
+     * @param state                The state.
+     * @param now                  The current time.
+     * @param activeNodeIds        The list of active node ids.
+     * @param perNodeReward        The per node reward.
+     * @param nodeRewardsAccountId The node rewards account id.
+     * @param rewardAccountBalance The reward account balance.
+     * @param minNodeReward        The minimum node reward.
+     * @param rosterEntries        The list of roster entries.
+     */
+    public void dispatchNodeRewards(
+            @NonNull final State state,
+            @NonNull final Instant now,
+            @NonNull final List<Long> activeNodeIds,
+            final long perNodeReward,
+            @NonNull final AccountID nodeRewardsAccountId,
+            final long rewardAccountBalance,
+            final long minNodeReward,
+            @NonNull final List<RosterEntry> rosterEntries) {
+        requireNonNull(state);
+        requireNonNull(now);
+        requireNonNull(activeNodeIds);
+        requireNonNull(nodeRewardsAccountId);
+        final var systemContext = newSystemContext(now, state, dispatch -> {});
+        final var activeNodeAccountIds = activeNodeIds.stream()
+                .map(id -> systemContext.networkInfo().nodeInfo(id))
+                .filter(nodeInfo -> nodeInfo != null && !nodeInfo.declineReward())
+                .map(NodeInfo::accountId)
+                .toList();
+        final var inactiveNodeAccountIds = rosterEntries.stream()
+                .map(RosterEntry::nodeId)
+                .filter(id -> !activeNodeIds.contains(id))
+                .map(id -> systemContext.networkInfo().nodeInfo(id))
+                .filter(nodeInfo -> nodeInfo != null && !nodeInfo.declineReward())
+                .map(NodeInfo::accountId)
+                .toList();
+        if (activeNodeAccountIds.isEmpty() && (minNodeReward <= 0 || inactiveNodeAccountIds.isEmpty())) {
+            // No eligible rewards to distribute
+            return;
+        }
+        log.info("Found active node accounts {}", activeNodeAccountIds);
+        if (minNodeReward > 0 && !inactiveNodeAccountIds.isEmpty()) {
+            log.info(
+                    "Found inactive node accounts {} that will receive minimum node reward {}",
+                    inactiveNodeAccountIds,
+                    minNodeReward);
+        }
+        // Check if rewardAccountBalance is enough to distribute rewards. If the balance is not enough, distribute
+        // rewards to active nodes only. If the balance is enough, distribute rewards to both active and inactive nodes.
+        final long activeTotal = activeNodeAccountIds.size() * perNodeReward;
+        final long inactiveTotal = minNodeReward > 0 ? inactiveNodeAccountIds.size() * minNodeReward : 0L;
+
+        if (rewardAccountBalance <= activeTotal) {
+            final long activeNodeReward = rewardAccountBalance / activeNodeAccountIds.size();
+            log.info("Balance insufficient for all, rewarding active nodes only: {} tinybars each", activeNodeReward);
+            if (activeNodeReward > 0) {
+                dispatchSynthNodeRewards(systemContext, activeNodeAccountIds, nodeRewardsAccountId, activeNodeReward);
+            }
+        } else {
+            final long activeNodeReward =
+                    activeNodeAccountIds.isEmpty() ? 0 : activeTotal / activeNodeAccountIds.size();
+            final long totalInactiveNodesReward =
+                    Math.min(Math.max(0, rewardAccountBalance - activeTotal), inactiveTotal);
+            final long inactiveNodeReward =
+                    inactiveNodeAccountIds.isEmpty() ? 0 : totalInactiveNodesReward / inactiveNodeAccountIds.size();
+            log.info(
+                    "Paying active nodes {} tinybars each, inactive nodes {} tinybars each",
+                    activeNodeReward,
+                    inactiveNodeReward);
+            dispatchSynthNodeRewards(
+                    systemContext,
+                    activeNodeAccountIds,
+                    nodeRewardsAccountId,
+                    activeNodeReward,
+                    inactiveNodeAccountIds,
+                    inactiveNodeReward);
+        }
     }
 
     /**
@@ -410,15 +526,25 @@ public class SystemTransactions {
 
     /**
      * Returns the timestamp to use for startup work state change consensus time in the block stream.
-     * @param roundTime the round timestamp
+     *
+     * @param firstEventTime the timestamp of the first event in the current round
      */
-    public Instant startupWorkConsTimeFor(@NonNull final Instant roundTime) {
-        requireNonNull(roundTime);
+    public Instant startupWorkConsTimeFor(@NonNull final Instant firstEventTime) {
+        requireNonNull(firstEventTime);
         final var config = configProvider.getConfiguration();
-        // Make room for dispatching at least as many transactions as there are system entities
-        return roundTime
-                .minusNanos(config.getConfigData(SchedulingConfig.class).consTimeSeparationNanos())
-                .minusNanos(config.getConfigData(HederaConfig.class).firstUserEntity());
+        final var consensusConfig = config.getConfigData(ConsensusConfig.class);
+        return firstEventTime
+                // Avoid overlap with a possible user transaction first in the event
+                .minusNanos(1)
+                // Avoid overlap with possible preceding records of this user transaction
+                .minusNanos(consensusConfig.handleMaxPrecedingRecords())
+                // Then back up to the first reserved system transaction time
+                .minusNanos(config.getConfigData(SchedulingConfig.class).reservedSystemTxnNanos())
+                // And at genesis, further step back to accommodate creating system entities
+                .minusNanos(
+                        initTrigger == GENESIS
+                                ? (int) config.getConfigData(HederaConfig.class).firstUserEntity()
+                                : 0);
     }
 
     private SystemContext newSystemContext(
@@ -432,12 +558,20 @@ public class SystemTransactions {
         final var creatorInfo = networkInfo.addressBook().getFirst();
         final var validDuration =
                 new Duration(config.getConfigData(HederaConfig.class).transactionMaxValidDuration());
-        final AtomicBoolean firstHandled = new AtomicBoolean(true);
 
         return new SystemContext() {
             @Override
             public void dispatchAdmin(@NonNull final Consumer<TransactionBody.Builder> spec) {
-                dispatchCreation(spec, 0);
+                requireNonNull(spec);
+                final var builder = TransactionBody.newBuilder()
+                        .transactionValidDuration(validDuration)
+                        .transactionID(TransactionID.newBuilder()
+                                .accountID(systemAdminId)
+                                .transactionValidStart(asTimestamp(now()))
+                                .nonce(nextDispatchNonce.getAndIncrement())
+                                .build());
+                spec.accept(builder);
+                dispatch(builder.build(), 0);
             }
 
             @Override
@@ -457,6 +591,10 @@ public class SystemTransactions {
             @Override
             public void dispatchCreation(@NonNull final TransactionBody body, final long entityNum) {
                 requireNonNull(body);
+                dispatch(body, entityNum);
+            }
+
+            private void dispatch(final @NonNull TransactionBody body, final long entityNum) {
                 // System dispatches never have child transactions, so one nano is enough to separate them
                 final var now = nextConsTime.getAndUpdate(then -> then.plusNanos(1));
                 if (streamMode == BOTH) {
@@ -471,9 +609,6 @@ public class SystemTransactions {
                 }
                 if (streamMode != RECORDS) {
                     handleOutput.blockRecordSourceOrThrow().forEachItem(blockStreamManager::writeItem);
-                    if (firstHandled.compareAndSet(true, false)) {
-                        blockStreamManager.setRoundFirstTransactionTime(now);
-                    }
                 }
             }
 
@@ -507,13 +642,13 @@ public class SystemTransactions {
      * scheduled transaction with a {@link ResponseCodeEnum#FAIL_INVALID} transaction result, and
      * no other side effects.
      *
-     * @param state the state to execute the transaction against
-     * @param now the time to execute the transaction at
-     * @param creatorInfo the node info of the creator of the transaction
-     * @param payerId the payer of the transaction
-     * @param body the transaction to execute
+     * @param state         the state to execute the transaction against
+     * @param now           the time to execute the transaction at
+     * @param creatorInfo   the node info of the creator of the transaction
+     * @param payerId       the payer of the transaction
+     * @param body          the transaction to execute
      * @param nextEntityNum if not zero, the next entity number to use for the transaction
-     * @param onSuccess the action to take after the transaction is successfully dispatched
+     * @param onSuccess     the action to take after the transaction is successfully dispatched
      * @return the stream output from executing the transaction
      */
     private HandleOutput executeSystem(
@@ -526,7 +661,7 @@ public class SystemTransactions {
             @NonNull final Configuration config,
             @NonNull final Consumer<Dispatch> onSuccess) {
         final var parentTxn =
-                parentTxnFactory.createSystemTxn(state, creatorInfo, now, ORDINARY_TRANSACTION, payerId, body);
+                parentTxnFactory.createSystemTxn(state, creatorInfo, now, INTERNAL_TRANSACTION, payerId, body);
         parentTxn.initBaseBuilder(exchangeRateManager.exchangeRates());
         final var dispatch = parentTxnFactory.createDispatch(parentTxn, parentTxn.baseBuilder(), ignore -> true, NODE);
         blockStreamManager.setLastHandleTime(parentTxn.consensusNow());
@@ -556,7 +691,7 @@ public class SystemTransactions {
             if (controlledNum != null) {
                 controlledNum.put(new EntityNumber(
                         config.getConfigData(HederaConfig.class).firstUserEntity() - 1));
-                dispatch.stack().commitSystemStateChanges();
+                dispatch.stack().commitFullStack();
             }
             final var handleOutput =
                     parentTxn.stack().buildHandleOutput(parentTxn.consensusNow(), exchangeRateManager.exchangeRates());
@@ -602,7 +737,7 @@ public class SystemTransactions {
                             recordBuilder.status());
                 }
                 controlledNum.put(new EntityNumber(firstUserNum - 1));
-                dispatch.stack().commitSystemStateChanges();
+                dispatch.stack().commitFullStack();
             }
 
             @Override

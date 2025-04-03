@@ -305,7 +305,8 @@ public class AddressBookTestBase {
                 Bytes.wrap(grpcCertificateHash),
                 0,
                 deleted,
-                key);
+                key,
+                false);
     }
 
     protected void givenValidNodeWithAdminKey(Key adminKey) {
@@ -319,7 +320,8 @@ public class AddressBookTestBase {
                 Bytes.wrap(grpcCertificateHash),
                 0,
                 false,
-                adminKey);
+                adminKey,
+                false);
     }
 
     protected Node createNode() {

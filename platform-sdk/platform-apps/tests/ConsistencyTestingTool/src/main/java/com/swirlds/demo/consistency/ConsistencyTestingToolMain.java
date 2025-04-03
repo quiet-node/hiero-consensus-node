@@ -5,12 +5,12 @@ import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.BasicSoftwareVersion;
@@ -26,6 +26,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * A testing app for guaranteeing proper handling of transactions after a restart
@@ -38,6 +39,9 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
      * The default software version of this application
      */
     private static final SoftwareVersion softwareVersion = new BasicSoftwareVersion(1);
+
+    private static final SemanticVersion semanticVersion =
+            SemanticVersion.newBuilder().major(1).build();
 
     static {
         try {
@@ -121,8 +125,7 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
     @Override
     @NonNull
     public ConsensusStateEventHandler<ConsistencyTestingToolState> newConsensusStateEvenHandler() {
-        return new ConsistencyTestingToolConsensusStateEventHandler(
-                new PlatformStateFacade((v) -> new BasicSoftwareVersion(v.major())));
+        return new ConsistencyTestingToolConsensusStateEventHandler(new PlatformStateFacade());
     }
 
     /**
@@ -133,6 +136,16 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
     public SoftwareVersion getSoftwareVersion() {
         logger.info(STARTUP.getMarker(), "returning software version {}", softwareVersion);
         return softwareVersion;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public SemanticVersion getSemanticVersion() {
+        logger.info(STARTUP.getMarker(), "returning software version {}", semanticVersion);
+        return semanticVersion;
     }
 
     /**
