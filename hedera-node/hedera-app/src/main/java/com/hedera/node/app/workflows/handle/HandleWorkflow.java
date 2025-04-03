@@ -88,6 +88,7 @@ import com.swirlds.platform.system.transaction.ConsensusTransaction;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
+import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -748,18 +749,17 @@ public class HandleWorkflow {
             kvStateChangeListener.reset();
         }
         action.run();
-        //        ((CommittableWritableStates) writableStates).commit();
-        //        if (entityIdWritableStates != null) {
-        //            ((CommittableWritableStates) entityIdWritableStates).commit();
-        //        }
+        ((CommittableWritableStates) writableStates).commit();
+        if (entityIdWritableStates != null) {
+            ((CommittableWritableStates) entityIdWritableStates).commit();
+        }
         if (streamMode != RECORDS) {
             final var changes = kvStateChangeListener.getStateChanges();
             if (!changes.isEmpty()) {
                 final var stateChangesItem = BlockItem.newBuilder()
                         .stateChanges(new StateChanges(asTimestamp(now), new ArrayList<>(changes)))
                         .build();
-                //                blockStreamManager.writeItem(stateChangesItem);
-                blockStreamManager.accumKvItem(stateChangesItem);
+                blockStreamManager.writeItem(stateChangesItem);
             }
         }
     }

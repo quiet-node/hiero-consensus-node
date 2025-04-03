@@ -57,7 +57,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -302,23 +301,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.lastHandleTime = requireNonNull(lastHandleTime);
     }
 
-    private Queue<BlockItem> kvAccum = new LinkedList<>();
-
-    @Override
-    public void accumKvItem(BlockItem blockItem) {
-        kvAccum.add(blockItem);
-    }
-
     @Override
     public boolean endRound(@NonNull final State state, final long roundNum) {
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
-
-        writeItem(boundaryStateChangeListener.flushChanges());
-
-        kvAccum.forEach(this::writeItem);
-        worker.sync();
-        kvAccum.clear();
-
         if (closesBlock) {
             // If there were no user or node transactions in the block, this writes all
             // the accumulated items starting from the header, sacrificing the benefits
@@ -327,9 +312,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             if (preTxnItems != null) {
                 flushPreUserItems(null);
             }
-
             // Flush all boundary state changes besides the BlockStreamInfo
-            //            worker.addItem(boundaryStateChangeListener.flushChanges());
+            worker.addItem(boundaryStateChangeListener.flushChanges());
             worker.sync();
 
             final var inputHash = inputTreeHasher.rootHash().join();

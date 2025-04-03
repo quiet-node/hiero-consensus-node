@@ -230,7 +230,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     /**
      * The application context for the node.
      */
-    public final AppContext appContext;
+    private final AppContext appContext;
 
     /**
      * The contract service singleton, kept as a field here to avoid constructing twice
@@ -272,7 +272,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * The platform state facade singleton, kept as a field here to avoid constructing twice`
      * (once in constructor to register schemas, again inside Dagger component).
      */
-    public final PlatformStateFacade platformStateFacade;
+    private final PlatformStateFacade platformStateFacade;
 
     /**
      * The block hash signer factory.
@@ -299,7 +299,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     /**
      * The Hashgraph Platform. This is set during state initialization.
      */
-    public Platform platform;
+    private Platform platform;
     /**
      * The current status of the platform.
      */

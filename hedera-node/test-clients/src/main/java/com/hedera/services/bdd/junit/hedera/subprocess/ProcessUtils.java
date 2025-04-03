@@ -172,7 +172,6 @@ public class ProcessUtils {
                     + (FIRST_AGENT_PORT + metadata.nodeId()));
         }
         commandLine.addAll(List.of(
-                "-ea",
                 "-classpath",
                 // Use the same classpath that started this process, excluding test-clients
                 currentNonTestClientClasspath(),

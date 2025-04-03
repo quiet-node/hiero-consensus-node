@@ -201,12 +201,6 @@ public class NewStateRoot implements MerkleNodeState {
     @NonNull
     @Override
     public NewStateRoot copy() {
-        // TODO: double check
-        /* this.virtualMap handles this:
-        throwIfImmutable();
-        throwIfDestroyed();
-        setImmutable(true);
-         */
         return new NewStateRoot(this);
     }
 
@@ -240,7 +234,7 @@ public class NewStateRoot implements MerkleNodeState {
             return;
         }
         try {
-            merkleCryptography.digestTreeAsync(virtualMap).get(); // TODO: double check
+            merkleCryptography.digestTreeAsync(virtualMap).get();
         } catch (final ExecutionException e) {
             logger.error(EXCEPTION.getMarker(), "Exception occurred during hashing", e);
         } catch (final InterruptedException e) {
@@ -259,8 +253,7 @@ public class NewStateRoot implements MerkleNodeState {
         virtualMap.throwIfMutable();
         virtualMap.throwIfDestroyed();
         final long startTime = time.currentTimeMillis();
-        MerkleTreeSnapshotWriter.createSnapshot(
-                virtualMap, targetPath, roundSupplier.getAsLong()); // TODO: double check
+        MerkleTreeSnapshotWriter.createSnapshot(virtualMap, targetPath, roundSupplier.getAsLong());
         snapshotMetrics.updateWriteStateToDiskTimeMetric(time.currentTimeMillis() - startTime);
     }
 
@@ -635,14 +628,14 @@ public class NewStateRoot implements MerkleNodeState {
 
         @Override
         public void commit() {
+            for (final ReadableKVState kv : kvInstances.values()) {
+                ((WritableKVStateBase) kv).commit();
+            }
             for (final ReadableSingletonState s : singletonInstances.values()) {
                 ((WritableSingletonStateBase) s).commit();
             }
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
-            }
-            for (final ReadableKVState kv : kvInstances.values()) {
-                ((WritableKVStateBase) kv).commit();
             }
             readableStatesMap.remove(serviceName);
         }

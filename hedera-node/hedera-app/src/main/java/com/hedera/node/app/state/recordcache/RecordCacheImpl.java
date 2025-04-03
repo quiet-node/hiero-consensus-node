@@ -124,7 +124,7 @@ public class RecordCacheImpl implements HederaRecordCache {
     /**
      * The list of transaction receipts for the current round.
      */
-    public final List<TransactionReceiptEntry> transactionReceipts = new ArrayList<>();
+    private final List<TransactionReceiptEntry> transactionReceipts = new ArrayList<>();
 
     /**
      * Contains history of transactions submitted with the same "base" {@link TransactionID};
@@ -332,7 +332,6 @@ public class RecordCacheImpl implements HederaRecordCache {
         requireNonNull(consensusNow);
         final var states = state.getWritableStates(NAME);
         final var queue = states.<TransactionReceiptEntries>getQueue(TXN_RECEIPT_QUEUE);
-
         purgeExpiredReceiptEntries(queue, consensusNow);
         if (!transactionReceipts.isEmpty()) {
             queue.add(new TransactionReceiptEntries(new ArrayList<>(transactionReceipts)));
@@ -358,7 +357,7 @@ public class RecordCacheImpl implements HederaRecordCache {
     /**
      * Removes all expired {@link TransactionID}s from the cache.
      */
-    public void purgeExpiredReceiptEntries(
+    private void purgeExpiredReceiptEntries(
             @NonNull final WritableQueueState<TransactionReceiptEntries> queue,
             @NonNull final Instant consensusTimestamp) {
         // Compute the earliest valid start timestamp that is still within the max transaction duration window.

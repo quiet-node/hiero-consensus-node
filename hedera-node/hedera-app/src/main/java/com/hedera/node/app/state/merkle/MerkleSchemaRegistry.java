@@ -11,7 +11,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.util.HapiUtils;
-import com.hedera.node.app.NewStateRoot;
+import com.hedera.node.app.NewStateRoot.MerkleWritableStates;
 import com.hedera.node.app.services.MigrationContextImpl;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.swirlds.common.constructable.ConstructableRegistry;
@@ -238,7 +238,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                 schema.restart(migrationContext);
             }
             // Now commit all the service-specific changes made during this service's update or migration
-            if (writableStates instanceof NewStateRoot.MerkleWritableStates mws) {
+            if (writableStates instanceof MerkleWritableStates mws) {
                 mws.commit();
                 migrationStateChanges.trackCommit();
             }
