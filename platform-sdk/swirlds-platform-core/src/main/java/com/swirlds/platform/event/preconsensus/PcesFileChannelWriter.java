@@ -41,10 +41,10 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     public PcesFileChannelWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
         this.syncEveryEvent = syncEveryEvent;
         final var defaultFlags = Stream.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-        final var extendedFlags = syncEveryEvent ? Stream.of() : Stream.of(StandardOpenOption.DSYNC);
+        final var extendedFlags = syncEveryEvent ? Stream.of(StandardOpenOption.DSYNC):Stream.of();
         final var allFlags = Streams.concat(defaultFlags, extendedFlags).toArray(OpenOption[]::new);
         channel = FileChannel.open(filePath, allFlags);
-        buffer = ByteBuffer.allocate(BUFFER_CAPACITY);
+        buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
         writableSequentialData = BufferedData.wrap(buffer);
     }
 
@@ -87,10 +87,10 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     @Override
     public void sync() throws IOException {
         // benchmarks show that this has horrible performance for the channel writer
-        if (!syncEveryEvent) {
+        //if (!syncEveryEvent) {
             // If syncEveryEvent is on, we already told the OS to do this
             channel.force(false);
-        }
+        //}
     }
 
     @Override
