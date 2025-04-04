@@ -7,7 +7,7 @@ import static com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants.HASHGRAPH
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.platform.Consensus;
 import com.swirlds.platform.consensus.CandidateWitness;
-import com.swirlds.platform.gui.BranchMetadata;
+import com.swirlds.platform.gui.BranchedEventMetadata;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.gui.hashgraph.HashgraphPictureOptions;
@@ -61,16 +61,8 @@ public class HashgraphPicture extends JPanel {
     private AddressBookMetadata expandedMetadata;
     private Long startGen;
 
-    /** used to store Y coordinate for each branch */
-    private final Map<Integer, Integer> branchIndexToY = new HashMap<>();
-    /** used to store map of all branched events and their X coordinate for each branch index */
-    private final Map<Integer, Map<GossipEvent, Integer>> allBranchedXCoordinates = new HashMap<>();
-    /** used to store map of branched events that fit the currently displayed range of min and max generations with
-     * their X coordinate for each branch index */
-    private final Map<Integer, Map<GossipEvent, Integer>> displayedBranchedXCoordinates = new HashMap<>();
-    /** used to store the first X coordinate for each branch index, this coordinate is used for shifting / reloading the
-     * branched events */
-    private final Map<Integer, Integer> branchIndexToMinimumXCoordinate = new HashMap<>();
+    /** used to store branched events coordinates for a given branch */
+    private final Map<Integer, BranchCoordinates> branchIndexToCoordinates = new HashMap<>();
 
     public HashgraphPicture(final HashgraphGuiSource hashgraphSource, final HashgraphPictureOptions options) {
         this.hashgraphSource = hashgraphSource;
@@ -127,15 +119,7 @@ public class HashgraphPicture extends JPanel {
                     .toList();
 
             pictureMetadata = new PictureMetadata(
-                    fm,
-                    this.getSize(),
-                    currentMetadata,
-                    events,
-                    hashgraphSource,
-                    branchIndexToY,
-                    branchIndexToMinimumXCoordinate,
-                    allBranchedXCoordinates,
-                    displayedBranchedXCoordinates);
+                    fm, this.getSize(), currentMetadata, events, hashgraphSource, branchIndexToCoordinates);
 
             selector.setMetadata(pictureMetadata);
             selector.setEventsInPicture(events);
@@ -189,15 +173,17 @@ public class HashgraphPicture extends JPanel {
     private void reloadBranchedEvents() {
         final Set<Integer> uniqueBranchIndexes =
                 new HashSet<>(hashgraphSource.getEventStorage().getEventToBranchMetadata().values().stream()
-                        .map(BranchMetadata::getBranchIndex)
+                        .map(BranchedEventMetadata::getBranchIndex)
                         .toList());
 
         for (final Integer branchIndex : uniqueBranchIndexes) {
             final Map<GossipEvent, Integer> reloadedXCoordinates = new LinkedHashMap<>();
 
-            int xPos = branchIndexToMinimumXCoordinate.get(branchIndex);
+            final BranchCoordinates branchCoordinates = branchIndexToCoordinates.get(branchIndex);
+
+            int xPos = branchCoordinates.getFarMostLeftX();
             for (final Entry<GossipEvent, Integer> branchIndexToAllXCoordinatesEntry :
-                    allBranchedXCoordinates.get(branchIndex).entrySet()) {
+                    branchCoordinates.getAllXCoordinates().entrySet()) {
                 final GossipEvent branchedEvent = branchIndexToAllXCoordinatesEntry.getKey();
 
                 if (hashgraphSource.getEventStorage().getEventToBranchMetadata().containsKey(branchedEvent)) {
@@ -212,7 +198,7 @@ public class HashgraphPicture extends JPanel {
                     }
                 }
             }
-            displayedBranchedXCoordinates.put(branchIndex, reloadedXCoordinates);
+            branchCoordinates.setInsideGenerationRangeXCoordinates(reloadedXCoordinates);
         }
     }
 

@@ -6,7 +6,7 @@ import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.consensus.SyntheticSnapshot;
 import com.swirlds.platform.eventhandling.EventConfig;
-import com.swirlds.platform.gui.BranchMetadata;
+import com.swirlds.platform.gui.BranchedEventMetadata;
 import com.swirlds.platform.gui.GuiEventStorage;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.gui.hashgraph.internal.StandardGuiSource;
@@ -36,7 +36,7 @@ public class TestGuiSource {
     private ConsensusSnapshot savedSnapshot;
     private final GuiEventStorage eventStorage;
     private final AncientMode ancientMode;
-    private final Map<GossipEvent, BranchMetadata> eventsToBranchMetadata = new HashMap<>();
+    private final Map<GossipEvent, BranchedEventMetadata> eventsToBranchMetadata = new HashMap<>();
 
     /**
      * Construct a {@link TestGuiSource} with the given platform context, address book, and event provider.
@@ -68,9 +68,9 @@ public class TestGuiSource {
         final Map<PlatformEvent, Integer> eventToBranchIndex = getEventToBranchIndex();
         for (final PlatformEvent event : events) {
             if (!eventToBranchIndex.isEmpty() && eventToBranchIndex.containsKey(event)) {
-                final BranchMetadata branchMetadata =
-                        new BranchMetadata(eventToBranchIndex.get(event), event.getGeneration());
-                eventsToBranchMetadata.put(event.getGossipEvent(), branchMetadata);
+                final BranchedEventMetadata branchedEventMetadata =
+                        new BranchedEventMetadata(eventToBranchIndex.get(event), event.getGeneration());
+                eventsToBranchMetadata.put(event.getGossipEvent(), branchedEventMetadata);
             }
 
             eventStorage.handlePreconsensusEvent(event);
@@ -102,9 +102,9 @@ public class TestGuiSource {
             final Map<PlatformEvent, Integer> eventToBranchIndex = getEventToBranchIndex();
             for (final PlatformEvent event : events) {
                 if (!eventToBranchIndex.isEmpty() && eventToBranchIndex.containsKey(event)) {
-                    final BranchMetadata branchMetadata =
-                            new BranchMetadata(eventToBranchIndex.get(event), event.getGeneration());
-                    eventsToBranchMetadata.put(event.getGossipEvent(), branchMetadata);
+                    final BranchedEventMetadata branchedEventMetadata =
+                            new BranchedEventMetadata(eventToBranchIndex.get(event), event.getGeneration());
+                    eventsToBranchMetadata.put(event.getGossipEvent(), branchedEventMetadata);
                 }
 
                 eventStorage.handlePreconsensusEvent(event);

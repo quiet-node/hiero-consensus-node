@@ -2,7 +2,7 @@
 package com.swirlds.platform.gui.hashgraph.internal;
 
 import com.hedera.hapi.platform.event.GossipEvent;
-import com.swirlds.platform.gui.BranchMetadata;
+import com.swirlds.platform.gui.BranchedEventMetadata;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.internal.EventImpl;
 import java.awt.Dimension;
@@ -30,10 +30,7 @@ public class PictureMetadata {
     private final long maxGen;
 
     private final HashgraphGuiSource hashgraphSource;
-    private final Map<Integer, Integer> branchIndexToY;
-    private final Map<Integer, Integer> branchIndexToMinimumXCoordinate;
-    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToAllXCoordinates;
-    private final Map<Integer, Map<GossipEvent, Integer>> branchIndexToCurrentXCoordinates;
+    private final Map<Integer, BranchCoordinates> branchIndexToCoordinates;
 
     /**
      *
@@ -42,10 +39,7 @@ public class PictureMetadata {
      * @param addressBookMetadata metadata for the address book
      * @param events the events to be displayed
      * @param hashgraphSource the needed information for visualisation from the hashgraph to use as a source
-     * @param branchIndexToY map collecting Y coordinates for each branch
-     * @param branchIndexToMinimumXCoordinate map collecting minimum X coordinate (far most left) for each branch
-     * @param allBranchedXCoordinates map collecting X coordinates for all branched events
-     * @param displayedBranchedXCoordinates map collecting X coordinates for displayed branched events
+     * @param branchIndexToCoordinates map collecting coordinates info for a given branch index
      *
      */
     public PictureMetadata(
@@ -54,16 +48,10 @@ public class PictureMetadata {
             final AddressBookMetadata addressBookMetadata,
             final List<EventImpl> events,
             final HashgraphGuiSource hashgraphSource,
-            final Map<Integer, Integer> branchIndexToY,
-            final Map<Integer, Integer> branchIndexToMinimumXCoordinate,
-            final Map<Integer, Map<GossipEvent, Integer>> allBranchedXCoordinates,
-            final Map<Integer, Map<GossipEvent, Integer>> displayedBranchedXCoordinates) {
+            final Map<Integer, BranchCoordinates> branchIndexToCoordinates) {
         this.addressBookMetadata = addressBookMetadata;
         this.hashgraphSource = hashgraphSource;
-        this.branchIndexToAllXCoordinates = allBranchedXCoordinates;
-        this.branchIndexToCurrentXCoordinates = displayedBranchedXCoordinates;
-        this.branchIndexToY = branchIndexToY;
-        this.branchIndexToMinimumXCoordinate = branchIndexToMinimumXCoordinate;
+        this.branchIndexToCoordinates = branchIndexToCoordinates;
         final int fa = fm.getMaxAscent();
         final int fd = fm.getMaxDescent();
         final int textLineHeight = fa + fd;
@@ -129,13 +117,17 @@ public class PictureMetadata {
                     .get(e2GossipEvent)
                     .branchIndex();
 
-            var eventToXCoordinatesForDisplayedBranchEvents = branchIndexToCurrentXCoordinates.get(branchIndex);
+            BranchCoordinates branchCoordinates = branchIndexToCoordinates.computeIfAbsent(branchIndex,
+                    k -> new BranchCoordinates());
 
-            if (eventToXCoordinatesForDisplayedBranchEvents != null) {
+            var insideGenerationRangeXCoordinates =
+                    branchCoordinates.getInsideGenerationRangeXCoordinates();
+
+            if (insideGenerationRangeXCoordinates != null) {
                 // event still does not have X coordinate
-                if (!eventToXCoordinatesForDisplayedBranchEvents.containsKey(e2GossipEvent)) {
+                if (!insideGenerationRangeXCoordinates.containsKey(e2GossipEvent)) {
                     // get highest X coordinate from existing branch events and add an offset
-                    final int maxXCoordinateForBranch = eventToXCoordinatesForDisplayedBranchEvents.values().stream()
+                    final int maxXCoordinateForBranch = insideGenerationRangeXCoordinates.values().stream()
                             .max(Integer::compareTo)
                             .orElse(-1);
 
@@ -143,24 +135,25 @@ public class PictureMetadata {
                         xPos = maxXCoordinateForBranch + (int) r;
                     }
 
-                    final var eventToXCoordinatesForAllBranchedEvents = branchIndexToAllXCoordinates.get(branchIndex);
+                    final var eventToXCoordinatesForAllBranchedEvents =
+                            branchCoordinates.getAllXCoordinates();
                     eventToXCoordinatesForAllBranchedEvents.put(e2GossipEvent, xPos);
-                    branchIndexToAllXCoordinates.put(branchIndex, eventToXCoordinatesForAllBranchedEvents);
                 }
                 // event has X coordinate
                 else {
                     // event has X coordinate and it is in proper position, so just assign it
-                    xPos = eventToXCoordinatesForDisplayedBranchEvents.get(e2GossipEvent);
+                    xPos = insideGenerationRangeXCoordinates.get(e2GossipEvent);
                 }
             } else {
                 // the event will be the first one of a new branch and X coordinate for it doesn't exist yet
-                final var allBranchXCoordinates = new LinkedHashMap<GossipEvent, Integer>();
-                allBranchXCoordinates.put(e2GossipEvent, xPos);
-                branchIndexToAllXCoordinates.put(branchIndex, allBranchXCoordinates);
+                final Map<GossipEvent, Integer> eventToXCoordinatesForAllBranchedEvents = new LinkedHashMap<>();
+                eventToXCoordinatesForAllBranchedEvents.put(e2GossipEvent, xPos);
+
+                branchCoordinates.setEventToXCoordinatesForAllBranchedEvents(eventToXCoordinatesForAllBranchedEvents);
 
                 // mark the first X position for the branch, so that it's used when branched events are shifted /
                 // reloaded
-                branchIndexToMinimumXCoordinate.put(branchIndex, xPos);
+                branchCoordinates.setFarMostLeftX(xPos);
             }
         }
 
@@ -173,16 +166,17 @@ public class PictureMetadata {
     public int ypos(final EventImpl event) {
         var yPos = (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
 
-        final Map<GossipEvent, BranchMetadata> branchedEventsToMetadata =
+        final Map<GossipEvent, BranchedEventMetadata> branchedEventsToMetadata =
                 hashgraphSource.getEventStorage().getEventToBranchMetadata();
         final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
         if (branchedEventsToMetadata.containsKey(gossipEvent)) {
-            if (!branchIndexToY.containsKey(
-                    branchedEventsToMetadata.get(gossipEvent).branchIndex())) {
-                branchIndexToY.put(branchedEventsToMetadata.get(gossipEvent).branchIndex(), yPos);
+            final BranchCoordinates branchCoordinates = branchIndexToCoordinates.get(
+                    branchedEventsToMetadata.get(gossipEvent).branchIndex());
+            final int y = branchCoordinates.getY();
+            if (y == 0) {
+                branchCoordinates.setY(yPos);
             } else {
-                yPos = branchIndexToY.get(
-                        branchedEventsToMetadata.get(gossipEvent).branchIndex());
+                yPos = branchCoordinates.getY();
             }
         }
 
