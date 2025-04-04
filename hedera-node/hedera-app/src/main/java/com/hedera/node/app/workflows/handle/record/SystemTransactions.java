@@ -191,7 +191,7 @@ public class SystemTransactions {
         requireNonNull(state);
         final AtomicReference<Consumer<Dispatch>> onSuccess = new AtomicReference<>(dispatch -> {});
         final var systemContext =
-                newSystemContext(now, state, dispatch -> onSuccess.get().accept(dispatch));
+                newSystemContext(now, state, dispatch -> onSuccess.get().accept(dispatch), true);
 
         final var config = configProvider.getConfiguration();
         final var ledgerConfig = config.getConfigData(LedgerConfig.class);
@@ -297,7 +297,8 @@ public class SystemTransactions {
                 stack.commitFullStack();
             });
             systemContext.dispatchAdmin(b -> {
-                final var isSystemAccount = nodeInfo.nodeId() <= ledgerConfig.numSystemAccounts();
+                final var isSystemAccount =
+                        nodeInfo.accountId().accountNumOrThrow() <= ledgerConfig.numSystemAccounts();
                 final var nodeCreate = NodeCreateTransactionBody.newBuilder()
                         .adminKey(adminKey)
                         .accountId(nodeInfo.accountId())
@@ -421,7 +422,7 @@ public class SystemTransactions {
         requireNonNull(now);
         requireNonNull(activeNodeIds);
         requireNonNull(nodeRewardsAccountId);
-        final var systemContext = newSystemContext(now, state, dispatch -> {});
+        final var systemContext = newSystemContext(now, state, dispatch -> {}, false);
         final var activeNodeAccountIds = activeNodeIds.stream()
                 .map(id -> systemContext.networkInfo().nodeInfo(id))
                 .filter(nodeInfo -> nodeInfo != null && !nodeInfo.declineReward())
@@ -536,7 +537,7 @@ public class SystemTransactions {
      *
      * @param firstEventTime the timestamp of the first event in the current round
      */
-    public Instant startupWorkConsTimeFor(@NonNull final Instant firstEventTime) {
+    public Instant restartSystemChangesTimeAt(@NonNull final Instant firstEventTime) {
         requireNonNull(firstEventTime);
         final var config = configProvider.getConfiguration();
         final var consensusConfig = config.getConfigData(ConsensusConfig.class);
@@ -555,9 +556,12 @@ public class SystemTransactions {
     }
 
     private SystemContext newSystemContext(
-            @NonNull final Instant now, @NonNull final State state, @NonNull final Consumer<Dispatch> onSuccess) {
+            @NonNull final Instant now,
+            @NonNull final State state,
+            @NonNull final Consumer<Dispatch> onSuccess,
+            final boolean isRestart) {
         final var config = configProvider.getConfiguration();
-        final var firstConsTime = startupWorkConsTimeFor(now);
+        final var firstConsTime = isRestart ? restartSystemChangesTimeAt(now) : now;
         final AtomicReference<Instant> nextConsTime = new AtomicReference<>(firstConsTime);
         final var systemAdminId = idFactory.newAccountId(
                 config.getConfigData(AccountsConfig.class).systemAdmin());
