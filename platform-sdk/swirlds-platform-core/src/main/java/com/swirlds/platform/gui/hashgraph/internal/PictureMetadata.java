@@ -123,7 +123,9 @@ public class PictureMetadata {
             final BranchCoordinates branchCoordinates =
                     branchIndexToCoordinates.computeIfAbsent(branchIndex, b -> new BranchCoordinates());
 
-            var insideGenerationRangeXCoordinates = branchCoordinates.getInsideGenerationRangeXCoordinates();
+            // use this map to only display the events in the currently displayed generation range
+            final Map<GossipEvent, Integer> insideGenerationRangeXCoordinates =
+                    branchCoordinates.getInsideGenerationRangeXCoordinates();
 
             if (insideGenerationRangeXCoordinates != null) {
                 // event still does not have X coordinate

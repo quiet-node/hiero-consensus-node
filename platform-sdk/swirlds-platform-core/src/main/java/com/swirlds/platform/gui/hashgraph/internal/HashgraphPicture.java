@@ -151,7 +151,7 @@ public class HashgraphPicture extends JPanel {
                 drawLinksToParents(g, event);
             }
 
-            // Reload branched events if such exist. Different generations are being display in the Gui,
+            // reload branched events if such exist. Different generations are being displayed in the Gui,
             // so we have to reposition branched events in case they fall in or out of the display generation range.
             if (!hashgraphSource.getEventStorage().getBranchedEventsMetadata().isEmpty()) {
                 reloadBranchedEvents();
@@ -174,6 +174,8 @@ public class HashgraphPicture extends JPanel {
         }
     }
 
+    // iterate over all of the created branched events and select only the ones falling in the currently displayed
+    // generation range, so that only they are drawn
     private void reloadBranchedEvents() {
         for (final Entry<Long, Map<Integer, BranchCoordinates>> nodeIdToBranchIndexToCoordinatesEntry :
                 nodeIdToBranchIndexToCoordinates.entrySet()) {
@@ -184,6 +186,8 @@ public class HashgraphPicture extends JPanel {
                 final Map<GossipEvent, Integer> reloadedXCoordinates = new LinkedHashMap<>();
 
                 final BranchCoordinates branchCoordinates = branchIndexToCoordinatesEntry.getValue();
+                // Start displaying the reloaded branch from the leftmost X coordinate of the branch that was recorded
+                // on the first branch drawing occurrence
                 int xPos = branchCoordinates.getFarMostLeftX();
                 for (final Entry<GossipEvent, Integer> branchIndexToAllXCoordinatesEntry :
                         branchCoordinates.getAllXCoordinates().entrySet()) {
@@ -277,7 +281,6 @@ public class HashgraphPicture extends JPanel {
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
         g.fillOval(xPos, yPos, d, d);
-
         g.setFont(g.getFont().deriveFont(Font.BOLD));
 
         String s = "";
