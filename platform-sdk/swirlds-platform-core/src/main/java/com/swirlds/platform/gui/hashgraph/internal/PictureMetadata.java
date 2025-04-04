@@ -2,16 +2,14 @@
 package com.swirlds.platform.gui.hashgraph.internal;
 
 import com.hedera.hapi.platform.event.GossipEvent;
+import com.swirlds.platform.gui.BranchMetadata;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.internal.EventImpl;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 /**
  * Metadata that is used to aid in drawing a {@code HashgraphPicture}
@@ -124,9 +122,12 @@ public class PictureMetadata {
         final GossipEvent e2GossipEvent = e2.getBaseEvent().getGossipEvent();
 
         // check if we have a branched event
-        if (hashgraphSource.getEventStorage().getBranchIndexes().containsKey(e2GossipEvent)) {
-            final var branchIndex =
-                    hashgraphSource.getEventStorage().getBranchIndexes().get(e2GossipEvent);
+        if (hashgraphSource.getEventStorage().getEventToBranchMetadata().containsKey(e2GossipEvent)) {
+            final var branchIndex = hashgraphSource
+                    .getEventStorage()
+                    .getEventToBranchMetadata()
+                    .get(e2GossipEvent)
+                    .branchIndex();
 
             var eventToXCoordinatesForDisplayedBranchEvents = branchIndexToCurrentXCoordinates.get(branchIndex);
 
@@ -138,7 +139,7 @@ public class PictureMetadata {
                             .max(Integer::compareTo)
                             .orElse(-1);
 
-                    if(maxXCoordinateForBranch > 0) {
+                    if (maxXCoordinateForBranch > 0) {
                         xPos = maxXCoordinateForBranch + (int) r;
                     }
 
@@ -172,14 +173,16 @@ public class PictureMetadata {
     public int ypos(final EventImpl event) {
         var yPos = (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
 
-        final Map<GossipEvent, Integer> allBranchedEvents =
-                hashgraphSource.getEventStorage().getBranchIndexes();
+        final Map<GossipEvent, BranchMetadata> branchedEventsToMetadata =
+                hashgraphSource.getEventStorage().getEventToBranchMetadata();
         final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
-        if (allBranchedEvents.containsKey(gossipEvent)) {
-            if (!branchIndexToY.containsKey(allBranchedEvents.get(gossipEvent))) {
-                branchIndexToY.put(allBranchedEvents.get(gossipEvent), yPos);
+        if (branchedEventsToMetadata.containsKey(gossipEvent)) {
+            if (!branchIndexToY.containsKey(
+                    branchedEventsToMetadata.get(gossipEvent).branchIndex())) {
+                branchIndexToY.put(branchedEventsToMetadata.get(gossipEvent).branchIndex(), yPos);
             } else {
-                yPos = branchIndexToY.get(allBranchedEvents.get(gossipEvent));
+                yPos = branchIndexToY.get(
+                        branchedEventsToMetadata.get(gossipEvent).branchIndex());
             }
         }
 

@@ -18,7 +18,6 @@ import com.swirlds.platform.roster.RosterRetriever;
 import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,8 +38,7 @@ public class GuiEventStorage {
     private final SimpleLinker linker;
     private final Configuration configuration;
     private ConsensusRound lastConsensusRound;
-    private final Map<GossipEvent, Integer> branchIndexes;
-    private final Map<GossipEvent, Long> generations;
+    private Map<GossipEvent, BranchMetadata> eventToBranchMetadata;
 
     /**
      * Creates an empty instance
@@ -57,32 +55,6 @@ public class GuiEventStorage {
                 platformContext, new NoOpConsensusMetrics(), RosterRetriever.buildRoster(addressBook));
         this.linker =
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
-        this.branchIndexes = new HashMap<>();
-        this.generations = new HashMap<>();
-    }
-
-    /**
-     * Creates an empty instance
-     *
-     * @param configuration this node's configuration
-     * @param addressBook   the network's address book
-     * @param branchIndexes map to be used of collecting branched events and their corresponding branch index
-     */
-    public GuiEventStorage(
-            @NonNull final Configuration configuration,
-            @NonNull final AddressBook addressBook,
-            @NonNull final Map<GossipEvent, Integer> branchIndexes,
-            @NonNull final Map<GossipEvent, Long> generations) {
-
-        this.configuration = Objects.requireNonNull(configuration);
-        final PlatformContext platformContext = PlatformContext.create(configuration);
-
-        this.consensus = new ConsensusImpl(
-                platformContext, new NoOpConsensusMetrics(), RosterRetriever.buildRoster(addressBook));
-        this.linker =
-                new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
-        this.branchIndexes = branchIndexes;
-        this.generations = generations;
     }
 
     /**
@@ -102,8 +74,6 @@ public class GuiEventStorage {
                 .mapToLong(EventImpl::getGeneration)
                 .max()
                 .orElse(FIRST_GENERATION);
-        this.branchIndexes = new HashMap<>();
-        this.generations = new HashMap<>();
     }
 
     /**
@@ -121,8 +91,6 @@ public class GuiEventStorage {
      */
     public synchronized void handlePreconsensusEvent(@NonNull final PlatformEvent event) {
         maxGeneration = Math.max(maxGeneration, event.getGeneration());
-
-        generations.put(event.getGossipEvent(), event.getGeneration());
 
         // since the gui will modify the event, we need to copy it
         final EventImpl eventImpl = linker.linkEvent(event.copyGossipedData());
@@ -178,11 +146,11 @@ public class GuiEventStorage {
         return lastConsensusRound;
     }
 
-    public Map<GossipEvent, Integer> getBranchIndexes() {
-        return branchIndexes;
+    public Map<GossipEvent, BranchMetadata> getEventToBranchMetadata() {
+        return eventToBranchMetadata;
     }
 
-    public Map<GossipEvent, Long> getGenerations() {
-        return generations;
+    public void setEventToBranchMetadata(Map<GossipEvent, BranchMetadata> eventToBranchIndex) {
+        this.eventToBranchMetadata = eventToBranchIndex;
     }
 }

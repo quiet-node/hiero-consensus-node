@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.event.source;
 
-import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.common.test.fixtures.TransactionGenerator;
 import com.swirlds.platform.internal.EventImpl;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.Optional;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -29,9 +26,7 @@ public class ForkingEventSource extends AbstractEventSource {
     /**
      * An collection of branches. Each branch contains a number of recent events on that branch.
      */
-    private ArrayList<LinkedList<EventImpl>> branches;
-
-    private Map<GossipEvent, Integer> branchIndexMap = new HashMap<>();
+    private List<LinkedList<EventImpl>> branches;
 
     /**
      * The index of the event that was last given out as the "latest" event.
@@ -40,11 +35,6 @@ public class ForkingEventSource extends AbstractEventSource {
 
     public ForkingEventSource() {
         this(true, DEFAULT_TRANSACTION_GENERATOR);
-    }
-
-    public ForkingEventSource(Map<GossipEvent, Integer> branchIndexMap) {
-        this(true, DEFAULT_TRANSACTION_GENERATOR);
-        this.branchIndexMap = branchIndexMap;
     }
 
     public ForkingEventSource(final boolean useFakeHashes) {
@@ -178,9 +168,11 @@ public class ForkingEventSource extends AbstractEventSource {
 
         final LinkedList<EventImpl> branch = branches.get(currentBranch);
         branch.addFirst(event);
-        branchIndexMap.put(event.getBaseEvent().getGossipEvent(), currentBranch);
-        final Optional<EventImpl> removedEvent = pruneEventList(branch);
-        removedEvent.ifPresent(
-                value -> branchIndexMap.remove(value.getBaseEvent().getGossipEvent()));
+
+        pruneEventList(branch);
+    }
+
+    public List<LinkedList<EventImpl>> getBranches() {
+        return branches;
     }
 }

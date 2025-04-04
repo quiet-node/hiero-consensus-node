@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.gui;
 
-import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
@@ -12,10 +11,8 @@ import com.swirlds.platform.test.fixtures.event.source.ForkingEventSource;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public class HashgraphGui {
 
@@ -34,20 +31,14 @@ public class HashgraphGui {
         final PlatformContext platformContext =
                 TestPlatformContextBuilder.create().build();
 
-        final Map<GossipEvent, Integer> eventsToBranchIndexes = new HashMap<>();
-        final Map<GossipEvent, Long> eventsToGenerations = new HashMap<>();
         final GraphGenerator graphGenerator = new StandardGraphGenerator(
                 platformContext,
                 randotron.nextInt(),
-                generateSources(numNodes, eventsToBranchIndexes, Arrays.stream(args).anyMatch("branch"::equals)));
+                generateSources(numNodes, Arrays.stream(args).anyMatch("branch"::equals)));
         graphGenerator.reset();
 
         final TestGuiSource guiSource = new TestGuiSource(
-                platformContext,
-                graphGenerator.getAddressBook(),
-                new GeneratorEventProvider(graphGenerator),
-                eventsToBranchIndexes,
-                eventsToGenerations);
+                platformContext, graphGenerator.getAddressBook(), new GeneratorEventProvider(graphGenerator));
         guiSource.generateEvents(initialEvents);
         guiSource.runGui();
     }
@@ -57,17 +48,13 @@ public class HashgraphGui {
      * indicates if we should have a forking event source or not.
      *
      * @param numNetworkNodes the number of nodes in the network
-     * @param branchIndexMap the map that will be used to store the branched events with their branch index
      * @param shouldBranch true if we should have a forking event source, false otherwise
      */
-    private static @NonNull List<EventSource> generateSources(
-            final int numNetworkNodes, final Map<GossipEvent, Integer> branchIndexMap, final boolean shouldBranch) {
+    private static @NonNull List<EventSource> generateSources(final int numNetworkNodes, final boolean shouldBranch) {
         final List<EventSource> list = new LinkedList<>();
         for (long i = 0; i < numNetworkNodes; i++) {
             if (i == 1 && shouldBranch) {
-                list.add(new ForkingEventSource(branchIndexMap)
-                        .setForkProbability(0.8)
-                        .setMaximumBranchCount(5));
+                list.add(new ForkingEventSource().setForkProbability(0.8).setMaximumBranchCount(5));
                 continue;
             }
             list.add(new StandardEventSource(true));

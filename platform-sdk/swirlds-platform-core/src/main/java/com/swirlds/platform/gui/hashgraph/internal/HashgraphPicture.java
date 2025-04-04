@@ -7,6 +7,7 @@ import static com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants.HASHGRAPH
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.platform.Consensus;
 import com.swirlds.platform.consensus.CandidateWitness;
+import com.swirlds.platform.gui.BranchMetadata;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.gui.hashgraph.HashgraphPictureOptions;
@@ -164,7 +165,7 @@ public class HashgraphPicture extends JPanel {
 
             // Reload branched events if such exist. Different generations are being display in the Gui,
             // so we have to reposition branched events in case they fall in or out of the display generation range.
-            if (!hashgraphSource.getEventStorage().getBranchIndexes().isEmpty()) {
+            if (!hashgraphSource.getEventStorage().getEventToBranchMetadata().isEmpty()) {
                 reloadBranchedEvents();
             }
 
@@ -186,8 +187,10 @@ public class HashgraphPicture extends JPanel {
     }
 
     private void reloadBranchedEvents() {
-        final Set<Integer> uniqueBranchIndexes = new HashSet<>(
-                hashgraphSource.getEventStorage().getBranchIndexes().values());
+        final Set<Integer> uniqueBranchIndexes =
+                new HashSet<>(hashgraphSource.getEventStorage().getEventToBranchMetadata().values().stream()
+                        .map(BranchMetadata::getBranchIndex)
+                        .toList());
 
         for (final Integer branchIndex : uniqueBranchIndexes) {
             final Map<GossipEvent, Integer> reloadedXCoordinates = new LinkedHashMap<>();
@@ -197,8 +200,12 @@ public class HashgraphPicture extends JPanel {
                     allBranchedXCoordinates.get(branchIndex).entrySet()) {
                 final GossipEvent branchedEvent = branchIndexToAllXCoordinatesEntry.getKey();
 
-                if(hashgraphSource.getEventStorage().getGenerations().containsKey(branchedEvent)) {
-                    final long generation = hashgraphSource.getEventStorage().getGenerations().get(branchedEvent);
+                if (hashgraphSource.getEventStorage().getEventToBranchMetadata().containsKey(branchedEvent)) {
+                    final long generation = hashgraphSource
+                            .getEventStorage()
+                            .getEventToBranchMetadata()
+                            .get(branchedEvent)
+                            .getGeneration();
                     if (generation >= startGen) {
                         reloadedXCoordinates.put(branchedEvent, xPos);
                         xPos += pictureMetadata.getD() / 2;
@@ -323,16 +330,15 @@ public class HashgraphPicture extends JPanel {
             s += " " + event.getBirthRound();
         }
 
+        final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
         if (options.showBranches()
-                && hashgraphSource
-                        .getEventStorage()
-                        .getBranchIndexes()
-                        .containsKey(event.getBaseEvent().getGossipEvent())) {
+                && hashgraphSource.getEventStorage().getEventToBranchMetadata().containsKey(gossipEvent)) {
             s += " " + "\\/ "
                     + hashgraphSource
                             .getEventStorage()
-                            .getBranchIndexes()
-                            .get(event.getBaseEvent().getGossipEvent());
+                            .getEventToBranchMetadata()
+                            .get(gossipEvent)
+                            .branchIndex();
         }
 
         if (!s.isEmpty()) {
