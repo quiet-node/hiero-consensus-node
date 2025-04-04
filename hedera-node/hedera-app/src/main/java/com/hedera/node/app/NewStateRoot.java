@@ -35,6 +35,7 @@ import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.state.spi.ReadableQueueState;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.spi.SingletonChangeListener;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
 import com.swirlds.state.spi.WritableQueueState;
@@ -143,6 +144,27 @@ public class NewStateRoot implements MerkleNodeState {
         // Copy over the metadata
         for (final var entry : from.services.entrySet()) {
             this.services.put(entry.getKey(), new HashMap<>(entry.getValue()));
+        }
+
+        // If the source state was deferring commits for queues and singletons, merge
+        // those in-progress base states into our writable states map
+        if (listeners.stream().anyMatch(StateChangeListener::deferCommits)) {
+            for (final var entry : from.writableStatesMap.entrySet()) {
+                final var serviceName = entry.getKey();
+                final var writableStates = getWritableStates(serviceName);
+                final var metadata = services.get(serviceName);
+                metadata.forEach((stateKey, m) -> {
+                    if (m.stateDefinition().queue()) {
+                        final var fromQueue =
+                                (WritableQueueStateBase) entry.getValue().getQueue(stateKey);
+                        fromQueue.recreateIn((WritableQueueStateBase) writableStates.getQueue(stateKey));
+                    } else if (m.stateDefinition().singleton()) {
+                        final var singletonState = writableStates.getSingleton(stateKey);
+                        singletonState.put(
+                                entry.getValue().getSingleton(stateKey).get());
+                    }
+                });
+            }
         }
     }
 
@@ -659,24 +681,51 @@ public class NewStateRoot implements MerkleNodeState {
                 @NonNull final String serviceName,
                 @NonNull final WritableSingletonStateBase<V> singletonState,
                 @NonNull final StateChangeListener listener) {
-            final var stateId = listener.stateIdFor(serviceName, singletonState.getStateKey());
-            singletonState.registerListener(value -> listener.singletonUpdateChange(stateId, value));
+            final var stateKey = singletonState.getStateKey();
+            final var stateId = listener.stateIdFor(serviceName, stateKey);
+            singletonState.registerListener(new SingletonChangeListener<V>() {
+                @Override
+                public void singletonUpdateChange(@NonNull V value) {
+                    listener.singletonUpdateChange(stateId, serviceName, stateKey, value);
+                }
+
+                @Override
+                public boolean deferCommits() {
+                    return listener.deferCommits();
+                }
+
+                @Override
+                public void commitDeferred() {
+                    listener.commitDeferredFor(serviceName);
+                }
+            });
         }
 
         private <V> void registerQueueListener(
                 @NonNull final String serviceName,
                 @NonNull final WritableQueueStateBase<V> queueState,
                 @NonNull final StateChangeListener listener) {
-            final var stateId = listener.stateIdFor(serviceName, queueState.getStateKey());
+            final var stateKey = queueState.getStateKey();
+            final var stateId = listener.stateIdFor(serviceName, stateKey);
             queueState.registerListener(new QueueChangeListener<>() {
                 @Override
                 public void queuePushChange(@NonNull final V value) {
-                    listener.queuePushChange(stateId, value);
+                    listener.queuePushChange(stateId, serviceName, stateKey, value);
                 }
 
                 @Override
                 public void queuePopChange() {
-                    listener.queuePopChange(stateId);
+                    listener.queuePopChange(stateId, serviceName, stateKey);
+                }
+
+                @Override
+                public boolean deferCommits() {
+                    return listener.deferCommits();
+                }
+
+                @Override
+                public void commitDeferred() {
+                    listener.commitDeferredFor(serviceName);
                 }
             });
         }

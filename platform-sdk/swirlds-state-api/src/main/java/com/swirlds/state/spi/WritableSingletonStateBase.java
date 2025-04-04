@@ -13,7 +13,9 @@ import java.util.List;
  *
  * @param <T> The type
  */
-public class WritableSingletonStateBase<T> extends ReadableSingletonStateBase<T> implements WritableSingletonState<T> {
+public abstract class WritableSingletonStateBase<T> extends ReadableSingletonStateBase<T>
+        implements WritableSingletonState<T> {
+
     /**
      * A sentinel value to represent null in the backing store.
      */
