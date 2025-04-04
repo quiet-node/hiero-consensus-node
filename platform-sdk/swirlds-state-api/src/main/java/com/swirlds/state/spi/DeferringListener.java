@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.spi;
 
+import static com.swirlds.logging.legacy.LogMarker.RECONNECT;
 import static java.util.Objects.requireNonNull;
 
 import com.swirlds.state.StateChangeListener.StateType;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.List;
 import java.util.Set;
 
@@ -12,6 +16,7 @@ import java.util.Set;
  * A listener that can defer committing changes to the state with which they are associated.
  */
 public interface DeferringListener {
+     Logger logger = LogManager.getLogger(DeferringListener.class);
     /**
      * Whether the state with which this listener is associated should defer committing changes.
      */
@@ -46,11 +51,20 @@ public interface DeferringListener {
                 .filter(l -> l.stateTypes().contains(stateType))
                 .toList();
         boolean deferCommits = false;
-        if (!listeners.isEmpty()) {
+
+        logger.info(RECONNECT.getMarker(), "State change listener info for state type {}: ", stateType);
+        for (T filteredListener : filteredListeners) {
+            logger.info(RECONNECT.getMarker(), "Listener type: {}. State types: {} Defer commits: {}",
+                    filteredListener.getClass().getName(),
+                    filteredListener.stateTypes(),
+                    filteredListener.deferCommits());
+        }
+
+        if (!filteredListeners.isEmpty()) {
             deferCommits = filteredListeners.getFirst().deferCommits();
-            if (listeners.size() > 1) {
-                final var restAgree = filteredListeners.subList(1, listeners.size()).stream()
-                        .allMatch(l -> l.deferCommits() == listeners.getFirst().deferCommits());
+            if (filteredListeners.size() > 1) {
+                final var restAgree = filteredListeners.subList(1, filteredListeners.size()).stream()
+                        .allMatch(l -> l.deferCommits() == filteredListeners.getFirst().deferCommits());
                 if (!restAgree) {
                     throw new IllegalArgumentException("Listeners have inconsistent defer commit settings");
                 }
