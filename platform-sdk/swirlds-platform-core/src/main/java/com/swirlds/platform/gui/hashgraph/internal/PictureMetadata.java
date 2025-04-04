@@ -110,10 +110,10 @@ public class PictureMetadata {
         final GossipEvent e2GossipEvent = e2.getBaseEvent().getGossipEvent();
 
         // check if we have a branched event
-        if (hashgraphSource.getEventStorage().getEventToBranchMetadata().containsKey(e2GossipEvent)) {
+        if (hashgraphSource.getEventStorage().getBranchedEventsMetadata().containsKey(e2GossipEvent)) {
             final var branchIndex = hashgraphSource
                     .getEventStorage()
-                    .getEventToBranchMetadata()
+                    .getBranchedEventsMetadata()
                     .get(e2GossipEvent)
                     .branchIndex();
 
@@ -166,7 +166,7 @@ public class PictureMetadata {
         var yPos = (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
 
         final Map<GossipEvent, BranchedEventMetadata> branchedEventsToMetadata =
-                hashgraphSource.getEventStorage().getEventToBranchMetadata();
+                hashgraphSource.getEventStorage().getBranchedEventsMetadata();
         final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
         if (branchedEventsToMetadata.containsKey(gossipEvent)) {
             final BranchCoordinates branchCoordinates = nodeIdToBranchIndexToCoordinates

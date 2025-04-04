@@ -153,7 +153,7 @@ public class HashgraphPicture extends JPanel {
 
             // Reload branched events if such exist. Different generations are being display in the Gui,
             // so we have to reposition branched events in case they fall in or out of the display generation range.
-            if (!hashgraphSource.getEventStorage().getEventToBranchMetadata().isEmpty()) {
+            if (!hashgraphSource.getEventStorage().getBranchedEventsMetadata().isEmpty()) {
                 reloadBranchedEvents();
             }
 
@@ -191,11 +191,11 @@ public class HashgraphPicture extends JPanel {
 
                     if (hashgraphSource
                             .getEventStorage()
-                            .getEventToBranchMetadata()
+                            .getBranchedEventsMetadata()
                             .containsKey(branchedEvent)) {
                         final long generation = hashgraphSource
                                 .getEventStorage()
-                                .getEventToBranchMetadata()
+                                .getBranchedEventsMetadata()
                                 .get(branchedEvent)
                                 .getGeneration();
                         if (generation >= startGen) {
@@ -325,11 +325,11 @@ public class HashgraphPicture extends JPanel {
 
         final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
         if (options.showBranches()
-                && hashgraphSource.getEventStorage().getEventToBranchMetadata().containsKey(gossipEvent)) {
+                && hashgraphSource.getEventStorage().getBranchedEventsMetadata().containsKey(gossipEvent)) {
             s += " " + "\\/ "
                     + hashgraphSource
                             .getEventStorage()
-                            .getEventToBranchMetadata()
+                            .getBranchedEventsMetadata()
                             .get(gossipEvent)
                             .branchIndex();
         }

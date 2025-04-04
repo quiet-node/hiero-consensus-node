@@ -76,7 +76,7 @@ public class TestGuiSource {
             eventStorage.handlePreconsensusEvent(event);
         }
 
-        eventStorage.setEventToBranchMetadata(eventsToBranchMetadata);
+        eventStorage.setBranchedEventsMetadata(eventsToBranchMetadata);
     }
 
     public @NonNull JPanel controls() {
@@ -109,7 +109,7 @@ public class TestGuiSource {
 
                 eventStorage.handlePreconsensusEvent(event);
             }
-            eventStorage.setEventToBranchMetadata(eventsToBranchMetadata);
+            eventStorage.setBranchedEventsMetadata(eventsToBranchMetadata);
 
             updateFameDecidedBelow.run();
         });

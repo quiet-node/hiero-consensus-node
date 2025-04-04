@@ -38,7 +38,7 @@ public class GuiEventStorage {
     private final SimpleLinker linker;
     private final Configuration configuration;
     private ConsensusRound lastConsensusRound;
-    private Map<GossipEvent, BranchedEventMetadata> eventToBranchMetadata;
+    private Map<GossipEvent, BranchedEventMetadata> branchedEventsMetadata;
 
     /**
      * Creates an empty instance
@@ -146,11 +146,12 @@ public class GuiEventStorage {
         return lastConsensusRound;
     }
 
-    public Map<GossipEvent, BranchedEventMetadata> getEventToBranchMetadata() {
-        return eventToBranchMetadata;
+    public Map<GossipEvent, BranchedEventMetadata> getBranchedEventsMetadata() {
+        return branchedEventsMetadata;
     }
 
-    public void setEventToBranchMetadata(Map<GossipEvent, BranchedEventMetadata> eventToBranchIndex) {
-        this.eventToBranchMetadata = eventToBranchIndex;
+    public void setBranchedEventsMetadata(
+            @NonNull final Map<GossipEvent, BranchedEventMetadata> branchedEventsMetadata) {
+        this.branchedEventsMetadata = branchedEventsMetadata;
     }
 }
