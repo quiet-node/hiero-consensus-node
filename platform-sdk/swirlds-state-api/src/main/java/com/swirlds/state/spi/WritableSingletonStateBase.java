@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.spi;
 
+import static com.swirlds.state.spi.DeferringListener.agreedDeferCommitOrThrow;
 import static java.util.Objects.requireNonNull;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -12,9 +13,7 @@ import java.util.List;
  *
  * @param <T> The type
  */
-public abstract class WritableSingletonStateBase<T> extends ReadableSingletonStateBase<T>
-        implements WritableSingletonState<T> {
-
+public class WritableSingletonStateBase<T> extends ReadableSingletonStateBase<T> implements WritableSingletonState<T> {
     /**
      * A sentinel value to represent null in the backing store.
      */
@@ -71,11 +70,17 @@ public abstract class WritableSingletonStateBase<T> extends ReadableSingletonSta
     }
 
     /**
-     * Flushes all changes into the underlying data store. This method should <strong>ONLY</strong>
-     * be called by the code that created the {@link WritableSingletonStateBase} instance or owns
-     * it. Don't cast and commit unless you own the instance!
+     * Flushes the change into the underlying data store unless the registered listeners agree to defer
+     * the commit.
+     * <p>
+     * This method should <strong>ONLY</strong> be called by the code that created the
+     * {@link WritableSingletonStateBase} instance or owns it. Don't cast and commit unless you own the instance!
      */
     public void commit() {
+        if (agreedDeferCommitOrThrow(listeners)) {
+            listeners.forEach(SingletonChangeListener::commitDeferred);
+            return;
+        }
         if (isModified()) { // update data source
             if (currentValue() != null) {
                 putIntoDataSource(currentValue());

@@ -17,7 +17,6 @@ import static com.hedera.node.app.workflows.handle.HandleOutput.failInvalidStrea
 import static com.hedera.node.app.workflows.handle.HandleWorkflow.ALERT_MESSAGE;
 import static com.hedera.node.app.workflows.handle.TransactionType.INTERNAL_TRANSACTION;
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
-import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
 import static com.swirlds.platform.roster.RosterUtils.formatNodeName;
 import static com.swirlds.platform.system.InitTrigger.GENESIS;
@@ -92,7 +91,6 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -124,7 +122,6 @@ public class SystemTransactions {
 
     private final InitTrigger initTrigger;
     private final BlocklistParser blocklistParser = new BlocklistParser();
-    private final AtomicInteger nextDispatchNonce = new AtomicInteger(1);
     private final FileServiceImpl fileService;
     private final ParentTxnFactory parentTxnFactory;
     private final StreamMode streamMode;
@@ -137,6 +134,8 @@ public class SystemTransactions {
     private final ExchangeRateManager exchangeRateManager;
     private final HederaRecordCache recordCache;
     private final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory;
+
+    private int nextDispatchNonce = 1;
 
     /**
      * Constructs a new {@link SystemTransactions}.
@@ -174,6 +173,13 @@ public class SystemTransactions {
     }
 
     /**
+     * Used to reset the system transaction dispatch nonce at the start of a round.
+     */
+    public void resetNextDispatchNonce() {
+        nextDispatchNonce = 1;
+    }
+
+    /**
      * Sets up genesis state for the system.
      *
      * @param now   the current time
@@ -184,7 +190,7 @@ public class SystemTransactions {
         requireNonNull(state);
         final AtomicReference<Consumer<Dispatch>> onSuccess = new AtomicReference<>(dispatch -> {});
         final var systemContext =
-                newSystemContext(now, state, dispatch -> onSuccess.get().accept(dispatch));
+                newSystemContext(now, state, dispatch -> onSuccess.get().accept(dispatch), true);
 
         final var config = configProvider.getConfiguration();
         final var ledgerConfig = config.getConfigData(LedgerConfig.class);
@@ -290,7 +296,8 @@ public class SystemTransactions {
                 stack.commitFullStack();
             });
             systemContext.dispatchAdmin(b -> {
-                final var isSystemAccount = nodeInfo.nodeId() <= ledgerConfig.numSystemAccounts();
+                final var isSystemAccount =
+                        nodeInfo.accountId().accountNumOrThrow() <= ledgerConfig.numSystemAccounts();
                 final var nodeCreate = NodeCreateTransactionBody.newBuilder()
                         .adminKey(adminKey)
                         .accountId(nodeInfo.accountId())
@@ -300,6 +307,7 @@ public class SystemTransactions {
                         .serviceEndpoint(hapiEndpoints)
                         .declineReward(isSystemAccount)
                         .build();
+                log.info("Creating node{} via {}", nodeInfo.nodeId(), nodeCreate);
                 b.nodeCreate(nodeCreate);
             });
         }
@@ -414,7 +422,7 @@ public class SystemTransactions {
         requireNonNull(now);
         requireNonNull(activeNodeIds);
         requireNonNull(nodeRewardsAccountId);
-        final var systemContext = newSystemContext(now, state, dispatch -> {});
+        final var systemContext = newSystemContext(now, state, dispatch -> {}, false);
         final var activeNodeAccountIds = activeNodeIds.stream()
                 .map(id -> systemContext.networkInfo().nodeInfo(id))
                 .filter(nodeInfo -> nodeInfo != null && !nodeInfo.declineReward())
@@ -428,7 +436,11 @@ public class SystemTransactions {
                 .map(NodeInfo::accountId)
                 .toList();
         if (activeNodeAccountIds.isEmpty() && (minNodeReward <= 0 || inactiveNodeAccountIds.isEmpty())) {
-            // No eligible rewards to distribute
+            log.info(
+                    "Skipping reward payments (no active nodes and {})",
+                    inactiveNodeAccountIds.isEmpty()
+                            ? "no inactive nodes to receive a minimum reward"
+                            : "no minimum reward");
             return;
         }
         log.info("Found active node accounts {}", activeNodeAccountIds);
@@ -445,7 +457,7 @@ public class SystemTransactions {
 
         if (rewardAccountBalance <= activeTotal) {
             final long activeNodeReward = rewardAccountBalance / activeNodeAccountIds.size();
-            log.info("Balance insufficient for all, rewarding active nodes only: {} tinybars each", activeNodeReward);
+            log.info("Balance insufficient for all, rewarding active nodes only {} tinybars each", activeNodeReward);
             if (activeNodeReward > 0) {
                 dispatchSynthNodeRewards(systemContext, activeNodeAccountIds, nodeRewardsAccountId, activeNodeReward);
             }
@@ -529,7 +541,7 @@ public class SystemTransactions {
      *
      * @param firstEventTime the timestamp of the first event in the current round
      */
-    public Instant startupWorkConsTimeFor(@NonNull final Instant firstEventTime) {
+    public Instant restartSystemChangesTimeAt(@NonNull final Instant firstEventTime) {
         requireNonNull(firstEventTime);
         final var config = configProvider.getConfiguration();
         final var consensusConfig = config.getConfigData(ConsensusConfig.class);
@@ -548,9 +560,12 @@ public class SystemTransactions {
     }
 
     private SystemContext newSystemContext(
-            @NonNull final Instant now, @NonNull final State state, @NonNull final Consumer<Dispatch> onSuccess) {
+            @NonNull final Instant now,
+            @NonNull final State state,
+            @NonNull final Consumer<Dispatch> onSuccess,
+            final boolean isRestart) {
         final var config = configProvider.getConfiguration();
-        final var firstConsTime = startupWorkConsTimeFor(now);
+        final var firstConsTime = isRestart ? restartSystemChangesTimeAt(now) : now;
         final AtomicReference<Instant> nextConsTime = new AtomicReference<>(firstConsTime);
         final var systemAdminId = idFactory.newAccountId(
                 config.getConfigData(AccountsConfig.class).systemAdmin());
@@ -568,7 +583,7 @@ public class SystemTransactions {
                         .transactionID(TransactionID.newBuilder()
                                 .accountID(systemAdminId)
                                 .transactionValidStart(asTimestamp(now()))
-                                .nonce(nextDispatchNonce.getAndIncrement())
+                                .nonce(nextDispatchNonce++)
                                 .build());
                 spec.accept(builder);
                 dispatch(builder.build(), 0);
@@ -582,7 +597,7 @@ public class SystemTransactions {
                         .transactionID(TransactionID.newBuilder()
                                 .accountID(systemAdminId)
                                 .transactionValidStart(asTimestamp(now()))
-                                .nonce(nextDispatchNonce.getAndIncrement())
+                                .nonce(nextDispatchNonce++)
                                 .build());
                 spec.accept(builder);
                 dispatchCreation(builder.build(), entityNum);
@@ -597,7 +612,7 @@ public class SystemTransactions {
             private void dispatch(final @NonNull TransactionBody body, final long entityNum) {
                 // System dispatches never have child transactions, so one nano is enough to separate them
                 final var now = nextConsTime.getAndUpdate(then -> then.plusNanos(1));
-                if (streamMode == BOTH) {
+                if (streamMode != BLOCKS) {
                     blockRecordManager.startUserTransaction(now, state);
                 }
                 final var handleOutput =
@@ -747,7 +762,7 @@ public class SystemTransactions {
                         .transactionID(TransactionID.newBuilder()
                                 .accountID(systemAdminId)
                                 .transactionValidStart(asTimestamp(now()))
-                                .nonce(nextDispatchNonce.getAndIncrement())
+                                .nonce(nextDispatchNonce++)
                                 .build());
                 spec.accept(bodyBuilder);
                 final var body = bodyBuilder.build();

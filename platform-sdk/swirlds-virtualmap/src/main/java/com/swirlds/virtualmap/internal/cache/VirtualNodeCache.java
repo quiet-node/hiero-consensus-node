@@ -11,7 +11,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.state.MutabilityException;
 import com.swirlds.common.FastCopyable;
 import com.swirlds.common.constructable.ConstructableClass;
-import com.swirlds.common.exceptions.PlatformException;
 import com.swirlds.common.exceptions.ReferenceCountException;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.virtualmap.VirtualMap;
@@ -43,6 +42,7 @@ import org.hiero.consensus.model.io.SelfSerializable;
 import org.hiero.consensus.model.io.streams.SerializableDataInputStream;
 import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.utility.StandardFuture;
+import org.hiero.consensus.utility.exceptions.PlatformException;
 
 /**
  * A cache for virtual merkel trees.

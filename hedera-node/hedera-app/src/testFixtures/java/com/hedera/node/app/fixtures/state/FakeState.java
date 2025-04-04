@@ -21,6 +21,7 @@ import com.swirlds.state.spi.KVChangeListener;
 import com.swirlds.state.spi.QueueChangeListener;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.spi.SingletonChangeListener;
 import com.swirlds.state.spi.WritableKVStateBase;
 import com.swirlds.state.spi.WritableQueueStateBase;
 import com.swirlds.state.spi.WritableSingletonStateBase;
@@ -204,7 +205,11 @@ public class FakeState implements MerkleNodeState {
             @NonNull final String serviceName, @NonNull final ListWritableQueueState<T> state) {
         listeners.forEach(listener -> {
             if (listener.stateTypes().contains(QUEUE)) {
-                registerQueueListener(serviceName, state, listener);
+                try {
+                    registerQueueListener(serviceName, state, listener);
+                } catch (Exception ignore) {
+                    // Eagerly registering listeners like this may throw exception on unsupported state keys
+                }
             }
         });
         return state;
@@ -214,8 +219,25 @@ public class FakeState implements MerkleNodeState {
             @NonNull final String serviceName,
             @NonNull final WritableSingletonStateBase<V> singletonState,
             @NonNull final StateChangeListener listener) {
-        final var stateId = listener.stateIdFor(serviceName, singletonState.getStateKey());
-        singletonState.registerListener(value -> listener.singletonUpdateChange(stateId, value));
+        final var stateKey = singletonState.getStateKey();
+        final var stateId = listener.stateIdFor(serviceName, stateKey);
+        singletonState.registerListener(new SingletonChangeListener<V>() {
+            @Override
+            public void singletonUpdateChange(@NonNull final V value) {
+                requireNonNull(value);
+                listener.singletonUpdateChange(stateId, serviceName, stateKey, value);
+            }
+
+            @Override
+            public boolean deferCommits() {
+                return listener.deferCommits();
+            }
+
+            @Override
+            public void commitDeferred() {
+                listener.commitDeferredFor(serviceName);
+            }
+        });
     }
 
     private <V> void registerQueueListener(
@@ -223,15 +245,26 @@ public class FakeState implements MerkleNodeState {
             @NonNull final WritableQueueStateBase<V> queueState,
             @NonNull final StateChangeListener listener) {
         final var stateId = listener.stateIdFor(serviceName, queueState.getStateKey());
+        final var stateKey = queueState.getStateKey();
         queueState.registerListener(new QueueChangeListener<>() {
             @Override
             public void queuePushChange(@NonNull final V value) {
-                listener.queuePushChange(stateId, value);
+                listener.queuePushChange(stateId, serviceName, stateKey, value);
             }
 
             @Override
             public void queuePopChange() {
-                listener.queuePopChange(stateId);
+                listener.queuePopChange(stateId, serviceName, stateKey);
+            }
+
+            @Override
+            public boolean deferCommits() {
+                return listener.deferCommits();
+            }
+
+            @Override
+            public void commitDeferred() {
+                listener.commitDeferredFor(serviceName);
             }
         });
     }

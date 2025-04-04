@@ -148,7 +148,7 @@ public class NodeRewardManager {
     private LastNodeRewardsPaymentTime classifyLastNodeRewardsPaymentTime(
             @NonNull final State state, @NonNull final Instant now) {
         final var networkRewardsStore =
-                new ReadableNetworkStakingRewardsStoreImpl(state.getReadableStates(TokenService.NAME));
+                new ReadableNetworkStakingRewardsStoreImpl(state.getWritableStates(TokenService.NAME));
         final var lastPaidTime = networkRewardsStore.get().lastNodeRewardPaymentsTime();
         if (lastPaidTime == null) {
             return LastNodeRewardsPaymentTime.NEVER;
@@ -167,26 +167,27 @@ public class NodeRewardManager {
      * @param state              the state
      * @param now                the current consensus time
      * @param systemTransactions the system transactions
+     * @return whether the node rewards were paid
      */
-    public void maybeRewardActiveNodes(
+    public boolean maybeRewardActiveNodes(
             @NonNull final State state, @NonNull final Instant now, final SystemTransactions systemTransactions) {
         final var config = configProvider.getConfiguration();
         final var nodesConfig = config.getConfigData(NodesConfig.class);
         if (!nodesConfig.nodeRewardsEnabled()) {
-            return;
+            return false;
         }
         final var lastNodeRewardsPaymentTime = classifyLastNodeRewardsPaymentTime(state, now);
         // If we're in the same staking period as the last time node rewards were paid, we don't
         // need to do anything
         if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.CURRENT_PERIOD) {
-            return;
+            return false;
         }
         final var writableStates = state.getWritableStates(TokenService.NAME);
         final var nodeRewardStore = new WritableNodeRewardsStoreImpl(writableStates);
         // Don't try to pay rewards in the genesis edge case when LastNodeRewardsPaymentTime.NEVER
         if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.PREVIOUS_PERIOD) {
             // Identify the nodes active in the last staking period
-            final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+            final var rosterStore = new ReadableRosterStoreImpl(state.getWritableStates(RosterService.NAME));
             final var currentRoster =
                     requireNonNull(rosterStore.getActiveRoster()).rosterEntries();
             final var activeNodeIds =
@@ -195,7 +196,7 @@ public class NodeRewardManager {
             // And pay whatever rewards the network can afford
             final var rewardsAccountId = entityIdFactory.newAccountId(
                     config.getConfigData(AccountsConfig.class).nodeRewardAccount());
-            final var entityCounters = new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME));
+            final var entityCounters = new ReadableEntityIdStoreImpl(state.getWritableStates(EntityIdService.NAME));
             final var accountStore = new ReadableAccountStoreImpl(writableStates, entityCounters);
             final long rewardAccountBalance = requireNonNull(accountStore.getAccountById(rewardsAccountId))
                     .tinybarBalance();
@@ -203,18 +204,18 @@ public class NodeRewardManager {
                     ? nodeRewardStore.get().nodeFeesCollected() / currentRoster.size()
                     : 0L;
 
-            final var targetPayInTinyCents = BigInteger.valueOf(nodesConfig.targetYearlyNodeRewardsUsd())
+            final var targetPayInTinycents = BigInteger.valueOf(nodesConfig.targetYearlyNodeRewardsUsd())
                     .multiply(USD_TO_TINYCENTS.toBigInteger())
                     .divide(BigInteger.valueOf(nodesConfig.numPeriodsToTargetUsd()));
-            final var minimumRewardInTinyCents = exchangeRateManager.getTinybarsFromTinyCents(
+            final var minimumRewardInTinycents = exchangeRateManager.getTinybarsFromTinycents(
                     Math.max(
                             0L,
                             BigInteger.valueOf(nodesConfig.minPerPeriodNodeRewardUsd())
                                     .multiply(USD_TO_TINYCENTS.toBigInteger())
                                     .longValue()),
                     now);
-            final long nodeReward = exchangeRateManager.getTinybarsFromTinyCents(targetPayInTinyCents.longValue(), now);
-            final var perActiveNodeReward = Math.max(minimumRewardInTinyCents, nodeReward - prePaidRewards);
+            final long nodeReward = exchangeRateManager.getTinybarsFromTinycents(targetPayInTinycents.longValue(), now);
+            final var perActiveNodeReward = Math.max(minimumRewardInTinycents, nodeReward - prePaidRewards);
 
             systemTransactions.dispatchNodeRewards(
                     state,
@@ -223,7 +224,7 @@ public class NodeRewardManager {
                     perActiveNodeReward,
                     rewardsAccountId,
                     rewardAccountBalance,
-                    minimumRewardInTinyCents,
+                    minimumRewardInTinycents,
                     rosterStore.getActiveRoster().rosterEntries());
         }
         // Record this as the last time node rewards were paid
@@ -236,6 +237,7 @@ public class NodeRewardManager {
         nodeRewardStore.resetForNewStakingPeriod();
         resetNodeRewards();
         ((CommittableWritableStates) writableStates).commit();
+        return true;
     }
 
     /**
@@ -246,7 +248,7 @@ public class NodeRewardManager {
      */
     private @NonNull NodeRewards nodeRewardInfoFrom(@NonNull final State state) {
         final var nodeRewardInfoState =
-                state.getReadableStates(TokenService.NAME).<NodeRewards>getSingleton(NODE_REWARDS_KEY);
+                state.getWritableStates(TokenService.NAME).<NodeRewards>getSingleton(NODE_REWARDS_KEY);
         return requireNonNull(nodeRewardInfoState.get());
     }
 
@@ -286,8 +288,8 @@ public class NodeRewardManager {
      */
     private List<Long> missingJudgesInLastRoundOf(@NonNull final State state) {
         final var readablePlatformState =
-                state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
-        final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+                state.getWritableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
+        final var rosterStore = new ReadableRosterStoreImpl(state.getWritableStates(RosterService.NAME));
         final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judgeIds().stream()
                 .map(JudgeId::creatorId)
                 .collect(toCollection(HashSet::new));
