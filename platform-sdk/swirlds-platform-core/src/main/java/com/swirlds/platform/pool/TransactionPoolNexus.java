@@ -2,7 +2,6 @@
 package com.swirlds.platform.pool;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
-import static org.hiero.base.utility.CompareTo.isLessThan;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
@@ -196,7 +195,7 @@ public class TransactionPoolNexus implements TransactionSupplier {
      * @param duration the amount of time that the system has been in an unhealthy state
      */
     public synchronized void reportUnhealthyDuration(@NonNull final Duration duration) {
-        healthy = isLessThan(duration, maximumPermissibleUnhealthyDuration);
+        healthy = duration.isZero();
     }
 
     /**
@@ -265,6 +264,10 @@ public class TransactionPoolNexus implements TransactionSupplier {
      */
     public synchronized boolean hasBufferedSignatureTransactions() {
         return bufferedSignatureTransactionCount > 0;
+    }
+
+    public synchronized boolean isEmpty() {
+        return bufferedTransactions.isEmpty() && priorityBufferedTransactions.isEmpty();
     }
 
     /**

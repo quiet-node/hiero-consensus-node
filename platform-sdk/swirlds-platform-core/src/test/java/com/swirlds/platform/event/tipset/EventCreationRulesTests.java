@@ -234,7 +234,8 @@ class EventCreationRulesTests {
     @Test
     void platformHealthRuleTest() {
         final AtomicReference<Duration> unhealthyDuration = new AtomicReference<>(Duration.ZERO);
-        final EventCreationRule rule = new PlatformHealthRule(Duration.ofSeconds(5), unhealthyDuration::get);
+        final EventCreationRule rule =
+                new PlatformHealthRule(Duration.ofSeconds(5), unhealthyDuration::get, () -> true);
 
         assertTrue(rule.isEventCreationPermitted());
 

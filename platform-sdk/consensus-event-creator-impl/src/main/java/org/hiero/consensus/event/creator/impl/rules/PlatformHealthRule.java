@@ -17,6 +17,7 @@ public class PlatformHealthRule implements EventCreationRule {
 
     private final Duration maximumPermissibleUnhealthyDuration;
     private final Supplier<Duration> currentUnhealthyDurationSupplier;
+    private final Supplier<Boolean> noPendingTransactions;
 
     /**
      * Constructor.
@@ -27,10 +28,12 @@ public class PlatformHealthRule implements EventCreationRule {
      */
     public PlatformHealthRule(
             @NonNull final Duration maximumPermissibleUnhealthyDuration,
-            @NonNull final Supplier<Duration> currentUnhealthyDurationSupplier) {
+            @NonNull final Supplier<Duration> currentUnhealthyDurationSupplier,
+            @NonNull final Supplier<Boolean> noPendingTransactions) {
 
         this.maximumPermissibleUnhealthyDuration = Objects.requireNonNull(maximumPermissibleUnhealthyDuration);
         this.currentUnhealthyDurationSupplier = Objects.requireNonNull(currentUnhealthyDurationSupplier);
+        this.noPendingTransactions = Objects.requireNonNull(noPendingTransactions);
     }
 
     /**
@@ -38,7 +41,8 @@ public class PlatformHealthRule implements EventCreationRule {
      */
     @Override
     public boolean isEventCreationPermitted() {
-        return isLessThanOrEqualTo(currentUnhealthyDurationSupplier.get(), maximumPermissibleUnhealthyDuration);
+        return !noPendingTransactions.get()
+                || isLessThanOrEqualTo(currentUnhealthyDurationSupplier.get(), maximumPermissibleUnhealthyDuration);
     }
 
     /**
