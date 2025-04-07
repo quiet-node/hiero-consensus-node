@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.consistency;
 
-import static com.swirlds.common.utility.ByteUtils.longToByteArray;
+import static org.hiero.base.utility.ByteUtils.longToByteArray;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.mock;
 
 import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.test.fixtures.Randotron;
-import com.swirlds.platform.consensus.ConsensusSnapshot;
-import com.swirlds.platform.consensus.EventWindow;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.internal.ConsensusRound;
-import com.swirlds.platform.system.Round;
 import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.ConsensusRound;
+import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.hashgraph.Round;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -63,13 +63,7 @@ class ConsistencyTestingToolRoundTests {
         Mockito.when(mockSnapshot.round()).thenReturn(roundReceived);
 
         return new ConsensusRound(
-                mock(Roster.class),
-                mockEvents,
-                mock(PlatformEvent.class),
-                mock(EventWindow.class),
-                mockSnapshot,
-                false,
-                Instant.now());
+                mock(Roster.class), mockEvents, mock(EventWindow.class), mockSnapshot, false, Instant.now());
     }
 
     @Test

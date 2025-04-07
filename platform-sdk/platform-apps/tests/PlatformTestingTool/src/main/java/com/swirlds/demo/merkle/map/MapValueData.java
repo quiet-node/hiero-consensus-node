@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.merkle.map;
 
-import com.swirlds.common.crypto.CryptographyHolder;
-import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
+import com.swirlds.common.crypto.Cryptography;
+import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.merkle.MerkleLeaf;
 import com.swirlds.common.merkle.impl.PartialMerkleLeaf;
 import com.swirlds.common.merkle.utility.Keyed;
@@ -13,8 +11,12 @@ import com.swirlds.merkle.test.fixtures.map.pta.MapValue;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Objects;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.io.streams.SerializableDataInputStream;
+import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
 
 public class MapValueData extends PartialMerkleLeaf implements Keyed<MapKey>, MapValue, Serializable, MerkleLeaf {
+    private static final Cryptography CRYPTOGRAPHY = CryptographyProvider.getInstance();
 
     public static final long CLASS_ID = 0x206bc63a03b16c28L;
 
@@ -116,7 +118,7 @@ public class MapValueData extends PartialMerkleLeaf implements Keyed<MapKey>, Ma
             return getHash();
         }
 
-        CryptographyHolder.get().digestSync(this);
+        CRYPTOGRAPHY.digestSync(this);
         return getHash();
     }
 

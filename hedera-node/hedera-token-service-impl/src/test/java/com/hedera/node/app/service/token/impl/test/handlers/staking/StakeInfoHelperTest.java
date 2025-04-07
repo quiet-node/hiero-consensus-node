@@ -15,9 +15,11 @@ import static com.hedera.node.app.service.token.impl.test.handlers.staking.EndOf
 import static com.hedera.node.app.service.token.impl.test.handlers.staking.EndOfStakingPeriodUpdaterTest.STAKING_INFO_2;
 import static com.hedera.node.app.service.token.impl.test.handlers.staking.EndOfStakingPeriodUpdaterTest.STAKING_INFO_3;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 
-import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.state.common.EntityNumber;
+import com.hedera.hapi.node.state.entity.EntityCounts;
+import com.hedera.hapi.node.state.token.NetworkStakingRewards;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.service.token.impl.WritableNetworkStakingRewardsStore;
@@ -26,7 +28,6 @@ import com.hedera.node.app.service.token.impl.handlers.staking.StakeInfoHelper;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.node.app.spi.fixtures.info.FakeNetworkInfo;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
-import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
@@ -38,7 +39,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -59,9 +59,11 @@ class StakeInfoHelperTest {
     void setup() {
         entityIdStore = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new WritableSingletonStateBase<>(ENTITY_ID_STATE_KEY, () -> null, c -> {}),
+                new WritableSingletonStateBase<>(
+                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}),
                 ENTITY_COUNTS_KEY,
-                new WritableSingletonStateBase<>(ENTITY_COUNTS_KEY, () -> null, c -> {}))));
+                new WritableSingletonStateBase<>(
+                        ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}))));
     }
 
     @ParameterizedTest
@@ -95,18 +97,20 @@ class StakeInfoHelperTest {
     }
 
     @Test
-    void marksNonExistingNodesToDeletedInStateAndAddsNewNodesToState() throws ParseException {
-        final var captor = ArgumentCaptor.forClass(Transaction.class);
+    void marksNonExistingNodesToDeletedInStateAndAddsNewNodesToState() {
         // State has nodeIds 1, 2, 3
         final var stakingInfosState = new MapWritableKVState.Builder<EntityNumber, StakingNodeInfo>(STAKING_INFO_KEY)
                 .value(NODE_NUM_1, STAKING_INFO_1)
                 .value(NODE_NUM_2, STAKING_INFO_2)
                 .value(NODE_NUM_3, STAKING_INFO_3)
                 .build();
+
         final var newStates = newStatesInstance(stakingInfosState);
         infoStore = new WritableStakingInfoStore(newStates, entityIdStore);
         // Platform address book has node Ids 2, 4, 8
         final var networkInfo = new FakeNetworkInfo();
+
+        given(rewardsStore.get()).willReturn(NetworkStakingRewards.DEFAULT);
 
         // Should update the state to mark node 1 and 3 as deleted
         subject.adjustPostUpgradeStakes(networkInfo, DEFAULT_CONFIG, infoStore, rewardsStore);

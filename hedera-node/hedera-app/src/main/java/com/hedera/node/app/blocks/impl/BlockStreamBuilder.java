@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl;
 
-import static com.hedera.hapi.node.base.HederaFunctionality.CONSENSUS_SUBMIT_MESSAGE;
 import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_CREATE;
-import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_TRANSFER;
-import static com.hedera.hapi.node.base.HederaFunctionality.TOKEN_AIRDROP;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.IDENTICAL_SCHEDULE_ALREADY_CREATED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.OK;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
@@ -18,13 +15,10 @@ import com.hedera.hapi.block.stream.output.CallContractOutput;
 import com.hedera.hapi.block.stream.output.CreateAccountOutput;
 import com.hedera.hapi.block.stream.output.CreateContractOutput;
 import com.hedera.hapi.block.stream.output.CreateScheduleOutput;
-import com.hedera.hapi.block.stream.output.CryptoTransferOutput;
 import com.hedera.hapi.block.stream.output.EthereumOutput;
 import com.hedera.hapi.block.stream.output.SignScheduleOutput;
 import com.hedera.hapi.block.stream.output.StateChange;
 import com.hedera.hapi.block.stream.output.StateChanges;
-import com.hedera.hapi.block.stream.output.SubmitMessageOutput;
-import com.hedera.hapi.block.stream.output.TokenAirdropOutput;
 import com.hedera.hapi.block.stream.output.TransactionOutput;
 import com.hedera.hapi.block.stream.output.TransactionResult;
 import com.hedera.hapi.block.stream.output.UtilPrngOutput;
@@ -53,6 +47,7 @@ import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
 import com.hedera.hapi.platform.event.EventTransaction;
+import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChanges;
@@ -96,6 +91,7 @@ import com.hedera.node.app.service.token.records.TokenCreateStreamBuilder;
 import com.hedera.node.app.service.token.records.TokenMintStreamBuilder;
 import com.hedera.node.app.service.token.records.TokenUpdateStreamBuilder;
 import com.hedera.node.app.service.util.impl.records.PrngStreamBuilder;
+import com.hedera.node.app.service.util.impl.records.ReplayableFeeStreamBuilder;
 import com.hedera.node.app.spi.records.RecordSource;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
@@ -147,7 +143,8 @@ public class BlockStreamBuilder
                 TokenAccountWipeStreamBuilder,
                 CryptoUpdateStreamBuilder,
                 NodeCreateStreamBuilder,
-                TokenAirdropStreamBuilder {
+                TokenAirdropStreamBuilder,
+                ReplayableFeeStreamBuilder {
     private static final Comparator<TokenAssociation> TOKEN_ASSOCIATION_COMPARATOR =
             Comparator.<TokenAssociation>comparingLong(a -> a.tokenIdOrThrow().tokenNum())
                     .thenComparingLong(a -> a.accountIdOrThrow().accountNumOrThrow());
@@ -258,10 +255,6 @@ public class BlockStreamBuilder
      * The token transfer lists resulting from the transaction.
      */
     private List<TokenTransferList> tokenTransferLists = new LinkedList<>();
-    /**
-     * Whether the transaction assessed custom fees.
-     */
-    private boolean hasAssessedCustomFees = false;
     /**
      * The assessed custom fees resulting from the transaction.
      */
@@ -382,6 +375,11 @@ public class BlockStreamBuilder
     private final TransactionCustomizer customizer;
 
     /**
+     * The builder {@link EventTransaction}'s role in a state changes "group".
+     */
+    private TransactionGroupRole role = TransactionGroupRole.STANDALONE;
+
+    /**
      * Constructs a builder for a user transaction with the given characteristics.
      * @param reversingBehavior the reversing behavior
      * @param customizer the customizer
@@ -459,7 +457,7 @@ public class BlockStreamBuilder
          * @param <T> the Java type of the view
          */
         @SuppressWarnings("unchecked")
-        private <T extends Record> T toView(@NonNull final BlockItemsTranslator translator, @NonNull final View view) {
+        private <T> T toView(@NonNull final BlockItemsTranslator translator, @NonNull final View view) {
             int i = 0;
             final var n = blockItems.size();
             TransactionResult result = null;
@@ -505,6 +503,7 @@ public class BlockStreamBuilder
         blockItems.add(BlockItem.newBuilder()
                 .eventTransaction(EventTransaction.newBuilder()
                         .applicationTransaction(getSerializedTransaction())
+                        .transactionGroupRole(role)
                         .build())
                 .build());
         blockItems.add(transactionResultBlockItem());
@@ -518,6 +517,11 @@ public class BlockStreamBuilder
                     .build());
         }
         return new Output(blockItems, translationContext());
+    }
+
+    @Override
+    public void setTransactionGroupRole(@NonNull final TransactionGroupRole role) {
+        this.role = requireNonNull(role);
     }
 
     @Override
@@ -541,6 +545,11 @@ public class BlockStreamBuilder
     @Override
     public int getNumAutoAssociations() {
         return automaticTokenAssociations.size();
+    }
+
+    @Override
+    public HederaFunctionality functionality() {
+        return functionality;
     }
 
     @Override
@@ -690,6 +699,16 @@ public class BlockStreamBuilder
     }
 
     @Override
+    public void setReplayedFees(@NonNull final TransferList transferList) {
+        requireNonNull(transferList);
+        if (this.transferList == null || this.transferList == TransferList.DEFAULT) {
+            this.transferList = transferList;
+        } else {
+            throw new IllegalStateException("Transfer list already set");
+        }
+    }
+
+    @Override
     @NonNull
     public BlockStreamBuilder tokenTransferLists(@NonNull final List<TokenTransferList> tokenTransferLists) {
         this.tokenTransferLists = requireNonNull(tokenTransferLists);
@@ -730,7 +749,6 @@ public class BlockStreamBuilder
     @NonNull
     public BlockStreamBuilder assessedCustomFees(@NonNull final List<AssessedCustomFee> assessedCustomFees) {
         this.assessedCustomFees = requireNonNull(assessedCustomFees);
-        hasAssessedCustomFees = true;
         return this;
     }
 
@@ -1049,6 +1067,9 @@ public class BlockStreamBuilder
             automaticTokenAssociations.sort(TOKEN_ASSOCIATION_COMPARATOR);
             transactionResultBuilder.automaticTokenAssociations(automaticTokenAssociations);
         }
+        if (!assessedCustomFees.isEmpty()) {
+            transactionResultBuilder.assessedCustomFees(assessedCustomFees);
+        }
         return BlockItem.newBuilder()
                 .transactionResult(
                         transactionResultBuilder.transferList(transferList).build())
@@ -1109,18 +1130,6 @@ public class BlockStreamBuilder
                     .signSchedule(SignScheduleOutput.newBuilder()
                             .scheduledTransactionId(scheduledTransactionId)
                             .build())));
-        }
-        if (functionality == CRYPTO_TRANSFER && hasAssessedCustomFees) {
-            items.add(itemWith(TransactionOutput.newBuilder()
-                    .cryptoTransfer(CryptoTransferOutput.newBuilder()
-                            .assessedCustomFees(assessedCustomFees)
-                            .build())));
-        } else if (functionality == TOKEN_AIRDROP && hasAssessedCustomFees) {
-            items.add(
-                    itemWith(TransactionOutput.newBuilder().tokenAirdrop(new TokenAirdropOutput(assessedCustomFees))));
-        } else if (functionality == CONSENSUS_SUBMIT_MESSAGE && hasAssessedCustomFees) {
-            items.add(itemWith(
-                    TransactionOutput.newBuilder().submitMessage(new SubmitMessageOutput(assessedCustomFees))));
         }
 
         if (functionality == CRYPTO_CREATE && accountId != null) {

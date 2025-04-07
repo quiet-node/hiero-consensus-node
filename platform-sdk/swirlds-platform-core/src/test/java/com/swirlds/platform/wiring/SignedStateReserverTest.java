@@ -5,8 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.merkle.MerkleNode;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.common.utility.ValueReference;
 import com.swirlds.component.framework.model.WiringModel;
@@ -34,18 +38,21 @@ class SignedStateReserverTest {
         final PlatformContext platformContext =
                 TestPlatformContextBuilder.create().build();
 
-        MerkleNodeState mock = mock(MerkleNodeState.class);
+        MerkleNodeState mockState = mock(MerkleNodeState.class);
+        MerkleNode root = mock(MerkleNode.class);
+        when(mockState.getRoot()).thenReturn(root);
         final SignedState signedState = new SignedState(
                 platformContext.getConfiguration(),
                 mock(SignatureVerifier.class),
-                mock,
+                mockState,
                 "create",
                 false,
                 false,
                 false,
                 mock(PlatformStateFacade.class));
 
-        final WiringModel model = WiringModelBuilder.create(platformContext).build();
+        final WiringModel model =
+                WiringModelBuilder.create(new NoOpMetrics(), Time.getCurrent()).build();
         final TaskScheduler<ReservedSignedState> taskScheduler = model.<ReservedSignedState>schedulerBuilder(
                         "scheduler")
                 .withType(TaskSchedulerType.DIRECT)

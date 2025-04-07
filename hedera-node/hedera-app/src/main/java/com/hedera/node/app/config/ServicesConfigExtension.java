@@ -23,6 +23,7 @@ import com.hedera.node.config.converter.ScaleFactorConverter;
 import com.hedera.node.config.converter.SemanticVersionConverter;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.ApiPermissionConfig;
+import com.hedera.node.config.data.AtomicBatchConfig;
 import com.hedera.node.config.data.AutoCreationConfig;
 import com.hedera.node.config.data.AutoRenew2Config;
 import com.hedera.node.config.data.AutoRenewConfig;
@@ -40,6 +41,7 @@ import com.hedera.node.config.data.FeesConfig;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.GrpcConfig;
 import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.config.data.JumboTransactionsConfig;
 import com.hedera.node.config.data.LazyCreationConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NettyConfig;
@@ -112,8 +114,10 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 TopicsConfig.class,
                 TraceabilityConfig.class,
                 UtilPrngConfig.class,
+                AtomicBatchConfig.class,
                 VersionConfig.class,
-                TssConfig.class);
+                TssConfig.class,
+                JumboTransactionsConfig.class);
     }
 
     @NonNull

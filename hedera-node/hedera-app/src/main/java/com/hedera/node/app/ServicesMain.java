@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app;
 
-import static com.hedera.node.app.history.impl.HistoryLibraryCodecImpl.HISTORY_LIBRARY_CODEC;
 import static com.swirlds.common.io.utility.FileUtils.getAbsolutePath;
 import static com.swirlds.common.io.utility.FileUtils.rethrowIO;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
@@ -25,6 +24,8 @@ import static com.swirlds.platform.util.BootstrapUtils.getNodesToRun;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.hedera.hapi.node.base.AccountID;
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.node.app.hints.impl.HintsLibraryImpl;
 import com.hedera.node.app.hints.impl.HintsServiceImpl;
@@ -38,22 +39,19 @@ import com.hedera.node.app.service.addressbook.AddressBookService;
 import com.hedera.node.app.service.addressbook.impl.ReadableNodeStoreImpl;
 import com.hedera.node.app.services.OrderedServiceMigrator;
 import com.hedera.node.app.services.ServicesRegistryImpl;
-import com.hedera.node.app.state.StateLifecyclesImpl;
+import com.hedera.node.app.state.ConsensusStateEventHandlerImpl;
 import com.hedera.node.app.tss.TssBlockHashSigner;
-import com.hedera.node.app.version.ServicesSoftwareVersion;
+import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.Network;
+import com.hedera.node.internal.network.NodeMetadata;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.RuntimeConstructable;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.CryptographyFactory;
-import com.swirlds.common.crypto.CryptographyHolder;
+import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.RecycleBin;
-import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.config.extensions.sources.SystemEnvironmentConfigSource;
@@ -70,11 +68,12 @@ import com.swirlds.platform.config.legacy.LegacyConfigProperties;
 import com.swirlds.platform.config.legacy.LegacyConfigPropertiesLoader;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.roster.RosterUtils;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.StateLifecycles;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.ReadableRosterStoreImpl;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
+import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.StartupStateUtils;
 import com.swirlds.platform.system.InitTrigger;
@@ -85,16 +84,19 @@ import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.util.BootstrapUtils;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.constructable.RuntimeConstructable;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Main entry point.
@@ -142,6 +144,14 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * {@inheritDoc}
      */
     @Override
+    public SemanticVersion getSemanticVersion() {
+        return hederaOrThrow().getSoftwareVersion().getPbjSemanticVersion();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void init(@NonNull final Platform platform, @NonNull final NodeId nodeId) {
         requireNonNull(platform);
         requireNonNull(nodeId);
@@ -160,8 +170,8 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * {@inheritDoc}
      */
     @Override
-    public StateLifecycles<MerkleNodeState> newStateLifecycles() {
-        return new StateLifecyclesImpl(hederaOrThrow());
+    public ConsensusStateEventHandler<MerkleNodeState> newConsensusStateEvenHandler() {
+        return new ConsensusStateEventHandlerImpl(hederaOrThrow());
     }
 
     /**
@@ -196,7 +206,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      *     and the working directory <i>settings.txt</i>, providing the same
      *     {@link Hedera#newStateRoot()} method reference as the genesis state
      *     factory. (<b>IMPORTANT:</b> This step instantiates and invokes
-     *     {@link StateLifecycles#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SoftwareVersion)}
+     *     {@link ConsensusStateEventHandler#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SemanticVersion)}
      *     on a {@link MerkleNodeState} instance that delegates the call back to our
      *     Hedera instance.)</li>
      *     <li>Call {@link Hedera#init(Platform, NodeId)} to complete startup phase
@@ -226,7 +236,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * </ol>
      *  Now, note that {@link Hedera#newStateRoot()} returns {@link MerkleNodeState}
      *  instances that delegate their lifecycle methods to an injected instance of
-     *  {@link StateLifecycles}---and the implementation of that
+     *  {@link ConsensusStateEventHandler}---and the implementation of that
      *  injected by {@link Hedera#newStateRoot()} delegates these calls back to the Hedera
      *  instance itself.
      *  <p>
@@ -255,10 +265,8 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         final var platformConfig = buildPlatformConfig();
         // Immediately initialize the cryptography and merkle cryptography factories
         // to avoid using default behavior instead of that defined in platformConfig
-        final var cryptography = CryptographyFactory.create();
-        CryptographyHolder.set(cryptography);
-        final var merkleCryptography = MerkleCryptographyFactory.create(platformConfig, cryptography);
-        MerkleCryptoFactory.set(merkleCryptography);
+        final var cryptography = CryptographyProvider.getInstance();
+        final var merkleCryptography = MerkleCryptographyFactory.create(platformConfig);
 
         // Determine which nodes were _requested_ to run from the command line
         final var cliNodesToRun = commandLineArgs.localNodesToStart();
@@ -275,10 +283,10 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         // --- Initialize the platform metrics and the Hedera instance ---
         setupGlobalMetrics(platformConfig);
         metrics = getMetricsProvider().createPlatformMetrics(selfId);
-        final PlatformStateFacade platformStateFacade = new PlatformStateFacade(ServicesSoftwareVersion::new);
+        final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
         hedera = newHedera(metrics, platformStateFacade);
         final var version = hedera.getSoftwareVersion();
-        final var isGenesis = new AtomicBoolean(false);
+        final AtomicReference<Network> genesisNetwork = new AtomicReference<>();
         logger.info("Starting node {} with version {}", selfId, version);
 
         // --- Build required infrastructure to load the initial state, then initialize the States API ---
@@ -287,33 +295,43 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         final var fileSystemManager = FileSystemManager.create(platformConfig);
         final var recycleBin =
                 RecycleBin.create(metrics, platformConfig, getStaticThreadManager(), time, fileSystemManager, selfId);
-        StateLifecycles<MerkleNodeState> stateLifecycles = hedera.newStateLifecycles();
-        final var maybeDiskAddressBook = loadLegacyAddressBook();
-        final var reservedState = loadInitialState(
+        ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler = hedera.newConsensusStateEvenHandler();
+        final PlatformContext platformContext = PlatformContext.create(
+                platformConfig,
+                Time.getCurrent(),
+                metrics,
+                FileSystemManager.create(platformConfig),
+                recycleBin,
+                merkleCryptography);
+        final Optional<AddressBook> maybeDiskAddressBook = loadLegacyAddressBook();
+        final HashedReservedSignedState reservedState = loadInitialState(
                 platformConfig,
                 recycleBin,
-                version,
+                version.getPbjSemanticVersion(),
                 () -> {
-                    isGenesis.set(true);
-                    Network genesisNetwork;
+                    Network network;
                     try {
-                        genesisNetwork = hedera.startupNetworks().genesisNetworkOrThrow(platformConfig);
+                        network = hedera.startupNetworks().genesisNetworkOrThrow(platformConfig);
                     } catch (Exception ignore) {
                         // Fallback to the legacy address book if genesis-network.json or equivalent not loaded
-                        genesisNetwork = DiskStartupNetworks.fromLegacyAddressBook(maybeDiskAddressBook.orElseThrow());
+                        network = DiskStartupNetworks.fromLegacyAddressBook(
+                                maybeDiskAddressBook.orElseThrow(),
+                                hedera.bootstrapConfigProvider().getConfiguration());
                     }
+                    genesisNetwork.set(network);
                     final var genesisState = hedera.newStateRoot();
-                    hedera.initializeStatesApi(genesisState, GENESIS, genesisNetwork, platformConfig);
+                    hedera.initializeStatesApi(genesisState, GENESIS, platformConfig);
                     return genesisState;
                 },
                 Hedera.APP_NAME,
                 Hedera.SWIRLD_NAME,
                 selfId,
-                platformStateFacade);
-        final var initialState = reservedState.state();
-        final var state = initialState.get().getState();
-        if (!isGenesis.get()) {
-            hedera.initializeStatesApi(state, RESTART, null, platformConfig);
+                platformStateFacade,
+                platformContext);
+        final ReservedSignedState initialState = reservedState.state();
+        final MerkleNodeState state = initialState.get().getState();
+        if (genesisNetwork.get() == null) {
+            hedera.initializeStatesApi(state, RESTART, platformConfig);
         }
         hedera.setInitialStateHash(reservedState.hash());
 
@@ -328,25 +346,21 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         final var networkKeysAndCerts = initNodeSecurity(addressBook, platformConfig, Set.copyOf(nodesToRun));
         final var keysAndCerts = networkKeysAndCerts.get(selfId);
         cryptography.digestSync(addressBook);
-        final var platformContext = PlatformContext.create(
-                platformConfig,
-                Time.getCurrent(),
-                metrics,
-                cryptography,
-                FileSystemManager.create(platformConfig),
-                recycleBin,
-                merkleCryptography);
 
         // --- Now build the platform and start it ---
         final var rosterHistory = RosterUtils.createRosterHistory(rosterStore);
         final var platformBuilder = PlatformBuilder.create(
                         Hedera.APP_NAME,
                         Hedera.SWIRLD_NAME,
-                        version,
+                        version.getPbjSemanticVersion(),
                         initialState,
-                        stateLifecycles,
+                        consensusStateEventHandler,
                         selfId,
-                        canonicalEventStreamLoc(selfId.id(), state),
+                        // If at genesis, base the event stream location on the genesis network metadata
+                        Optional.ofNullable(genesisNetwork.get())
+                                .map(network -> eventStreamLocOrThrow(network, selfId.id()))
+                                // Otherwise derive if from the node's id in state or
+                                .orElseGet(() -> canonicalEventStreamLoc(selfId.id(), state)),
                         rosterHistory,
                         platformStateFacade)
                 .withPlatformContext(platformContext)
@@ -355,8 +369,29 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 .withSystemTransactionEncoderCallback(hedera::encodeSystemTransaction);
         final var platform = platformBuilder.build();
         hedera.init(platform, selfId);
+
+        // Initialize block node connections before starting the platform
+        final var waitPeriodForActiveConnection =
+                platformConfig.getConfigData(BlockStreamConfig.class).waitPeriodForActiveConnection();
+        hedera.initializeBlockNodeConnections(Duration.ofMinutes(waitPeriodForActiveConnection));
+
         platform.start();
         hedera.run();
+    }
+
+    /**
+     * Returns the event stream location for the given node id based on the given network metadata.
+     * @param network the network metadata
+     * @param nodeId the node id
+     * @return the event stream location
+     */
+    private static String eventStreamLocOrThrow(@NonNull final Network network, final long nodeId) {
+        return network.nodeMetadata().stream()
+                .map(NodeMetadata::nodeOrThrow)
+                .filter(node -> node.nodeId() == nodeId)
+                .map(node -> canonicalEventStreamLoc(node.accountIdOrThrow()))
+                .findFirst()
+                .orElseThrow();
     }
 
     /**
@@ -367,10 +402,28 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * @return the event stream name
      */
     private static String canonicalEventStreamLoc(final long nodeId, @NonNull final State root) {
-        final var nodeStore = new ReadableNodeStoreImpl(
-                root.getReadableStates(AddressBookService.NAME),
-                new ReadableEntityIdStoreImpl(root.getReadableStates(EntityIdService.NAME)));
-        final var accountId = requireNonNull(nodeStore.get(nodeId)).accountIdOrThrow();
+        try {
+            final var nodeStore = new ReadableNodeStoreImpl(
+                    root.getReadableStates(AddressBookService.NAME),
+                    new ReadableEntityIdStoreImpl(root.getReadableStates(EntityIdService.NAME)));
+            final var accountId = requireNonNull(nodeStore.get(nodeId)).accountIdOrThrow();
+            return canonicalEventStreamLoc(accountId);
+        } catch (Exception ignore) {
+            // If this node id was not in the state address book, as a final fallback assume
+            // we are restarting from round zero state and try to use genesis startup assets,
+            // which are not archived until at least one round has been handled
+            final var genesisNetwork =
+                    hederaOrThrow().genesisNetworkSupplierOrThrow().get();
+            return eventStreamLocOrThrow(genesisNetwork, nodeId);
+        }
+    }
+
+    /**
+     * Returns the event stream name for the given account id.
+     * @return the event stream name
+     */
+    private static String canonicalEventStreamLoc(@NonNull final AccountID accountId) {
+        requireNonNull(accountId);
         return accountId.shardNum() + "." + accountId.realmNum() + "." + accountId.accountNumOrThrow();
     }
 
@@ -391,14 +444,13 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 InstantSource.system(),
                 DiskStartupNetworks::new,
                 (appContext, bootstrapConfig) -> new HintsServiceImpl(
-                        metrics, ForkJoinPool.commonPool(), appContext, new HintsLibraryImpl(), bootstrapConfig),
-                (appContext, bootstrapConfig) -> new HistoryServiceImpl(
                         metrics,
                         ForkJoinPool.commonPool(),
                         appContext,
-                        new HistoryLibraryImpl(),
-                        HISTORY_LIBRARY_CODEC,
-                        bootstrapConfig),
+                        new HintsLibraryImpl(),
+                        bootstrapConfig.getConfigData(BlockStreamConfig.class).blockPeriod()),
+                (appContext, bootstrapConfig) -> new HistoryServiceImpl(
+                        metrics, ForkJoinPool.commonPool(), appContext, new HistoryLibraryImpl(), bootstrapConfig),
                 TssBlockHashSigner::new,
                 metrics,
                 platformStateFacade);
@@ -489,21 +541,22 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
     private static HashedReservedSignedState loadInitialState(
             @NonNull final Configuration configuration,
             @NonNull final RecycleBin recycleBin,
-            @NonNull final SoftwareVersion softwareVersion,
+            @NonNull final SemanticVersion softwareVersion,
             @NonNull final Supplier<MerkleNodeState> stateRootSupplier,
             @NonNull final String mainClassName,
             @NonNull final String swirldName,
             @NonNull final NodeId selfId,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final PlatformContext platformContext) {
         final var loadedState = StartupStateUtils.loadStateFile(
-                configuration, recycleBin, selfId, mainClassName, swirldName, softwareVersion, platformStateFacade);
+                recycleBin, selfId, mainClassName, swirldName, softwareVersion, platformStateFacade, platformContext);
         try (loadedState) {
             if (loadedState.isNotNull()) {
                 logger.info(
                         STARTUP.getMarker(),
                         new SavedStateLoadedPayload(
                                 loadedState.get().getRound(), loadedState.get().getConsensusTimestamp()));
-                return copyInitialSignedState(configuration, loadedState.get(), platformStateFacade);
+                return copyInitialSignedState(loadedState.get(), platformStateFacade, platformContext);
             }
         }
         final var stateRoot = stateRootSupplier.get();
@@ -516,9 +569,10 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 false,
                 false,
                 platformStateFacade);
+        signedState.init(platformContext);
         final var reservedSignedState = signedState.reserve("initial reservation on genesis state");
         try (reservedSignedState) {
-            return copyInitialSignedState(configuration, reservedSignedState.get(), platformStateFacade);
+            return copyInitialSignedState(reservedSignedState.get(), platformStateFacade, platformContext);
         }
     }
 

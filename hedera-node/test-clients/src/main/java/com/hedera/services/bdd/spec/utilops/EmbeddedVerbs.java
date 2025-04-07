@@ -31,6 +31,7 @@ import com.hedera.services.bdd.spec.utilops.embedded.MutateAccountOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateKVStateOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateNodeOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateScheduleCountsOp;
+import com.hedera.services.bdd.spec.utilops.embedded.MutateSingletonOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateStakingInfosOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateTokenOp;
 import com.hedera.services.bdd.spec.utilops.embedded.ViewAccountOp;
@@ -48,6 +49,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
+import java.util.function.UnaryOperator;
 
 /**
  * Contains operations that are usable only with an {@link EmbeddedNetwork}.
@@ -55,6 +57,14 @@ import java.util.function.IntConsumer;
 public final class EmbeddedVerbs {
     private EmbeddedVerbs() {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Returns an operation that allows the test author to handle the next round in a repeatable embedded network,
+     * typically useful to handle the query payment from a just-submitted transaction.
+     */
+    public static SpecOperation handleAnyRepeatableQueryPayment() {
+        return doingContextual(spec -> spec.repeatableEmbeddedHederaOrThrow().handleNextRoundIfPresent());
     }
 
     /**
@@ -122,12 +132,30 @@ public final class EmbeddedVerbs {
      * @return the operation that will expose the record to the observer
      * @param <T> the type of the record
      */
-    public static <T extends Record> ViewSingletonOp<T> viewSingleton(
+    public static <T> ViewSingletonOp<T> viewSingleton(
             @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Consumer<T> observer) {
         requireNonNull(serviceName);
         requireNonNull(stateKey);
         requireNonNull(observer);
-        return new ViewSingletonOp<T>(serviceName, stateKey, observer);
+        return new ViewSingletonOp<>(serviceName, stateKey, observer);
+    }
+
+    /**
+     * Returns an operation that allows the test author to mutate a singleton record in an embedded state.
+     * @param serviceName the name of the service that manages the record
+     * @param stateKey the key of the record in the state
+     * @param mutator the observer that will receive the record
+     * @return the operation that will expose the record to the mutator
+     * @param <T> the type of the record
+     */
+    public static <T> MutateSingletonOp<T> mutateSingleton(
+            @NonNull final String serviceName,
+            @NonNull final String stateKey,
+            @NonNull final UnaryOperator<T> mutator) {
+        requireNonNull(serviceName);
+        requireNonNull(stateKey);
+        requireNonNull(mutator);
+        return new MutateSingletonOp<>(serviceName, stateKey, mutator);
     }
 
     /**
@@ -140,7 +168,7 @@ public final class EmbeddedVerbs {
      * @param <K> the type of the key
      * @param <V> the type of the value
      */
-    public static <K extends Record, V extends Record> ViewKVStateOp<K, V> viewKVState(
+    public static <K, V> ViewKVStateOp<K, V> viewKVState(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final Consumer<ReadableKVState<K, V>> observer) {
@@ -160,7 +188,7 @@ public final class EmbeddedVerbs {
      * @param <K> the type of the key
      * @param <V> the type of the value
      */
-    public static <K extends Record, V extends Record> MutateKVStateOp<K, V> mutateKVState(
+    public static <K, V> MutateKVStateOp<K, V> mutateKVState(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final Consumer<WritableKVState<K, V>> observer) {
@@ -180,7 +208,7 @@ public final class EmbeddedVerbs {
      * @param <K> the type of the key
      * @param <V> the type of the value
      */
-    public static <K extends Record, V extends Record> ViewMappingValueOp<K, V> viewMappedValue(
+    public static <K, V> ViewMappingValueOp<K, V> viewMappedValue(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final K key,

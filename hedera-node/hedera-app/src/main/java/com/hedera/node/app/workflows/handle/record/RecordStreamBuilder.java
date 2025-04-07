@@ -32,6 +32,7 @@ import com.hedera.hapi.node.transaction.SignedTransaction;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
+import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChanges;
@@ -63,13 +64,13 @@ import com.hedera.node.app.service.token.records.TokenCreateStreamBuilder;
 import com.hedera.node.app.service.token.records.TokenMintStreamBuilder;
 import com.hedera.node.app.service.token.records.TokenUpdateStreamBuilder;
 import com.hedera.node.app.service.util.impl.records.PrngStreamBuilder;
+import com.hedera.node.app.service.util.impl.records.ReplayableFeeStreamBuilder;
 import com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.state.SingleTransactionRecord;
 import com.hedera.node.app.state.SingleTransactionRecord.TransactionOutputs;
 import com.hedera.pbj.runtime.OneOf;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.crypto.DigestType;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.security.MessageDigest;
@@ -84,6 +85,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.hiero.consensus.model.crypto.DigestType;
 
 /**
  * A custom builder for create a {@link SingleTransactionRecord}.
@@ -126,7 +128,8 @@ public class RecordStreamBuilder
                 TokenAccountWipeStreamBuilder,
                 CryptoUpdateStreamBuilder,
                 NodeCreateStreamBuilder,
-                TokenAirdropStreamBuilder {
+                TokenAirdropStreamBuilder,
+                ReplayableFeeStreamBuilder {
     private static final Comparator<TokenAssociation> TOKEN_ASSOCIATION_COMPARATOR =
             Comparator.<TokenAssociation>comparingLong(a -> a.tokenId().tokenNum())
                     .thenComparingLong(a -> a.accountIdOrThrow().accountNum());
@@ -192,6 +195,7 @@ public class RecordStreamBuilder
     private TokenID tokenID;
     private ScheduleID scheduleID;
     private TokenType tokenType;
+    private HederaFunctionality function;
 
     public RecordStreamBuilder(
             @NonNull final ReversingBehavior reversingBehavior,
@@ -285,6 +289,11 @@ public class RecordStreamBuilder
 
         return new SingleTransactionRecord(
                 transaction, transactionRecord, transactionSidecarRecords, new TransactionOutputs(tokenType));
+    }
+
+    @Override
+    public void setTransactionGroupRole(@NonNull final TransactionGroupRole role) {
+        // No-op
     }
 
     @Override
@@ -510,6 +519,16 @@ public class RecordStreamBuilder
     @NonNull
     public TransferList transferList() {
         return transferList;
+    }
+
+    @Override
+    public void setReplayedFees(@NonNull final TransferList transferList) {
+        requireNonNull(transferList);
+        if (this.transferList == null || this.transferList == TransferList.DEFAULT) {
+            this.transferList = transferList;
+        } else {
+            throw new IllegalStateException("Transfer list already set");
+        }
     }
 
     /**
@@ -1160,12 +1179,17 @@ public class RecordStreamBuilder
 
     @Override
     public StreamBuilder functionality(@NonNull final HederaFunctionality functionality) {
-        // No-op
+        this.function = functionality;
         return this;
     }
 
     @Override
     public ScheduleID scheduleID() {
         return scheduleID;
+    }
+
+    @Override
+    public HederaFunctionality functionality() {
+        return function;
     }
 }

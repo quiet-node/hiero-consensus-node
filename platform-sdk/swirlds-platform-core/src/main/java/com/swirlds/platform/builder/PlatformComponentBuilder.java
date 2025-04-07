@@ -17,6 +17,8 @@ import com.swirlds.platform.components.consensus.DefaultConsensusEngine;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.crypto.PlatformSigner;
+import com.swirlds.platform.event.DefaultFutureEventBuffer;
+import com.swirlds.platform.event.FutureEventBuffer;
 import com.swirlds.platform.event.branching.BranchDetector;
 import com.swirlds.platform.event.branching.BranchReporter;
 import com.swirlds.platform.event.branching.DefaultBranchDetector;
@@ -32,15 +34,9 @@ import com.swirlds.platform.event.hashing.EventHasher;
 import com.swirlds.platform.event.orphan.DefaultOrphanBuffer;
 import com.swirlds.platform.event.orphan.OrphanBuffer;
 import com.swirlds.platform.event.preconsensus.DefaultInlinePcesWriter;
-import com.swirlds.platform.event.preconsensus.DefaultPcesSequencer;
-import com.swirlds.platform.event.preconsensus.DefaultPcesWriter;
 import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileManager;
-import com.swirlds.platform.event.preconsensus.PcesSequencer;
-import com.swirlds.platform.event.preconsensus.PcesWriter;
-import com.swirlds.platform.event.preconsensus.durability.DefaultRoundDurabilityBuffer;
-import com.swirlds.platform.event.preconsensus.durability.RoundDurabilityBuffer;
 import com.swirlds.platform.event.resubmitter.DefaultTransactionResubmitter;
 import com.swirlds.platform.event.resubmitter.TransactionResubmitter;
 import com.swirlds.platform.event.signing.DefaultSelfEventSigner;
@@ -82,7 +78,6 @@ import com.swirlds.platform.state.snapshot.DefaultStateSnapshotManager;
 import com.swirlds.platform.state.snapshot.StateSnapshotManager;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SystemExitUtils;
-import com.swirlds.platform.system.events.CesEvent;
 import com.swirlds.platform.system.status.DefaultStatusStateMachine;
 import com.swirlds.platform.system.status.StatusStateMachine;
 import com.swirlds.platform.util.MetricsDocUtils;
@@ -91,6 +86,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
+import org.hiero.consensus.model.event.CesEvent;
 
 /**
  * The advanced platform builder is responsible for constructing platform components. This class is exposed so that
@@ -125,11 +121,8 @@ public class PlatformComponentBuilder {
     private ConsensusEngine consensusEngine;
     private ConsensusEventStream consensusEventStream;
     private SignedStateSentinel signedStateSentinel;
-    private PcesSequencer pcesSequencer;
-    private RoundDurabilityBuffer roundDurabilityBuffer;
     private StatusStateMachine statusStateMachine;
     private TransactionPrehandler transactionPrehandler;
-    private PcesWriter pcesWriter;
     private InlinePcesWriter inlinePcesWriter;
     private IssDetector issDetector;
     private IssHandler issHandler;
@@ -145,6 +138,7 @@ public class PlatformComponentBuilder {
     private StateSigner stateSigner;
     private TransactionHandler transactionHandler;
     private LatestCompleteStateNotifier latestCompleteStateNotifier;
+    private FutureEventBuffer futureEventBuffer;
 
     private SwirldsPlatform swirldsPlatform;
 
@@ -353,7 +347,7 @@ public class PlatformComponentBuilder {
             eventSignatureValidator = new DefaultEventSignatureValidator(
                     blocks.platformContext(),
                     CryptoStatic::verifySignature,
-                    blocks.appVersion().getPbjSemanticVersion(),
+                    blocks.appVersion(),
                     blocks.rosterHistory().getPreviousRoster(),
                     blocks.rosterHistory().getCurrentRoster(),
                     blocks.intakeEventCounter());
@@ -573,71 +567,6 @@ public class PlatformComponentBuilder {
     }
 
     /**
-     * Provide a PCES sequencer in place of the platform's default PCES sequencer.
-     *
-     * @param pcesSequencer the PCES sequencer to use
-     * @return this builder
-     */
-    @NonNull
-    public PlatformComponentBuilder withPcesSequencer(@NonNull final PcesSequencer pcesSequencer) {
-        throwIfAlreadyUsed();
-        if (this.pcesSequencer != null) {
-            throw new IllegalStateException("PCES sequencer has already been set");
-        }
-        this.pcesSequencer = Objects.requireNonNull(pcesSequencer);
-        return this;
-    }
-
-    /**
-     * Build the PCES sequencer if it has not yet been built. If one has been provided via
-     * {@link #withPcesSequencer(PcesSequencer)}, that sequencer will be used. If this method is called more than once,
-     * only the first call will build the PCES sequencer. Otherwise, the default sequencer will be created and
-     * returned.
-     *
-     * @return the PCES sequencer
-     */
-    @NonNull
-    public PcesSequencer buildPcesSequencer() {
-        if (pcesSequencer == null) {
-            pcesSequencer = new DefaultPcesSequencer();
-        }
-        return pcesSequencer;
-    }
-
-    /**
-     * Provide a round durability buffer in place of the platform's default round durability buffer.
-     *
-     * @param roundDurabilityBuffer the RoundDurabilityBuffer to use
-     * @return this builder
-     */
-    @NonNull
-    public PlatformComponentBuilder withRoundDurabilityBuffer(
-            @NonNull final RoundDurabilityBuffer roundDurabilityBuffer) {
-        throwIfAlreadyUsed();
-        if (this.roundDurabilityBuffer != null) {
-            throw new IllegalStateException("RoundDurabilityBuffer has already been set");
-        }
-        this.roundDurabilityBuffer = Objects.requireNonNull(roundDurabilityBuffer);
-        return this;
-    }
-
-    /**
-     * Build the round durability buffer if it has not yet been built. If one has been provided via
-     * {@link #withRoundDurabilityBuffer(RoundDurabilityBuffer)}, that round durability buffer will be used. If this
-     * method is called more than once, only the first call will build the round durability buffer. Otherwise, the
-     * default round durability buffer will be created and returned.
-     *
-     * @return the RoundDurabilityBuffer
-     */
-    @NonNull
-    public RoundDurabilityBuffer buildRoundDurabilityBuffer() {
-        if (roundDurabilityBuffer == null) {
-            roundDurabilityBuffer = new DefaultRoundDurabilityBuffer(blocks.platformContext());
-        }
-        return roundDurabilityBuffer;
-    }
-
-    /**
      * Provide a status state machine in place of the platform's default status state machine.
      *
      * @param statusStateMachine the status state machine to use
@@ -732,25 +661,9 @@ public class PlatformComponentBuilder {
             transactionPrehandler = new DefaultTransactionPrehandler(
                     blocks.platformContext(),
                     () -> blocks.latestImmutableStateProviderReference().get().apply("transaction prehandle"),
-                    blocks.stateLifecycles());
+                    blocks.consensusStateEventHandler());
         }
         return transactionPrehandler;
-    }
-
-    /**
-     * Provide a PCES writer in place of the platform's default PCES writer.
-     *
-     * @param pcesWriter the PCES writer to use
-     * @return this builder
-     */
-    @NonNull
-    public PlatformComponentBuilder withPcesWriter(@NonNull final PcesWriter pcesWriter) {
-        throwIfAlreadyUsed();
-        if (this.pcesWriter != null) {
-            throw new IllegalStateException("PCES writer has already been set");
-        }
-        this.pcesWriter = Objects.requireNonNull(pcesWriter);
-        return this;
     }
 
     /**
@@ -767,31 +680,6 @@ public class PlatformComponentBuilder {
         }
         this.inlinePcesWriter = Objects.requireNonNull(inlinePcesWriter);
         return this;
-    }
-
-    /**
-     * Build the PCES writer if it has not yet been built. If one has been provided via
-     * {@link #withPcesWriter(PcesWriter)}, that writer will be used. If this method is called more than once, only the
-     * first call will build the PCES writer. Otherwise, the default writer will be created and returned.
-     *
-     * @return the PCES writer
-     */
-    @NonNull
-    public PcesWriter buildPcesWriter() {
-        if (pcesWriter == null) {
-            try {
-                final PcesFileManager preconsensusEventFileManager = new PcesFileManager(
-                        blocks.platformContext(),
-                        blocks.initialPcesFiles(),
-                        blocks.selfId(),
-                        blocks.initialState().get().getRound());
-                pcesWriter = new DefaultPcesWriter(blocks.platformContext(), preconsensusEventFileManager);
-
-            } catch (final IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
-        return pcesWriter;
     }
 
     /**
@@ -883,7 +771,7 @@ public class PlatformComponentBuilder {
             issDetector = new DefaultIssDetector(
                     blocks.platformContext(),
                     blocks.rosterHistory().getCurrentRoster(),
-                    blocks.appVersion().getPbjSemanticVersion(),
+                    blocks.appVersion(),
                     ignorePreconsensusSignatures,
                     roundToIgnore);
         }
@@ -1362,5 +1250,34 @@ public class PlatformComponentBuilder {
             latestCompleteStateNotifier = new DefaultLatestCompleteStateNotifier();
         }
         return latestCompleteStateNotifier;
+    }
+
+    /**
+     * Builds the {@link FutureEventBuffer} if it has not yet been built and returns it.
+     *
+     * @return the future event buffer
+     */
+    @NonNull
+    public FutureEventBuffer buildFutureEventBuffer() {
+        if (futureEventBuffer == null) {
+            futureEventBuffer = new DefaultFutureEventBuffer(blocks.platformContext());
+        }
+        return futureEventBuffer;
+    }
+
+    /**
+     * Provide a future event buffer in place of the platform's default future event buffer.
+     *
+     * @param futureEventBuffer the future event buffer to use
+     * @return this builder
+     */
+    @NonNull
+    public PlatformComponentBuilder withFutureEventBuffer(@NonNull final FutureEventBuffer futureEventBuffer) {
+        throwIfAlreadyUsed();
+        if (this.futureEventBuffer != null) {
+            throw new IllegalStateException("Future event buffer has already been set");
+        }
+        this.futureEventBuffer = Objects.requireNonNull(futureEventBuffer);
+        return this;
     }
 }

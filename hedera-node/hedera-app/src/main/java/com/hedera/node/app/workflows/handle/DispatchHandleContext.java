@@ -53,6 +53,7 @@ import com.hedera.node.app.workflows.handle.stack.SavepointStackImpl;
 import com.hedera.node.app.workflows.handle.validation.AttributeValidatorImpl;
 import com.hedera.node.app.workflows.handle.validation.ExpiryValidatorImpl;
 import com.hedera.node.app.workflows.prehandle.PreHandleContextImpl;
+import com.hedera.node.app.workflows.prehandle.PreHandleResult;
 import com.hedera.node.app.workflows.purechecks.PureChecksContextImpl;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
@@ -61,6 +62,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -94,6 +96,10 @@ public class DispatchHandleContext implements HandleContext, FeeContext {
     private Map<AccountID, Long> dispatchPaidRewards;
     private final DispatchMetadata dispatchMetaData;
     private final TransactionChecker transactionChecker;
+    // This is used to store the pre-handle results for the inner transactions
+    // in an atomic batch, null otherwise
+    @Nullable
+    private final List<PreHandleResult> preHandleResults;
 
     public DispatchHandleContext(
             @NonNull final Instant consensusNow,
@@ -119,7 +125,8 @@ public class DispatchHandleContext implements HandleContext, FeeContext {
             @NonNull final ThrottleAdviser throttleAdviser,
             @NonNull final FeeAccumulator feeAccumulator,
             @NonNull final DispatchMetadata handleMetaData,
-            @NonNull final TransactionChecker transactionChecker) {
+            @NonNull final TransactionChecker transactionChecker,
+            @Nullable final List<PreHandleResult> preHandleResults) {
         this.consensusNow = requireNonNull(consensusNow);
         this.creatorInfo = requireNonNull(creatorInfo);
         this.txnInfo = requireNonNull(transactionInfo);
@@ -146,6 +153,7 @@ public class DispatchHandleContext implements HandleContext, FeeContext {
         this.networkInfo = requireNonNull(networkInfo);
         this.dispatchMetaData = requireNonNull(handleMetaData);
         this.transactionChecker = requireNonNull(transactionChecker);
+        this.preHandleResults = preHandleResults;
     }
 
     @NonNull
@@ -168,7 +176,7 @@ public class DispatchHandleContext implements HandleContext, FeeContext {
 
     @Override
     public boolean tryToChargePayer(final long amount) {
-        return feeAccumulator.chargeNetworkFee(payerId, amount);
+        return feeAccumulator.chargeNetworkFee(payerId, amount, null);
     }
 
     @NonNull
@@ -256,11 +264,16 @@ public class DispatchHandleContext implements HandleContext, FeeContext {
     public TransactionKeys allKeysForTransaction(
             @NonNull final TransactionBody nestedTxn, @NonNull final AccountID payerForNested)
             throws PreCheckException {
-        final var nestedPureChecksContext =
-                new PureChecksContextImpl(nestedTxn, configuration(), dispatcher, transactionChecker);
+        final var nestedPureChecksContext = new PureChecksContextImpl(nestedTxn, dispatcher);
         dispatcher.dispatchPureChecks(nestedPureChecksContext);
         final var nestedContext = new PreHandleContextImpl(
-                storeFactory.asReadOnly(), nestedTxn, payerForNested, configuration(), dispatcher, transactionChecker);
+                storeFactory.asReadOnly(),
+                nestedTxn,
+                payerForNested,
+                configuration(),
+                dispatcher,
+                transactionChecker,
+                creatorInfo);
         try {
             dispatcher.dispatchPreHandle(nestedContext);
         } catch (final PreCheckException ignored) {
@@ -345,6 +358,12 @@ public class DispatchHandleContext implements HandleContext, FeeContext {
     @Override
     public <T extends StreamBuilder> T dispatch(@NonNull final DispatchOptions<T> options) {
         requireNonNull(options);
+        PreHandleResult childPreHandleResult = null;
+        // If we have pre-computed pre-handle results for the inner transactions, pass them to the child
+        // dispatch instead of computing a synthetic pre-handle result for child dispatch.
+        if (preHandleResults != null && !preHandleResults.isEmpty()) {
+            childPreHandleResult = preHandleResults.removeFirst();
+        }
         final var childDispatch = childDispatchFactory.createChildDispatch(
                 config,
                 stack,
@@ -354,20 +373,21 @@ public class DispatchHandleContext implements HandleContext, FeeContext {
                 throttleAdviser,
                 consensusNow,
                 blockRecordInfo,
-                options);
+                options,
+                childPreHandleResult);
         dispatchProcessor.processDispatch(childDispatch);
         if (options.commitImmediately()) {
-            stack.commitTransaction(childDispatch.recordBuilder());
+            stack.commitTransaction(childDispatch.streamBuilder());
         }
         // This can be non-empty for SCHEDULED dispatches, if rewards are paid for the triggered transaction
-        final var paidStakingRewards = childDispatch.recordBuilder().getPaidStakingRewards();
+        final var paidStakingRewards = childDispatch.streamBuilder().getPaidStakingRewards();
         if (!paidStakingRewards.isEmpty()) {
             if (dispatchPaidRewards == null) {
                 dispatchPaidRewards = new LinkedHashMap<>();
             }
             paidStakingRewards.forEach(aa -> dispatchPaidRewards.put(aa.accountIDOrThrow(), aa.amount()));
         }
-        return castBuilder(childDispatch.recordBuilder(), options.streamBuilderType());
+        return castBuilder(childDispatch.streamBuilder(), options.streamBuilderType());
     }
 
     @NonNull

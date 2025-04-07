@@ -11,6 +11,7 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.OWNER_I
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.REVOKE_APPROVAL_SPENDER_ID;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.UNAUTHORIZED_SPENDER_ID;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.asBytesResult;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.entityIdFactory;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,6 +31,7 @@ import com.hedera.node.app.service.contract.impl.exec.scope.VerificationStrategy
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.grantapproval.ERCGrantApprovalCall;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.grantapproval.GrantApprovalTranslator;
 import com.hedera.node.app.service.contract.impl.records.ContractCallStreamBuilder;
+import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.common.CallTestBase;
 import com.hedera.node.app.service.token.ReadableAccountStore;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -65,6 +67,9 @@ class ERCGrantApprovalCallTest extends CallTestBase {
     @Mock
     private ReadableAccountStore accountStore;
 
+    @Mock
+    private ProxyWorldUpdater updater;
+
     @Test
     void erc20approve() {
         subject = new ERCGrantApprovalCall(
@@ -84,6 +89,8 @@ class ERCGrantApprovalCallTest extends CallTestBase {
                 .willReturn(recordBuilder);
         given(recordBuilder.status()).willReturn(ResponseCodeEnum.SUCCESS);
         given(nativeOperations.readableAccountStore()).willReturn(accountStore);
+        given(frame.getWorldUpdater()).willReturn(updater);
+        given(updater.entityIdFactory()).willReturn(entityIdFactory);
         given(accountStore.getAccountById(any(AccountID.class))).willReturn(account);
         given(account.accountIdOrThrow())
                 .willReturn(AccountID.newBuilder().accountNum(1).build());
@@ -115,9 +122,11 @@ class ERCGrantApprovalCallTest extends CallTestBase {
                         eq(ContractCallStreamBuilder.class)))
                 .willReturn(recordBuilder);
         given(recordBuilder.status()).willReturn(ResponseCodeEnum.SUCCESS);
-        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID.tokenNum(), 100L)).willReturn(nft);
-        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID.tokenNum())).willReturn(token);
+        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID, 100L)).willReturn(nft);
+        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID)).willReturn(token);
         given(nativeOperations.readableAccountStore()).willReturn(accountStore);
+        given(frame.getWorldUpdater()).willReturn(updater);
+        given(updater.entityIdFactory()).willReturn(entityIdFactory);
         given(accountStore.getAccountById(any(AccountID.class))).willReturn(account);
         given(account.accountIdOrThrow())
                 .willReturn(AccountID.newBuilder().accountNum(1).build());
@@ -143,8 +152,8 @@ class ERCGrantApprovalCallTest extends CallTestBase {
                 UNAUTHORIZED_SPENDER_ID,
                 100L,
                 TokenType.NON_FUNGIBLE_UNIQUE);
-        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID.tokenNum(), 100L)).willReturn(nft);
-        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID.tokenNum())).willReturn(token);
+        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID, 100L)).willReturn(nft);
+        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID)).willReturn(token);
         given(systemContractOperations.dispatch(
                         any(TransactionBody.class),
                         eq(verificationStrategy),
@@ -170,8 +179,8 @@ class ERCGrantApprovalCallTest extends CallTestBase {
                 100L,
                 TokenType.NON_FUNGIBLE_UNIQUE);
         // make sure nft is found
-        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID.tokenNum(), 100L)).willReturn(nft);
-        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID.tokenNum())).willReturn(token);
+        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID, 100L)).willReturn(nft);
+        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID)).willReturn(token);
         given(systemContractOperations.dispatch(
                         any(TransactionBody.class),
                         eq(verificationStrategy),
@@ -201,7 +210,7 @@ class ERCGrantApprovalCallTest extends CallTestBase {
                 100L,
                 TokenType.NON_FUNGIBLE_UNIQUE);
         // make sure nft is found
-        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID.tokenNum(), 100L)).willReturn(null);
+        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID, 100L)).willReturn(null);
         given(systemContractOperations.dispatch(
                         any(TransactionBody.class),
                         eq(verificationStrategy),
@@ -234,9 +243,11 @@ class ERCGrantApprovalCallTest extends CallTestBase {
                         eq(ContractCallStreamBuilder.class)))
                 .willReturn(recordBuilder);
         given(recordBuilder.status()).willReturn(ResponseCodeEnum.SUCCESS);
-        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID.tokenNum(), 100L)).willReturn(nft);
-        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID.tokenNum())).willReturn(token);
+        given(nativeOperations.getNft(NON_FUNGIBLE_TOKEN_ID, 100L)).willReturn(nft);
+        given(nativeOperations.getToken(NON_FUNGIBLE_TOKEN_ID)).willReturn(token);
         given(nativeOperations.readableAccountStore()).willReturn(accountStore);
+        given(frame.getWorldUpdater()).willReturn(updater);
+        given(updater.entityIdFactory()).willReturn(entityIdFactory);
         given(accountStore.getAccountById(any(AccountID.class))).willReturn(account);
         given(account.accountIdOrThrow())
                 .willReturn(AccountID.newBuilder().accountNum(1).build());

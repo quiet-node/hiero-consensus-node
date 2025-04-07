@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.event.source;
 
-import static com.swirlds.platform.system.events.EventConstants.FIRST_GENERATION;
 import static com.swirlds.platform.test.fixtures.event.EventUtils.integerPowerDistribution;
 import static com.swirlds.platform.test.fixtures.event.EventUtils.staticDynamicValue;
 
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.TransactionGenerator;
 import com.swirlds.platform.internal.EventImpl;
 import com.swirlds.platform.test.fixtures.event.DynamicValue;
@@ -18,6 +16,7 @@ import java.time.Instant;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Random;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * A source of events.
@@ -33,9 +32,6 @@ public abstract class AbstractEventSource implements EventSource {
      * Influences the probability that this node create a new event.
      */
     private DynamicValueGenerator<Double> newEventWeight;
-
-    /** The amount of weight this node has. */
-    private final long weight;
 
     /**
      * The average size of a transaction, in bytes.
@@ -56,9 +52,6 @@ public abstract class AbstractEventSource implements EventSource {
      * The standard deviation of the number of transactions.
      */
     private static final double DEFAULT_TX_COUNT_STD_DEV = 3;
-
-    /** The default amount of weight to allocate this node is no value is provided. */
-    protected static final long DEFAULT_WEIGHT = 1;
 
     /** The default transaction generator used to create transaction for generated events. */
     protected static final TransactionGenerator DEFAULT_TRANSACTION_GENERATOR =
@@ -97,13 +90,10 @@ public abstract class AbstractEventSource implements EventSource {
      *
      * @param useFakeHashes        indicates if fake hashes should be used instead of real ones
      * @param transactionGenerator a transaction generator to use when creating events
-     * @param weight               the weight allocated to this event source
      */
-    protected AbstractEventSource(
-            final boolean useFakeHashes, final TransactionGenerator transactionGenerator, final long weight) {
+    protected AbstractEventSource(final boolean useFakeHashes, final TransactionGenerator transactionGenerator) {
         this.useFakeHashes = useFakeHashes;
         this.transactionGenerator = transactionGenerator;
-        this.weight = weight;
         nodeId = NodeId.UNDEFINED_NODE_ID;
         setNewEventWeight(1.0);
 
@@ -121,7 +111,6 @@ public abstract class AbstractEventSource implements EventSource {
     protected AbstractEventSource(final AbstractEventSource that) {
         this.useFakeHashes = that.useFakeHashes;
         this.transactionGenerator = that.transactionGenerator;
-        this.weight = that.weight;
         this.nodeId = that.nodeId;
         this.newEventWeight = that.newEventWeight.cleanCopy();
 
@@ -169,11 +158,6 @@ public abstract class AbstractEventSource implements EventSource {
         return this;
     }
 
-    @Override
-    public long getWeight() {
-        return weight;
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -214,10 +198,6 @@ public abstract class AbstractEventSource implements EventSource {
         final EventImpl otherParentEvent =
                 otherParent == null ? null : otherParent.getRecentEvent(random, otherParentIndex);
         final EventImpl latestSelfEvent = getLatestEvent(random);
-        final long generation = Math.max(
-                        otherParentEvent == null ? (FIRST_GENERATION - 1) : otherParentEvent.getGeneration(),
-                        latestSelfEvent == null ? (FIRST_GENERATION - 1) : latestSelfEvent.getGeneration())
-                + 1;
 
         event = RandomEventUtils.randomEventWithTimestamp(
                 random,

@@ -10,7 +10,6 @@ import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
 import com.swirlds.common.merkle.synchronization.TeachingSynchronizer;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.threading.manager.ThreadManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.logging.legacy.payload.ReconnectFinishPayload;
@@ -28,6 +27,7 @@ import java.time.Duration;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * This class encapsulates reconnect logic for the up to date node which is helping an out of date node obtain a recent
@@ -68,7 +68,6 @@ public class ReconnectTeacher {
      * @param otherId                the learner's ID
      * @param lastRoundReceived      the round of the state
      * @param statistics             reconnect metrics
-     * @param configuration          the configuration
      * @param platformStateFacade    the facade to access the platform state
      */
     public ReconnectTeacher(
@@ -81,7 +80,6 @@ public class ReconnectTeacher {
             @NonNull final NodeId otherId,
             final long lastRoundReceived,
             @NonNull final ReconnectMetrics statistics,
-            @NonNull final Configuration configuration,
             @NonNull final PlatformStateFacade platformStateFacade) {
 
         this.platformContext = Objects.requireNonNull(platformContext);
@@ -94,7 +92,7 @@ public class ReconnectTeacher {
         this.otherId = Objects.requireNonNull(otherId);
         this.lastRoundReceived = lastRoundReceived;
         this.statistics = Objects.requireNonNull(statistics);
-        this.configuration = Objects.requireNonNull(configuration);
+        this.configuration = Objects.requireNonNull(platformContext.getConfiguration());
         this.platformStateFacade = platformStateFacade;
     }
 
@@ -218,7 +216,7 @@ public class ReconnectTeacher {
                 threadManager,
                 new MerkleDataInputStream(connection.getDis()),
                 new MerkleDataOutputStream(connection.getDos()),
-                signedState.getState(),
+                signedState.getState().getRoot(),
                 connection::disconnect,
                 reconnectConfig);
 

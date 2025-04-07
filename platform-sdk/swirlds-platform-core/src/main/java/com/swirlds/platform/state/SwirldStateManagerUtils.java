@@ -3,9 +3,9 @@ package com.swirlds.platform.state;
 
 import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_MICROSECONDS;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.platform.metrics.StateMetrics;
 import com.swirlds.platform.state.service.PlatformStateFacade;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
@@ -29,7 +29,7 @@ public final class SwirldStateManagerUtils {
     public static MerkleNodeState fastCopy(
             @NonNull final MerkleNodeState state,
             @NonNull final StateMetrics stats,
-            @NonNull final SoftwareVersion softwareVersion,
+            @NonNull final SemanticVersion softwareVersion,
             @NonNull final PlatformStateFacade platformStateFacade) {
 
         Objects.requireNonNull(softwareVersion);
@@ -41,7 +41,7 @@ public final class SwirldStateManagerUtils {
         platformStateFacade.setCreationSoftwareVersionTo(copy, softwareVersion);
 
         // Increment the reference count because this reference becomes the new value
-        copy.reserve();
+        copy.getRoot().reserve();
 
         final long copyEnd = System.nanoTime();
 

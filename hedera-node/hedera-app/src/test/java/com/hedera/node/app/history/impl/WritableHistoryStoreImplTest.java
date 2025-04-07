@@ -99,9 +99,6 @@ class WritableHistoryStoreImplTest {
     private HistoryLibrary library;
 
     @Mock
-    private HistoryLibraryCodec codec;
-
-    @Mock
     private NetworkInfo networkInfo;
 
     @Mock
@@ -374,7 +371,7 @@ class WritableHistoryStoreImplTest {
     }
 
     @SuppressWarnings("unchecked")
-    private <T extends Record> @NonNull T getSingleton(@NonNull final String key) {
+    private <T> @NonNull T getSingleton(@NonNull final String key) {
         return requireNonNull((T)
                 state.getWritableStates(HistoryService.NAME).getSingleton(key).get());
     }
@@ -399,12 +396,7 @@ class WritableHistoryStoreImplTest {
         Set.of(
                         new EntityIdService(),
                         new HistoryServiceImpl(
-                                NO_OP_METRICS,
-                                ForkJoinPool.commonPool(),
-                                appContext,
-                                library,
-                                codec,
-                                WITH_ENABLED_HISTORY))
+                                NO_OP_METRICS, ForkJoinPool.commonPool(), appContext, library, WITH_ENABLED_HISTORY))
                 .forEach(servicesRegistry::register);
         final var migrator = new FakeServiceMigrator();
         final var bootstrapConfig = new BootstrapConfigProviderImpl().getConfiguration();
@@ -416,7 +408,6 @@ class WritableHistoryStoreImplTest {
                         bootstrapConfig.getConfigData(VersionConfig.class).servicesVersion()),
                 new ConfigProviderImpl().getConfiguration(),
                 DEFAULT_CONFIG,
-                networkInfo,
                 NO_OP_METRICS,
                 startupNetworks,
                 storeMetricsService,

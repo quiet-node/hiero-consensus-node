@@ -10,7 +10,6 @@ import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.prometheus.PrometheusConfig;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.platform.NodeIdConverter;
 import com.swirlds.component.framework.WiringConfig;
 import com.swirlds.component.framework.schedulers.builders.TaskSchedulerConfiguration;
@@ -29,12 +28,12 @@ import com.swirlds.platform.health.OSHealthCheckConfig;
 import com.swirlds.platform.network.SocketConfig;
 import com.swirlds.platform.system.status.PlatformStatusConfig;
 import com.swirlds.platform.uptime.UptimeConfig;
-import com.swirlds.platform.wiring.ComponentWiringConfig;
 import com.swirlds.platform.wiring.PlatformSchedulersConfig;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Set;
-import org.hiero.event.creator.impl.EventCreationConfig;
+import org.hiero.consensus.event.creator.impl.config.EventCreationConfig;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Registers configuration types for the platform.
@@ -81,7 +80,6 @@ public class PlatformConfigurationExtension implements ConfigurationExtension {
                 VirtualMapConfig.class,
                 WiringConfig.class,
                 InternalLoggingConfig.class,
-                ComponentWiringConfig.class,
                 GossipConfig.class);
     }
 

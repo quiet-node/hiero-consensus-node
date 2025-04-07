@@ -4,7 +4,9 @@ package com.swirlds.platform.wiring;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 
+import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.model.WiringModelBuilder;
@@ -17,6 +19,7 @@ import com.swirlds.platform.components.EventWindowManager;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.components.appcomm.LatestCompleteStateNotifier;
 import com.swirlds.platform.components.consensus.ConsensusEngine;
+import com.swirlds.platform.event.FutureEventBuffer;
 import com.swirlds.platform.event.branching.BranchDetector;
 import com.swirlds.platform.event.branching.BranchReporter;
 import com.swirlds.platform.event.creation.EventCreationManager;
@@ -25,9 +28,6 @@ import com.swirlds.platform.event.hashing.EventHasher;
 import com.swirlds.platform.event.orphan.OrphanBuffer;
 import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
 import com.swirlds.platform.event.preconsensus.PcesReplayer;
-import com.swirlds.platform.event.preconsensus.PcesSequencer;
-import com.swirlds.platform.event.preconsensus.PcesWriter;
-import com.swirlds.platform.event.preconsensus.durability.RoundDurabilityBuffer;
 import com.swirlds.platform.event.resubmitter.TransactionResubmitter;
 import com.swirlds.platform.event.signing.SelfEventSigner;
 import com.swirlds.platform.event.stale.DefaultStaleEventDetector;
@@ -84,9 +84,10 @@ class PlatformWiringTests {
             return null;
         });
 
-        final WiringModel model = WiringModelBuilder.create(platformContext).build();
+        final WiringModel model =
+                WiringModelBuilder.create(new NoOpMetrics(), Time.getCurrent()).build();
 
-        final PlatformWiring wiring = new PlatformWiring(platformContext, model, applicationCallbacks);
+        final PlatformWiring wiring = new PlatformWiring(platformContext, model, applicationCallbacks, true);
 
         final PlatformComponentBuilder componentBuilder =
                 new PlatformComponentBuilder(mock(PlatformBuildingBlocks.class));
@@ -102,11 +103,8 @@ class PlatformWiringTests {
                 .withEventCreationManager(mock(EventCreationManager.class))
                 .withConsensusEngine(mock(ConsensusEngine.class))
                 .withConsensusEventStream(mock(ConsensusEventStream.class))
-                .withPcesSequencer(mock(PcesSequencer.class))
-                .withRoundDurabilityBuffer(mock(RoundDurabilityBuffer.class))
                 .withStatusStateMachine(mock(StatusStateMachine.class))
                 .withTransactionPrehandler(mock(TransactionPrehandler.class))
-                .withPcesWriter(mock(PcesWriter.class))
                 .withInlinePcesWriter(mock(InlinePcesWriter.class))
                 .withSignedStateSentinel(mock(SignedStateSentinel.class))
                 .withIssDetector(mock(IssDetector.class))
@@ -121,7 +119,8 @@ class PlatformWiringTests {
                 .withBranchReporter(mock(BranchReporter.class))
                 .withStateSigner(mock(StateSigner.class))
                 .withTransactionHandler(mock(DefaultTransactionHandler.class))
-                .withLatestCompleteStateNotifier(mock(LatestCompleteStateNotifier.class));
+                .withLatestCompleteStateNotifier(mock(LatestCompleteStateNotifier.class))
+                .withFutureEventBuffer(mock(FutureEventBuffer.class));
 
         // Gossip is a special case, it's not like other components.
         // Currently we just have a facade between gossip and the wiring framework.

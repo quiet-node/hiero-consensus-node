@@ -24,6 +24,7 @@ import com.hedera.node.config.converter.ScaleFactorConverter;
 import com.hedera.node.config.converter.SemanticVersionConverter;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.ApiPermissionConfig;
+import com.hedera.node.config.data.AtomicBatchConfig;
 import com.hedera.node.config.data.AutoCreationConfig;
 import com.hedera.node.config.data.AutoRenew2Config;
 import com.hedera.node.config.data.AutoRenewConfig;
@@ -41,6 +42,7 @@ import com.hedera.node.config.data.FeesConfig;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.GrpcConfig;
 import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.config.data.JumboTransactionsConfig;
 import com.hedera.node.config.data.LazyCreationConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NettyConfig;
@@ -173,6 +175,8 @@ public final class HederaTestConfigBuilder {
                 .withConfigDataType(NodesConfig.class)
                 .withConfigDataType(TssConfig.class)
                 .withConfigDataType(BlockStreamConfig.class)
+                .withConfigDataType(AtomicBatchConfig.class)
+                .withConfigDataType(JumboTransactionsConfig.class)
                 .withConverter(CongestionMultipliers.class, new CongestionMultipliersConverter())
                 .withConverter(EntityScaleFactors.class, new EntityScaleFactorsConverter())
                 .withConverter(KnownBlockValues.class, new KnownBlockValuesConverter())

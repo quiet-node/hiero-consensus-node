@@ -197,6 +197,18 @@ public class TransactionRecordAsserts extends BaseErroringAssertsProvider<Transa
         return this;
     }
 
+    public TransactionRecordAsserts parentConsensusTime(final Timestamp parentTime) {
+        this.<Timestamp>registerTypedProvider("parentConsensusTimestamp", spec -> actualTime -> {
+            try {
+                assertEquals(parentTime, actualTime);
+            } catch (Throwable t) {
+                return List.of(t);
+            }
+            return EMPTY_LIST;
+        });
+        return this;
+    }
+
     public TransactionRecordAsserts txnId(TransactionID expectedTxn) {
         this.<TransactionID>registerTypedProvider("transactionID", spec -> txnId -> {
             try {
@@ -310,8 +322,14 @@ public class TransactionRecordAsserts extends BaseErroringAssertsProvider<Transa
     public TransactionRecordAsserts hasMirrorIdInReceipt() {
         this.<TransactionReceipt>registerTypedProvider(RECEIPT, spec -> receipt -> {
             try {
-                assertEquals(0, receipt.getContractID().getShardNum(), "Bad receipt shard");
-                assertEquals(0, receipt.getContractID().getRealmNum(), "Bad receipt realm");
+                assertEquals(
+                        spec.setup().defaultShard().getShardNum(),
+                        receipt.getContractID().getShardNum(),
+                        "Bad receipt shard");
+                assertEquals(
+                        spec.setup().defaultRealm().getRealmNum(),
+                        receipt.getContractID().getRealmNum(),
+                        "Bad receipt realm");
             } catch (Exception t) {
                 return List.of(t);
             }

@@ -2,12 +2,12 @@
 package com.swirlds.platform.event.preconsensus;
 
 import com.swirlds.component.framework.component.InputWireLabel;
-import com.swirlds.platform.consensus.EventWindow;
-import com.swirlds.platform.event.PlatformEvent;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.EventWindow;
 
 /**
- * This object is responsible for writing preconsensus events to disk. It differs from {@link PcesWriter} in that it
+ * This object is responsible for writing preconsensus events to disk. It
  * writes events to disk and then outputs them once it ensures they are durable.
  */
 public interface InlinePcesWriter {

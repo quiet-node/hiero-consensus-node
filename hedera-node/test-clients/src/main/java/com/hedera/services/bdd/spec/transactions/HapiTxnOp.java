@@ -52,6 +52,7 @@ import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.hederahashgraph.api.proto.java.TransactionGetReceiptResponse;
 import com.hederahashgraph.api.proto.java.TransactionReceipt;
+import com.hederahashgraph.api.proto.java.TransactionRecord;
 import com.hederahashgraph.api.proto.java.TransactionResponse;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -98,6 +99,7 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
     protected ResponseCodeEnum actualStatus = UNKNOWN;
     protected ResponseCodeEnum actualPrecheck = UNKNOWN;
     protected TransactionReceipt lastReceipt;
+    protected HederaFunctionality overriddenHederaFunctionality = null;
 
     @Nullable
     private Consumer<TransactionReceipt> receiptValidator;
@@ -196,8 +198,14 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
                 if (fiddler.isPresent()) {
                     txn = fiddler.get().apply(txn);
                 }
+                final var hederaFunctionality =
+                        overriddenHederaFunctionality != null ? overriddenHederaFunctionality : type();
                 response = submissionStrategy.submit(
-                        spec.targetNetworkOrThrow(), txn, type(), systemFunctionalityTarget(), targetNodeFor(spec));
+                        spec.targetNetworkOrThrow(),
+                        txn,
+                        hederaFunctionality,
+                        systemFunctionalityTarget(),
+                        targetNodeFor(spec));
             } catch (StatusRuntimeException e) {
                 if (respondToSRE(e, "submitting transaction")) {
                     continue;
@@ -227,10 +235,10 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
                         throw new HapiTxnCheckStateException("Unable to resolve txn status");
                     }
                 }
+            } finally {
+                /* Used by superclass to perform standard housekeeping. */
+                txnSubmitted = txn;
             }
-
-            /* Used by superclass to perform standard housekeeping. */
-            txnSubmitted = txn;
 
             actualPrecheck = response.getNodeTransactionPrecheckCode();
             if (retryPrechecks.isPresent()
@@ -836,6 +844,16 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
         return self();
     }
 
+    /**
+     * The hedera functionality is passed to the submissionStrategy and based on that it's decided
+     * to which gRPC endpoint the transaction will be sent. By overriding this property we are able to test
+     * what will happen if we send a call to the wrong endpoint.
+     */
+    public T withOverriddenHederaFunctionality(@NonNull final HederaFunctionality hederaFunctionality) {
+        this.overriddenHederaFunctionality = hederaFunctionality;
+        return self();
+    }
+
     public T hasSuccessReceipt(@NonNull final Consumer<TransactionReceipt> receiptValidator) {
         this.receiptValidator = requireNonNull(receiptValidator);
         return self();
@@ -855,5 +873,20 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
 
     public ResponseCodeEnum getActualStatus() {
         return lastReceipt.getStatus();
+    }
+
+    public void updateStateFromRecord(TransactionRecord record, HapiSpec spec) throws Throwable {
+        this.actualStatus = record.getReceipt().getStatus();
+        this.lastReceipt = record.getReceipt();
+        updateStateOf(spec);
+    }
+
+    public T batchKey(String key) {
+        batchKey = Optional.of(spec -> spec.registry().getKey(key));
+        return self();
+    }
+
+    public Optional<AccountID> getNode() {
+        return node;
     }
 }

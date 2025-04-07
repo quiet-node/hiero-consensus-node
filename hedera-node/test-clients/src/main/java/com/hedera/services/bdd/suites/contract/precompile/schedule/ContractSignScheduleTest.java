@@ -2,6 +2,7 @@
 package com.hedera.services.bdd.suites.contract.precompile.schedule;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.keys.KeyShape.ED25519;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getScheduleInfo;
@@ -20,6 +21,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.getEcdsaPrivateKeyF
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.getEd25519PrivateKeyFromSpec;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
@@ -37,7 +39,8 @@ import com.hedera.node.app.hapi.utils.SignatureGenerator;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
-import com.hedera.services.bdd.junit.OrderedInIsolation;
+import com.hedera.services.bdd.junit.RepeatableHapiTest;
+import com.hedera.services.bdd.junit.RepeatableReason;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
 import com.hedera.services.bdd.spec.keys.KeyShape;
 import com.hedera.services.bdd.spec.keys.RepeatableKeyGenerator;
@@ -46,11 +49,11 @@ import com.hedera.services.bdd.spec.utilops.CustomSpecAssert;
 import com.hedera.services.bdd.utils.Signing;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.ScheduleID;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.bouncycastle.jcajce.provider.digest.Keccak;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -58,7 +61,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 
 @Tag(SMART_CONTRACT)
-@OrderedInIsolation
 @DisplayName("Contract sign schedule")
 @HapiTestLifecycle
 public class ContractSignScheduleTest {
@@ -93,6 +95,7 @@ public class ContractSignScheduleTest {
         }
 
         @HapiTest
+        @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
         @DisplayName("Signature executes schedule transaction")
         final Stream<DynamicTest> authorizeScheduleWithContract() {
             return hapiTest(
@@ -102,6 +105,7 @@ public class ContractSignScheduleTest {
                                     AUTHORIZE_SCHEDULE_CALL,
                                     mirrorAddrWith(scheduleID_A.get().getScheduleNum()))
                             .gas(1_000_000L),
+                    sleepFor(1_000),
                     getScheduleInfo(SCHEDULE_A).isExecuted());
         }
 
@@ -146,6 +150,7 @@ public class ContractSignScheduleTest {
 
         @HapiTest
         @DisplayName("Signature executes schedule transaction")
+        @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
         final Stream<DynamicTest> authorizeScheduleWithContract() {
             return hapiTest(
                     getScheduleInfo(SCHEDULE_C).isNotExecuted(),
@@ -154,6 +159,7 @@ public class ContractSignScheduleTest {
                                     AUTHORIZE_SCHEDULE_CALL,
                                     mirrorAddrWith(scheduleID_C.get().getScheduleNum()))
                             .gas(1_000_000L),
+                    sleepFor(1000L),
                     getScheduleInfo(SCHEDULE_C).isExecuted());
         }
 
@@ -199,7 +205,7 @@ public class ContractSignScheduleTest {
         @HapiTest
         @DisplayName("Signature executes schedule transaction")
         final Stream<DynamicTest> authorizeScheduleWithContract() {
-            var scheduleAddress = "0.0." + scheduleID_E.get().getScheduleNum();
+            var scheduleAddress = asEntityString(scheduleID_E.get().getScheduleNum());
             return hapiTest(
                     getScheduleInfo(SCHEDULE_E).isNotExecuted(),
                     contractCallWithFunctionAbi(
@@ -285,7 +291,7 @@ public class ContractSignScheduleTest {
                     getScheduleInfo(SCHEDULE_H).isExecuted().hasSignatories(GENESIS, ED25519KEY));
         }
 
-        private @NotNull CustomSpecAssert signWithEd(
+        private @NonNull CustomSpecAssert signWithEd(
                 final AtomicReference<ScheduleID> scheduleID, final ResponseCodeEnum expectedStatus) {
             return withOpContext((spec, opLog) -> {
                 final var message = getMessageBytes(scheduleID);
@@ -315,7 +321,7 @@ public class ContractSignScheduleTest {
             });
         }
 
-        private @NotNull CustomSpecAssert signWithEcdsa(
+        private @NonNull CustomSpecAssert signWithEcdsa(
                 final AtomicReference<ScheduleID> scheduleID, final ResponseCodeEnum expectedStatus) {
             return withOpContext((spec, opLog) -> {
                 final var message = getMessageBytes(scheduleID);

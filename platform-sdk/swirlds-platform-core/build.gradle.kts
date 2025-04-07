@@ -22,7 +22,6 @@ mainModuleInfo {
 jmhModuleInfo {
     requires("com.swirlds.common")
     requires("com.swirlds.platform.core")
-    requires("com.swirlds.platform.test")
     requires("com.swirlds.common.test.fixtures")
     requires("com.swirlds.platform.core.test.fixtures")
     requires("com.hedera.node.hapi")
@@ -33,20 +32,18 @@ testModuleInfo {
     requires("com.swirlds.base.test.fixtures")
     requires("com.swirlds.metrics.impl")
     requires("com.swirlds.common.test.fixtures")
-    requires("com.swirlds.logging.test.fixtures")
     requires("com.swirlds.platform.core")
     requires("com.swirlds.platform.core.test.fixtures")
-    requires("com.swirlds.platform.test")
     requires("com.swirlds.config.extensions.test.fixtures")
     requires("com.swirlds.state.api.test.fixtures")
     requires("com.swirlds.state.impl.test.fixtures")
-    requires("jakarta.inject")
+    requires("org.hiero.base.utility.test.fixtures")
+    requires("awaitility")
     requires("org.assertj.core")
     requires("org.junit.jupiter.api")
     requires("org.junit.jupiter.params")
     requires("org.mockito")
     requires("org.mockito.junit.jupiter")
-    requiresStatic("com.github.spotbugs.annotations")
 }
 
 timingSensitiveModuleInfo {
@@ -54,6 +51,7 @@ timingSensitiveModuleInfo {
     requires("com.swirlds.common.test.fixtures")
     requires("com.swirlds.platform.core")
     requires("com.swirlds.platform.core.test.fixtures")
+    requires("org.hiero.base.utility.test.fixtures")
     requires("org.assertj.core")
     requires("org.junit.jupiter.api")
     requires("org.junit.jupiter.params")

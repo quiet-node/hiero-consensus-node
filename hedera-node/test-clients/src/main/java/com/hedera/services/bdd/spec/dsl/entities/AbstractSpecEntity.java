@@ -3,10 +3,10 @@ package com.hedera.services.bdd.spec.dsl.entities;
 
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.handleExec;
-import static com.swirlds.common.threading.interrupt.Uninterruptable.abortAndThrowIfInterrupted;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static org.hiero.consensus.model.utility.interrupt.Uninterruptable.abortAndThrowIfInterrupted;
 
 import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.spec.HapiSpec;
@@ -14,6 +14,7 @@ import com.hedera.services.bdd.spec.SpecOperation;
 import com.hedera.services.bdd.spec.dsl.SpecEntity;
 import com.hedera.services.bdd.spec.dsl.SpecEntityRegistrar;
 import com.hedera.services.bdd.spec.dsl.operations.deferred.DoWithModelOperation;
+import com.hedera.services.bdd.spec.props.JutilPropertySource;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
@@ -36,8 +37,12 @@ import org.apache.logging.log4j.Logger;
  * @param <O> the type of the operation used to create the entity
  * @param <M> the type of the entity's model
  */
-public abstract class AbstractSpecEntity<O extends SpecOperation, M extends Record> implements SpecEntity {
+public abstract class AbstractSpecEntity<O extends SpecOperation, M> implements SpecEntity {
     private static final Logger log = LogManager.getLogger(AbstractSpecEntity.class);
+    protected static final String SHARD =
+            JutilPropertySource.getDefaultInstance().get("default.shard");
+    protected static final String REALM =
+            JutilPropertySource.getDefaultInstance().get("default.realm");
 
     /**
      * Represents the attempt to create an entity.
@@ -47,7 +52,7 @@ public abstract class AbstractSpecEntity<O extends SpecOperation, M extends Reco
      * @param <S> the type of the operation
      * @param <R> the type of the model
      */
-    protected record Creation<S extends SpecOperation, R extends Record>(S op, R model) {}
+    protected record Creation<S extends SpecOperation, R>(S op, R model) {}
 
     /**
      * Represents the result of a successful entity creation.
@@ -56,14 +61,14 @@ public abstract class AbstractSpecEntity<O extends SpecOperation, M extends Reco
      * @param registrar the registrar for the entity
      * @param <R> the type of the model
      */
-    protected record Result<R extends Record>(R model, SpecEntityRegistrar registrar) {}
+    protected record Result<R>(R model, SpecEntityRegistrar registrar) {}
 
     /**
      * Wraps a supplier of a future result, allowing us to defer scheduling that supplier until we know
      * it we are the privileged supplier out of potentially several concurrent threads.
      * @param <M> the type of the model returned by the supplier
      */
-    private static class DeferredResult<M extends Record> {
+    private static class DeferredResult<M> {
         private static final Duration SCHEDULING_TIMEOUT = Duration.ofSeconds(10);
 
         /**

@@ -16,7 +16,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.MAX_ENTRIES_FOR_FEE_EXE
 import static com.hedera.hapi.node.base.ResponseCodeEnum.UNAUTHORIZED;
 import static com.hedera.node.app.hapi.utils.fee.ConsensusServiceFeeBuilder.getConsensusUpdateTopicFee;
 import static com.hedera.node.app.hapi.utils.fee.ConsensusServiceFeeBuilder.getUpdateTopicRbsIncrease;
-import static com.hedera.node.app.spi.key.KeyUtils.isEmpty;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.isEmpty;
 import static com.hedera.node.app.spi.validation.AttributeValidator.isImmutableKey;
 import static com.hedera.node.app.spi.validation.AttributeValidator.isKeyRemoval;
 import static com.hedera.node.app.spi.validation.ExpiryMeta.NA;
@@ -167,12 +167,15 @@ public class ConsensusUpdateTopicHandler implements TransactionHandler {
         // preHandle already checks for topic existence, so topic should never be null.
 
         // First validate this topic is mutable; and the pending mutations are allowed
-        validateFalse(topic.adminKey() == null && wantsToMutateNonExpiryField(op), UNAUTHORIZED);
-        if (!(op.hasAutoRenewAccount() && designatesAccountRemoval(op.autoRenewAccount()))
-                && topic.hasAutoRenewAccountId()) {
-            validateFalse(
-                    !topic.hasAdminKey() || (op.hasAdminKey() && isEmpty(op.adminKey())),
-                    AUTORENEW_ACCOUNT_NOT_ALLOWED);
+        if (wantsToMutateNonExpiryField(op)) {
+            validateTrue(topic.hasAdminKey(), UNAUTHORIZED);
+            final var opRemovesAutoRenewId =
+                    op.hasAutoRenewAccount() && designatesAccountRemoval(op.autoRenewAccount());
+            if (!opRemovesAutoRenewId && topic.hasAutoRenewAccountId()) {
+                validateFalse(
+                        !topic.hasAdminKey() || (op.hasAdminKey() && isEmpty(op.adminKey())),
+                        AUTORENEW_ACCOUNT_NOT_ALLOWED);
+            }
         }
 
         validateMaybeNewAttributes(handleContext, op, topic);

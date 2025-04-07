@@ -145,7 +145,7 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
      */
     private final AtomicReference<AbstractTask> notifyTaskRef = new AtomicReference<>();
 
-    /** A holder for the first exception occured during endWriting() tasks */
+    /** A holder for the first exception occurred during endWriting() tasks */
     private final AtomicReference<Throwable> exceptionOccurred = new AtomicReference<>();
 
     /** Fork-join pool for HDHM.endWriting() */
@@ -249,13 +249,14 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
             final boolean forceIndexRebuilding = merkleDbConfig.indexRebuildingEnforced();
             if (Files.exists(indexFile) && !forceIndexRebuilding) {
                 bucketIndexToBucketLocation = preferDiskBasedIndex
-                        ? new LongListDisk(indexFile, configuration)
-                        : new LongListOffHeap(indexFile, configuration);
+                        ? new LongListDisk(indexFile, numOfBuckets, configuration)
+                        : new LongListOffHeap(indexFile, numOfBuckets, configuration);
                 loadedDataCallback = null;
             } else {
                 // create new index and setup call back to rebuild
-                bucketIndexToBucketLocation =
-                        preferDiskBasedIndex ? new LongListDisk(indexFile, configuration) : new LongListOffHeap();
+                bucketIndexToBucketLocation = preferDiskBasedIndex
+                        ? new LongListDisk(numOfBuckets, configuration)
+                        : new LongListOffHeap(numOfBuckets, configuration);
                 loadedDataCallback = (dataLocation, bucketData) -> {
                     final Bucket bucket = bucketPool.getBucket();
                     bucket.readFrom(bucketData);
@@ -265,13 +266,14 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
         } else {
             // create store dir
             Files.createDirectories(storeDir);
-            // create new index
-            bucketIndexToBucketLocation =
-                    preferDiskBasedIndex ? new LongListDisk(indexFile, configuration) : new LongListOffHeap();
             // calculate number of entries we can store in a disk page
             final int minimumBuckets = (int) (mapSize / GOOD_AVERAGE_BUCKET_ENTRY_COUNT);
             // numOfBuckets is the nearest power of two greater than minimumBuckets with a min of 2
             numOfBuckets = Math.max(Integer.highestOneBit(minimumBuckets) * 2, 2);
+            // create new index
+            bucketIndexToBucketLocation = preferDiskBasedIndex
+                    ? new LongListDisk(numOfBuckets, configuration)
+                    : new LongListOffHeap(numOfBuckets, configuration);
             // we are new so no need for a loadedDataCallback
             loadedDataCallback = null;
             // write metadata
@@ -501,6 +503,7 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
         } finally {
             writingThread = null;
             oneTransactionsData = null;
+            currentSubmitTask.set(null);
         }
         return dataFileReader;
     }
@@ -607,8 +610,18 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
                 // Read from bytes
                 bucket.readFrom(bucketData);
                 if (bucketIndex != bucket.getBucketIndex()) {
-                    throw new RuntimeException(
+                    logger.error(
+                            MERKLE_DB.getMarker(),
                             "Bucket index integrity check " + bucketIndex + " != " + bucket.getBucketIndex());
+                    /*
+                       This is a workaround for the issue https://github.com/hiero-ledger/hiero-consensus-node/pull/18250,
+                       which caused possible corruption in snapshots.
+                       If the snapshot is corrupted, the code may read a bucket from the file, and the bucket index
+                       may be different from the expected one. In this case, we clear the bucket (as it contains garbage
+                       anyway) and set the correct index.
+                    */
+                    bucket.clear();
+                    bucket.setBucketIndex(bucketIndex);
                 }
             }
             // Apply all updates

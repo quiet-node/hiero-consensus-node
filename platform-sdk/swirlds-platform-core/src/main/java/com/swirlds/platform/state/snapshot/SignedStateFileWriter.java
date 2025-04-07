@@ -16,7 +16,6 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
 import com.swirlds.common.merkle.utility.MerkleTreeVisualizer;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.logging.legacy.payload.StateSavedToDiskPayload;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.recovery.emergencyfile.EmergencyRecoveryFile;
@@ -25,7 +24,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SigSet;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.state.State;
-import com.swirlds.state.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.BufferedWriter;
@@ -36,6 +34,7 @@ import java.time.Instant;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Utility methods for writing a signed state to disk.
@@ -73,7 +72,7 @@ public final class SignedStateFileWriter {
 
         final Path hashInfoFile = directory.resolve(HASH_INFO_FILE_NAME);
 
-        final String hashInfo = new MerkleTreeVisualizer(state)
+        final String hashInfo = new MerkleTreeVisualizer(state.getRoot())
                 .setDepth(stateConfig.debugHashDepth())
                 .render();
         try (final BufferedWriter writer = new BufferedWriter(new FileWriter(hashInfoFile.toFile()))) {
@@ -146,9 +145,6 @@ public final class SignedStateFileWriter {
         Objects.requireNonNull(signedState);
 
         final State state = signedState.getState();
-        if (state instanceof MerkleStateRoot<?> merkleStateRoot) {
-            merkleStateRoot.setTime(platformContext.getTime());
-        }
 
         state.createSnapshot(directory);
         writeSignatureSetFile(directory, signedState);

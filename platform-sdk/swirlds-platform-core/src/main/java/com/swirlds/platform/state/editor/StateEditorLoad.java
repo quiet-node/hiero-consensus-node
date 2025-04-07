@@ -8,7 +8,6 @@ import static com.swirlds.platform.state.editor.StateEditorUtils.formatParent;
 import static com.swirlds.platform.state.editor.StateEditorUtils.formatRoute;
 
 import com.swirlds.cli.utility.SubcommandOf;
-import com.swirlds.common.crypto.Hashable;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
@@ -23,6 +22,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.crypto.Hashable;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -82,7 +82,7 @@ public class StateEditorLoad extends StateEditorOperation {
 
         // Invalidate hashes in path down from root
         try (final ReservedSignedState reservedSignedState = getStateEditor().getState("StateEditorLoad.run()")) {
-            new MerkleRouteIterator(reservedSignedState.get().getState(), parent.getRoute())
+            new MerkleRouteIterator(reservedSignedState.get().getState().getRoot(), parent.getRoute())
                     .forEachRemaining(Hashable::invalidateHash);
         }
     }

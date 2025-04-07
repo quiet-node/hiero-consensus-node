@@ -6,7 +6,6 @@ import static com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants.DEFAULT_G
 
 import com.swirlds.platform.gui.GuiUtils;
 import com.swirlds.platform.gui.hashgraph.HashgraphPictureOptions;
-import com.swirlds.platform.system.events.EventConstants;
 import java.awt.Checkbox;
 import java.awt.Color;
 import java.awt.Component;
@@ -19,6 +18,7 @@ import java.awt.event.ItemListener;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
+import org.hiero.consensus.model.event.EventConstants;
 
 /**
  * GUI controls for changing display options for the {@link HashgraphPicture}
@@ -35,6 +35,10 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
 
     /** the round number for the event */
     private final Checkbox labelRoundCheckbox;
+    /** votes for the witnesses */
+    private final Checkbox labelVoteCheckbox;
+    /** the hash for the event */
+    private final Checkbox labelEventHashCheckbox;
     /** the consensus round received for the event */
     private final Checkbox labelRoundRecCheckbox;
     /** the consensus order number for the event */
@@ -43,6 +47,8 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
     private final Checkbox labelConsTimestampCheckbox;
     /** the generation number for the event */
     private final Checkbox labelGenerationCheckbox;
+    /** the birth round number for the event */
+    private final Checkbox labelBirthroundCheckbox;
     /** check to display the latest events available */
     private final Checkbox displayLatestEvents;
 
@@ -58,10 +64,13 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
         simpleColorsCheckbox = new Checkbox("Colors: blue=consensus, green=not");
         expandCheckbox = new Checkbox("Expand: wider so lines don't cross");
         labelRoundCheckbox = new Checkbox("Labels: Round created");
+        labelVoteCheckbox = new Checkbox("Labels: Vote");
+        labelEventHashCheckbox = new Checkbox("Labels: Event Hash (h)");
         labelRoundRecCheckbox = new Checkbox("Labels: Round received (consensus)");
         labelConsOrderCheckbox = new Checkbox("Labels: Order (consensus)");
         labelConsTimestampCheckbox = new Checkbox("Labels: Timestamp (consensus)");
         labelGenerationCheckbox = new Checkbox("Labels: Generation");
+        labelBirthroundCheckbox = new Checkbox("Labels: Birth round");
         displayLatestEvents = new Checkbox("Display latest events");
         displayLatestEvents.setState(true);
 
@@ -93,10 +102,13 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
             simpleColorsCheckbox,
             expandCheckbox,
             labelRoundCheckbox,
+            labelVoteCheckbox,
+            labelEventHashCheckbox,
             labelRoundRecCheckbox,
             labelConsOrderCheckbox,
             labelConsTimestampCheckbox,
             labelGenerationCheckbox,
+            labelBirthroundCheckbox,
             displayLatestEvents
         };
     }
@@ -210,6 +222,16 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
     }
 
     @Override
+    public boolean writeVote() {
+        return labelVoteCheckbox.getState();
+    }
+
+    @Override
+    public boolean writeEventHash() {
+        return labelEventHashCheckbox.getState();
+    }
+
+    @Override
     public boolean writeRoundReceived() {
         return labelRoundRecCheckbox.getState();
     }
@@ -227,6 +249,11 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
     @Override
     public boolean writeGeneration() {
         return labelGenerationCheckbox.getState();
+    }
+
+    @Override
+    public boolean writeBirthRound() {
+        return labelBirthroundCheckbox.getState();
     }
 
     @Override

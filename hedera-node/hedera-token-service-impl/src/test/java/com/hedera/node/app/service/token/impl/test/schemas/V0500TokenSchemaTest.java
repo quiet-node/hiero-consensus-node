@@ -4,7 +4,8 @@ package com.hedera.node.app.service.token.impl.test.schemas;
 import static com.hedera.hapi.util.HapiUtils.CONTRACT_ID_COMPARATOR;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ACCOUNTS_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -12,6 +13,7 @@ import com.hedera.hapi.node.base.ContractID;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.node.app.service.token.impl.schemas.V0500TokenSchema;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
@@ -19,6 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,7 +50,15 @@ class V0500TokenSchemaTest {
     @Mock
     private MigrationContext ctx;
 
-    private final V0500TokenSchema subject = new V0500TokenSchema();
+    @Mock
+    private EntityIdFactory entityIdFactory;
+
+    private V0500TokenSchema subject;
+
+    @BeforeEach
+    void setUp() {
+        subject = new V0500TokenSchema(entityIdFactory);
+    }
 
     @Test
     @DisplayName("skips migration without shared values")
@@ -60,6 +71,7 @@ class V0500TokenSchemaTest {
     @DisplayName("works around missing account")
     void worksAroundMissing() {
         givenValidCtx();
+        given(entityIdFactory.newAccountId(anyLong())).willReturn(AccountID.DEFAULT);
         assertDoesNotThrow(() -> subject.migrate(ctx));
     }
 
@@ -67,6 +79,12 @@ class V0500TokenSchemaTest {
     @DisplayName("fixes first storage keys")
     void fixesFirstKeys() {
         givenValidCtx();
+        given(entityIdFactory.newAccountId(1))
+                .willReturn(AccountID.newBuilder().accountNum(1L).build());
+        given(entityIdFactory.newAccountId(2))
+                .willReturn(AccountID.newBuilder().accountNum(2L).build());
+        given(entityIdFactory.newAccountId(3))
+                .willReturn(AccountID.newBuilder().accountNum(3L).build());
         accounts.put(
                 accountIdWith(1),
                 Account.newBuilder()

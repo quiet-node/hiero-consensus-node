@@ -3,19 +3,19 @@ package com.swirlds.demo.addressbook;
 
 import static com.swirlds.common.io.utility.FileUtils.getAbsolutePath;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.registerMerkleStateRootClassIds;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.config.DefaultConfiguration;
-import com.swirlds.platform.state.StateLifecycles;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * <p>
@@ -65,6 +66,9 @@ public class AddressBookTestingToolMain implements SwirldMain<AddressBookTesting
 
     /** The software version of this application. */
     private BasicSoftwareVersion softwareVersion;
+
+    /** The semantic version of this application. */
+    private SemanticVersion semanticVersion;
 
     /** The platform. */
     private Platform platform;
@@ -113,14 +117,14 @@ public class AddressBookTestingToolMain implements SwirldMain<AddressBookTesting
     @NonNull
     public AddressBookTestingToolState newStateRoot() {
         final AddressBookTestingToolState state = new AddressBookTestingToolState();
-        FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(state);
         return state;
     }
 
     @Override
     @NonNull
-    public StateLifecycles<AddressBookTestingToolState> newStateLifecycles() {
-        return new AddressBookTestingToolStateLifecycles(new PlatformStateFacade((v) -> getSoftwareVersion()));
+    public ConsensusStateEventHandler<AddressBookTestingToolState> newConsensusStateEvenHandler() {
+        return new AddressBookTestingToolConsensusStateEventHandler(new PlatformStateFacade());
     }
 
     /**
@@ -150,6 +154,34 @@ public class AddressBookTestingToolMain implements SwirldMain<AddressBookTesting
 
         logger.info(STARTUP.getMarker(), "returning software version {}", softwareVersion);
         return softwareVersion;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public SemanticVersion getSemanticVersion() {
+        if (semanticVersion != null) {
+            return semanticVersion;
+        }
+
+        // Preload configuration so that we can change the software version on the fly
+        final Configuration configuration;
+        try {
+            final ConfigurationBuilder configurationBuilder =
+                    ConfigurationBuilder.create().withConfigDataType(AddressBookTestingToolConfig.class);
+            configuration = DefaultConfiguration.buildBasicConfiguration(
+                    configurationBuilder, getAbsolutePath("settings.txt"), List.of());
+        } catch (final IOException e) {
+            throw new UncheckedIOException("unable to load settings.txt", e);
+        }
+
+        final int version =
+                configuration.getConfigData(AddressBookTestingToolConfig.class).softwareVersion();
+        this.semanticVersion = SemanticVersion.newBuilder().major(version).build();
+
+        logger.info(STARTUP.getMarker(), "returning semantic version {}", semanticVersion);
+        return semanticVersion;
     }
 
     @Override

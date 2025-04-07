@@ -114,6 +114,7 @@ public abstract class HapiSpecOperation implements SpecOperation {
     protected Optional<ControlForKey[]> controlOverrides = Optional.empty();
     protected Map<Key, SigControl> overrides = Collections.EMPTY_MAP;
 
+    protected Optional<Function<HapiSpec, Key>> batchKey = Optional.empty();
     protected Optional<Long> fee = Optional.empty();
     protected List<Function<HapiSpec, CustomFeeLimit>> maxCustomFeeList = new ArrayList<>();
     protected Optional<Long> validDurationSecs = Optional.empty();
@@ -277,6 +278,7 @@ public abstract class HapiSpecOperation implements SpecOperation {
                     Duration.newBuilder().setSeconds(s).build()));
             genRecord.ifPresent(builder::setGenerateRecord);
             memo.ifPresent(builder::setMemo);
+            batchKey.ifPresent(k -> builder.setBatchKey(k.apply(spec)));
         };
     }
 

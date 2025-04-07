@@ -43,7 +43,6 @@ import com.hedera.node.app.spi.workflows.InsufficientBalanceException;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.store.ReadableStoreFactory;
 import com.hedera.node.app.validation.ExpiryValidation;
-import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.app.workflows.SolvencyPreCheck;
 import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.node.app.workflows.TransactionInfo;
@@ -155,7 +154,7 @@ class QueryCheckerTest extends AppTestBase {
     @SuppressWarnings("ConstantConditions")
     @Test
     void testValidateCryptoTransferWithIllegalArguments() {
-        assertThatThrownBy(() -> checker.validateCryptoTransfer(null, null)).isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> checker.validateCryptoTransfer(null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
@@ -171,8 +170,7 @@ class QueryCheckerTest extends AppTestBase {
                 transaction, txBody, signatureMap, transaction.signedTransactionBytes(), CRYPTO_TRANSFER, null);
 
         // when
-        assertThatCode(() -> checker.validateCryptoTransfer(transactionInfo, configuration))
-                .doesNotThrowAnyException();
+        assertThatCode(() -> checker.validateCryptoTransfer(transactionInfo)).doesNotThrowAnyException();
     }
 
     @Test
@@ -188,7 +186,7 @@ class QueryCheckerTest extends AppTestBase {
                 transaction, txBody, signatureMap, transaction.signedTransactionBytes(), CONSENSUS_CREATE_TOPIC, null);
 
         // then
-        assertThatThrownBy(() -> checker.validateCryptoTransfer(transactionInfo, configuration))
+        assertThatThrownBy(() -> checker.validateCryptoTransfer(transactionInfo))
                 .isInstanceOf(PreCheckException.class)
                 .has(responseCode(INSUFFICIENT_TX_FEE));
     }
@@ -209,7 +207,7 @@ class QueryCheckerTest extends AppTestBase {
                 .pureChecks(any());
 
         // then
-        assertThatThrownBy(() -> checker.validateCryptoTransfer(transactionInfo, configuration))
+        assertThatThrownBy(() -> checker.validateCryptoTransfer(transactionInfo))
                 .isInstanceOf(PreCheckException.class)
                 .has(responseCode(INVALID_ACCOUNT_AMOUNTS));
     }
@@ -261,7 +259,7 @@ class QueryCheckerTest extends AppTestBase {
         void setup() {
             setupStandardStates();
 
-            final var storeFactory = new ReadableStoreFactory(state, ServicesSoftwareVersion::new);
+            final var storeFactory = new ReadableStoreFactory(state);
             store = storeFactory.getStore(ReadableAccountStore.class);
         }
 

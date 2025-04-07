@@ -26,6 +26,7 @@ import com.hedera.node.app.spi.ids.ReadableEntityCounters;
 import com.hedera.node.app.spi.ids.WritableEntityCounters;
 import com.hedera.node.app.spi.store.StoreFactory;
 import com.hedera.node.app.spi.workflows.HandleContext;
+import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
@@ -89,9 +90,10 @@ public class FileTestBase {
                                     A_THRESHOLD_KEY)))
             .build();
 
+    // Constants below must match V0490FileSchema
     protected static final String FILES = "FILES";
     protected static final String UPGRADE_FILE_KEY = "UPGRADE_FILE";
-    protected static final String UPGRADE_DATA_KEY = "UPGRADE_DATA[%s]";
+    protected static final String UPGRADE_DATA_KEY = "UPGRADE_DATA[FileID[shardNum=%d, realmNum=%d, fileNum=%d]]";
     protected final Key key = A_COMPLEX_KEY;
     protected final AccountID payerId = AccountID.newBuilder().accountNum(3).build();
     protected final byte[] contents = "contents".getBytes();
@@ -101,10 +103,12 @@ public class FileTestBase {
 
     protected final KeyList anotherKeys = B_KEY_LIST.keyList();
 
-    private final long SHARD = 5L;
-    private final long REALM = 10L;
+    protected final long SHARD =
+            DEFAULT_CONFIG.getConfigData(HederaConfig.class).shard();
+    protected final long REALM =
+            DEFAULT_CONFIG.getConfigData(HederaConfig.class).realm();
 
-    private final EntityIdFactory idFactory = new FakeEntityIdFactoryImpl(SHARD, REALM);
+    protected final EntityIdFactory idFactory = new FakeEntityIdFactoryImpl(SHARD, REALM);
 
     protected final FileID WELL_KNOWN_FILE_ID = idFactory.newFileId(1_234L);
     protected final FileID WELL_KNOWN_UPGRADE_FILE_ID = idFactory.newFileId(150L);
@@ -187,10 +191,10 @@ public class FileTestBase {
         writableUpgradeFileStates = emptyUpgradeFileState();
         given(readableStates.<FileID, File>get(FILES)).willReturn(readableFileState);
         given(writableStates.<FileID, File>get(FILES)).willReturn(writableFileState);
-        given(filteredReadableStates.<ProtoBytes>getQueue(UPGRADE_DATA_KEY.formatted(fileUpgradeFileId)))
-                .willReturn(readableUpgradeStates);
-        given(filteredWritableStates.<ProtoBytes>getQueue(UPGRADE_DATA_KEY.formatted(fileUpgradeFileId)))
-                .willReturn(writableUpgradeStates);
+        final var fileStateKey = UPGRADE_DATA_KEY.formatted(
+                fileUpgradeFileId.shardNum(), fileUpgradeFileId.realmNum(), fileUpgradeFileId.fileNum());
+        given(filteredReadableStates.<ProtoBytes>getQueue(fileStateKey)).willReturn(readableUpgradeStates);
+        given(filteredWritableStates.<ProtoBytes>getQueue(fileStateKey)).willReturn(writableUpgradeStates);
         given(filteredReadableStates.<FileID, File>get(FILES)).willReturn(readableUpgradeFileStates);
         given(filteredWritableStates.<FileID, File>get(FILES)).willReturn(writableUpgradeFileStates);
         readableStore = new ReadableFileStoreImpl(readableStates, readableEntityCounters);
@@ -234,10 +238,10 @@ public class FileTestBase {
         writableUpgradeFileStates = writableUpgradeFileState();
         given(readableStates.<FileID, File>get(FILES)).willReturn(readableFileState);
         given(writableStates.<FileID, File>get(FILES)).willReturn(writableFileState);
-        given(filteredReadableStates.<ProtoBytes>getQueue(UPGRADE_DATA_KEY.formatted(fileUpgradeFileId)))
-                .willReturn(readableUpgradeStates);
-        given(filteredWritableStates.<ProtoBytes>getQueue(UPGRADE_DATA_KEY.formatted(fileUpgradeFileId)))
-                .willReturn(writableUpgradeStates);
+        final var fileStateKey = UPGRADE_DATA_KEY.formatted(
+                fileUpgradeFileId.shardNum(), fileUpgradeFileId.realmNum(), fileUpgradeFileId.fileNum());
+        given(filteredReadableStates.<ProtoBytes>getQueue(fileStateKey)).willReturn(readableUpgradeStates);
+        given(filteredWritableStates.<ProtoBytes>getQueue(fileStateKey)).willReturn(writableUpgradeStates);
         given(filteredReadableStates.<FileID, File>get(FILES)).willReturn(readableUpgradeFileStates);
         given(filteredWritableStates.<FileID, File>get(FILES)).willReturn(writableUpgradeFileStates);
         readableStore = new ReadableFileStoreImpl(readableStates, readableEntityCounters);

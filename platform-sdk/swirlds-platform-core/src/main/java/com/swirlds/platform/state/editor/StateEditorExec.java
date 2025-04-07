@@ -6,7 +6,6 @@ import static com.swirlds.platform.state.editor.StateEditorUtils.formatNode;
 import static com.swirlds.platform.state.editor.StateEditorUtils.formatNodeType;
 
 import com.swirlds.cli.utility.SubcommandOf;
-import com.swirlds.common.crypto.Hashable;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.route.MerkleRouteIterator;
 import com.swirlds.logging.legacy.LogMarker;
@@ -15,6 +14,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.crypto.Hashable;
 import picocli.CommandLine;
 
 @CommandLine.Command(name = "exec", mixinStandardHelpOptions = true, description = "Run a function on a node.")
@@ -78,7 +78,7 @@ public class StateEditorExec extends StateEditorOperation {
                 try (final ReservedSignedState reservedSignedState =
                         getStateEditor().getState("StateEditorExec.run()")) {
                     new MerkleRouteIterator(
-                                    reservedSignedState.get().getState(),
+                                    reservedSignedState.get().getState().getRoot(),
                                     parentInfo.parent().getRoute())
                             .forEachRemaining(Hashable::invalidateHash);
                 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.support.translators;
 
+import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONSENSUS_CREATE_TOPIC;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONSENSUS_DELETE_TOPIC;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONSENSUS_SUBMIT_MESSAGE;
@@ -9,6 +10,7 @@ import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CALL;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_DELETE;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_UPDATE;
+import static com.hedera.hapi.node.base.HederaFunctionality.CRS_PUBLICATION;
 import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_APPROVE_ALLOWANCE;
 import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_DELETE;
@@ -21,6 +23,12 @@ import static com.hedera.hapi.node.base.HederaFunctionality.FILE_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.FILE_DELETE;
 import static com.hedera.hapi.node.base.HederaFunctionality.FILE_UPDATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.FREEZE;
+import static com.hedera.hapi.node.base.HederaFunctionality.HINTS_KEY_PUBLICATION;
+import static com.hedera.hapi.node.base.HederaFunctionality.HINTS_PARTIAL_SIGNATURE;
+import static com.hedera.hapi.node.base.HederaFunctionality.HINTS_PREPROCESSING_VOTE;
+import static com.hedera.hapi.node.base.HederaFunctionality.HISTORY_ASSEMBLY_SIGNATURE;
+import static com.hedera.hapi.node.base.HederaFunctionality.HISTORY_PROOF_KEY_PUBLICATION;
+import static com.hedera.hapi.node.base.HederaFunctionality.HISTORY_PROOF_VOTE;
 import static com.hedera.hapi.node.base.HederaFunctionality.NODE_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.NODE_DELETE;
 import static com.hedera.hapi.node.base.HederaFunctionality.NODE_STAKE_UPDATE;
@@ -160,6 +168,14 @@ public class BlockTransactionalUnitTranslator {
                     put(TOKEN_UNPAUSE, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
                     put(TOKEN_UPDATE, new TokenUpdateTranslator());
                     put(UTIL_PRNG, new UtilPrngTranslator());
+                    put(ATOMIC_BATCH, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
+                    put(HINTS_KEY_PUBLICATION, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
+                    put(CRS_PUBLICATION, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
+                    put(HINTS_PARTIAL_SIGNATURE, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
+                    put(HINTS_PREPROCESSING_VOTE, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
+                    put(HISTORY_PROOF_KEY_PUBLICATION, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
+                    put(HISTORY_ASSEMBLY_SIGNATURE, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
+                    put(HISTORY_PROOF_VOTE, NO_EXPLICIT_SIDE_EFFECTS_TRANSLATOR);
                 }
             };
 

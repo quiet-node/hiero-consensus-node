@@ -63,13 +63,15 @@ module com.swirlds.platform.core {
             com.swirlds.platform.test,
             com.swirlds.platform.core.test.fixtures,
             com.fasterxml.jackson.core,
-            com.fasterxml.jackson.databind;
+            com.fasterxml.jackson.databind,
+            com.swirlds.platform.test.gui;
     exports com.swirlds.platform.swirldapp to
             com.swirlds.platform.test;
     exports com.swirlds.platform.consensus to
             com.swirlds.platform.test,
             com.swirlds.platform.core.test.fixtures,
-            com.hedera.node.app;
+            com.hedera.node.app,
+            com.swirlds.platform.test.gui;
     exports com.swirlds.platform.crypto to
             com.swirlds.platform.test,
             com.hedera.node.test.clients,
@@ -95,13 +97,13 @@ module com.swirlds.platform.core {
     exports com.swirlds.platform.gossip.sync.config to
             com.swirlds.config.impl,
             com.swirlds.common,
+            com.swirlds.platform.core.test.fixtures,
             com.hedera.node.test.clients;
 
     opens com.swirlds.platform.cli to
             info.picocli;
 
     exports com.swirlds.platform.components.transaction;
-    exports com.swirlds.platform.components.transaction.system;
     exports com.swirlds.platform.event.preconsensus;
     exports com.swirlds.platform.gossip.sync.protocol;
     exports com.swirlds.platform.gossip;
@@ -137,9 +139,10 @@ module com.swirlds.platform.core {
     requires transitive com.swirlds.config.api;
     requires transitive com.swirlds.metrics.api;
     requires transitive com.swirlds.state.api;
-    requires transitive com.swirlds.state.impl;
+    requires transitive org.hiero.base.utility;
+    requires transitive org.hiero.consensus.event.creator.impl;
     requires transitive org.hiero.consensus.gossip;
-    requires transitive org.hiero.event.creator;
+    requires transitive org.hiero.consensus.model;
     requires transitive com.fasterxml.jackson.annotation;
     requires transitive com.fasterxml.jackson.databind;
     requires transitive info.picocli;
@@ -149,7 +152,6 @@ module com.swirlds.platform.core {
     requires com.swirlds.merkle;
     requires com.swirlds.merkledb;
     requires com.swirlds.virtualmap;
-    requires org.hiero.event.creator.impl;
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.dataformat.yaml;
     requires com.github.spotbugs.annotations;

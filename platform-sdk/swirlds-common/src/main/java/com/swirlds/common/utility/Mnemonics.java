@@ -2,20 +2,23 @@
 package com.swirlds.common.utility;
 
 import static com.swirlds.common.formatting.StringFormattingUtils.formattedList;
-import static com.swirlds.common.utility.ByteUtils.byteArrayToShort;
+import static org.hiero.base.utility.ByteUtils.byteArrayToShort;
 
-import com.swirlds.common.crypto.CryptographyHolder;
+import com.swirlds.common.crypto.Cryptography;
+import com.swirlds.common.crypto.CryptographyProvider;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.hiero.consensus.model.crypto.Hash;
 
 /**
  * A utility class for creating mnemonic words.
  */
 public final class Mnemonics {
+    private static final Cryptography CRYPTOGRAPHY = CryptographyProvider.getInstance();
 
     private Mnemonics() {}
 
@@ -2147,7 +2150,7 @@ public final class Mnemonics {
 
         while (mnemonics.size() < wordCount) {
             if (nextIndex + 1 >= entropy.length) {
-                entropy = CryptographyHolder.get().digestBytesSync(entropy);
+                entropy = CRYPTOGRAPHY.digestBytesSync(entropy);
                 nextIndex = 0;
             }
 
@@ -2187,5 +2190,9 @@ public final class Mnemonics {
      */
     public static String generateMnemonic(final byte[] data, final int wordCount) {
         return formattedList(generateMnemonicWords(data, wordCount).iterator(), "-");
+    }
+
+    public static String generateMnemonic(final Hash hash) {
+        return generateMnemonic(hash.copyToByteArray(), 4);
     }
 }
