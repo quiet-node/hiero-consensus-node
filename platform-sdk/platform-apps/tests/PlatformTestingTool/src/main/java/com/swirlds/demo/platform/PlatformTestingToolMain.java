@@ -11,7 +11,6 @@ package com.swirlds.demo.platform;
  * DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
  */
 
-import static com.swirlds.common.threading.interrupt.Uninterruptable.abortAndThrowIfInterrupted;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.logging.legacy.LogMarker.DEMO_INFO;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
@@ -22,13 +21,15 @@ import static com.swirlds.merkle.test.fixtures.map.lifecycle.SaveExpectedMapHand
 import static com.swirlds.merkle.test.fixtures.map.lifecycle.SaveExpectedMapHandler.serialize;
 import static com.swirlds.metrics.api.FloatFormats.FORMAT_6_2;
 import static com.swirlds.metrics.api.FloatFormats.FORMAT_9_6;
-import static com.swirlds.platform.test.fixtures.state.FakeStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static java.lang.System.exit;
+import static org.hiero.consensus.model.utility.interrupt.Uninterruptable.abortAndThrowIfInterrupted;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.units.UnitConstants;
@@ -40,7 +41,6 @@ import com.swirlds.common.constructable.NoArgsConstructor;
 import com.swirlds.common.merkle.iterators.MerkleIterator;
 import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.common.metrics.SpeedometerMetric;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.common.utility.StopWatch;
@@ -75,7 +75,7 @@ import com.swirlds.platform.listeners.PlatformStatusChangeNotification;
 import com.swirlds.platform.listeners.ReconnectCompleteListener;
 import com.swirlds.platform.listeners.StateWriteToDiskCompleteListener;
 import com.swirlds.platform.roster.RosterUtils;
-import com.swirlds.platform.state.StateLifecycles;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
@@ -83,8 +83,7 @@ import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.system.SystemExitUtils;
 import com.swirlds.platform.system.state.notifications.NewSignedStateListener;
-import com.swirlds.platform.system.status.PlatformStatus;
-import com.swirlds.platform.test.fixtures.state.FakeStateLifecycles;
+import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
@@ -111,6 +110,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.status.PlatformStatus;
 
 /**
  * This demo tests platform features and collects statistics on the running of the network and consensus systems. It
@@ -150,7 +151,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
                             .getConstructor(PlatformTestingToolState.CLASS_ID)
                             .get()
                             .getClassId());
-            FakeStateLifecycles.registerMerkleStateRootClassIds();
+            FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
         } catch (final ConstructableRegistryException e) {
             logger.error(STARTUP.getMarker(), "Failed to register PlatformTestingToolState", e);
             throw new RuntimeException(e);
@@ -303,14 +304,15 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
     private long queriesSentPerSec = -1;
 
     private static final BasicSoftwareVersion softwareVersion = new BasicSoftwareVersion(1);
+    private static final SemanticVersion semanticVersion =
+            SemanticVersion.newBuilder().major(1).build();
 
-    final PlatformTestingToolStateLifecycles stateLifecycles;
+    final PlatformTestingToolConsensusStateEventHandler consensusStateEventHandler;
 
     public PlatformTestingToolMain() {
         // the config needs to be loaded before the init() method
         config = PlatformConfig.getDefault();
-        stateLifecycles = new PlatformTestingToolStateLifecycles(
-                new PlatformStateFacade(v -> new BasicSoftwareVersion(v.major())));
+        consensusStateEventHandler = new PlatformTestingToolConsensusStateEventHandler(new PlatformStateFacade());
     }
 
     /**
@@ -434,7 +436,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
         FCQueueStatistics.register(metrics);
 
         // Register PTT statistics
-        PlatformTestingToolStateLifecycles.initStatistics(platform);
+        PlatformTestingToolConsensusStateEventHandler.initStatistics(platform);
 
         final int SAMPLING_PERIOD = 5000; /* millisecond */
         final Timer statTimer = new Timer("stat timer" + selfId, true);
@@ -567,7 +569,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
                 UnsafeMutablePTTStateAccessor.getInstance().getUnsafeMutableState(platform.getSelfId())) {
             final PlatformTestingToolState state = wrapper.get();
 
-            stateLifecycles.initControlStructures(this::handleMessageQuorum);
+            consensusStateEventHandler.initControlStructures(this::handleMessageQuorum);
 
             // FUTURE WORK implement mirrorNode
             final String myName =
@@ -629,7 +631,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
 
                     submitConfig = currentConfig.getSubmitConfig();
 
-                    submitter = new TransactionSubmitter(submitConfig, stateLifecycles.getControlQuorum());
+                    submitter = new TransactionSubmitter(submitConfig, consensusStateEventHandler.getControlQuorum());
 
                     if (currentConfig.getFcmConfig() != null) {
                         state.initChildren();
@@ -745,7 +747,8 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
         final SuperConfig clientConfig = objectMapper.readValue(new File(jsonFileName), SuperConfig.class);
         final String selfName = RosterUtils.formatNodeName(selfId.id());
         for (int k = 0; k < CLIENT_AMOUNT; k++) {
-            appClient[k] = new AppClient(this.platform, this.selfId, clientConfig, selfName, stateLifecycles);
+            appClient[k] =
+                    new AppClient(this.platform, this.selfId, clientConfig, selfName, consensusStateEventHandler);
             appClient[k].start();
         }
     }
@@ -860,7 +863,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
     @NonNull
     public PlatformTestingToolState newStateRoot() {
         final PlatformTestingToolState state = new PlatformTestingToolState();
-        FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(state);
         return state;
     }
 
@@ -869,8 +872,8 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
      */
     @Override
     @NonNull
-    public StateLifecycles<PlatformTestingToolState> newStateLifecycles() {
-        return stateLifecycles;
+    public ConsensusStateEventHandler<PlatformTestingToolState> newConsensusStateEvenHandler() {
+        return consensusStateEventHandler;
     }
 
     private void platformStatusChange(final PlatformStatusChangeNotification notification) {
@@ -896,6 +899,14 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
     @Override
     public BasicSoftwareVersion getSoftwareVersion() {
         return softwareVersion;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public SemanticVersion getSemanticVersion() {
+        return semanticVersion;
     }
 
     private boolean timeToCheckBalances(final Instant consensusTimestamp) {
@@ -987,7 +998,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
             try (final AutoCloseableWrapper<PlatformTestingToolState> wrapper =
                     UnsafeMutablePTTStateAccessor.getInstance().getUnsafeMutableState(platform.getSelfId())) {
                 final PlatformTestingToolState state = wrapper.get();
-                stateLifecycles.initControlStructures(this::handleMessageQuorum);
+                consensusStateEventHandler.initControlStructures(this::handleMessageQuorum);
                 SyntheticBottleneckConfig.getActiveConfig()
                         .registerReconnect(platform.getSelfId().id());
             }

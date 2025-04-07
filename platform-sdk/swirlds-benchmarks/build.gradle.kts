@@ -14,6 +14,7 @@ jmhModuleInfo {
     requires("com.hedera.pbj.runtime")
     requires("com.swirlds.base")
     requires("com.swirlds.common")
+    requires("com.swirlds.common.test.fixtures")
     requires("com.swirlds.config.api")
     requires("com.swirlds.metrics.api")
     requires("com.swirlds.config.extensions")
@@ -21,8 +22,10 @@ jmhModuleInfo {
     requires("com.swirlds.merkledb")
     requires("com.swirlds.virtualmap")
     requires("com.swirlds.platform.core")
+    requires("org.hiero.consensus.model")
     requires("jmh.core")
     requires("org.apache.logging.log4j")
+    requires("org.hiero.consensus.model")
     requiresStatic("com.github.spotbugs.annotations")
     runtimeOnly("com.swirlds.config.impl")
 }
@@ -45,7 +48,7 @@ tasks.register<JMHTask>("jmhReconnect") {
             "-Xms16g",
             "-XX:+UnlockExperimentalVMOptions",
             "-XX:+UseZGC",
-            "-XX:MaxDirectMemorySize=48g"
+            "-XX:MaxDirectMemorySize=48g",
         )
     )
 

@@ -3,8 +3,8 @@ package com.swirlds.platform.reconnect;
 
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.platform.state.signed.ReservedSignedState.createNullReservation;
-import static com.swirlds.platform.system.status.PlatformStatus.ACTIVE;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
+import static org.hiero.consensus.model.status.PlatformStatus.ACTIVE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -22,7 +22,7 @@ import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig_;
-import com.swirlds.common.platform.NodeId;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.common.utility.ValueReference;
 import com.swirlds.config.api.Configuration;
@@ -37,7 +37,6 @@ import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateValidator;
-import com.swirlds.platform.system.status.PlatformStatus;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -46,6 +45,8 @@ import java.util.List;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import org.hiero.consensus.gossip.FallenBehindManager;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.status.PlatformStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -63,6 +64,7 @@ class ReconnectPeerProtocolTests {
 
     private ReconnectController reconnectController;
     private ReconnectThrottle teacherThrottle;
+    private ReconnectMetrics reconnectMetrics;
 
     private static Stream<Arguments> initiateParams() {
         return Stream.of(
@@ -124,6 +126,11 @@ class ReconnectPeerProtocolTests {
 
         teacherThrottle = mock(ReconnectThrottle.class);
         when(teacherThrottle.initiateReconnect(any())).thenReturn(true);
+
+        var nopMetrics = new NoOpMetrics();
+        reconnectMetrics = mock(ReconnectMetrics.class);
+
+        when(reconnectMetrics.getMetrics()).thenReturn(nopMetrics);
     }
 
     @AfterEach
@@ -144,7 +151,6 @@ class ReconnectPeerProtocolTests {
                 .toList();
 
         final FallenBehindManager fallenBehindManager = mock(FallenBehindManager.class);
-        when(fallenBehindManager.getNeighborsForReconnect()).thenReturn(neighborsForReconnect);
         when(fallenBehindManager.shouldReconnectFrom(any()))
                 .thenAnswer(a -> neighborsForReconnect.contains(a.getArgument(0, NodeId.class)));
 
@@ -157,12 +163,11 @@ class ReconnectPeerProtocolTests {
                 mock(ReconnectThrottle.class),
                 () -> null,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
 
         assertEquals(
@@ -201,12 +206,11 @@ class ReconnectPeerProtocolTests {
                 teacherThrottle,
                 () -> reservedSignedState,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
 
         assertEquals(
@@ -236,12 +240,11 @@ class ReconnectPeerProtocolTests {
                 mock(ReconnectThrottle.class),
                 () -> null,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
 
         // the ReconnectController must be running in order to provide permits
@@ -281,6 +284,7 @@ class ReconnectPeerProtocolTests {
 
         final NodeId node1 = NodeId.of(1L);
         final NodeId node2 = NodeId.of(2L);
+
         final ReconnectPeerProtocol peer1 = new ReconnectPeerProtocol(
                 platformContext,
                 getStaticThreadManager(),
@@ -288,12 +292,11 @@ class ReconnectPeerProtocolTests {
                 reconnectThrottle,
                 () -> null,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 Time.getCurrent(),
                 TEST_PLATFORM_STATE_FACADE);
         final SignedState signedState = spy(new RandomSignedStateGenerator().build());
@@ -310,12 +313,11 @@ class ReconnectPeerProtocolTests {
                 reconnectThrottle,
                 () -> reservedSignedState,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 Time.getCurrent(),
                 TEST_PLATFORM_STATE_FACADE);
 
@@ -356,12 +358,11 @@ class ReconnectPeerProtocolTests {
                 mock(ReconnectThrottle.class),
                 () -> null,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
         assertTrue(peerProtocol.shouldInitiate());
@@ -401,12 +402,11 @@ class ReconnectPeerProtocolTests {
                 reconnectThrottle,
                 () -> reservedSignedState,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
 
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
@@ -440,12 +440,11 @@ class ReconnectPeerProtocolTests {
                 reconnectThrottle,
                 ReservedSignedState::createNullReservation,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 mock(ReconnectController.class),
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
         assertFalse(peerProtocol.shouldAccept());
@@ -471,12 +470,11 @@ class ReconnectPeerProtocolTests {
                 teacherThrottle,
                 () -> reservedSignedState,
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 mock(ReconnectController.class),
                 mock(SignedStateValidator.class),
                 fallenBehindManager,
                 () -> PlatformStatus.CHECKING,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
         assertFalse(peerProtocol.shouldAccept());
@@ -498,12 +496,11 @@ class ReconnectPeerProtocolTests {
                 teacherThrottle,
                 () -> signedState.reserve("test"),
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 mock(FallenBehindManager.class),
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
         assertTrue(peerProtocol.shouldAccept());
@@ -545,12 +542,11 @@ class ReconnectPeerProtocolTests {
                 teacherThrottle,
                 () -> signedState.reserve("test"),
                 Duration.of(100, ChronoUnit.MILLIS),
-                mock(ReconnectMetrics.class),
+                reconnectMetrics,
                 reconnectController,
                 mock(SignedStateValidator.class),
                 mock(FallenBehindManager.class),
                 () -> ACTIVE,
-                configuration,
                 TEST_PLATFORM_STATE_FACADE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
         assertFalse(peerProtocol.shouldAccept());
