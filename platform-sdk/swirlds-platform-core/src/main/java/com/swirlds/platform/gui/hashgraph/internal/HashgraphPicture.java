@@ -280,6 +280,15 @@ public class HashgraphPicture extends JPanel {
         final int xPos = pictureMetadata.xpos(e2, event) - d / 2;
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
+        if(selector.isSelected(event)) {
+            g.fillOval(xPos - 5, yPos - 5, d + 10, d + 10);
+
+            // draw lines to parents for a branched event last, so that they can be clearly seen
+            if(hashgraphSource.getEventStorage().getBranchedEventsMetadata().containsKey(event.getBaseEvent().getGossipEvent())) {
+                drawLinksToParents(g, event);
+            }
+        }
+
         g.fillOval(xPos, yPos, d, d);
         g.setFont(g.getFont().deriveFont(Font.BOLD));
 
