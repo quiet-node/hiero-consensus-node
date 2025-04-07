@@ -361,7 +361,7 @@ class BlockNodeConnectionTest {
 
         // Assert
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Worker thread did not stop");
-        assertEquals(TEST_BLOCK_NUMBER + 1, finalBlockNumber.get());
+        assertEquals(TEST_BLOCK_NUMBER + 1L, finalBlockNumber.get());
         verify(requestObserver, times(2)).onNext(any(PublishStreamRequest.class));
 
         // Verify log messages indicate processing of requests
@@ -400,7 +400,7 @@ class BlockNodeConnectionTest {
         when(request1.blockItems()).thenReturn(blockItems);
 
         // For the next block, return null to stop the loop
-        when(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER + 1)).thenReturn(null);
+        when(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER + 1L)).thenReturn(null);
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicReference<Long> finalBlockNumber = new AtomicReference<>(0L);
@@ -435,7 +435,7 @@ class BlockNodeConnectionTest {
         assertTrue(latch.await(1, TimeUnit.SECONDS), "Worker thread did not stop");
 
         // Assert
-        assertEquals(TEST_BLOCK_NUMBER + 1, finalBlockNumber.get());
+        assertEquals(TEST_BLOCK_NUMBER + 1L, finalBlockNumber.get());
         verify(requestObserver, times(1)).onNext(any(PublishStreamRequest.class));
 
         // Verify log messages indicate moving to the next block
@@ -683,6 +683,125 @@ class BlockNodeConnectionTest {
         assertTrue(
                 logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
                         || logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected acknowledgement handling logs not found");
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with an Acknowledgement for already verified block.
+     */
+    @Test
+    void testOnNext_WithAcknowledgementWithAlreadyVerifiedBlock() {
+        // Arrange
+        final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
+                .blockAck(BlockAcknowledgement.newBuilder()
+                        .blockNumber(TEST_BLOCK_NUMBER)
+                        .blockAlreadyExists(true)
+                        .build())
+                .build();
+        final PublishStreamResponse response = PublishStreamResponse.newBuilder()
+                .acknowledgement(acknowledgement)
+                .build();
+
+        // Act
+        connection.onNext(response);
+
+        verify(connectionManager, times(1)).updateLastVerifiedBlock(TEST_CONNECTION_ID, TEST_BLOCK_NUMBER);
+        verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
+
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
+                .isNull();
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
+
+        // Verify log messages for acknowledgement
+        final String expectedLog = "Block " + TEST_BLOCK_NUMBER + " already exists on block node";
+        assertTrue(
+                logCaptor.warnLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected acknowledgement handling logs not found");
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with an Acknowledgement for a block before the current one.
+     */
+    @Test
+    void testOnNext_WithAcknowledgementWithBlockBeforeCurrent() {
+        final long currentBlockNumber = TEST_BLOCK_NUMBER + 1L;
+        connection.setCurrentBlockNumber(currentBlockNumber);
+        // Arrange
+        final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
+                .blockAck(BlockAcknowledgement.newBuilder()
+                        .blockNumber(TEST_BLOCK_NUMBER)
+                        .blockAlreadyExists(true)
+                        .build())
+                .build();
+        final PublishStreamResponse response = PublishStreamResponse.newBuilder()
+                .acknowledgement(acknowledgement)
+                .build();
+
+        // Act
+        connection.onNext(response);
+
+        verify(connectionManager, times(1)).updateLastVerifiedBlock(TEST_CONNECTION_ID, TEST_BLOCK_NUMBER);
+        verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
+
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
+                .isNull();
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
+
+        // Verify log messages for acknowledgement
+        final String expectedLog = "Block " + TEST_BLOCK_NUMBER + " already exists on block node";
+        assertTrue(
+                logCaptor.warnLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected acknowledgement handling logs not found");
+        final String expectedLogForLowerBlockNumber = "Current block number " + currentBlockNumber
+                + " is higher than the acknowledged block number " + TEST_BLOCK_NUMBER;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLogForLowerBlockNumber)),
+                "Expected acknowledgement handling logs not found");
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with an Acknowledgement for a block after the current one.
+     */
+    @Test
+    void testOnNext_WithAcknowledgementWithBlockAfterCurrent() {
+        final long currentBlockNumber = TEST_BLOCK_NUMBER - 1L;
+        final BlockNodeConnection connectionSpy = spy(connection);
+
+        connectionSpy.setCurrentBlockNumber(currentBlockNumber);
+        // Arrange
+        final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
+                .blockAck(BlockAcknowledgement.newBuilder()
+                        .blockNumber(TEST_BLOCK_NUMBER)
+                        .blockAlreadyExists(true)
+                        .build())
+                .build();
+        final PublishStreamResponse response = PublishStreamResponse.newBuilder()
+                .acknowledgement(acknowledgement)
+                .build();
+
+        // Act
+        connectionSpy.onNext(response);
+
+        verify(connectionManager, times(1)).updateLastVerifiedBlock(TEST_CONNECTION_ID, TEST_BLOCK_NUMBER);
+        verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
+        verify(connectionSpy, times(1)).jumpToBlock(TEST_BLOCK_NUMBER + 1L);
+
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
+                .isNull();
+        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
+
+        // Verify log messages for acknowledgement
+        final String expectedLog = "Block " + TEST_BLOCK_NUMBER + " already exists on block node";
+        assertTrue(
+                logCaptor.warnLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected acknowledgement handling logs not found");
+        final String expectedLogForLowerBlockNumber = "Consensus node is behind and current block number "
+                + currentBlockNumber + " is before the acknowledged block number " + TEST_BLOCK_NUMBER;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLogForLowerBlockNumber)),
                 "Expected acknowledgement handling logs not found");
     }
 
