@@ -11,6 +11,7 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.services.auxiliary.hints.HintsPartialSignatureTransactionBody;
 import com.hedera.node.app.hints.HintsLibrary;
+import com.hedera.node.app.tss.TssBlockHashSigner;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -27,6 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * The hinTS context that can be used to request hinTS signatures using the latest
@@ -42,6 +45,7 @@ public class HintsContext {
 
     @Nullable
     private Map<Long, Integer> nodePartyIds;
+    private static final Logger logger = LogManager.getLogger(HintsContext.class);
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
@@ -76,6 +80,9 @@ public class HintsContext {
      * @return true if the context is ready
      */
     public boolean isReady() {
+        logger.warn("construction = {}", construction);
+        logger.warn("construction.hasHintsScheme() = {}", construction != null && construction.hasHintsScheme());
+        logger.warn("construction.preprocessingState() = {}", construction != null ? construction.preprocessingState() : null);
         return construction != null && construction.hasHintsScheme();
     }
 
