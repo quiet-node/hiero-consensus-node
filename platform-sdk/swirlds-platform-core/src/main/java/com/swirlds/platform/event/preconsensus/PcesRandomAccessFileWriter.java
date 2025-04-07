@@ -19,10 +19,9 @@ public class PcesRandomAccessFileWriter implements PcesFileWriter {
      * Create a new writer that writes events to a file using a {@link RandomAccessFile}.
      *
      * @param filePath       the path to the file to write to
-     * @param syncEveryEvent if true, the file will be synced after every event is written
      * @throws IOException if an error occurs while opening the file
      */
-    public PcesRandomAccessFileWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
+    public PcesRandomAccessFileWriter(@NonNull final Path filePath) throws IOException {
         file = new RandomAccessFile(filePath.toFile(), "rw");
     }
 

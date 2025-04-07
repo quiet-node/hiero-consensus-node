@@ -12,12 +12,13 @@ import java.nio.channels.FileChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
  * Writes preconsensus events to a file using a {@link FileChannel}.
  */
-public class PcesFileChannelWriter implements PcesFileWriter {
+public abstract class AbstractPcesFileChannelWriter implements PcesFileWriter {
     /** The capacity of the ByteBuffer used to write events */
     private static final int BUFFER_CAPACITY = 1024 * 1024 * 10;
     /** The file channel for writing events */
@@ -33,13 +34,13 @@ public class PcesFileChannelWriter implements PcesFileWriter {
      * Create a new writer that writes events to a file using a {@link FileChannel}.
      *
      * @param filePath       the path to the file to write to
-     * @param syncEveryEvent if true, the file will be synced after every event is written
      * @throws IOException if an error occurs while opening the file
      */
-    public PcesFileChannelWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
+    public AbstractPcesFileChannelWriter(@NonNull final Path filePath, @NonNull final List<OpenOption> extendedFlags)
+            throws IOException {
         final var defaultFlags = Stream.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-        final var extendedFlags = /*syncEveryEvent ? Stream.of(StandardOpenOption.DSYNC):Stream.of() */ Stream.of();
-        final var allFlags = Streams.concat(defaultFlags, extendedFlags).toArray(OpenOption[]::new);
+        final var allFlags =
+                Streams.concat(defaultFlags, extendedFlags.stream()).toArray(OpenOption[]::new);
         channel = FileChannel.open(filePath, allFlags);
         buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
         writableSequentialData = BufferedData.wrap(buffer);
@@ -98,5 +99,31 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     @Override
     public long fileSize() {
         return fileSize;
+    }
+
+    public static class DsyncPcesFileChannelWriter extends AbstractPcesFileChannelWriter {
+
+        /**
+         * Create a new writer that writes events to a file using a {@link FileChannel}.
+         *
+         * @param filePath the path to the file to write to
+         * @throws IOException if an error occurs while opening the file
+         */
+        public DsyncPcesFileChannelWriter(@NonNull final Path filePath) throws IOException {
+            super(filePath, List.of(StandardOpenOption.DSYNC));
+        }
+    }
+
+    public static class PcesFileChannelWriter extends AbstractPcesFileChannelWriter {
+
+        /**
+         * Create a new writer that writes events to a file using a {@link FileChannel}.
+         *
+         * @param filePath the path to the file to write to
+         * @throws IOException if an error occurs while opening the file
+         */
+        public PcesFileChannelWriter(@NonNull final Path filePath) throws IOException {
+            super(filePath, List.of());
+        }
     }
 }

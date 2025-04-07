@@ -6,8 +6,8 @@ import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.platform.event.preconsensus.PcesFile;
+import com.swirlds.platform.event.preconsensus.PcesFileWriterType;
 import com.swirlds.platform.event.preconsensus.PcesMutableFile;
-import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
 import com.swirlds.platform.test.fixtures.event.generator.StandardGraphGenerator;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
@@ -24,7 +24,7 @@ import org.hiero.consensus.model.node.NodeId;
 
 public class Experiment {
     private static final boolean SLEEP = false;
-    public static PcesFileWriterType fileWriterType = PcesFileWriterType.RANDOM_ACCESS_FILE;
+    public static PcesFileWriterType fileWriterType = PcesFileWriterType.FILE_CHANNEL;
 
     private static Path directory;
     private static PcesMutableFile mutableFile;
@@ -73,7 +73,7 @@ public class Experiment {
         directory = Files.createTempDirectory("PcesWriterBenchmark");
         final PcesFile file = PcesFile.of(AncientMode.GENERATION_THRESHOLD, r.nextInstant(), 1, 0, 100, 0, directory);
 
-        mutableFile = file.getMutableFile(fileWriterType, false);
+        mutableFile = file.getMutableFile(fileWriterType);
     }
 
     public static void main(String[] args) throws IOException, InterruptedException {

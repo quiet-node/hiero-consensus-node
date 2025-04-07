@@ -6,8 +6,8 @@ import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.platform.event.preconsensus.PcesFile;
+import com.swirlds.platform.event.preconsensus.PcesFileWriterType;
 import com.swirlds.platform.event.preconsensus.PcesMutableFile;
-import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import com.swirlds.platform.test.fixtures.event.generator.StandardGraphGenerator;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
 import java.io.IOException;
@@ -36,14 +36,11 @@ import org.openjdk.jmh.annotations.Warmup;
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 3, time = 1)
-@Measurement(iterations = 10, time = 10)
+@Measurement(iterations = 10)
 public class PcesWriterBenchmark {
 
-    @Param({"OUTPUT_STREAM", "FILE_CHANNEL", "RANDOM_ACCESS_FILE"})
+    @Param({"OUTPUT_STREAM", "FILE_CHANNEL_DSYNC", "FILE_CHANNEL", "RANDOM_ACCESS_FILE"})
     public PcesFileWriterType writer;
-
-    @Param({"true", "false"})
-    public boolean useDsyncFlagWriter;
 
     private Path directory;
     private PcesMutableFile mutableFile;
@@ -84,7 +81,7 @@ public class PcesWriterBenchmark {
         directory = Files.createTempDirectory("PcesWriterBenchmark");
         final PcesFile file = PcesFile.of(AncientMode.GENERATION_THRESHOLD, r.nextInstant(), 1, 0, 100, 0, directory);
 
-        mutableFile = file.getMutableFile(writer, useDsyncFlagWriter);
+        mutableFile = file.getMutableFile(writer);
     }
 
     @TearDown(Level.Iteration)

@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.common.collect.Lists;
 import com.swirlds.common.io.IOIterator;
 import com.swirlds.common.io.utility.FileUtils;
-import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import com.swirlds.platform.test.fixtures.event.generator.StandardGraphGenerator;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -119,7 +118,7 @@ class PcesReadWriteTests {
                 0,
                 testDirectory);
 
-        final PcesMutableFile mutableFile = file.getMutableFile(pcesFileWriterType, false);
+        final PcesMutableFile mutableFile = file.getMutableFile(pcesFileWriterType);
         for (final PlatformEvent event : events) {
             mutableFile.writeEvent(event);
         }

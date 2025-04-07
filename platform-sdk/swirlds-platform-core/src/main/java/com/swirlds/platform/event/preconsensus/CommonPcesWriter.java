@@ -7,7 +7,6 @@ import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.LongRunningAverage;
-import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import com.swirlds.platform.eventhandling.EventConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -29,7 +28,7 @@ public class CommonPcesWriter {
     /**
      *  If {@code true} {@code FileChannel} is used to write to the file and if {@code false} {@code OutputStream} is used.
      */
-    private static final PcesFileWriterType USE_FILE_CHANNEL_WRITER = PcesFileWriterType.OUTPUT_STREAM;
+    private final PcesFileWriterType pcesFileWriterType;
 
     /**
      * Keeps track of the event stream files on disk.
@@ -115,22 +114,16 @@ public class CommonPcesWriter {
      */
     private final AncientMode fileType;
 
-    private final boolean syncEveryEvent;
-
     /**
      * Constructor
      *
-     * @param platformContext the platform context
-     * @param fileManager     manages all PCES files currently on disk
-     * @param syncEveryEvent  whether to sync the file after every event
+     * @param platformContext    the platform context
+     * @param fileManager        manages all PCES files currently on disk
      */
     public CommonPcesWriter(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final PcesFileManager fileManager,
-            final boolean syncEveryEvent) {
+            @NonNull final PlatformContext platformContext, @NonNull final PcesFileManager fileManager) {
         Objects.requireNonNull(platformContext, "platformContext is required");
         this.fileManager = Objects.requireNonNull(fileManager, "fileManager is required");
-        this.syncEveryEvent = syncEveryEvent;
 
         final PcesConfig pcesConfig = platformContext.getConfiguration().getConfigData(PcesConfig.class);
         final EventConfig eventConfig = platformContext.getConfiguration().getConfigData(EventConfig.class);
@@ -140,7 +133,7 @@ public class CommonPcesWriter {
         spanOverlapFactor = pcesConfig.spanOverlapFactor();
         minimumSpan = pcesConfig.minimumSpan();
         preferredFileSizeMegabytes = pcesConfig.preferredFileSizeMegabytes();
-
+        this.pcesFileWriterType = pcesConfig.pcesFileWriterType();
         averageSpanUtilization = new LongRunningAverage(pcesConfig.spanUtilizationRunningAverageLength());
 
         fileType = eventConfig.useBirthRoundAncientThreshold()
@@ -280,7 +273,7 @@ public class CommonPcesWriter {
 
             currentMutableFile = fileManager
                     .getNextFileDescriptor(nonAncientBoundary, upperBound)
-                    .getMutableFile(USE_FILE_CHANNEL_WRITER, syncEveryEvent);
+                    .getMutableFile(pcesFileWriterType);
         }
 
         return fileClosed;

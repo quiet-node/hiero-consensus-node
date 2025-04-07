@@ -4,7 +4,6 @@ package com.swirlds.platform.event.preconsensus;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.mock;
@@ -37,10 +36,10 @@ class CommonPcesWriterTest {
         final PcesFile pcesFile = mock(PcesFile.class);
         when(fileManager.getNextFileDescriptor(anyLong(), anyLong())).thenReturn(pcesFile);
         pcesMutableFile = mock(PcesMutableFile.class);
-        when(pcesFile.getMutableFile(any(), anyBoolean())).thenReturn(pcesMutableFile);
+        when(pcesFile.getMutableFile(any())).thenReturn(pcesMutableFile);
 
         // Initialize CommonPcesWriter with mocks
-        commonPcesWriter = new CommonPcesWriter(platformContext, fileManager, true);
+        commonPcesWriter = new CommonPcesWriter(platformContext, fileManager);
     }
 
     @Test

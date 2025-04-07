@@ -63,12 +63,10 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
             @NonNull final NodeId selfId) {
         Objects.requireNonNull(platformContext, "platformContext is required");
         Objects.requireNonNull(fileManager, "fileManager is required");
-        commonPcesWriter = new CommonPcesWriter(platformContext, fileManager, false);
+        final PcesConfig configData = platformContext.getConfiguration().getConfigData(PcesConfig.class);
+        this.commonPcesWriter = new CommonPcesWriter(platformContext, fileManager);
         this.selfId = Objects.requireNonNull(selfId, "selfId is required");
-        this.fileSyncOption = platformContext
-                .getConfiguration()
-                .getConfigData(PcesConfig.class)
-                .inlinePcesSyncOption();
+        this.fileSyncOption = configData.inlinePcesSyncOption();
         this.metrics = platformContext.getMetrics();
     }
 
