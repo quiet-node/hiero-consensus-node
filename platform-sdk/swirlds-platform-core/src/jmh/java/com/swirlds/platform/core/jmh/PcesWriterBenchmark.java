@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.core.jmh;
 
-import com.google.common.collect.ImmutableList;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.platform.event.preconsensus.FileSyncOption;
 import com.swirlds.platform.event.preconsensus.PcesFile;
 import com.swirlds.platform.event.preconsensus.PcesFileWriterType;
 import com.swirlds.platform.event.preconsensus.PcesMutableFile;
+import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
 import com.swirlds.platform.test.fixtures.event.generator.StandardGraphGenerator;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.PlatformEvent;
@@ -44,32 +47,19 @@ public class PcesWriterBenchmark {
 
     private Path directory;
     private PcesMutableFile mutableFile;
-    static final List<PlatformEvent> EVENTS;
     static final PlatformEvent EVENT;
-    static final NodeId selfId = NodeId.FIRST_NODE_ID;
 
     static final int NUM_EVENTS = 100;
 
     static {
-        final Randotron r = Randotron.create(0);
-        final StandardGraphGenerator generator = new StandardGraphGenerator(
-                TestPlatformContextBuilder.create().build(),
-                r.nextLong(),
-                new StandardEventSource(),
-                new StandardEventSource(),
-                new StandardEventSource(),
-                new StandardEventSource());
 
-        final var events = new ArrayList<PlatformEvent>();
-        for (int i = 0; i < NUM_EVENTS; i++) {
-            events.add(generator.generateEvent().getBaseEvent());
-        }
-        EVENTS = ImmutableList.copyOf(events);
-        EVENT = EVENTS.getFirst();
-        System.out.println("selfEvents:"
-                + EVENTS.stream()
-                        .filter(event -> event.getCreatorId().equals(selfId))
-                        .count());
+        final Randotron r = Randotron.create(0);
+        EVENT  = new TestingEventBuilder(r)
+                .setAppTransactionCount(3)
+                .setSystemTransactionCount(1)
+                .setSelfParent(new TestingEventBuilder(r).build())
+                .setOtherParent(new TestingEventBuilder(r).build())
+                .build();
     }
 
     @Setup(Level.Iteration)
@@ -133,5 +123,49 @@ public class PcesWriterBenchmark {
     public void writeAndSyncEvent() throws IOException {
         mutableFile.writeEvent(EVENT);
         mutableFile.sync();
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.Throughput)
+    @OutputTimeUnit(TimeUnit.SECONDS)
+    public void all(BenchmarkState state) throws IOException {
+        for (var event : state.events) {
+            mutableFile.writeEvent(EVENT);
+            if (state.option == FileSyncOption.EVERY_EVENT
+                    || event.getCreatorId().equals(state.selfId) && state.option == FileSyncOption.EVERY_SELF_EVENT) {
+                mutableFile.sync();
+            }
+        }
+    }
+
+    @State(Scope.Thread)
+    public static class BenchmarkState {
+        @Param({"EVERY_EVENT", "EVERY_SELF_EVENT"})
+        private FileSyncOption option;
+        private NodeId selfId = NodeId.FIRST_NODE_ID;
+         private List<PlatformEvent> events;
+
+        @Setup(Level.Iteration)
+        public void setup() throws IOException, InterruptedException {
+            final Randotron r = Randotron.create(0);
+            final StandardGraphGenerator generator = new StandardGraphGenerator(
+                    TestPlatformContextBuilder.create().build(),
+                    r.nextLong(),
+                    new StandardEventSource(),
+                    new StandardEventSource(),
+                    new StandardEventSource(),
+                    new StandardEventSource());
+
+            events = new ArrayList<>();
+            for (int i = 0; i < NUM_EVENTS; i++) {
+                events.add(generator.generateEvent().getBaseEvent());
+            }
+
+            System.out.println("selfEvents:"
+                    + events.stream()
+                    .filter(event -> event.getCreatorId().equals(selfId))
+                    .count());
+            Collections.shuffle(events);
+        }
     }
 }
