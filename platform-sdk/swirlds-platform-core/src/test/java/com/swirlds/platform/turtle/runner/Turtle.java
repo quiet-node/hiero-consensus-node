@@ -6,11 +6,7 @@ import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.test.fixtures.Randotron;
-import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.address.AddressBook;
-import com.swirlds.platform.test.consensus.framework.validation.SigSetValidation;
-import com.swirlds.platform.test.consensus.framework.validation.StateValidation;
-import com.swirlds.platform.test.consensus.framework.validation.Validations;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusRoundValidator;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
@@ -260,24 +256,6 @@ public class Turtle {
                 throw new RuntimeException("Interrupted while ticking nodes", e);
             } catch (final ExecutionException e) {
                 throw new RuntimeException(e);
-            }
-        }
-    }
-
-    // TODO: adapt after consensus events validations are merged
-    public void validate() {
-        final Validations validations = Validations.standard();
-
-        for (final TurtleNode node : nodes) {
-            List<ReservedSignedState> reservedSignedStates =
-                    node.getSignedStateHolder().getCollectedSignedStates();
-
-            for (final StateValidation validator : validations.getConsensusStateValidationsList()) {
-                validator.validate(reservedSignedStates);
-            }
-
-            for (final SigSetValidation validation : validations.getConsensusSigSetValidationsList()) {
-                validation.validate(reservedSignedStates, node.getPlatform().getSelfId());
             }
         }
     }
