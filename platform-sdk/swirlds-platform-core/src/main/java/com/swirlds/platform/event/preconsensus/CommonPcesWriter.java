@@ -7,6 +7,7 @@ import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.LongRunningAverage;
+import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import com.swirlds.platform.eventhandling.EventConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -28,7 +29,7 @@ public class CommonPcesWriter {
     /**
      *  If {@code true} {@code FileChannel} is used to write to the file and if {@code false} {@code OutputStream} is used.
      */
-    private static final boolean USE_FILE_CHANNEL_WRITER = true;
+    private static final PcesFileWriterType USE_FILE_CHANNEL_WRITER = PcesFileWriterType.OUTPUT_STREAM;
 
     /**
      * Keeps track of the event stream files on disk.

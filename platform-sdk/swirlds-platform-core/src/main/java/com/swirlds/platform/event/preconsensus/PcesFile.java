@@ -8,6 +8,7 @@ import static org.hiero.consensus.model.event.AncientMode.GENERATION_THRESHOLD;
 
 import com.swirlds.common.io.utility.RecycleBin;
 import com.swirlds.common.utility.NonCryptographicHashing;
+import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -378,26 +379,26 @@ public final class PcesFile implements Comparable<PcesFile> {
     }
 
     /**
-     * Same as {@link #getMutableFile(boolean, boolean)} with both parameters set to false.
+     * Same as {@link #getMutableFile(PcesFileWriterType, boolean)} with both parameters set to false.
      */
     @NonNull
     public PcesMutableFile getMutableFile() throws IOException {
-        return new PcesMutableFile(this, false, false);
+        return new PcesMutableFile(this, PcesFileWriterType.OUTPUT_STREAM, false);
     }
 
     /**
      * Get an object that can be used to write events to this file. Throws if there already exists a file on disk with
      * the same path.
      *
-     * @param useFileChannelWriter if true, use a {@link java.nio.channels.FileChannel} to write to the file. Otherwise,
-     *                             use a {@link java.io.FileOutputStream}.
-     * @param syncEveryEvent       if true, sync the file after every event is written
+     * @param pcesFileWriterType if true, use a {@link java.nio.channels.FileChannel} to write to the file. Otherwise, use a
+     *                       {@link java.io.FileOutputStream}.
+     * @param syncEveryEvent if true, sync the file after every event is written
      * @return a writer for this file
      */
     @NonNull
-    public PcesMutableFile getMutableFile(final boolean useFileChannelWriter, final boolean syncEveryEvent)
+    public PcesMutableFile getMutableFile(final PcesFileWriterType pcesFileWriterType, final boolean syncEveryEvent)
             throws IOException {
-        return new PcesMutableFile(this, useFileChannelWriter, syncEveryEvent);
+        return new PcesMutableFile(this, pcesFileWriterType, syncEveryEvent);
     }
 
     /**

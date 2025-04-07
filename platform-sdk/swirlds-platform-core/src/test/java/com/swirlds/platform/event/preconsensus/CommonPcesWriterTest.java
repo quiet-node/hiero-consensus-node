@@ -37,7 +37,7 @@ class CommonPcesWriterTest {
         final PcesFile pcesFile = mock(PcesFile.class);
         when(fileManager.getNextFileDescriptor(anyLong(), anyLong())).thenReturn(pcesFile);
         pcesMutableFile = mock(PcesMutableFile.class);
-        when(pcesFile.getMutableFile(anyBoolean(), anyBoolean())).thenReturn(pcesMutableFile);
+        when(pcesFile.getMutableFile(any(), anyBoolean())).thenReturn(pcesMutableFile);
 
         // Initialize CommonPcesWriter with mocks
         commonPcesWriter = new CommonPcesWriter(platformContext, fileManager, true);

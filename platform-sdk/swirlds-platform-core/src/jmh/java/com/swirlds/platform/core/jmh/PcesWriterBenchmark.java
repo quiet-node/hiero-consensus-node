@@ -5,9 +5,9 @@ import com.google.common.collect.ImmutableList;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
-import com.swirlds.platform.event.preconsensus.FileSyncOption;
 import com.swirlds.platform.event.preconsensus.PcesFile;
 import com.swirlds.platform.event.preconsensus.PcesMutableFile;
+import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import com.swirlds.platform.test.fixtures.event.generator.StandardGraphGenerator;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
 import java.io.IOException;
@@ -39,10 +39,12 @@ import org.openjdk.jmh.annotations.Warmup;
 @Measurement(iterations = 10, time = 10)
 public class PcesWriterBenchmark {
 
-    @Param({ "true", "false"})
-    public boolean useFileChannelWriter;
-    @Param({ "true", "false"})
+    @Param({"OUTPUT_STREAM", "FILE_CHANNEL", "RANDOM_ACCESS_FILE"})
+    public PcesFileWriterType writer;
+
+    @Param({"true", "false"})
     public boolean useDsyncFlagWriter;
+
     private Path directory;
     private PcesMutableFile mutableFile;
     static final List<PlatformEvent> EVENTS;
@@ -66,7 +68,7 @@ public class PcesWriterBenchmark {
             events.add(generator.generateEvent().getBaseEvent());
         }
         EVENTS = ImmutableList.copyOf(events);
-        EVENT=EVENTS.getFirst();
+        EVENT = EVENTS.getFirst();
         System.out.println("selfEvents:"
                 + EVENTS.stream()
                         .filter(event -> event.getCreatorId().equals(selfId))
@@ -82,7 +84,7 @@ public class PcesWriterBenchmark {
         directory = Files.createTempDirectory("PcesWriterBenchmark");
         final PcesFile file = PcesFile.of(AncientMode.GENERATION_THRESHOLD, r.nextInstant(), 1, 0, 100, 0, directory);
 
-        mutableFile = file.getMutableFile(useFileChannelWriter, useDsyncFlagWriter);
+        mutableFile = file.getMutableFile(writer, useDsyncFlagWriter);
     }
 
     @TearDown(Level.Iteration)
@@ -125,14 +127,14 @@ public class PcesWriterBenchmark {
     @BenchmarkMode(Mode.Throughput)
     @OutputTimeUnit(TimeUnit.SECONDS)
     public void writeEvent() throws IOException {
-            mutableFile.writeEvent(EVENT);
+        mutableFile.writeEvent(EVENT);
     }
+
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     @OutputTimeUnit(TimeUnit.SECONDS)
     public void writeAndSyncEvent() throws IOException {
-            mutableFile.writeEvent(EVENT);
-            mutableFile.sync();
+        mutableFile.writeEvent(EVENT);
+        mutableFile.sync();
     }
-
 }

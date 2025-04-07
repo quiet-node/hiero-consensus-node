@@ -9,7 +9,6 @@ import static org.hiero.consensus.model.event.AncientMode.GENERATION_THRESHOLD;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.units.UnitConstants;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.eventhandling.EventConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -52,7 +51,6 @@ public class PcesFileManager {
      * The root directory where event files are stored.
      */
     private final Path databaseDirectory;
-
 
     /**
      * The current origin round.

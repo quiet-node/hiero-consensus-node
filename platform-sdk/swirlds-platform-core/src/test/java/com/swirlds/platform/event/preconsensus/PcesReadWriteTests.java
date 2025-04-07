@@ -13,8 +13,10 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.Lists;
 import com.swirlds.common.io.IOIterator;
 import com.swirlds.common.io.utility.FileUtils;
+import com.swirlds.platform.event.preconsensus.PcesMutableFile.PcesFileWriterType;
 import com.swirlds.platform.test.fixtures.event.generator.StandardGraphGenerator;
 import com.swirlds.platform.test.fixtures.event.source.StandardEventSource;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -64,6 +66,13 @@ class PcesReadWriteTests {
         return Stream.of(Arguments.of(GENERATION_THRESHOLD), Arguments.of(BIRTH_ROUND_THRESHOLD));
     }
 
+    protected static Stream<Arguments> ancientAndFileWriterTypeArguments() {
+        return Lists.cartesianProduct(
+                        List.of(GENERATION_THRESHOLD, BIRTH_ROUND_THRESHOLD), List.of(PcesFileWriterType.values()))
+                .stream()
+                .map(l -> Arguments.of(l.toArray()));
+    }
+
     protected static Stream<Arguments> ancientAndBoolanArguments() {
         return Stream.of(
                 Arguments.of(GENERATION_THRESHOLD, false),
@@ -73,9 +82,9 @@ class PcesReadWriteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("ancientAndBoolanArguments")
+    @MethodSource("ancientAndFileWriterTypeArguments")
     @DisplayName("Write Then Read Test")
-    void writeThenReadTest(@NonNull final AncientMode ancientMode, final boolean useFileChannelWriter)
+    void writeThenReadTest(@NonNull final AncientMode ancientMode, final PcesFileWriterType pcesFileWriterType)
             throws IOException {
         final Random random = RandomUtils.getRandomPrintSeed();
 
@@ -110,7 +119,7 @@ class PcesReadWriteTests {
                 0,
                 testDirectory);
 
-        final PcesMutableFile mutableFile = file.getMutableFile(useFileChannelWriter, false);
+        final PcesMutableFile mutableFile = file.getMutableFile(pcesFileWriterType, false);
         for (final PlatformEvent event : events) {
             mutableFile.writeEvent(event);
         }

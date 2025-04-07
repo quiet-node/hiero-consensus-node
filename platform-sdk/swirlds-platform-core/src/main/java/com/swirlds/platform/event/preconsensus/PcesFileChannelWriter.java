@@ -29,8 +29,6 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     /** Tracks the size of the file in bytes */
     private int fileSize;
 
-    private final boolean syncEveryEvent;
-
     /**
      * Create a new writer that writes events to a file using a {@link FileChannel}.
      *
@@ -39,9 +37,8 @@ public class PcesFileChannelWriter implements PcesFileWriter {
      * @throws IOException if an error occurs while opening the file
      */
     public PcesFileChannelWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
-        this.syncEveryEvent = syncEveryEvent;
         final var defaultFlags = Stream.of(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
-        final var extendedFlags = syncEveryEvent ? Stream.of(StandardOpenOption.DSYNC):Stream.of();
+        final var extendedFlags = /*syncEveryEvent ? Stream.of(StandardOpenOption.DSYNC):Stream.of() */ Stream.of();
         final var allFlags = Streams.concat(defaultFlags, extendedFlags).toArray(OpenOption[]::new);
         channel = FileChannel.open(filePath, allFlags);
         buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
@@ -87,10 +84,10 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     @Override
     public void sync() throws IOException {
         // benchmarks show that this has horrible performance for the channel writer
-        //if (!syncEveryEvent) {
-            // If syncEveryEvent is on, we already told the OS to do this
-            channel.force(false);
-        //}
+        // if (!syncEveryEvent) {
+        // If syncEveryEvent is on, we already told the OS to do this
+        channel.force(false);
+        // }
     }
 
     @Override

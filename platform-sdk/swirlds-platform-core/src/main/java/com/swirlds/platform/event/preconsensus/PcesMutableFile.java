@@ -5,6 +5,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import org.hiero.consensus.model.event.PlatformEvent;
 
@@ -27,12 +28,14 @@ public class PcesMutableFile {
     /**
      * Create a new preconsensus event file that can be written to.
      *
-     * @param descriptor           a description of the file
-     * @param useFileChannelWriter whether to use a FileChannel to write to the file as opposed to an OutputStream
-     * @param syncEveryEvent       whether to sync the file after every event
+     * @param descriptor     a description of the file
+     * @param pcesFileWriterType whether to use a FileChannel to write to the file as opposed to an OutputStream
+     * @param syncEveryEvent whether to sync the file after every event
      */
     PcesMutableFile(
-            @NonNull final PcesFile descriptor, final boolean useFileChannelWriter, final boolean syncEveryEvent)
+            @NonNull final PcesFile descriptor,
+            final PcesFileWriterType pcesFileWriterType,
+            final boolean syncEveryEvent)
             throws IOException {
         if (Files.exists(descriptor.getPath())) {
             throw new IOException("File " + descriptor.getPath() + " already exists");
@@ -41,13 +44,24 @@ public class PcesMutableFile {
         Files.createDirectories(descriptor.getPath().getParent());
 
         this.descriptor = descriptor;
-        writer = useFileChannelWriter
-                ? new PcesFileChannelWriter(descriptor.getPath(), syncEveryEvent)
-                : new PcesOutputStreamFileWriter(descriptor.getPath(), syncEveryEvent);
+        writer = pcesFileWriterType.create(descriptor.getPath(), syncEveryEvent);
         writer.writeVersion(PcesFileVersion.currentVersionNumber());
         highestAncientIdentifierInFile = descriptor.getLowerBound();
     }
 
+    public enum PcesFileWriterType {
+        OUTPUT_STREAM,
+        FILE_CHANNEL,
+        RANDOM_ACCESS_FILE;
+
+        PcesFileWriter create(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
+            return switch (this) {
+                case FILE_CHANNEL -> new PcesFileChannelWriter(filePath, syncEveryEvent);
+                case RANDOM_ACCESS_FILE -> new PcesRandomAccessFileWriter(filePath, syncEveryEvent);
+                default -> new PcesOutputStreamFileWriter(filePath, syncEveryEvent);
+            };
+        }
+    }
     /**
      * Check if this file is eligible to contain an event based on bounds.
      *
