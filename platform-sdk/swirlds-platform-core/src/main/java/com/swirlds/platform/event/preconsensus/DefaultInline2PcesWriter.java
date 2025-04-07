@@ -86,7 +86,7 @@ public class DefaultInline2PcesWriter {
     }
 
     /**
-     * {@inheritDoc}
+     *
      */
     @Nullable
     public List<PlatformEvent> writeEvents() {
@@ -136,14 +136,14 @@ public class DefaultInline2PcesWriter {
     }
 
     /**
-     * {@inheritDoc}
+     *
      */
     public void registerDiscontinuity(@NonNull Long newOriginRound) {
         commonPcesWriter.registerDiscontinuity(newOriginRound);
     }
 
     /**
-     * {@inheritDoc}
+     *
      */
     public void updateNonAncientEventBoundary(@NonNull EventWindow nonAncientBoundary) {
         commonPcesWriter.updateNonAncientEventBoundary(nonAncientBoundary);
