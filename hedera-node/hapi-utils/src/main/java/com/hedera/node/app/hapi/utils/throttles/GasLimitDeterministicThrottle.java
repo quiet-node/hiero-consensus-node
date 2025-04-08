@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.hapi.utils.throttles;
 
+import static com.hedera.node.app.hapi.utils.throttles.BucketThrottle.CAPACITY_UNITS_PER_TXN;
 import static com.hedera.node.app.hapi.utils.throttles.DeterministicThrottle.nanosBetween;
 import static java.util.Objects.requireNonNull;
 
@@ -16,19 +17,19 @@ import java.time.Instant;
  */
 public class GasLimitDeterministicThrottle implements CongestibleThrottle {
     private static final String THROTTLE_NAME = "Gas";
-    private final GasLimitBucketThrottle delegate;
+    private final DeterministicThrottle delegate;
     private Timestamp lastDecisionTime;
-    private final long capacity;
 
     /**
      * Creates a new instance of the throttle with capacity - the total amount of gas allowed per
      * sec.
      *
      * @param capacity - the total amount of gas allowed per sec.
+     * @param burstPeriodMs - the burst period as milliseconds
      */
-    public GasLimitDeterministicThrottle(long capacity) {
-        this.capacity = capacity;
-        this.delegate = new GasLimitBucketThrottle(capacity);
+    public GasLimitDeterministicThrottle(final long capacity, final long burstPeriodMs) {
+        this.delegate = DeterministicThrottle.withTpsAndBurstPeriodMsNamed(
+                Math.toIntExact(capacity), burstPeriodMs, THROTTLE_NAME);
     }
 
     /**
@@ -50,7 +51,7 @@ public class GasLimitDeterministicThrottle implements CongestibleThrottle {
             throw new IllegalArgumentException("Gas limit must be non-negative, but was " + txGasLimit);
         }
         lastDecisionTime = new Timestamp(now.getEpochSecond(), now.getNano());
-        return delegate.allow(txGasLimit, elapsedNanos);
+        return delegate.allow(Math.toIntExact(txGasLimit), now);
     }
 
     /**
@@ -59,7 +60,8 @@ public class GasLimitDeterministicThrottle implements CongestibleThrottle {
      * @return the free-to-used ratio at that time
      */
     public long instantaneousFreeToUsedRatio() {
-        return delegate.freeToUsedRatio();
+        final var used = delegate.used() / CAPACITY_UNITS_PER_TXN;
+        return (used == 0) ? Long.MAX_VALUE : capacityFree() / used;
     }
 
     /**
@@ -73,8 +75,7 @@ public class GasLimitDeterministicThrottle implements CongestibleThrottle {
         if (lastDecisionTime == null) {
             return 0.0;
         }
-        final var elapsedNanos = Math.max(0, nanosBetween(lastDecisionTime, now));
-        return delegate.percentUsed(elapsedNanos);
+        return delegate.percentUsed(now);
     }
 
     /**
@@ -98,14 +99,14 @@ public class GasLimitDeterministicThrottle implements CongestibleThrottle {
      */
     @Override
     public long capacity() {
-        return capacity;
+        return delegate.capacity() / CAPACITY_UNITS_PER_TXN;
     }
 
     @Override
     @SuppressWarnings("java:S125")
     public long mtps() {
         // We treat the "milli-TPS" of the throttle bucket as 1000x its gas/sec;
-        return capacity * 1_000;
+        return capacity() * 1_000;
     }
 
     @Override
@@ -120,7 +121,7 @@ public class GasLimitDeterministicThrottle implements CongestibleThrottle {
      */
     @Override
     public long used() {
-        return delegate.bucket().capacityUsed();
+        return delegate.used() / CAPACITY_UNITS_PER_TXN;
     }
 
     /**
@@ -131,34 +132,23 @@ public class GasLimitDeterministicThrottle implements CongestibleThrottle {
      * @param value - the amount to release
      */
     public void leakUnusedGasPreviouslyReserved(long value) {
-        delegate().bucket().leak(value);
-    }
-
-    /**
-     * returns an instance of the {@link GasLimitBucketThrottle} used under the hood.
-     *
-     * @return - an instance of the {@link GasLimitBucketThrottle} used under the hood
-     */
-    GasLimitBucketThrottle delegate() {
-        return delegate;
+        delegate.leakCapacity(value * CAPACITY_UNITS_PER_TXN);
     }
 
     public ThrottleUsageSnapshot usageSnapshot() {
-        final var bucket = delegate.bucket();
-        return new ThrottleUsageSnapshot(bucket.capacityUsed(), lastDecisionTime);
+        return new ThrottleUsageSnapshot(delegate.used() / CAPACITY_UNITS_PER_TXN, lastDecisionTime);
     }
 
     public void resetUsageTo(@NonNull final ThrottleUsageSnapshot usageSnapshot) {
         requireNonNull(usageSnapshot);
-        final var bucket = delegate.bucket();
         lastDecisionTime = usageSnapshot.lastDecisionTime();
-        bucket.resetUsed(usageSnapshot.used());
+        final ThrottleUsageSnapshot adjustedSnapshot =
+                new ThrottleUsageSnapshot(usageSnapshot.used() * CAPACITY_UNITS_PER_TXN, lastDecisionTime);
+        delegate.resetUsageTo(adjustedSnapshot);
     }
 
     public void resetUsage() {
-        resetLastAllowedUse();
-        final var bucket = delegate.bucket();
-        bucket.resetUsed(0);
+        delegate.resetUsage();
     }
 
     public void reclaimLastAllowedUse() {
@@ -167,5 +157,9 @@ public class GasLimitDeterministicThrottle implements CongestibleThrottle {
 
     public void resetLastAllowedUse() {
         delegate.resetLastAllowedUse();
+    }
+
+    public long capacityFree() {
+        return delegate.capacityFree() / CAPACITY_UNITS_PER_TXN;
     }
 }

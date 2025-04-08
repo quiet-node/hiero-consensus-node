@@ -851,10 +851,13 @@ public class ThrottleAccumulator {
     public void applyGasConfig() {
         final var configuration = configSupplier.get();
         final var contractsConfig = configuration.getConfigData(ContractsConfig.class);
-        if (contractsConfig.throttleThrottleByGas() && contractsConfig.maxGasPerSec() == 0) {
+        final var maxGasPerSec = throttleType.equals(ThrottleType.BACKEND_THROTTLE)
+                ? contractsConfig.maxGasPerSecBackend()
+                : contractsConfig.maxGasPerSec();
+        if (contractsConfig.throttleThrottleByGas() && maxGasPerSec == 0) {
             log.warn("{} gas throttling enabled, but limited to 0 gas/sec", throttleType.name());
         }
-        gasThrottle = new GasLimitDeterministicThrottle(contractsConfig.maxGasPerSec());
+        gasThrottle = new GasLimitDeterministicThrottle(maxGasPerSec, contractsConfig.throttleBurstPeriod());
         if (throttleMetrics != null) {
             throttleMetrics.setupGasThrottleMetric(gasThrottle, configuration);
         }
