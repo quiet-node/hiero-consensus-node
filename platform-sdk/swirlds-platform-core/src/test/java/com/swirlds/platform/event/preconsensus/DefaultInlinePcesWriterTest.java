@@ -4,8 +4,12 @@ package com.swirlds.platform.event.preconsensus;
 import static org.hiero.consensus.model.event.AncientMode.GENERATION_THRESHOLD;
 
 import com.swirlds.base.test.fixtures.time.FakeTime;
+import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.component.framework.model.WiringModel;
+import com.swirlds.component.framework.model.WiringModelBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.test.fixtures.event.PcesWriterTestUtils;
@@ -65,14 +69,14 @@ class DefaultInlinePcesWriterTest {
         }
 
         final PcesFileTracker pcesFiles = new PcesFileTracker(ancientMode);
-
+        final WiringModel model =
+                WiringModelBuilder.create(new NoOpMetrics(), Time.getCurrent()).build();
         final PcesFileManager fileManager = new PcesFileManager(platformContext, pcesFiles, selfId, 0);
-        final DefaultInlinePcesWriter writer = new DefaultInlinePcesWriter(platformContext, fileManager, selfId);
+        final DefaultInlinePcesWriter writer =
+                new DefaultInlinePcesWriter(platformContext, fileManager, selfId, model, System.out::println);
 
         writer.beginStreamingNewEvents();
-        for (final PlatformEvent event : events) {
-            writer.writeEvent(event);
-        }
+        writer.writeEvents(events);
 
         // forces the writer to close the current file so that we can verify the stream
         writer.registerDiscontinuity(1L);

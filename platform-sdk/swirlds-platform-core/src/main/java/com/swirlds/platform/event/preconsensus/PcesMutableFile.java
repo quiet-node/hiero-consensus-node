@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import org.hiero.consensus.model.event.PlatformEvent;
 
 /**
@@ -158,5 +159,11 @@ public class PcesMutableFile {
     @Override
     public String toString() {
         return descriptor.toString();
+    }
+
+    public void writeEvents(final List<PlatformEvent> platformEvents) throws IOException {
+        for (var event : platformEvents) {
+            this.writeEvent(event);
+        }
     }
 }

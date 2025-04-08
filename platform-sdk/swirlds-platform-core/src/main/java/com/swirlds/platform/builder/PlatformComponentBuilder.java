@@ -34,7 +34,7 @@ import com.swirlds.platform.event.hashing.EventHasher;
 import com.swirlds.platform.event.orphan.DefaultOrphanBuffer;
 import com.swirlds.platform.event.orphan.OrphanBuffer;
 import com.swirlds.platform.event.preconsensus.DefaultInlinePcesWriter;
-import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
+import com.swirlds.platform.event.preconsensus.InlinePcesWriter2;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileManager;
 import com.swirlds.platform.event.resubmitter.DefaultTransactionResubmitter;
@@ -84,7 +84,9 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
+import java.util.function.Consumer;
 import org.hiero.consensus.model.event.CesEvent;
+import org.hiero.consensus.model.event.PlatformEvent;
 
 /**
  * The advanced platform builder is responsible for constructing platform components. This class is exposed so that
@@ -121,7 +123,7 @@ public class PlatformComponentBuilder {
     private SignedStateSentinel signedStateSentinel;
     private StatusStateMachine statusStateMachine;
     private TransactionPrehandler transactionPrehandler;
-    private InlinePcesWriter inlinePcesWriter;
+    private InlinePcesWriter2 inlinePcesWriter;
     private IssDetector issDetector;
     private IssHandler issHandler;
     private Gossip gossip;
@@ -671,7 +673,7 @@ public class PlatformComponentBuilder {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder withInlinePcesWriter(@NonNull final InlinePcesWriter inlinePcesWriter) {
+    public PlatformComponentBuilder withInlinePcesWriter(@NonNull final InlinePcesWriter2 inlinePcesWriter) {
         throwIfAlreadyUsed();
         if (this.inlinePcesWriter != null) {
             throw new IllegalStateException("Inline PCES writer has already been set");
@@ -682,14 +684,14 @@ public class PlatformComponentBuilder {
 
     /**
      * Build the Inline PCES writer if it has not yet been built. If one has been provided via
-     * {@link #withInlinePcesWriter(InlinePcesWriter)}, that writer will be used. If this method is called more than
+     * {@link #withInlinePcesWriter(InlinePcesWriter2)}, that writer will be used. If this method is called more than
      * once, only the first call will build the Inline PCES writer. Otherwise, the default writer will be created and
      * returned.
      *
      * @return the Inline PCES writer
      */
     @NonNull
-    public InlinePcesWriter buildInlinePcesWriter() {
+    public InlinePcesWriter2 buildInlinePcesWriter(Consumer<PlatformEvent> inputWire) {
         if (inlinePcesWriter == null) {
             try {
                 final PcesFileManager preconsensusEventFileManager = new PcesFileManager(
@@ -697,8 +699,13 @@ public class PlatformComponentBuilder {
                         blocks.initialPcesFiles(),
                         blocks.selfId(),
                         blocks.initialState().get().getRound());
+
                 inlinePcesWriter = new DefaultInlinePcesWriter(
-                        blocks.platformContext(), preconsensusEventFileManager, blocks.selfId());
+                        blocks.platformContext(),
+                        preconsensusEventFileManager,
+                        blocks.selfId(),
+                        blocks.model(),
+                        inputWire);
 
             } catch (final IOException e) {
                 throw new UncheckedIOException(e);

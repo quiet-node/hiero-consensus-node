@@ -11,7 +11,7 @@ import com.swirlds.platform.event.branching.BranchReporter;
 import com.swirlds.platform.event.creation.EventCreationManager;
 import com.swirlds.platform.event.deduplication.EventDeduplicator;
 import com.swirlds.platform.event.orphan.OrphanBuffer;
-import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
+import com.swirlds.platform.event.preconsensus.InlinePcesWriter2;
 import com.swirlds.platform.event.stale.StaleEventDetector;
 import com.swirlds.platform.event.validation.EventSignatureValidator;
 import com.swirlds.platform.event.validation.InternalEventValidator;
@@ -64,7 +64,7 @@ public class PlatformCoordinator {
     private final ComponentWiring<StatusStateMachine, PlatformStatus> statusStateMachineWiring;
     private final ComponentWiring<BranchDetector, PlatformEvent> branchDetectorWiring;
     private final ComponentWiring<BranchReporter, Void> branchReporterWiring;
-    private final ComponentWiring<InlinePcesWriter, PlatformEvent> pcesInlineWriterWiring;
+    private final ComponentWiring<InlinePcesWriter2, PlatformEvent> pcesInlineWriterWiring;
     private final ComponentWiring<FutureEventBuffer, List<PlatformEvent>> futureEventBufferWiring;
 
     /**
@@ -115,7 +115,7 @@ public class PlatformCoordinator {
             @NonNull final ComponentWiring<StatusStateMachine, PlatformStatus> statusStateMachineWiring,
             @NonNull final ComponentWiring<BranchDetector, PlatformEvent> branchDetectorWiring,
             @NonNull final ComponentWiring<BranchReporter, Void> branchReporterWiring,
-            @Nullable final ComponentWiring<InlinePcesWriter, PlatformEvent> pcesInlineWriterWiring,
+            @Nullable final ComponentWiring<InlinePcesWriter2, PlatformEvent> pcesInlineWriterWiring,
             @NonNull final ComponentWiring<FutureEventBuffer, List<PlatformEvent>> futureEventBufferWiring) {
 
         this.flushTheEventHasher = Objects.requireNonNull(flushTheEventHasher);
