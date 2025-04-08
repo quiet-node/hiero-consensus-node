@@ -275,20 +275,25 @@ public class HashgraphPicture extends JPanel {
         } else {
             color = HashgraphGuiUtils.eventColor(event, options);
         }
-        g.setColor(color);
 
         final int xPos = pictureMetadata.xpos(e2, event) - d / 2;
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
-        if(selector.isSelected(event)) {
+        if (selector.isSelected(event)) {
+            final Color selectionBorder = Color.GREEN;
+            g.setColor(selectionBorder);
             g.fillOval(xPos - 5, yPos - 5, d + 10, d + 10);
 
             // draw lines to parents for a branched event last, so that they can be clearly seen
-            if(hashgraphSource.getEventStorage().getBranchedEventsMetadata().containsKey(event.getBaseEvent().getGossipEvent())) {
+            if (hashgraphSource
+                    .getEventStorage()
+                    .getBranchedEventsMetadata()
+                    .containsKey(event.getBaseEvent().getGossipEvent())) {
                 drawLinksToParents(g, event);
             }
         }
 
+        g.setColor(color);
         g.fillOval(xPos, yPos, d, d);
         g.setFont(g.getFont().deriveFont(Font.BOLD));
 

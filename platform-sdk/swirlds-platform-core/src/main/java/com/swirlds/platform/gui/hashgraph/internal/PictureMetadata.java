@@ -176,7 +176,15 @@ public class PictureMetadata {
                     .get(branchedEventsToMetadata.get(gossipEvent).branchIndex());
             final int y = branchCoordinates.getY();
             if (y == 0) {
-                yPos = (event == null) ? -100 : (int) (ymax - r * (1.5 + 2 * (event.getGeneration() - minGen)));
+                yPos = (event == null)
+                        ? -100
+                        : (int) (ymax
+                                - r
+                                        * (2
+                                                + branchedEventsToMetadata
+                                                                .get(gossipEvent)
+                                                                .branchIndex()
+                                                        * 10));
                 branchCoordinates.setY(yPos);
             } else {
                 yPos = branchCoordinates.getY();
