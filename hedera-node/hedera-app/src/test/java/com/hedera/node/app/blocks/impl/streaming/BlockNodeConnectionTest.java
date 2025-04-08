@@ -632,16 +632,19 @@ class BlockNodeConnectionTest {
      */
     @Test
     void testEndStreamAndRestartAtBlock() {
+        final BlockNodeConnection connectionSpy = spy(connection);
         // Arrange
         final long blockNumber = 100L;
 
         // Act
-        connection.endStreamAndRestartAtBlock(blockNumber);
+        connectionSpy.endStreamAndRestartAtBlock(blockNumber);
 
         // Assert
         verify(requestObserver).onCompleted();
-        assertEquals(blockNumber, connection.getCurrentBlockNumber());
-        assertEquals(0, connection.getCurrentRequestIndex());
+        assertEquals(blockNumber, connectionSpy.getCurrentBlockNumber());
+        assertEquals(0, connectionSpy.getCurrentRequestIndex());
+        assertThat(connectionSpy.getConnectionState().getStatus()).isEqualTo(ConnectionState.Status.CLOSED);
+        assertThat(connectionSpy.getConnectionState().getMessage()).isEqualTo("Connection closed");
 
         // Verify log messages for ending stream and restarting
         final String expectedLog = "Ending stream and restarting at block " + blockNumber;
@@ -656,6 +659,9 @@ class BlockNodeConnectionTest {
      */
     @Test
     void testOnNext_WithAcknowledgement() {
+        final BlockNodeConnection connectionSpy = spy(connection);
+        connectionSpy.setCurrentBlockNumber(TEST_BLOCK_NUMBER);
+
         // Arrange
         final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
                 .blockAck(BlockAcknowledgement.newBuilder()
@@ -668,11 +674,13 @@ class BlockNodeConnectionTest {
                 .build();
 
         // Act
-        connection.onNext(response);
+        connectionSpy.onNext(response);
 
         verify(connectionManager, times(1)).updateLastVerifiedBlock(TEST_CONNECTION_ID, TEST_BLOCK_NUMBER);
         verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
 
+        assertThat(connectionSpy.getConnectionState().getStatus()).isEqualTo(ConnectionState.Status.RECEIVED_BLOCK_ACK);
+        assertThat(connectionSpy.getConnectionState().getMessage()).isEqualTo("Consensus node is in sync");
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
                 .isNull();
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
@@ -692,6 +700,7 @@ class BlockNodeConnectionTest {
      */
     @Test
     void testOnNext_WithAcknowledgementWithAlreadyVerifiedBlock() {
+        final BlockNodeConnection connectionSpy = spy(connection);
         // Arrange
         final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
                 .blockAck(BlockAcknowledgement.newBuilder()
@@ -704,11 +713,13 @@ class BlockNodeConnectionTest {
                 .build();
 
         // Act
-        connection.onNext(response);
+        connectionSpy.onNext(response);
 
         verify(connectionManager, times(1)).updateLastVerifiedBlock(TEST_CONNECTION_ID, TEST_BLOCK_NUMBER);
         verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
 
+        assertThat(connectionSpy.getConnectionState().getStatus()).isEqualTo(ConnectionState.Status.RECEIVED_BLOCK_ACK);
+        assertThat(connectionSpy.getConnectionState().getMessage()).isEqualTo("Consensus node is behind");
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
                 .isNull();
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
@@ -727,7 +738,9 @@ class BlockNodeConnectionTest {
     @Test
     void testOnNext_WithAcknowledgementWithBlockBeforeCurrent() {
         final long currentBlockNumber = TEST_BLOCK_NUMBER + 1L;
-        connection.setCurrentBlockNumber(currentBlockNumber);
+        final BlockNodeConnection connectionSpy = spy(connection);
+
+        connectionSpy.setCurrentBlockNumber(currentBlockNumber);
         // Arrange
         final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
                 .blockAck(BlockAcknowledgement.newBuilder()
@@ -740,11 +753,13 @@ class BlockNodeConnectionTest {
                 .build();
 
         // Act
-        connection.onNext(response);
+        connectionSpy.onNext(response);
 
         verify(connectionManager, times(1)).updateLastVerifiedBlock(TEST_CONNECTION_ID, TEST_BLOCK_NUMBER);
         verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
 
+        assertThat(connectionSpy.getConnectionState().getStatus()).isEqualTo(ConnectionState.Status.RECEIVED_BLOCK_ACK);
+        assertThat(connectionSpy.getConnectionState().getMessage()).isEqualTo("Consensus node is ahead");
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
                 .isNull();
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
@@ -792,6 +807,8 @@ class BlockNodeConnectionTest {
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
                 .isNull();
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
+        assertThat(connectionSpy.getConnectionState().getStatus()).isEqualTo(ConnectionState.Status.RECEIVED_BLOCK_ACK);
+        assertThat(connectionSpy.getConnectionState().getMessage()).isEqualTo("Consensus node is behind");
 
         // Verify log messages for acknowledgement
         final String expectedLog = "Block " + TEST_BLOCK_NUMBER + " already exists on block node";
@@ -824,6 +841,8 @@ class BlockNodeConnectionTest {
 
         // Assert connection restarts after the last verified block number
         verify(connectionSpy).endStreamAndRestartAtBlock(endOfStream.blockNumber() + 1L);
+        assertThat(connectionSpy.getConnectionState().getStatus()).isEqualTo(ConnectionState.Status.CLOSED);
+        assertThat(connectionSpy.getConnectionState().getMessage()).isEqualTo("Connection closed");
 
         // Verify log messages for end of stream
         final String expectedLog = "Received EndOfStream from block node";

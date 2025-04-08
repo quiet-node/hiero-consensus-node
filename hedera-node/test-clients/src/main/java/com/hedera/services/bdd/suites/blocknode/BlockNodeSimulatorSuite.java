@@ -11,6 +11,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.services.bdd.junit.HapiTest;
+import com.hedera.services.bdd.junit.LogLevel;
 import com.hedera.services.bdd.junit.OrderedInIsolation;
 import java.time.Duration;
 import java.time.Instant;
@@ -47,6 +48,7 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
+    @LogLevel("DEBUG")
     final Stream<DynamicTest> node0BlockInternalError() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
