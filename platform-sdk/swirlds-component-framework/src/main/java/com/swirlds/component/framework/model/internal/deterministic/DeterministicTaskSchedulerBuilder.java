@@ -59,7 +59,10 @@ public class DeterministicTaskSchedulerBuilder<OUT> extends AbstractTaskSchedule
 
         final TaskScheduler<OUT> scheduler =
                 switch (type) {
-                    case CONCURRENT, SEQUENTIAL, SEQUENTIAL_THREAD -> new DeterministicTaskScheduler<>(
+                    case BATCH /*Do something else*/,
+                            CONCURRENT,
+                            SEQUENTIAL,
+                            SEQUENTIAL_THREAD -> new DeterministicTaskScheduler<>(
                             model,
                             name,
                             type,

@@ -35,7 +35,7 @@ import java.util.function.Function;
 public abstract class TaskScheduler<OUT> extends TaskSchedulerInput<OUT> {
 
     private final boolean flushEnabled;
-    private final TraceableWiringModel model;
+    protected final TraceableWiringModel model;
     private final String name;
     private final TaskSchedulerType type;
     private final StandardOutputWire<OUT> primaryOutputWire;

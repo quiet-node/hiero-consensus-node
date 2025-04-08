@@ -3,8 +3,9 @@ package com.swirlds.component.framework.model;
 
 import static com.swirlds.component.framework.schedulers.builders.TaskSchedulerType.NO_OP;
 import static com.swirlds.component.framework.schedulers.builders.TaskSchedulerType.SEQUENTIAL;
-import static com.swirlds.component.framework.schedulers.builders.TaskSchedulerType.SEQUENTIAL_THREAD;
 
+import com.swirlds.base.state.Startable;
+import com.swirlds.base.state.Stoppable;
 import com.swirlds.base.time.Time;
 import com.swirlds.component.framework.model.diagram.HyperlinkBuilder;
 import com.swirlds.component.framework.model.internal.monitor.HealthMonitor;
@@ -13,7 +14,6 @@ import com.swirlds.component.framework.model.internal.standard.JvmAnchor;
 import com.swirlds.component.framework.schedulers.TaskScheduler;
 import com.swirlds.component.framework.schedulers.builders.TaskSchedulerBuilder;
 import com.swirlds.component.framework.schedulers.builders.internal.StandardTaskSchedulerBuilder;
-import com.swirlds.component.framework.schedulers.internal.SequentialThreadTaskScheduler;
 import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.output.OutputWire;
 import com.swirlds.metrics.api.Metrics;
@@ -21,8 +21,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ForkJoinPool;
 
@@ -53,11 +51,6 @@ public class StandardWiringModel extends TraceableWiringModel {
      * The input wire for the health monitor.
      */
     private final BindableInputWire<Instant, Duration> healthMonitorInputWire;
-
-    /**
-     * Thread schedulers need to have their threads started/stopped.
-     */
-    private final List<SequentialThreadTaskScheduler<?>> threadSchedulers = new ArrayList<>();
 
     /**
      * The default fork join pool, schedulers not explicitly assigned a pool will use this one.
@@ -176,9 +169,6 @@ public class StandardWiringModel extends TraceableWiringModel {
     @Override
     public void registerScheduler(@NonNull final TaskScheduler<?> scheduler, @Nullable final String hyperlink) {
         super.registerScheduler(scheduler, hyperlink);
-        if (scheduler.getType() == SEQUENTIAL_THREAD) {
-            threadSchedulers.add((SequentialThreadTaskScheduler<?>) scheduler);
-        }
     }
 
     /**
@@ -208,8 +198,8 @@ public class StandardWiringModel extends TraceableWiringModel {
             heartbeatScheduler.start();
         }
 
-        for (final SequentialThreadTaskScheduler<?> threadScheduler : threadSchedulers) {
-            threadScheduler.start();
+        for (final TaskScheduler<?> threadScheduler : schedulers) {
+            if (threadScheduler instanceof Startable stoppable) stoppable.start();
         }
     }
 
@@ -224,8 +214,8 @@ public class StandardWiringModel extends TraceableWiringModel {
             heartbeatScheduler.stop();
         }
 
-        for (final SequentialThreadTaskScheduler<?> threadScheduler : threadSchedulers) {
-            threadScheduler.stop();
+        for (final TaskScheduler<?> threadScheduler : schedulers) {
+            if (threadScheduler instanceof Stoppable stoppable) stoppable.stop();
         }
 
         if (anchor != null) {

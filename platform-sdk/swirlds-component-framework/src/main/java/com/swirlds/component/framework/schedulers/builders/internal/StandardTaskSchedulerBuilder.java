@@ -12,6 +12,7 @@ import com.swirlds.common.metrics.extensions.StandardFractionalTimer;
 import com.swirlds.component.framework.model.StandardWiringModel;
 import com.swirlds.component.framework.schedulers.TaskScheduler;
 import com.swirlds.component.framework.schedulers.builders.TaskSchedulerType;
+import com.swirlds.component.framework.schedulers.internal.BatchedTaskScheduler;
 import com.swirlds.component.framework.schedulers.internal.ConcurrentTaskScheduler;
 import com.swirlds.component.framework.schedulers.internal.DirectTaskScheduler;
 import com.swirlds.component.framework.schedulers.internal.NoOpTaskScheduler;
@@ -117,6 +118,18 @@ public class StandardTaskSchedulerBuilder<OUT> extends AbstractTaskSchedulerBuil
 
         final TaskScheduler<OUT> scheduler =
                 switch (type) {
+                    case BATCH -> new BatchedTaskScheduler<>(
+                            model,
+                            name,
+                            buildUncaughtExceptionHandler(),
+                            counters.onRamp(),
+                            counters.offRamp(),
+                            dataCounter,
+                            busyFractionTimer,
+                            unhandledTaskCapacity,
+                            flushingEnabled,
+                            squelchingEnabled,
+                            insertionIsBlocking);
                     case CONCURRENT -> new ConcurrentTaskScheduler<>(
                             model,
                             name,

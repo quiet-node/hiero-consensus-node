@@ -6,6 +6,7 @@ package com.swirlds.component.framework.schedulers.builders;
  * to create a task scheduler of the desired type. If unspecified, the default scheduler type is {@link #SEQUENTIAL}.
  */
 public enum TaskSchedulerType {
+    BATCH,
     /**
      * Tasks are executed in a fork join pool one at a time in the order they were enqueued. There is a happens before
      * relationship between each task.
