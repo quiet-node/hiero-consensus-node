@@ -29,12 +29,12 @@ import com.hedera.hapi.node.contract.ContractUpdateTransactionBody;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.node.app.hapi.utils.fee.SigValueObj;
 import com.hedera.node.app.hapi.utils.fee.SmartContractFeeBuilder;
+import com.hedera.node.app.hapi.utils.keys.KeyUtils;
 import com.hedera.node.app.service.contract.impl.records.ContractUpdateStreamBuilder;
 import com.hedera.node.app.service.token.ReadableAccountStore;
 import com.hedera.node.app.service.token.api.TokenServiceApi;
 import com.hedera.node.app.spi.fees.FeeContext;
 import com.hedera.node.app.spi.fees.Fees;
-import com.hedera.node.app.spi.key.KeyUtils;
 import com.hedera.node.app.spi.validation.ExpiryMeta;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
@@ -47,6 +47,7 @@ import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.StakingConfig;
 import com.hedera.node.config.data.TokensConfig;
 import com.hederahashgraph.api.proto.java.FeeData;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Optional;
@@ -59,6 +60,7 @@ import javax.inject.Singleton;
 @Singleton
 public class ContractUpdateHandler implements TransactionHandler {
     private final SmartContractFeeBuilder usageEstimator = new SmartContractFeeBuilder();
+    private final EntityIdFactory entityIdFactory;
 
     /**
      * The value for unlimited automatic associations
@@ -69,8 +71,8 @@ public class ContractUpdateHandler implements TransactionHandler {
      * Default constructor for injection.
      */
     @Inject
-    public ContractUpdateHandler() {
-        // Exists for injection
+    public ContractUpdateHandler(@NonNull final EntityIdFactory entityIdFactory) {
+        this.entityIdFactory = requireNonNull(entityIdFactory);
     }
 
     @Override
@@ -134,9 +136,8 @@ public class ContractUpdateHandler implements TransactionHandler {
         context.storeFactory().serviceApi(TokenServiceApi.class).updateContract(changed);
         context.savepointStack()
                 .getBaseBuilder(ContractUpdateStreamBuilder.class)
-                .contractID(ContractID.newBuilder()
-                        .contractNum(toBeUpdated.accountIdOrThrow().accountNumOrThrow())
-                        .build());
+                .contractID(entityIdFactory.newContractId(
+                        toBeUpdated.accountIdOrThrow().accountNumOrThrow()));
     }
 
     private void validateSemantics(

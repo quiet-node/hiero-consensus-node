@@ -181,7 +181,7 @@ class CryptoTransferHandlerTest extends CryptoTransferHandlerTestBase {
 
         subject.calculateFees(feeContext);
 
-        // Not interested in return value from calculate, just that it was called and bpt and rbs were set approriately
+        // Not interested in return value from calculate, just that it was called and bpt and rbs were set appropriately
         InOrder inOrder = inOrder(feeCalculatorFactory, feeCalculator);
         inOrder.verify(feeCalculatorFactory, times(1)).feeCalculator(SubType.DEFAULT);
         inOrder.verify(feeCalculator, times(1)).addBytesPerTransaction(64L);
@@ -236,7 +236,7 @@ class CryptoTransferHandlerTest extends CryptoTransferHandlerTestBase {
 
         subject.calculateFees(feeContext);
 
-        // Not interested in return value from calculate, just that it was called and bpt and rbs were set approriately
+        // Not interested in return value from calculate, just that it was called and bpt and rbs were set appropriately
         InOrder inOrder = inOrder(feeCalculatorFactory, feeCalculator);
         inOrder.verify(feeCalculatorFactory, times(1)).feeCalculator(SubType.TOKEN_FUNGIBLE_COMMON_WITH_CUSTOM_FEES);
         inOrder.verify(feeCalculator, times(1)).addBytesPerTransaction(176L);
@@ -283,7 +283,7 @@ class CryptoTransferHandlerTest extends CryptoTransferHandlerTestBase {
 
         subject.calculateFees(feeContext);
 
-        // Not interested in return value from calculate, just that it was called and bpt and rbs were set approriately
+        // Not interested in return value from calculate, just that it was called and bpt and rbs were set appropriately
         InOrder inOrder = inOrder(feeCalculatorFactory, feeCalculator);
         inOrder.verify(feeCalculatorFactory, times(1))
                 .feeCalculator(SubType.TOKEN_NON_FUNGIBLE_UNIQUE_WITH_CUSTOM_FEES);
@@ -306,18 +306,6 @@ class CryptoTransferHandlerTest extends CryptoTransferHandlerTestBase {
         Assertions.assertThatThrownBy(() -> subject.handle(context))
                 .isInstanceOf(HandleException.class)
                 .has(responseCode(TRANSFER_LIST_SIZE_LIMIT_EXCEEDED));
-    }
-
-    @Test
-    void handleHbarAllowancePresentButAllowancesDisabled() {
-        config = defaultConfig().withValue("hedera.allowances.isEnabled", false).getOrCreateConfig();
-        final var txn = newCryptoTransfer(
-                ACCT_3333_MINUS_10.copyBuilder().isApproval(true).build(), ACCT_4444_PLUS_10);
-        final var context = mockContext(txn);
-
-        Assertions.assertThatThrownBy(() -> subject.handle(context))
-                .isInstanceOf(HandleException.class)
-                .has(responseCode(NOT_SUPPORTED));
     }
 
     @Test
@@ -449,37 +437,6 @@ class CryptoTransferHandlerTest extends CryptoTransferHandlerTestBase {
         Assertions.assertThatThrownBy(() -> subject.handle(context))
                 .isInstanceOf(HandleException.class)
                 .has(responseCode(BATCH_SIZE_LIMIT_EXCEEDED));
-    }
-
-    @Test
-    void handleFungibleTokenAllowancePresentButAllowancesDisabled() {
-        config = defaultConfig().withValue("hedera.allowances.isEnabled", false).getOrCreateConfig();
-        final var txn = newCryptoTransfer(TokenTransferList.newBuilder()
-                .token(TOKEN_2468)
-                .transfers(ACCT_4444_PLUS_10.copyBuilder().isApproval(true).build())
-                .build());
-        final var context = mockContext(txn);
-
-        Assertions.assertThatThrownBy(() -> subject.handle(context))
-                .isInstanceOf(HandleException.class)
-                .has(responseCode(NOT_SUPPORTED));
-    }
-
-    @Test
-    void handleNftAllowancePresentButAllowancesDisabled() {
-        config = defaultConfig().withValue("hedera.allowances.isEnabled", false).getOrCreateConfig();
-        final var txn = newCryptoTransfer(TokenTransferList.newBuilder()
-                .token(TOKEN_2468)
-                .nftTransfers(SERIAL_1_FROM_3333_TO_4444
-                        .copyBuilder()
-                        .isApproval(true)
-                        .build())
-                .build());
-        final var context = mockContext(txn);
-
-        Assertions.assertThatThrownBy(() -> subject.handle(context))
-                .isInstanceOf(HandleException.class)
-                .has(responseCode(NOT_SUPPORTED));
     }
 
     @Test
@@ -702,7 +659,6 @@ class CryptoTransferHandlerTest extends CryptoTransferHandlerTestBase {
                 .withValue("ledger.transfers.maxLen", 10)
                 .withValue("ledger.tokenTransfers.maxLen", 10)
                 .withValue("tokens.nfts.areEnabled", true)
-                .withValue("ledger.nftTransfers.maxLen", 10)
-                .withValue("hedera.allowances.isEnabled", true);
+                .withValue("ledger.nftTransfers.maxLen", 10);
     }
 }

@@ -9,10 +9,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.crypto.CryptographyHolder;
-import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.crypto.Cryptography;
+import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
+import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
@@ -38,6 +38,8 @@ import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Stream;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
 
 // Note: This class is intended to be used with a human in the loop who is watching standard in and standard err.
 
@@ -45,6 +47,7 @@ import java.util.stream.Stream;
  * Validator to read a data source and all its data and check the complete data set is valid.
  */
 public class VirtualMerkleLeafHasher<K extends VirtualKey, V extends VirtualValue> {
+    private static final Cryptography CRYPTOGRAPHY = CryptographyProvider.getInstance();
 
     private static final Configuration CONFIGURATION = ConfigurationBuilder.create()
             .withConfigDataType(MerkleDbConfig.class)
@@ -102,7 +105,7 @@ public class VirtualMerkleLeafHasher<K extends VirtualKey, V extends VirtualValu
      */
     public Hash computeNextHash(final Hash prevHash, final VirtualLeafNode<K, V> leaf) throws IOException {
         try (final ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                final SerializableDataOutputStream out = new SerializableDataOutputStream(bout)) {
+                final SerializableDataOutputStream out = new SerializableDataOutputStreamImpl(bout)) {
 
             if (prevHash != null) {
                 // add Previous Hash
@@ -127,7 +130,7 @@ public class VirtualMerkleLeafHasher<K extends VirtualKey, V extends VirtualValu
      * @return the hash of the content
      */
     public static Hash hashOf(final byte[] content) {
-        return new Hash(CryptographyHolder.get().digestSync(content));
+        return new Hash(CRYPTOGRAPHY.digestSync(content));
     }
 
     public static void main(final String[] args) throws IOException {
@@ -137,6 +140,7 @@ public class VirtualMerkleLeafHasher<K extends VirtualKey, V extends VirtualValu
             registry.registerConstructables("com.swirlds.merkledb");
             registry.registerConstructables("com.swirlds.demo.virtualmerkle");
             registry.registerConstructables("com.swirlds.common.crypto");
+            registry.registerConstructables("org.hiero.consensus.model.crypto");
         } catch (final ConstructableRegistryException e) {
             e.printStackTrace();
             return;

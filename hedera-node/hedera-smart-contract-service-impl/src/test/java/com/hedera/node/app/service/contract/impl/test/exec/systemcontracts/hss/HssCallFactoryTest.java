@@ -8,6 +8,7 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.EIP_1014_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SOMEBODY;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.bytesForRedirectScheduleTxn;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.entityIdFactory;
 import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.asLongZeroAddress;
 import static org.hyperledger.besu.datatypes.Address.ALTBN128_ADD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -111,16 +112,17 @@ class HssCallFactoryTest extends CallTestBase {
         given(frame.getSenderAddress()).willReturn(EIP_1014_ADDRESS);
         given(addressChecks.hasParentDelegateCall(frame)).willReturn(true);
         given(syntheticIds.converterFor(nativeOperations)).willReturn(idConverter);
-        given(nativeOperations.getSchedule(CALLED_SCHEDULE_ID.scheduleNum())).willReturn(schedule);
+        given(nativeOperations.getSchedule(CALLED_SCHEDULE_ID)).willReturn(schedule);
         given(nativeOperations.getAccount(A_NEW_ACCOUNT_ID)).willReturn(SOMEBODY);
         given(schedule.scheduleId()).willReturn(CALLED_SCHEDULE_ID);
         given(idConverter.convertSender(EIP_1014_ADDRESS)).willReturn(A_NEW_ACCOUNT_ID);
         given(verificationStrategies.activatingOnlyContractKeysFor(EIP_1014_ADDRESS, true, nativeOperations))
                 .willReturn(verificationStrategy);
+        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
 
         final var input = bytesForRedirectScheduleTxn(
                 SignScheduleTranslator.SIGN_SCHEDULE_PROXY.selector(),
-                asLongZeroAddress(CALLED_SCHEDULE_ID.scheduleNum()));
+                asLongZeroAddress(entityIdFactory, CALLED_SCHEDULE_ID.scheduleNum()));
         final var attempt = subject.createCallAttemptFrom(
                 HSS_CONTRACT_ID, input, FrameUtils.CallType.DIRECT_OR_PROXY_REDIRECT, frame);
         final var call = Objects.requireNonNull(attempt.asExecutableCall());
@@ -143,8 +145,9 @@ class HssCallFactoryTest extends CallTestBase {
         given(idConverter.convertSender(ALTBN128_ADD)).willReturn(A_NEW_ACCOUNT_ID);
         given(addressChecks.hasParentDelegateCall(frame)).willReturn(true);
         given(syntheticIds.converterFor(nativeOperations)).willReturn(idConverter);
-        given(nativeOperations.getSchedule(CALLED_SCHEDULE_ID.scheduleNum())).willReturn(schedule);
+        given(nativeOperations.getSchedule(CALLED_SCHEDULE_ID)).willReturn(schedule);
         given(nativeOperations.getAccount(A_NEW_ACCOUNT_ID)).willReturn(SOMEBODY);
+        given(nativeOperations.entityIdFactory()).willReturn(entityIdFactory);
         given(schedule.scheduleId()).willReturn(CALLED_SCHEDULE_ID);
         given(idConverter.convertSender(ALTBN128_ADD)).willReturn(A_NEW_ACCOUNT_ID);
         given(verificationStrategies.activatingOnlyContractKeysFor(ALTBN128_ADD, true, nativeOperations))
@@ -152,7 +155,7 @@ class HssCallFactoryTest extends CallTestBase {
 
         final var input = bytesForRedirectScheduleTxn(
                 SignScheduleTranslator.SIGN_SCHEDULE_PROXY.selector(),
-                asLongZeroAddress(CALLED_SCHEDULE_ID.scheduleNum()));
+                asLongZeroAddress(entityIdFactory, CALLED_SCHEDULE_ID.scheduleNum()));
         final var attempt = subject.createCallAttemptFrom(
                 HSS_CONTRACT_ID, input, FrameUtils.CallType.DIRECT_OR_PROXY_REDIRECT, frame);
         final var call = Objects.requireNonNull(attempt.asExecutableCall());

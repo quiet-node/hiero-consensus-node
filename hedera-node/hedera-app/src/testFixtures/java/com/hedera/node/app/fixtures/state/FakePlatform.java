@@ -8,7 +8,6 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.CryptographyHolder;
 import com.swirlds.common.crypto.Signature;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.NoOpRecycleBin;
@@ -18,7 +17,6 @@ import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.metrics.platform.MetricKeyRegistry;
 import com.swirlds.common.metrics.platform.PlatformMetricsFactoryImpl;
 import com.swirlds.common.notification.NotificationEngine;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.roster.RosterRetriever;
@@ -29,6 +27,7 @@ import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.Random;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * A fake implementation of the {@link Platform} interface.
@@ -87,10 +86,9 @@ public final class FakePlatform implements Platform {
                 configuration,
                 Time.getCurrent(),
                 metrics,
-                CryptographyHolder.get(),
                 FileSystemManager.create(configuration),
                 new NoOpRecycleBin(),
-                MerkleCryptographyFactory.create(configuration, CryptographyHolder.get()));
+                MerkleCryptographyFactory.create(configuration));
     }
 
     @Override

@@ -19,9 +19,8 @@ import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
 import com.swirlds.base.units.UnitConstants;
 import com.swirlds.base.utility.ToStringBuilder;
-import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.collections.HashListByteBuffer;
 import com.swirlds.merkledb.collections.LongList;
 import com.swirlds.merkledb.collections.LongListDisk;
@@ -60,6 +59,8 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
 
 public final class MerkleDbDataSource implements VirtualDataSource {
 
@@ -181,7 +182,8 @@ public final class MerkleDbDataSource implements VirtualDataSource {
         this.tableConfig = tableConfig;
         this.preferDiskBasedIndices = preferDiskBasedIndices;
 
-        final MerkleDbConfig merkleDbConfig = database.getConfiguration().getConfigData(MerkleDbConfig.class);
+        final Configuration config = database.getConfiguration();
+        final MerkleDbConfig merkleDbConfig = config.getConfigData(MerkleDbConfig.class);
 
         // create thread group with label
         final ThreadGroup threadGroup = new ThreadGroup("MerkleDb-" + tableName);
@@ -231,34 +233,44 @@ public final class MerkleDbDataSource implements VirtualDataSource {
         }
         saveMetadata(dbPaths);
 
-        // create path to disk location index
+        // Max number of entities that can be stored
+        final long virtualSize = tableConfig.getMaxNumberOfKeys();
+        // Path to hash and path to KV index capacity. Last leaf path is 2*virtualSize - 2,
+        // so capacity should be 2*virtualSize - 1, but only if virtualSize is greater than 1.
+        // To support virtual sizes 0 and 1, let's set capacity to 2*virtualSize
+        final long pathIndexCapacity = virtualSize * 2;
+
         final boolean forceIndexRebuilding = merkleDbConfig.indexRebuildingEnforced();
-        if (preferDiskBasedIndices) {
-            pathToDiskLocationInternalNodes =
-                    new LongListDisk(dbPaths.pathToDiskLocationInternalNodesFile, database.getConfiguration());
-        } else if (Files.exists(dbPaths.pathToDiskLocationInternalNodesFile) && !forceIndexRebuilding) {
-            pathToDiskLocationInternalNodes =
-                    new LongListOffHeap(dbPaths.pathToDiskLocationInternalNodesFile, database.getConfiguration());
+        // path to disk location index, hashes
+        final Path pathToHashLocationFile = dbPaths.pathToDiskLocationInternalNodesFile;
+        if (Files.exists(pathToHashLocationFile) && !forceIndexRebuilding) {
+            pathToDiskLocationInternalNodes = preferDiskBasedIndices
+                    ? new LongListDisk(pathToHashLocationFile, pathIndexCapacity, config)
+                    : new LongListOffHeap(pathToHashLocationFile, pathIndexCapacity, config);
         } else {
-            pathToDiskLocationInternalNodes = new LongListOffHeap();
+            pathToDiskLocationInternalNodes = preferDiskBasedIndices
+                    ? new LongListDisk(pathIndexCapacity, config)
+                    : new LongListOffHeap(pathIndexCapacity, config);
         }
         // path to disk location index, leaf nodes
-        if (preferDiskBasedIndices) {
-            pathToDiskLocationLeafNodes =
-                    new LongListDisk(dbPaths.pathToDiskLocationLeafNodesFile, database.getConfiguration());
-        } else if (Files.exists(dbPaths.pathToDiskLocationLeafNodesFile) && !forceIndexRebuilding) {
-            pathToDiskLocationLeafNodes =
-                    new LongListOffHeap(dbPaths.pathToDiskLocationLeafNodesFile, database.getConfiguration());
+        final Path pathToLeafLocationFile = dbPaths.pathToDiskLocationLeafNodesFile;
+        if (Files.exists(pathToLeafLocationFile) && !forceIndexRebuilding) {
+            pathToDiskLocationLeafNodes = preferDiskBasedIndices
+                    ? new LongListDisk(pathToLeafLocationFile, pathIndexCapacity, config)
+                    : new LongListOffHeap(pathToLeafLocationFile, pathIndexCapacity, config);
         } else {
-            pathToDiskLocationLeafNodes = new LongListOffHeap(merkleDbConfig.reservedBufferLengthForLeafList());
+            pathToDiskLocationLeafNodes = preferDiskBasedIndices
+                    ? new LongListDisk(pathIndexCapacity, config)
+                    : new LongListOffHeap(pathIndexCapacity, config);
         }
 
         // internal node hashes store, RAM
-        if (tableConfig.getHashesRamToDiskThreshold() > 0) {
+        final long hashesRamToDiskThreshold = tableConfig.getHashesRamToDiskThreshold();
+        if (hashesRamToDiskThreshold > 0) {
             if (Files.exists(dbPaths.hashStoreRamFile)) {
-                hashStoreRam = new HashListByteBuffer(dbPaths.hashStoreRamFile);
+                hashStoreRam = new HashListByteBuffer(dbPaths.hashStoreRamFile, hashesRamToDiskThreshold, config);
             } else {
-                hashStoreRam = new HashListByteBuffer();
+                hashStoreRam = new HashListByteBuffer(hashesRamToDiskThreshold, config);
             }
         } else {
             hashStoreRam = null;
@@ -275,15 +287,19 @@ public final class MerkleDbDataSource implements VirtualDataSource {
         hasDiskStoreForHashes = tableConfig.getHashesRamToDiskThreshold() < Long.MAX_VALUE;
         final DataFileCompactor hashStoreDiskFileCompactor;
         if (hasDiskStoreForHashes) {
-            final boolean hashIndexEmpty = pathToDiskLocationInternalNodes.size() == 0;
+            final boolean needRestorePathToDiskLocationInternalNodes = pathToDiskLocationInternalNodes.size() == 0;
             final LoadedDataCallback hashRecordLoadedCallback;
-            if (hashIndexEmpty) {
+            if (needRestorePathToDiskLocationInternalNodes) {
                 if (validLeafPathRange.getMaxValidKey() >= 0) {
                     pathToDiskLocationInternalNodes.updateValidRange(0, validLeafPathRange.getMaxValidKey());
                 }
                 hashRecordLoadedCallback = (dataLocation, hashData) -> {
                     final VirtualHashRecord hashRecord = VirtualHashRecord.parseFrom(hashData);
-                    pathToDiskLocationInternalNodes.put(hashRecord.path(), dataLocation);
+                    final long path = hashRecord.path();
+                    // Old data files may contain entries with paths outside the current virtual node range
+                    if (path <= validLeafPathRange.getMaxValidKey()) {
+                        pathToDiskLocationInternalNodes.put(path, dataLocation);
+                    }
                 };
             } else {
                 hashRecordLoadedCallback = null;
@@ -332,7 +348,8 @@ public final class MerkleDbDataSource implements VirtualDataSource {
         keyToPath.printStats();
 
         final LoadedDataCallback leafRecordLoadedCallback;
-        final boolean needRestorePathToDiskLocationLeafNodes = pathToDiskLocationLeafNodes.size() == 0;
+        final boolean needRestorePathToDiskLocationLeafNodes =
+                (pathToDiskLocationLeafNodes.size() == 0) && (validLeafPathRange.getMinValidKey() > 0);
         if (needRestorePathToDiskLocationLeafNodes) {
             if (validLeafPathRange.getMaxValidKey() >= 0) {
                 pathToDiskLocationLeafNodes.updateValidRange(
@@ -340,7 +357,11 @@ public final class MerkleDbDataSource implements VirtualDataSource {
             }
             leafRecordLoadedCallback = (dataLocation, leafData) -> {
                 final VirtualLeafBytes leafBytes = VirtualLeafBytes.parseFrom(leafData);
-                pathToDiskLocationLeafNodes.put(leafBytes.path(), dataLocation);
+                final long path = leafBytes.path();
+                // Old data files may contain entries with paths outside the current leaf range
+                if (validLeafPathRange.withinRange(path)) {
+                    pathToDiskLocationLeafNodes.put(path, dataLocation);
+                }
             };
         } else {
             leafRecordLoadedCallback = null;

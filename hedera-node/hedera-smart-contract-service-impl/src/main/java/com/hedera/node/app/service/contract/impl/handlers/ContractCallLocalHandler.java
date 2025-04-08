@@ -17,7 +17,6 @@ import com.hedera.hapi.node.base.ContractID;
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.QueryHeader;
 import com.hedera.hapi.node.base.ResponseHeader;
-import com.hedera.hapi.node.base.TokenID;
 import com.hedera.hapi.node.contract.ContractCallLocalQuery;
 import com.hedera.hapi.node.contract.ContractCallLocalResponse;
 import com.hedera.hapi.node.transaction.Query;
@@ -35,6 +34,7 @@ import com.hedera.node.app.spi.workflows.QueryContext;
 import com.hedera.node.config.data.ContractsConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hederahashgraph.api.proto.java.ContractFunctionResult;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.InstantSource;
 import javax.inject.Inject;
@@ -50,6 +50,7 @@ public class ContractCallLocalHandler extends PaidQueryHandler {
     private final Provider<QueryComponent.Factory> provider;
     private final GasCalculator gasCalculator;
     private final InstantSource instantSource;
+    private final EntityIdFactory entityIdFactory;
 
     /**
      *  Constructs a {@link ContractCreateHandler} with the given {@link Provider}, {@link GasCalculator} and {@link InstantSource}.
@@ -62,10 +63,12 @@ public class ContractCallLocalHandler extends PaidQueryHandler {
     public ContractCallLocalHandler(
             @NonNull final Provider<Factory> provider,
             @NonNull final GasCalculator gasCalculator,
-            @NonNull final InstantSource instantSource) {
+            @NonNull final InstantSource instantSource,
+            @NonNull final EntityIdFactory entityIdFactory) {
         this.provider = requireNonNull(provider);
         this.gasCalculator = requireNonNull(gasCalculator);
         this.instantSource = requireNonNull(instantSource);
+        this.entityIdFactory = requireNonNull(entityIdFactory);
     }
 
     @Override
@@ -102,19 +105,18 @@ public class ContractCallLocalHandler extends PaidQueryHandler {
                     op.contractID().evmAddressOrThrow().length() == EVM_ADDRESS_LENGTH_AS_INT, INVALID_CONTRACT_ID);
         }
         // A contract or token contract corresponding to that contract ID must exist in state (otherwise we have
-        // nothing
-        // to call)
+        // nothing to call)
         final var contract = context.createStore(ReadableAccountStore.class).getContractById(contractID);
         if (contract == null) {
             var tokenNum = contractID.contractNumOrElse(0L);
             // For convenience also translate a long-zero address to a token ID
             if (contractID.hasEvmAddress()) {
                 final var evmAddress = contractID.evmAddressOrThrow().toByteArray();
-                if (isLongZeroAddress(evmAddress)) {
+                if (isLongZeroAddress(entityIdFactory, evmAddress)) {
                     tokenNum = numberOfLongZero(evmAddress);
                 }
             }
-            final var tokenID = TokenID.newBuilder().tokenNum(tokenNum).build();
+            final var tokenID = entityIdFactory.newTokenId(tokenNum);
             final var tokenContract =
                     context.createStore(ReadableTokenStore.class).get(tokenID);
             mustExist(tokenContract, INVALID_CONTRACT_ID);

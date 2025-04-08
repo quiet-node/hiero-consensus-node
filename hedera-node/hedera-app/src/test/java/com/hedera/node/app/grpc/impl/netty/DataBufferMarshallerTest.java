@@ -4,7 +4,6 @@ package com.hedera.node.app.grpc.impl.netty;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.hedera.node.app.Hedera;
 import com.hedera.node.app.utils.TestUtils;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import java.io.ByteArrayInputStream;
@@ -21,7 +20,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 final class DataBufferMarshallerTest {
-    private final DataBufferMarshaller marshaller = new DataBufferMarshaller();
+    private static final int MAX_MESSAGE_SIZE = 6144;
+    private static final int BUFFER_CAPACITY = 133120;
+    private final DataBufferMarshaller marshaller = new DataBufferMarshaller(BUFFER_CAPACITY, MAX_MESSAGE_SIZE);
 
     @Test
     void nullBufferThrows() {
@@ -94,7 +95,7 @@ final class DataBufferMarshallerTest {
         final var arr = TestUtils.randomBytes(numBytes);
         final var stream = new ByteArrayInputStream(arr);
         final var buff = marshaller.parse(stream);
-        assertThat(buff.length()).isEqualTo(Hedera.MAX_SIGNED_TXN_SIZE + 1);
+        assertThat(buff.length()).isEqualTo(MAX_MESSAGE_SIZE + 1);
     }
 
     @Test

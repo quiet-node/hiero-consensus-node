@@ -7,8 +7,6 @@ import com.swirlds.base.time.Time;
 import com.swirlds.common.concurrent.ExecutorFactory;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Cryptography;
-import com.swirlds.common.crypto.CryptographyHolder;
 import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.io.filesystem.FileSystemManager;
@@ -16,16 +14,16 @@ import com.swirlds.common.io.utility.RecycleBin;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.config.MetricsConfig;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.config.BasicConfig;
-import com.swirlds.platform.config.TransactionConfig;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.concurrent.ScheduledExecutorService;
+import org.hiero.consensus.config.TransactionConfig;
+import org.hiero.consensus.model.node.NodeId;
 
 public class FakePlatformContext implements PlatformContext {
     public static final Configuration PLATFORM_CONFIG = ConfigurationBuilder.create()
@@ -54,12 +52,6 @@ public class FakePlatformContext implements PlatformContext {
     @Override
     public Configuration getConfiguration() {
         return PLATFORM_CONFIG;
-    }
-
-    @NonNull
-    @Override
-    public Cryptography getCryptography() {
-        return CryptographyHolder.get();
     }
 
     @NonNull
@@ -95,6 +87,6 @@ public class FakePlatformContext implements PlatformContext {
     @NonNull
     @Override
     public MerkleCryptography getMerkleCryptography() {
-        return MerkleCryptographyFactory.create(PLATFORM_CONFIG, getCryptography());
+        return MerkleCryptographyFactory.create(PLATFORM_CONFIG);
     }
 }

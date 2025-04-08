@@ -9,7 +9,7 @@ import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.has
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.ReturnTypes.ZERO_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.asHeadlongAddress;
 import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.explicitFromHeadlong;
-import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.isLongZeroAddress;
+import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.isLongZero;
 import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.numberOfLongZero;
 import static java.util.Objects.requireNonNull;
 
@@ -19,6 +19,7 @@ import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.FullResult;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.AbstractCall;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.has.HasCallAttempt;
+import com.hedera.node.app.service.token.AliasUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
@@ -41,23 +42,25 @@ public class EvmAddressAliasCall extends AbstractCall {
         final var explicitAddress = explicitFromHeadlong(address);
 
         // If the address is not a long zero then return fail
-        if (!isLongZeroAddress(explicitAddress)) {
+        if (!isLongZero(enhancement.nativeOperations().entityIdFactory(), address)) {
             return gasOnly(fullResultsFor(INVALID_ACCOUNT_ID, ZERO_ADDRESS), INVALID_ACCOUNT_ID, true);
         }
 
-        final var accountNum = numberOfLongZero(explicitAddress);
-        final var account = enhancement.nativeOperations().getAccount(accountNum);
+        final var accountID =
+                enhancement.nativeOperations().entityIdFactory().newAccountId(numberOfLongZero(explicitAddress));
+        final var account = enhancement.nativeOperations().getAccount(accountID);
         // If the account is null or does not have an account id then return bail
         if (account == null) {
             return gasOnly(fullResultsFor(INVALID_ACCOUNT_ID, ZERO_ADDRESS), INVALID_ACCOUNT_ID, true);
         }
 
         // If the account does not have an evm address as an alias
-        if (account.alias().length() != 20) {
+        final var evmAlias = AliasUtils.extractEvmAddress(account.alias());
+        if (evmAlias == null) {
             return gasOnly(fullResultsFor(INVALID_ACCOUNT_ID, ZERO_ADDRESS), INVALID_ACCOUNT_ID, true);
         }
 
-        final var aliasAddress = asHeadlongAddress(account.alias().toByteArray());
+        final var aliasAddress = asHeadlongAddress(evmAlias.toByteArray());
         return gasOnly(fullResultsFor(SUCCESS, aliasAddress), SUCCESS, true);
     }
 

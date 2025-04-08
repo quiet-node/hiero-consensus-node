@@ -20,10 +20,9 @@ import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
-import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.crypto.HashingOutputStream;
 import com.swirlds.common.crypto.SignatureType;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
+import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -41,6 +40,8 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
+import org.hiero.consensus.model.crypto.DigestType;
+import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
 
 @SuppressWarnings({"DataFlowIssue", "removal"})
 public class RecordStreamV6Verifier {
@@ -98,9 +99,8 @@ public class RecordStreamV6Verifier {
             final List<List<SingleTransactionRecord>> expectedDataBlocks,
             final long firstBlockNumber)
             throws Exception {
-        final boolean compressed = recordStreamConfig.compressFilesOnCreation();
         final Path sidecarsDir = recordsDir.resolve(recordStreamConfig.sidecarDir());
-        final String extension = compressed ? RECORD_EXTENSION + COMPRESSION_ALGORITHM_EXTENSION : RECORD_EXTENSION;
+        final String extension = RECORD_EXTENSION + COMPRESSION_ALGORITHM_EXTENSION;
         List<RecordFileSet> recordFileSets = scanForRecordFiles(recordsDir, sidecarsDir, extension);
         // start running hashes
         Bytes runningHash = null;
@@ -311,7 +311,7 @@ public class RecordStreamV6Verifier {
         // create metadata hash
         HashingOutputStream hashingOutputStream =
                 new HashingOutputStream(MessageDigest.getInstance(DigestType.SHA_384.algorithmName()));
-        SerializableDataOutputStream dataOutputStream = new SerializableDataOutputStream(hashingOutputStream);
+        SerializableDataOutputStream dataOutputStream = new SerializableDataOutputStreamImpl(hashingOutputStream);
         dataOutputStream.writeInt(recordStreamConfig.recordFileVersion());
         dataOutputStream.writeInt(recordFile.hapiProtoVersion().major());
         dataOutputStream.writeInt(recordFile.hapiProtoVersion().minor());

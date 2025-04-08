@@ -3,9 +3,9 @@ package com.swirlds.merkle.test.map;
 
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.merkle.utility.KeyedMerkleLong;
 import com.swirlds.common.merkle.utility.SerializableLong;
+import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.merkle.map.MerkleMap;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
@@ -27,6 +27,7 @@ class MerkleMapMemoryBenchmark {
         registry.registerConstructables("com.swirlds.MerkleMap");
         registry.registerConstructables("com.swirlds.merkletree");
         registry.registerConstructables("com.swirlds.common");
+        registry.registerConstructables("org.hiero.consensus");
     }
 
     /**
@@ -43,7 +44,7 @@ class MerkleMapMemoryBenchmark {
         }
 
         System.out.println("hashing map");
-        MerkleCryptoFactory.getInstance().digestTreeAsync(map).get();
+        TestMerkleCryptoFactory.getInstance().digestTreeAsync(map).get();
 
         return map;
     }

@@ -10,23 +10,19 @@ import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchem
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.PlatformStateModifier;
-import com.swirlds.platform.system.Round;
-import com.swirlds.platform.system.SoftwareVersion;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.state.State;
-import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.singleton.SingletonNode;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.consensus.model.hashgraph.Round;
 
 /**
  * This class is an entry point for the platform state. Though the class itself is stateless, given an instance of {@link State},
@@ -35,18 +31,7 @@ import java.util.function.Function;
  */
 public class PlatformStateFacade {
 
-    public static final PlatformStateFacade DEFAULT_PLATFORM_STATE_FACADE =
-            new PlatformStateFacade(v -> SoftwareVersion.NO_VERSION);
-
-    private final Function<SemanticVersion, SoftwareVersion> versionFactory;
-
-    /**
-     * Create a new instance of {@link PlatformStateFacade}.
-     * @param versionFactory a factory to create the current {@link SoftwareVersion} from a {@link SemanticVersion}
-     */
-    public PlatformStateFacade(Function<SemanticVersion, SoftwareVersion> versionFactory) {
-        this.versionFactory = versionFactory;
-    }
+    public static final PlatformStateFacade DEFAULT_PLATFORM_STATE_FACADE = new PlatformStateFacade();
 
     /**
      * Given a {@link State}, returns the creation version of the platform state if it exists.
@@ -112,7 +97,7 @@ public class PlatformStateFacade {
      * @return the version of the state if it was deserialized, otherwise null
      */
     @Nullable
-    public SoftwareVersion creationSoftwareVersionOf(@NonNull final State state) {
+    public SemanticVersion creationSoftwareVersionOf(@NonNull final State state) {
         requireNonNull(state);
         if (isPlatformStateEmpty(state)) {
             return null;
@@ -143,13 +128,6 @@ public class PlatformStateFacade {
     public @Nullable PlatformState platformStateOf(@NonNull final State state) {
         final ReadableStates readableStates = state.getReadableStates(NAME);
         if (readableStates.isEmpty()) {
-            // fallback to lookup directly in the Merkle tree, useful for loading the state from disk
-            if (state instanceof MerkleStateRoot<?> merkleStateRoot) {
-                final int index = merkleStateRoot.findNodeIndex(PlatformStateService.NAME, PLATFORM_STATE_KEY);
-                return index == -1
-                        ? UNINITIALIZED_PLATFORM_STATE
-                        : ((SingletonNode<PlatformState>) merkleStateRoot.getChild(index)).getValue();
-            }
             return UNINITIALIZED_PLATFORM_STATE;
         } else {
             return (PlatformState)
@@ -183,7 +161,7 @@ public class PlatformStateFacade {
      * @return the consensus snapshot, or null if the state is a genesis state
      */
     @Nullable
-    public com.swirlds.platform.consensus.ConsensusSnapshot consensusSnapshotOf(@NonNull final State root) {
+    public ConsensusSnapshot consensusSnapshotOf(@NonNull final State root) {
         return readablePlatformStateStore(root).getSnapshot();
     }
 
@@ -194,7 +172,7 @@ public class PlatformStateFacade {
      * @return the number of non-ancient rounds, or zero if the state is a genesis state
      */
     @Nullable
-    public SoftwareVersion firstVersionInBirthRoundModeOf(@NonNull final State state) {
+    public SemanticVersion firstVersionInBirthRoundModeOf(@NonNull final State state) {
         return readablePlatformStateStore(state).getFirstVersionInBirthRoundMode();
     }
 
@@ -254,26 +232,6 @@ public class PlatformStateFacade {
     }
 
     /**
-     * Given a {@link State}, returns the address book if it exists.
-     * @param state the state to extract the address book from
-     * @return the address book, or null if the state is a genesis state
-     */
-    @Nullable
-    public AddressBook addressBookOf(State state) {
-        return readablePlatformStateStore(state).getAddressBook();
-    }
-
-    /**
-     * Get the previous address book from the state.
-     * @param state the state to extract the address book from
-     * @return the previous address book, or null if the state is a genesis state
-     */
-    @Nullable
-    public AddressBook previousAddressBookOf(State state) {
-        return readablePlatformStateStore(state).getPreviousAddressBook();
-    }
-
-    /**
      * Get writable platform state. Works only on mutable {@link State}.
      * Call this method only if you need to modify the platform state.
      *
@@ -298,8 +256,7 @@ public class PlatformStateFacade {
     /**
      * @param snapshot the consensus snapshot for this round
      */
-    public void setSnapshotTo(
-            @NonNull final State state, @NonNull com.swirlds.platform.consensus.ConsensusSnapshot snapshot) {
+    public void setSnapshotTo(@NonNull final State state, @NonNull ConsensusSnapshot snapshot) {
         getWritablePlatformStateOf(state).setSnapshot(snapshot);
     }
 
@@ -317,7 +274,7 @@ public class PlatformStateFacade {
      *
      * @param creationVersion the creation version
      */
-    public void setCreationSoftwareVersionTo(@NonNull final State state, @NonNull SoftwareVersion creationVersion) {
+    public void setCreationSoftwareVersionTo(@NonNull final State state, @NonNull SemanticVersion creationVersion) {
         getWritablePlatformStateOf(state).setCreationSoftwareVersion(creationVersion);
     }
 
@@ -334,12 +291,12 @@ public class PlatformStateFacade {
     private PlatformStateAccessor readablePlatformStateStore(@NonNull final State state) {
         final ReadableStates readableStates = state.getReadableStates(NAME);
         if (readableStates.isEmpty()) {
-            return new SnapshotPlatformStateAccessor(platformStateOf(state), versionFactory);
+            return new SnapshotPlatformStateAccessor(UNINITIALIZED_PLATFORM_STATE);
         }
-        return new ReadablePlatformStateStore(readableStates, versionFactory);
+        return new ReadablePlatformStateStore(readableStates);
     }
 
     private WritablePlatformStateStore writablePlatformStateStore(@NonNull final State state) {
-        return new WritablePlatformStateStore(state.getWritableStates(NAME), versionFactory);
+        return new WritablePlatformStateStore(state.getWritableStates(NAME));
     }
 }

@@ -2,6 +2,7 @@
 package com.swirlds.platform;
 
 import static com.swirlds.common.io.utility.FileUtils.throwIfFileExists;
+import static com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
 import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStateFile;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.CURRENT_ROSTER_FILE_NAME;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.HASH_INFO_FILE_NAME;
@@ -10,7 +11,6 @@ import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeHas
 import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeSignatureSetFile;
 import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeSignedStateToDisk;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
-import static com.swirlds.state.merkle.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
 import static java.nio.file.Files.exists;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,10 +24,8 @@ import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
-import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
 import com.swirlds.common.merkle.utility.MerkleTreeVisualizer;
-import com.swirlds.common.platform.NodeId;
-import com.swirlds.common.test.fixtures.RandomUtils;
+import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
@@ -39,14 +37,15 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.state.snapshot.SignedStateFileUtils;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
-import com.swirlds.platform.system.BasicSoftwareVersion;
-import com.swirlds.platform.test.fixtures.state.FakeStateLifecycles;
+import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import com.swirlds.state.State;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import org.hiero.base.utility.test.fixtures.RandomUtils;
+import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,19 +65,20 @@ class SignedStateFileReadWriteTest {
         platformVersion =
                 SemanticVersion.newBuilder().major(RandomUtils.nextInt(1, 100)).build();
         registry.registerConstructables("com.swirlds.common");
+        registry.registerConstructables("org.hiero.consensus.model");
         registry.registerConstructables("com.swirlds.platform");
         registry.registerConstructables("com.swirlds.state");
         registry.registerConstructables("com.swirlds.virtualmap");
         registry.registerConstructables("com.swirlds.merkledb");
-        FakeStateLifecycles.registerMerkleStateRootClassIds();
-        stateFacade = new PlatformStateFacade(v -> new BasicSoftwareVersion(platformVersion.major()));
+        FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
+        stateFacade = new PlatformStateFacade();
     }
 
     @BeforeEach
     void beforeEach() throws IOException {
         // Don't use JUnit @TempDir as it runs into a thread race with Merkle DB DataSource release...
         testDirectory = LegacyTemporaryFileBuilder.buildTemporaryFile(
-                "SignedStateFileReadWriteTest", FakeStateLifecycles.CONFIGURATION);
+                "SignedStateFileReadWriteTest", FakeConsensusStateEventHandler.CONFIGURATION);
         LegacyTemporaryFileBuilder.overrideTemporaryFileLocation(testDirectory.resolve("tmp"));
         MerkleDb.resetDefaultInstancePath();
     }
@@ -94,7 +94,7 @@ class SignedStateFileReadWriteTest {
         final PlatformContext platformContext =
                 TestPlatformContextBuilder.create().build();
         final SignedState signedState = new RandomSignedStateGenerator()
-                .setSoftwareVersion(new BasicSoftwareVersion(platformVersion.minor()))
+                .setSoftwareVersion(platformVersion)
                 .build();
         final MerkleNodeState state = signedState.getState();
         writeHashInfoFile(platformContext, testDirectory, state, stateFacade);
@@ -136,9 +136,11 @@ class SignedStateFileReadWriteTest {
         assertTrue(exists(signatureSetFile), "signature set file should be present");
 
         MerkleDb.resetDefaultInstancePath();
-        final DeserializedSignedState deserializedSignedState = readStateFile(
-                TestPlatformContextBuilder.create().build().getConfiguration(), stateFile, TEST_PLATFORM_STATE_FACADE);
-        MerkleCryptoFactory.getInstance()
+        Configuration configuration =
+                TestPlatformContextBuilder.create().build().getConfiguration();
+        final DeserializedSignedState deserializedSignedState =
+                readStateFile(stateFile, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
+        TestMerkleCryptoFactory.getInstance()
                 .digestTreeSync(deserializedSignedState
                         .reservedSignedState()
                         .get()
@@ -158,7 +160,7 @@ class SignedStateFileReadWriteTest {
     @DisplayName("writeSavedStateToDisk() Test")
     void writeSavedStateToDiskTest() throws IOException {
         final SignedState signedState = new RandomSignedStateGenerator()
-                .setSoftwareVersion(new BasicSoftwareVersion(platformVersion.minor()))
+                .setSoftwareVersion(platformVersion)
                 .build();
         final Path directory = testDirectory.resolve("state");
 
