@@ -3,8 +3,13 @@ package com.swirlds.platform.gui.hashgraph.internal;
 
 import com.hedera.hapi.platform.event.GossipEvent;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Map;
 
+/**
+ * Class holding coordinated related data for a specific branch for a given node.
+ *
+ */
 public class BranchCoordinates {
 
     // the Y coordinate for the whole branch
@@ -18,18 +23,22 @@ public class BranchCoordinates {
     // the X coordinates of all events in this branch that are inside the currently displayed generation range
     private Map<GossipEvent, Integer> insideGenerationRangeXCoordinates;
 
+    @NonNull
     public int getY() {
         return y;
     }
 
+    @NonNull
     public int getFarMostLeftX() {
         return farMostLeftX;
     }
 
+    @Nullable
     public Map<GossipEvent, Integer> getAllXCoordinates() {
         return allXCoordinates;
     }
 
+    @Nullable
     public Map<GossipEvent, Integer> getInsideGenerationRangeXCoordinates() {
         return insideGenerationRangeXCoordinates;
     }
