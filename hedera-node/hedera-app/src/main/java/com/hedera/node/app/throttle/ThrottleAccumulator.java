@@ -442,7 +442,6 @@ public class ThrottleAccumulator {
                 yield shouldThrottleCryptoTransfer(
                         manager,
                         now,
-                        configuration,
                         getImplicitCreationsCount(txnInfo.txBody(), accountStore),
                         getAutoAssociationsCount(txnInfo.txBody(), relationStore));
             }
@@ -595,7 +594,6 @@ public class ThrottleAccumulator {
     private boolean shouldThrottleCryptoTransfer(
             @NonNull final ThrottleReqsManager manager,
             @NonNull final Instant now,
-            @NonNull final Configuration configuration,
             final int implicitCreationsCount,
             final int autoAssociationsCount) {
         if (implicitCreationsCount > 0) {

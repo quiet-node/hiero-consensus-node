@@ -732,9 +732,6 @@ class CryptoUpdateHandlerTest extends CryptoHandlerTestBase {
         FeeContext feeContext = mock(FeeContext.class);
         FeeCalculatorFactory feeCalculatorFactory = mock(FeeCalculatorFactory.class);
         FeeCalculator feeCalculator = mock(FeeCalculator.class);
-        final var config = HederaTestConfigBuilder.create()
-                .withValue("entities.unlimitedAutoAssociationsEnabled", true)
-                .getOrCreateConfig();
 
         TransactionBody cryptoUpdateTransaction = new CryptoUpdateBuilder()
                 .withPayer(id)
@@ -755,7 +752,7 @@ class CryptoUpdateHandlerTest extends CryptoHandlerTestBase {
 
         when(feeContext.readableStore(ReadableAccountStore.class)).thenReturn(readableStore);
         when(feeContext.body()).thenReturn(cryptoUpdateTransaction);
-        when(feeContext.configuration()).thenReturn(config);
+        when(feeContext.configuration()).thenReturn(configuration);
         when(feeContext.feeCalculatorFactory()).thenReturn(feeCalculatorFactory);
         when(feeCalculatorFactory.feeCalculator(any())).thenReturn(feeCalculator);
         when(feeCalculator.addBytesPerTransaction(anyLong())).thenReturn(feeCalculator);
@@ -766,7 +763,7 @@ class CryptoUpdateHandlerTest extends CryptoHandlerTestBase {
 
         InOrder inOrder = inOrder(feeCalculator);
         inOrder.verify(feeCalculator, times(1)).addBytesPerTransaction(212L);
-        inOrder.verify(feeCalculator, times(2)).addRamByteSeconds(0L);
+        inOrder.verify(feeCalculator, times(1)).addRamByteSeconds(0L);
         inOrder.verify(feeCalculator, times(1)).calculate();
     }
 
