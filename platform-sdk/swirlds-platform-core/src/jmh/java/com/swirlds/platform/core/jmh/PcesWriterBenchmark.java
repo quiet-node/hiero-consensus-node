@@ -39,7 +39,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 3, time = 1)
-@Measurement(iterations = 10)
+@Measurement(iterations = 5)
 public class PcesWriterBenchmark {
 
     @Param({"OUTPUT_STREAM", "FILE_CHANNEL_DSYNC", "FILE_CHANNEL", "RANDOM_ACCESS_FILE"})
@@ -79,37 +79,28 @@ public class PcesWriterBenchmark {
         mutableFile.close();
         FileUtils.deleteDirectory(directory);
     }
-    /*
-    Results on a M1 Max MacBook Pro:
 
-    Benchmark                       (syncEveryEvent)  (useFileChannelWriter)   Mode  Cnt       Score        Error  Units
-    PcesWriterBenchmark.writeEvent              true                    true  thrpt    3   12440.268 ±  42680.146  ops/s
-    PcesWriterBenchmark.writeEvent              true                   false  thrpt    3   16244.412 ±  38461.148  ops/s
-    PcesWriterBenchmark.writeEvent             false                    true  thrpt    3  411138.079 ± 110692.138  ops/s
-    PcesWriterBenchmark.writeEvent             false                   false  thrpt    3  643582.781 ± 154393.415  ops/s
-    */
+    //Results on a M1 Max MacBook Pro:
 
-    // Benchmark                       (syncEveryEvent)  (useFileChannelWriter)   Mode  Cnt        Score        Error
-    // Units
-    // PcesWriterBenchmark.writeEvent              true                    true  thrpt    3    25208.858 ±  99590.982
-    // ops/s
-    // PcesWriterBenchmark.writeEvent              true                   false  thrpt    3    34301.777 ±  94947.390
-    // ops/s
-    // PcesWriterBenchmark.writeEvent             false                    true  thrpt    3   513363.285 ± 447530.872
-    // ops/s
-    // PcesWriterBenchmark.writeEvent             false                   false  thrpt    3  1292696.028 ± 198412.982
-    // ops/s
+    //Results ubuntu 22 Intel i7
+    // Benchmark                                      (option)            (writer)   Mode  Cnt       Score       Error  Units
+    //PcesWriterBenchmark.all                     EVERY_EVENT       OUTPUT_STREAM  thrpt    5      18.436 ±     0.535  ops/s
+    //PcesWriterBenchmark.all                     EVERY_EVENT  FILE_CHANNEL_DSYNC  thrpt    5      16.365 ±     0.480  ops/s
+    //PcesWriterBenchmark.all                     EVERY_EVENT        FILE_CHANNEL  thrpt    5      18.322 ±     1.089  ops/s
+    //PcesWriterBenchmark.all                     EVERY_EVENT  RANDOM_ACCESS_FILE  thrpt    5      18.314 ±     0.824  ops/s
+    //PcesWriterBenchmark.all                EVERY_SELF_EVENT       OUTPUT_STREAM  thrpt    5      74.946 ±     2.186  ops/s
+    //PcesWriterBenchmark.all                EVERY_SELF_EVENT  FILE_CHANNEL_DSYNC  thrpt    5      18.085 ±     0.278  ops/s
+    //PcesWriterBenchmark.all                EVERY_SELF_EVENT        FILE_CHANNEL  thrpt    5      75.378 ±     1.681  ops/s
+    //PcesWriterBenchmark.all                EVERY_SELF_EVENT  RANDOM_ACCESS_FILE  thrpt    5      72.974 ±     5.835  ops/s
+    //PcesWriterBenchmark.writeAndSyncEvent               N/A       OUTPUT_STREAM  thrpt    5    1849.272 ±    26.053  ops/s
+    //PcesWriterBenchmark.writeAndSyncEvent               N/A  FILE_CHANNEL_DSYNC  thrpt    5    1644.452 ±    41.744  ops/s
+    //PcesWriterBenchmark.writeAndSyncEvent               N/A        FILE_CHANNEL  thrpt    5    1854.448 ±    11.100  ops/s
+    //PcesWriterBenchmark.writeAndSyncEvent               N/A  RANDOM_ACCESS_FILE  thrpt    5    1825.233 ±   111.043  ops/s
+    //PcesWriterBenchmark.writeEvent                      N/A       OUTPUT_STREAM  thrpt    5  618148.642 ± 47736.304  ops/s
+    //PcesWriterBenchmark.writeEvent                      N/A  FILE_CHANNEL_DSYNC  thrpt    5    1850.401 ±    84.902  ops/s
+    //PcesWriterBenchmark.writeEvent                      N/A        FILE_CHANNEL  thrpt    5  798976.557 ± 47014.755  ops/s
+    //PcesWriterBenchmark.writeEvent                      N/A  RANDOM_ACCESS_FILE  thrpt    5  328733.917 ±  7864.738  ops/s
 
-    // Benchmark                       (syncEveryEvent)  (useFileChannelWriter)   Mode  Cnt        Score        Error
-    // Units
-    // PcesWriterBenchmark.writeEvent              true                    true  thrpt    3   516916.172 ± 499773.057
-    // ops/s
-    // PcesWriterBenchmark.writeEvent              true                   false  thrpt    3    27711.788 ± 209413.534
-    // ops/s
-    // PcesWriterBenchmark.writeEvent             false                    true  thrpt    3   541710.710 ± 445208.701
-    // ops/s
-    // PcesWriterBenchmark.writeEvent             false                   false  thrpt    3  1356841.154 ± 978813.630
-    // ops/s
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     @OutputTimeUnit(TimeUnit.SECONDS)
@@ -138,7 +129,7 @@ public class PcesWriterBenchmark {
         }
     }
 
-    @State(Scope.Thread)
+    @State(Scope.Benchmark)
     public static class BenchmarkState {
         @Param({"EVERY_EVENT", "EVERY_SELF_EVENT"})
         private FileSyncOption option;
