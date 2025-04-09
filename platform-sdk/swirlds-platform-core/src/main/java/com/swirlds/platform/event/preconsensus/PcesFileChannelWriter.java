@@ -26,15 +26,16 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     /** Tracks the size of the file in bytes */
     private int fileSize;
 
+    private static final Boolean ASYNC_WRITE = false;
+
     /**
      * Create a new writer that writes events to a file using a {@link FileChannel}.
      *
      * @param filePath       the path to the file to write to
-     * @param syncEveryEvent if true, the file will be synced after every event is written
      * @throws IOException if an error occurs while opening the file
      */
-    public PcesFileChannelWriter(@NonNull final Path filePath, final boolean syncEveryEvent) throws IOException {
-        if (syncEveryEvent) {
+    public PcesFileChannelWriter(@NonNull final Path filePath) throws IOException {
+        if (ASYNC_WRITE) {
             channel = FileChannel.open(
                     filePath, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, StandardOpenOption.DSYNC);
         } else {

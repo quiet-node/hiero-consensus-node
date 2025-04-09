@@ -55,7 +55,7 @@ public class PcesWriterBenchmark {
         directory = Files.createTempDirectory("PcesWriterBenchmark");
         final PcesFile file = PcesFile.of(AncientMode.GENERATION_THRESHOLD, r.nextInstant(), 1, 0, 100, 0, directory);
 
-        mutableFile = file.getMutableFile(useFileChannelWriter, syncEveryEvent);
+        mutableFile = file.getMutableFile(useFileChannelWriter);
     }
 
     @TearDown(Level.Iteration)

@@ -28,7 +28,7 @@ public class CommonPcesWriter {
     /**
      *  If {@code true} {@code FileChannel} is used to write to the file and if {@code false} {@code OutputStream} is used.
      */
-    private static final boolean USE_FILE_CHANNEL_WRITER = false;
+    private static final boolean USE_FILE_CHANNEL_WRITER = true;
 
     /**
      * Keeps track of the event stream files on disk.
@@ -278,7 +278,7 @@ public class CommonPcesWriter {
 
             currentMutableFile = fileManager
                     .getNextFileDescriptor(nonAncientBoundary, upperBound)
-                    .getMutableFile(USE_FILE_CHANNEL_WRITER, syncEveryEvent);
+                    .getMutableFile(USE_FILE_CHANNEL_WRITER);
         }
 
         return fileClosed;

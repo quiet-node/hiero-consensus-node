@@ -110,7 +110,7 @@ class PcesReadWriteTests {
                 0,
                 testDirectory);
 
-        final PcesMutableFile mutableFile = file.getMutableFile(useFileChannelWriter, false);
+        final PcesMutableFile mutableFile = file.getMutableFile(useFileChannelWriter);
         for (final PlatformEvent event : events) {
             mutableFile.writeEvent(event);
         }

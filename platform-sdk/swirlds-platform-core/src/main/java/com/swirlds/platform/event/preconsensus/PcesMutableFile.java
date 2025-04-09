@@ -29,11 +29,8 @@ public class PcesMutableFile {
      *
      * @param descriptor           a description of the file
      * @param useFileChannelWriter whether to use a FileChannel to write to the file as opposed to an OutputStream
-     * @param syncEveryEvent       whether to sync the file after every event
      */
-    PcesMutableFile(
-            @NonNull final PcesFile descriptor, final boolean useFileChannelWriter, final boolean syncEveryEvent)
-            throws IOException {
+    PcesMutableFile(@NonNull final PcesFile descriptor, final boolean useFileChannelWriter) throws IOException {
         if (Files.exists(descriptor.getPath())) {
             throw new IOException("File " + descriptor.getPath() + " already exists");
         }
@@ -42,8 +39,8 @@ public class PcesMutableFile {
 
         this.descriptor = descriptor;
         writer = useFileChannelWriter
-                ? new PcesFileChannelWriter(descriptor.getPath(), syncEveryEvent)
-                : new PcesOutputStreamFileWriter(descriptor.getPath(), syncEveryEvent);
+                ? new PcesFileChannelWriter(descriptor.getPath())
+                : new PcesOutputStreamFileWriter(descriptor.getPath());
         writer.writeVersion(PcesFileVersion.currentVersionNumber());
         highestAncientIdentifierInFile = descriptor.getLowerBound();
     }

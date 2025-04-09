@@ -378,11 +378,11 @@ public final class PcesFile implements Comparable<PcesFile> {
     }
 
     /**
-     * Same as {@link #getMutableFile(boolean, boolean)} with both parameters set to false.
+     * Same as {@link #getMutableFile(boolean)} with both parameters set to false.
      */
     @NonNull
     public PcesMutableFile getMutableFile() throws IOException {
-        return new PcesMutableFile(this, false, false);
+        return new PcesMutableFile(this, false);
     }
 
     /**
@@ -391,13 +391,11 @@ public final class PcesFile implements Comparable<PcesFile> {
      *
      * @param useFileChannelWriter if true, use a {@link java.nio.channels.FileChannel} to write to the file. Otherwise,
      *                             use a {@link java.io.FileOutputStream}.
-     * @param syncEveryEvent       if true, sync the file after every event is written
      * @return a writer for this file
      */
     @NonNull
-    public PcesMutableFile getMutableFile(final boolean useFileChannelWriter, final boolean syncEveryEvent)
-            throws IOException {
-        return new PcesMutableFile(this, useFileChannelWriter, syncEveryEvent);
+    public PcesMutableFile getMutableFile(final boolean useFileChannelWriter) throws IOException {
+        return new PcesMutableFile(this, useFileChannelWriter);
     }
 
     /**
