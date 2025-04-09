@@ -26,7 +26,7 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     /** Tracks the size of the file in bytes */
     private int fileSize;
 
-    private static final Boolean ASYNC_WRITE = false;
+    private static final Boolean ASYNC_WRITE = true;
 
     /**
      * Create a new writer that writes events to a file using a {@link FileChannel}.
