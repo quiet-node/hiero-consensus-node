@@ -81,6 +81,23 @@ public class PcesWriterBenchmark {
     }
 
     //Results on a M1 Max MacBook Pro:
+//Benchmark                                      (option)            (writer)   Mode  Cnt        Score        Error  Units
+//PcesWriterBenchmark.all                     EVERY_EVENT       OUTPUT_STREAM  thrpt    5      279.472 ±    252.105  ops/s
+//PcesWriterBenchmark.all                     EVERY_EVENT  FILE_CHANNEL_DSYNC  thrpt    5        1.827 ±      0.349  ops/s
+//PcesWriterBenchmark.all                     EVERY_EVENT        FILE_CHANNEL  thrpt    5        1.789 ±      0.450  ops/s
+//PcesWriterBenchmark.all                     EVERY_EVENT  RANDOM_ACCESS_FILE  thrpt    5      265.936 ±    354.480  ops/s
+//PcesWriterBenchmark.all                EVERY_SELF_EVENT       OUTPUT_STREAM  thrpt    5      237.601 ±    522.023  ops/s
+//PcesWriterBenchmark.all                EVERY_SELF_EVENT  FILE_CHANNEL_DSYNC  thrpt    5        7.261 ±      1.555  ops/s
+//PcesWriterBenchmark.all                EVERY_SELF_EVENT        FILE_CHANNEL  thrpt    5        7.513 ±      1.708  ops/s
+//PcesWriterBenchmark.all                EVERY_SELF_EVENT  RANDOM_ACCESS_FILE  thrpt    5      396.172 ±    294.832  ops/s
+//PcesWriterBenchmark.writeAndSyncEvent               N/A       OUTPUT_STREAM  thrpt    5    20086.463 ±  24514.189  ops/s
+//PcesWriterBenchmark.writeAndSyncEvent               N/A  FILE_CHANNEL_DSYNC  thrpt    5      180.130 ±     44.120  ops/s
+//PcesWriterBenchmark.writeAndSyncEvent               N/A        FILE_CHANNEL  thrpt    5      181.301 ±     46.327  ops/s
+//PcesWriterBenchmark.writeAndSyncEvent               N/A  RANDOM_ACCESS_FILE  thrpt    5    26988.064 ±  42397.662  ops/s
+//PcesWriterBenchmark.writeEvent                      N/A       OUTPUT_STREAM  thrpt    5  1313684.065 ±  95200.365  ops/s
+//PcesWriterBenchmark.writeEvent                      N/A  FILE_CHANNEL_DSYNC  thrpt    5    19961.494 ±  17596.217  ops/s
+//PcesWriterBenchmark.writeEvent                      N/A        FILE_CHANNEL  thrpt    5   543818.942 ± 115003.139  ops/s
+//PcesWriterBenchmark.writeEvent                      N/A  RANDOM_ACCESS_FILE  thrpt    5   206974.085 ±  21330.817  ops/s
 
     //Results ubuntu 22 Intel i7
     // Benchmark                                      (option)            (writer)   Mode  Cnt       Score       Error  Units
