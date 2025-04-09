@@ -105,6 +105,7 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
         return size;
     }
 
+    // TODO: remove ?
     @Override
     public void commit() {
         super.commit();

@@ -182,7 +182,7 @@ public class FakeState implements MerkleNodeState {
 
     private <V> WritableSingletonStateBase<V> withAnyRegisteredListeners(
             @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final AtomicReference<V> ref) {
-        final var state = new FunctionWritableSingletonState<>(stateKey, serviceName, ref::get, ref::set);
+        final var state = new FunctionWritableSingletonState<>(serviceName, stateKey, ref::get, ref::set);
         listeners.forEach(listener -> {
             if (listener.stateTypes().contains(SINGLETON)) {
                 registerSingletonListener(serviceName, state, listener);

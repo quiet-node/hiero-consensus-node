@@ -20,6 +20,7 @@ import com.hedera.hapi.node.state.roster.RosterState;
 import com.hedera.hapi.node.state.roster.RosterState.Builder;
 import com.hedera.hapi.node.state.roster.RoundRosterPair;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.common.RosterStateId;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
@@ -55,21 +56,18 @@ class WritableRosterStoreTest {
         final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
         final var tableConfig =
                 new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 1, merkleDbConfig.hashesRamToDiskThreshold());
-        final var virtualMapLabel = "VirtualMap";
+        final String virtualMapLabel = "VirtualMap-" + System.currentTimeMillis();
         final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
         final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, CONFIGURATION);
 
         final WritableKVState<ProtoBytes, Roster> rosters = MapWritableKVState.<ProtoBytes, Roster>builder(
-                        PlatformStateService.NAME, WritableRosterStore.ROSTER_KEY)
+                        RosterStateId.NAME, WritableRosterStore.ROSTER_KEY)
                 .build();
         when(writableStates.<ProtoBytes, Roster>get(WritableRosterStore.ROSTER_KEY))
                 .thenReturn(rosters);
         when(writableStates.<RosterState>getSingleton(WritableRosterStore.ROSTER_STATES_KEY))
                 .thenReturn(new OnDiskWritableSingletonState<>(
-                        PlatformStateService.NAME,
-                        WritableRosterStore.ROSTER_STATES_KEY,
-                        RosterState.PROTOBUF,
-                        virtualMap));
+                        RosterStateId.NAME, WritableRosterStore.ROSTER_STATES_KEY, RosterState.PROTOBUF, virtualMap));
 
         readableRosterStore = new ReadableRosterStoreImpl(writableStates);
         writableRosterStore = new WritableRosterStore(writableStates);

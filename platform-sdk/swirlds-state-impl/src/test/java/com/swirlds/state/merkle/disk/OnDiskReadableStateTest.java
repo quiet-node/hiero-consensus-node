@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 
+import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.test.fixtures.merkle.MerkleTestBase;
 import com.swirlds.virtualmap.VirtualMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,8 +24,8 @@ class OnDiskReadableStateTest extends MerkleTestBase {
         setupFruitVirtualMap();
     }
 
-    private void add(String key, String value) {
-        add(fruitVirtualMap, STRING_CODEC, STRING_CODEC, key, value);
+    private void add(String serviceName, String stateKey, String key, String value) {
+        add(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, STRING_CODEC, key, value);
     }
 
     @Nested
@@ -81,9 +82,9 @@ class OnDiskReadableStateTest extends MerkleTestBase {
         void setUp() {
             state = new OnDiskReadableKVState<>(
                     FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
-            add(A_KEY, APPLE);
-            add(B_KEY, BANANA);
-            add(C_KEY, CHERRY);
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, APPLE);
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, B_KEY, BANANA);
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, C_KEY, CHERRY);
         }
 
         @Test
@@ -105,6 +106,7 @@ class OnDiskReadableStateTest extends MerkleTestBase {
         final var state = new OnDiskReadableKVState<>(
                 FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, virtualMapMock);
         state.warm(A_KEY);
-        verify(virtualMapMock).warm(STRING_CODEC.toBytes(A_KEY));
+        verify(virtualMapMock)
+                .warm(StateUtils.getVirtualMapKey(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, STRING_CODEC));
     }
 }

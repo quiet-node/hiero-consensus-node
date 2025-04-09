@@ -2,7 +2,11 @@
 package com.swirlds.state.test.fixtures.merkle;
 
 import static com.swirlds.state.lifecycle.StateMetadata.computeClassId;
+import static com.swirlds.state.merkle.StateUtils.getVirtualMapKey;
 import static com.swirlds.virtualmap.constructable.ConstructableUtils.registerVirtualMapConstructables;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 
 import com.hedera.pbj.runtime.Codec;
 import com.swirlds.common.config.StateCommonConfig;
@@ -24,6 +28,7 @@ import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.state.lifecycle.StateMetadata;
+import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.memory.InMemoryKey;
 import com.swirlds.state.merkle.memory.InMemoryValue;
 import com.swirlds.state.merkle.queue.QueueNode;
@@ -39,9 +44,12 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 import org.hiero.consensus.model.crypto.DigestType;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.provider.Arguments;
+import org.mockito.MockedStatic;
 
 /**
  * This base class provides helpful methods and defaults for simplifying the other merkle related
@@ -133,6 +141,29 @@ public class MerkleTestBase extends StateTestBase {
     // The "COUNTRY" singleton is part of FIRST_SERVICE
     protected String countryLabel;
     protected SingletonNode<String> countrySingleton;
+
+    // This static mock instance will override calls to the static methods in StateUtils
+    // for the duration of the tests in this class.
+    private static MockedStatic<StateUtils> stateUtilsMock;
+
+    /**
+     * Initializes the static mock of StateUtils before all tests run.
+     *
+     * <p>
+     * We mock the static method {@code StateUtils.stateIdFor(String, String)} with CALLS_REAL_METHODS,
+     * meaning that only the methods we explicitly stub will be replaced with custom behavior.
+     * Other calls will use the actual implementation. This is needed because the commit method in
+     * State APIs internally calls {@code StateUtils.stateIdFor()}, and when using made-up service
+     * names or state keys, it would throw an IllegalStateException.
+     * </p>
+     */
+    @BeforeAll
+    static void init() {
+        stateUtilsMock = mockStatic(StateUtils.class, CALLS_REAL_METHODS);
+        stateUtilsMock
+                .when(() -> StateUtils.stateIdFor(anyString(), anyString()))
+                .thenReturn(0);
+    }
 
     /** Sets up the "Fruit" merkle map, label, and metadata. */
     protected void setupFruitMerkleMap() {
@@ -246,8 +277,15 @@ public class MerkleTestBase extends StateTestBase {
     }
 
     /** A convenience method for adding a k/v pair to a virtual map */
-    protected void add(VirtualMap map, Codec<String> keyCodec, Codec<String> valueCodec, String key, String value) {
-        map.put(keyCodec.toBytes(key), value, valueCodec);
+    protected void add(
+            VirtualMap map,
+            String serviceName,
+            String stateKey,
+            Codec<String> keyCodec,
+            Codec<String> valueCodec,
+            String key,
+            String value) {
+        map.put(getVirtualMapKey(serviceName, stateKey, key, keyCodec), value, valueCodec);
     }
 
     /** A convenience method used to serialize a merkle tree */
@@ -281,5 +319,10 @@ public class MerkleTestBase extends StateTestBase {
     @AfterEach
     void cleanUp() {
         MerkleDb.resetDefaultInstancePath();
+    }
+
+    @AfterAll
+    static void cleanup() {
+        stateUtilsMock.close();
     }
 }
