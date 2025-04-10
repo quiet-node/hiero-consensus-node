@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.BDDMockito.given;
 
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
@@ -21,19 +23,14 @@ class BlockStreamStateManagerTest {
     private ConfigProvider configProvider;
 
     @Mock
-    private VersionedConfigImpl versionedConfig;
-
-    @Mock
-    private BlockNodeConfigExtractor blockNodeConfigExtractor;
-
-    @Mock
     private BlockNodeConnectionManager blockNodeConnectionManager;
 
     private BlockStreamStateManager blockStreamStateManager;
 
     @BeforeEach
     void setUp() {
-        blockStreamStateManager = new BlockStreamStateManager(blockNodeConfigExtractor);
+        given(configProvider.getConfiguration()).willReturn(new VersionedConfigImpl(DEFAULT_CONFIG, 1));
+        blockStreamStateManager = new BlockStreamStateManager(configProvider);
     }
 
     @Test
