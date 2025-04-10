@@ -834,6 +834,13 @@ class BlockNodeConnectionTest {
         verify(requestObserver).onCompleted();
         verify(scheduler).schedule(any(Runnable.class), eq(5L), eq(TimeUnit.SECONDS));
 
+        // Verify log messages for end of stream
+        final String expectedLog =
+                "Received EndOfStream from block node " + TEST_CONNECTION_DESCRIPTOR + " at block " + TEST_BLOCK_NUMBER;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected warning log message not found: " + expectedLog);
+
         // Verify log messages for internal error
         final String expectedWarningLog =
                 "Block node " + TEST_ADDRESS + ":" + TEST_PORT + " reported an error at block " + TEST_BLOCK_NUMBER
@@ -959,6 +966,113 @@ class BlockNodeConnectionTest {
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedWarningLog)),
                 "Expected warning log message not found: " + expectedWarningLog);
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with a ResendBlock for the next block after the last verified one.
+     */
+    @Test
+    void testOnNext_WithResendBlock() {
+        // Arrange
+        final BlockNodeConnection connectionSpy = spy(connection);
+        final PublishStreamResponse.ResendBlock resendBlock = PublishStreamResponse.ResendBlock.newBuilder()
+                .blockNumber(TEST_BLOCK_NUMBER)
+                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().resendBlock(resendBlock).build();
+
+        when(connectionManager.getLastVerifiedBlock(blockNodeConfig)).thenReturn(TEST_BLOCK_NUMBER - 1L);
+        // Act
+        connectionSpy.onNext(response);
+
+        // Assert connection restarts after the last verified block number
+        verify(connectionSpy, times(1)).close();
+        verify(connectionSpy, times(1)).restartStreamAtBlock(resendBlock.blockNumber());
+        verify(connectionSpy, times(1)).setCurrentBlockNumber(resendBlock.blockNumber());
+        verify(connectionSpy, times(1)).establishStream();
+
+        assertEquals(resendBlock.blockNumber(), connection.getCurrentBlockNumber());
+        assertEquals(0, connection.getCurrentRequestIndex());
+
+        // Verify log messages for resend block
+        final String expectedLog = "Received ResendBlock from block node " + TEST_CONNECTION_DESCRIPTOR + " for block "
+                + TEST_BLOCK_NUMBER;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected log message not found: " + expectedLog);
+        final String expectedLogForCorrectResendBlock = "Restarting stream at the next block " + TEST_BLOCK_NUMBER
+                + " after the last verified one for block node " + TEST_CONNECTION_DESCRIPTOR;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLogForCorrectResendBlock)),
+                "Expected log message not found: " + expectedLogForCorrectResendBlock);
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with a ResendBlock for the next block after the last verified one.
+     */
+    @Test
+    void testOnNext_WithResendBlockDifferentThanExpected() {
+        final var lastVerifiedBlockNumber = TEST_BLOCK_NUMBER * 2L;
+
+        // Arrange
+        final BlockNodeConnection connectionSpy = spy(connection);
+        final PublishStreamResponse.ResendBlock resendBlock = PublishStreamResponse.ResendBlock.newBuilder()
+                .blockNumber(TEST_BLOCK_NUMBER)
+                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().resendBlock(resendBlock).build();
+
+        when(connectionManager.getLastVerifiedBlock(blockNodeConfig)).thenReturn(lastVerifiedBlockNumber);
+
+        // Act
+        connectionSpy.onNext(response);
+
+        // Verify log messages for resend block
+        final String expectedLog = "Received ResendBlock from block node " + TEST_CONNECTION_DESCRIPTOR + " for block "
+                + TEST_BLOCK_NUMBER;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected log message not found: " + expectedLog);
+        final String expectedLogForDifferentResendBlock = "Received ResendBlock for block " + TEST_BLOCK_NUMBER
+                + " but last verified block is " + lastVerifiedBlockNumber;
+        assertTrue(
+                logCaptor.warnLogs().stream().anyMatch(log -> log.contains(expectedLogForDifferentResendBlock)),
+                "Expected log message not found: " + expectedLogForDifferentResendBlock);
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with a ResendBlock for already acknowledged block.
+     */
+    @Test
+    void testOnNext_WithResendBlockForAlreadyAcknowledgedBlock() {
+        // Arrange
+        final BlockNodeConnection connectionSpy = spy(connection);
+        final PublishStreamResponse.ResendBlock resendBlock = PublishStreamResponse.ResendBlock.newBuilder()
+                .blockNumber(TEST_BLOCK_NUMBER)
+                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().resendBlock(resendBlock).build();
+
+        when(connectionManager.isBlockAlreadyAcknowledged(TEST_BLOCK_NUMBER)).thenReturn(true);
+
+        // Act
+        connectionSpy.onNext(response);
+
+        // Verify log messages for resend block
+        final String expectedLog = "Received ResendBlock from block node " + TEST_CONNECTION_DESCRIPTOR + " for block "
+                + TEST_BLOCK_NUMBER;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected log message not found: " + expectedLog);
+        final String expectedLogForResendBlockAlreadyAcknowledged = "Block " + TEST_BLOCK_NUMBER
+                + " already acknowledged, skipping resend for block node " + TEST_CONNECTION_DESCRIPTOR;
+        assertTrue(
+                logCaptor.debugLogs().stream()
+                        .anyMatch(log -> log.contains(expectedLogForResendBlockAlreadyAcknowledged)),
+                "Expected log message not found: " + expectedLogForResendBlockAlreadyAcknowledged);
     }
 
     /**
