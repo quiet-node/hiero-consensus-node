@@ -25,7 +25,7 @@ public class VirtualMapState {
     /**
      * See {@code StateIdentifier.RESERVED}
      */
-    public static final Bytes VM_STATE_KEY = Bytes.fromHex("32");
+    public static final Bytes VM_STATE_KEY = Bytes.fromHex("33");
 
     public static final FieldDefinition FIELD_FIRST_LEAF_PATH =
             new FieldDefinition("firstLeafPath", FieldType.FIXED64, false, true, false, 1);
