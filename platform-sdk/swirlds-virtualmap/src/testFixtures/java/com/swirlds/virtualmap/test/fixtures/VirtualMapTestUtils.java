@@ -49,6 +49,6 @@ public final class VirtualMapTestUtils {
     }
 
     public static VirtualRootNode getRoot(VirtualMap map) {
-        return map.getChild(1);
+        return map.getChild(0);
     }
 }
