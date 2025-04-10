@@ -20,7 +20,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
@@ -61,8 +60,7 @@ public class BlockNodeConnectionManager {
     private final Object connectionLock = new Object();
     private final ExecutorService retryExecutor = Executors.newVirtualThreadPerTaskExecutor();
     private final ScheduledExecutorService connectionExecutor = Executors.newScheduledThreadPool(1);
-    private BlockNodeConnection primary;
-    private BlockNodeConnection secondary;
+    private BlockNodeConnection activeConnection;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -118,13 +116,11 @@ public class BlockNodeConnectionManager {
      */
     public void handleConnectionError(@NonNull final BlockNodeConnection connection) {
         synchronized (connectionLock) {
-            // If available, make the secondary connection the primary connection
-            if (Objects.equals(connection, primary) && !secondaryActive()) {
-                primary = secondary;
-                secondary = connection;
-            }
+            // Mark as retrying, because we'll try to establish a new connection and we filter these out
             connectionsInRetry.putIfAbsent(connection.getNodeConfig(), connection);
+            establishConnection();
         }
+
         scheduleReconnect(connection);
     }
 
@@ -189,7 +185,7 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Shuts down the connection manager, closing all active connections.
+     * Shuts down the connection manager, closing active connection.
      */
     public void shutdown() {
         connectionExecutor.shutdown();
@@ -202,8 +198,7 @@ public class BlockNodeConnectionManager {
             throw new RuntimeException(e);
         } finally {
             synchronized (connectionLock) {
-                primary.close();
-                secondary.close();
+                activeConnection.close();
                 connectionsInRetry.clear();
             }
         }
@@ -222,8 +217,8 @@ public class BlockNodeConnectionManager {
         final CompletableFuture<Boolean> future = new CompletableFuture<>();
         final ScheduledFuture<?> scheduledTask = connectionExecutor.scheduleAtFixedRate(
                 () -> {
-                    if (!primaryActive() && !secondaryActive()) {
-                        // Since neither connection is active, we can try to establish a new connection
+                    if (!primaryActive()) {
+                        // Since connection is not active, we can try to establish a new connection
                         future.complete(true); // Ensure future completed
                     } else if (Instant.now().isAfter(deadline)) {
                         future.complete(false); // Handle timeout
@@ -302,7 +297,7 @@ public class BlockNodeConnectionManager {
         final List<Integer> sortedPriorities = new ArrayList<>(priorityGroups.keySet());
         sortedPriorities.sort(Integer::compare);
 
-        // Find the current lowest priority of active connections
+        // Find the current lowest priority which is the priority of the active connection
         final int currentMinPriority = getCurrentMinPriority();
 
         BlockNodeConfig selectedNode = null;
@@ -344,13 +339,11 @@ public class BlockNodeConnectionManager {
         }
     }
 
-    private void rememberConnection(@NonNull BlockNodeConnection connection) {
+    private void setPrimaryConnection(@NonNull BlockNodeConnection connection) {
         if (!primaryActive()) {
-            primary = connection;
-        } else if (!secondaryActive()) {
-            secondary = connection;
+            activeConnection = connection;
         } else {
-            logger.warn("Both primary and secondary connections are already established");
+            logger.warn("Both primary connection is already established");
         }
     }
 
@@ -362,7 +355,7 @@ public class BlockNodeConnectionManager {
                     new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient, connectionExecutor);
             connection.establishStream();
             synchronized (connectionLock) {
-                rememberConnection(connection);
+                setPrimaryConnection(connection);
                 connectionsInRetry.remove(node);
             }
             logger.info("Successfully connected to block node {}", blockNodeName(node));
@@ -374,9 +367,7 @@ public class BlockNodeConnectionManager {
     private Optional<BlockNodeConnection> getActiveConnection() {
         synchronized (connectionLock) {
             if (primaryActive()) {
-                return Optional.of(primary);
-            } else if (secondaryActive()) {
-                return Optional.of(secondary);
+                return Optional.of(activeConnection);
             }
         }
         return Optional.empty();
@@ -399,11 +390,7 @@ public class BlockNodeConnectionManager {
     }
 
     private boolean primaryActive() {
-        return connectionActive(primary);
-    }
-
-    private boolean secondaryActive() {
-        return connectionActive(secondary);
+        return connectionActive(activeConnection);
     }
 
     private boolean connectionActive(BlockNodeConnection connection) {
@@ -417,21 +404,12 @@ public class BlockNodeConnectionManager {
 
     public boolean isHigherPriorityReady(BlockNodeConnection connection) {
         synchronized (connectionLock) {
-            if (!primaryActive() || !secondaryActive()) {
+            if (!primaryActive()) {
                 return false;
             }
 
-            if (Objects.equals(connection, primary)
-                    && secondary.getNodeConfig().priority()
-                            > primary.getNodeConfig().priority()) {
-                // If the secondary connection has a higher priority, we can use it
-                primary = secondary;
-                secondary = connection;
-                return true;
-            } else {
-                // If the primary connection has a higher priority, we can use it
-                return false;
-            }
+            // TODO: implement
+            return true;
         }
     }
 
