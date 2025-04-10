@@ -163,11 +163,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 // If the block is complete and we've sent all requests, move to the next block
                 if (blockState.isComplete()
                         && currentRequestIndex.get() >= blockState.requests().size()) {
-                    final boolean higherPriorityReady = blockNodeConnectionManager.isHigherPriorityReady(this);
-                    if (!higherPriorityReady) {
+                    // Check if there is a higher priority ready connection
+                    if (!blockNodeConnectionManager.isHigherPriorityReady(this)) {
                         moveToNextBlock();
-                    } else {
-                        close();
                     }
                 }
             } catch (InterruptedException e) {
