@@ -15,6 +15,6 @@ import com.swirlds.config.api.ConfigProperty;
 @ConfigData("blockNode")
 public record BlockNodeConnectionConfig(
         @ConfigProperty(defaultValue = "false") @NodeProperty boolean shutdownNodeOnNoBlockNodes,
-        @ConfigProperty(defaultValue = "/opt/hgcapp/data/config") @NodeProperty String blockNodeConnectionFileDir,
+        @ConfigProperty(defaultValue = "data/config") @NodeProperty String blockNodeConnectionFileDir,
         @ConfigProperty(defaultValue = "block-nodes.json") @NodeProperty String blockNodeConfigFile,
         @ConfigProperty(defaultValue = "2") @NetworkProperty long waitPeriodForActiveConnection) {}
