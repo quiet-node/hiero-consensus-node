@@ -418,9 +418,6 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
         if (state == null) {
             try {
                 VirtualLeafBytes<?> virtualLeafBytes = dataSource.loadLeafRecord(VM_STATE_KEY);
-                if (virtualLeafBytes == null) {
-                    this.state = new VirtualMapState();
-                }
                 this.state = virtualLeafBytes == null
                         ? new VirtualMapState()
                         : new VirtualMapState(virtualLeafBytes.valueBytes());
