@@ -3,6 +3,7 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
@@ -118,12 +119,11 @@ public class BlockNodeConnectionManager {
      */
     public void handleConnectionError(@NonNull final BlockNodeConnection connection) {
         synchronized (connectionLock) {
+            scheduleReconnect(connection);
             // Mark as retrying, because we'll try to establish a new connection and we filter these out
             connectionsInRetry.putIfAbsent(connection.getNodeConfig(), connection);
             establishConnection();
         }
-
-        scheduleReconnect(connection);
     }
 
     /**
@@ -292,7 +292,8 @@ public class BlockNodeConnectionManager {
     /**
      * Attempts to establish a connection to a block node based on priority.
      */
-    private void establishConnection() {
+    @VisibleForTesting
+    void establishConnection() {
         logger.info("Establishing connection to primary block node");
         List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
 
@@ -368,7 +369,8 @@ public class BlockNodeConnectionManager {
         }
     }
 
-    private Optional<BlockNodeConnection> getActiveConnection() {
+    @VisibleForTesting
+    Optional<BlockNodeConnection> getActiveConnection() {
         synchronized (connectionLock) {
             if (primaryActive()) {
                 return Optional.of(activeConnection);
