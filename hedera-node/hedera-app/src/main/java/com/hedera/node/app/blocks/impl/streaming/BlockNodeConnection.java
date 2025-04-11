@@ -162,7 +162,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
                 // If the block is complete and we've sent all requests, move to the next block
                 if (blockState.isComplete()
-                        && currentRequestIndex.get() >= blockState.requests().size()) {
+                        && getCurrentRequestIndex() >= blockState.requests().size()) {
                     // Check if there is a higher priority ready connection
                     if (!blockNodeConnectionManager.isHigherPriorityReady(this)) {
                         moveToNextBlock();
@@ -193,7 +193,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         + "currentRequestIndex: {}, requestsSize: {}",
                 currentBlock,
                 connectionDescriptor,
-                currentRequestIndex.get(),
+                getCurrentRequestIndex(),
                 blockStreamStateManager.getBlockState(currentBlock) != null
                         ? blockStreamStateManager
                                 .getBlockState(currentBlock)
@@ -215,21 +215,21 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private boolean needToWaitForMoreRequests(@NonNull BlockState blockState) {
-        return currentRequestIndex.get() >= blockState.requests().size() && !blockState.isComplete();
+        return getCurrentRequestIndex() >= blockState.requests().size() && !blockState.isComplete();
     }
 
     private void processAvailableRequests(@NonNull BlockState blockState) {
         synchronized (isActiveLock) {
             List<PublishStreamRequest> requests = blockState.requests();
-            while (currentRequestIndex.get() < requests.size()) {
+            while (getCurrentRequestIndex() < requests.size()) {
                 if (!isActive.get()) {
                     return;
                 }
-                final PublishStreamRequest request = requests.get(currentRequestIndex.get());
+                final PublishStreamRequest request = requests.get(getCurrentRequestIndex());
                 logger.debug(
                         "[] Sending request for block {} request index {} to node {}, items: {}",
                         getCurrentBlockNumber(),
-                        currentRequestIndex.get(),
+                        getCurrentRequestIndex(),
                         connectionDescriptor,
                         request.blockItems().blockItems().size());
                 sendRequest(request);
