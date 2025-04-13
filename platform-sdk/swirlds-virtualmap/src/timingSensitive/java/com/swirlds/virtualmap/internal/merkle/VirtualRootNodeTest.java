@@ -58,7 +58,6 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-@SuppressWarnings("ALL")
 class VirtualRootNodeTest extends VirtualTestBase {
 
     @TempDir
@@ -66,19 +65,19 @@ class VirtualRootNodeTest extends VirtualTestBase {
 
     void testEnableVirtualRootFlush() throws ExecutionException, InterruptedException {
         VirtualRootNode fcm0 = createRoot();
-        fcm0.postInit(VM_LABEL, new VirtualMapState());
+        fcm0.postInit(new VirtualMapState(VM_LABEL));
         assertFalse(fcm0.shouldBeFlushed(), "map should not yet be flushed");
 
         VirtualRootNode fcm1 = fcm0.copy();
-        fcm1.postInit(VM_LABEL, new VirtualMapState());
+        fcm1.postInit(new VirtualMapState(VM_LABEL));
         assertFalse(fcm1.shouldBeFlushed(), "map should not yet be flushed");
 
         VirtualRootNode fcm2 = fcm1.copy();
-        fcm2.postInit(VM_LABEL, new VirtualMapState());
+        fcm2.postInit(new VirtualMapState(VM_LABEL));
         assertFalse(fcm1.shouldBeFlushed(), "map should not yet be flushed");
 
         VirtualRootNode fcm3 = fcm2.copy();
-        fcm3.postInit(VM_LABEL, new VirtualMapState());
+        fcm3.postInit(new VirtualMapState(VM_LABEL));
         fcm3.enableFlush();
         assertTrue(fcm3.shouldBeFlushed(), "map should now be flushed");
 
@@ -96,12 +95,12 @@ class VirtualRootNodeTest extends VirtualTestBase {
         final VirtualDataSourceBuilder builder = new InMemoryBuilder();
 
         final VirtualRootNode fcm = new VirtualRootNode(builder, CONFIGURATION.getConfigData(VirtualMapConfig.class));
-        fcm.postInit(VM_LABEL, new VirtualMapState());
+        fcm.postInit(new VirtualMapState(VM_LABEL));
         fcm.enableFlush();
         fcm.put(A_KEY, APPLE, TestValueCodec.INSTANCE);
 
         final VirtualRootNode copy = fcm.copy();
-        copy.postInit(VM_LABEL, fcm.getState());
+        copy.postInit(fcm.getState());
 
         fcm.getHash();
         final Hash expectedHash = fcm.getChild(0).getHash();
@@ -109,7 +108,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
         fcm.waitUntilFlushed();
 
         final VirtualRootNode fcm2 = new VirtualRootNode(builder, CONFIGURATION.getConfigData(VirtualMapConfig.class));
-        fcm2.postInit(VM_LABEL, copy.getState());
+        fcm2.postInit(copy.getState());
         assertNotNull(fcm2.getChild(0), "child should not be null");
         assertEquals(expectedHash, fcm2.getChild(0).getHash(), "hash should match expected");
 
@@ -126,7 +125,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
         fcm.put(A_KEY, APPLE, TestValueCodec.INSTANCE);
 
         final VirtualRootNode copy = fcm.copy();
-        copy.postInit(VM_LABEL, fcm.getState());
+        copy.postInit(fcm.getState());
         fcm.release();
         fcm.waitUntilFlushed();
 
@@ -148,7 +147,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
         fcm.put(C_KEY, CHERRY, TestValueCodec.INSTANCE);
 
         final VirtualRootNode copy = fcm.copy();
-        copy.postInit(VM_LABEL, fcm.getState());
+        copy.postInit(fcm.getState());
         fcm.release();
         fcm.waitUntilFlushed();
 
@@ -173,7 +172,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
         fcm.put(G_KEY, GRAPE, TestValueCodec.INSTANCE);
 
         final VirtualRootNode copy = fcm.copy();
-        copy.postInit(VM_LABEL, fcm.getState());
+        copy.postInit(fcm.getState());
         fcm.release();
         fcm.waitUntilFlushed();
 
@@ -213,7 +212,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
 
         try (SerializableDataInputStream input = new SerializableDataInputStreamImpl(resourceAsStream)) {
             root.deserialize(input, tempDir, version);
-            root.postInit(VM_LABEL, new VirtualMapState());
+            root.postInit(new VirtualMapState(VM_LABEL));
             final VirtualNodeCache cache = root.getCache();
             for (int i = 0; i < 100; i++) {
                 final Bytes key = TestKey.longToKey(i);
@@ -418,7 +417,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
         for (int i = 0; i <= flushInterval; i++) {
             assertEquals(threshold, root.getFlushCandidateThreshold());
             VirtualRootNode copy = root.copy();
-            copy.postInit(VM_LABEL, root.getState());
+            copy.postInit(root.getState());
             root.release();
             root = copy;
         }
@@ -436,7 +435,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
         assertFalse(root.shouldBeFlushed()); // the very first copy is never flushed
         for (int i = 0; i < flushInterval; i++) {
             VirtualRootNode copy = root.copy();
-            copy.postInit(VM_LABEL, root.getState());
+            copy.postInit(root.getState());
             root.release();
             root = copy;
         }
@@ -457,7 +456,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
                 configuration.getConfigData(VirtualMapConfig.class).flushInterval();
         for (int i = 0; i < flushInterval; i++) {
             VirtualRootNode copy = root.copy();
-            copy.postInit(VM_LABEL, root.getState());
+            copy.postInit(root.getState());
             root.release();
             root = copy;
         }
@@ -465,7 +464,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
         root.setFlushCandidateThreshold(12345678L);
         for (int i = 0; i < flushInterval; i++) {
             VirtualRootNode copy = root.copy();
-            copy.postInit(VM_LABEL, root.getState());
+            copy.postInit(root.getState());
             root.release();
             root = copy;
         }
@@ -571,6 +570,6 @@ class VirtualRootNodeTest extends VirtualTestBase {
         VirtualRootNode anotherRoot = createRoot();
         anotherRoot.computeHash();
         root.setupWithOriginalNode(anotherRoot);
-        assertDoesNotThrow(() -> root.postInit(VM_LABEL, null));
+        assertDoesNotThrow(() -> root.postInit(new VirtualMapState(VM_LABEL)));
     }
 }

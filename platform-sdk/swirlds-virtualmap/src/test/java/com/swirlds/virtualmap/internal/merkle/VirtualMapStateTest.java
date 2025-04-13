@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.internal.merkle;
 
+import static com.swirlds.virtualmap.internal.merkle.VirtualMapState.MAX_LABEL_CHARS;
 import static org.hiero.consensus.utility.test.fixtures.RandomUtils.nextInt;
+import static org.hiero.consensus.utility.test.fixtures.RandomUtils.randomString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.virtualmap.internal.Path;
+import java.io.UncheckedIOException;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +23,7 @@ class VirtualMapStateTest {
         VirtualMapState state = new VirtualMapState();
         assertEquals(-1, state.getFirstLeafPath(), "Default firstLeafPath should be -1");
         assertEquals(-1, state.getLastLeafPath(), "Default lastLeafPath should be -1");
+        assertNull(state.getLabel(), "Default label should be null");
         assertEquals(0, state.getSize(), "Size should be 0 when no leaves");
     }
 
@@ -29,6 +34,8 @@ class VirtualMapStateTest {
         // Then 8 bytes for firstLeafPath = 1
         // Field #2 (lastLeafPath): wire type = FIXED64 => (2 << 3) + 1 = 0x11
         // Then 8 bytes for lastLeafPath = 2
+        // Field #3 (label): wire type = DELIMITED => (3 << 3) + 2 = 0x1A
+        // Then length of the label (4 for "test"), then the bytes for "test"
         byte[] rawProtobuf = {
             (byte) 0x09, // Tag: firstLeafPath, fixed64
             0x01,
@@ -38,7 +45,7 @@ class VirtualMapStateTest {
             0,
             0,
             0,
-            0, // firstLeafPath = 1 (little-endian)
+            0, // firstLeafPath = 1
             (byte) 0x11, // Tag: lastLeafPath, fixed64
             0x02,
             0,
@@ -47,7 +54,13 @@ class VirtualMapStateTest {
             0,
             0,
             0,
-            0, // lastLeafPath = 2 (little-endian)
+            0, // lastLeafPath = 2
+            (byte) 0x1A, // Tag: label, delimited
+            0x04, // length of the label = 4
+            0x74,
+            0x65,
+            0x73,
+            0x74 // UTF-8 bytes for "test"
         };
 
         // Wrap into a Bytes object
@@ -59,6 +72,7 @@ class VirtualMapStateTest {
         // Assert: verify fields set as expected
         assertEquals(1L, state.getFirstLeafPath(), "firstLeafPath should be 1");
         assertEquals(2L, state.getLastLeafPath(), "lastLeafPath should be 2");
+        assertEquals("test", state.getLabel(), "Label should be 'test'");
         assertEquals(2L, state.getSize(), "Size should be (2 - 1 + 1) = 2");
     }
 
@@ -252,18 +266,44 @@ class VirtualMapStateTest {
                 RuntimeException.class, () -> new VirtualMapState(bytes), "Expected failure due to truncated label");
     }
 
+    /**
+     * Invalid UTF-8 sequence for the label field.
+     * Field #3 (label): wire type = length-delimited => (3 << 3) + 2 = 0x1A.
+     * We say length = 2, then provide two bytes that form an invalid UTF-8 sequence:
+     *   0xC3 0x28
+     */
+    @Test
+    void invalidUtf8LabelTest() {
+        // 0x1A => field #3, wire type = 2 (length-delimited)
+        // 0x02 => length = 2
+        // 0xC3, 0x28 => invalid UTF-8 sequence
+        byte[] rawProtobuf = {(byte) 0x1A, 0x02, (byte) 0xC3, (byte) 0x28};
+
+        Bytes bytes = Bytes.wrap(rawProtobuf);
+
+        // The VirtualMapState constructor ultimately calls readString(), which:
+        //   1) Attempts to decode 0xC3 0x28 as UTF-8.
+        //   2) Fails with MalformedProtobufException (subclass of ParseException).
+        //   3) readString() rethrows as UncheckedParseException.
+        assertThrows(
+                UncheckedIOException.class,
+                () -> new VirtualMapState(bytes),
+                "Expected the constructor to fail due to invalid UTF-8 in the label");
+    }
+
     @Test
     void testConstructorWithLabel() {
         String label = "TestLabel";
-        VirtualMapState state = new VirtualMapState();
+        VirtualMapState state = new VirtualMapState(label);
         assertEquals(-1, state.getFirstLeafPath(), "Expected firstLeafPath to be -1 by default");
         assertEquals(-1, state.getLastLeafPath(), "Expected lastLeafPath to be -1 by default");
+        assertEquals(label, state.getLabel(), "Expected label to match constructor argument");
         assertEquals(0, state.getSize(), "Size should be 0 when no leaves");
     }
 
     @Test
     void testValidPaths() {
-        VirtualMapState state = new VirtualMapState();
+        VirtualMapState state = new VirtualMapState("test");
         int firstLeafPath = nextInt(1, 100);
         int lastLeafPath = nextInt(firstLeafPath + 1, firstLeafPath * 2);
         state.setFirstLeafPath(firstLeafPath);
@@ -323,8 +363,28 @@ class VirtualMapStateTest {
     }
 
     @Test
+    void testSetLabel() {
+        final String initLabel = randomString(RANDOM, 7);
+        VirtualMapState state = new VirtualMapState(initLabel);
+
+        assertEquals(initLabel, state.getLabel());
+
+        final String newLabel = randomString(RANDOM, 7);
+        state.setLabel(newLabel);
+        assertEquals(newLabel, state.getLabel());
+
+        assertThrows(
+                NullPointerException.class, () -> state.setLabel(null), "Setting null label should throw an exception");
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> state.setLabel(randomString(RANDOM, MAX_LABEL_CHARS + 1)),
+                "Setting label with legth greater than " + MAX_LABEL_CHARS + " should throw an exception");
+    }
+
+    @Test
     void testGetSize() {
-        VirtualMapState state = new VirtualMapState();
+        VirtualMapState state = new VirtualMapState("test");
 
         int firstLeafPath = nextInt(1, 100);
         int lastLeafPath = firstLeafPath * 2;
@@ -337,7 +397,7 @@ class VirtualMapStateTest {
     @Test
     void testToBytes() {
         // Arrange: create and configure a VirtualMapState
-        VirtualMapState original = new VirtualMapState();
+        VirtualMapState original = new VirtualMapState("testLabel");
         original.setFirstLeafPath(100);
         original.setLastLeafPath(200);
 
@@ -348,6 +408,7 @@ class VirtualMapStateTest {
         VirtualMapState deserialized = new VirtualMapState(bytes);
         assertEquals(100, deserialized.getFirstLeafPath(), "firstLeafPath should match after round-trip");
         assertEquals(200, deserialized.getLastLeafPath(), "lastLeafPath should match after round-trip");
+        assertEquals("testLabel", deserialized.getLabel(), "Label should match after round-trip");
         assertEquals(101, deserialized.getSize(), "Size should be (200 - 100 + 1) = 101");
     }
 }

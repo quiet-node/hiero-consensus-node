@@ -3,6 +3,7 @@ package com.swirlds.virtualmap;
 
 import static com.swirlds.common.io.streams.StreamDebugUtils.deserializeAndDebugOnFailure;
 import static com.swirlds.virtualmap.VirtualMap.CLASS_ID;
+import static com.swirlds.virtualmap.internal.merkle.VirtualMapState.MAX_LABEL_CHARS;
 import static java.util.Objects.requireNonNull;
 import static org.hiero.base.utility.CommonUtils.getNormalisedStringBytes;
 
@@ -13,6 +14,7 @@ import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
 import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
 import com.swirlds.common.merkle.MerkleInternal;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.impl.PartialBinaryMerkleInternal;
 import com.swirlds.common.merkle.utility.DebugIterationEndpoint;
 import com.swirlds.common.utility.Labeled;
@@ -132,15 +134,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     }
 
     /**
-     * A reference to the map metadata, the {@link VirtualMapState}. Ideally this would be final
-     * and never null, but serialization requires partially constructed objects, so it must not be
-     * final and may be null until deserialization is complete.
-     */
-    private VirtualMapState state;
-
-    public static final int MAX_LABEL_CHARS = 512;
-
-    /**
      *  The label for the virtual map.  Needed to differentiate between different VirtualMaps (stats, filesystem)
      */
     private String label;
@@ -192,9 +185,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
         this.label = label;
         root = new VirtualRootNode(
                 requireNonNull(dataSourceBuilder), requireNonNull(configuration.getConfigData(VirtualMapConfig.class)));
-        state = new VirtualMapState();
         setChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX, root);
-        root.postInit(label, state);
+        root.postInit(new VirtualMapState(label));
     }
 
     /**
@@ -206,10 +198,9 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     private VirtualMap(final VirtualMap source) {
         this(source.configuration);
         label = source.label;
-        state = source.state.copy();
         root = source.getRoot().copy();
+        root.postInit(root.getState());
         setChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX, root);
-        root.postInit(label, state);
     }
 
     /**
@@ -227,7 +218,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * @return The current state
      */
     VirtualMapState getState() {
-        return state;
+        return root.getState();
     }
 
     /**
@@ -284,8 +275,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     public VirtualMap copy() {
         throwIfImmutable();
         throwIfDestroyed();
-
-        putBytes(VirtualMapState.VM_STATE_KEY, state.toBytes());
         final VirtualMap copy = new VirtualMap(this);
         setImmutable(true);
         return copy;
@@ -311,6 +300,17 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             serout.writeInt(root.getVersion());
             root.serialize(serout, outputDirectory);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setChild(int index, MerkleNode child) {
+        if (index == ChildIndices.VIRTUAL_ROOT_CHILD_INDEX) {
+            root = child.cast();
+        }
+        super.setChild(index, child);
     }
 
     /**
@@ -354,9 +354,10 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
                     if (vmStateExternal) {
                         final ExternalVirtualMapState value = stream.readSerializable();
                         virtualMapStateRef.setValue(new VirtualMapState(value));
-                        label = value.getLabel();
                     } else {
-                        label = stream.readNormalisedString(MAX_LABEL_CHARS);
+                        // This instance of `VirtualMapState` will have a label only,
+                        // it's necessary to initialize a datasource in `VirtualRootNode
+                        virtualMapStateRef.setValue(new VirtualMapState(stream.readNormalisedString(MAX_LABEL_CHARS)));
                     }
                     virtualRootNodeRef.setValue(
                             new VirtualRootNode(configuration.getConfigData(VirtualMapConfig.class)));
@@ -365,18 +366,12 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
                 });
 
         root = virtualRootNodeRef.getValue();
-        root.postInit(label, null);
-        if (vmStateExternal) {
-            state = new VirtualMapState();
-        }
-
+        // Will be non-null value in case of migration from the previous version
+        // Otherwise, the assumption is that VirtualMapState is a leaf of the VM
+        VirtualMapState state = virtualMapStateRef.getValue();
+        label = state.getLabel();
+        root.postInit(state);
         addDeserializedChildren(List.of(root), getVersion());
-
-        if (!vmStateExternal) {
-            Bytes stateBytes = root.getBytes(VirtualMapState.VM_STATE_KEY);
-            assert stateBytes != null;
-            state = new VirtualMapState(stateBytes);
-        }
     }
 
     /**
@@ -399,7 +394,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * @return The number of key/value pairs in the map.
      */
     public long size() {
-        return state.getSize();
+        return root.size();
     }
 
     /*
