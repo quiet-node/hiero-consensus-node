@@ -44,7 +44,7 @@ public final class VirtualMapTestUtils {
     public static VirtualRootNode createRoot(final Configuration configuration) {
         final VirtualRootNode root =
                 new VirtualRootNode(new InMemoryBuilder(), configuration.getConfigData(VirtualMapConfig.class));
-        root.postInit(VM_LABEL, new VirtualMapState());
+        root.postInit(new VirtualMapState(VM_LABEL));
         return root;
     }
 
