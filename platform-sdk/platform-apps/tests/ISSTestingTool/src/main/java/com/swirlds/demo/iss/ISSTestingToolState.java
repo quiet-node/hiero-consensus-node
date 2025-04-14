@@ -13,10 +13,7 @@ package com.swirlds.demo.iss;
 
 import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
 
-import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
@@ -33,7 +30,10 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Supplier;
+import org.hiero.base.constructable.ConstructableIgnored;
 import org.hiero.base.io.SelfSerializable;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.event.ConsensusEvent;
 
 /**
@@ -133,7 +133,8 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
     <T extends SelfSerializable> void writeObjectByChildIndex(final int index, final List<T> list) {
         try {
             final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-            final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(byteOut);
+            final org.hiero.base.io.streams.SerializableDataOutputStream out =
+                    new SerializableDataOutputStream(byteOut);
             out.writeSerializableList(list, false, true);
             setChild(index, new StringLeaf(byteOut.toString(StandardCharsets.UTF_8)));
         } catch (final IOException e) {

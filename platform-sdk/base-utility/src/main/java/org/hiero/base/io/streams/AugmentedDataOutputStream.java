@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.common.io.streams;
+package org.hiero.base.io.streams;
 
-import static com.swirlds.common.io.streams.SerializableStreamConstants.DEFAULT_CHECKSUM;
-import static com.swirlds.common.io.streams.SerializableStreamConstants.NULL_INSTANT_EPOCH_SECOND;
-import static com.swirlds.common.io.streams.SerializableStreamConstants.NULL_LIST_ARRAY_LENGTH;
+import static org.hiero.base.io.streams.SerializableStreamConstants.DEFAULT_CHECKSUM;
+import static org.hiero.base.io.streams.SerializableStreamConstants.NULL_INSTANT_EPOCH_SECOND;
+import static org.hiero.base.io.streams.SerializableStreamConstants.NULL_LIST_ARRAY_LENGTH;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;

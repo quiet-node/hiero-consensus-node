@@ -4,8 +4,6 @@ package com.swirlds.platform.test.fixtures.crypto;
 import static com.swirlds.platform.crypto.CryptoStatic.generateKeysAndCerts;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandom;
 
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.test.fixtures.io.ResourceLoader;
 import com.swirlds.common.test.fixtures.io.ResourceNotFoundException;
 import com.swirlds.platform.crypto.SerializableX509Certificate;
@@ -40,6 +38,8 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
@@ -187,8 +187,10 @@ public class PreGeneratedX509Certs {
             return;
         }
 
-        final org.hiero.base.io.streams.SerializableDataInputStream sigCertDis = new SerializableDataInputStream(sigCertIs);
-        final org.hiero.base.io.streams.SerializableDataInputStream agreeCertDis = new SerializableDataInputStream(agreeCertIs);
+        final org.hiero.base.io.streams.SerializableDataInputStream sigCertDis =
+                new SerializableDataInputStream(sigCertIs);
+        final org.hiero.base.io.streams.SerializableDataInputStream agreeCertDis =
+                new SerializableDataInputStream(agreeCertIs);
         try {
             // load signing certs
             final int numSigCerts = sigCertDis.readInt();

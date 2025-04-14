@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig_;
 import com.swirlds.common.merkle.synchronization.streams.AsyncInputStream;
@@ -25,6 +23,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -160,7 +160,8 @@ class AsyncStreamTest {
 
         // Sanity check, make sure all the messages were written to the stream
         final byte[] bytes = byteOut.toByteArray();
-        final org.hiero.base.io.streams.SerializableDataInputStream in = new SerializableDataInputStream(new ByteArrayInputStream(bytes));
+        final org.hiero.base.io.streams.SerializableDataInputStream in =
+                new SerializableDataInputStream(new ByteArrayInputStream(bytes));
         for (int i = 0; i < count; i++) {
             final SerializableLong value = new SerializableLong();
             value.deserialize(in, value.getVersion());

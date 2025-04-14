@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.common.io.streams;
+package org.hiero.base.io.streams;
 
 import org.hiero.base.io.SelfSerializable;
 

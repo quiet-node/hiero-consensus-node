@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.hedera.hapi.platform.event.GossipEvent;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.io.InputOutputStream;
 import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
@@ -16,6 +14,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 import org.hiero.base.io.SelfSerializable;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.crypto.Hash;
 import org.junit.jupiter.api.Test;
 
@@ -80,14 +80,16 @@ public class GossipEventTest {
         final byte[] byteArray;
 
         try (final ByteArrayOutputStream bs = new ByteArrayOutputStream();
-                final org.hiero.base.io.streams.SerializableDataOutputStream ss = new SerializableDataOutputStream(bs)) {
+                final org.hiero.base.io.streams.SerializableDataOutputStream ss =
+                        new SerializableDataOutputStream(bs)) {
             ss.writePbjRecord(original, GossipEvent.PROTOBUF);
             byteArray = bs.toByteArray();
         }
         for (int i = 0; i < byteArray.length; i++) {
             final byte[] truncated = Arrays.copyOf(byteArray, i);
             try (final ByteArrayInputStream bs = new ByteArrayInputStream(truncated);
-                    final org.hiero.base.io.streams.SerializableDataInputStream ss = new SerializableDataInputStream(bs)) {
+                    final org.hiero.base.io.streams.SerializableDataInputStream ss =
+                            new SerializableDataInputStream(bs)) {
                 assertThrows(EOFException.class, () -> ss.readPbjRecord(GossipEvent.PROTOBUF));
             }
         }

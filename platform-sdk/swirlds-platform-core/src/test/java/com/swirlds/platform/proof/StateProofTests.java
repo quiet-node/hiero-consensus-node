@@ -17,13 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.crypto.Cryptography;
 import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.crypto.Signature;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.merkle.MerkleLeaf;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.interfaces.MerkleType;
@@ -45,6 +41,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.crypto.Hash;
 import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.BeforeAll;
@@ -109,7 +109,8 @@ class StateProofTests {
         out.writeSerializable(stateProof, true);
 
         final byte[] bytes = byteOut.toByteArray();
-        final org.hiero.base.io.streams.SerializableDataInputStream in = new SerializableDataInputStream(new ByteArrayInputStream(bytes));
+        final org.hiero.base.io.streams.SerializableDataInputStream in =
+                new SerializableDataInputStream(new ByteArrayInputStream(bytes));
 
         final StateProof deserialized = in.readSerializable();
         assertNotSame(stateProof, deserialized);
@@ -416,7 +417,8 @@ class StateProofTests {
         final org.hiero.base.io.streams.SerializableDataOutputStream outA = new SerializableDataOutputStream(byteOutA);
         outA.writeSerializable(stateProofA, true);
         final byte[] bytesA = byteOutA.toByteArray();
-        final org.hiero.base.io.streams.SerializableDataInputStream in = new SerializableDataInputStream(new ByteArrayInputStream(bytesA));
+        final org.hiero.base.io.streams.SerializableDataInputStream in =
+                new SerializableDataInputStream(new ByteArrayInputStream(bytesA));
 
         final StateProof stateProofB = in.readSerializable();
         final ByteArrayOutputStream byteOutB = new ByteArrayOutputStream();

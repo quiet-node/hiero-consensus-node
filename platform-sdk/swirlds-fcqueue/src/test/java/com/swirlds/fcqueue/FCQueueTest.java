@@ -12,10 +12,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.swirlds.base.state.MutabilityException;
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.test.fixtures.fcqueue.FCInt;
 import com.swirlds.common.test.fixtures.io.SerializationUtils;
 import java.io.ByteArrayInputStream;
@@ -31,6 +27,10 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.hiero.consensus.model.crypto.Hash;
 import org.junit.jupiter.api.Assertions;
@@ -638,7 +638,8 @@ class FCQueueTest {
         // Serialize the original FCQueue
         final byte[] serializedQueue;
         try (final ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                final org.hiero.base.io.streams.SerializableDataOutputStream dos = new SerializableDataOutputStream(bos)) {
+                final org.hiero.base.io.streams.SerializableDataOutputStream dos =
+                        new SerializableDataOutputStream(bos)) {
             dos.writeSerializable(origFCQ, true);
             dos.flush();
             serializedQueue = bos.toByteArray();
@@ -649,7 +650,8 @@ class FCQueueTest {
 
         // Recover the serialized FCQueue into the recoveredFCQ variable
         try (final ByteArrayInputStream bis = new ByteArrayInputStream(serializedQueue);
-                final org.hiero.base.io.streams.SerializableDataInputStream dis = new SerializableDataInputStream(bis)) {
+                final org.hiero.base.io.streams.SerializableDataInputStream dis =
+                        new SerializableDataInputStream(bis)) {
             recoveredFCQ = dis.readSerializable();
         }
 
@@ -689,7 +691,8 @@ class FCQueueTest {
         try (final ByteArrayInputStream bis = new ByteArrayInputStream(
                         getClass().getResourceAsStream(queueFileName).readAllBytes());
                 final ObjectInputStream oin = new ObjectInputStream(getClass().getResourceAsStream(numbersFilename));
-                final org.hiero.base.io.streams.SerializableDataInputStream dis = new SerializableDataInputStream(bis)) {
+                final org.hiero.base.io.streams.SerializableDataInputStream dis =
+                        new SerializableDataInputStream(bis)) {
             recoveredFCQ = dis.readSerializable();
             numbers = (int[]) oin.readObject();
         }
@@ -792,12 +795,14 @@ class FCQueueTest {
             assertEquals(fcq.size(), 0);
 
             final ByteArrayOutputStream outStream = new ByteArrayOutputStream();
-            final org.hiero.base.io.streams.SerializableDataOutputStream outputStream = new SerializableDataOutputStream(outStream);
+            final org.hiero.base.io.streams.SerializableDataOutputStream outputStream =
+                    new SerializableDataOutputStream(outStream);
 
             outputStream.writeSerializableIterableWithSize(Collections.emptyIterator(), 0, true, false);
 
             final ByteArrayInputStream inStream = new ByteArrayInputStream(outStream.toByteArray());
-            final org.hiero.base.io.streams.SerializableDataInputStream inputStream = new SerializableDataInputStream(inStream);
+            final org.hiero.base.io.streams.SerializableDataInputStream inputStream =
+                    new SerializableDataInputStream(inStream);
             inputStream.readSerializableIterableWithSize(10, fcq::add);
         } catch (final Exception ex) {
             // should not fail with EOFException

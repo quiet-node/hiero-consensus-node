@@ -2,12 +2,12 @@
 package com.swirlds.platform.event;
 
 import com.hedera.hapi.platform.event.GossipEvent;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.event.PlatformEvent;
 
 /**

@@ -3,8 +3,6 @@ package com.swirlds.benchmark;
 
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
@@ -28,6 +26,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.crypto.DigestType;
 import org.openjdk.jmh.annotations.TearDown;
 
@@ -156,8 +156,9 @@ public abstract class VirtualMapBaseBench extends BaseBench {
                                 Files.createDirectory(savedDir);
                             }
                             virtualMap.getRight().getHash();
-                            try (final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(
-                                    Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
+                            try (final org.hiero.base.io.streams.SerializableDataOutputStream out =
+                                    new SerializableDataOutputStream(
+                                            Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
                                 virtualMap.serialize(out, savedDir);
                             }
                             virtualMap.release();
@@ -266,8 +267,9 @@ public abstract class VirtualMapBaseBench extends BaseBench {
                         final VirtualMap<BenchmarkKey, BenchmarkValue> curMap = virtualMap.copy();
 
                         virtualMap.getRight().getHash();
-                        try (final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(
-                                Files.newOutputStream(finalSavedDir.resolve(label + SERDE_SUFFIX)))) {
+                        try (final org.hiero.base.io.streams.SerializableDataOutputStream out =
+                                new SerializableDataOutputStream(
+                                        Files.newOutputStream(finalSavedDir.resolve(label + SERDE_SUFFIX)))) {
                             virtualMap.serialize(out, finalSavedDir);
                         } catch (IOException ex) {
                             logger.error("Error saving VirtualMap " + label, ex);
@@ -302,8 +304,8 @@ public abstract class VirtualMapBaseBench extends BaseBench {
             }
             Files.createDirectories(savedDir);
             virtualMap.getRight().getHash();
-            try (final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(
-                    Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
+            try (final org.hiero.base.io.streams.SerializableDataOutputStream out =
+                    new SerializableDataOutputStream(Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
                 virtualMap.serialize(out, savedDir);
             }
             logger.info("Saved map {} to {} in {} ms", LABEL, savedDir, System.currentTimeMillis() - start);
@@ -328,8 +330,8 @@ public abstract class VirtualMapBaseBench extends BaseBench {
             try {
                 logger.info("Restoring map {} from {}", label, savedDir);
                 final VirtualMap<BenchmarkKey, BenchmarkValue> virtualMap = new VirtualMap<>(configuration);
-                try (final org.hiero.base.io.streams.SerializableDataInputStream in = new SerializableDataInputStream(
-                        Files.newInputStream(savedDir.resolve(label + SERDE_SUFFIX)))) {
+                try (final org.hiero.base.io.streams.SerializableDataInputStream in =
+                        new SerializableDataInputStream(Files.newInputStream(savedDir.resolve(label + SERDE_SUFFIX)))) {
                     virtualMap.deserialize(in, savedDir, virtualMap.getVersion());
                 }
                 logger.info("Restored map {} from {}", label, savedDir);

@@ -11,7 +11,6 @@ import com.hedera.node.app.records.impl.producers.SerializedSingleTransactionRec
 import com.hedera.node.app.state.SingleTransactionRecord;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -23,6 +22,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.consensus.model.crypto.Hash;
 

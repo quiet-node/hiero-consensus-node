@@ -3,8 +3,6 @@ package com.swirlds.common.test.fixtures.merkle.dummy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.merkle.MerkleLeaf;
 import com.swirlds.common.merkle.impl.PartialMerkleLeaf;
 import com.swirlds.common.test.fixtures.merkle.util.MerkleTestUtils;
@@ -13,6 +11,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 
 /**
  * This merkle leaf stores a string randomly generated using seed. When serialized in abbreviated
@@ -67,7 +67,8 @@ public class DummyMerkleExternalLeaf extends PartialMerkleLeaf implements DummyM
     }
 
     @Override
-    public void serialize(final org.hiero.base.io.streams.SerializableDataOutputStream out, final Path outputDirectory) throws IOException {
+    public void serialize(final org.hiero.base.io.streams.SerializableDataOutputStream out, final Path outputDirectory)
+            throws IOException {
         out.writeLong(seed);
         out.writeInt(averageSize);
         out.writeInt(standardDeviation);
@@ -79,7 +80,10 @@ public class DummyMerkleExternalLeaf extends PartialMerkleLeaf implements DummyM
     }
 
     @Override
-    public void deserialize(final org.hiero.base.io.streams.SerializableDataInputStream in, final Path inputDirectory, final int version)
+    public void deserialize(
+            final org.hiero.base.io.streams.SerializableDataInputStream in,
+            final Path inputDirectory,
+            final int version)
             throws IOException {
         seed = in.readLong();
         averageSize = in.readInt();

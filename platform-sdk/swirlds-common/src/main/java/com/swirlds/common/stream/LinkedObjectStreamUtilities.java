@@ -8,8 +8,6 @@ import static com.swirlds.common.stream.internal.TimestampStreamFileWriter.OBJEC
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.crypto.HashingOutputStream;
 import com.swirlds.common.crypto.Signature;
-import com.swirlds.common.io.streams.SerializableDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.stream.internal.InvalidStreamFileException;
 import com.swirlds.common.stream.internal.SingleStreamIterator;
 import com.swirlds.common.stream.internal.StreamFilesIterator;
@@ -24,6 +22,8 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
 import org.hiero.base.io.SelfSerializable;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.consensus.model.crypto.Hash;
 
@@ -355,7 +355,8 @@ public final class LinkedObjectStreamUtilities {
      */
     public static int readFirstIntFromFile(final File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file);
-                org.hiero.base.io.streams.SerializableDataInputStream inputStream = new SerializableDataInputStream(fis)) {
+                org.hiero.base.io.streams.SerializableDataInputStream inputStream =
+                        new SerializableDataInputStream(fis)) {
             return inputStream.readInt();
         }
     }
