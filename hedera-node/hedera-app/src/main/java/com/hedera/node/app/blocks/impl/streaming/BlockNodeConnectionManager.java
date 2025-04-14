@@ -146,6 +146,8 @@ public class BlockNodeConnectionManager {
             try {
                 retry(
                         () -> {
+                            connection.updateConnectionState(
+                                    ConnectionState.Status.RECONNECTING, "Connection is scheduled for reconnect");
                             connection.establishStream();
                             synchronized (connectionLock) {
                                 final var blockNodeInfo = connection.getNodeConfig();
@@ -443,7 +445,7 @@ public class BlockNodeConnectionManager {
             final int highestAvailablePriority =
                     highestAvailableConnection.getNodeConfig().priority();
 
-            // If the highest available connection is not higher priority than the active one, return false
+            // If the highest available connection is not higher priority than the active connection, return false
             if (highestAvailablePriority >= activeConnection.getNodeConfig().priority()) {
                 return false;
             }
@@ -462,6 +464,8 @@ public class BlockNodeConnectionManager {
 
             // Set the higher priority connection as the new primary connection
             setPrimaryConnection(highestAvailableConnection);
+
+            // Start streaming the next block to the highest connection that was in reconnect
             highestAvailableConnection.jumpToBlock(blockToStartTheNewConnection);
 
             return true;
