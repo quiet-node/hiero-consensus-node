@@ -153,7 +153,7 @@ public class PictureMetadata {
      *
      * @return the calculated X coordinate for a branched event
      */
-    private int calculateXPosForBranchedEvent(@NonNull final EventImpl event, final int xPos) {
+    private int calculateXPosForBranchedEvent(@NonNull final EventImpl event, final int currentXPos) {
         final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
 
         final BranchedEventMetadata branchedEventMetadata =
@@ -184,8 +184,9 @@ public class PictureMetadata {
                 calculatedXPos = xCoordinates.get(gossipEvent);
             }
         } else {
-            // assign the first X coordinate for the current generation
-            calculatedXPos = xPos - (int) (3 * r / 4);
+            // assign the first X coordinate for the current generation by moving the current X position to the left,
+            // so that branched events appear to be offset from creator's node column
+            calculatedXPos = currentXPos - (int) (3 * r / 4);
 
             xCoordinates = new HashMap<>();
             xCoordinates.put(gossipEvent, calculatedXPos);

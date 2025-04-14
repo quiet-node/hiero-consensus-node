@@ -187,9 +187,8 @@ public class TestGuiSource {
         if (eventProvider instanceof GeneratorEventProvider) {
             final List<ForkingEventSource> forkingEventSources = new ArrayList<>();
             for (final NodeId nodeId : guiSource.getAddressBook().getNodeIdSet()) {
-                if (((GeneratorEventProvider) eventProvider).getNodeSource(nodeId) instanceof ForkingEventSource) {
-                    final ForkingEventSource forkingEventSource =
-                            (ForkingEventSource) ((GeneratorEventProvider) eventProvider).getNodeSource(nodeId);
+                if (((GeneratorEventProvider) eventProvider).getNodeSource(nodeId)
+                        instanceof ForkingEventSource forkingEventSource) {
                     forkingEventSources.add(forkingEventSource);
 
                     final List<LinkedList<EventImpl>> branches = forkingEventSource.getBranches();

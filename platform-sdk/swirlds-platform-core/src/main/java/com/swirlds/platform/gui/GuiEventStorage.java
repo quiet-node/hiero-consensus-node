@@ -17,6 +17,7 @@ import com.swirlds.platform.roster.RosterRetriever;
 import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,7 +39,7 @@ public class GuiEventStorage {
     private final SimpleLinker linker;
     private final Configuration configuration;
     private ConsensusRound lastConsensusRound;
-    private Map<GossipEvent, BranchedEventMetadata> branchedEventsMetadata;
+    private Map<GossipEvent, BranchedEventMetadata> branchedEventsMetadata = new HashMap<>();
 
     /**
      * Creates an empty instance
@@ -146,6 +147,7 @@ public class GuiEventStorage {
         return lastConsensusRound;
     }
 
+    @NonNull
     public Map<GossipEvent, BranchedEventMetadata> getBranchedEventsMetadata() {
         return branchedEventsMetadata;
     }
