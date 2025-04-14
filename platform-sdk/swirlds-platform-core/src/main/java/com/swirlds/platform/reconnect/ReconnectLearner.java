@@ -199,7 +199,7 @@ public class ReconnectLearner {
         final MerkleNodeState state = (MerkleNodeState) synchronizer.getRoot();
         // FIXME: debug
         logger.info(
-                RECONNECT.getMarker(), PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE.getInfoString(state, 5));
+                RECONNECT.getMarker(), platformStateFacade.getInfoString(state, 5));
         final SignedState newSignedState = new SignedState(
                 platformContext.getConfiguration(),
                 CryptoStatic::verifySignature,
