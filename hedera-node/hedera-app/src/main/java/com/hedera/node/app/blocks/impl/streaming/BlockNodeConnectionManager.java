@@ -464,7 +464,9 @@ public class BlockNodeConnectionManager {
             // Set the higher priority connection as the new primary connection
             setPrimaryConnection(highestAvailableConnection);
 
-            // Start streaming the next block to the highest connection that was in reconnect
+            // Make active the highest connection that was in reconnect
+            // and start streaming the next block to it
+            highestAvailableConnection.updateConnectionState(BlockNodeConnection.ConnectionState.ACTIVE);
             highestAvailableConnection.jumpToBlock(blockToStartTheNewConnection);
 
             return true;
