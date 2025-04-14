@@ -92,10 +92,10 @@ class BlockNodeConnectionTest {
         requestObserverField.setAccessible(true);
         requestObserverField.set(connection, requestObserver);
 
-        // Set isActive to true via reflection
-        Field isActiveField = BlockNodeConnection.class.getDeclaredField("isActive");
-        isActiveField.setAccessible(true);
-        isActiveField.set(connection, new AtomicBoolean(true));
+        // Set connectionState to true via reflection
+        Field connectionStateField = BlockNodeConnection.class.getDeclaredField("connectionState");
+        connectionStateField.setAccessible(true);
+        connectionStateField.set(connection, BlockNodeConnection.ConnectionState.ACTIVE);
     }
 
     @AfterEach
@@ -523,9 +523,9 @@ class BlockNodeConnectionTest {
         Thread workerThread = Thread.ofPlatform().name("TestWorker").start(() -> {
             // Call the method under test via reflection
             try {
-                // Make the isActive field accessible and override it to stop after a few iterations
-                Field isActiveField = BlockNodeConnection.class.getDeclaredField("isActive");
-                isActiveField.setAccessible(true);
+                // Make the connectionState field accessible and override it to stop after a few iterations
+                Field connectionStateField = BlockNodeConnection.class.getDeclaredField("connectionState");
+                connectionStateField.setAccessible(true);
 
                 Method requestWorkerLoopMethod = BlockNodeConnection.class.getDeclaredMethod("requestWorkerLoop");
                 requestWorkerLoopMethod.setAccessible(true);
@@ -537,7 +537,7 @@ class BlockNodeConnectionTest {
 
                 // If we reached here, the worker continued despite the exception
                 workerContinued.set(true);
-                isActiveField.set(connection, new AtomicBoolean(false));
+                connectionStateField.set(connection, BlockNodeConnection.ConnectionState.CLOSED);
 
             } catch (Exception e) {
                 // Ignore
@@ -641,18 +641,43 @@ class BlockNodeConnectionTest {
      */
     @Test
     void testEndStreamAndRestartAtBlock() {
+        final BlockNodeConnection connectionSpy = spy(connection);
         // Arrange
         final long blockNumber = 100L;
 
         // Act
-        connection.restartStreamAtBlock(blockNumber);
+        connectionSpy.restartStreamAtBlock(blockNumber);
 
         // Assert
-        assertEquals(blockNumber, connection.getCurrentBlockNumber());
-        assertEquals(0, connection.getCurrentRequestIndex());
+        assertEquals(blockNumber, connectionSpy.getCurrentBlockNumber());
+        assertEquals(0, connectionSpy.getCurrentRequestIndex());
+        assertThat(connectionSpy.getConnectionState()).isEqualTo(BlockNodeConnection.ConnectionState.ACTIVE);
 
         // Verify log messages for ending stream and restarting
         final String expectedLog = "Restarting stream at block " + blockNumber;
+        assertTrue(
+                logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
+                        || logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected log message not found: " + expectedLog);
+    }
+
+    /**
+     * Tests that the connection properly ends the stream and restarts at a specific block.
+     */
+    @Test
+    void testConnectionClosure() {
+        final BlockNodeConnection connectionSpy = spy(connection);
+
+        // Act
+        connectionSpy.close();
+
+        // Assert
+        assertEquals(-1, connectionSpy.getCurrentBlockNumber());
+        assertEquals(0, connectionSpy.getCurrentRequestIndex());
+        assertThat(connectionSpy.getConnectionState()).isEqualTo(BlockNodeConnection.ConnectionState.CLOSED);
+
+        // Verify log messages for ending stream and restarting
+        final String expectedLog = "Closed connection to block node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.infoLogs().stream().anyMatch(log -> log.contains(expectedLog))
                         || logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
@@ -994,6 +1019,9 @@ class BlockNodeConnectionTest {
 
         assertEquals(resendBlock.blockNumber(), connection.getCurrentBlockNumber());
         assertEquals(0, connection.getCurrentRequestIndex());
+
+        // Assert that the connection restarted at the ResendBlock block_number successfully
+        assertThat(connectionSpy.getConnectionState()).isEqualTo(BlockNodeConnection.ConnectionState.ACTIVE);
 
         // Verify log messages for resend block
         final String expectedLog = "Received ResendBlock from block node " + TEST_CONNECTION_DESCRIPTOR + " for block "

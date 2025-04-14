@@ -36,10 +36,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     // Locks and synchronization objects
     private final Object channelLock = new Object();
     private final Object workerLock = new Object();
-    private final ReentrantLock isActiveLock = new ReentrantLock();
+    private final ReentrantLock connectionStateLock = new ReentrantLock();
 
     // Atomic state variables
-    private final AtomicBoolean isActive = new AtomicBoolean(false);
     private final AtomicBoolean streamCompletionInProgress = new AtomicBoolean(false);
     private final AtomicLong currentBlockNumber = new AtomicLong(-1);
     private final AtomicInteger currentRequestIndex = new AtomicInteger(0);
@@ -52,6 +51,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private volatile StreamObserver<PublishStreamRequest> requestObserver;
     private volatile Thread requestWorker;
     private volatile ConnectionState connectionState;
+
+    public enum ConnectionState {
+        UNINITIALIZED,
+        ACTIVE,
+        RECONNECTING,
+        CLOSED
+    }
 
     protected BlockNodeConnection() {
         // Default constructor for NoOpConnection
@@ -86,20 +92,19 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.scheduler = requireNonNull(scheduler, "scheduler must not be null");
         this.connectionDescriptor = generateConnectionDescriptor(nodeConfig);
-        this.connectionState = new ConnectionState();
+        this.connectionState = ConnectionState.UNINITIALIZED;
     }
 
     /**
      * Establish the bidirectional streaming to block nodes.
      */
     public void establishStream() {
-        synchronized (isActiveLock) {
+        synchronized (connectionStateLock) {
             synchronized (channelLock) {
                 requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
-                isActive.set(true);
+                updateConnectionState(ConnectionState.ACTIVE);
 
-                if (getConnectionState().getStatus() != ConnectionState.Status.RECONNECTING) {
-                    updateConnectionState(ConnectionState.Status.ACTIVE, "Connection is active");
+                if (getConnectionState() != ConnectionState.RECONNECTING) {
                     startRequestWorker();
                 }
             }
@@ -107,13 +112,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * @param status the new state to transition to
-     * @param message the message to set for the new state
+     * @param newState the new state to transition to
      */
-    public void updateConnectionState(@NonNull ConnectionState.Status status, @NonNull String message) {
-        synchronized (isActiveLock) {
-            connectionState.setStatus(status);
-            connectionState.setMessage(message);
+    public void updateConnectionState(@NonNull ConnectionState newState) {
+        synchronized (connectionStateLock) {
+            connectionState = newState;
         }
     }
 
@@ -130,7 +133,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             if (requestWorker != null && requestWorker.isAlive()) {
                 stopWorkerThread();
             }
-            if (isActive.get()) {
+            if (isActive()) {
                 requestWorker = Thread.ofPlatform()
                         .name("BlockNodeConnection-RequestWorker-" + blockNodeConfig.address() + ":"
                                 + blockNodeConfig.port())
@@ -141,7 +144,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void requestWorkerLoop() {
-        while (isActive.get()) {
+        while (isActive()) {
             try {
                 final var currentBlock = getCurrentBlockNumber();
                 // Get the current block state
@@ -245,10 +248,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void processAvailableRequests(@NonNull BlockState blockState) {
-        synchronized (isActiveLock) {
+        synchronized (connectionStateLock) {
             List<PublishStreamRequest> requests = blockState.requests();
             while (getCurrentRequestIndex() < requests.size()) {
-                if (!isActive.get()) {
+                if (!isActive()) {
                     return;
                 }
                 final PublishStreamRequest request = requests.get(getCurrentRequestIndex());
@@ -314,23 +317,19 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             }
 
             if (currentBlock > acknowledgedBlockNumber) {
-                updateConnectionState(ConnectionState.Status.RECEIVED_BLOCK_ACK, "Consensus node is ahead");
                 logger.debug(
                         "Current block number {} is higher than the acknowledged block number {}",
                         currentBlock,
                         acknowledgedBlockNumber);
             } else if (currentBlock < acknowledgedBlockNumber) {
-                updateConnectionState(ConnectionState.Status.RECEIVED_BLOCK_ACK, "Consensus node is behind");
                 logger.debug(
                         "Consensus node is behind and current block number {} is before the acknowledged block number {}",
                         currentBlock,
                         acknowledgedBlockNumber);
                 jumpToBlock(acknowledgedBlockNumber + 1);
             } else {
-                updateConnectionState(ConnectionState.Status.RECEIVED_BLOCK_ACK, "Consensus node is in sync");
             }
         } else {
-            updateConnectionState(ConnectionState.Status.RECEIVED_BLOCK_ACK, "Unknown acknowledgement received");
             logger.warn("Unknown acknowledgement received: {}", acknowledgement);
         }
     }
@@ -349,10 +348,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         // Always end the stream when we receive an end of stream message
         logger.debug("Ending stream for node {}:{}", blockNodeConfig.address(), blockNodeConfig.port());
         close();
-
-        updateConnectionState(
-                ConnectionState.Status.RECEIVED_END_OF_STREAM,
-                endOfStream.status().toString());
 
         switch (responseCode) {
             case STREAM_ITEMS_INTERNAL_ERROR, STREAM_ITEMS_PERSISTENCE_FAILED -> {
@@ -429,9 +424,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 resendBlockNumber);
 
         if (blockNodeConnectionManager.isBlockAlreadyAcknowledged(resendBlockNumber)) {
-            updateConnectionState(
-                    ConnectionState.Status.RECEIVED_RESEND_BLOCK,
-                    "Received resend block for already acknowledged block");
             logger.debug(
                     "[{}] Block {} already acknowledged, skipping resend for block node {}",
                     Thread.currentThread().getName(),
@@ -446,9 +438,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             logger.debug("Ending stream for node {}:{}", blockNodeConfig.address(), blockNodeConfig.port());
             close();
 
-            updateConnectionState(
-                    ConnectionState.Status.RECEIVED_RESEND_BLOCK,
-                    "Block number matches the one we should restart the stream at");
             logger.debug(
                     "[{}] Restarting stream at the next block {} after the last verified one for block node {}",
                     Thread.currentThread().getName(),
@@ -456,9 +445,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     connectionDescriptor);
             restartStreamAtBlock(resendBlockNumber);
         } else {
-            updateConnectionState(
-                    ConnectionState.Status.RECEIVED_RESEND_BLOCK,
-                    "Block number is not the next block after the last verified");
             logger.warn(
                     "[{}] Received ResendBlock for block {} but last verified block is {}",
                     Thread.currentThread().getName(),
@@ -478,9 +464,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request);
-        synchronized (isActiveLock) {
+        synchronized (connectionStateLock) {
             synchronized (channelLock) {
-                if (isActive.get() && requestObserver != null) {
+                if (isActive() && requestObserver != null) {
                     requestObserver.onNext(request);
                 }
             }
@@ -491,8 +477,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * Idempotent operation that closes this connection (if active)
      */
     public void close() {
-        synchronized (isActiveLock) {
-            if (isActive.compareAndSet(true, false)) {
+        synchronized (connectionStateLock) {
+            if (isActive()) {
+                updateConnectionState(ConnectionState.CLOSED);
                 closeObserver();
                 setCurrentBlockNumber(-1);
             }
@@ -512,7 +499,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             }
         }
         stopWorkerThread();
-        updateConnectionState(ConnectionState.Status.CLOSED, "Connection closed");
     }
 
     /**
@@ -521,7 +507,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @return true if the connection is active, false otherwise
      */
     public boolean isActive() {
-        return isActive.get();
+        return getConnectionState() == ConnectionState.ACTIVE;
     }
 
     /**
@@ -560,8 +546,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         return currentRequestIndex.get();
     }
 
-    public ReentrantLock getIsActiveLock() {
-        return isActiveLock;
+    public ReentrantLock getConnectionStateLock() {
+        return connectionStateLock;
     }
 
     public void notifyNewRequestAvailable() {
@@ -635,7 +621,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockNodeConfig.address(),
                 blockNodeConfig.port());
 
-        synchronized (isActiveLock) {
+        synchronized (connectionStateLock) {
             synchronized (channelLock) {
                 setCurrentBlockNumber(blockNumber);
                 establishStream();
@@ -674,7 +660,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         } else if (response.hasEndStream()) {
             handleEndOfStream(response.endStream());
         } else if (response.hasSkipBlock()) {
-            updateConnectionState(ConnectionState.Status.RECEIVED_SKIP_BLOCK, "Received skip block");
             logger.debug(
                     "Received SkipBlock from block node {}  Block #{}",
                     connectionDescriptor,

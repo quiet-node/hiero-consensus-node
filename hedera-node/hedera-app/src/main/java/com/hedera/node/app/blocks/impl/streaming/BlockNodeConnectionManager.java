@@ -146,8 +146,7 @@ public class BlockNodeConnectionManager {
             try {
                 retry(
                         () -> {
-                            connection.updateConnectionState(
-                                    ConnectionState.Status.RECONNECTING, "Connection is scheduled for reconnect");
+                            connection.updateConnectionState(BlockNodeConnection.ConnectionState.RECONNECTING);
                             connection.establishStream();
                             synchronized (connectionLock) {
                                 final var blockNodeInfo = connection.getNodeConfig();
@@ -258,7 +257,7 @@ public class BlockNodeConnectionManager {
                 return;
             }
 
-            connection.getIsActiveLock().lock();
+            connection.getConnectionStateLock().lock();
             try {
                 if (connection.isActive()) {
                     if (connection.getCurrentBlockNumber() == -1) {
@@ -267,7 +266,7 @@ public class BlockNodeConnectionManager {
                     connection.notifyNewBlockAvailable();
                 }
             } finally {
-                connection.getIsActiveLock().unlock();
+                connection.getConnectionStateLock().unlock();
             }
         }
     }
@@ -280,13 +279,13 @@ public class BlockNodeConnectionManager {
                 return;
             }
 
-            connection.getIsActiveLock().lock();
+            connection.getConnectionStateLock().lock();
             try {
                 if (connection.isActive()) {
                     connection.notifyNewRequestAvailable();
                 }
             } finally {
-                connection.getIsActiveLock().unlock();
+                connection.getConnectionStateLock().unlock();
             }
         }
     }
