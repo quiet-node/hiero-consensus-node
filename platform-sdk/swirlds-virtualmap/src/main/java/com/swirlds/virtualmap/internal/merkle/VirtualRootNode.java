@@ -63,6 +63,7 @@ import com.swirlds.virtualmap.internal.reconnect.ConcurrentBlockingIterator;
 import com.swirlds.virtualmap.internal.reconnect.LearnerPullVirtualTreeView;
 import com.swirlds.virtualmap.internal.reconnect.LearnerPushVirtualTreeView;
 import com.swirlds.virtualmap.internal.reconnect.NodeTraversalOrder;
+import com.swirlds.virtualmap.internal.reconnect.ReconnectHashLeafFlusher;
 import com.swirlds.virtualmap.internal.reconnect.ReconnectHashListener;
 import com.swirlds.virtualmap.internal.reconnect.ReconnectNodeRemover;
 import com.swirlds.virtualmap.internal.reconnect.ReconnectState;
@@ -86,9 +87,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
+import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.consensus.model.crypto.Hash;
-import org.hiero.consensus.model.io.streams.SerializableDataInputStream;
-import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
 
 /**
  * An {@link AbstractMerkleInternal} that represents the root node of a virtual tree. This root node always
@@ -308,6 +310,8 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
      */
     private VirtualRootNode originalMap;
 
+    private ReconnectHashLeafFlusher<K, V> reconnectFlusher;
+
     private ReconnectNodeRemover nodeRemover;
 
     private final long fastCopyVersion;
@@ -476,8 +480,11 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
                 firstLeafPath,
                 lastLeafPath,
                 getRoute());
-        final FullLeafRehashHashListener hashListener = new FullLeafRehashHashListener(
-                firstLeafPath, lastLeafPath, dataSource, virtualMapConfig.reconnectFlushInterval(), statistics);
+        // Full leaf rehashing has nothing to do with reconnects, but existing reconnect mechanisms,
+        // flusher and hash listener, work just fine in this scenario
+        final ReconnectHashLeafFlusher<K, V> flusher = new ReconnectHashLeafFlusher<>(
+                keySerializer, valueSerializer, dataSource, virtualMapConfig.flushInterval(), statistics);
+        final ReconnectHashListener<K, V> hashListener = new ReconnectHashListener<>(flusher);
 
         // This background thread will be responsible for hashing the tree and sending the
         // data to the hash listener to flush.
@@ -1453,8 +1460,17 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
         assert originalMap != null;
         // During reconnect we want to look up state from the original records
         final VirtualStateAccessor originalState = originalMap.getState();
+        reconnectFlusher = new ReconnectHashLeafFlusher<>(
+                keySerializer,
+                valueSerializer,
+                reconnectRecords.getDataSource(),
+                virtualMapConfig.flushInterval(),
+                statistics);
         nodeRemover = new ReconnectNodeRemover(
-                originalMap.getRecords(), originalState.getFirstLeafPath(), originalState.getLastLeafPath());
+                originalMap.getRecords(),
+                originalState.getFirstLeafPath(),
+                originalState.getLastLeafPath(),
+                reconnectFlusher);
         return switch (virtualMapConfig.reconnectMode()) {
             case VirtualMapReconnectMode.PUSH -> new LearnerPushVirtualTreeView(
                     reconnectConfig, this, originalMap.records, originalState, reconnectState, nodeRemover, mapStats);
@@ -1520,15 +1536,9 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
     }
 
     public void prepareReconnectHashing(final long firstLeafPath, final long lastLeafPath) {
-        assert nodeRemover != null : "Cannot prepare reconnect hashing, since reconnect is not started";
+        assert reconnectFlusher != null : "Cannot prepare reconnect hashing, since reconnect is not started";
         // The hash listener will be responsible for flushing stuff to the reconnect data source
-        final ReconnectHashListener hashListener = new ReconnectHashListener(
-                firstLeafPath,
-                lastLeafPath,
-                reconnectRecords.getDataSource(),
-                virtualMapConfig.reconnectFlushInterval(),
-                statistics,
-                nodeRemover);
+        final ReconnectHashListener<K, V> hashListener = new ReconnectHashListener<>(reconnectFlusher);
 
         // This background thread will be responsible for hashing the tree and sending the
         // data to the hash listener to flush.

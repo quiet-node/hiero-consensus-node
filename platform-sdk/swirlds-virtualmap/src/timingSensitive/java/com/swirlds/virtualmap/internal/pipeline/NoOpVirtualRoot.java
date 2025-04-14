@@ -7,8 +7,8 @@ import com.swirlds.common.merkle.impl.PartialMerkleLeaf;
 import com.swirlds.virtualmap.internal.RecordAccessor;
 import java.io.IOException;
 import java.nio.file.Path;
-import org.hiero.consensus.model.io.streams.SerializableDataInputStream;
-import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 
 /**
  * A bare-bones implementation of {@link VirtualRoot} that doesn't do much of anything.

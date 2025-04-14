@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
 import com.swirlds.virtualmap.test.fixtures.TestKey;
 import com.swirlds.virtualmap.test.fixtures.TestValue;
 import com.swirlds.virtualmap.test.fixtures.TestValueCodec;

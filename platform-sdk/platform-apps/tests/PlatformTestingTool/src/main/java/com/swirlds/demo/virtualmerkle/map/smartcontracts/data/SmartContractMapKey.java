@@ -9,8 +9,8 @@ import com.swirlds.virtualmap.VirtualKey;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
-import org.hiero.consensus.model.io.streams.SerializableDataInputStream;
-import org.hiero.consensus.model.io.streams.SerializableDataOutputStream;
+import org.hiero.base.io.streams.SerializableDataInputStream;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
 
 /**
  * A smart contract has a list of key value pairs to store its data.

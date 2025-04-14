@@ -3,13 +3,12 @@ package com.swirlds.virtualmap.internal.reconnect;
 
 import static com.swirlds.logging.legacy.LogMarker.RECONNECT;
 
-import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
+import com.swirlds.virtualmap.VirtualKey;
+import com.swirlds.virtualmap.VirtualValue;
+import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
 import com.swirlds.virtualmap.internal.Path;
 import com.swirlds.virtualmap.internal.RecordAccessor;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Stream;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -33,8 +32,13 @@ import org.apache.logging.log4j.Logger;
  * to M. Later during flush, key K is in the list of candidates to remove, but with path N (this is where it
  * was originally located in the learner tree). Since the path is different, the leaf will not be actually
  * removed from disk.
+ *
+ * @param <K>
+ * 		the type of the key
+ * @param <V>
+ * 		the type of the value
  */
-public class ReconnectNodeRemover {
+public class ReconnectNodeRemover<K extends VirtualKey, V extends VirtualValue> {
 
     private static final Logger logger = LogManager.getLogger(ReconnectNodeRemover.class);
 
@@ -46,7 +50,7 @@ public class ReconnectNodeRemover {
     /**
      * Can be used to access the tree being constructed.
      */
-    private final RecordAccessor oldRecords;
+    private final RecordAccessor<K, V> oldRecords;
 
     /**
      * The first leaf path of the original merkle tree.
@@ -59,12 +63,9 @@ public class ReconnectNodeRemover {
     private final long oldLastLeafPath;
 
     /**
-     * Set of keys (actually, keys + paths) collected for removal. This set is empties every
-     * time {@link #getRecordsToDelete()} is called, and a new set is started. The set is
-     * populated in {@link #newLeafNode(long, Bytes)} based on what is received from the
-     * teacher (method args) and what was on the learner ({@link #oldRecords}).
+     * A flusher used to delete old leaves from the data source.
      */
-    private Set<VirtualLeafBytes> leavesToDelete = new HashSet<>();
+    private final ReconnectHashLeafFlusher<K, V> flusher;
 
     /**
      * Create an object responsible for removing virtual map nodes during a reconnect.
@@ -77,10 +78,14 @@ public class ReconnectNodeRemover {
      * 		the original last leaf path from before the reconnect
      */
     public ReconnectNodeRemover(
-            final RecordAccessor oldRecords, final long oldFirstLeafPath, final long oldLastLeafPath) {
+            @NonNull final RecordAccessor<K, V> oldRecords,
+            final long oldFirstLeafPath,
+            final long oldLastLeafPath,
+            @NonNull final ReconnectHashLeafFlusher<K, V> flusher) {
         this.oldRecords = oldRecords;
         this.oldFirstLeafPath = oldFirstLeafPath;
         this.oldLastLeafPath = oldLastLeafPath;
+        this.flusher = flusher;
     }
 
     /**
@@ -97,14 +102,14 @@ public class ReconnectNodeRemover {
      * 		the last leaf path after reconnect completes
      */
     public synchronized void setPathInformation(final long newFirstLeafPath, final long newLastLeafPath) {
+        flusher.start(newFirstLeafPath, newLastLeafPath);
         this.newLastLeafPath = newLastLeafPath;
-
         if (oldLastLeafPath > 0) {
             // no-op if new first leaf path is less or equal to old first leaf path
             for (long path = oldFirstLeafPath; path < Math.min(newFirstLeafPath, oldLastLeafPath + 1); path++) {
-                final VirtualLeafBytes oldRecord = oldRecords.findLeafRecord(path);
+                final VirtualLeafRecord<K, V> oldRecord = oldRecords.findLeafRecord(path, false);
                 assert oldRecord != null;
-                leavesToDelete.add(oldRecord);
+                flusher.deleteLeaf(oldRecord);
             }
         }
     }
@@ -118,10 +123,10 @@ public class ReconnectNodeRemover {
      * @param newKey
      * 		the key of the new leaf node
      */
-    public synchronized void newLeafNode(final long path, final Bytes newKey) {
-        final VirtualLeafBytes oldRecord = oldRecords.findLeafRecord(path);
-        if ((oldRecord != null) && !newKey.equals(oldRecord.keyBytes())) {
-            leavesToDelete.add(oldRecord);
+    public synchronized void newLeafNode(final long path, final K newKey) {
+        final VirtualLeafRecord<K, V> oldRecord = oldRecords.findLeafRecord(path, false);
+        if ((oldRecord != null) && !newKey.equals(oldRecord.getKey())) {
+            flusher.deleteLeaf(oldRecord);
         }
     }
 
@@ -132,26 +137,11 @@ public class ReconnectNodeRemover {
         final long firstOldStalePath = (newLastLeafPath == Path.INVALID_PATH) ? 1 : newLastLeafPath + 1;
         // No-op if newLastLeafPath is greater or equal to oldLastLeafPath
         for (long p = firstOldStalePath; p <= oldLastLeafPath; p++) {
-            final VirtualLeafBytes<?> oldExtraLeafRecord = oldRecords.findLeafRecord(p);
+            final VirtualLeafRecord<K, V> oldExtraLeafRecord = oldRecords.findLeafRecord(p, false);
             assert oldExtraLeafRecord != null || p < oldFirstLeafPath;
             if (oldExtraLeafRecord != null) {
-                leavesToDelete.add(oldExtraLeafRecord);
+                flusher.deleteLeaf(oldExtraLeafRecord);
             }
         }
-    }
-
-    /**
-     * Return a stream of keys collected so far for deletion. The set of collected keys is reset,
-     * so subsequent calls to this method will return different keys collected in {@link
-     * #newLeafNode(long, Bytes)}.
-     *
-     * @return a stream of keys to be deleted. Only the key and path in these records
-     * 		are populated, all other data is uninitialized.
-     */
-    public synchronized Stream<VirtualLeafBytes> getRecordsToDelete() {
-        final Stream<VirtualLeafBytes> stream = leavesToDelete.stream();
-        // Don't use clear(), as it would affect the returned stream
-        leavesToDelete = new HashSet<>();
-        return stream;
     }
 }
