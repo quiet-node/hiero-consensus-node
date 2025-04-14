@@ -102,9 +102,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         synchronized (connectionStateLock) {
             synchronized (channelLock) {
                 requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
-                updateConnectionState(ConnectionState.ACTIVE);
 
                 if (getConnectionState() != ConnectionState.RECONNECTING) {
+                    updateConnectionState(ConnectionState.ACTIVE);
                     startRequestWorker();
                 }
             }
