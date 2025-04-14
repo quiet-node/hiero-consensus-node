@@ -21,7 +21,7 @@ import com.swirlds.common.io.exceptions.InvalidVersionException;
 import com.swirlds.common.io.streams.DebuggableMerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
+import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.route.MerkleRouteFactory;
@@ -45,7 +45,6 @@ import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.consensus.model.crypto.Hash;
@@ -452,8 +451,8 @@ class MerkleSerializationTests {
                 "directory must exist");
 
         final Path notADirectory = testDirectory.resolve("notADirectory.txt");
-        final SerializableDataOutputStream fOut =
-                new SerializableDataOutputStreamImpl(new FileOutputStream(notADirectory.toFile()));
+        final org.hiero.base.io.streams.SerializableDataOutputStream fOut =
+                new SerializableDataOutputStream(new FileOutputStream(notADirectory.toFile()));
         fOut.writeNormalisedString("this is not a directory");
         fOut.close();
         assertThrows(

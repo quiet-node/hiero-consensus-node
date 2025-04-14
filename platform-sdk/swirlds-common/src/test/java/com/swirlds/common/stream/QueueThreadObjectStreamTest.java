@@ -9,7 +9,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.swirlds.common.crypto.Cryptography;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
+import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.test.fixtures.crypto.CryptoRandomUtils;
 import com.swirlds.common.test.fixtures.stream.ObjectForTestStream;
 import com.swirlds.common.test.fixtures.stream.ObjectForTestStreamGenerator;
@@ -46,7 +46,7 @@ class QueueThreadObjectStreamTest {
     @BeforeEach
     void initLinkedObjectStreams() throws IOException {
         consumer = new WriteToStreamConsumer(
-                new SerializableDataOutputStreamImpl(new BufferedOutputStream(new ByteArrayOutputStream())),
+                new SerializableDataOutputStream(new BufferedOutputStream(new ByteArrayOutputStream())),
                 initialHash);
 
         queueThread = new QueueThreadObjectStreamConfiguration<ObjectForTestStream>(getStaticThreadManager())

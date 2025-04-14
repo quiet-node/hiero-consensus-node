@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
+import com.swirlds.common.io.streams.SerializableDataInputStream;
+import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBuilder;
@@ -32,8 +32,6 @@ import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.hiero.base.io.streams.SerializableDataInputStream;
-import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -278,12 +276,12 @@ class AddressBookTests {
         validateAddressBookConsistency(original);
 
         final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-        final SerializableDataOutputStream out = new SerializableDataOutputStreamImpl(byteOut);
+        final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(byteOut);
 
         out.writeSerializable(original, true);
 
-        final SerializableDataInputStream in =
-                new SerializableDataInputStreamImpl(new ByteArrayInputStream(byteOut.toByteArray()));
+        final org.hiero.base.io.streams.SerializableDataInputStream in =
+                new SerializableDataInputStream(new ByteArrayInputStream(byteOut.toByteArray()));
 
         final AddressBook deserialized = in.readSerializable();
         validateAddressBookConsistency(deserialized);

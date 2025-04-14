@@ -14,8 +14,8 @@ import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
-import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
+import com.swirlds.common.io.streams.SerializableDataInputStream;
+import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.route.MerkleRoute;
@@ -43,8 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Stream;
-import org.hiero.base.io.streams.SerializableDataInputStream;
-import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.consensus.model.crypto.Hash;
 import org.junit.jupiter.api.BeforeAll;
@@ -186,12 +184,12 @@ class VirtualMapSerializationTests {
         final VirtualDataSourceBuilder builder = constructBuilder();
 
         final ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-        final SerializableDataOutputStream out = new SerializableDataOutputStreamImpl(byteOut);
+        final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(byteOut);
 
         out.writeSerializable(builder, true);
 
-        final SerializableDataInputStream in =
-                new SerializableDataInputStreamImpl(new ByteArrayInputStream(byteOut.toByteArray()));
+        final org.hiero.base.io.streams.SerializableDataInputStream in =
+                new SerializableDataInputStream(new ByteArrayInputStream(byteOut.toByteArray()));
 
         final VirtualDataSourceBuilder deserializedBuilder = in.readSerializable();
 

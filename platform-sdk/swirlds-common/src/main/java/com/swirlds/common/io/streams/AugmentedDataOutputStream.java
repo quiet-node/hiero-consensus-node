@@ -5,27 +5,35 @@ import static com.swirlds.common.io.streams.SerializableStreamConstants.DEFAULT_
 import static com.swirlds.common.io.streams.SerializableStreamConstants.NULL_INSTANT_EPOCH_SECOND;
 import static com.swirlds.common.io.streams.SerializableStreamConstants.NULL_LIST_ARRAY_LENGTH;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.time.Instant;
 import java.util.List;
-import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.base.utility.CommonUtils;
 
 /**
  * This data output stream provides additional functionality for serializing various basic data structures.
  */
-public abstract class AugmentedDataOutputStream extends SerializableDataOutputStream {
+public class AugmentedDataOutputStream extends DataOutputStream {
 
-    protected AugmentedDataOutputStream(OutputStream out) {
+    public AugmentedDataOutputStream(@NonNull final OutputStream out) {
         super(out);
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a byte array to the stream. Can be null.
+     *
+     * @param data
+     * 		the array to write
+     * @param writeChecksum
+     * 		whether to read the checksum or not
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeByteArray(byte[] data, boolean writeChecksum) throws IOException {
+    public void writeByteArray(@Nullable final byte[] data, final boolean writeChecksum) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
             return;
@@ -39,18 +47,27 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a byte array to the stream. Can be null.
+     * Same as {@link #writeByteArray(byte[], boolean)} with {@code writeChecksum} set to false
+     *
+     * @param data
+     * 		the array to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeByteArray(byte[] data) throws IOException {
+    public void writeByteArray(@Nullable final byte[] data) throws IOException {
         writeByteArray(data, DEFAULT_CHECKSUM);
     }
 
     /**
-     * {@inheritDoc}
+     * Writes an int array to the stream. Can be null.
+     *
+     * @param data
+     * 		the array to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeIntArray(int[] data) throws IOException {
+    public void writeIntArray(@Nullable final int[] data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -62,10 +79,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes an int list to the stream. Can be null.
+     *
+     * @param data
+     * 		the list to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeIntList(List<Integer> data) throws IOException {
+    public void writeIntList(@Nullable final List<Integer> data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -77,10 +98,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a long array to the stream. Can be null.
+     *
+     * @param data
+     * 		the array to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeLongArray(long[] data) throws IOException {
+    public void writeLongArray(@Nullable final long[] data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -92,10 +117,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a long list to the stream. Can be null.
+     *
+     * @param data
+     * 		the list to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeLongList(List<Long> data) throws IOException {
+    public void writeLongList(@Nullable final List<Long> data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -107,10 +136,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a boolean list to the stream. Can be null.
+     *
+     * @param data
+     * 		the list to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeBooleanList(List<Boolean> data) throws IOException {
+    public void writeBooleanList(@Nullable final List<Boolean> data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -122,10 +155,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a float array to the stream. Can be null.
+     *
+     * @param data
+     * 		the array to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeFloatArray(float[] data) throws IOException {
+    public void writeFloatArray(@Nullable final float[] data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -137,10 +174,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a float list to the stream. Can be null.
+     *
+     * @param data
+     * 		the list to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeFloatList(List<Float> data) throws IOException {
+    public void writeFloatList(@Nullable final List<Float> data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -152,10 +193,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a double array to the stream. Can be null.
+     *
+     * @param data
+     * 		the array to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeDoubleArray(double[] data) throws IOException {
+    public void writeDoubleArray(@Nullable final double[] data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -167,10 +212,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a double list to the stream. Can be null.
+     *
+     * @param data
+     * 		the list to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeDoubleList(List<Double> data) throws IOException {
+    public void writeDoubleList(@Nullable final List<Double> data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -182,10 +231,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a String array to the stream. Can be null.
+     *
+     * @param data
+     * 		the array to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeStringArray(String[] data) throws IOException {
+    public void writeStringArray(@Nullable final String[] data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -197,10 +250,14 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a string list to the stream. Can be null.
+     *
+     * @param data
+     * 		the list to write
+     * @throws IOException
+     * 		thrown if any IO problems occur
      */
-    @Override
-    public void writeStringList(List<String> data) throws IOException {
+    public void writeStringList(@Nullable final List<String> data) throws IOException {
         if (data == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
         } else {
@@ -212,19 +269,30 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
     }
 
     /**
-     * {@inheritDoc}
+     * Normalizes the string in accordance with the Swirlds default normalization method (NFD) and writes it
+     * to the output stream encoded in the Swirlds default charset (UTF8). This is important for having a
+     * consistent method of converting Strings to bytes that will guarantee that two identical strings will
+     * have an identical byte representation
+     *
+     * @param s
+     * 		the String to be converted and written
+     * @throws IOException
+     * 		thrown if there are any problems during the operation
      */
-    @Override
-    public void writeNormalisedString(String s) throws IOException {
+    public void writeNormalisedString(@Nullable final String s) throws IOException {
         byte[] data = CommonUtils.getNormalisedStringBytes(s);
         this.writeByteArray(data);
     }
 
     /**
-     * {@inheritDoc}
+     * Write an Instant to the stream
+     *
+     * @param instant
+     * 		the instant to write
+     * @throws IOException
+     * 		thrown if there are any problems during the operation
      */
-    @Override
-    public void writeInstant(Instant instant) throws IOException {
+    public void writeInstant(@Nullable final Instant instant) throws IOException {
         if (instant == null) {
             this.writeLong(NULL_INSTANT_EPOCH_SECOND);
             return;
@@ -239,7 +307,7 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
      * @param data
      * 		the array to write
      */
-    public static int getArraySerializedLength(final long[] data) {
+    public static int getArraySerializedLength(@Nullable final long[] data) {
         int totalByteLength = Integer.BYTES;
         totalByteLength += (data == null) ? 0 : (data.length * Long.BYTES);
         return totalByteLength;
@@ -251,7 +319,7 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
      * @param data
      * 		the array to write
      */
-    public static int getArraySerializedLength(final int[] data) {
+    public static int getArraySerializedLength(@Nullable final int[] data) {
         int totalByteLength = Integer.BYTES;
         totalByteLength += (data == null) ? 0 : (data.length * Integer.BYTES);
         return totalByteLength;
@@ -263,7 +331,7 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
      * @param data
      * 		the array to write
      */
-    public static int getArraySerializedLength(final byte[] data) {
+    public static int getArraySerializedLength(@Nullable final byte[] data) {
         return getArraySerializedLength(data, DEFAULT_CHECKSUM);
     }
 
@@ -275,8 +343,8 @@ public abstract class AugmentedDataOutputStream extends SerializableDataOutputSt
      * @param writeChecksum
      * 		whether to read the checksum or not
      */
-    public static int getArraySerializedLength(final byte[] data, final boolean writeChecksum) {
-        int totalByteLength = Integer.BYTES; // add the size of array length field
+    public static int getArraySerializedLength(@Nullable final byte[] data, final boolean writeChecksum) {
+        int totalByteLength = Integer.BYTES; // add the the size of array length field
         if (writeChecksum) {
             totalByteLength += Integer.BYTES; // add the length of checksum
         }

@@ -2,14 +2,12 @@
 package com.swirlds.platform.event;
 
 import com.hedera.hapi.platform.event.GossipEvent;
-import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
+import com.swirlds.common.io.streams.SerializableDataInputStream;
+import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import org.hiero.base.io.streams.SerializableDataInputStream;
-import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.event.PlatformEvent;
 
 /**
@@ -31,11 +29,11 @@ public final class EventSerializationUtils {
     public static PlatformEvent serializeDeserializePlatformEvent(@NonNull final PlatformEvent original)
             throws IOException {
         try (final ByteArrayOutputStream io = new ByteArrayOutputStream()) {
-            final SerializableDataOutputStream out = new SerializableDataOutputStreamImpl(io);
+            final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(io);
             out.writePbjRecord(original.getGossipEvent(), GossipEvent.PROTOBUF);
             out.flush();
-            final SerializableDataInputStream in =
-                    new SerializableDataInputStreamImpl(new ByteArrayInputStream(io.toByteArray()));
+            final org.hiero.base.io.streams.SerializableDataInputStream in =
+                    new SerializableDataInputStream(new ByteArrayInputStream(io.toByteArray()));
             return new PlatformEvent(in.readPbjRecord(GossipEvent.PROTOBUF));
         }
     }

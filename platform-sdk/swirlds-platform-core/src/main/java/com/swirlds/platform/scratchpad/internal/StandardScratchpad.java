@@ -8,8 +8,8 @@ import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.formatting.TextTable;
-import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
+import com.swirlds.common.io.streams.SerializableDataInputStream;
+import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.scratchpad.Scratchpad;
@@ -39,8 +39,6 @@ import org.hiero.base.concurrent.locks.AutoClosableLock;
 import org.hiero.base.concurrent.locks.Locks;
 import org.hiero.base.concurrent.locks.locked.Locked;
 import org.hiero.base.io.SelfSerializable;
-import org.hiero.base.io.streams.SerializableDataInputStream;
-import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
@@ -237,7 +235,7 @@ public class StandardScratchpad<K extends Enum<K> & ScratchpadType> implements S
             final Path scratchpadFile = files.get(files.size() - 1);
             nextScratchpadIndex = getFileIndex(scratchpadFile) + 1;
 
-            try (final SerializableDataInputStream in = new SerializableDataInputStreamImpl(
+            try (final org.hiero.base.io.streams.SerializableDataInputStream in = new SerializableDataInputStream(
                     new BufferedInputStream(new FileInputStream(scratchpadFile.toFile())))) {
 
                 final int fileVersion = in.readInt();
@@ -271,7 +269,7 @@ public class StandardScratchpad<K extends Enum<K> & ScratchpadType> implements S
     @NonNull
     private Path flushToTemporaryFile() throws IOException {
         final Path temporaryFile = buildTemporaryFile(configuration);
-        try (final SerializableDataOutputStream out = new SerializableDataOutputStreamImpl(
+        try (final org.hiero.base.io.streams.SerializableDataOutputStream out = new SerializableDataOutputStream(
                 new BufferedOutputStream(new FileOutputStream(temporaryFile.toFile(), false)))) {
 
             out.writeInt(fileVersion);

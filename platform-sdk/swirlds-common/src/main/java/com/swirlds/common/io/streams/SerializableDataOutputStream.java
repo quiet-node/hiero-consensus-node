@@ -13,6 +13,7 @@ import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.io.WritableSequentialData;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -28,7 +29,7 @@ import org.hiero.base.io.SerializableWithKnownLength;
  * A drop-in replacement for {@link DataOutputStream}, which handles SerializableDet classes specially.
  * It is designed for use with the SerializableDet interface, and its use is described there.
  */
-public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream {
+public class SerializableDataOutputStream extends AugmentedDataOutputStream {
     /** A stream used to write PBJ objects */
     private final WritableSequentialData writableSequentialData;
 
@@ -37,12 +38,10 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
      * underlying output stream. The counter <code>written</code> is
      * set to zero.
      *
-     * @param out
-     * 		the underlying output stream, to be saved for later
-     * 		use.
+     * @param out the underlying output stream, to be saved for later use.
      * @see java.io.FilterOutputStream#out
      */
-    public SerializableDataOutputStreamImpl(OutputStream out) {
+    public SerializableDataOutputStream(@NonNull final OutputStream out) {
         super(out);
         writableSequentialData = new WritableStreamingData(out);
     }
@@ -51,15 +50,16 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
      * Write the serialization protocol version number to the stream. Should be used when serializing to a file that
      * can be read by future versions.
      *
-     * @throws IOException
-     * 		thrown if any IO problems occur
+     * @throws IOException thrown if any IO problems occur
      */
     public void writeProtocolVersion() throws IOException {
         this.writeInt(SERIALIZATION_PROTOCOL_VERSION);
     }
 
     private void writeSerializable(
-            SelfSerializable serializable, boolean writeClassId, FunctionalSerialize serializeMethod)
+            @Nullable final SelfSerializable serializable,
+            final boolean writeClassId,
+            @NonNull final FunctionalSerialize serializeMethod)
             throws IOException {
         if (serializable == null) {
             if (writeClassId) {
@@ -74,19 +74,34 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a {@link SelfSerializable} object to a stream. If the class is known at the time of deserialization, the
+     * the {@code writeClassId} param can be set to false. If the class might be unknown when deserializing, then the
+     * {@code writeClassId} must be written.
+     *
+     * @param serializable the object to serialize
+     * @param writeClassId whether to write the class ID or not
+     * @throws IOException thrown if any IO problems occur
      */
-    @Override
-    public void writeSerializable(SelfSerializable serializable, boolean writeClassId) throws IOException {
+    public void writeSerializable(@NonNull final SelfSerializable serializable, final boolean writeClassId)
+            throws IOException {
         writeSerializable(serializable, writeClassId, serializable);
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a list of objects returned by an {@link Iterator} when the size in known ahead of time. If the class is
+     * known at the time of deserialization, the {@code writeClassId} param can be set to false. If the class might be
+     * unknown when deserializing, then the {@code writeClassId} must be written.
+     *
+     * @param iterator the iterator that returns the data
+     * @param size the size of the dataset
+     * @param writeClassId whether to write the class ID or not
+     * @param allSameClass should be set to true if all the objects in the list are the same class
+     * @param <T> the type returned by the iterator
+     * @throws IOException thrown if any IO problems occur
      */
-    @Override
     public <T extends SelfSerializable> void writeSerializableIterableWithSize(
-            Iterator<T> iterator, int size, boolean writeClassId, boolean allSameClass) throws IOException {
+            @NonNull final Iterator<T> iterator, final int size, final boolean writeClassId, final boolean allSameClass)
+            throws IOException {
         this.writeInt(size);
         if (size == 0) {
             return;
@@ -117,11 +132,17 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
     }
 
     /**
-     * {@inheritDoc}
+     * Writes a list of {@link SelfSerializable} objects to the stream
+     *
+     * @param list the list to write, can be null
+     * @param writeClassId set to true if the classID should be written. This can be false if the class is known when
+     * de-serializing
+     * @param allSameClass should be set to true if all the objects in the list are the same class
+     * @param <T> the class stored in the list
+     * @throws IOException thrown if any IO problems occur
      */
-    @Override
     public <T extends SelfSerializable> void writeSerializableList(
-            List<T> list, boolean writeClassId, boolean allSameClass) throws IOException {
+            @Nullable final List<T> list, final boolean writeClassId, final boolean allSameClass) throws IOException {
 
         if (list == null) {
             this.writeInt(NULL_LIST_ARRAY_LENGTH);
@@ -133,21 +154,15 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
     /**
      * Writes an array of {@link SelfSerializable} objects to the stream
      *
-     * @param array
-     * 		the array to write, can be null
-     * @param writeClassId
-     * 		set to true if the classID should be written. This can be false if the class is known when
-     * 		de-serializing
-     * @param allSameClass
-     * 		should be set to true if all the objects in the list are the same class
-     * @param <T>
-     * 		the class stored in the list
-     * @throws IOException
-     * 		thrown if any IO problems occur
+     * @param array the array to write, can be null
+     * @param writeClassId set to true if the classID should be written. This can be false if the class is known when
+     * de-serializing
+     * @param allSameClass should be set to true if all the objects in the list are the same class
+     * @param <T> the class stored in the list
+     * @throws IOException thrown if any IO problems occur
      */
     public <T extends SelfSerializable> void writeSerializableArray(
-            T[] array, boolean writeClassId, boolean allSameClass) throws IOException {
-
+            @Nullable final T[] array, final boolean writeClassId, final boolean allSameClass) throws IOException {
         if (array == null) {
             writeSerializableList(null, writeClassId, allSameClass);
         } else {
@@ -158,18 +173,14 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
     /**
      * Get the serialized byte length an array of {@link SerializableWithKnownLength} objects
      *
-     * @param array
-     * 		the array to write, can be null
-     * @param writeClassId
-     * 		set to true if the classID should be written. This can be false if the class is known when
-     * 		de-serializing
-     * @param allSameClass
-     * 		should be set to true if all the objects in the array are the same class
-     * @param <T>
-     * 		the class stored in the array
+     * @param array the array to write, can be null
+     * @param writeClassId set to true if the classID should be written. This can be false if the class is known when
+     * de-serializing
+     * @param allSameClass should be set to true if all the objects in the array are the same class
+     * @param <T> the class stored in the array
      */
     public static <T extends SerializableWithKnownLength> int getSerializedLength(
-            final T[] array, final boolean writeClassId, final boolean allSameClass) {
+            @Nullable final T[] array, final boolean writeClassId, final boolean allSameClass) {
         int totalByteLength = Integer.BYTES; // length of array size
         if (array == null || array.length == 0) {
             return totalByteLength;
@@ -205,16 +216,13 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
     /**
      * Get the serialized byte length of {@link SerializableWithKnownLength} object
      *
-     * @param data
-     * 		array to write, should not be null
-     * @param writeVersion
-     *      set to true if the version will be serialized
-     * @param writeClassId
-     * 		set to true if the classID should be written. This can be false if the class is known when
-     * 		de-serializing
+     * @param data array to write, should not be null
+     * @param writeVersion set to true if the version will be serialized
+     * @param writeClassId set to true if the classID should be written. This can be false if the class is known when
+     * de-serializing
      */
     public static <T extends SerializableWithKnownLength> int getInstanceSerializedLength(
-            final T data, final boolean writeVersion, final boolean writeClassId) {
+            @Nullable final T data, final boolean writeVersion, final boolean writeClassId) {
         if (data == null) {
             return writeClassId ? CLASS_ID_BYTES : writeVersion ? VERSION_BYTES : 0;
         }
@@ -230,7 +238,7 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
     }
 
     /** This method assumes serializable is not null */
-    protected void writeClassIdVersion(final SerializableDet serializable, final boolean writeClassId)
+    protected void writeClassIdVersion(@NonNull final SerializableDet serializable, final boolean writeClassId)
             throws IOException {
 
         if (writeClassId) {
@@ -240,9 +248,13 @@ public class SerializableDataOutputStreamImpl extends AugmentedDataOutputStream 
     }
 
     /**
-     * {@inheritDoc}
+     * Write a PBJ record to the stream
+     *
+     * @param record the record to write
+     * @param codec the codec to use to write the record
+     * @param <T> the type of the record
+     * @throws IOException thrown if any IO problems occur
      */
-    @Override
     public <T> void writePbjRecord(@NonNull final T record, @NonNull final Codec<T> codec) throws IOException {
         writeInt(codec.measureRecord(record));
         codec.write(record, writableSequentialData);

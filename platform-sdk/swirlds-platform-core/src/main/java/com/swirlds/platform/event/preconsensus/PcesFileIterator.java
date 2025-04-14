@@ -3,7 +3,7 @@ package com.swirlds.platform.event.preconsensus;
 
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.common.io.IOIterator;
-import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
+import com.swirlds.common.io.streams.SerializableDataInputStream;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
@@ -11,7 +11,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.PlatformEvent;
 
@@ -22,7 +21,7 @@ public class PcesFileIterator implements IOIterator<PlatformEvent> {
 
     private final long lowerBound;
     private final AncientMode fileType;
-    private final SerializableDataInputStream stream;
+    private final org.hiero.base.io.streams.SerializableDataInputStream stream;
     private boolean hasPartialEvent = false;
     private PlatformEvent next;
     private boolean streamClosed = false;
@@ -42,7 +41,7 @@ public class PcesFileIterator implements IOIterator<PlatformEvent> {
 
         this.lowerBound = lowerBound;
         this.fileType = Objects.requireNonNull(fileType);
-        stream = new SerializableDataInputStreamImpl(new BufferedInputStream(
+        stream = new SerializableDataInputStream(new BufferedInputStream(
                 new FileInputStream(fileDescriptor.getPath().toFile())));
 
         try {
