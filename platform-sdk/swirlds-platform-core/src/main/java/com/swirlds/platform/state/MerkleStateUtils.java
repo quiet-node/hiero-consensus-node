@@ -46,7 +46,7 @@ public class MerkleStateUtils {
                         "Legacy running event mnemonic:",
                         hashEventsCons == null ? "null" : Mnemonics.generateMnemonic(hashEventsCons))
                 .addRow("Rounds non-ancient:", platformState.getRoundsNonAncient())
-                .addRow("Creation version:", platformState.getCreationSoftwareVersion())
+                //.addRow("Creation version:", platformState.getCreationSoftwareVersion())
                 .addRow("Minimum judge hash code:", minimumJudgeInfo == null ? "null" : minimumJudgeInfo.hashCode())
                 .addRow("Root hash:", rootHash)
                 .addRow("First BR Version:", platformState.getFirstVersionInBirthRoundMode())
