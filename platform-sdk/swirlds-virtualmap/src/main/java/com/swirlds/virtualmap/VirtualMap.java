@@ -134,11 +134,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     }
 
     /**
-     *  The label for the virtual map.  Needed to differentiate between different VirtualMaps (stats, filesystem)
-     */
-    private String label;
-
-    /**
      * A reference to the second child, the {@link VirtualRootNode}. We hold this reference
      * only for performance overhead reasons. Ideally this would be final and never null, but
      * serialization requires partially constructed objects, so it must not be final and may be
@@ -182,7 +177,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
         if (label.length() > MAX_LABEL_CHARS) {
             throw new IllegalArgumentException("Label cannot be greater than 512 characters");
         }
-        this.label = label;
         root = new VirtualRootNode(
                 requireNonNull(dataSourceBuilder), requireNonNull(configuration.getConfigData(VirtualMapConfig.class)));
         setChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX, root);
@@ -197,7 +191,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     private VirtualMap(final VirtualMap source) {
         this(source.configuration);
-        label = source.label;
         root = source.getRoot().copy();
         root.postInit(root.getState());
         setChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX, root);
@@ -265,7 +258,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     @Override
     public String getLabel() {
-        return label;
+        return root.getState() == null ? null : root.getState().getLabel();
     }
 
     /**
@@ -287,7 +280,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     public void serialize(final SerializableDataOutputStream out, final Path outputDirectory) throws IOException {
 
         // Create and write to state the name of the file we will expect later on deserialization
-        final String outputFileName = label + ".vmap";
+        final String outputFileName = root.getState() + ".vmap";
         final byte[] outputFileNameBytes = getNormalisedStringBytes(outputFileName);
         out.writeInt(outputFileNameBytes.length);
         out.writeNormalisedString(outputFileName);
@@ -296,7 +289,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
         final Path outputFile = outputDirectory.resolve(outputFileName);
         try (SerializableDataOutputStream serout = new SerializableDataOutputStreamImpl(
                 new BufferedOutputStream(new FileOutputStream(outputFile.toFile())))) {
-            serout.writeNormalisedString(label);
+            serout.writeNormalisedString(root.getState().getLabel());
             serout.writeInt(root.getVersion());
             root.serialize(serout, outputDirectory);
         }
@@ -369,7 +362,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
         // Will be non-null value in case of migration from the previous version
         // Otherwise, the assumption is that VirtualMapState is a leaf of the VM
         VirtualMapState state = virtualMapStateRef.getValue();
-        label = state.getLabel();
         root.postInit(state);
         addDeserializedChildren(List.of(root), getVersion());
     }
