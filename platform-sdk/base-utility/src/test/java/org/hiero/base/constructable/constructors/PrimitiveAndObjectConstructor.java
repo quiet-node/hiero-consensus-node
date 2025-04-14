@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.common.constructable.constructors;
+package org.hiero.base.constructable.constructors;
 
-import com.swirlds.common.constructable.constructables.scannable.PrimitiveAndObjectConstructable;
+import org.hiero.base.constructable.constructables.scannable.PrimitiveAndObjectConstructable;
 
 @FunctionalInterface
 public interface PrimitiveAndObjectConstructor {

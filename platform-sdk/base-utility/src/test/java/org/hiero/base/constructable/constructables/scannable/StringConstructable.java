@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.common.constructable.constructables.scannable;
+package org.hiero.base.constructable.constructables.scannable;
 
-import static com.swirlds.common.constructable.constructables.scannable.StringConstructable.CLASS_ID;
+import static org.hiero.base.constructable.constructables.scannable.StringConstructable.CLASS_ID;
 
-import com.swirlds.common.constructable.constructors.StringConstructor;
+import org.hiero.base.constructable.constructors.StringConstructor;
 import org.hiero.base.constructable.ConstructableClass;
 import org.hiero.base.constructable.RuntimeConstructable;
 
