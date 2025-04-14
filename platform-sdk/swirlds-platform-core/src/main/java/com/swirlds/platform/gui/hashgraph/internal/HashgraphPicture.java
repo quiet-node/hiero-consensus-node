@@ -30,10 +30,8 @@ import java.io.Serial;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import javax.swing.JPanel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,7 +55,6 @@ public class HashgraphPicture extends JPanel {
 
     private AddressBookMetadata nonExpandedMetadata;
     private AddressBookMetadata expandedMetadata;
-    private Long startGen;
 
     /** used to store events coordinates for a given branch for each forking node */
     private final Map<Long, Map<Integer, BranchCoordinates>> nodeIdToBranchIndexToCoordinates = new HashMap<>();
@@ -98,14 +95,13 @@ public class HashgraphPicture extends JPanel {
 
             List<EventImpl> events;
             if (options.displayLatestEvents()) {
-                startGen = Math.max(
+                final long startGen = Math.max(
                         hashgraphSource.getMaxGeneration() - options.getNumGenerationsDisplay() + 1,
                         EventConstants.FIRST_GENERATION);
                 options.setStartGeneration(startGen);
                 events = hashgraphSource.getEvents(startGen, options.getNumGenerationsDisplay());
             } else {
-                startGen = options.getStartGeneration();
-                events = hashgraphSource.getEvents(startGen, options.getNumGenerationsDisplay());
+                events = hashgraphSource.getEvents(options.getStartGeneration(), options.getNumGenerationsDisplay());
             }
             // in case the state has events from creators that don't exist, don't show them
             if (events == null) { // in case a screen refresh happens before any events
@@ -151,18 +147,12 @@ public class HashgraphPicture extends JPanel {
                 drawLinksToParents(g, event);
             }
 
-            // reload branched events if such exist. Different generations are being displayed in the Gui,
-            // so we have to reposition branched events in case they fall in or out of the display generation range.
-            if (!hashgraphSource.getEventStorage().getBranchedEventsMetadata().isEmpty()) {
-                reloadBranchedEvents();
-            }
-
             // for each event, draw its circle
             for (final EventImpl event : events) {
                 drawEventCircle(g, event, options, d);
             }
 
-            final var selectedEvent =
+            final EventImpl selectedEvent =
                     events.stream().filter(selector::isSelected).toList().getFirst();
             if (selectedEvent != null) {
                 // if we have a selected event draw it last, so that all labels and lines connected to it can be easily
@@ -171,45 +161,6 @@ public class HashgraphPicture extends JPanel {
             }
         } catch (final Exception e) {
             logger.error(EXCEPTION.getMarker(), "error while painting", e);
-        }
-    }
-
-    // iterate over all of the created branched events and select only the ones falling in the currently displayed
-    // generation range, so that only they are drawn
-    private void reloadBranchedEvents() {
-        for (final Entry<Long, Map<Integer, BranchCoordinates>> nodeIdToBranchIndexToCoordinatesEntry :
-                nodeIdToBranchIndexToCoordinates.entrySet()) {
-            final Map<Integer, BranchCoordinates> branchIndexToCoordinates =
-                    nodeIdToBranchIndexToCoordinatesEntry.getValue();
-            for (final Entry<Integer, BranchCoordinates> branchIndexToCoordinatesEntry :
-                    branchIndexToCoordinates.entrySet()) {
-                final Map<GossipEvent, Integer> reloadedXCoordinates = new LinkedHashMap<>();
-
-                final BranchCoordinates branchCoordinates = branchIndexToCoordinatesEntry.getValue();
-                // Start displaying the reloaded branch from the leftmost X coordinate of the branch that was recorded
-                // on the first branch drawing occurrence
-                int xPos = branchCoordinates.getFarMostLeftX();
-                for (final Entry<GossipEvent, Integer> branchIndexToAllXCoordinatesEntry :
-                        branchCoordinates.getAllXCoordinates().entrySet()) {
-                    final GossipEvent branchedEvent = branchIndexToAllXCoordinatesEntry.getKey();
-
-                    if (hashgraphSource
-                            .getEventStorage()
-                            .getBranchedEventsMetadata()
-                            .containsKey(branchedEvent)) {
-                        final long generation = hashgraphSource
-                                .getEventStorage()
-                                .getBranchedEventsMetadata()
-                                .get(branchedEvent)
-                                .getGeneration();
-                        if (generation >= startGen) {
-                            reloadedXCoordinates.put(branchedEvent, xPos);
-                            xPos += pictureMetadata.getD() / 2;
-                        }
-                    }
-                }
-                branchCoordinates.setInsideGenerationRangeXCoordinates(reloadedXCoordinates);
-            }
         }
     }
 

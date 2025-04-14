@@ -7,7 +7,7 @@ import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.internal.EventImpl;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -111,50 +111,51 @@ public class PictureMetadata {
 
         // check if we have a branched event
         if (hashgraphSource.getEventStorage().getBranchedEventsMetadata().containsKey(e2GossipEvent)) {
-            final var branchIndex = hashgraphSource
+            final BranchedEventMetadata branchedEventMetadata = hashgraphSource
                     .getEventStorage()
                     .getBranchedEventsMetadata()
-                    .get(e2GossipEvent)
-                    .branchIndex();
+                    .get(e2GossipEvent);
 
             final Map<Integer, BranchCoordinates> branchIndexToCoordinates =
                     nodeIdToBranchIndexToCoordinates.get(e2.getCreatorId().id());
 
-            final BranchCoordinates branchCoordinates =
-                    branchIndexToCoordinates.computeIfAbsent(branchIndex, b -> new BranchCoordinates());
+            final BranchCoordinates branchCoordinates = branchIndexToCoordinates.computeIfAbsent(
+                    branchedEventMetadata.branchIndex(), b -> new BranchCoordinates());
 
-            // use this map to only display the events in the currently displayed generation range
-            final Map<GossipEvent, Integer> insideGenerationRangeXCoordinates =
-                    branchCoordinates.getInsideGenerationRangeXCoordinates();
+            Map<GossipEvent, Integer> xCoordinates = branchCoordinates.getXCoordinates();
+            Map<Long, Integer> generationToMaxX = branchCoordinates.getGenerationToMaxX();
 
-            if (insideGenerationRangeXCoordinates != null) {
+            if (xCoordinates != null) {
                 // event still does not have X coordinate
-                if (!insideGenerationRangeXCoordinates.containsKey(e2GossipEvent)) {
-                    // get highest X coordinate from existing branch events and add an offset
-                    final int maxXCoordinateForBranch = insideGenerationRangeXCoordinates.values().stream()
-                            .max(Integer::compareTo)
-                            .orElse(-1);
+                if (!xCoordinates.containsKey(e2GossipEvent)) {
+                    int maxXCoordinateForGeneration = xPos - (int) r / 4;
 
-                    if (maxXCoordinateForBranch > 0) {
-                        xPos = maxXCoordinateForBranch + (int) r;
+                    if (generationToMaxX != null && generationToMaxX.containsKey(e2.getGeneration())) {
+                        // we already have branched events with the same generation so get the far right X coordinate
+                        maxXCoordinateForGeneration = generationToMaxX.get(e2.getGeneration());
                     }
 
-                    final var eventToXCoordinatesForAllBranchedEvents = branchCoordinates.getAllXCoordinates();
-                    eventToXCoordinatesForAllBranchedEvents.put(e2GossipEvent, xPos);
+                    if (maxXCoordinateForGeneration > 0) {
+                        xPos = maxXCoordinateForGeneration + (int) r;
+                    }
+
+                    xCoordinates.put(e2GossipEvent, xPos);
+                    // associate the current event's X coordinate to be the far right value for the branch this event
+                    // belongs to
+                    generationToMaxX.put(e2.getGeneration(), xPos);
                 } else {
-                    // event has X coordinate, so just assign it
-                    xPos = insideGenerationRangeXCoordinates.get(e2GossipEvent);
+                    // event has assigned X coordinate, so just assign it
+                    xPos = xCoordinates.get(e2GossipEvent);
                 }
             } else {
-                // the event will be the first one of a new branch and X coordinate for it doesn't exist yet
-                final Map<GossipEvent, Integer> eventToXCoordinatesForAllBranchedEvents = new LinkedHashMap<>();
-                eventToXCoordinatesForAllBranchedEvents.put(e2GossipEvent, xPos);
+                xCoordinates = new HashMap<>();
+                xCoordinates.put(e2GossipEvent, xPos);
+                branchCoordinates.setXCoordinates(xCoordinates);
 
-                branchCoordinates.setEventToXCoordinatesForAllBranchedEvents(eventToXCoordinatesForAllBranchedEvents);
-
-                // mark the first X position for the branch, so that it's used when branched events are shifted /
-                // reloaded
-                branchCoordinates.setFarMostLeftX(xPos);
+                if (generationToMaxX == null) {
+                    generationToMaxX = new HashMap<>();
+                    branchCoordinates.setGenerationToMaxX(generationToMaxX);
+                }
             }
         }
 
@@ -165,33 +166,7 @@ public class PictureMetadata {
      * find y position on the screen for an event
      */
     public int ypos(final EventImpl event) {
-        var yPos = (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
-
-        final Map<GossipEvent, BranchedEventMetadata> branchedEventsToMetadata =
-                hashgraphSource.getEventStorage().getBranchedEventsMetadata();
-        final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
-        if (branchedEventsToMetadata.containsKey(gossipEvent)) {
-            final BranchCoordinates branchCoordinates = nodeIdToBranchIndexToCoordinates
-                    .get(event.getCreatorId().id())
-                    .get(branchedEventsToMetadata.get(gossipEvent).branchIndex());
-            final int y = branchCoordinates.getY();
-            if (y == 0) {
-                yPos = (event == null)
-                        ? -100
-                        : (int) (ymax
-                                - r
-                                        * (2
-                                                + branchedEventsToMetadata
-                                                                .get(gossipEvent)
-                                                                .branchIndex()
-                                                        * 10));
-                branchCoordinates.setY(yPos);
-            } else {
-                yPos = branchCoordinates.getY();
-            }
-        }
-
-        return yPos;
+        return (event == null) ? -100 : (int) (ymax - r * (1 + 2 * (event.getGeneration() - minGen)));
     }
 
     /**
