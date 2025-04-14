@@ -5,6 +5,7 @@ import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.platform.gui.BranchedEventMetadata;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.internal.EventImpl;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.util.HashMap;
@@ -30,7 +31,7 @@ public class PictureMetadata {
     private final long maxGen;
 
     private final HashgraphGuiSource hashgraphSource;
-    private final Map<Long, Map<Integer, BranchCoordinates>> nodeIdToBranchIndexToCoordinates;
+    private final Map<Long, Map<Long, GenerationCoordinates>> nodeIdToGenerationToCoordinates;
 
     /**
      *
@@ -39,7 +40,7 @@ public class PictureMetadata {
      * @param addressBookMetadata metadata for the address book
      * @param events the events to be displayed
      * @param hashgraphSource the needed information for visualisation from the hashgraph to use as a source
-     * @param nodeIdToBranchIndexToCoordinates map collecting coordinates info for a given branch for each forking node
+     * @param nodeIdToGenerationToCoordinates map collecting coordinates info for a given branch for each forking node
      *
      */
     public PictureMetadata(
@@ -48,10 +49,10 @@ public class PictureMetadata {
             final AddressBookMetadata addressBookMetadata,
             final List<EventImpl> events,
             final HashgraphGuiSource hashgraphSource,
-            final Map<Long, Map<Integer, BranchCoordinates>> nodeIdToBranchIndexToCoordinates) {
+            final Map<Long, Map<Long, GenerationCoordinates>> nodeIdToGenerationToCoordinates) {
         this.addressBookMetadata = addressBookMetadata;
         this.hashgraphSource = hashgraphSource;
-        this.nodeIdToBranchIndexToCoordinates = nodeIdToBranchIndexToCoordinates;
+        this.nodeIdToGenerationToCoordinates = nodeIdToGenerationToCoordinates;
         final int fa = fm.getMaxAscent();
         final int fd = fm.getMaxDescent();
         final int textLineHeight = fa + fd;
@@ -111,52 +112,7 @@ public class PictureMetadata {
 
         // check if we have a branched event
         if (hashgraphSource.getEventStorage().getBranchedEventsMetadata().containsKey(e2GossipEvent)) {
-            final BranchedEventMetadata branchedEventMetadata = hashgraphSource
-                    .getEventStorage()
-                    .getBranchedEventsMetadata()
-                    .get(e2GossipEvent);
-
-            final Map<Integer, BranchCoordinates> branchIndexToCoordinates =
-                    nodeIdToBranchIndexToCoordinates.get(e2.getCreatorId().id());
-
-            final BranchCoordinates branchCoordinates = branchIndexToCoordinates.computeIfAbsent(
-                    branchedEventMetadata.branchIndex(), b -> new BranchCoordinates());
-
-            Map<GossipEvent, Integer> xCoordinates = branchCoordinates.getXCoordinates();
-            Map<Long, Integer> generationToMaxX = branchCoordinates.getGenerationToMaxX();
-
-            if (xCoordinates != null) {
-                // event still does not have X coordinate
-                if (!xCoordinates.containsKey(e2GossipEvent)) {
-                    int maxXCoordinateForGeneration = xPos - (int) r / 4;
-
-                    if (generationToMaxX != null && generationToMaxX.containsKey(e2.getGeneration())) {
-                        // we already have branched events with the same generation so get the far right X coordinate
-                        maxXCoordinateForGeneration = generationToMaxX.get(e2.getGeneration());
-                    }
-
-                    if (maxXCoordinateForGeneration > 0) {
-                        xPos = maxXCoordinateForGeneration + (int) r;
-                    }
-
-                    xCoordinates.put(e2GossipEvent, xPos);
-                    // associate the current event's X coordinate to be the far right value for the branch this event
-                    // belongs to
-                    generationToMaxX.put(e2.getGeneration(), xPos);
-                } else {
-                    // event has assigned X coordinate, so just assign it
-                    xPos = xCoordinates.get(e2GossipEvent);
-                }
-            } else {
-                xCoordinates = new HashMap<>();
-                xCoordinates.put(e2GossipEvent, xPos);
-                branchCoordinates.setXCoordinates(xCoordinates);
-
-                if (generationToMaxX == null) {
-                    generationToMaxX = new HashMap<>();
-                    branchCoordinates.setGenerationToMaxX(generationToMaxX);
-                }
-            }
+            return calculateXPosForBranchedEvent(e2, xPos);
         }
 
         return xPos;
@@ -189,5 +145,54 @@ public class PictureMetadata {
      */
     public long getMinGen() {
         return minGen;
+    }
+
+    /**
+     * Calculate the X coordinate for an event that is branched respecting the existing coordinates for the
+     * other events in the same branch and generation
+     *
+     * @return the calculated X coordinate for a branched event
+     */
+    private int calculateXPosForBranchedEvent(@NonNull final EventImpl event, final int xPos) {
+        final GossipEvent gossipEvent = event.getBaseEvent().getGossipEvent();
+
+        final BranchedEventMetadata branchedEventMetadata =
+                hashgraphSource.getEventStorage().getBranchedEventsMetadata().get(gossipEvent);
+
+        final Map<Long, GenerationCoordinates> generationToXCoordinates =
+                nodeIdToGenerationToCoordinates.get(event.getCreatorId().id());
+
+        final GenerationCoordinates coordinatesForGeneration = generationToXCoordinates.computeIfAbsent(
+                branchedEventMetadata.getGeneration(), b -> new GenerationCoordinates());
+
+        Map<GossipEvent, Integer> xCoordinates = coordinatesForGeneration.getXCoordinates();
+
+        int calculatedXPos;
+        if (xCoordinates != null) {
+            // event still does not have X coordinate
+            if (!xCoordinates.containsKey(gossipEvent)) {
+                final int maxXCoordinateForGeneration = coordinatesForGeneration.getMaxX();
+
+                calculatedXPos = maxXCoordinateForGeneration + (int) (1.5 * r);
+
+                xCoordinates.put(gossipEvent, calculatedXPos);
+                // associate the current event's X coordinate to be the far right value for the generation this
+                // event belongs to
+                coordinatesForGeneration.setMaxX(calculatedXPos);
+            } else {
+                // event has assigned X coordinate, so just assign it
+                calculatedXPos = xCoordinates.get(gossipEvent);
+            }
+        } else {
+            // assign the first X coordinate for the current generation
+            calculatedXPos = xPos - (int) (3 * r / 4);
+
+            xCoordinates = new HashMap<>();
+            xCoordinates.put(gossipEvent, calculatedXPos);
+            coordinatesForGeneration.setXCoordinates(xCoordinates);
+            coordinatesForGeneration.setMaxX(calculatedXPos);
+        }
+
+        return calculatedXPos;
     }
 }

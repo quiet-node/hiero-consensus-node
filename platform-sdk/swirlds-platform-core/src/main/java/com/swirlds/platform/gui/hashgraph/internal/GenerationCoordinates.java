@@ -6,16 +6,16 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Map;
 
 /**
- * Class holding X coordinates for a specific branch for a given node. Note that it's normal the branch to contain
+ * Class holding X coordinates for branched events with a specific generation for a given node. Note that it's normal the branch to contain
  * events with different generations.
  *
  */
-public class BranchCoordinates {
+public class GenerationCoordinates {
 
     // the X coordinates of all events in this branch
     private Map<GossipEvent, Integer> xCoordinates;
-    // map holding the far most right X coordinate of the branch
-    private Map<Long, Integer> generationToMaxX;
+    // the most right X coordinate of the branch
+    private Integer maxX = 0;
 
     public Map<GossipEvent, Integer> getXCoordinates() {
         return xCoordinates;
@@ -25,11 +25,11 @@ public class BranchCoordinates {
         this.xCoordinates = xCoordinates;
     }
 
-    public Map<Long, Integer> getGenerationToMaxX() {
-        return generationToMaxX;
+    public Integer getMaxX() {
+        return maxX;
     }
 
-    public void setGenerationToMaxX(@NonNull final Map<Long, Integer> generationToMaxX) {
-        this.generationToMaxX = generationToMaxX;
+    public void setMaxX(@NonNull final Integer maxX) {
+        this.maxX = maxX;
     }
 }

@@ -57,7 +57,7 @@ public class HashgraphPicture extends JPanel {
     private AddressBookMetadata expandedMetadata;
 
     /** used to store events coordinates for a given branch for each forking node */
-    private final Map<Long, Map<Integer, BranchCoordinates>> nodeIdToBranchIndexToCoordinates = new HashMap<>();
+    private final Map<Long, Map<Long, GenerationCoordinates>> nodeIdToBranchIndexToCoordinates = new HashMap<>();
 
     public HashgraphPicture(final HashgraphGuiSource hashgraphSource, final HashgraphPictureOptions options) {
         this.hashgraphSource = hashgraphSource;
@@ -152,12 +152,16 @@ public class HashgraphPicture extends JPanel {
                 drawEventCircle(g, event, options, d);
             }
 
-            final EventImpl selectedEvent =
-                    events.stream().filter(selector::isSelected).toList().getFirst();
-            if (selectedEvent != null) {
-                // if we have a selected event draw it last, so that all labels and lines connected to it can be easily
-                // seen
-                drawEventCircle(g, selectedEvent, options, d);
+            final List<EventImpl> selectedEvents =
+                    events.stream().filter(selector::isSelected).toList();
+            if (!selectedEvents.isEmpty()) {
+                final EventImpl selectedEvent = selectedEvents.getFirst();
+                if (selectedEvent != null) {
+                    // if we have a selected event draw it last, so that all labels and lines connected to it can be
+                    // easily
+                    // seen
+                    drawEventCircle(g, selectedEvent, options, d);
+                }
             }
         } catch (final Exception e) {
             logger.error(EXCEPTION.getMarker(), "error while painting", e);
