@@ -81,7 +81,7 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                             final boolean isRemote = Optional.ofNullable(System.getProperty("hapi.spec.remote"))
                                     .map(Boolean::parseBoolean)
                                     .orElse(false);
-                            yield isRemote ? sharedRemoteNetworkIfRequested() : sharedSubProcessNetwork(null);
+                            yield isRemote ? sharedRemoteNetworkIfRequested() : sharedSubProcessNetwork(null, null);
                         }
                             // For the default Test task, we need to run some tests in concurrent embedded mode and
                             // some in repeatable embedded mode, depending on the value of their @TargetEmbeddedMode
@@ -135,10 +135,12 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
          * @param networkName the name of the network
          * @return the shared subprocess network
          */
-        public static HederaNetwork sharedSubProcessNetwork(String networkName) {
-            final int networkSize = Optional.ofNullable(System.getProperty("hapi.spec.network.size"))
-                    .map(Integer::parseInt)
-                    .orElse(CLASSIC_HAPI_TEST_NETWORK_SIZE);
+        public static HederaNetwork sharedSubProcessNetwork(String networkName, Integer specifiedNetworkSize) {
+            final int networkSize = specifiedNetworkSize != null
+                    ? specifiedNetworkSize
+                    : Optional.ofNullable(System.getProperty("hapi.spec.network.size"))
+                            .map(Integer::parseInt)
+                            .orElse(CLASSIC_HAPI_TEST_NETWORK_SIZE);
             final var initialPortProperty = System.getProperty("hapi.spec.initial.port");
             if (!initialPortProperty.isBlank()) {
                 final var initialPort = Integer.parseInt(initialPortProperty);

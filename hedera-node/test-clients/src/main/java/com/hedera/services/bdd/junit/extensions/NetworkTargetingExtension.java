@@ -107,7 +107,8 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
             } else if (isAnnotated(method, HapiBlockNode.class)) {
                 logger.info("HapiBlockNode annotation found on method: " + method.getName());
                 final var annotation = method.getAnnotation(HapiBlockNode.class);
-                final SubProcessNetwork targetNetwork = (SubProcessNetwork) sharedSubProcessNetwork(method.getName());
+                final SubProcessNetwork targetNetwork =
+                        (SubProcessNetwork) sharedSubProcessNetwork(method.getName(), annotation.networkSize());
 
                 // Configure block node mode based on annotation
                 for (BlockNodeConfig blockNodeConfig : annotation.blockNodeConfigs()) {

@@ -11,6 +11,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface HapiBlockNode {
 
+    int networkSize() default 4;
+
     BlockNodeConfig[] blockNodeConfigs() default {};
 
     /**

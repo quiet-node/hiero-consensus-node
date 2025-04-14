@@ -48,6 +48,8 @@ public class BlockNodeConnectionManager {
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
     private static final String GRPC_END_POINT =
             BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
+    // Maximum retry delay to prevent excessively long waits
+    private static final Duration MAX_RETRY_DELAY = Duration.ofMinutes(1);
 
     // Add a random number generator for retry jitter
     private final Random random = new Random();
@@ -176,15 +178,16 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Retries the given action with exponential backoff.
+     * Retries the given action with exponential backoff using the scheduler.
      *
-     * @param action the action to retry
-     * @param initialDelay the initial delay before the first retry
-     * @param <T> the return type of the action
+     * @param action the action returning true on success, false on failure (to allow retry)
+     * @param currentDelay the delay to use for this attempt
+     * @param attempt the current attempt number
      */
-    public <T> void retry(@NonNull final Supplier<T> action, @NonNull final Duration initialDelay) {
+    private void retry(
+            @NonNull final Supplier<Boolean> action, @NonNull final Duration currentDelay, final int attempt) {
         requireNonNull(action);
-        requireNonNull(initialDelay);
+        requireNonNull(currentDelay);
 
         Duration delay = initialDelay;
         while (true) {
