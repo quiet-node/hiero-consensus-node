@@ -404,8 +404,10 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
             dataSource = dataSourceBuilder.build(state.getLabel(), true);
         }
 
-        if (state.getLastLeafPath() == INVALID_PATH) {
+        if (state.getFirstLeafPath() == INVALID_PATH ||
+                state.getLastLeafPath() == INVALID_PATH) {
             assert state.getFirstLeafPath() == INVALID_PATH;
+            assert state.getLastLeafPath() == INVALID_PATH;
             try {
                 VirtualLeafBytes<?> virtualLeafBytes = dataSource.loadLeafRecord(VM_STATE_KEY);
                 this.state = virtualLeafBytes == null ? state : new VirtualMapState(virtualLeafBytes.valueBytes());
