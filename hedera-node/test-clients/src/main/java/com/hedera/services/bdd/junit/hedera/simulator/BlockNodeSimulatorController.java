@@ -28,7 +28,8 @@ public class BlockNodeSimulatorController {
      * @param network the SubProcessNetwork containing simulated block nodes
      */
     public BlockNodeSimulatorController(SubProcessNetwork network) {
-        this.simulatedBlockNodes = network.getSimulatedBlockNodes();
+        this.simulatedBlockNodes =
+                network.getSimulatedBlockNodeById().values().stream().toList();
         if (simulatedBlockNodes.isEmpty()) {
             log.warn("No simulated block nodes found in the network. Make sure BlockNodeMode.SIMULATOR is set.");
         } else {
