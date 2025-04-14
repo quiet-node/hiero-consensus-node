@@ -114,6 +114,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private final Map<Long, long[]> blockNodePrioritiesBySubProcessNodeId = new HashMap<>();
     private final Map<Long, long[]> blockNodeIdsBySubProcessNodeId = new HashMap<>();
 
+    private BlockNodeSimulatorController blockNodeSimulatorController;
+
     /**
      * Get a controller for the simulated block nodes.
      * @return a controller for the simulated block nodes
