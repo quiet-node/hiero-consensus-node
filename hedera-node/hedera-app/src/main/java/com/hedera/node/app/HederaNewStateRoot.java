@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app;
 
-import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -9,6 +8,7 @@ import com.swirlds.state.State;
 import com.swirlds.state.merkle.NewStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.hiero.base.constructable.ConstructableIgnored;
 
 /**
  * This class sole purpose is to extend the {@link NewStateRoot} class and implement the {@link MerkleNodeState}.

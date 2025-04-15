@@ -89,8 +89,8 @@ import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.concurrent.interrupt.InterruptableConsumer;
-import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.base.constructable.ConstructableIgnored;
+import org.hiero.consensus.model.crypto.DigestType;
 
 /**
  * An implementation of {@link State}.
