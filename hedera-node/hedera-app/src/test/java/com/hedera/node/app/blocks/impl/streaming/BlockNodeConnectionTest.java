@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -821,6 +822,7 @@ class BlockNodeConnectionTest {
         verify(connectionManager, times(1)).updateLastVerifiedBlock(blockNodeConfig, TEST_BLOCK_NUMBER);
         verify(blockStreamStateManager, times(1)).removeBlockStatesUpTo(TEST_BLOCK_NUMBER);
         verify(connectionSpy, times(1)).jumpToBlock(TEST_BLOCK_NUMBER + 1L);
+        verify(connectionSpy, times(1)).setCurrentBlockNumber(TEST_BLOCK_NUMBER + 1L);
 
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER - 1L))
                 .isNull();
@@ -991,6 +993,84 @@ class BlockNodeConnectionTest {
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedWarningLog)),
                 "Expected warning log message not found: " + expectedWarningLog);
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with a SkipBlock for the next block after the last verified one.
+     */
+    @Test
+    void testOnNext_WithSkipBlock() {
+        connection.setCurrentBlockNumber(TEST_BLOCK_NUMBER);
+
+        // Arrange
+        final BlockNodeConnection connectionSpy = spy(connection);
+        final PublishStreamResponse.SkipBlock skipBlock = PublishStreamResponse.SkipBlock.newBuilder()
+                .blockNumber(TEST_BLOCK_NUMBER)
+                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().skipBlock(skipBlock).build();
+
+        // Act
+        connectionSpy.onNext(response);
+
+        final var shouldSkipToBlock = TEST_BLOCK_NUMBER + 1L;
+        // Assert connection restarts after the last verified block number
+        verify(connectionSpy, times(1)).jumpToBlock(shouldSkipToBlock);
+        verify(connectionSpy, times(1)).setCurrentBlockNumber(shouldSkipToBlock);
+
+        assertEquals(shouldSkipToBlock, connection.getCurrentBlockNumber());
+        assertEquals(0, connection.getCurrentRequestIndex());
+
+        // Assert that the connection restarted at the ResendBlock block_number successfully
+        assertThat(connectionSpy.getConnectionState()).isEqualTo(BlockNodeConnection.ConnectionState.ACTIVE);
+
+        // Verify log messages for resend block
+        final String expectedLog =
+                "Received SkipBlock from block node " + TEST_CONNECTION_DESCRIPTOR + " for block " + TEST_BLOCK_NUMBER;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
+                "Expected log message not found: " + expectedLog);
+        final String expectedLogForCorrectResendBlock = "Setting current block number to " + shouldSkipToBlock
+                + " for node " + TEST_CONNECTION_DESCRIPTOR + " without ending stream";
+        ;
+        assertTrue(
+                logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLogForCorrectResendBlock)),
+                "Expected log message not found: " + expectedLogForCorrectResendBlock);
+    }
+
+    /**
+     * Tests the onNext method handling a PublishStreamResponse
+     * with a SkipBlock for the next block after the last verified one.
+     */
+    @Test
+    void testOnNext_WithSkipBlockWrongNumberNoOp() {
+        final var currentBlockNumber = TEST_BLOCK_NUMBER + 1L;
+        connection.setCurrentBlockNumber(currentBlockNumber);
+
+        // Arrange
+        final BlockNodeConnection connectionSpy = spy(connection);
+        final PublishStreamResponse.SkipBlock skipBlock = PublishStreamResponse.SkipBlock.newBuilder()
+                .blockNumber(TEST_BLOCK_NUMBER)
+                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().skipBlock(skipBlock).build();
+
+        // Act
+        connectionSpy.onNext(response);
+
+        final var shouldSkipToBlock = currentBlockNumber + 1L;
+        // Assert connection restarts after the last verified block number
+        verify(connectionSpy, never()).jumpToBlock(currentBlockNumber);
+        verify(connectionSpy, never()).jumpToBlock(shouldSkipToBlock);
+        verify(connectionSpy, never()).setCurrentBlockNumber(currentBlockNumber);
+        verify(connectionSpy, never()).setCurrentBlockNumber(shouldSkipToBlock);
+
+        assertEquals(currentBlockNumber, connection.getCurrentBlockNumber());
+        assertEquals(0, connection.getCurrentRequestIndex());
+
+        // Assert that the connection restarted at the ResendBlock block_number successfully
+        assertThat(connectionSpy.getConnectionState()).isEqualTo(BlockNodeConnection.ConnectionState.ACTIVE);
     }
 
     /**

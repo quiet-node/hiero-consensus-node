@@ -343,7 +343,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         currentBlock,
                         acknowledgedBlockNumber);
                 jumpToBlock(acknowledgedBlockNumber + 1);
-            } else {
             }
         } else {
             logger.warn("Unknown acknowledgement received: {}", acknowledgement);
@@ -351,8 +350,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void handleEndOfStream(@NonNull PublishStreamResponse.EndOfStream endOfStream) {
-        var blockNumber = endOfStream.blockNumber();
-        var responseCode = endOfStream.status();
+        final var blockNumber = endOfStream.blockNumber();
+        final var responseCode = endOfStream.status();
 
         logger.debug(
                 "[{}] Received EndOfStream from block node {} at block {} with PublishStreamResponseCode {}",
@@ -425,6 +424,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         connectionDescriptor,
                         blockNumber);
             }
+        }
+    }
+
+    private void handleSkipBlock(@NonNull PublishStreamResponse.SkipBlock skipBlock) {
+        final var skipBlockNumber = skipBlock.blockNumber();
+
+        if (skipBlockNumber == getCurrentBlockNumber()) {
+            logger.debug("Received SkipBlock from block node {} for block {}", connectionDescriptor, skipBlockNumber);
+            jumpToBlock(skipBlockNumber + 1L);
         }
     }
 
@@ -665,10 +673,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         } else if (response.hasEndStream()) {
             handleEndOfStream(response.endStream());
         } else if (response.hasSkipBlock()) {
-            logger.debug(
-                    "Received SkipBlock from block node {}  Block #{}",
-                    connectionDescriptor,
-                    response.skipBlock().blockNumber());
+            handleSkipBlock(response.skipBlock());
         } else if (response.hasResendBlock()) {
             handleResendBlock(response.resendBlock());
         }
