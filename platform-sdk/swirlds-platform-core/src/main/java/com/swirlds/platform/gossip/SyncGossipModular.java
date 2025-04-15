@@ -52,8 +52,8 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -200,7 +200,8 @@ public class SyncGossipModular implements Gossip {
             @NonNull final SwirldStateManager swirldStateManager,
             @NonNull final NodeId selfId,
             @NonNull final GossipController gossipController,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
 
         final ReconnectConfig reconnectConfig =
                 platformContext.getConfiguration().getConfigData(ReconnectConfig.class);
@@ -232,7 +233,8 @@ public class SyncGossipModular implements Gossip {
                         roster,
                         reconnectConfig.asyncStreamTimeout(),
                         reconnectMetrics,
-                        platformStateFacade),
+                        platformStateFacade,
+                        stateRootFunction),
                 stateConfig,
                 platformStateFacade);
 

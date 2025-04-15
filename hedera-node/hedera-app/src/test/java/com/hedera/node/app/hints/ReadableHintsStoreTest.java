@@ -27,11 +27,13 @@ import com.hedera.hapi.node.state.hints.PreprocessingVoteId;
 import com.hedera.hapi.platform.state.NodeId;
 import com.hedera.hapi.services.auxiliary.hints.CrsPublicationTransactionBody;
 import com.hedera.node.app.hints.impl.ReadableHintsStoreImpl;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.spi.ids.ReadableEntityCounters;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
 import java.time.Instant;
@@ -57,10 +59,14 @@ class ReadableHintsStoreTest {
     void setUp() {
         entityCounters = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new WritableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}),
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}),
                 ENTITY_COUNTS_KEY,
-                new WritableSingletonStateBase<>(
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
                         ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numNodes(2).build(),
                         c -> {}))));

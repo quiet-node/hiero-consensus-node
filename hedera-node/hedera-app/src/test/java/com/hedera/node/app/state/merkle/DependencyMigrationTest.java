@@ -206,8 +206,7 @@ class DependencyMigrationTest extends MerkleTestBase {
                     merkleTree,
                     servicesRegistry,
                     null,
-
-                            SemanticVersion.newBuilder().major(1).build(),
+                    SemanticVersion.newBuilder().major(1).build(),
                     VERSIONED_CONFIG,
                     VERSIONED_CONFIG,
                     startupNetworks,

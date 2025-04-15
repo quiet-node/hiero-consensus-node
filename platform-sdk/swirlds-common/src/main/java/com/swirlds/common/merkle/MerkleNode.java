@@ -9,9 +9,9 @@ import com.swirlds.common.merkle.iterators.MerkleIterator;
 import com.swirlds.common.merkle.route.MerkleRoute;
 import com.swirlds.common.merkle.route.MerkleRouteIterator;
 import com.swirlds.common.merkle.synchronization.views.MaybeCustomReconnectRoot;
-import org.hiero.base.io.SerializableDet;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.hiero.base.io.SerializableDet;
 import org.hiero.consensus.model.crypto.Hashable;
 
 /**

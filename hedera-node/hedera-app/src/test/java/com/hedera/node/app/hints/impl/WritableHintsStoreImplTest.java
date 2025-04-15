@@ -121,10 +121,14 @@ class WritableHintsStoreImplTest {
         state = emptyState();
         entityCounters = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new WritableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}),
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}),
                 ENTITY_COUNTS_KEY,
-                new WritableSingletonStateBase<>(
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
                         ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numNodes(2).build(),
                         c -> {}))));

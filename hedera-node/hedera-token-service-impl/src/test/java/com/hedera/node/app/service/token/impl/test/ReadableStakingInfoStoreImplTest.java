@@ -11,11 +11,12 @@ import static org.mockito.Mockito.mock;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
+import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.ReadableStakingInfoStoreImpl;
 import com.swirlds.state.spi.ReadableStates;
-import com.swirlds.state.spi.WritableSingletonStateBase;
+import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapReadableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
 import java.util.Map;
@@ -50,11 +51,17 @@ class ReadableStakingInfoStoreImplTest {
                 .build();
         entityCounters = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new WritableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}),
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}),
                 ENTITY_COUNTS_KEY,
-                new WritableSingletonStateBase<>(
-                        ENTITY_COUNTS_KEY, () -> EntityCounts.newBuilder().build(), c -> {}))));
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
+                        ENTITY_COUNTS_KEY,
+                        () -> EntityCounts.newBuilder().build(),
+                        c -> {}))));
 
         given(states.<EntityNumber, StakingNodeInfo>get(STAKING_INFO_KEY)).willReturn(readableStakingNodes);
 
@@ -89,10 +96,14 @@ class ReadableStakingInfoStoreImplTest {
         given(states.<EntityNumber, StakingNodeInfo>get(STAKING_INFO_KEY)).willReturn(readableStakingNodes);
         entityCounters = new WritableEntityIdStore(new MapWritableStates(Map.of(
                 ENTITY_ID_STATE_KEY,
-                new WritableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build(), c -> {}),
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
+                        ENTITY_ID_STATE_KEY,
+                        () -> EntityNumber.newBuilder().build(),
+                        c -> {}),
                 ENTITY_COUNTS_KEY,
-                new WritableSingletonStateBase<>(
+                new FunctionWritableSingletonState<>(
+                        EntityIdService.NAME,
                         ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder()
                                 .numNodes(21)
