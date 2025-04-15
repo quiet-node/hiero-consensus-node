@@ -19,6 +19,7 @@ import com.hedera.services.bdd.junit.hedera.BlockNodeMode;
 import com.hedera.services.bdd.junit.hedera.NodeSelector;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
@@ -26,10 +27,6 @@ import org.junit.jupiter.api.Tag;
 
 /**
  * This suite is for testing with the block node simulator.
- *
- * <p>Note: This suite requires the block node simulator to be enabled.
- * Use the system property "hapi.spec.blocknode.mode=SIM" to enable it.
- * The testSubprocessWithBlockNodeSimulator task automatically sets this property.
  */
 @Tag(BLOCK_NODE_SIMULATOR)
 @OrderedInIsolation
@@ -303,6 +300,103 @@ public class BlockNodeSimulatorSuite {
                 // TODO assert that the consensus node restarts stream
                 // this should immediately go into a longer backoff time period
                 waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true));
+    }
+
+    @HapiTest
+    @HapiBlockNode(
+            networkSize = 2,
+            blockNodeConfigs = {
+                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
+            },
+            subProcessNodeConfigs = {
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        simulatorPriorities = {0}),
+                @SubProcessNodeConfig(
+                        nodeId = 1,
+                        blockNodeIds = {1},
+                        simulatorPriorities = {0})
+            })
+    final Stream<DynamicTest> twoNodesStreamingHappyPath() {
+        return hapiTest(
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true));
+    }
+
+    @HapiTest
+    @HapiBlockNode(
+            networkSize = 2,
+            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
+            subProcessNodeConfigs = {
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        simulatorPriorities = {0}),
+                @SubProcessNodeConfig(
+                        nodeId = 1,
+                        blockNodeIds = {0},
+                        simulatorPriorities = {0})
+            })
+    final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
+        return hapiTest(
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                // TODO assert that the consensus node should eventually receive a SkipBlock message as blocks are
+                // being produced
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true));
+    }
+
+    @HapiTest
+    @HapiBlockNode(
+            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
+            subProcessNodeConfigs = {
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        simulatorPriorities = {0})
+            })
+    final Stream<DynamicTest> node0StreamingResendBlock() {
+        AtomicLong lastVerifiedBlock = new AtomicLong();
+        return hapiTest(
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                blockNodeSimulator(0).getLastVerifiedBlockExposing(lastVerifiedBlock::set),
+                blockNodeSimulator(0).sendResendBlockImmediately(lastVerifiedBlock.get() - 1),
+                // TODO assert that the consensus node should end the stream, and restart at lastVerifiedBlock - 1.
+                // It should be available in the buffer.
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true));
+    }
+
+    @HapiTest
+    @HapiBlockNode(
+            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
+            subProcessNodeConfigs = {
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0},
+                            simulatorPriorities = {0})
+            })
+    final Stream<DynamicTest> node0StreamingBufferFullHappyPath() {
+        AtomicLong lastVerifiedBlock = new AtomicLong();
+        return hapiTest(
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                blockNodeSimulator(0).getLastVerifiedBlockExposing(lastVerifiedBlock::set),
+                blockNodeSimulator(0).sendResendBlockImmediately(lastVerifiedBlock.get() - 1),
+                // TODO assert that the consensus node should end the stream, and restart at lastVerifiedBlock - 1.
+                // It should be available in the buffer.
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true));
     }
