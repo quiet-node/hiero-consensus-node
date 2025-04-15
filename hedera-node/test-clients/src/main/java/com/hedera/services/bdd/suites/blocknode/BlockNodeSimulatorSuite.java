@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
 
 /**
@@ -41,6 +42,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         simulatorPriorities = {0})
             })
+    @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -76,6 +78,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {3},
                         simulatorPriorities = {0}),
             })
+    @Order(1)
     final Stream<DynamicTest> allNodesStreamingHappyPath() {
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -95,6 +98,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         simulatorPriorities = {0})
             })
+    @Order(2)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsCanStreamGenesisBlock() {
         AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
         AtomicReference<Long> lastVerifiedBlock = new AtomicReference<>();
@@ -140,6 +144,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0, 1},
                         simulatorPriorities = {0, 1})
             })
+    @Order(3)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsSwitchLower() {
         AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
         return hapiTest(
@@ -173,6 +178,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0, 1, 2, 3},
                         simulatorPriorities = {0, 1, 2, 3})
             })
+    @Order(4)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickle() {
         AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
         return hapiTest(
@@ -209,6 +215,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         simulatorPriorities = {0})
             })
+    @Order(5)
     final Stream<DynamicTest> node0StreamingBlockNodeMultipleEndOfStreamInSuccession() {
         AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
         return hapiTest(
@@ -258,6 +265,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         simulatorPriorities = {0})
             })
+    @Order(6)
     final Stream<DynamicTest> node0StreamingBlockNodeEndOfStreamResponseCodes() {
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -321,6 +329,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {1},
                         simulatorPriorities = {0})
             })
+    @Order(7)
     final Stream<DynamicTest> twoNodesStreamingHappyPath() {
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -344,6 +353,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         simulatorPriorities = {0})
             })
+    @Order(8)
     final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -364,6 +374,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         simulatorPriorities = {0})
             })
+    @Order(9)
     final Stream<DynamicTest> node0StreamingResendBlock() {
         AtomicLong lastVerifiedBlock = new AtomicLong();
         return hapiTest(
@@ -382,11 +393,12 @@ public class BlockNodeSimulatorSuite {
     @HapiBlockNode(
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            simulatorPriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        simulatorPriorities = {0})
             })
+    @Order(10)
     final Stream<DynamicTest> node0StreamingBufferFullHappyPath() {
         AtomicLong lastVerifiedBlock = new AtomicLong();
         return hapiTest(
