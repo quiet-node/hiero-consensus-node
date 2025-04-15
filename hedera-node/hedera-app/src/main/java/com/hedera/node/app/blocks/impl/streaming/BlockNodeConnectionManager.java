@@ -7,6 +7,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -66,6 +67,7 @@ public class BlockNodeConnectionManager {
 
     private BlockNodeConnection activeConnection;
     private BlockNodeConnection highestPriorityReadyConnection;
+    private final BlockStreamMetrics blockStreamMetrics;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -74,7 +76,8 @@ public class BlockNodeConnectionManager {
      */
     public BlockNodeConnectionManager(
             @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
-            @NonNull final BlockStreamStateManager blockStreamStateManager) {
+            @NonNull final BlockStreamStateManager blockStreamStateManager,
+            @NonNull final BlockStreamMetrics blockStreamMetrics) {
         this.blockNodeConfigurations =
                 requireNonNull(blockNodeConfigExtractor, "blockNodeConfigExtractor must not be null");
         this.blockStreamStateManager =
@@ -82,6 +85,7 @@ public class BlockNodeConnectionManager {
 
         this.connectionsInRetry = new ConcurrentHashMap<>();
         this.lastVerifiedBlockPerConnection = new ConcurrentHashMap<>();
+        this.blockStreamMetrics = blockStreamMetrics;
     }
 
     /**

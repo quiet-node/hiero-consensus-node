@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.protoc.PublishStreamRequest;
 import com.hedera.hapi.block.protoc.PublishStreamResponse;
+import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.app.spi.fixtures.util.LogCaptor;
 import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
@@ -60,6 +61,9 @@ class BlockNodeConnectionManagerTest {
     @Mock
     private BlockState mockBlockState;
 
+    @Mock
+    BlockStreamMetrics blockStreamMetrics;
+
     private static BlockNodeConfigExtractor mockBlockNodeConfigExtractor;
 
     private static final List<Server> testServers = new ArrayList<>();
@@ -91,7 +95,7 @@ class BlockNodeConnectionManagerTest {
 
     @BeforeEach
     void setUp() {
-        blockNodeConnectionManager = new BlockNodeConnectionManager(mockBlockNodeConfigExtractor, mockStateManager);
+        blockNodeConnectionManager = new BlockNodeConnectionManager(mockBlockNodeConfigExtractor, mockStateManager, blockStreamMetrics);
     }
 
     @AfterAll

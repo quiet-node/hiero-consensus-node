@@ -150,45 +150,45 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
 
     @Override
     public void afterEach(@NonNull final ExtensionContext extensionContext) {
-        if (SHARED_NETWORK.get() != null) {
-            // If a per-method network exists, run validation and terminate it
-            try {
-                // Create a temporary HapiSpec to run the validation against the per-method network
-                final var streamValidationOp = validateStreams();
-                final var validationSpec = new HapiSpec(
-                        "StreamValidation",
-                        new com.hedera.services.bdd.spec.utilops.streams.StreamValidationOp[] {streamValidationOp});
-                validationSpec.setTargetNetwork(SHARED_NETWORK.get());
-                // Execute the validation spec
+        hapiTestMethodOf(extensionContext).ifPresent(method -> {
+            if (isAnnotated(method, HapiBlockNode.class)) {
+                // If a per-method network exists, run validation and terminate it
                 try {
-                    validationSpec.execute();
-                } catch (Throwable e) {
-                    throw new RuntimeException(e);
+                    // Create a temporary HapiSpec to run the validation against the per-method network
+                    final var streamValidationOp = validateStreams();
+                    final var validationSpec = new HapiSpec(
+                            "StreamValidation",
+                            new com.hedera.services.bdd.spec.utilops.streams.StreamValidationOp[] {streamValidationOp});
+                    validationSpec.setTargetNetwork(SHARED_NETWORK.get());
+                    // Execute the validation spec
+                    try {
+                        validationSpec.execute();
+                    } catch (Throwable e) {
+                        throw new RuntimeException(e);
+                    }
+                    // Log success or handle failure?
+                    // For now, assume if exec doesn't throw, it's okay.
+                } catch (Exception e) {
+                    System.err.println("Error during post-test stream validation: " + e.getMessage());
+                } finally {
+                    // Ensure network termination even if validation fails
+                    SHARED_NETWORK.get().terminate();
+                    // Clear the static shared network reference as the per-method network is gone
+                    SHARED_NETWORK.set(null);
+                    // Default cleanup if no per-method network was found
+                    HapiSpec.TARGET_NETWORK.remove();
+                    HapiSpec.FEES_OVERRIDE.remove();
+                    HapiSpec.THROTTLES_OVERRIDE.remove();
+                    HapiSpec.PROPERTIES_TO_PRESERVE.remove();
                 }
-                // Log success or handle failure?
-                // For now, assume if exec doesn't throw, it's okay.
-            } catch (Exception e) {
-                System.err.println("Error during post-test stream validation: " + e.getMessage());
-            } finally {
-                // Ensure network termination even if validation fails
-                SHARED_NETWORK.get().terminate();
-                // Clear the static shared network reference as the per-method network is gone
-                SHARED_NETWORK.set(null);
+            } else {
                 // Default cleanup if no per-method network was found
                 HapiSpec.TARGET_NETWORK.remove();
                 HapiSpec.FEES_OVERRIDE.remove();
                 HapiSpec.THROTTLES_OVERRIDE.remove();
                 HapiSpec.PROPERTIES_TO_PRESERVE.remove();
             }
-        } else {
-            // Default cleanup if no per-method network was found
-            HapiSpec.TARGET_NETWORK.remove();
-            HapiSpec.FEES_OVERRIDE.remove();
-            HapiSpec.THROTTLES_OVERRIDE.remove();
-            HapiSpec.PROPERTIES_TO_PRESERVE.remove();
-        }
-        // Ensure thread-local is always removed, even if per-method network existed
-        HapiSpec.TARGET_NETWORK.remove();
+        });
     }
 
     /**
