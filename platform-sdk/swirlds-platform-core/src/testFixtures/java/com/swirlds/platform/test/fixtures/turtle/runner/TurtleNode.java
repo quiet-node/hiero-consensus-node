@@ -39,6 +39,7 @@ import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.turtle.consensus.ConsensusRoundsTestCollector;
 import com.swirlds.platform.test.fixtures.turtle.consensus.DefaultConsensusRoundsTestCollector;
+import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedNetwork;
 import com.swirlds.platform.test.fixtures.turtle.signedstate.DefaultSignedStatesTestCollector;
 import com.swirlds.platform.test.fixtures.turtle.signedstate.SignedStatesTestCollector;
@@ -160,7 +161,11 @@ public class TurtleNode {
         wireConsensusRoundsTestCollector(platformWiring);
         wireSignedStatesTestCollector(platformWiring);
 
-        platformComponentBuilder.withMetricsDocumentationEnabled(false).withGossip(network.getGossipInstance(nodeId));
+        final SimulatedGossip gossip = network.getGossipInstance(nodeId);
+        gossip.provideIntakeEventCounter(
+                platformComponentBuilder.getBuildingBlocks().intakeEventCounter());
+
+        platformComponentBuilder.withMetricsDocumentationEnabled(false).withGossip(gossip);
 
         platform = platformComponentBuilder.build();
     }
