@@ -731,7 +731,7 @@ class VirtualMapTests extends VirtualTestBase {
      *                           \
      *                            \
      *                               Root
-     *                            [1]
+     *                            [0]
      *                             /     \
      *                            /       \
      *                        Internal     B

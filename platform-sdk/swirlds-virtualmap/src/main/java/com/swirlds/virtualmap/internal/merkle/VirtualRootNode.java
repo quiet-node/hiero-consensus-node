@@ -208,9 +208,9 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
     private VirtualNodeCache cache;
 
     /**
-     *      A reference to the map metadata, such as the first leaf path, last leaf path, name ({@link VirtualMapState}). Ideally this would be final
-     *      and never null, but serialization requires partially constructed objects, so it must not be
-     *     final and may be null until deserialization is complete.
+     * A reference to the map metadata, such as the first leaf path, last leaf path, name ({@link VirtualMapState}).
+     * Ideally this would be final and never null, but serialization requires partially constructed objects,
+     * so it must not be final and may be null until deserialization is complete.
      */
     private VirtualMapState state;
 
@@ -293,6 +293,10 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
      */
     private AtomicBoolean reconnectHashingStarted;
 
+    /**
+     * Empty VirtualMap state created using a label from the original map.
+     * Paths are not initialized in this instance on purpose.
+     */
     private VirtualMapState reconnectState;
     /**
      * The {@link RecordAccessor} for the state, cache, and data source needed during reconnect.

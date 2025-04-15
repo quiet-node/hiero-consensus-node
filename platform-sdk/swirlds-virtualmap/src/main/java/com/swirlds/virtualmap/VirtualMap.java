@@ -268,9 +268,21 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     public VirtualMap copy() {
         throwIfImmutable();
         throwIfDestroyed();
+
         final VirtualMap copy = new VirtualMap(this);
         setImmutable(true);
         return copy;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setChild(int index, MerkleNode child) {
+        if (index == ChildIndices.VIRTUAL_ROOT_CHILD_INDEX) {
+            root = child.cast();
+        }
+        super.setChild(index, child);
     }
 
     /**
@@ -293,17 +305,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             serout.writeInt(root.getVersion());
             root.serialize(serout, outputDirectory);
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setChild(int index, MerkleNode child) {
-        if (index == ChildIndices.VIRTUAL_ROOT_CHILD_INDEX) {
-            root = child.cast();
-        }
-        super.setChild(index, child);
     }
 
     /**
@@ -333,7 +334,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * public use, it is for testing and tools only.
      *
      * @param inputFile           The input .vmap file. Cannot be null.
-     * @param vmStateExternal true for versions prior to version 4, the state is not a leaf for the VM
+     * @param vmStateExternal true for versions prior to version 4, the state is not a leaf for the VirtualMap
      * @throws IOException For problems.
      */
     public void loadFromFile(final Path inputFile, boolean vmStateExternal) throws IOException {

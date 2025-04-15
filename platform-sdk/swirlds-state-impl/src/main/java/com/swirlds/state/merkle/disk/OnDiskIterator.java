@@ -34,6 +34,7 @@ public class OnDiskIterator<K, V> implements Iterator<K> {
             final var merkleNode = itr.next();
             if (merkleNode instanceof VirtualLeafNode leaf) {
                 final var k = leaf.getKey();
+                // VirtualMap metadata should not be considered as a possible result of the iterator
                 if (k.equals(VM_STATE_KEY)) {
                     continue;
                 }

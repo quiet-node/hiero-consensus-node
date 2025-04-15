@@ -5,6 +5,7 @@ import com.swirlds.base.utility.ToStringBuilder;
 import com.swirlds.common.merkle.MerkleLeaf;
 import com.swirlds.common.merkle.impl.PartialMerkleLeaf;
 import com.swirlds.virtualmap.VirtualMap;
+import com.swirlds.virtualmap.VirtualMap.ClassVersion;
 import com.swirlds.virtualmap.internal.Path;
 import java.io.IOException;
 import java.util.Objects;
@@ -14,6 +15,7 @@ import org.hiero.base.io.streams.SerializableDataOutputStream;
 /**
  * Contains state for a {@link VirtualMap}. This state is stored in memory in the merkle tree as
  * the first (left) child of the VFCMap / {@link VirtualMap}.
+ * This class exist only for backward compatibility with {@link VirtualMap} of versions prior to {@link ClassVersion#MIGRATE_VM_STATE}
  *
  * @deprecated Use {@link VirtualMapState} instead.
  */
