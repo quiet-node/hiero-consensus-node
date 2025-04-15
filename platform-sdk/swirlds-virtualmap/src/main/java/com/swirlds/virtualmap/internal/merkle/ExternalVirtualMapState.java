@@ -19,7 +19,6 @@ import org.hiero.base.io.streams.SerializableDataOutputStream;
  *
  * @deprecated Use {@link VirtualMapState} instead.
  */
-@Deprecated(forRemoval = true)
 public class ExternalVirtualMapState extends PartialMerkleLeaf implements MerkleLeaf {
     public static final long CLASS_ID = 0x9e698c13a408250dL;
     private static final int CLASS_VERSION = 1;
