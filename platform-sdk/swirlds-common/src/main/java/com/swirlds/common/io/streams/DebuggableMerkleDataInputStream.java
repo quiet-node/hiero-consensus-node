@@ -5,7 +5,6 @@ import com.swirlds.base.function.CheckedFunction;
 import com.swirlds.common.io.streams.internal.SerializationOperation;
 import com.swirlds.common.io.streams.internal.SerializationStack;
 import com.swirlds.common.merkle.MerkleNode;
-import com.swirlds.common.utility.ValueReference;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -20,6 +19,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
+import org.hiero.base.ValueReference;
 import org.hiero.base.io.SelfSerializable;
 
 /**

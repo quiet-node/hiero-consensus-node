@@ -14,7 +14,6 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
-import com.swirlds.common.constructable.ConstructableIgnored;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
@@ -91,6 +90,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.concurrent.interrupt.InterruptableConsumer;
 import org.hiero.consensus.model.crypto.DigestType;
+import org.hiero.base.constructable.ConstructableIgnored;
 
 /**
  * An implementation of {@link State}.
