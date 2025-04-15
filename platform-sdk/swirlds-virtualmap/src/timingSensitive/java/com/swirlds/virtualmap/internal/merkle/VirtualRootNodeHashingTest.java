@@ -6,9 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
-import com.swirlds.common.merkle.MerkleInternal;
-import com.swirlds.common.merkle.impl.PartialBinaryMerkleInternal;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.virtualmap.internal.hash.VirtualHasher;
 import com.swirlds.virtualmap.test.fixtures.DummyVirtualStateAccessor;

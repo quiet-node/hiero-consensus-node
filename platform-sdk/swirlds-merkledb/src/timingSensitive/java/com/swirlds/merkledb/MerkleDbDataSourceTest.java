@@ -31,7 +31,6 @@ import com.swirlds.merkledb.test.fixtures.TestType;
 import com.swirlds.metrics.api.IntegerGauge;
 import com.swirlds.metrics.api.Metric.ValueType;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
@@ -677,8 +676,6 @@ class MerkleDbDataSourceTest {
         final String label = "testRebuildHDHMIndex";
         final TestType testType = TestType.variable_variable;
         final Path originalDbPath = testDirectory.resolve("merkledb-testRebuildHDHMIndex-" + testType);
-        final KeySerializer keySerializer = testType.dataType().getKeySerializer();
-        final ValueSerializer valueSerializer = testType.dataType().getValueSerializer();
         final Path snapshotDbPath1 = testDirectory.resolve("merkledb-testRebuildHDHMIndex_SNAPSHOT1");
         final Path snapshotDbPath2 = testDirectory.resolve("merkledb-testRebuildHDHMIndex_SNAPSHOT2");
         createAndApplyDataSource(originalDbPath, label, testType, 100, 0, dataSource -> {
@@ -687,9 +684,7 @@ class MerkleDbDataSourceTest {
                     8,
                     16,
                     IntStream.range(0, 17).mapToObj(i -> createVirtualInternalRecord(i, 2 * i)),
-                    IntStream.range(8, 17)
-                            .mapToObj(i -> testType.dataType().createVirtualLeafRecord(i, i, 3 * i))
-                            .map(r -> r.toBytes(keySerializer, valueSerializer)),
+                    IntStream.range(8, 17).mapToObj(i -> testType.dataType().createVirtualLeafRecord(i, i, 3 * i)),
                     Stream.empty());
             // Flush 2: leaf path range is [9,18]. Note that the list of deleted leaves is empty, so one of the leaves
             // becomes stale in the database. This is not what we have in production, but it will let test rebuilding
@@ -698,9 +693,7 @@ class MerkleDbDataSourceTest {
                     9,
                     18,
                     IntStream.range(0, 19).mapToObj(i -> createVirtualInternalRecord(i, 2 * i)),
-                    IntStream.range(9, 19)
-                            .mapToObj(i -> testType.dataType().createVirtualLeafRecord(i, i, 3 * i))
-                            .map(r -> r.toBytes(keySerializer, valueSerializer)),
+                    IntStream.range(9, 19).mapToObj(i -> testType.dataType().createVirtualLeafRecord(i, i, 3 * i)),
                     Stream.empty());
             // Create snapshots
             dataSource.getDatabase().snapshot(snapshotDbPath1, dataSource);
@@ -720,11 +713,9 @@ class MerkleDbDataSourceTest {
                 .build();
         final MerkleDb snapshotDb1 = MerkleDb.getInstance(snapshotDbPath1, config1);
         final MerkleDbDataSource snapshotDataSource1 = snapshotDb1.getDataSource(label, false);
-        IntStream.range(9, 19)
-                .forEach(i ->
-                        assertLeaf(testType, keySerializer, valueSerializer, snapshotDataSource1, i, i, 2 * i, 3 * i));
-        final VirtualKey staleKey = testType.dataType().createVirtualLongKey(8);
-        assertEquals(8, snapshotDataSource1.findKey(keySerializer.toBytes(staleKey), staleKey.hashCode()));
+        IntStream.range(9, 19).forEach(i -> assertLeaf(testType, snapshotDataSource1, i, i, 2 * i, 3 * i));
+        final Bytes staleKey = testType.dataType().createVirtualLongKey(8);
+        assertEquals(8, snapshotDataSource1.findKey(staleKey));
         snapshotDataSource1.close();
 
         // Now load snapshot 2, but with HDHM bucket index rebuilt. There must be no stale keys there
@@ -738,10 +729,8 @@ class MerkleDbDataSourceTest {
                 .build();
         final MerkleDb snapshotDb2 = MerkleDb.getInstance(snapshotDbPath2, config2);
         final MerkleDbDataSource snapshotDataSource2 = snapshotDb2.getDataSource(config2, label, false);
-        IntStream.range(9, 19)
-                .forEach(i ->
-                        assertLeaf(testType, keySerializer, valueSerializer, snapshotDataSource2, i, i, 2 * i, 3 * i));
-        assertEquals(-1, snapshotDataSource2.findKey(keySerializer.toBytes(staleKey), staleKey.hashCode()));
+        IntStream.range(9, 19).forEach(i -> assertLeaf(testType, snapshotDataSource2, i, i, 2 * i, 3 * i));
+        assertEquals(-1, snapshotDataSource2.findKey(staleKey));
         snapshotDataSource2.close();
     }
 

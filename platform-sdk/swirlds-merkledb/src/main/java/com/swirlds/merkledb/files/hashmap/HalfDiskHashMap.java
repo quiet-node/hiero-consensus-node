@@ -363,7 +363,7 @@ public class HalfDiskHashMap implements AutoCloseable, Snapshotable, FileStatist
                             }
                         }
                         if (removeKey) {
-                            delete(keyBytes, entry.getHashCode());
+                            delete(keyBytes);
                         }
                     } catch (final Exception e) {
                         logger.error(
