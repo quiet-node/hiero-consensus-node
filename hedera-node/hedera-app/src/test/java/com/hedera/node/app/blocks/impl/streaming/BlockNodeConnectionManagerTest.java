@@ -129,7 +129,7 @@ class BlockNodeConnectionManagerTest {
     }
 
     @Test
-    void testScheduleReconnect_WithPriority() throws InterruptedException {
+    void testScheduleRetry_WithPriority() throws InterruptedException {
         when(mockConnection.getNodeConfig())
                 .thenReturn(BlockNodeConfig.newBuilder()
                         .address("localhost")
@@ -137,7 +137,7 @@ class BlockNodeConnectionManagerTest {
                         .priority(1)
                         .build());
 
-        blockNodeConnectionManager.scheduleReconnect(mockConnection);
+        blockNodeConnectionManager.scheduleRetry(mockConnection);
 
         // There should be no immediate attempt to establish a stream
         verify(mockConnection, times(0)).establishStream();
@@ -152,10 +152,10 @@ class BlockNodeConnectionManagerTest {
     }
 
     @Test
-    void testScheduleReconnect_WithoutPriority() throws InterruptedException {
+    void testScheduleRetry_WithoutPriority() throws InterruptedException {
         given(mockConnection.getNodeConfig())
                 .willReturn(BlockNodeConfig.newBuilder().build());
-        blockNodeConnectionManager.scheduleReconnect(mockConnection);
+        blockNodeConnectionManager.scheduleRetry(mockConnection);
 
         verify(mockConnection, never()).establishStream(); // there should be no immediate attempt to establish a stream
         final var initialDelay = BlockNodeConnectionManager.INITIAL_RETRY_DELAY;
@@ -171,14 +171,14 @@ class BlockNodeConnectionManagerTest {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
         final List<String> infoLogs = logCaptor.infoLogs();
-        assertThat(infoLogs.get(0)).contains("Establishing connection to primary block node");
+        assertThat(infoLogs.get(0)).contains("Establishing connection to block node based on priorities");
 
         // Verify the order of connection attempts: The high priority node should be the first
         assertThat(infoLogs.get(1)).contains("Connecting to block node localhost:8080");
     }
 
     @Test
-    void handleConnectionError_shouldAddToRetryAndScheduleReconnect() throws InterruptedException {
+    void handleConnectionError_shouldAddToRetryAndScheduleRetry() throws InterruptedException {
         // Given established connection
         blockNodeConnectionManager.establishConnection();
 
