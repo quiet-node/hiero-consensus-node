@@ -17,7 +17,7 @@ import org.hiero.base.io.streams.SerializableDataOutputStream;
  * the first (left) child of the VFCMap / {@link VirtualMap}.
  * This class exist only for backward compatibility with {@link VirtualMap} of versions prior to {@link ClassVersion#MIGRATE_VM_STATE}
  *
- * @deprecated Use {@link VirtualMapState} instead.
+ * Use {@link VirtualMapState} instead.
  */
 public class ExternalVirtualMapState extends PartialMerkleLeaf implements MerkleLeaf {
     public static final long CLASS_ID = 0x9e698c13a408250dL;
