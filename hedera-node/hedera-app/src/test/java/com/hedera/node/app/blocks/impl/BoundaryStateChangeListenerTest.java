@@ -39,7 +39,6 @@ import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
 import com.hedera.node.app.spi.metrics.StoreMetricsService;
 import com.hedera.node.app.state.recordcache.RecordCacheService;
 import com.hedera.node.app.throttle.CongestionThrottleService;
-import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.ContractsConfig;
 import com.hedera.node.config.data.FilesConfig;
@@ -363,8 +362,7 @@ class BoundaryStateChangeListenerTest {
                 state,
                 servicesRegistry,
                 null,
-                new ServicesSoftwareVersion(
-                        bootstrapConfig.getConfigData(VersionConfig.class).servicesVersion()),
+                bootstrapConfig.getConfigData(VersionConfig.class).servicesVersion(),
                 new ConfigProviderImpl().getConfiguration(),
                 DEFAULT_CONFIG,
                 startupNetworks,

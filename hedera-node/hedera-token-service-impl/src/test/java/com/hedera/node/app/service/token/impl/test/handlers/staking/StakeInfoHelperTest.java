@@ -22,6 +22,7 @@ import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.token.NetworkStakingRewards;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.node.app.ids.EntityIdService;
+import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.ids.WritableEntityIdStore;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.node.app.service.token.impl.WritableNetworkStakingRewardsStore;
@@ -117,6 +118,7 @@ class StakeInfoHelperTest {
 
         final var newStates = newStatesInstance(stakingInfosState);
         infoStore = new WritableStakingInfoStore(newStates, entityIdStore);
+        entityIdStore.adjustEntityCount(EntityType.STAKING_INFO, 4L);
         // Platform address book has node Ids 2, 4, 8
         final var networkInfo = new FakeNetworkInfo();
 

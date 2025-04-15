@@ -19,7 +19,6 @@ import com.swirlds.merkle.map.MerkleMapMetrics;
 import com.swirlds.platform.ParameterProvider;
 import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
-import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.virtualmap.VirtualMap;
@@ -68,7 +67,6 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
     public static final int SOFTWARE_VERSION = 61;
     public static final SemanticVersion PREVIOUS_SOFTWARE_VERSION =
             SemanticVersion.newBuilder().major(SOFTWARE_VERSION - 1).build();
-    private final BasicSoftwareVersion softwareVersion = new BasicSoftwareVersion(SOFTWARE_VERSION);
     private static final SemanticVersion semanticVersion =
             SemanticVersion.newBuilder().major(SOFTWARE_VERSION).build();
 
@@ -186,14 +184,6 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
     @Override
     public ConsensusStateEventHandler<MigrationTestingToolState> newConsensusStateEvenHandler() {
         return new MigrationTestToolConsensusStateEventHandler();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public BasicSoftwareVersion getSoftwareVersion() {
-        return softwareVersion;
     }
 
     /**

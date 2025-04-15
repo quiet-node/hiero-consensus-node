@@ -12,8 +12,8 @@ open module com.swirlds.merkle.test.fixtures {
     requires transitive com.swirlds.common;
     requires transitive com.swirlds.config.api;
     requires transitive com.swirlds.merkle;
+    requires transitive org.hiero.base.utility;
     requires transitive org.hiero.consensus.model;
-    requires transitive org.hiero.consensus.utility;
     requires transitive com.fasterxml.jackson.annotation;
     requires transitive com.fasterxml.jackson.core;
     requires transitive com.fasterxml.jackson.databind;
@@ -22,6 +22,7 @@ open module com.swirlds.merkle.test.fixtures {
     requires com.swirlds.fchashmap;
     requires com.swirlds.fcqueue;
     requires com.swirlds.logging;
+    requires org.hiero.base.utility.test.fixtures;
     requires com.swirlds.merkledb;
     requires com.swirlds.virtualmap;
     requires org.hiero.consensus.utility.test.fixtures;

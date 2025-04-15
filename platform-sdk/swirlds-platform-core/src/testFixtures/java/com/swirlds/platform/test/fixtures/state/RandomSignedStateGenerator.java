@@ -7,7 +7,7 @@ import static com.swirlds.common.test.fixtures.crypto.CryptoRandomUtils.randomSi
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
-import static org.hiero.consensus.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
+import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static org.mockito.Mockito.spy;
 
 import com.hedera.hapi.node.base.SemanticVersion;
@@ -50,10 +50,10 @@ import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.hiero.consensus.model.crypto.DigestType;
+import org.hiero.base.utility.CommonUtils;
+import org.hiero.base.utility.test.fixtures.RandomUtils;
 import org.hiero.consensus.model.crypto.Hash;
 import org.hiero.consensus.model.node.NodeId;
-import org.hiero.consensus.model.utility.CommonUtils;
-import org.hiero.consensus.utility.test.fixtures.RandomUtils;
 
 /**
  * A utility for generating random signed states.

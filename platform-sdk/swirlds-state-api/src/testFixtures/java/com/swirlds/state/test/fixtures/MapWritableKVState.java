@@ -23,7 +23,9 @@ import java.util.Objects;
  * @param <V> The value type
  */
 public class MapWritableKVState<K, V> extends WritableKVStateBase<K, V> {
-    /** Represents the backing storage for this state */
+    /**
+     * Represents the backing storage for this state
+     */
     private final Map<K, V> backingStore;
 
     /**
@@ -71,7 +73,18 @@ public class MapWritableKVState<K, V> extends WritableKVStateBase<K, V> {
         backingStore.remove(key);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * Get the backing store for this state. This is only for testing purposes added to {@link MapWritableKVState}
+     *
+     * @return The backing store for this state
+     */
+    public Map<K, V> getBackingStore() {
+        return backingStore;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @NonNull
     @Override
     public long sizeOfDataSource() {
@@ -87,10 +100,10 @@ public class MapWritableKVState<K, V> extends WritableKVStateBase<K, V> {
      * Create a new {@link Builder} for building a {@link MapWritableKVState}. The builder has
      * convenience methods for pre-populating the map.
      *
-     * @param <K>         The key type
-     * @param <V>         The value type
      * @param serviceName The service name
      * @param stateKey    The state key
+     * @param <K>      The key type
+     * @param <V>      The value type
      * @return A {@link Builder} to be used for creating a {@link MapWritableKVState}.
      */
     public static <K, V> Builder<K, V> builder(@NonNull final String serviceName, @NonNull final String stateKey) {
@@ -115,7 +128,7 @@ public class MapWritableKVState<K, V> extends WritableKVStateBase<K, V> {
          * Add a key/value pair to the state's backing map. This is used to pre-initialize the
          * backing map. The created state will be "clean" with no modifications.
          *
-         * @param key The key
+         * @param key   The key
          * @param value The value
          * @return a reference to this builder
          */
