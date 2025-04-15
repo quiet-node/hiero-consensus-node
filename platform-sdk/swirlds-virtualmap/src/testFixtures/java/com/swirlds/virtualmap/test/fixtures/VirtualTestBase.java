@@ -21,6 +21,8 @@ import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.hiero.base.constructable.ClassConstructorPair;
+import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.junit.jupiter.api.BeforeAll;
