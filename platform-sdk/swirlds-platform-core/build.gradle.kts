@@ -38,6 +38,7 @@ testModuleInfo {
     requires("com.swirlds.config.extensions.test.fixtures")
     requires("com.swirlds.state.api.test.fixtures")
     requires("com.swirlds.state.impl.test.fixtures")
+    requires("com.hedera.node.app")
     requires("org.hiero.consensus.utility.test.fixtures")
     requires("awaitility")
     requires("org.assertj.core")

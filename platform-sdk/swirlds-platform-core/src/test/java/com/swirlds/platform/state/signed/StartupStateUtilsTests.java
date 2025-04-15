@@ -12,10 +12,10 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.node.app.HederaNewStateRoot;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.config.StateCommonConfig_;
-import com.swirlds.common.constructable.ClassConstructorPair;
 import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.context.PlatformContext;
@@ -34,7 +34,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.SignedStateFilePath;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
-import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.BufferedWriter;
@@ -94,7 +93,6 @@ public class StartupStateUtilsTests {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
         registry.registerConstructables("org.hiero.consensus");
-        registry.registerConstructable(new ClassConstructorPair(TestMerkleStateRoot.class, TestMerkleStateRoot::new));
     }
 
     @NonNull
@@ -167,10 +165,7 @@ public class StartupStateUtilsTests {
                         selfId,
                         mainClassName,
                         swirldName,
-                        // FIXME
-                        (virtualMap) -> {
-                            throw new UnsupportedOperationException();
-                        },
+                        HederaNewStateRoot::new,
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -201,10 +196,7 @@ public class StartupStateUtilsTests {
                         selfId,
                         mainClassName,
                         swirldName,
-                        // FIXME
-                        (virtualMap) -> {
-                            throw new UnsupportedOperationException();
-                        },
+                        HederaNewStateRoot::new,
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -239,10 +231,7 @@ public class StartupStateUtilsTests {
                         selfId,
                         mainClassName,
                         swirldName,
-                        // FIXME
-                        (virtualMap) -> {
-                            throw new UnsupportedOperationException();
-                        },
+                        HederaNewStateRoot::new,
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -289,10 +278,7 @@ public class StartupStateUtilsTests {
                         selfId,
                         mainClassName,
                         swirldName,
-                        // FIXME
-                        (virtualMap) -> {
-                            throw new UnsupportedOperationException();
-                        },
+                        HederaNewStateRoot::new,
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)

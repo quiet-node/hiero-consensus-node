@@ -9,7 +9,6 @@ import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -28,10 +27,6 @@ public interface MerkleNodeState extends State {
         return (MerkleNode) this;
     }
 
-    default Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
-        throw new UnsupportedOperationException();
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -41,6 +36,8 @@ public interface MerkleNodeState extends State {
 
     /**
      * Initializes the defined service state.
+     * Note: This method replaces the deprecated {@link #putServiceStateIfAbsent(StateMetadata, Supplier)} methods,
+     * which were specifically used with {@code MerkleStateRoot}. This method will be utilized instead with {@code NewStateRoot}.
      *
      * @param md The metadata associated with the state.
      * @throws IllegalArgumentException if md doesn't have a label, or if the label isn't right.
@@ -55,11 +52,13 @@ public interface MerkleNodeState extends State {
      * MUST have a correct label applied. If the node is already present, then this method does nothing
      * else.
      *
+     * @deprecated This method is only required for the MerkleStateRoot class and will be removed together with that class.
      * @param md The metadata associated with the state
      * @param nodeSupplier Returns the node to add. Cannot be null. Can be used to create the node on-the-fly.
      * @throws IllegalArgumentException if the node is neither a merkle map nor virtual map, or if
      *                                  it doesn't have a label, or if the label isn't right.
      */
+    @Deprecated
     default void putServiceStateIfAbsent(
             @NonNull final StateMetadata<?, ?> md, @NonNull final Supplier<? extends MerkleNode> nodeSupplier) {
         putServiceStateIfAbsent(md, nodeSupplier, n -> {});
@@ -71,18 +70,18 @@ public interface MerkleNodeState extends State {
      * MUST have a correct label applied. No matter if the resulting node is newly created or already
      * present, calls the provided initialization consumer with the node.
      *
+     * @deprecated This method is only required for the MerkleStateRoot class and will be removed together with that class.
      * @param md The metadata associated with the state
      * @param nodeSupplier Returns the node to add. Cannot be null. Can be used to create the node on-the-fly.
      * @param nodeInitializer The node's initialization logic.
      * @throws IllegalArgumentException if the node is neither a merkle map nor virtual map, or if
      *                                  it doesn't have a label, or if the label isn't right.
      */
-    default <T extends MerkleNode> void putServiceStateIfAbsent(
+    @Deprecated
+    <T extends MerkleNode> void putServiceStateIfAbsent(
             @NonNull final StateMetadata<?, ?> md,
             @NonNull final Supplier<T> nodeSupplier,
-            @NonNull final Consumer<T> nodeInitializer) {
-        initializeState(md);
-    }
+            @NonNull final Consumer<T> nodeInitializer);
 
     /**
      * Unregister a service without removing its nodes from the state.

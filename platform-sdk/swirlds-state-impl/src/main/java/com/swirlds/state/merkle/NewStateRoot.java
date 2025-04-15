@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.hedera.node.app;
+package com.swirlds.state.merkle;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
@@ -17,10 +17,9 @@ import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StateMetadata;
-import com.swirlds.state.merkle.MerkleRootSnapshotMetrics;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
 import com.swirlds.state.merkle.disk.OnDiskReadableQueueState;
 import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
@@ -57,13 +56,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.model.crypto.DigestType;
 import org.hiero.consensus.model.crypto.Hash;
 
-public class NewStateRoot implements MerkleNodeState {
+public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     private static final Logger logger = LogManager.getLogger(NewStateRoot.class);
 
@@ -107,20 +108,26 @@ public class NewStateRoot implements MerkleNodeState {
 
     public NewStateRoot(@NonNull final Configuration configuration) {
         this.configuration = requireNonNull(configuration);
+        final String virtualMapLabel;
+        final MerkleDbDataSourceBuilder dsBuilder;
 
-        // Config constant (TODO: move to config)
-        long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
+        try {
+            // Config constant (TODO: move to config)
+            long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
 
-        final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
-        final var tableConfig = new MerkleDbTableConfig(
-                (short) 1,
-                DigestType.SHA_384,
-                // Future work: drop StateDefinition.maxKeysHint and load VM size
-                // from VirtualMapConfig.size instead
-                MEGA_MAP_MAX_KEYS_HINT,
-                merkleDbConfig.hashesRamToDiskThreshold());
-        final var virtualMapLabel = "VirtualMap";
-        final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
+            final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
+            final var tableConfig = new MerkleDbTableConfig(
+                    (short) 1,
+                    DigestType.SHA_384,
+                    // Future work: drop StateDefinition.maxKeysHint and load VM size
+                    // from VirtualMapConfig.size instead
+                    MEGA_MAP_MAX_KEYS_HINT,
+                    merkleDbConfig.hashesRamToDiskThreshold());
+            virtualMapLabel = "VirtualMap";
+            dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         this.virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
     }
@@ -134,7 +141,7 @@ public class NewStateRoot implements MerkleNodeState {
      *
      * @param from The other state to fast-copy from. Cannot be null.
      */
-    protected NewStateRoot(@NonNull final NewStateRoot from) {
+    protected NewStateRoot(@NonNull final NewStateRoot<T> from) {
         this.virtualMap = from.virtualMap.copy();
 
         this.roundSupplier = from.roundSupplier;
@@ -176,14 +183,6 @@ public class NewStateRoot implements MerkleNodeState {
         this.roundSupplier = roundSupplier;
 
         this.virtualMap.registerMetrics(metrics);
-    }
-
-    // State interface impl
-
-    @Override
-    public boolean release() {
-        virtualMap.release();
-        return true;
     }
 
     // State interface impl
@@ -232,9 +231,13 @@ public class NewStateRoot implements MerkleNodeState {
      */
     @NonNull
     @Override
-    public NewStateRoot copy() {
-        return new NewStateRoot(this);
+    public T copy() {
+        return copyingConstructor();
     }
+
+    protected abstract T copyingConstructor();
+
+    protected abstract T newInstance(@NonNull final VirtualMap virtualMap);
 
     @Override
     @Nullable
@@ -248,8 +251,23 @@ public class NewStateRoot implements MerkleNodeState {
     }
 
     @Override
+    public boolean isMutable() {
+        return virtualMap.isMutable();
+    }
+
+    @Override
     public boolean isImmutable() {
         return virtualMap.isImmutable();
+    }
+
+    @Override
+    public boolean isDestroyed() {
+        return virtualMap.isDestroyed();
+    }
+
+    public boolean release() {
+        virtualMap.release();
+        return true;
     }
 
     /**
@@ -259,7 +277,7 @@ public class NewStateRoot implements MerkleNodeState {
     public void computeHash() {
         requireNonNull(
                 merkleCryptography,
-                "MerkleStateRoot has to be initialized before hashing. merkleCryptography is not set.");
+                "NewStateRoot has to be initialized before hashing. merkleCryptography is not set.");
         virtualMap.throwIfMutable("Hashing should only be done on immutable states");
         virtualMap.throwIfDestroyed("Hashing should not be done on destroyed states");
         if (getHash() != null) {
@@ -293,15 +311,27 @@ public class NewStateRoot implements MerkleNodeState {
      * {@inheritDoc}
      */
     @Override
-    public MerkleNodeState loadSnapshot(@NonNull Path targetPath) throws IOException {
-        requireNonNull(configuration);
-        return (MerkleNodeState) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
+    public T loadSnapshot(@NonNull Path targetPath) throws IOException {
+        final MerkleNode root = MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
                 .stateRoot();
+        if (!(root instanceof VirtualMap readVirtualMap)) {
+            throw new IllegalStateException(
+                    "Root should be a VirtualMap, but it is " + root.getClass().getSimpleName() + " instead");
+        }
+
+        final var mutableCopy = readVirtualMap.copy();
+        if (metrics != null) {
+            mutableCopy.registerMetrics(metrics);
+        }
+        readVirtualMap.release();
+
+        readVirtualMap = mutableCopy;
+
+        return newInstance(readVirtualMap);
     }
 
     // Getters and setters
 
-    @Override
     public MerkleNode getRoot() {
         return virtualMap;
     }
@@ -335,6 +365,16 @@ public class NewStateRoot implements MerkleNodeState {
 
     // State API related ops
 
+    // Should be removed once the MerkleStateRoot is removed along with putServiceStateIfAbsent in
+    // MerkleNodeState interface
+    @Deprecated
+    public <T extends MerkleNode> void putServiceStateIfAbsent(
+            @NonNull final StateMetadata<?, ?> md,
+            @NonNull final Supplier<T> nodeSupplier,
+            @NonNull final Consumer<T> nodeInitializer) {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Initializes the defined service state.
      *
@@ -354,8 +394,8 @@ public class NewStateRoot implements MerkleNodeState {
 
         // We also need to add/update the metadata of the service in the writableStatesMap so that
         // it isn't stale or incomplete (e.g. in a genesis case)
-        readableStatesMap.put(serviceName, new NewStateRoot.MerkleReadableStates(stateMetadata));
-        writableStatesMap.put(serviceName, new NewStateRoot.MerkleWritableStates(serviceName, stateMetadata));
+        readableStatesMap.put(serviceName, new MerkleReadableStates(stateMetadata));
+        writableStatesMap.put(serviceName, new MerkleWritableStates(serviceName, stateMetadata));
     }
 
     /**
@@ -376,7 +416,7 @@ public class NewStateRoot implements MerkleNodeState {
      * To prevent this and to allow the system to initialize all the services,
      * we unregister the PlatformStateService and RosterService after the validation is performed.
      *
-     * Note that unlike the MerkleStateRoot.removeServiceState() method below in this class,
+     * Note that unlike the NewStateRoot.removeServiceState() method below in this class,
      * the unregisterService() method will NOT remove the merkle nodes that store the states of
      * the services being unregistered. This is by design because these nodes will be used
      * by the actual service states once the app initializes the States API in full.

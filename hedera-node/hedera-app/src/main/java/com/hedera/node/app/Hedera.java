@@ -136,6 +136,7 @@ import com.swirlds.platform.system.state.notifications.StateHashedListener;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StartupNetworks;
+import com.swirlds.state.merkle.NewStateRoot;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.virtualmap.VirtualMap;
@@ -534,7 +535,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .forEach(servicesRegistry::register);
         try {
             consensusStateEventHandler = new ConsensusStateEventHandlerImpl(this);
-            final Supplier<MerkleNodeState> baseSupplier = () -> new NewStateRoot(platformConfig);
+            final Supplier<MerkleNodeState> baseSupplier = () -> new HederaNewStateRoot(platformConfig);
             final var blockStreamsEnabled = isBlockStreamEnabled();
             stateRootSupplier = blockStreamsEnabled ? () -> withListeners(baseSupplier.get()) : baseSupplier;
             onSealConsensusRound = blockStreamsEnabled ? this::manageBlockEndRound : (round, state) -> true;
@@ -590,7 +591,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
 
     @Override
     public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap() {
-        return NewStateRoot::new;
+        return HederaNewStateRoot::new;
     }
 
     /**

@@ -12,7 +12,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.primitives.ProtoString;
-import com.hedera.node.app.HederaStateRoot;
+import com.hedera.node.app.HederaNewStateRoot;
 import com.hedera.node.app.config.ConfigProviderImpl;
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
@@ -59,12 +59,12 @@ class DependencyMigrationTest extends MerkleTestBase {
 
     private ConfigProviderImpl configProvider;
 
-    private HederaStateRoot merkleTree;
+    private HederaNewStateRoot merkleTree;
 
     @BeforeEach
     void setUp() {
         registry = mock(ConstructableRegistry.class);
-        merkleTree = new HederaStateRoot();
+        merkleTree = new HederaNewStateRoot(CONFIGURATION);
         configProvider = new ConfigProviderImpl();
         storeMetricsService = new StoreMetricsServiceImpl(new NoOpMetrics());
     }

@@ -8,30 +8,36 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class StateTestBase extends TestBase {
-    protected static final String UNKNOWN_STATE_KEY = "BOGUS_STATE_KEY";
-    protected static final String UNKNOWN_KEY = "BOGUS_KEY";
-
-    public static final String FIRST_SERVICE = "First-Service";
-    public static final String SECOND_SERVICE = "Second-Service";
-    public static final String UNKNOWN_SERVICE = "Bogus-Service";
-
     public static final SemanticVersion TEST_VERSION =
             SemanticVersion.newBuilder().major(1).build();
 
-    protected static final int FRUIT_STATE_ID = 123;
-    protected static final int ANIMAL_STATE_ID = 234;
-    protected static final int COUNTRY_STATE_ID = 345;
-    protected static final int STEAM_STATE_ID = 456;
+    public static final String FIRST_SERVICE = "First-Service";
+
+    public static final String SECOND_SERVICE = "Second-Service";
+
+    public static final String UNKNOWN_SERVICE = "Bogus-Service";
+    protected static final String UNKNOWN_STATE_KEY = "BOGUS_STATE_KEY";
+    protected static final String UNKNOWN_KEY = "BOGUS_KEY";
+
     protected static final String FRUIT_SERVICE_NAME = "Plants";
     protected static final String FRUIT_STATE_KEY = "FRUIT";
+    protected static final int FRUIT_STATE_ID = 20123;
+
     protected static final String ANIMAL_SERVICE_NAME = "Organisms";
     protected static final String ANIMAL_STATE_KEY = "ANIMAL";
+    protected static final int ANIMAL_STATE_ID = 20234;
+
     protected static final String SPACE_SERVICE_NAME = "Universe";
     protected static final String SPACE_STATE_KEY = "SPACE";
+    protected static final int SPACE_STATE_ID = 20345;
+
     protected static final String STEAM_SERVICE_NAME = "Learning";
     protected static final String STEAM_STATE_KEY = "STEAM";
+    protected static final int STEAM_STATE_ID = 20456;
+
     public static final String COUNTRY_SERVICE_NAME = "Planets";
     public static final String COUNTRY_STATE_KEY = "COUNTRY";
+    protected static final int COUNTRY_STATE_ID = 20567;
 
     protected static final String A_KEY = "A";
     protected static final String B_KEY = "B";

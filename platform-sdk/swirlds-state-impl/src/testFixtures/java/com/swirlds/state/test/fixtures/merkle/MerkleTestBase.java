@@ -162,7 +162,32 @@ public class MerkleTestBase extends StateTestBase {
         stateUtilsMock = mockStatic(StateUtils.class, CALLS_REAL_METHODS);
         stateUtilsMock
                 .when(() -> StateUtils.stateIdFor(anyString(), anyString()))
-                .thenReturn(0);
+                .thenAnswer(invocation -> {
+                    try {
+                        //                         First, try calling the real method.
+                        return invocation.callRealMethod();
+                    } catch (Exception e) {
+                        // The real method couldn't find a valid mapping.
+                        final String serviceName = invocation.getArgument(0);
+                        final String stateKey = invocation.getArgument(1);
+
+                        // Check for test-specific "made up" states.
+                        if (FRUIT_SERVICE_NAME.equals(serviceName) || FRUIT_STATE_KEY.equals(stateKey)) {
+                            return FRUIT_STATE_ID;
+                        } else if (ANIMAL_SERVICE_NAME.equals(serviceName) || ANIMAL_STATE_KEY.equals(stateKey)) {
+                            return ANIMAL_STATE_ID;
+                        } else if (SPACE_SERVICE_NAME.equals(serviceName) || SPACE_STATE_KEY.equals(stateKey)) {
+                            return SPACE_STATE_ID;
+                        } else if (STEAM_SERVICE_NAME.equals(serviceName) || STEAM_STATE_KEY.equals(stateKey)) {
+                            return STEAM_STATE_ID;
+                        } else if (COUNTRY_SERVICE_NAME.equals(serviceName) || COUNTRY_STATE_KEY.equals(stateKey)) {
+                            return COUNTRY_STATE_ID;
+                        } else {
+                            // Neither the real method nor any test mappings applied.
+                            return 65000;
+                        }
+                    }
+                });
     }
 
     /** Sets up the "Fruit" merkle map, label, and metadata. */
@@ -322,7 +347,7 @@ public class MerkleTestBase extends StateTestBase {
     }
 
     @AfterAll
-    static void cleanup() {
+    static void cleanUpStaticMocks() {
         stateUtilsMock.close();
     }
 }

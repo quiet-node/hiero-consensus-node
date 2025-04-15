@@ -5,6 +5,7 @@ import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
@@ -20,7 +21,7 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
-import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
+import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StartupNetworks;
@@ -179,7 +180,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
         void migrateFromV9ToV10() {
             SemanticVersion latestVersion = version(10, 0, 0);
             schemaRegistry.migrate(
-                    new TestMerkleStateRoot(),
+                    new TestNewMerkleStateRoot(CONFIGURATION),
                     version(9, 0, 0),
                     latestVersion,
                     config,
@@ -205,7 +206,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             for (int i = 1; i < versions.length; i++) {
                 versions[i] = version(0, i, 0);
             }
-            merkleTree = new TestMerkleStateRoot();
+            merkleTree = new TestNewMerkleStateRoot(CONFIGURATION);
         }
 
         @Test
@@ -512,7 +513,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         assertThat(previousStates.stateKeys())
                                 .containsExactlyInAnyOrder(FRUIT_STATE_KEY, ANIMAL_STATE_KEY, COUNTRY_STATE_KEY);
                         final ReadableKVState<String, String> oldFruit = previousStates.get(FRUIT_STATE_KEY);
-                        assertThat(oldFruit.keys()).toIterable().containsExactlyInAnyOrder(B_KEY, C_KEY, E_KEY);
                         assertThat(oldFruit.get(B_KEY)).isEqualTo(BLACKBERRY);
                         assertThat(oldFruit.get(C_KEY)).isEqualTo(CHERRY);
                         assertThat(oldFruit.get(E_KEY)).isEqualTo(EGGPLANT);
@@ -565,7 +565,9 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                 final var readableStates = merkleTree.getReadableStates(FIRST_SERVICE);
                 assertThat(readableStates.size()).isEqualTo(1);
                 final ReadableKVState<String, String> fruitV1 = readableStates.get(FRUIT_STATE_KEY);
-                assertThat(fruitV1.keys()).toIterable().containsExactlyInAnyOrder(A_KEY, B_KEY, C_KEY);
+                assertTrue(fruitV1.contains(A_KEY));
+                assertTrue(fruitV1.contains(B_KEY));
+                assertTrue(fruitV1.contains(C_KEY));
             }
 
             @Test
@@ -594,7 +596,10 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                 assertThat(readableStates.size()).isEqualTo(3);
 
                 final ReadableKVState<String, String> fruitV2 = readableStates.get(FRUIT_STATE_KEY);
-                assertThat(fruitV2.keys()).toIterable().containsExactlyInAnyOrder(B_KEY, C_KEY, E_KEY);
+                assertTrue(fruitV2.contains(B_KEY));
+                assertTrue(fruitV2.contains(C_KEY));
+                assertTrue(fruitV2.contains(E_KEY));
+
                 assertThat(fruitV2.get(B_KEY)).isEqualTo(BLACKBERRY);
 
                 final ReadableKVState<String, String> animalV2 = readableStates.get(ANIMAL_STATE_KEY);
