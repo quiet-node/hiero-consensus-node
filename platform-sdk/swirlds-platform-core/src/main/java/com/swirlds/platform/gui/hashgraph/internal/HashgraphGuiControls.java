@@ -200,7 +200,8 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
                                 - Non-famous witnesses are yellow\s
                                 - Famous witnesses are green\s
                                 - Undecided witnesses are red\s
-                                - The selected event is magenta\s
+                                - The selected event is magenta with green border\s
+                                - The parents of the selected event have magenta borders\s
                                 - The events the selected event can strongly see are cyan\s""")),
                 constr);
         constr.gridy++;

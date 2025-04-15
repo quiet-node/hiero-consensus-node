@@ -157,9 +157,9 @@ public class HashgraphPicture extends JPanel {
             if (!selectedEvents.isEmpty()) {
                 final EventImpl selectedEvent = selectedEvents.getFirst();
                 if (selectedEvent != null) {
-                    // if we have a selected event draw it last, so that all labels and lines connected to it can be
-                    // easily
-                    // seen
+                    // if we have a selected event draw the circle and its parent links last, so that all labels and
+                    // lines connected to it can be easily seen
+                    drawLinksToParents(g, selectedEvent);
                     drawEventCircle(g, selectedEvent, options, d);
                 }
             }
@@ -168,8 +168,27 @@ public class HashgraphPicture extends JPanel {
         }
     }
 
+    private void drawBorderAroundParentOfSelectedEvent(final Graphics g, final int d, final EventImpl event) {
+        final Color currentColor = g.getColor();
+        final int xPos =
+                pictureMetadata.xpos(event.getOtherParent() != null ? event.getOtherParent() : event, event) - d / 2;
+        final int yPos = pictureMetadata.ypos(event) - d / 2;
+
+        drawBorderAroundEventCircle(g, xPos, yPos, Color.MAGENTA);
+        drawEventCircle(g, event, options, d);
+        g.setColor(currentColor);
+    }
+
+    private void drawBorderAroundEventCircle(
+            final Graphics g, final int xPos, final int yPos, final Color borderColor) {
+        final int d = pictureMetadata.getD();
+        g.setColor(borderColor);
+        g.fillOval(xPos - 5, yPos - 5, d + 10, d + 10);
+    }
+
     private void drawLinksToParents(final Graphics g, final EventImpl event) {
-        Graphics2D g2d = (Graphics2D) g;
+        final int d = pictureMetadata.getD();
+        final Graphics2D g2d = (Graphics2D) g;
         Stroke savedStroke = null;
         g.setColor(HashgraphGuiUtils.eventColor(event, options));
         boolean selectedLines = selector.isSelected(event);
@@ -196,6 +215,10 @@ public class HashgraphPicture extends JPanel {
                     pictureMetadata.ypos(event),
                     pictureMetadata.xpos(e2, e1),
                     pictureMetadata.ypos(e1));
+
+            if (selectedLines) {
+                drawBorderAroundParentOfSelectedEvent(g, d, e1);
+            }
         }
         if (e2 != null && e2.getGeneration() >= pictureMetadata.getMinGen()) {
             g.drawLine(
@@ -203,6 +226,10 @@ public class HashgraphPicture extends JPanel {
                     pictureMetadata.ypos(event),
                     pictureMetadata.xpos(event, e2),
                     pictureMetadata.ypos(e2));
+
+            if (selectedLines) {
+                drawBorderAroundParentOfSelectedEvent(g, d, e2);
+            }
         }
 
         if (selectedLines) {
@@ -235,17 +262,7 @@ public class HashgraphPicture extends JPanel {
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
         if (selector.isSelected(event)) {
-            final Color selectionBorder = Color.GREEN;
-            g.setColor(selectionBorder);
-            g.fillOval(xPos - 5, yPos - 5, d + 10, d + 10);
-
-            // draw lines to parents for a branched event last, so that they can be clearly seen
-            if (hashgraphSource
-                    .getEventStorage()
-                    .getBranchedEventsMetadata()
-                    .containsKey(event.getBaseEvent().getGossipEvent())) {
-                drawLinksToParents(g, event);
-            }
+            drawBorderAroundEventCircle(g, xPos, yPos, Color.GREEN);
         }
 
         g.setColor(color);
