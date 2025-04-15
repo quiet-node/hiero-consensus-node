@@ -38,9 +38,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BlockNodeConnectionManagerTest {
     private static final Duration INITIAL_DELAY = Duration.ofMillis(10);
 
-    @LoggingSubject
-    private BlockNodeConnectionManager blockNodeConnectionManager;
-
     @LoggingTarget
     private LogCaptor logCaptor;
 
