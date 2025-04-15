@@ -126,6 +126,20 @@ public class BlockNodeConnectionManager {
         }
     }
 
+    public void forgetConnection(@NonNull final BlockNodeConnection connection) {
+        synchronized (connectionLock) {
+            final BlockNodeConfig nodeConfig = connection.getNodeConfig();
+            logger.warn(
+                    "Connection for {} block node has exceeded the maximum number of end of stream retries.",
+                    blockNodeName(nodeConfig));
+            connectionsInRetry.remove(nodeConfig);
+
+            // Remove the connection from the blockNodeConfigurations list, so that establishConnection() doesn't try to
+            // connect to it again
+            blockNodeConfigurations.getAllNodes().remove(nodeConfig);
+        }
+    }
+
     /**
      * Schedules a retry for the given Block Node connection.
      *

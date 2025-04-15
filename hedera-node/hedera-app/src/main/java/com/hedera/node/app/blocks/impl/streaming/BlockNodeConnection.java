@@ -25,6 +25,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
+    private static final int MAX_END_OF_STREAM_RETRIES = 10;
     private final ScheduledExecutorService scheduler;
 
     private final BlockNodeConfig blockNodeConfig;
@@ -42,6 +43,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final AtomicBoolean streamCompletionInProgress = new AtomicBoolean(false);
     private final AtomicLong currentBlockNumber = new AtomicLong(-1);
     private final AtomicInteger currentRequestIndex = new AtomicInteger(0);
+    private final AtomicInteger endOfStreamCount = new AtomicInteger(0);
 
     // Notification objects
     private final Object newBlockAvailable = new Object();
@@ -361,6 +363,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
         // Always end the stream when we receive an end of stream message
         close();
+
+        if (endOfStreamCount.incrementAndGet() > MAX_END_OF_STREAM_RETRIES) {
+            blockNodeConnectionManager.forgetConnection(this);
+        }
 
         switch (responseCode) {
             case STREAM_ITEMS_INTERNAL_ERROR, STREAM_ITEMS_PERSISTENCE_FAILED -> {
