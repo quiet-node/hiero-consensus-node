@@ -2,7 +2,6 @@
 package com.swirlds.platform.test.fixtures.state;
 
 import static com.swirlds.platform.test.fixtures.PlatformStateUtils.randomPlatformState;
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 
 import com.swirlds.common.test.fixtures.crypto.CryptoRandomUtils;
@@ -18,9 +17,10 @@ public class SignedStateUtils {
         return randomSignedState(new Random(seed));
     }
 
+    // FUTURE WORK: use TestNewMerkleStateRoot
     public static SignedState randomSignedState(Random random) {
         TestPlatformStateFacade platformStateFacade = new TestPlatformStateFacade();
-        MerkleNodeState root = new TestNewMerkleStateRoot(CONFIGURATION);
+        MerkleNodeState root = new TestMerkleStateRoot();
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(root);
         randomPlatformState(random, root, platformStateFacade);
         boolean shouldSaveToDisk = random.nextBoolean();

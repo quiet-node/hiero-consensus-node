@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state;
 
-import static com.swirlds.platform.test.fixtures.config.ConfigUtils.CONFIGURATION;
-
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.test.fixtures.merkle.util.MerkleTestUtils;
 import com.swirlds.config.api.Configuration;
@@ -10,10 +8,6 @@ import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.platform.test.fixtures.state.SignedStateUtils;
-import com.swirlds.virtualmap.config.VirtualMapConfig;
-import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
-import com.swirlds.virtualmap.test.fixtures.InMemoryBuilder;
-import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
@@ -31,10 +25,6 @@ public class SignedStateSynchronizationTests {
     static void setUp() throws ConstructableRegistryException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
-        registry.registerConstructable(new ClassConstructorPair(
-                VirtualRootNode.class,
-                () -> new VirtualRootNode(new InMemoryBuilder(), CONFIGURATION.getConfigData(VirtualMapConfig.class))));
-
         FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
     }
 
