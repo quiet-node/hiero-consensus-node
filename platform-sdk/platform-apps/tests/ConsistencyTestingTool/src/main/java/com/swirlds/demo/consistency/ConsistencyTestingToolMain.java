@@ -5,6 +5,7 @@ import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.constructable.ClassConstructorPair;
@@ -12,9 +13,7 @@ import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.service.PlatformStateFacade;
-import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.SwirldMain;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -32,10 +31,8 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
 
     private static final Logger logger = LogManager.getLogger(ConsistencyTestingToolMain.class);
 
-    /**
-     * The default software version of this application
-     */
-    private static final SoftwareVersion softwareVersion = new BasicSoftwareVersion(1);
+    private static final SemanticVersion semanticVersion =
+            SemanticVersion.newBuilder().major(1).build();
 
     static {
         try {
@@ -121,9 +118,9 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
      */
     @Override
     @NonNull
-    public SoftwareVersion getSoftwareVersion() {
-        logger.info(STARTUP.getMarker(), "returning software version {}", softwareVersion);
-        return softwareVersion;
+    public SemanticVersion getSemanticVersion() {
+        logger.info(STARTUP.getMarker(), "returning software version {}", semanticVersion);
+        return semanticVersion;
     }
 
     /**

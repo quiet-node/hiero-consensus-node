@@ -36,7 +36,6 @@ import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.address.AddressBookInitializer;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.address.Address;
 import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
@@ -83,7 +82,6 @@ class AddressBookInitializerTest {
         final SignedState signedState = getMockSignedState7WeightRandomAddressBook(randotron);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(2),
                 // no software upgrade
                 false,
                 signedState,
@@ -115,7 +113,6 @@ class AddressBookInitializerTest {
         final SignedState signedState = getMockSignedState(10, null, null, true);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(2),
                 // no software upgrade
                 false,
                 signedState,
@@ -144,7 +141,6 @@ class AddressBookInitializerTest {
         final SignedState signedState = getMockSignedState(10, null, null, true);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(2),
                 // no software upgrade
                 false,
                 signedState,
@@ -173,7 +169,6 @@ class AddressBookInitializerTest {
         final SignedState signedState = getMockSignedState(7, roster, null, true);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(2),
                 // no software upgrade
                 false,
                 signedState,
@@ -205,7 +200,6 @@ class AddressBookInitializerTest {
         final AddressBook configAddressBook = copyWithWeightChanges(buildAddressBook(signedState.getRoster()), 10);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(2),
                 // no software upgrade
                 false,
                 signedState,
@@ -252,7 +246,6 @@ class AddressBookInitializerTest {
         final AddressBook configAddressBook = copyWithWeightChanges(buildAddressBook(roster), 10);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(3),
                 // software upgrade
                 true,
                 signedState,
@@ -285,7 +278,6 @@ class AddressBookInitializerTest {
         final AddressBook configAddressBook = copyWithWeightChanges(signedStateAddressBook, 3);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(3),
                 // software upgrade
                 true,
                 signedState,
@@ -316,7 +308,6 @@ class AddressBookInitializerTest {
         final AddressBook configAddressBook = copyWithWeightChanges(signedStateAddressBook, 5);
         final AddressBookInitializer initializer = new AddressBookInitializer(
                 NodeId.of(0),
-                getMockSoftwareVersion(3),
                 // software upgrade
                 true,
                 signedState,
@@ -380,24 +371,8 @@ class AddressBookInitializerTest {
      * @param version the integer software version.
      * @return the SoftwareVersion matching the input version.
      */
-    private SoftwareVersion getMockSoftwareVersion(int version) {
-        final SoftwareVersion softwareVersion = mock(SoftwareVersion.class);
-        when(softwareVersion.getVersion()).thenReturn(version);
-        final AtomicReference<SoftwareVersion> softVersion = new AtomicReference<>();
-        when(softwareVersion.compareTo(argThat(sv -> {
-                    softVersion.set(sv);
-                    return true;
-                })))
-                .thenAnswer(i -> {
-                    SoftwareVersion other = softVersion.get();
-                    if (other == null) {
-                        return 1;
-                    } else {
-                        return Integer.compare(softwareVersion.getVersion(), other.getVersion());
-                    }
-                });
-        when(softwareVersion.toString()).thenReturn(Integer.toString(version));
-        return softwareVersion;
+    private SemanticVersion getMockSoftwareVersion(int version) {
+        return SemanticVersion.newBuilder().minor(version).build();
     }
 
     /**
@@ -427,7 +402,7 @@ class AddressBookInitializerTest {
             @Nullable final AddressBook previousAddressBook,
             boolean fromGenesis) {
         final SignedState signedState = mock(SignedState.class);
-        final SemanticVersion softwareVersion = getMockSoftwareVersion(2).getPbjSemanticVersion();
+        final SemanticVersion softwareVersion = getMockSoftwareVersion(2);
         configureUpdateWeightForStateEventHandler(weightValue);
         final MerkleNodeState state = mock(MerkleNodeState.class);
         final ReadableStates readableStates = mock(ReadableStates.class);

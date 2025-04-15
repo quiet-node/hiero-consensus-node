@@ -8,11 +8,11 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.LongStream;
+import org.hiero.base.utility.CommonUtils;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.EventConstants;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusConstants;
-import org.hiero.consensus.model.utility.CommonUtils;
 
 /**
  * Utility class for generating "synthetic" snapshots
@@ -48,7 +48,7 @@ public final class SyntheticSnapshot {
             @NonNull final PlatformEvent judge) {
         final List<MinimumJudgeInfo> minimumJudgeInfos = LongStream.range(
                         RoundCalculationUtils.getOldestNonAncientRound(config.roundsNonAncient(), round), round + 1)
-                .mapToObj(r -> new MinimumJudgeInfo(r, judge.getAncientIndicator(ancientMode)))
+                .mapToObj(r -> new MinimumJudgeInfo(r, ancientMode.selectIndicator(judge)))
                 .toList();
         return ConsensusSnapshot.newBuilder()
                 .round(round)
