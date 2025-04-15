@@ -154,20 +154,30 @@ public class BlockNodeConnectionManager {
     public void scheduleRetry(@NonNull final BlockNodeConnection connection) {
         requireNonNull(connection);
 
+
+        logger.info("[{}] Checking if in retry: {}", Thread.currentThread().getName(),
+                blockNodeName(connection.getNodeConfig()));
         // Avoid duplicate retry attempts
-        synchronized (connectionLock) {
-            if (isRetrying(connection)) {
-                logger.info("Already in retry: {}", blockNodeName(connection.getNodeConfig()));
-                return;
-            }
+        if (isRetrying(connection)) {
+            logger.info("[{}] Already in retry: {}", Thread.currentThread().getName(),
+                    blockNodeName(connection.getNodeConfig()));
+            return;
         }
 
+        logger.debug("[{}] Scheduling retry for block node {} in {} ms",
+                Thread.currentThread().getName(),
+                blockNodeName(connection.getNodeConfig()),
+                INITIAL_RETRY_DELAY.toMillis());
         retryExecutor.execute(() -> {
             try {
                 retry(
                         () -> {
+                            logger.info("[{}] Retrying connection to block node {}",
+                                    Thread.currentThread().getName(),
+                                    blockNodeName(connection.getNodeConfig()));
                             connection.updateConnectionState(BlockNodeConnection.ConnectionState.RETRYING);
                             connection.establishStream();
+                            connectionsInRetry.remove(connection.getNodeConfig());
                             synchronized (connectionLock) {
                                 updateIfHighest(connection);
                             }
@@ -270,9 +280,12 @@ public class BlockNodeConnectionManager {
     public void openBlock(long blockNumber) {
         synchronized (connectionLock) {
             // Identify the currently-active connection
+            logger.debug("[{}] openBlock:: Active Connection: {}",
+                    Thread.currentThread().getName(), activeConnection);
             final BlockNodeConnection connection = getActiveConnection().orElse(null);
             if (connection == null) {
-                logger.warn("No active connections available for streaming block {}", blockNumber);
+                logger.warn("[{}] No active connections available for streaming block {}",
+                        Thread.currentThread().getName(), blockNumber);
                 return;
             }
 
@@ -294,7 +307,8 @@ public class BlockNodeConnectionManager {
         synchronized (connectionLock) {
             final BlockNodeConnection connection = getActiveConnection().orElse(null);
             if (connection == null) {
-                logger.warn("No active connections available for streaming new request");
+                logger.warn("[{}] No active connections available for streaming new request",
+                        Thread.currentThread().getName());
                 return;
             }
 
@@ -314,7 +328,8 @@ public class BlockNodeConnectionManager {
      */
     @VisibleForTesting
     void establishConnection() {
-        logger.info("Establishing connection to block node based on priorities");
+        logger.info("[{}] Establishing connection to block node based on priorities",
+                Thread.currentThread().getName());
         List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
 
         final Map<Integer, List<BlockNodeConfig>> priorityGroups =
@@ -347,6 +362,9 @@ public class BlockNodeConnectionManager {
                 break;
             }
         }
+        logger.debug("[{}] Selected block node {} for connection",
+                Thread.currentThread().getName(),
+                blockNodeName(selectedNode));
         if (selectedNode == null) {
             // This could be the case where all the configured block nodes are in retry
             // we check if the highest priority from the retried once is ready, and start streaming to ti
