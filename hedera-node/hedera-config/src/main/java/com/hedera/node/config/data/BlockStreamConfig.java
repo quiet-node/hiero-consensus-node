@@ -17,6 +17,8 @@ import java.time.Duration;
  * @param blockFileDir directory to store block files
  * @param hashCombineBatchSize the number of items to hash in a batch
  * @param roundsPerBlock the number of rounds per block
+ * @param blockPeriod the block period
+ * @param blockItemBatchSize the number of items to send in a batch to block nodes
  */
 @ConfigData("blockStream")
 public record BlockStreamConfig(
@@ -25,7 +27,8 @@ public record BlockStreamConfig(
         @ConfigProperty(defaultValue = "/opt/hgcapp/blockStreams") @NodeProperty String blockFileDir,
         @ConfigProperty(defaultValue = "32") @NetworkProperty int hashCombineBatchSize,
         @ConfigProperty(defaultValue = "1") @NetworkProperty int roundsPerBlock,
-        @ConfigProperty(defaultValue = "2s") @Min(0) @NetworkProperty Duration blockPeriod) {
+        @ConfigProperty(defaultValue = "2s") @Min(0) @NetworkProperty Duration blockPeriod,
+        @ConfigProperty(defaultValue = "256") @Min(0) @NetworkProperty int blockItemBatchSize) {
 
     /**
      * Whether to stream to block nodes.

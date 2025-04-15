@@ -92,7 +92,6 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private static final String SHARED_NETWORK_NAME = "SHARED_NETWORK";
     private static final GrpcPinger GRPC_PINGER = new GrpcPinger();
     private static final PrometheusClient PROMETHEUS_CLIENT = new PrometheusClient();
-    private static final int DEFAULT_BLOCK_ITEM_BATCH_SIZE = 256;
 
     private static int nextGrpcPort;
     private static int nextNodeOperatorPort;
@@ -355,8 +354,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             // Create block node config for this container
             List<BlockNodeConfig> blockNodes = List.of(new BlockNodeConfig("127.0.0.1", 8080, 1));
 
-            BlockNodeConnectionInfo connectionInfo =
-                    new BlockNodeConnectionInfo(blockNodes, DEFAULT_BLOCK_ITEM_BATCH_SIZE);
+            BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(blockNodes);
 
             // Write the config to this consensus node's block-nodes.json
             Path configPath = node.getExternalPath(DATA_CONFIG_DIR).resolve("block-nodes.json");
@@ -375,8 +373,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             List<BlockNodeConfig> blockNodes =
                     List.of(new BlockNodeConfig(container.getHost(), container.getGrpcPort(), 1));
 
-            BlockNodeConnectionInfo connectionInfo =
-                    new BlockNodeConnectionInfo(blockNodes, DEFAULT_BLOCK_ITEM_BATCH_SIZE);
+            BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(blockNodes);
 
             // Write the config to this consensus node's block-nodes.json
             Path configPath = node.getExternalPath(DATA_CONFIG_DIR).resolve("block-nodes.json");
@@ -397,8 +394,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             List<BlockNodeConfig> blockNodes = new ArrayList<>();
             blockNodes.add(new BlockNodeConfig("localhost", sim.getPort(), 1));
 
-            BlockNodeConnectionInfo connectionInfo =
-                    new BlockNodeConnectionInfo(blockNodes, DEFAULT_BLOCK_ITEM_BATCH_SIZE);
+            BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(blockNodes);
 
             // Write the config to this consensus node's block-nodes.json
             Path configPath = node.getExternalPath(DATA_CONFIG_DIR).resolve("block-nodes.json");
