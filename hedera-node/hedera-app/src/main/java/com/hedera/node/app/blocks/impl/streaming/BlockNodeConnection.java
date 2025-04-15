@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
+import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.stub.StreamObserver;
@@ -27,6 +28,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final GrpcServiceClient grpcServiceClient;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
+    private final BlockStreamMetrics blockStreamMetrics;
     private final String connectionDescriptor;
 
     // Locks and synchronization objects
@@ -55,18 +57,21 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param blockNodeConnectionManager the connection manager for block node connections
      * @param blockStreamStateManager the block stream state manager for block node connections
      * @param grpcServiceClient the gRPC client to establish the bidirectional streaming to block node connections
+     * @param blockStreamMetrics the block stream metrics for block node connections
      */
     public BlockNodeConnection(
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager,
-            @NonNull final GrpcServiceClient grpcServiceClient) {
+            @NonNull final GrpcServiceClient grpcServiceClient,
+            @NonNull final BlockStreamMetrics blockStreamMetrics) {
         this.blockNodeConfig = requireNonNull(nodeConfig, "nodeConfig must not be null");
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
+        this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
         this.connectionDescriptor = generateConnectionDescriptor(nodeConfig);
     }
 
@@ -567,13 +572,16 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         if (response.hasAcknowledgement()) {
             handleAcknowledgement(response.acknowledgement());
         } else if (response.hasEndStream()) {
+            blockStreamMetrics.incrementEndOfStreamCount(response.endStream().status()); // Remove nodeId
             handleEndOfStream(response.endStream());
         } else if (response.hasSkipBlock()) {
+            blockStreamMetrics.incrementSkipBlockCount();
             logger.debug(
                     "Received SkipBlock from block node {}  Block #{}",
                     connectionDescriptor,
                     response.skipBlock().blockNumber());
         } else if (response.hasResendBlock()) {
+            blockStreamMetrics.incrementResendBlockCount();
             handleResendBlock(response.resendBlock());
         }
     }

@@ -6,6 +6,7 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -57,6 +58,7 @@ public class BlockNodeConnectionManager {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
             Thread.ofVirtual().factory()); // Use virtual threads for scheduler too
     private final ExecutorService streamingExecutor = Executors.newSingleThreadExecutor();
+    private final BlockStreamMetrics blockStreamMetrics;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -65,13 +67,15 @@ public class BlockNodeConnectionManager {
      */
     public BlockNodeConnectionManager(
             @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
-            @NonNull final BlockStreamStateManager blockStreamStateManager) {
+            @NonNull final BlockStreamStateManager blockStreamStateManager,
+            @NonNull final BlockStreamMetrics blockStreamMetrics) {
         this.blockNodeConfigurations =
                 requireNonNull(blockNodeConfigExtractor, "blockNodeConfigExtractor must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.activeConnections = new ConcurrentHashMap<>();
         this.lastVerifiedBlockPerConnection = new ConcurrentHashMap<>();
+        this.blockStreamMetrics = blockStreamMetrics;
     }
 
     /**
@@ -115,7 +119,7 @@ public class BlockNodeConnectionManager {
             try {
                 final GrpcServiceClient grpcClient = createNewGrpcClient(node);
                 final BlockNodeConnection connection =
-                        new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient);
+                        new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient, blockStreamMetrics);
                 connection.establishStream();
                 connection.getIsActiveLock().lock();
                 try {
