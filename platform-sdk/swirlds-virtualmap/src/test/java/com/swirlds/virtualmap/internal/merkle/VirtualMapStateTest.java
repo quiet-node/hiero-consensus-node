@@ -2,8 +2,8 @@
 package com.swirlds.virtualmap.internal.merkle;
 
 import static com.swirlds.virtualmap.internal.merkle.VirtualMapState.MAX_LABEL_CHARS;
-import static org.hiero.consensus.utility.test.fixtures.RandomUtils.nextInt;
-import static org.hiero.consensus.utility.test.fixtures.RandomUtils.randomString;
+import static org.hiero.base.utility.test.fixtures.RandomUtils.nextInt;
+import static org.hiero.base.utility.test.fixtures.RandomUtils.randomString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;

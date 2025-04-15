@@ -55,13 +55,7 @@ class ReconnectHashListenerTest {
     void goodLeafPaths() {
         final ReconnectHashLeafFlusher flusher = mock(ReconnectHashLeafFlusher.class);
         try {
-            new ReconnectHashListener(
-                    firstLeafPath,
-                    lastLeafPath,
-                    ds,
-                    VIRTUAL_MAP_CONFIG.reconnectFlushInterval(),
-                    statistics,
-                    nodeRemover);
+            new ReconnectHashListener(flusher);
         } catch (Exception e) {
             fail("Should have been able to create the instance", e);
         }
