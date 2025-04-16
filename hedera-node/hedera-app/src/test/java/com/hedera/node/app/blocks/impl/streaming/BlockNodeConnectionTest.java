@@ -90,7 +90,12 @@ class BlockNodeConnectionTest {
         when(blockNodeConfig.port()).thenReturn(TEST_PORT);
 
         connection = new BlockNodeConnection(
-                blockNodeConfig, connectionManager, blockStreamStateManager, grpcServiceClient, scheduler, blockStreamMetrics);
+                blockNodeConfig,
+                connectionManager,
+                blockStreamStateManager,
+                grpcServiceClient,
+                scheduler,
+                blockStreamMetrics);
 
         // Set requestObserver via reflection to avoid establishing an actual gRPC connection
         Field requestObserverField = BlockNodeConnection.class.getDeclaredField("requestObserver");
@@ -162,7 +167,7 @@ class BlockNodeConnectionTest {
 
         // Verify log messages
         final String expectedWaitingLog =
-                "[] Waiting for new block to be available for node " + TEST_CONNECTION_DESCRIPTOR;
+                "Waiting for new block to be available for node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
@@ -235,7 +240,7 @@ class BlockNodeConnectionTest {
 
         // Verify log messages indicate waiting for a new block
         final String expectedWaitingLog =
-                "[] Waiting for new block to be available for node " + TEST_CONNECTION_DESCRIPTOR;
+                "Waiting for new block to be available for node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
                 "Expected log message not found: " + expectedWaitingLog);
@@ -306,11 +311,11 @@ class BlockNodeConnectionTest {
 
         // Verify log messages indicate waiting for new requests
         final String expectedProcessingLog =
-                "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_CONNECTION_DESCRIPTOR;
+                "Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
                 "Expected log message not found: " + expectedProcessingLog);
-        final String expectedWaitingLog = "[] Waiting for new requests to be available for block " + TEST_BLOCK_NUMBER
+        final String expectedWaitingLog = "Waiting for new requests to be available for block " + TEST_BLOCK_NUMBER
                 + " on node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedWaitingLog)),
@@ -380,11 +385,11 @@ class BlockNodeConnectionTest {
 
         // Verify log messages indicate processing of requests
         final String expectedProcessingLog =
-                "[] Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_CONNECTION_DESCRIPTOR;
+                "Processing block " + TEST_BLOCK_NUMBER + " for node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedProcessingLog)),
                 "Expected log message not found: " + expectedProcessingLog);
-        final String expectedSendingLog = "[] Sending request for block " + TEST_BLOCK_NUMBER;
+        final String expectedSendingLog = "Sending request for block " + TEST_BLOCK_NUMBER;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedSendingLog)),
                 "Expected log message not found: " + expectedSendingLog);
@@ -453,11 +458,11 @@ class BlockNodeConnectionTest {
         verify(requestObserver, times(1)).onNext(any(PublishStreamRequest.class));
 
         // Verify log messages indicate moving to the next block
-        final String expectedSendingLog = "[] Sending request for block " + TEST_BLOCK_NUMBER;
+        final String expectedSendingLog = "Sending request for block " + TEST_BLOCK_NUMBER;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedSendingLog)),
                 "Expected log message not found: " + expectedSendingLog);
-        final String expectedCompletedLog = "[] Completed sending all requests for block " + TEST_BLOCK_NUMBER;
+        final String expectedCompletedLog = "Completed sending all requests for block " + TEST_BLOCK_NUMBER;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedCompletedLog)),
                 "Expected log message not found: " + expectedCompletedLog);
@@ -503,7 +508,7 @@ class BlockNodeConnectionTest {
         assertTrue(workerExited.get(), "Worker did not exit after InterruptedException");
 
         // Verify log messages for handling the InterruptedException
-        final String expectedErrorLog = "[] Request worker thread interrupted for node " + TEST_CONNECTION_DESCRIPTOR;
+        final String expectedErrorLog = "Request worker thread interrupted for node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
@@ -556,7 +561,7 @@ class BlockNodeConnectionTest {
         assertTrue(workerContinued.get(), "Worker did not continue after generic exception");
 
         // Verify log messages for handling the generic exception
-        final String expectedErrorLog = "[] Error in request worker thread for node " + TEST_CONNECTION_DESCRIPTOR;
+        final String expectedErrorLog = "Error in request worker thread for node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
@@ -611,7 +616,7 @@ class BlockNodeConnectionTest {
         assertTrue(requestIndexResetCalled.get(), "Request index was not reset after IndexOutOfBoundsException");
 
         // Verify log messages for handling the IndexOutOfBoundsException
-        final String expectedErrorLog = "[] Error in request worker thread for node " + TEST_CONNECTION_DESCRIPTOR;
+        final String expectedErrorLog = "Error in request worker thread for node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedErrorLog)),
                 "Expected log message not found: " + expectedErrorLog);
@@ -1202,7 +1207,7 @@ class BlockNodeConnectionTest {
         verify(connectionManager).handleConnectionError(connection);
 
         // Verify log messages for onError
-        final String expectedLog = "[] Error on stream from block node " + TEST_CONNECTION_DESCRIPTOR;
+        final String expectedLog = "Error on stream from block node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.errorLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);
@@ -1220,7 +1225,7 @@ class BlockNodeConnectionTest {
         verify(connectionManager).handleConnectionError(connection);
 
         // Verify log messages for onCompleted
-        final String expectedLog = "[] Stream completed for block node " + TEST_CONNECTION_DESCRIPTOR;
+        final String expectedLog = "Stream completed for block node " + TEST_CONNECTION_DESCRIPTOR;
         assertTrue(
                 logCaptor.debugLogs().stream().anyMatch(log -> log.contains(expectedLog)),
                 "Expected log message not found: " + expectedLog);

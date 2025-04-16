@@ -288,7 +288,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 // TODO
             } else if (mode == BlockNodeMode.SIMULATOR) {
                 SimulatedBlockNodeServer sim = simulatedBlockNodeById.get(blockNodeId);
-                int priority = (int) blockNodePrioritiesBySubProcessNodeId.get(node.getNodeId())[blockNodeId.intValue()];
+                int priority =
+                        (int) blockNodePrioritiesBySubProcessNodeId.get(node.getNodeId())[blockNodeId.intValue()];
                 // TODO Add Priority
                 blockNodes.add(new BlockNodeConfig("localhost", sim.getPort(), priority));
             } else if (mode == BlockNodeMode.LOCAL_NODE) {
@@ -296,9 +297,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
             }
         }
         if (!blockNodes.isEmpty()) {
-            BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(
-                    blockNodes
-                    );
+            BlockNodeConnectionInfo connectionInfo = new BlockNodeConnectionInfo(blockNodes);
             try {
                 // Write the config to this consensus node's block-nodes.json
                 Path configPath = node.getExternalPath(DATA_CONFIG_DIR).resolve("block-nodes.json");

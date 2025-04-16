@@ -136,6 +136,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     logger.debug("Stream to block node {} is ACTIVE", connectionDescriptor);
                     updateConnectionState(ConnectionState.ACTIVE);
                     startRequestWorker();
+                } else if (getConnectionState() == ConnectionState.RETRYING
+                        && blockNodeConnectionManager.getNextPriorityBlockNode() == null) {
+                    logger.debug(
+                            "No other priority connection available, making current stream to block node {} ACTIVE",
+                            connectionDescriptor);
+                    updateConnectionState(ConnectionState.ACTIVE);
+                    startRequestWorker();
                 }
             }
         }
