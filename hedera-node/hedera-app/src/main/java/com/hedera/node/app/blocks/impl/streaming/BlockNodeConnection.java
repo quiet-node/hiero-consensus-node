@@ -25,7 +25,8 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
-    private static final int MAX_END_OF_STREAM_RETRIES = 10;
+    private static final int MAX_END_OF_STREAM_RESTARTS = 3;
+    private static final int MAX_END_OF_STREAM_EXP_RETRIES = 10;
     private final ScheduledExecutorService scheduler;
 
     private final BlockNodeConfig blockNodeConfig;
@@ -43,7 +44,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final AtomicBoolean streamCompletionInProgress = new AtomicBoolean(false);
     private final AtomicLong currentBlockNumber = new AtomicLong(-1);
     private final AtomicInteger currentRequestIndex = new AtomicInteger(0);
-    private final AtomicInteger endOfStreamCount = new AtomicInteger(0);
+    private final AtomicInteger endOfStreamExpBackoffs = new AtomicInteger(0);
+    private final AtomicInteger endOfStreamImmediateRestarts = new AtomicInteger(0);
 
     // Notification objects
     private final Object newBlockAvailable = new Object();
@@ -363,10 +365,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         // Always end the stream when we receive an end of stream message
         close();
 
-        if (endOfStreamCount.incrementAndGet() > MAX_END_OF_STREAM_RETRIES) {
-            blockNodeConnectionManager.forgetConnection(this);
-        }
-
         switch (responseCode) {
             case STREAM_ITEMS_INTERNAL_ERROR, STREAM_ITEMS_PERSISTENCE_FAILED -> {
                 // The block node had an end of stream error and cannot continue processing.
@@ -378,7 +376,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         connectionDescriptor,
                         blockNumber);
 
-                handleEndOfStreamError();
+                if (endOfStreamExpBackoffs.incrementAndGet() <= MAX_END_OF_STREAM_EXP_RETRIES) {
+                    handleEndOfStreamError();
+                } else {
+                    blockNodeConnectionManager.forgetConnection(this);
+                }
             }
             case STREAM_ITEMS_SUCCESS,
                     STREAM_ITEMS_TIMEOUT,
@@ -393,7 +395,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         connectionDescriptor,
                         restartBlockNumber);
 
-                restartStreamAtBlock(restartBlockNumber);
+                if (endOfStreamImmediateRestarts.incrementAndGet() <= MAX_END_OF_STREAM_RESTARTS) {
+                    restartStreamAtBlock(restartBlockNumber);
+                } else {
+                    handleEndOfStreamError();
+                }
             }
             case STREAM_ITEMS_BEHIND -> {
                 // The block node is behind us, check if we have the last verified block still available in order to
@@ -405,7 +411,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                             Thread.currentThread().getName(),
                             connectionDescriptor,
                             restartBlockNumber);
-                    restartStreamAtBlock(restartBlockNumber);
+                    if (endOfStreamImmediateRestarts.incrementAndGet() <= MAX_END_OF_STREAM_RESTARTS) {
+                        restartStreamAtBlock(restartBlockNumber);
+                    } else {
+                        handleEndOfStreamError();
+                    }
                 } else {
                     // If we don't have the block state, we schedule retry for this connection and establish new one
                     // with different block node
@@ -413,7 +423,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                             "[{}] Block node {} is behind and block state is not available. Closing connection and retrying.",
                             Thread.currentThread().getName(),
                             connectionDescriptor);
-                    blockNodeConnectionManager.handleConnectionError(this);
+
+                    if (endOfStreamExpBackoffs.incrementAndGet() <= MAX_END_OF_STREAM_EXP_RETRIES) {
+                        blockNodeConnectionManager.handleConnectionError(this);
+                    } else {
+                        blockNodeConnectionManager.forgetConnection(this);
+                    }
                 }
             }
             case STREAM_ITEMS_UNKNOWN -> {
