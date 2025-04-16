@@ -43,7 +43,7 @@ class VirtualRootNodeHashingTest {
 
     @Test
     @Tag(TestComponentTags.VMAP)
-    @DisplayName("Hash Root With One Data  Entry")
+    @DisplayName("Hash Root With One Data Entry")
     void hashMapWithOneEntry() {
         final VirtualRootNode root = createRoot();
         root.put(TestKey.longToKey('a'), new TestValue("a"), TestValueCodec.INSTANCE);

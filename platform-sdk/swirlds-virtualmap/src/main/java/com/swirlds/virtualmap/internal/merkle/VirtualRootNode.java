@@ -395,7 +395,7 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
      * from scratch, or during deserialization. It's also called after learner reconnects.
      *
      * @param state
-     * 		The accessor. Cannot be null. Must have a label.
+     * 		The VirtualMap state. Cannot be null. Must have a label.
      */
     public void postInit(@NonNull final VirtualMapState state) {
         requireNonNull(state);
