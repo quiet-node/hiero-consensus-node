@@ -11,7 +11,7 @@ import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.hapi.util.HapiUtils;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.crypto.SignatureType;
-import com.swirlds.common.test.fixtures.RandomUtils;
+import com.swirlds.common.test.fixtures.crypto.CryptoRandomUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
@@ -21,6 +21,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Stream;
+import org.hiero.base.utility.test.fixtures.RandomUtils;
+import org.hiero.consensus.model.event.EventConstants;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.event.UnsignedEvent;
@@ -51,8 +53,8 @@ public class TestingEventBuilder {
     /**
      * The time created of the event.
      * <p>
-     * If not set, defaults to the time created of the self parent, plus a random number of milliseconds between
-     * 1 and 99 inclusive. If the self parent is not set, defaults to {@link #DEFAULT_TIMESTAMP}.
+     * If not set, defaults to the time created of the self parent, plus a random number of milliseconds between 1 and
+     * 99 inclusive. If the self parent is not set, defaults to {@link #DEFAULT_TIMESTAMP}.
      */
     private Instant timeCreated;
 
@@ -158,6 +160,12 @@ public class TestingEventBuilder {
     private Long consensusOrder;
 
     /**
+     * The non-deterministic generation of the event. This value is calculated by the orphan buffer in production.
+     * Defaults to {@link EventConstants#GENERATION_UNDEFINED}
+     */
+    private long nGen = EventConstants.GENERATION_UNDEFINED;
+
+    /**
      * Constructor
      *
      * @param random a source of randomness
@@ -181,6 +189,17 @@ public class TestingEventBuilder {
     }
 
     /**
+     * Set the non-deterministic generation to use. If not set, default to {@link EventConstants#GENERATION_UNDEFINED}
+     *
+     * @param nGen the ngen
+     * @return this instance
+     */
+    public @NonNull TestingEventBuilder setNGen(final long nGen) {
+        this.nGen = nGen;
+        return this;
+    }
+
+    /**
      * Set the software version of the event.
      * <p>
      * If not set, defaults to {@link #DEFAULT_SOFTWARE_VERSION}.
@@ -197,8 +216,8 @@ public class TestingEventBuilder {
     /**
      * Set the time created of an event.
      * <p>
-     * If not set, defaults to the time created of the self parent, plus a random number of milliseconds between
-     * 1 and 99 inclusive. If the self parent is not set, defaults to {@link #DEFAULT_TIMESTAMP}.
+     * If not set, defaults to the time created of the self parent, plus a random number of milliseconds between 1 and
+     * 99 inclusive. If the self parent is not set, defaults to {@link #DEFAULT_TIMESTAMP}.
      *
      * @param timeCreated the time created
      * @return this instance
@@ -232,7 +251,10 @@ public class TestingEventBuilder {
      *
      * @param numberOfSystemTransactions the number of system transactions
      * @return this instance
+     * @deprecated system transaction are no longer in the consensus domain, so this method just adds app transactions
+     * at the moment. it should be removed and cannot be relied upon.
      */
+    @Deprecated
     public @NonNull TestingEventBuilder setSystemTransactionCount(final int numberOfSystemTransactions) {
         if (transactionBytes != null) {
             throw new IllegalStateException("Cannot set system transaction count when transactions are explicitly set");
@@ -266,7 +288,9 @@ public class TestingEventBuilder {
      *
      * @param transactions the transactions
      * @return this instance
+     * @deprecated the {@link EventTransaction} type will be removed in the future
      */
+    @Deprecated
     public @NonNull TestingEventBuilder setTransactions(@Nullable final List<EventTransaction> transactions) {
         if (appTransactionCount != null || systemTransactionCount != null || transactionSize != null) {
             throw new IllegalStateException(
@@ -462,8 +486,8 @@ public class TestingEventBuilder {
         for (int i = appTransactionCount; i < appTransactionCount + systemTransactionCount; ++i) {
             generatedTransactions.add(StateSignatureTransaction.PROTOBUF.toBytes(StateSignatureTransaction.newBuilder()
                     .round(random.nextLong(0, Long.MAX_VALUE))
-                    .signature(RandomUtils.randomSignatureBytes(random))
-                    .hash(RandomUtils.randomHashBytes(random))
+                    .signature(CryptoRandomUtils.randomSignatureBytes(random))
+                    .hash(CryptoRandomUtils.randomHashBytes(random))
                     .build()));
         }
 
@@ -569,7 +593,9 @@ public class TestingEventBuilder {
 
         final PlatformEvent platformEvent = new PlatformEvent(unsignedEvent, signature);
 
-        platformEvent.setHash(RandomUtils.randomHash(random));
+        platformEvent.setHash(CryptoRandomUtils.randomHash(random));
+
+        platformEvent.setNGen(nGen);
 
         if (consensusTimestamp != null || consensusOrder != null) {
             platformEvent.setConsensusData(new EventConsensusData.Builder()

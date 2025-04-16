@@ -30,7 +30,7 @@ import org.apache.logging.log4j.Logger;
 
 @Singleton
 public class HintsPartialSignatureHandler implements TransactionHandler {
-    private static final Logger log = LogManager.getLogger(HintsContext.class);
+    private static final Logger log = LogManager.getLogger(HintsPartialSignatureHandler.class);
 
     @NonNull
     private final ConcurrentMap<Bytes, HintsContext.Signing> signings;
@@ -45,9 +45,9 @@ public class HintsPartialSignatureHandler implements TransactionHandler {
      * A node's partial signature verified relative to a particular hinTS construction id and CRS.
      *
      * @param constructionId the construction id
-     * @param crs the CRS
-     * @param nodeId the node id
-     * @param body the partial signature
+     * @param crs            the CRS
+     * @param nodeId         the node id
+     * @param body           the partial signature
      */
     private record PartialSignature(
             long constructionId, @NonNull Bytes crs, long nodeId, @NonNull HintsPartialSignatureTransactionBody body) {
@@ -91,29 +91,34 @@ public class HintsPartialSignatureHandler implements TransactionHandler {
         final var op = context.body().hintsPartialSignatureOrThrow();
         final var hintsStore = context.createStore(ReadableHintsStore.class);
         // We don't care about the result, just that it's in the cache
-        cache.get(new PartialSignature(
-                hintsContext.constructionIdOrThrow(),
-                requireNonNull(hintsStore.crsIfKnown()),
-                context.creatorInfo().nodeId(),
-                op));
+        try {
+            cache.get(new PartialSignature(
+                    hintsContext.constructionIdOrThrow(),
+                    requireNonNull(hintsStore.crsIfKnown()),
+                    context.creatorInfo().nodeId(),
+                    context.body().hintsPartialSignatureOrThrow()));
+        } catch (Exception ignore) {
+            // Ignore any exceptions
+        }
     }
 
     @Override
     public void handle(@NonNull final HandleContext context) throws HandleException {
         requireNonNull(context);
         final var op = context.body().hintsPartialSignatureOrThrow();
-        final var creator = context.creatorInfo().nodeId();
+        final var creatorId = context.creatorInfo().nodeId();
         final var hintsStore = context.storeFactory().readableStore(ReadableHintsStore.class);
         final var crs = requireNonNull(hintsStore.crsIfKnown());
-        final var signature = new PartialSignature(
-                hintsContext.constructionIdOrThrow(), crs, context.creatorInfo().nodeId(), op);
-        final var validation = requireNonNull(cache.get(signature));
-        if (validation.valid()) {
-            final var signing = signings.computeIfAbsent(
-                    op.message(),
-                    b -> hintsContext.newSigning(
-                            b, requireNonNull(currentRoster.get()), () -> signings.remove(op.message())));
-            signing.incorporateValid(crs, creator, op.partialSignature(), validation.result());
+        final boolean isValid = Boolean.TRUE.equals(cache.get(new PartialSignature(
+                hintsContext.constructionIdOrThrow(), crs, context.creatorInfo().nodeId(), op)));
+        if (isValid) {
+            signings.computeIfAbsent(
+                            op.message(),
+                            b -> hintsContext.newSigning(
+                                    b, requireNonNull(currentRoster.get()), () -> signings.remove(op.message())))
+                    .incorporateValid(crs, creatorId, op.partialSignature());
+        } else {
+            log.warn("Ignoring invalid partial signature on '{}' from node{}", op.message(), creatorId);
         }
     }
 

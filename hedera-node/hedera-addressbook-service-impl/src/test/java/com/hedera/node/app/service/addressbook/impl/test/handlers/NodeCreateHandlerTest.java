@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -326,18 +327,6 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
     }
 
     @Test
-    void failsWhenGossipEndpointTooSmall() {
-        txn = new NodeCreateBuilder()
-                .withAccountId(accountId)
-                .withGossipEndpoint(List.of(endpoint1))
-                .build(payerId);
-        setupHandle();
-
-        final var msg = assertThrows(HandleException.class, () -> subject.handle(handleContext));
-        assertEquals(ResponseCodeEnum.INVALID_GOSSIP_ENDPOINT, msg.getStatus());
-    }
-
-    @Test
     void failsWhenGossipEndpointHaveIPAndFQDN() {
         txn = new NodeCreateBuilder()
                 .withAccountId(accountId)
@@ -538,6 +527,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
                 .withGossipCaCertificate(Bytes.wrap(certList.get(0).getEncoded()))
                 .withGrpcCertificateHash(Bytes.wrap("hash"))
                 .withAdminKey(key)
+                .withDeclineReward(true)
                 .build(payerId);
         given(handleContext.body()).willReturn(txn);
         refreshStoresWithMoreNodeInWritable();
@@ -557,10 +547,10 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
         given(handleContext.attributeValidator()).willReturn(validator);
 
         assertDoesNotThrow(() -> subject.handle(handleContext));
-        final var createdNode = writableStore.get(4L);
+        final var createdNode = writableStore.get(0L);
         assertNotNull(createdNode);
-        verify(recordBuilder).nodeID(4L);
-        assertEquals(4, createdNode.nodeId());
+        verify(recordBuilder).nodeID(0L);
+        assertEquals(0L, createdNode.nodeId());
         assertEquals("Description", createdNode.description());
         assertArrayEquals(
                 (List.of(endpoint1, endpoint2)).toArray(),
@@ -572,6 +562,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
                 certList.get(0).getEncoded(), createdNode.gossipCaCertificate().toByteArray());
         assertArrayEquals("hash".getBytes(), createdNode.grpcCertificateHash().toByteArray());
         assertEquals(key, createdNode.adminKey());
+        assertTrue(createdNode.declineReward());
     }
 
     @Test
@@ -640,6 +631,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
         private Bytes grpcCertificateHash = null;
 
         private Key adminKey = null;
+        private boolean declineReward = false;
 
         private NodeCreateBuilder() {}
 
@@ -667,6 +659,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
             if (adminKey != null) {
                 txnBody.adminKey(adminKey);
             }
+            txnBody.declineReward(declineReward);
 
             return TransactionBody.newBuilder()
                     .transactionID(txnId)
@@ -706,6 +699,11 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
 
         public NodeCreateBuilder withAdminKey(final Key adminKey) {
             this.adminKey = adminKey;
+            return this;
+        }
+
+        public NodeCreateBuilder withDeclineReward(final boolean declineReward) {
+            this.declineReward = declineReward;
             return this;
         }
     }

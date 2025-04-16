@@ -11,11 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.stream.internal.LinkedObjectStreamValidateUtils;
 import com.swirlds.common.stream.internal.StreamValidationResult;
-import com.swirlds.common.test.fixtures.RandomUtils;
+import com.swirlds.common.test.fixtures.crypto.CryptoRandomUtils;
 import com.swirlds.common.test.fixtures.stream.StreamFileSigner;
 import com.swirlds.common.test.fixtures.stream.StreamObjectWorker;
 import com.swirlds.common.test.fixtures.stream.TestStreamType;
@@ -35,6 +33,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.constructable.ConstructableRegistryException;
 import org.hiero.consensus.model.crypto.Hash;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ class StreamObjectTest {
     private static final Marker LOGM_EXCEPTION = MarkerManager.getMarker("EXCEPTION");
     private static final String dirPath = "src/test/resources/stream/writeDir";
     private static final StreamType streamType = TestStreamType.TEST_STREAM;
-    static Hash initialHash = RandomUtils.randomHash();
+    static Hash initialHash = CryptoRandomUtils.randomHash();
     static StreamFileSigner signer = new StreamFileSigner();
     static PublicKey publicKey = signer.getPublicKey();
 
