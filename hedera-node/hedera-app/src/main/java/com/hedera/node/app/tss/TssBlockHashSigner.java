@@ -87,10 +87,6 @@ public class TssBlockHashSigner implements BlockHashSigner {
             log.info(SIGNER_READY_MSG);
             loggedReady = true;
         }
-        log.warn("hintsService = {}; historyService = {}", hintsService, historyService);
-        log.warn("hintsService.isReady() = {}; historyService.isReady() = {}",
-                hintsService == null ? "null" : hintsService.isReady(),
-                historyService == null ? "null" : historyService.isReady());
         return answer;
     }
 
