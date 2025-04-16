@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.turtle.runner;
 
+import static org.junit.jupiter.api.io.CleanupMode.NEVER;
+
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusRoundValidator;
 import com.swirlds.platform.test.fixtures.turtle.runner.Turtle;
@@ -31,7 +33,6 @@ class TurtleTests {
      * </ul>
      */
     @Test
-    @Disabled
     void turtleTest() {
         final Randotron randotron = Randotron.create();
 
@@ -45,5 +46,7 @@ class TurtleTests {
 
         turtle.start();
         turtle.simulateTimeAndValidate(Duration.ofMinutes(5L));
+
+        turtle.stop();
     }
 }

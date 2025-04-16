@@ -180,6 +180,10 @@ public class TurtleNode {
         platform.start();
     }
 
+    public void stop() {
+        platform.stop();
+    }
+
     /**
      * Simulate the next time step for this node.
      */

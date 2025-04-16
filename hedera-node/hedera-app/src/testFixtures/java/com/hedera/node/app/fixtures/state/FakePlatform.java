@@ -129,4 +129,9 @@ public final class FakePlatform implements Platform {
 
     @Override
     public void start() {}
+
+    @Override
+    public void stop() {
+
+    }
 }

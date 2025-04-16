@@ -174,4 +174,9 @@ public class RecoveryPlatform implements Platform, AutoCloseableNonThrowing {
     public void start() {
         // no-op
     }
+
+    @Override
+    public void stop() {
+
+    }
 }

@@ -412,6 +412,17 @@ public class SwirldsPlatform implements Platform {
         platformWiring.startGossip();
     }
 
+    @Override
+    public void stop() {
+
+        platformContext.getRecycleBin().stop();
+        platformWiring.stop();
+
+        platformWiring.stopGossip();
+        platformWiring.clear();
+
+    }
+
     /**
      * Performs a PCES recovery:
      * <ul>

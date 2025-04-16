@@ -755,6 +755,10 @@ public class PlatformWiring {
         gossipWiring.getStartInput().inject(NoInput.getInstance());
     }
 
+    public void stopGossip() {
+        gossipWiring.getStopInput().inject(NoInput.getInstance());
+    }
+
     /**
      * Get the input wire for the address book update.
      * <p>

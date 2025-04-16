@@ -100,4 +100,6 @@ public interface Platform {
      * Start this platform.
      */
     void start();
+
+    void stop();
 }

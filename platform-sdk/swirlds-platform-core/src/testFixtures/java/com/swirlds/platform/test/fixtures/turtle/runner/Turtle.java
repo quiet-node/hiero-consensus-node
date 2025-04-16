@@ -131,6 +131,12 @@ public class Turtle {
         }
     }
 
+    public void stop() {
+        for (final TurtleNode node : nodes) {
+            node.stop();
+        }
+    }
+
     /**
      * Simulate the network for a period of time. Validate the correctness of collected items after each tick.
      *
