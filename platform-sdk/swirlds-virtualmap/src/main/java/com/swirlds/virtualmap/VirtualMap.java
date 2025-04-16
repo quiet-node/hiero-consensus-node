@@ -292,7 +292,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     public void serialize(final SerializableDataOutputStream out, final Path outputDirectory) throws IOException {
 
         // Create and write to state the name of the file we will expect later on deserialization
-        final String outputFileName = root.getState() + ".vmap";
+        final String outputFileName = root.getState().getLabel() + ".vmap";
         final byte[] outputFileNameBytes = getNormalisedStringBytes(outputFileName);
         out.writeInt(outputFileNameBytes.length);
         out.writeNormalisedString(outputFileName);
