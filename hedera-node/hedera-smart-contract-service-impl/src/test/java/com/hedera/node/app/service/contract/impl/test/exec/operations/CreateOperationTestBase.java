@@ -70,7 +70,7 @@ public class CreateOperationTestBase {
         given(frame.getGasPrice()).willReturn(GAS_PRICE);
         given(frame.getBlockValues()).willReturn(blockValues);
         given(frame.getMiningBeneficiary()).willReturn(COINBASE_ADDRESS);
-        given(frame.getBlockHashLookup()).willReturn(l -> Hash.ZERO);
+        given(frame.getBlockHashLookup()).willReturn((f, l) -> Hash.ZERO);
     }
 
     protected void givenSpawnPrereqs() {
