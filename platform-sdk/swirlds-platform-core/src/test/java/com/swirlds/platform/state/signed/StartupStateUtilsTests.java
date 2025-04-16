@@ -126,6 +126,7 @@ public class StartupStateUtilsTests {
         final SignedState signedState = new RandomSignedStateGenerator(random)
                 .setRound(round)
                 .setEpoch(epoch)
+                .setCalculateHash(true)
                 .build();
 
         // make the state immutable

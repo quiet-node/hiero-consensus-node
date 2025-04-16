@@ -46,7 +46,7 @@ class WritablePlatformStateStoreTest {
         final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
         final var tableConfig =
                 new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 1, merkleDbConfig.hashesRamToDiskThreshold());
-        final String virtualMapLabel = "VirtualMap-" + System.currentTimeMillis();
+        final String virtualMapLabel = "VirtualMap-" + randotron.nextString(100);
         final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
         final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, CONFIGURATION);
 
