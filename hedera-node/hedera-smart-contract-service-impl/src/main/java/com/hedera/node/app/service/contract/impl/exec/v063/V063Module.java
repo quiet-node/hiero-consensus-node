@@ -40,6 +40,7 @@ import com.hedera.node.app.service.contract.impl.exec.v038.Version038AddressChec
 import com.hedera.node.app.service.contract.impl.hevm.HederaEVM;
 import com.hedera.node.app.service.contract.impl.hevm.HederaGasSchedule;
 import dagger.Binds;
+import dagger.Module;
 import dagger.Provides;
 import dagger.multibindings.IntoSet;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -64,6 +65,11 @@ import org.hyperledger.besu.evm.precompile.MainnetPrecompiledContracts;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
 import org.hyperledger.besu.evm.processor.ContractCreationProcessor;
 
+/**
+ * Provides the Services 0.63 EVM implementation, which consists of update to the 25.3 version of the Besu EVM
+ * and a new native library verification strategy
+ */
+@Module
 public interface V063Module {
 
     /** Initialization that must be performed when module is created - typically stuff from Besu's
