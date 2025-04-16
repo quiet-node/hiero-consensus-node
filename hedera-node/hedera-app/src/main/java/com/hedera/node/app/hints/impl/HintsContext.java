@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,9 +40,11 @@ import org.apache.logging.log4j.Logger;
 public class HintsContext {
     private static final Logger log = LogManager.getLogger(HintsContext.class);
 
-    private static final Duration SIGNING_ATTEMPT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration SIGNING_ATTEMPT_TIMEOUT = Duration.ofSeconds(30);
 
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+
+    private final Executor executor;
 
     private final HintsLibrary library;
 
@@ -54,8 +57,9 @@ public class HintsContext {
     private long schemeId;
 
     @Inject
-    public HintsContext(@NonNull final HintsLibrary library) {
+    public HintsContext(@NonNull final HintsLibrary library, @NonNull final Executor executor) {
         this.library = requireNonNull(library);
+        this.executor = requireNonNull(executor);
     }
 
     /**
@@ -194,7 +198,6 @@ public class HintsContext {
      */
     public class Signing {
         private final long thresholdWeight;
-        private final Bytes blockHash;
         private final Bytes aggregationKey;
         private final Bytes verificationKey;
         private final Map<Long, Integer> partyIds;
@@ -214,12 +217,11 @@ public class HintsContext {
                 @NonNull final Runnable onCompletion) {
             this.thresholdWeight = thresholdWeight;
             requireNonNull(onCompletion);
-            this.blockHash = requireNonNull(blockHash);
             this.aggregationKey = requireNonNull(aggregationKey);
             this.partyIds = requireNonNull(partyIds);
             this.verificationKey = requireNonNull(verificationKey);
             this.currentRoster = requireNonNull(currentRoster);
-            executor.schedule(
+            scheduledExecutor.schedule(
                     () -> {
                         if (!future.isDone()) {
                             log.warn(
@@ -268,9 +270,13 @@ public class HintsContext {
                     .orElse(0L);
             final var totalWeight = weightOfSignatures.addAndGet(weight);
             if (totalWeight >= thresholdWeight && completed.compareAndSet(false, true)) {
-                final var aggregatedSignature =
-                        library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures);
-                future.complete(aggregatedSignature);
+                CompletableFuture.runAsync(
+                        () -> {
+                            final var aggregatedSignature =
+                                    library.aggregateSignatures(crs, aggregationKey, verificationKey, signatures);
+                            future.complete(aggregatedSignature);
+                        },
+                        executor);
             }
         }
     }

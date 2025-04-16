@@ -12,6 +12,8 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.node.app.hints.HintsLibrary;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,17 +45,13 @@ class HintsContextTest {
     @Mock
     private Bytes signature;
 
-    @Mock
-    private Bytes badKey;
-
-    @Mock
-    private Bytes goodKey;
+    private final Deque<Runnable> scheduledCompletions = new ArrayDeque<>();
 
     private HintsContext subject;
 
     @BeforeEach
     void setUp() {
-        subject = new HintsContext(library);
+        subject = new HintsContext(library, scheduledCompletions::offer);
     }
 
     @Test
@@ -107,13 +105,24 @@ class HintsContextTest {
         final var future = signing.future();
 
         signing.incorporateValid(CRS, A_NODE_PARTY_ID.nodeId(), signature);
+        runScheduledCompletions();
         assertFalse(future.isDone());
         signing.incorporateValid(CRS, B_NODE_PARTY_ID.nodeId(), signature);
+        runScheduledCompletions();
         assertFalse(future.isDone());
         signing.incorporateValid(CRS, C_NODE_PARTY_ID.nodeId(), signature);
+        runScheduledCompletions();
         assertFalse(future.isDone());
         signing.incorporateValid(CRS, D_NODE_PARTY_ID.nodeId(), signature);
+        runScheduledCompletions();
         assertTrue(future.isDone());
         assertEquals(aggregateSignature, future.join());
+    }
+
+    private void runScheduledCompletions() {
+        Runnable task;
+        while ((task = scheduledCompletions.poll()) != null) {
+            task.run();
+        }
     }
 }
