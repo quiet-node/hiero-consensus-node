@@ -341,8 +341,15 @@ public class BlockNodeConnectionManager {
             }
         }
         if (selectedNode == null) {
-            throw new IllegalStateException(
-                    "No available block node found for connection. Check configuration and network status.");
+            // This could be the case where all the configured block nodes are in retry
+            // we check if the highest priority from the retried once is ready, and start streaming to ti
+            if (highestPriorityReadyConnection != null) {
+                highestPriorityReadyConnection.jumpToBlock(
+                        getLastVerifiedBlock(highestPriorityReadyConnection.getNodeConfig()) + 1L);
+            } else {
+                throw new IllegalStateException(
+                        "No available block node found for connection. Check configuration and network status.");
+            }
         }
 
         connectToNode(selectedNode);
@@ -357,11 +364,13 @@ public class BlockNodeConnectionManager {
         }
     }
 
-    private void setCurrentConnection(@NonNull BlockNodeConnection connection) {
-        if (!currentActive()) {
-            activeConnection = connection;
-        } else {
-            logger.warn("Both current connection is already established");
+    private void setCurrentActiveConnection(@NonNull BlockNodeConnection connection) {
+        synchronized (connectionLock) {
+            if (!currentActive()) {
+                activeConnection = connection;
+            } else {
+                logger.warn("Both current connection is already established");
+            }
         }
     }
 
@@ -372,8 +381,8 @@ public class BlockNodeConnectionManager {
             final BlockNodeConnection connection =
                     new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient, connectionExecutor);
             connection.establishStream();
+            setCurrentActiveConnection(connection);
             synchronized (connectionLock) {
-                setCurrentConnection(connection);
                 connectionsInRetry.remove(node);
             }
             logger.info("Successfully connected to block node {}", blockNodeName(node));
@@ -392,7 +401,15 @@ public class BlockNodeConnectionManager {
         return Optional.empty();
     }
 
-    private boolean isRetrying(BlockNodeConnection connection) {
+    @VisibleForTesting
+    BlockNodeConnection getHighestPriorityReadyConnection() {
+        synchronized (connectionLock) {
+            return highestPriorityReadyConnection;
+        }
+    }
+
+    @VisibleForTesting
+    boolean isRetrying(BlockNodeConnection connection) {
         return isRetrying(connection.getNodeConfig());
     }
 
@@ -474,7 +491,7 @@ public class BlockNodeConnectionManager {
             activeConnection.close();
 
             // Set the higher priority connection as the new current connection
-            setCurrentConnection(highestAvailableConnection);
+            setCurrentActiveConnection(highestAvailableConnection);
 
             // Make active the highest priority connection that was in retry
             // and start streaming the next block to it

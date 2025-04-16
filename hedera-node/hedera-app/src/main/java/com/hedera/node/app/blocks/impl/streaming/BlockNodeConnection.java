@@ -550,15 +550,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * Gets the current block number being processed.
-     *
-     * @return the current block number
-     */
-    public ConnectionState getCurrentState() {
-        return connectionState;
-    }
-
-    /**
      * Gets the current request index being processed.
      *
      * @return the current request index
