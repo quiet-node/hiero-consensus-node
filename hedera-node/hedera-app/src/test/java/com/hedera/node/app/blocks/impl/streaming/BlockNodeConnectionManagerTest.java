@@ -120,7 +120,7 @@ class BlockNodeConnectionManagerTest {
     @Test
     @Disabled
     void testRetrySuccessOnFirstAttempt() {
-        blockNodeConnectionManager.scheduleRetry(mockConnection);
+        blockNodeConnectionManager.scheduleRetry(mockConnection, INITIAL_DELAY);
         when(mockSupplier.get()).thenReturn(null);
 
         verify(mockSupplier, times(1)).get();
@@ -152,7 +152,7 @@ class BlockNodeConnectionManagerTest {
                         .priority(1)
                         .build());
 
-        blockNodeConnectionManager.scheduleRetry(mockConnection);
+        blockNodeConnectionManager.scheduleRetry(mockConnection, INITIAL_DELAY);
 
         // There should be no immediate attempt to establish a stream
         verify(mockConnection, times(0)).establishStream();
@@ -170,7 +170,7 @@ class BlockNodeConnectionManagerTest {
     void testScheduleRetry_WithoutPriority() throws InterruptedException {
         given(mockConnection.getNodeConfig())
                 .willReturn(BlockNodeConfig.newBuilder().build());
-        blockNodeConnectionManager.scheduleRetry(mockConnection);
+        blockNodeConnectionManager.scheduleRetry(mockConnection, INITIAL_DELAY);
 
         verify(mockConnection, never()).establishStream(); // there should be no immediate attempt to establish a stream
         final var initialDelay = BlockNodeConnectionManager.INITIAL_RETRY_DELAY;

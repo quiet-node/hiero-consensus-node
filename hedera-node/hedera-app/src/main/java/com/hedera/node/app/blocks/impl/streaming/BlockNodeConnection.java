@@ -360,6 +360,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             // Update the last verified block by the current connection
             blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, acknowledgedBlockNumber);
 
+            // Increment the ACK counter metric
+            blockStreamMetrics.incrementBlockAckReceivedCount();
+
             if (blockAlreadyExists) {
                 logger.warn("[{}] Block {} already exists on block node {}",
                         Thread.currentThread().getName(),

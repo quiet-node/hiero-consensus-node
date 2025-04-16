@@ -48,7 +48,5 @@ public @interface HapiBlockNode {
         long[] blockNodeIds() default {};
 
         long[] simulatorPriorities() default {};
-
-        int prometheusPort() default 0;
     }
 }
