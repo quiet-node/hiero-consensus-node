@@ -6,6 +6,10 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
+import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
+import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
+import com.hedera.hapi.block.PublishStreamResponse.ResendBlock;
+import com.hedera.hapi.block.PublishStreamResponse.SkipBlock;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -34,7 +38,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final GrpcServiceClient grpcServiceClient;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
-    private final BlockStreamMetrics blockStreamMetrics;
+    private BlockStreamMetrics blockStreamMetrics = null;
     private final String connectionDescriptor;
 
     // Locks and synchronization objects
@@ -125,10 +129,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void establishStream() {
         synchronized (connectionStateLock) {
             synchronized (channelLock) {
-                logger.debug("Stream to block node {} is ACTIVE", connectionDescriptor);
-                updateConnectionState(ConnectionState.ACTIVE);
                 requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
-                startRequestWorker();
+
+                // Check if this is the highest priority connection
+                if (getConnectionState() != ConnectionState.RETRYING) {
+                    logger.debug("Stream to block node {} is ACTIVE", connectionDescriptor);
+                    updateConnectionState(ConnectionState.ACTIVE);
+                    startRequestWorker();
+                }
             }
         }
     }
@@ -334,7 +342,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 TimeUnit.SECONDS);
     }
 
-    private void handleAcknowledgement(@NonNull PublishStreamResponse.Acknowledgement acknowledgement) {
+    private void handleAcknowledgement(@NonNull Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
             final var blockAck = acknowledgement.blockAck();
             final var acknowledgedBlockNumber = blockAck.blockNumber();
@@ -372,7 +380,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
-    private void handleEndOfStream(@NonNull PublishStreamResponse.EndOfStream endOfStream) {
+    private void handleEndOfStream(@NonNull EndOfStream endOfStream) {
         final var blockNumber = endOfStream.blockNumber();
         final var responseCode = endOfStream.status();
 
@@ -463,7 +471,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
-    private void handleSkipBlock(@NonNull PublishStreamResponse.SkipBlock skipBlock) {
+    private void handleSkipBlock(@NonNull SkipBlock skipBlock) {
         final var skipBlockNumber = skipBlock.blockNumber();
 
         if (skipBlockNumber == getCurrentBlockNumber()) {
@@ -472,7 +480,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
-    private void handleResendBlock(@NonNull PublishStreamResponse.ResendBlock resendBlock) {
+    private void handleResendBlock(@NonNull ResendBlock resendBlock) {
         final var resendBlockNumber = resendBlock.blockNumber();
 
         logger.debug(

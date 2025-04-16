@@ -100,26 +100,13 @@ public class BlockNodeSimulatorSuite {
             })
     @Order(2)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsCanStreamGenesisBlock() {
-        AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
-        AtomicReference<Long> lastVerifiedBlock = new AtomicReference<>();
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
-                doingContextual(spec -> connectionDropTime.set(Instant.now())),
-                blockNodeSimulator(0).shutDownImmediately(),
+                blockNodeSimulator(0).shutDownImmediately(), // Shutdown BN 0
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).getLastVerifiedBlockExposing(lastVerifiedBlock::set),
-                blockNodeSimulator(0).startImmediately(),
-//                assertHgcaaLogContainsTimeframe(
-//                        NodeSelector.byNodeId(0),
-//                        connectionDropTime::get,
-//                        Duration.of(30, SECONDS),
-//                        Duration.of(30, SECONDS),
-//                        "Successfully reconnected to block node",
-//                        "Received EndOfStream from block node",
-//                        "PublishStreamResponseCode STREAM_ITEMS_BEHIND",
-//                        "Ending stream and restarting at block " + lastVerifiedBlock.get()),
+                blockNodeSimulator(0).startImmediately(), // Start BN 0
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -128,8 +115,6 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true));
-        // TODO Add log verification that the consensus node is able to stream from the genesis block through it's
-        // buffer
     }
 
     @HapiTest

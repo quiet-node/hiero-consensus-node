@@ -119,7 +119,7 @@ class BlockNodeConnectionManagerTest {
     @Test
     @Disabled
     void testRetrySuccessOnFirstAttempt() {
-        blockNodeConnectionManager.scheduleReconnect(mockConnection);
+        blockNodeConnectionManager.scheduleRetry(mockConnection);
         when(mockSupplier.get()).thenReturn(null);
 
         verify(mockSupplier, times(1)).get();
@@ -194,7 +194,7 @@ class BlockNodeConnectionManagerTest {
     @Test
     void handleConnectionError_shouldScheduleRetryAndChooseHigherPriorityConnection() throws InterruptedException {
         // Given established connection
-        blockNodeConnectionManager.establishConnection();
+        blockNodeConnectionManager.selectBlockNodeForStreaming();
 
         final var activeConnection =
                 blockNodeConnectionManager.getActiveConnection().orElseThrow();

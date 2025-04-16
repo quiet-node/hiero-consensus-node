@@ -128,7 +128,7 @@ public class BlockNodeConnectionManager {
             scheduleRetry(connection);
             // Mark as retrying, because we'll try to establish a new connection and we filter these out
             connectionsInRetry.putIfAbsent(connection.getNodeConfig(), connection);
-            establishConnection();
+            selectBlockNodeForStreaming();
         }
     }
 
@@ -196,14 +196,13 @@ public class BlockNodeConnectionManager {
      *
      * @param action the action returning true on success, false on failure (to allow retry)
      * @param currentDelay the delay to use for this attempt
-     * @param attempt the current attempt number
      */
     private void retry(
-            @NonNull final Supplier<Boolean> action, @NonNull final Duration currentDelay, final int attempt) {
+            @NonNull final Supplier<Boolean> action, @NonNull final Duration currentDelay) {
         requireNonNull(action);
         requireNonNull(currentDelay);
 
-        Duration delay = initialDelay;
+        Duration delay = currentDelay;
         while (true) {
             try {
                 // Apply jitter: use a random value between 50-100% of the calculated delay
@@ -213,6 +212,7 @@ public class BlockNodeConnectionManager {
                 action.get();
                 return;
             } catch (Exception e) {
+                logger.debug("Retry failed: {}", e.getMessage());
                 delay = delay.multipliedBy(RETRY_BACKOFF_MULTIPLIER);
             }
         }
@@ -246,7 +246,7 @@ public class BlockNodeConnectionManager {
      */
     public boolean waitForConnection(Duration timeout) {
         final Instant deadline = Instant.now().plus(timeout);
-        establishConnection();
+        selectBlockNodeForStreaming();
 
         final CompletableFuture<Boolean> future = new CompletableFuture<>();
         final ScheduledFuture<?> scheduledTask = connectionExecutor.scheduleAtFixedRate(
@@ -327,7 +327,7 @@ public class BlockNodeConnectionManager {
      * Attempts to establish a connection to a block node based on priority.
      */
     @VisibleForTesting
-    void establishConnection() {
+    void selectBlockNodeForStreaming() {
         logger.info("[{}] Establishing connection to block node based on priorities",
                 Thread.currentThread().getName());
         List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
@@ -368,6 +368,9 @@ public class BlockNodeConnectionManager {
         if (selectedNode == null) {
             // This could be the case where all the configured block nodes are in retry
             // we check if the highest priority from the retried once is ready, and start streaming to ti
+            logger.debug("[{}] No available block nodes found, checking for highest priority ready connection highest {}",
+                    Thread.currentThread().getName(),
+                    highestPriorityReadyConnection);
             if (highestPriorityReadyConnection != null) {
                 highestPriorityReadyConnection.jumpToBlock(
                         getLastVerifiedBlock(highestPriorityReadyConnection.getNodeConfig()) + 1L);
@@ -385,7 +388,7 @@ public class BlockNodeConnectionManager {
 
             // Now that we have put the current connection in retry, we can try again to establish a new connection. If
             // there are no successful connections made, eventually this recursive call will throw an exception
-            establishConnection();
+            selectBlockNodeForStreaming();
         }
     }
 
@@ -404,7 +407,7 @@ public class BlockNodeConnectionManager {
         try {
             final GrpcServiceClient grpcClient = createNewGrpcClient(node);
             final BlockNodeConnection connection =
-                    new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient, connectionExecutor);
+                    new BlockNodeConnection(node, this, blockStreamStateManager, grpcClient, connectionExecutor, blockStreamMetrics);
             connection.establishStream();
             setCurrentActiveConnection(connection);
             synchronized (connectionLock) {

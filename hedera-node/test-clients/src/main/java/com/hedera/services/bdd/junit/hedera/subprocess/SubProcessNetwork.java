@@ -288,10 +288,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 // TODO
             } else if (mode == BlockNodeMode.SIMULATOR) {
                 SimulatedBlockNodeServer sim = simulatedBlockNodeById.get(blockNodeId);
+                int priority = (int) blockNodePrioritiesBySubProcessNodeId.get(node.getNodeId())[blockNodeId.intValue()];
                 // TODO Add Priority
-                blockNodes.add(new BlockNodeConfig("localhost", sim.getPort()));
+                blockNodes.add(new BlockNodeConfig("localhost", sim.getPort(), priority));
             } else if (mode == BlockNodeMode.LOCAL_NODE) {
-                blockNodes.add(new BlockNodeConfig("localhost", 8080));
+                blockNodes.add(new BlockNodeConfig("localhost", 8080, 0));
             }
         }
         if (!blockNodes.isEmpty()) {
