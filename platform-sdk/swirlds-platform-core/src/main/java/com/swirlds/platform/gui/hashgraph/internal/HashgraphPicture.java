@@ -56,7 +56,7 @@ public class HashgraphPicture extends JPanel {
     private AddressBookMetadata nonExpandedMetadata;
     private AddressBookMetadata expandedMetadata;
 
-    /** used to store events coordinates for a given branch for each forking node */
+    /** used to store coordinates for branched events with a given generation for each forking node */
     private final Map<Long, Map<Long, GenerationCoordinates>> nodeIdToBranchIndexToCoordinates = new HashMap<>();
 
     public HashgraphPicture(final HashgraphGuiSource hashgraphSource, final HashgraphPictureOptions options) {
@@ -168,20 +168,18 @@ public class HashgraphPicture extends JPanel {
         }
     }
 
-    private void drawBorderAroundParentOfSelectedEvent(final Graphics g, final int d, final EventImpl event) {
-        final Color currentColor = g.getColor();
+    /**
+     * Draws a border around the event circle.
+     *
+     * @param g    the graphics context
+     * @param d    the diameter of the event circle
+     * @param event the selected event
+     * @param borderColor the color of the border
+     */
+    private void drawBorderAroundEvent(final Graphics g, final int d, final EventImpl event, final Color borderColor) {
         final int xPos =
                 pictureMetadata.xpos(event.getOtherParent() != null ? event.getOtherParent() : event, event) - d / 2;
         final int yPos = pictureMetadata.ypos(event) - d / 2;
-
-        drawBorderAroundEventCircle(g, xPos, yPos, Color.MAGENTA);
-        drawEventCircle(g, event, options, d);
-        g.setColor(currentColor);
-    }
-
-    private void drawBorderAroundEventCircle(
-            final Graphics g, final int xPos, final int yPos, final Color borderColor) {
-        final int d = pictureMetadata.getD();
         g.setColor(borderColor);
         g.fillOval(xPos - 5, yPos - 5, d + 10, d + 10);
     }
@@ -217,7 +215,10 @@ public class HashgraphPicture extends JPanel {
                     pictureMetadata.ypos(e1));
 
             if (selectedLines) {
-                drawBorderAroundParentOfSelectedEvent(g, d, e1);
+                final Color currentColor = g.getColor();
+                drawBorderAroundEvent(g, d, e1, Color.MAGENTA);
+                drawEventCircle(g, e1, options, d);
+                g.setColor(currentColor);
             }
         }
         if (e2 != null && e2.getGeneration() >= pictureMetadata.getMinGen()) {
@@ -228,7 +229,10 @@ public class HashgraphPicture extends JPanel {
                     pictureMetadata.ypos(e2));
 
             if (selectedLines) {
-                drawBorderAroundParentOfSelectedEvent(g, d, e2);
+                final Color currentColor = g.getColor();
+                drawBorderAroundEvent(g, d, e2, Color.MAGENTA);
+                drawEventCircle(g, e2, options, d);
+                g.setColor(currentColor);
             }
         }
 
@@ -262,7 +266,7 @@ public class HashgraphPicture extends JPanel {
         final int yPos = pictureMetadata.ypos(event) - d / 2;
 
         if (selector.isSelected(event)) {
-            drawBorderAroundEventCircle(g, xPos, yPos, Color.GREEN);
+            drawBorderAroundEvent(g, d, event, Color.GREEN);
         }
 
         g.setColor(color);

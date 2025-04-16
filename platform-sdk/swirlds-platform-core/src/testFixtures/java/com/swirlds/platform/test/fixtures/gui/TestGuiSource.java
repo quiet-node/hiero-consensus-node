@@ -181,6 +181,12 @@ public class TestGuiSource {
         return eventStorage;
     }
 
+    /**
+     * Get a map between events and their branch index in case there are {@link ForkingEventSource instances}
+     * that produce branched events.
+     *
+     * @return the constructed map
+     */
     private Map<PlatformEvent, Integer> getEventToBranchIndex() {
         final Map<PlatformEvent, Integer> eventToBranchIndex = new HashMap<>();
 

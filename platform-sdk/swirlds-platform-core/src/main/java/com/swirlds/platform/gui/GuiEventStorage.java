@@ -147,6 +147,11 @@ public class GuiEventStorage {
         return lastConsensusRound;
     }
 
+    /**
+     * Get map with a link between a branched event and its metadata
+     *
+     * @return the map
+     */
     @NonNull
     public Map<GossipEvent, BranchedEventMetadata> getBranchedEventsMetadata() {
         return branchedEventsMetadata;

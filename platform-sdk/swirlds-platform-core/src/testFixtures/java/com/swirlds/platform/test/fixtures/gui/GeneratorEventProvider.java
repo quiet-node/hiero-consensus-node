@@ -38,6 +38,13 @@ public class GeneratorEventProvider implements GuiEventProvider {
         graphGenerator.reset();
     }
 
+    /**
+     * Get the event source for a node specified by id.
+     *
+     * @param nodeID the id to filter with
+     *
+     * @return the specific event source
+     */
     public EventSource getNodeSource(@NonNull final NodeId nodeID) {
         return graphGenerator.getSource(nodeID);
     }

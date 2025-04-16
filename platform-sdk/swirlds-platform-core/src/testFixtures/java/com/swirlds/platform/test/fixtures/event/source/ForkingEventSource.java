@@ -172,6 +172,11 @@ public class ForkingEventSource extends AbstractEventSource {
         pruneEventList(branch);
     }
 
+    /**
+     * Get the list of all branches for this forking source.
+     *
+     * @return A list of all branches. Each branch is a list of events.
+     */
     public List<LinkedList<EventImpl>> getBranches() {
         return branches;
     }

@@ -40,7 +40,8 @@ public class PictureMetadata {
      * @param addressBookMetadata metadata for the address book
      * @param events the events to be displayed
      * @param hashgraphSource the needed information for visualisation from the hashgraph to use as a source
-     * @param nodeIdToGenerationToCoordinates map collecting coordinates info for a given branch for each forking node
+     * @param nodeIdToGenerationToCoordinates map collecting coordinates info for branched events with the
+     * same generation for each forking node
      *
      */
     public PictureMetadata(
@@ -171,14 +172,14 @@ public class PictureMetadata {
         if (xCoordinates != null) {
             // event still does not have X coordinate
             if (!xCoordinates.containsKey(gossipEvent)) {
-                final int maxXCoordinateForGeneration = coordinatesForGeneration.getMaxX();
+                final int maxXCoordinateForGeneration = coordinatesForGeneration.getRightMostX();
 
                 calculatedXPos = maxXCoordinateForGeneration + (int) (1.5 * r);
 
                 xCoordinates.put(gossipEvent, calculatedXPos);
                 // associate the current event's X coordinate to be the far right value for the generation this
                 // event belongs to
-                coordinatesForGeneration.setMaxX(calculatedXPos);
+                coordinatesForGeneration.setRightMostX(calculatedXPos);
             } else {
                 // event has assigned X coordinate, so just assign it
                 calculatedXPos = xCoordinates.get(gossipEvent);
@@ -191,7 +192,7 @@ public class PictureMetadata {
             xCoordinates = new HashMap<>();
             xCoordinates.put(gossipEvent, calculatedXPos);
             coordinatesForGeneration.setXCoordinates(xCoordinates);
-            coordinatesForGeneration.setMaxX(calculatedXPos);
+            coordinatesForGeneration.setRightMostX(calculatedXPos);
         }
 
         return calculatedXPos;
