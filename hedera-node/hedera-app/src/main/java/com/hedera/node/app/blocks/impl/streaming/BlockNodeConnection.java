@@ -268,7 +268,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void waitForNewRequests() throws InterruptedException {
         final var currentBlock = getCurrentBlockNumber();
         logger.debug(
-                "{}} Waiting for new requests to be available for block {} on node {}, "
+                "[{}] Waiting for new requests to be available for block {} on node {}, "
                         + "currentRequestIndex: {}, requestsSize: {}",
                 Thread.currentThread().getName(),
                 currentBlock,
@@ -354,33 +354,49 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             final var blockAck = acknowledgement.blockAck();
             final var acknowledgedBlockNumber = blockAck.blockNumber();
             final var blockAlreadyExists = blockAck.blockAlreadyExists();
-            final var currentBlock = getCurrentBlockNumber();
+            final var currentBlockStreaming = getCurrentBlockNumber();
+            final var currentBlockProducing = blockStreamStateManager.getBlockNumber();
 
             // Update the last verified block by the current connection
             blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, acknowledgedBlockNumber);
-            // Remove all block states up to and including this block number
-            blockStreamStateManager.removeBlockStatesUpTo(acknowledgedBlockNumber);
 
             if (blockAlreadyExists) {
-                logger.warn("Block {} already exists on block node {}", acknowledgedBlockNumber, connectionDescriptor);
+                logger.warn("[{}] Block {} already exists on block node {}",
+                        Thread.currentThread().getName(),
+                        acknowledgedBlockNumber, connectionDescriptor);
             } else {
                 logger.debug(
-                        "Block {} acknowledged and successfully processed by block node {}",
+                        "[{}] Block {} acknowledged and successfully processed by block node {}",
+                        Thread.currentThread().getName(),
                         acknowledgedBlockNumber,
                         connectionDescriptor);
             }
 
-            if (currentBlock > acknowledgedBlockNumber) {
+            if (currentBlockStreaming < acknowledgedBlockNumber && currentBlockProducing >= acknowledgedBlockNumber) {
+                // We can jump to streaming the acknowledged block number
                 logger.debug(
-                        "Current block number {} is higher than the acknowledged block number {}",
-                        currentBlock,
-                        acknowledgedBlockNumber);
-            } else if (currentBlock < acknowledgedBlockNumber) {
-                logger.debug(
-                        "Consensus node is behind and current block number {} is before the acknowledged block number {}",
-                        currentBlock,
-                        acknowledgedBlockNumber);
+                        "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
+                        Thread.currentThread().getName(),
+                        currentBlockStreaming,
+                        connectionDescriptor,
+                        acknowledgedBlockNumber,
+                        acknowledgedBlockNumber + 1L);
+                // Remove all block states up to and including this block number
+                blockStreamStateManager.removeBlockStatesUpTo(acknowledgedBlockNumber);
                 jumpToBlock(acknowledgedBlockNumber + 1);
+            } else if (currentBlockStreaming == acknowledgedBlockNumber && currentBlockProducing == acknowledgedBlockNumber) {
+                // We are already streaming the acknowledged block number
+                logger.debug(
+                        "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - (no buffer interaction) moving streaming ahead to Block {}",
+                        Thread.currentThread().getName(),
+                        currentBlockStreaming,
+                        connectionDescriptor,
+                        acknowledgedBlockNumber,
+                        acknowledgedBlockNumber + 1L);
+                jumpToBlock(acknowledgedBlockNumber + 1);
+            } else if (currentBlockStreaming > acknowledgedBlockNumber) {
+                // We are already streaming a block after the acknowledged block number, so remove from buffer
+                blockStreamStateManager.removeBlockStatesUpTo(acknowledgedBlockNumber);
             }
         } else {
             logger.warn("Unknown acknowledgement received: {}", acknowledgement);
@@ -615,6 +631,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     public void notifyNewRequestAvailable() {
         final var currentBlock = getCurrentBlockNumber();
+        if (currentBlock > blockStreamStateManager.getBlockNumber()) {
+            return;
+        }
         synchronized (newRequestAvailable) {
             BlockState blockState = blockStreamStateManager.getBlockState(currentBlock);
             if (blockState != null) {
@@ -651,6 +670,25 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
+     * Restarts a new stream at a specific block number.
+     * This method will establish a new stream and start processing from the specified block number.
+     *
+     * @param blockNumber the block number to restart at
+     */
+    public void restartStreamAtBlock(long blockNumber) {
+        logger.debug("Restarting stream at block {} for node {}", blockNumber, connectionDescriptor);
+
+        synchronized (connectionStateLock) {
+            synchronized (channelLock) {
+                setCurrentBlockNumber(blockNumber);
+                establishStream();
+            }
+        }
+
+        logger.debug("Stream restarted at block {} for node {}", blockNumber, connectionDescriptor);
+    }
+
+    /**
      * Restarts the worker thread at a specific block number without ending the stream.
      * This method will interrupt the current worker thread if it exists,
      * set the new block number and request index, and start a new worker thread.
@@ -670,25 +708,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         notifyNewBlockAvailable();
 
         logger.debug("Worker thread restarted and jumped to block {} for node {}", blockNumber, connectionDescriptor);
-    }
-
-    /**
-     * Restarts a new stream at a specific block number.
-     * This method will establish a new stream and start processing from the specified block number.
-     *
-     * @param blockNumber the block number to restart at
-     */
-    public void restartStreamAtBlock(long blockNumber) {
-        logger.debug("Restarting stream at block {} for node {}", blockNumber, connectionDescriptor);
-
-        synchronized (connectionStateLock) {
-            synchronized (channelLock) {
-                setCurrentBlockNumber(blockNumber);
-                establishStream();
-            }
-        }
-
-        logger.debug("Stream restarted at block {} for node {}", blockNumber, connectionDescriptor);
     }
 
     /**
