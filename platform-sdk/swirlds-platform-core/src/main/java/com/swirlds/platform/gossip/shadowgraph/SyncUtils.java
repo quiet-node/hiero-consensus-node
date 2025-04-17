@@ -333,10 +333,8 @@ public final class SyncUtils {
                             }
                             return eventsRead;
                         }
-                        default ->
-                            throw new SyncException(
-                                    connection,
-                                    String.format("while reading events, received unexpected byte %02x", next));
+                        default -> throw new SyncException(
+                                connection, String.format("while reading events, received unexpected byte %02x", next));
                     }
                 }
             } finally {

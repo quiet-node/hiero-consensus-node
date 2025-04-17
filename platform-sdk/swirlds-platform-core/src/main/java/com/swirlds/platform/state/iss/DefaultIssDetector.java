@@ -506,14 +506,12 @@ public class DefaultIssDetector implements IssDetector {
                 }
                 yield notification;
             }
-            case UNDECIDED ->
-                throw new IllegalStateException(
-                        "status is undecided, but method reported a decision, round = " + round);
-            case LACK_OF_DATA ->
-                throw new IllegalStateException(
-                        "a decision that we lack data should only be possible once time runs out, round = " + round);
-            default ->
-                throw new IllegalStateException("unhandled case " + roundValidator.getStatus() + ", round = " + round);
+            case UNDECIDED -> throw new IllegalStateException(
+                    "status is undecided, but method reported a decision, round = " + round);
+            case LACK_OF_DATA -> throw new IllegalStateException(
+                    "a decision that we lack data should only be possible once time runs out, round = " + round);
+            default -> throw new IllegalStateException(
+                    "unhandled case " + roundValidator.getStatus() + ", round = " + round);
         };
     }
 

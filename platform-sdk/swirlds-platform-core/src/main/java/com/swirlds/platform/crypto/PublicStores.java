@@ -91,8 +91,7 @@ public record PublicStores(KeyStore sigTrustStore, KeyStore agrTrustStore) {
         try {
             certificate = switch (type) {
                 case SIGNING -> sigTrustStore.getCertificate(name);
-                case AGREEMENT -> agrTrustStore.getCertificate(name);
-            };
+                case AGREEMENT -> agrTrustStore.getCertificate(name);};
         } catch (KeyStoreException e) {
             // cannot be thrown because we ensure the key store is initialized in the constructor
             throw new CryptographyException(e);
