@@ -93,7 +93,7 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.base.crypto.Hash;
 import org.junit.jupiter.api.Assertions;
 
 /**
@@ -456,10 +456,10 @@ public class StateChangesValidator implements BlockStreamValidator {
         final var itemSerialized = BlockItem.PROTOBUF.toBytes(item);
         final var digest = sha384DigestOrThrow();
         switch (item.item().kind()) {
-            case EVENT_HEADER, EVENT_TRANSACTION, ROUND_HEADER -> inputTreeHasher.addLeaf(
-                    ByteBuffer.wrap(digest.digest(itemSerialized.toByteArray())));
-            case TRANSACTION_RESULT, TRANSACTION_OUTPUT, STATE_CHANGES, BLOCK_HEADER -> outputTreeHasher.addLeaf(
-                    ByteBuffer.wrap(digest.digest(itemSerialized.toByteArray())));
+            case EVENT_HEADER, EVENT_TRANSACTION, ROUND_HEADER ->
+                inputTreeHasher.addLeaf(ByteBuffer.wrap(digest.digest(itemSerialized.toByteArray())));
+            case TRANSACTION_RESULT, TRANSACTION_OUTPUT, STATE_CHANGES, BLOCK_HEADER ->
+                outputTreeHasher.addLeaf(ByteBuffer.wrap(digest.digest(itemSerialized.toByteArray())));
             default -> {
                 // Other items are not part of the input/output trees
             }

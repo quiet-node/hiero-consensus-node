@@ -13,11 +13,11 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Objects;
+import org.hiero.base.crypto.AbstractSerializableHashable;
+import org.hiero.base.crypto.RunningHash;
+import org.hiero.base.crypto.RunningHashable;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
-import org.hiero.consensus.model.crypto.AbstractSerializableHashable;
-import org.hiero.consensus.model.crypto.RunningHash;
-import org.hiero.consensus.model.crypto.RunningHashable;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.stream.StreamAligned;
 import org.hiero.consensus.model.stream.Timestamped;
@@ -91,7 +91,8 @@ public class CesEvent extends AbstractSerializableHashable
     public void deserialize(@NonNull final SerializableDataInputStream in, final int version) throws IOException {
         this.platformEvent = switch (version) {
             case CES_EVENT_VERSION_PBJ_EVENT -> new PlatformEvent(in.readPbjRecord(GossipEvent.PROTOBUF));
-            default -> throw new IOException("Unsupported version " + version);};
+            default -> throw new IOException("Unsupported version " + version);
+        };
 
         in.readInt(); // ConsensusData.version
         in.readLong(); // ConsensusData.generation

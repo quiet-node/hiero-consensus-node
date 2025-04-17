@@ -33,9 +33,9 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Hash;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
-import org.hiero.consensus.model.crypto.Hash;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 import org.hiero.consensus.model.event.PlatformEvent;
@@ -312,9 +312,9 @@ public final class SyncUtils {
                             // we are done reading event, tell the writer thread to send a COMM_SYNC_DONE
                             eventReadingDone.countDown();
                         }
-                            // while we are waiting for the peer to tell us they are done, they might send
-                            // COMM_SYNC_ONGOING
-                            // if they are still busy reading events
+                        // while we are waiting for the peer to tell us they are done, they might send
+                        // COMM_SYNC_ONGOING
+                        // if they are still busy reading events
                         case ByteConstants.COMM_SYNC_ONGOING -> {
                             // peer is still reading events, waiting for them to finish
                             if (logger.isDebugEnabled(SYNC_INFO.getMarker())) {
@@ -333,8 +333,10 @@ public final class SyncUtils {
                             }
                             return eventsRead;
                         }
-                        default -> throw new SyncException(
-                                connection, String.format("while reading events, received unexpected byte %02x", next));
+                        default ->
+                            throw new SyncException(
+                                    connection,
+                                    String.format("while reading events, received unexpected byte %02x", next));
                     }
                 }
             } finally {
