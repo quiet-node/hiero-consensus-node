@@ -22,6 +22,7 @@ import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.TestRecycleBin;
+import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
@@ -126,11 +127,13 @@ public class StartupStateUtilsTests {
         final SignedState signedState = new RandomSignedStateGenerator(random)
                 .setRound(round)
                 .setEpoch(epoch)
-                .setCalculateHash(true)
                 .build();
 
         // make the state immutable
         signedState.getState().copy();
+
+        TestMerkleCryptoFactory.getInstance()
+                .digestTreeSync(signedState.getState().getRoot());
 
         final Path savedStateDirectory =
                 signedStateFilePath.getSignedStateDirectory(mainClassName, selfId, swirldName, round);

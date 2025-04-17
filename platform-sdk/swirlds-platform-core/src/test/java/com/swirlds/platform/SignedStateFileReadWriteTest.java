@@ -38,6 +38,7 @@ import com.swirlds.platform.state.snapshot.SignedStateFileUtils;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
 import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import com.swirlds.state.State;
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -121,8 +122,7 @@ class SignedStateFileReadWriteTest {
     @Test
     @DisplayName("Write Then Read State File Test")
     void writeThenReadStateFileTest() throws IOException {
-        final SignedState signedState =
-                new RandomSignedStateGenerator().setCalculateHash(true).build();
+        final SignedState signedState = new RandomSignedStateGenerator().build();
         final Path stateFile = testDirectory.resolve(SIGNED_STATE_FILE_NAME);
         final Path signatureSetFile = testDirectory.resolve(SIGNATURE_SET_FILE_NAME);
 
@@ -131,6 +131,7 @@ class SignedStateFileReadWriteTest {
 
         State state = signedState.getState();
         state.copy();
+        TestMerkleCryptoFactory.getInstance().digestTreeSync(((TestNewMerkleStateRoot) state).getRoot());
         state.createSnapshot(testDirectory);
         writeSignatureSetFile(testDirectory, signedState);
 
@@ -163,7 +164,6 @@ class SignedStateFileReadWriteTest {
     void writeSavedStateToDiskTest() throws IOException {
         final SignedState signedState = new RandomSignedStateGenerator()
                 .setSoftwareVersion(platformVersion)
-                .setCalculateHash(true)
                 .build();
         final Path directory = testDirectory.resolve("state");
 
@@ -182,6 +182,7 @@ class SignedStateFileReadWriteTest {
 
         // make immutable
         signedState.getState().copy();
+        TestMerkleCryptoFactory.getInstance().digestTreeSync((signedState.getState()).getRoot());
 
         writeSignedStateToDisk(
                 platformContext,
