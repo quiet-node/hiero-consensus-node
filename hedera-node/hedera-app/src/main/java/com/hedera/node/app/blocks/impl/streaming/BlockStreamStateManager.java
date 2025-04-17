@@ -11,6 +11,7 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
@@ -185,6 +186,16 @@ public class BlockStreamStateManager {
      * @param blockNumber the block number
      */
     public void removeBlockStatesUpTo(long blockNumber) {
+        // Remove only if the greatest blockNumber in blockStates minus the blockNumber is greater than 50.
+        // This is a crude buffer in-memory, but only BlockAcknowledgement's remove BlockStates at the moment.
+        if (Collections.max(blockStates.keySet()) - blockNumber <= 50) {
+            logger.debug(
+                    "Not removing block states up to {} - max block number is {}",
+                    blockNumber,
+                    Collections.max(blockStates.keySet()));
+            return;
+        }
+
         // Use keySet().removeIf for atomic removal of multiple entries
         blockStates.keySet().removeIf(key -> key <= blockNumber);
         logger.debug("Removed block states up to and including block {}", blockNumber);

@@ -38,7 +38,7 @@ public class BlockNodeSimulatorSuite {
     @HapiTest
     @HapiBlockNode(
             networkSize = 1,
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.LOCAL_NODE)},
+            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
                 @SubProcessNodeConfig(
                         nodeId = 0,
@@ -50,7 +50,17 @@ public class BlockNodeSimulatorSuite {
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
-                burstOfTps(500, Duration.of(600, SECONDS)),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true));
     }
@@ -110,6 +120,34 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 blockNodeSimulator(0).startImmediately(), // Start BN 0
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -177,18 +215,45 @@ public class BlockNodeSimulatorSuite {
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(), // Pri 0
                 waitUntilNextBlock().withBackgroundTraffic(true),
-                // TODO assert that consensus node switches to lower priority 1 block node
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 blockNodeSimulator(1).shutDownImmediately(), // Pri 1
-                // TODO assert that consensus node switches to lower priority 2 block node
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 blockNodeSimulator(2).shutDownImmediately(), // Pri 2
-                // TODO assert that consensus node switches to lower priority 3 block node
-                // Startup BN 1
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 blockNodeSimulator(1).startImmediately(),
-                // TODO assert that consensus node switches to higher priority 1 block node
-                // TODO assert that the consensus node doesn't retry connecting to Pri 2 anymore
-                blockNodeSimulator(0).startImmediately()
-                // CN Should switch to BN 1
-                // TODO assert that consensus node switches to higher priority 0 block node
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlock().withBackgroundTraffic(true)
                 );
     }
 

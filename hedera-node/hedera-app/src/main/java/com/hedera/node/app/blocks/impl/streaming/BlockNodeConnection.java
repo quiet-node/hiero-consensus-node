@@ -42,9 +42,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final String connectionDescriptor;
 
     // Locks and synchronization objects
-    private final Object channelLock = new Object();
     private final Object workerLock = new Object();
-    private final ReentrantLock connectionStateLock = new ReentrantLock();
 
     // Atomic state variables
     private final AtomicBoolean streamCompletionInProgress = new AtomicBoolean(false);
@@ -67,21 +65,17 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public enum ConnectionState {
         /**
-         * Connection is not yet initialized.
+         * bidi RequestObserver needs to be created.
          */
         UNINITIALIZED,
         /**
-         * Connection is active.
+         * bidi RequestObserver is established but this connection has not been chosen as the active one (priority based).
          */
-        ACTIVE,
+        PENDING,
         /**
-         * Connection is currently retrying.
+         * Connection is active. Request Worker Thread is sending PublishStreamRequest's to the block node through async bidi stream.
          */
-        RETRYING,
-        /**
-         * Connection is closed.
-         */
-        CLOSED
+        ACTIVE
     }
 
     protected BlockNodeConnection() {
@@ -123,38 +117,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         this.connectionState = ConnectionState.UNINITIALIZED;
     }
 
-    /**
-     * Establish the bidirectional streaming to block nodes.
-     */
-    public void establishStream() {
-        synchronized (connectionStateLock) {
-            synchronized (channelLock) {
-                requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
-
-                // Check if this is the highest priority connection
-                if (getConnectionState() != ConnectionState.RETRYING) {
-                    logger.debug("Stream to block node {} is ACTIVE", connectionDescriptor);
-                    updateConnectionState(ConnectionState.ACTIVE);
-                    startRequestWorker();
-                } else if (getConnectionState() == ConnectionState.RETRYING
-                        && blockNodeConnectionManager.getNextPriorityBlockNode() == null) {
-                    logger.debug(
-                            "No other priority connection available, making current stream to block node {} ACTIVE",
-                            connectionDescriptor);
-                    updateConnectionState(ConnectionState.ACTIVE);
-                    startRequestWorker();
-                }
-            }
-        }
+    public void createRequestObserver() throws RuntimeException {
+        requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
     }
 
     /**
      * @param newState the new state to transition to
      */
     public void updateConnectionState(@NonNull ConnectionState newState) {
-        synchronized (connectionStateLock) {
-            connectionState = newState;
-        }
+        connectionState = newState;
     }
 
     /**
@@ -165,7 +136,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         return connectionState;
     }
 
-    private void startRequestWorker() {
+    public void startRequestWorker() {
         synchronized (workerLock) {
             if (requestWorker != null && requestWorker.isAlive()) {
                 stopWorkerThread();
@@ -233,9 +204,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 if (blockState.isComplete()
                         && getCurrentRequestIndex() >= blockState.requests().size()) {
                     // Check if there is a higher priority ready connection
-                    if (!blockNodeConnectionManager.isHigherPriorityReady(this)) {
+                    //if (!blockNodeConnectionManager.isHigherPriorityReady(this)) {
                         moveToNextBlock();
-                    }
+                    //}
                 }
             } catch (InterruptedException e) {
                 logger.error(
@@ -300,24 +271,27 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void processAvailableRequests(@NonNull BlockState blockState) {
-        synchronized (connectionStateLock) {
-            List<PublishStreamRequest> requests = blockState.requests();
-            while (getCurrentRequestIndex() < requests.size()) {
-                if (!isActive()) {
-                    return;
-                }
-                final PublishStreamRequest request = requests.get(getCurrentRequestIndex());
-                logger.debug(
-                        "[{}] Sending request for block {} request index {} to node {}, items: {}",
-                        Thread.currentThread().getName(),
-                        getCurrentBlockNumber(),
-                        getCurrentRequestIndex(),
-                        connectionDescriptor,
-                        request.blockItems().blockItems().size());
-                sendRequest(request);
-                currentRequestIndex.incrementAndGet();
+        List<PublishStreamRequest> requests = blockState.requests();
+        while (getCurrentRequestIndex() < requests.size()) {
+            if (!isActive()) {
+                return;
             }
+            final PublishStreamRequest request = requests.get(getCurrentRequestIndex());
+            logger.debug(
+                    "[{}] Sending request for block {} request index {} to node {}, items: {}",
+                    Thread.currentThread().getName(),
+                    getCurrentBlockNumber(),
+                    getCurrentRequestIndex(),
+                    connectionDescriptor,
+                    request.blockItems().blockItems().size());
+            sendRequest(request);
+            currentRequestIndex.incrementAndGet();
         }
+    }
+
+    private void handleStreamFailure() {
+        close();
+        blockNodeConnectionManager.handleConnectionError(this);
     }
 
     private void moveToNextBlock() {
@@ -328,11 +302,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 connectionDescriptor);
         currentBlockNumber.incrementAndGet();
         currentRequestIndex.set(0);
-    }
-
-    private void handleStreamFailure() {
-        close();
-        blockNodeConnectionManager.handleConnectionError(this);
     }
 
     private void handleEndOfStreamError() {
@@ -437,8 +406,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
                 if (endOfStreamExpBackoffs.incrementAndGet() <= MAX_END_OF_STREAM_EXP_RETRIES) {
                     handleEndOfStreamError();
-                } else {
-                    blockNodeConnectionManager.forgetConnection(this);
                 }
             }
             case STREAM_ITEMS_SUCCESS,
@@ -485,8 +452,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
                     if (endOfStreamExpBackoffs.incrementAndGet() <= MAX_END_OF_STREAM_EXP_RETRIES) {
                         blockNodeConnectionManager.handleConnectionError(this);
-                    } else {
-                        blockNodeConnectionManager.forgetConnection(this);
                     }
                 }
             }
@@ -559,12 +524,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request);
-        synchronized (connectionStateLock) {
-            synchronized (channelLock) {
-                if (isActive() && requestObserver != null) {
-                    requestObserver.onNext(request);
-                }
-            }
+        if (isActive() && requestObserver != null) {
+            requestObserver.onNext(request);
         }
     }
 
@@ -572,28 +533,32 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * Idempotent operation that closes this connection (if active)
      */
     public void close() {
-        synchronized (connectionStateLock) {
-            if (isActive()) {
-                updateConnectionState(ConnectionState.CLOSED);
-                closeObserver();
-                setCurrentBlockNumber(-1);
-            }
+        if (isActive()) {
+            updateConnectionState(ConnectionState.UNINITIALIZED);
+            logger.debug("[{}] BlockNodeConnection {} ConnectionState: {}",
+                    Thread.currentThread().getName(),
+                    connectionDescriptor,
+                    connectionState);
+            closeObserver();
+            setCurrentBlockNumber(-1);
         }
-        logger.debug("Closed connection to block node {}", connectionDescriptor);
+        logger.debug("[{}] Closed connection to block node {}",
+                Thread.currentThread().getName(),
+                connectionDescriptor);
     }
 
     private void closeObserver() {
-        synchronized (channelLock) {
-            if (requestObserver != null) {
-                try {
-                    logger.debug("Closing request observer for block node - requestObserver.onCompleted() {}", connectionDescriptor);
-                    streamCompletionInProgress.set(true);
-                    requestObserver.onCompleted();
-                } catch (Exception e) {
-                    logger.warn("Error while completing request observer", e);
-                }
-                requestObserver = null;
+        if (requestObserver != null) {
+            try {
+                logger.debug("[{}] Closing request observer for block node - requestObserver.onCompleted() {}",
+                        Thread.currentThread().getName(),
+                        connectionDescriptor);
+                streamCompletionInProgress.set(true);
+                requestObserver.onCompleted();
+            } catch (Exception e) {
+                logger.warn("Error while completing request observer", e);
             }
+            requestObserver = null;
         }
         stopWorkerThread();
     }
@@ -632,10 +597,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public int getCurrentRequestIndex() {
         return currentRequestIndex.get();
-    }
-
-    public ReentrantLock getConnectionStateLock() {
-        return connectionStateLock;
     }
 
     public void notifyNewRequestAvailable() {
@@ -687,12 +648,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void restartStreamAtBlock(long blockNumber) {
         logger.debug("Restarting stream at block {} for node {}", blockNumber, connectionDescriptor);
 
-        synchronized (connectionStateLock) {
-            synchronized (channelLock) {
-                setCurrentBlockNumber(blockNumber);
-                establishStream();
-            }
-        }
+        setCurrentBlockNumber(blockNumber);
+        blockNodeConnectionManager.scheduleRetry(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
 
         logger.debug("Stream restarted at block {} for node {}", blockNumber, connectionDescriptor);
     }
@@ -781,5 +738,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     connectionDescriptor);
             streamCompletionInProgress.set(false);
         }
+    }
+
+    public ConnectionState getState() {
+        return connectionState;
     }
 }
