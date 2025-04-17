@@ -412,6 +412,39 @@ public class BlockNodeConnectionManager {
         return connections.containsKey(config);
     }
 
+    public boolean higherPriorityStarted(BlockNodeConnection blockNodeConnection) {
+        synchronized (lockObject) {
+            // Find a pending connection with the highest priority greater than the current connection
+            BlockNodeConnection highestPri = null;
+            for (BlockNodeConnection connection : this.connections.values()) {
+                if (connection.getConnectionState().equals(ConnectionState.PENDING) &&
+                        connection.getNodeConfig().priority() < blockNodeConnection.getNodeConfig().priority()) {
+                    if (highestPri == null || connection.getNodeConfig().priority() < highestPri.getNodeConfig().priority()) {
+                        // If no connection is found or the current one has a higher priority, update the reference
+                        highestPri = connection;
+                    }
+                }
+            }
+
+            if (highestPri != null) {
+                // Found a higher priority pending connection,
+                highestPri.updateConnectionState(ConnectionState.ACTIVE);
+                highestPri.startRequestWorker();
+                // Log the transition of this higher priority connection to active
+                logger.debug("[{}] Transitioning higher priority pending connection: {} Priority: {} to ACTIVE",
+                        Thread.currentThread().getName(),
+                        blockNodeName(highestPri.getNodeConfig()),
+                        highestPri.getNodeConfig().priority());
+
+                // Close the current connection and remove it from the connections map
+                blockNodeConnection.close();
+                connections.remove(blockNodeConnection.getNodeConfig());
+                return true;
+            }
+            return false;
+        }
+    }
+
     // This class exists solely to avoid checking for null every time we reference a connection in connectionsInRetry
     // And to handle cases where connection object creation might fail in connectToNode
     private static class NoOpConnection extends BlockNodeConnection {
@@ -551,6 +584,14 @@ public class BlockNodeConnectionManager {
                              Thread.currentThread().getName(),
                              blockNodeName(nodeConfig),
                              connection.getConnectionState());
+
+                    // Check if the connection is already active
+                    if (connection.getConnectionState().equals(ConnectionState.ACTIVE)) {
+                        logger.debug("[{}] Connection task for block node {} is already active",
+                                Thread.currentThread().getName(),
+                                blockNodeName(nodeConfig));
+                        return;
+                    }
 
                     // If we have an active connection, and this task is of lower priority, stop rescheduling.
                     if (connections.values().stream().anyMatch(c -> c.getConnectionState().equals(ConnectionState.ACTIVE) &&
