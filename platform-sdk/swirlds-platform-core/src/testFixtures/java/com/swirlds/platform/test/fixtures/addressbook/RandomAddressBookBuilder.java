@@ -6,13 +6,13 @@ import static com.swirlds.platform.crypto.KeyCertPurpose.SIGNING;
 
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.crypto.PublicStores;
-import com.swirlds.platform.crypto.SerializableX509Certificate;
-import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import org.hiero.consensus.model.address.AddressBook;
+import org.hiero.consensus.model.address.SerializableX509Certificate;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
@@ -254,8 +254,8 @@ public class RandomAddressBookBuilder {
         final long unboundedWeight;
         switch (weightDistributionStrategy) {
             case BALANCED -> unboundedWeight = averageWeight;
-            case GAUSSIAN -> unboundedWeight =
-                    Math.max(0, (long) (averageWeight + random.nextGaussian() * weightStandardDeviation));
+            case GAUSSIAN ->
+                unboundedWeight = Math.max(0, (long) (averageWeight + random.nextGaussian() * weightStandardDeviation));
             default -> throw new IllegalStateException("Unexpected value: " + weightDistributionStrategy);
         }
 

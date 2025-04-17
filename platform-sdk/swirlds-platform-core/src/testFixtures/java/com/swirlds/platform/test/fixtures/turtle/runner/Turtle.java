@@ -3,7 +3,6 @@ package com.swirlds.platform.test.fixtures.turtle.runner;
 
 import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.common.test.fixtures.Randotron;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusRoundValidator;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
@@ -24,6 +23,7 @@ import org.apache.logging.log4j.Logger;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.consensus.model.address.AddressBook;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.node.NodeId;
 

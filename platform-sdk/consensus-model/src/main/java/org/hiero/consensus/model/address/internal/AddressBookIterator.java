@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.platform.system.address.internal;
+package org.hiero.consensus.model.address.internal;
 
-import com.swirlds.platform.system.address.Address;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import org.hiero.consensus.model.address.Address;
 import org.hiero.consensus.model.node.NodeId;
 
 /**

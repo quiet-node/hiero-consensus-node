@@ -8,6 +8,8 @@ import java.util.Objects;
 import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.address.Address;
+import org.hiero.consensus.model.address.AddressBook;
 import org.hiero.consensus.model.node.NodeId;
 
 /**

@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.platform.system.address;
-
-import static com.swirlds.common.utility.NonCryptographicHashing.hash32;
+package org.hiero.consensus.model.address;
 
 import com.swirlds.base.utility.ToStringBuilder;
-import com.swirlds.platform.crypto.CryptoStatic;
-import com.swirlds.platform.crypto.SerializableX509Certificate;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -14,10 +10,12 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Objects;
+import org.hiero.base.crypto.CryptoUtils;
 import org.hiero.base.crypto.SerializablePublicKey;
 import org.hiero.base.io.SelfSerializable;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
+import org.hiero.base.utility.NonCryptographicHashing;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
@@ -641,7 +639,7 @@ public class Address implements SelfSerializable {
         if (certificate == null) {
             return null;
         }
-        return CryptoStatic.checkCertificate(certificate.getCertificate()) ? certificate : null;
+        return CryptoUtils.checkCertificate(certificate.getCertificate()) ? certificate : null;
     }
 
     /**
@@ -649,7 +647,7 @@ public class Address implements SelfSerializable {
      */
     @Override
     public int hashCode() {
-        return hash32(id.id());
+        return NonCryptographicHashing.hash32(id.id());
     }
 
     /**

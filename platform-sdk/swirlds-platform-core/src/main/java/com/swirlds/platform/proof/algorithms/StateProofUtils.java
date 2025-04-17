@@ -6,8 +6,6 @@ import static org.hiero.base.crypto.DigestType.SHA_384;
 import com.swirlds.platform.proof.SignatureVerifier;
 import com.swirlds.platform.proof.tree.StateProofInternalNode;
 import com.swirlds.platform.proof.tree.StateProofNode;
-import com.swirlds.platform.system.address.Address;
-import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.MessageDigest;
 import java.util.Deque;
@@ -15,6 +13,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import org.hiero.consensus.model.address.Address;
+import org.hiero.consensus.model.address.AddressBook;
 import org.hiero.consensus.model.node.NodeId;
 
 /**

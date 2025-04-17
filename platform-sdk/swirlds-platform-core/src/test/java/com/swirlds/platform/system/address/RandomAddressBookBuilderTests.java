@@ -17,6 +17,8 @@ import java.security.PublicKey;
 import org.hiero.base.crypto.Cryptography;
 import org.hiero.base.crypto.CryptographyProvider;
 import org.hiero.base.crypto.Signature;
+import org.hiero.consensus.model.address.Address;
+import org.hiero.consensus.model.address.AddressBook;
 import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.Test;
 

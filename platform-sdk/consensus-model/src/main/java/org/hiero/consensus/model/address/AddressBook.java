@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.platform.system.address;
+package org.hiero.consensus.model.address;
 
 import com.swirlds.base.state.MutabilityException;
-import com.swirlds.platform.system.address.internal.AddressBookIterator;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -20,6 +19,7 @@ import org.hiero.base.crypto.Hashable;
 import org.hiero.base.io.SelfSerializable;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
+import org.hiero.consensus.model.address.internal.AddressBookIterator;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
@@ -580,16 +580,6 @@ public class AddressBook implements Iterable<Address>, SelfSerializable, Hashabl
     @NonNull
     public Set<NodeId> getNodeIdSet() {
         return new HashSet<>(addresses.keySet());
-    }
-
-    /**
-     * The text form of an address book that appears in config.txt
-     *
-     * @return the string form of the AddressBook that would appear in config.txt
-     */
-    @NonNull
-    public String toConfigText() {
-        return AddressBookUtils.addressBookConfigText(this);
     }
 
     /**

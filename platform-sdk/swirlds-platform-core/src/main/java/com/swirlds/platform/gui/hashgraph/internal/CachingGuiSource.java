@@ -5,8 +5,8 @@ import com.swirlds.platform.gui.GuiEventStorage;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiConstants;
 import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.internal.EventImpl;
-import com.swirlds.platform.system.address.AddressBook;
 import java.util.List;
+import org.hiero.consensus.model.address.AddressBook;
 import org.hiero.consensus.model.event.EventConstants;
 
 /**

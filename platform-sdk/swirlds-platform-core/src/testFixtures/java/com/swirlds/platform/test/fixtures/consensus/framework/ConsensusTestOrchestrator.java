@@ -3,7 +3,6 @@ package com.swirlds.platform.test.fixtures.consensus.framework;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusOutputValidator;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusRoundValidator;
 import com.swirlds.platform.test.fixtures.event.generator.GraphGenerator;
@@ -12,6 +11,7 @@ import com.swirlds.platform.test.fixtures.gui.TestGuiSource;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.function.Consumer;
+import org.hiero.consensus.model.address.AddressBook;
 import org.hiero.consensus.model.event.EventConstants;
 import org.hiero.consensus.model.node.NodeId;
 

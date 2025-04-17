@@ -20,8 +20,6 @@ import com.swirlds.platform.network.PeerInfo;
 import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.system.SystemExitUtils;
-import com.swirlds.platform.system.address.Address;
-import com.swirlds.platform.system.address.AddressBook;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.FileInputStream;
@@ -42,7 +40,6 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -71,6 +68,8 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.hiero.base.crypto.CryptographyException;
 import org.hiero.base.crypto.config.CryptoConfig;
+import org.hiero.consensus.model.address.Address;
+import org.hiero.consensus.model.address.AddressBook;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
@@ -632,28 +631,5 @@ public final class CryptoStatic {
             store.setCertificateEntry(SIGNING.storeName(peer.nodeId()), sigCert);
         }
         return store;
-    }
-
-    /**
-     * Check if a certificate is valid.  A certificate is valid if it is not null, has a public key, and can be encoded.
-     *
-     * @param certificate the certificate to check
-     * @return true if the certificate is valid, false otherwise
-     */
-    public static boolean checkCertificate(@Nullable final Certificate certificate) {
-        if (certificate == null) {
-            return false;
-        }
-        if (certificate.getPublicKey() == null) {
-            return false;
-        }
-        try {
-            if (certificate.getEncoded().length == 0) {
-                return false;
-            }
-        } catch (final CertificateEncodingException e) {
-            return false;
-        }
-        return true;
     }
 }
