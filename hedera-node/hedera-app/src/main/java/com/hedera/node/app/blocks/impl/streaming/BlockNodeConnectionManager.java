@@ -53,7 +53,7 @@ public class BlockNodeConnectionManager {
     private static final String GRPC_END_POINT =
             BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
     // Maximum retry delay to prevent excessively long waits
-    private static final Duration MAX_RETRY_DELAY = Duration.ofMinutes(1);
+    private static final Duration MAX_RETRY_DELAY = Duration.ofSeconds(10);
 
     // Add a random number generator for retry jitter
     private final Random random = new Random();
@@ -551,6 +551,15 @@ public class BlockNodeConnectionManager {
                              Thread.currentThread().getName(),
                              blockNodeName(nodeConfig),
                              connection.getConnectionState());
+
+                    // If we have an active connection, and this task is of lower priority, stop rescheduling.
+                    if (connections.values().stream().anyMatch(c -> c.getConnectionState().equals(ConnectionState.ACTIVE) &&
+                            c.getNodeConfig().priority() <= nodeConfig.priority())) {
+                        logger.debug("[{}] Connection task for block node {} is stopping due to active connection with higher priority",
+                                Thread.currentThread().getName(),
+                                blockNodeName(nodeConfig));
+                        return;
+                    }
 
                      switch (connection.getConnectionState()) {
                          case UNINITIALIZED:
