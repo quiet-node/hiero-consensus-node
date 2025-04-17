@@ -43,8 +43,7 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        simulatorPriorities = {0},
-                        prometheusPort = 31003)
+                        simulatorPriorities = {0})
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
@@ -53,9 +52,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 burstOfTps(500, Duration.of(600, SECONDS)),
                 waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true)
-                );
-                //);
+                waitUntilNextBlock().withBackgroundTraffic(true));
     }
 
     @HapiTest

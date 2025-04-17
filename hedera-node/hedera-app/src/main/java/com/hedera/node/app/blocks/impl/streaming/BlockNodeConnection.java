@@ -363,6 +363,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             // Increment the ACK counter metric
             blockStreamMetrics.incrementBlockAckReceivedCount();
 
+            if (currentBlockStreaming == -1) {
+                return;
+            }
+
             if (blockAlreadyExists) {
                 logger.warn("[{}] Block {} already exists on block node {}",
                         Thread.currentThread().getName(),
@@ -582,6 +586,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         synchronized (channelLock) {
             if (requestObserver != null) {
                 try {
+                    logger.debug("Closing request observer for block node - requestObserver.onCompleted() {}", connectionDescriptor);
+                    streamCompletionInProgress.set(true);
                     requestObserver.onCompleted();
                 } catch (Exception e) {
                     logger.warn("Error while completing request observer", e);
@@ -763,16 +769,17 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     @Override
     public void onCompleted() {
-        if (streamCompletionInProgress.compareAndSet(false, true)) {
-            try {
-                logger.debug(
-                        "[{}] Stream completed for block node {}",
-                        Thread.currentThread().getName(),
-                        connectionDescriptor);
-                handleStreamFailure();
-            } finally {
-                streamCompletionInProgress.set(false);
-            }
+        if (!streamCompletionInProgress.get()) {
+            logger.debug(
+                    "[{}] Stream completed for block node {}",
+                    Thread.currentThread().getName(),
+                    connectionDescriptor);
+            handleStreamFailure();
+        } else {
+            logger.debug("[{}] Stream completed for block node {} (stream completion in progress)",
+                    Thread.currentThread().getName(),
+                    connectionDescriptor);
+            streamCompletionInProgress.set(false);
         }
     }
 }

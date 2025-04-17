@@ -327,9 +327,6 @@ public class BlockNodeConnectionManager {
         synchronized (connectionLock) {
             final BlockNodeConnection connection = getActiveConnection().orElse(null);
             if (connection == null) {
-                logger.debug(
-                        "[{}] No active connections available for streaming new request",
-                        Thread.currentThread().getName());
                 return;
             }
 
