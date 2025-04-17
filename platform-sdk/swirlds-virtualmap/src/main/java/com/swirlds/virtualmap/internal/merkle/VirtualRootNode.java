@@ -87,6 +87,8 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.constructable.ConstructableClass;
+import org.hiero.base.crypto.DigestType;
+import org.hiero.base.crypto.Hash;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.hiero.consensus.model.crypto.Hash;
@@ -482,7 +484,7 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
         // Full leaf rehashing has nothing to do with reconnects, but existing reconnect mechanisms,
         // flusher and hash listener, work just fine in this scenario
         final ReconnectHashLeafFlusher flusher =
-                new ReconnectHashLeafFlusher(dataSource, virtualMapConfig.flushInterval(), statistics);
+                new ReconnectHashLeafFlusher(dataSource, virtualMapConfig.reconnectFlushInterval(), statistics);
         final ReconnectHashListener hashListener = new ReconnectHashListener(flusher);
 
         // This background thread will be responsible for hashing the tree and sending the
@@ -1460,7 +1462,7 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
         // During reconnect we want to look up state from the original records
         final VirtualStateAccessor originalState = originalMap.getState();
         reconnectFlusher = new ReconnectHashLeafFlusher(
-                reconnectRecords.getDataSource(), virtualMapConfig.flushInterval(), statistics);
+                reconnectRecords.getDataSource(), virtualMapConfig.reconnectFlushInterval(), statistics);
         nodeRemover = new ReconnectNodeRemover(
                 originalMap.getRecords(),
                 originalState.getFirstLeafPath(),
