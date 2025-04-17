@@ -14,8 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.synchronization.utility.MerkleSynchronizationException;
 import com.swirlds.config.api.Configuration;
@@ -275,7 +273,7 @@ class VirtualRootNodeTest extends VirtualTestBase {
     void moveDataAcrossMaps() throws InterruptedException {
         final int totalSize = 1_000_000;
         final VirtualRootNode root1 = createRoot();
-        final VirtualRootNode<TestKey, TestValue> root2 = createRoot();
+        final VirtualRootNode root2 = createRoot();
 
         try {
             for (int index = 0; index < totalSize; index++) {
@@ -284,15 +282,14 @@ class VirtualRootNodeTest extends VirtualTestBase {
                 root1.put(key, value, TestValueCodec.INSTANCE);
             }
 
-        final VirtualRootNode root2 = createRoot();
-        final long firstLeafPath = root1.getState().getFirstLeafPath();
-        final long lastLeafPath = root1.getState().getLastLeafPath();
-        for (long index = firstLeafPath; index <= lastLeafPath; index++) {
-            final VirtualLeafBytes leaf = root1.getRecords().findLeafRecord(index);
-            final Bytes key = leaf.keyBytes().replicate();
-            final Bytes value = leaf.valueBytes().replicate();
-            root2.putBytes(key, value);
-        }
+            final long firstLeafPath = root1.getState().getFirstLeafPath();
+            final long lastLeafPath = root1.getState().getLastLeafPath();
+            for (long index = firstLeafPath; index <= lastLeafPath; index++) {
+                final VirtualLeafBytes leaf = root1.getRecords().findLeafRecord(index);
+                final Bytes key = leaf.keyBytes().replicate();
+                final Bytes value = leaf.valueBytes().replicate();
+                root2.putBytes(key, value);
+            }
 
             for (int index = 0; index < totalSize; index++) {
                 final Bytes key = TestKey.longToKey(index);

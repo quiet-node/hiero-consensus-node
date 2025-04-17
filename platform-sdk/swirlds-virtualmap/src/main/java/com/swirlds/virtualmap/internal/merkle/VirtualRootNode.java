@@ -87,11 +87,9 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.constructable.ConstructableClass;
-import org.hiero.base.crypto.DigestType;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
-import org.hiero.consensus.model.crypto.Hash;
 
 /**
  * An {@link AbstractMerkleInternal} that represents the root node of a virtual tree. This root node always
@@ -1382,14 +1380,14 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
     @Override
     public TeacherTreeView<Long> buildTeacherView(final ReconnectConfig reconnectConfig) {
         return switch (virtualMapConfig.reconnectMode()) {
-            case VirtualMapReconnectMode.PUSH -> new TeacherPushVirtualTreeView(
-                    getStaticThreadManager(), reconnectConfig, this, state, pipeline);
-            case VirtualMapReconnectMode.PULL_TOP_TO_BOTTOM -> new TeacherPullVirtualTreeView(
-                    getStaticThreadManager(), reconnectConfig, this, state, pipeline);
-            case VirtualMapReconnectMode.PULL_TWO_PHASE_PESSIMISTIC -> new TeacherPullVirtualTreeView(
-                    getStaticThreadManager(), reconnectConfig, this, state, pipeline);
-            default -> throw new UnsupportedOperationException(
-                    "Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
+            case VirtualMapReconnectMode.PUSH ->
+                new TeacherPushVirtualTreeView(getStaticThreadManager(), reconnectConfig, this, state, pipeline);
+            case VirtualMapReconnectMode.PULL_TOP_TO_BOTTOM ->
+                new TeacherPullVirtualTreeView(getStaticThreadManager(), reconnectConfig, this, state, pipeline);
+            case VirtualMapReconnectMode.PULL_TWO_PHASE_PESSIMISTIC ->
+                new TeacherPullVirtualTreeView(getStaticThreadManager(), reconnectConfig, this, state, pipeline);
+            default ->
+                throw new UnsupportedOperationException("Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
         };
     }
 
@@ -1469,8 +1467,15 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
                 originalState.getLastLeafPath(),
                 reconnectFlusher);
         return switch (virtualMapConfig.reconnectMode()) {
-            case VirtualMapReconnectMode.PUSH -> new LearnerPushVirtualTreeView(
-                    reconnectConfig, this, originalMap.records, originalState, reconnectState, nodeRemover, mapStats);
+            case VirtualMapReconnectMode.PUSH ->
+                new LearnerPushVirtualTreeView(
+                        reconnectConfig,
+                        this,
+                        originalMap.records,
+                        originalState,
+                        reconnectState,
+                        nodeRemover,
+                        mapStats);
             case VirtualMapReconnectMode.PULL_TOP_TO_BOTTOM -> {
                 final NodeTraversalOrder topToBottom = new TopToBottomTraversalOrder();
                 yield new LearnerPullVirtualTreeView(
@@ -1495,8 +1500,8 @@ public final class VirtualRootNode extends PartialBinaryMerkleInternal
                         twoPhasePessimistic,
                         mapStats);
             }
-            default -> throw new UnsupportedOperationException(
-                    "Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
+            default ->
+                throw new UnsupportedOperationException("Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
         };
     }
 

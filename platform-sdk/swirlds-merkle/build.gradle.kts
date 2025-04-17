@@ -25,7 +25,6 @@ timingSensitiveModuleInfo {
     requires("com.swirlds.config.extensions.test.fixtures")
     requires("com.swirlds.fchashmap")
     requires("com.swirlds.merkle.test.fixtures")
-    requires("org.hiero.consensus.model")
     requires("org.hiero.base.crypto")
     requires("org.hiero.base.utility.test.fixtures")
     requires("org.junit.jupiter.api")
