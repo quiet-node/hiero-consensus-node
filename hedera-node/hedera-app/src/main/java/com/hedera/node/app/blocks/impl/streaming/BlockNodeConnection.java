@@ -50,7 +50,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final AtomicBoolean streamCompletionInProgress = new AtomicBoolean(false);
     private final AtomicLong currentBlockNumber = new AtomicLong(-1);
     private final AtomicInteger currentRequestIndex = new AtomicInteger(0);
-    private final AtomicInteger endOfStreamExpBackoffs = new AtomicInteger(0);
     private final AtomicInteger endOfStreamImmediateRestarts = new AtomicInteger(0);
 
     // Notification objects
@@ -412,11 +411,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         connectionDescriptor,
                         blockNumber);
 
-                if (endOfStreamExpBackoffs.incrementAndGet() <= MAX_END_OF_STREAM_EXP_RETRIES) {
-                    handleEndOfStreamError();
-                } else {
-                    blockNodeConnectionManager.forgetConnection(this);
-                }
+                handleEndOfStreamError();
             }
             case STREAM_ITEMS_SUCCESS,
                     STREAM_ITEMS_TIMEOUT,
@@ -460,11 +455,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                             Thread.currentThread().getName(),
                             connectionDescriptor);
 
-                    if (endOfStreamExpBackoffs.incrementAndGet() <= MAX_END_OF_STREAM_EXP_RETRIES) {
-                        blockNodeConnectionManager.handleConnectionError(this);
-                    } else {
-                        blockNodeConnectionManager.forgetConnection(this);
-                    }
+                    blockNodeConnectionManager.handleConnectionError(this);
                 }
             }
             case STREAM_ITEMS_UNKNOWN -> {
