@@ -966,11 +966,10 @@ public class EnhancedKeyStoreLoader {
             return switch (entry) {
                 case SubjectPublicKeyInfo spki -> converter.getPublicKey(spki);
                 case PEMKeyPair kp -> converter.getPublicKey(kp.getPublicKeyInfo());
-                case PEMEncryptedKeyPair ekp ->
-                    converter.getPublicKey(ekp.decryptKeyPair(decrypter).getPublicKeyInfo());
-                default ->
-                    throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
-                            .formatted(entry.getClass().getName()));
+                case PEMEncryptedKeyPair ekp -> converter.getPublicKey(
+                        ekp.decryptKeyPair(decrypter).getPublicKeyInfo());
+                default -> throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
+                        .formatted(entry.getClass().getName()));
             };
         } catch (IOException e) {
             throw new KeyLoadingException(
@@ -1002,14 +1001,13 @@ public class EnhancedKeyStoreLoader {
 
             return switch (entry) {
                 case PrivateKeyInfo pki -> converter.getPrivateKey(pki);
-                case PKCS8EncryptedPrivateKeyInfo epki ->
-                    converter.getPrivateKey(epki.decryptPrivateKeyInfo(inputDecrypter));
+                case PKCS8EncryptedPrivateKeyInfo epki -> converter.getPrivateKey(
+                        epki.decryptPrivateKeyInfo(inputDecrypter));
                 case PEMKeyPair kp -> converter.getPrivateKey(kp.getPrivateKeyInfo());
-                case PEMEncryptedKeyPair ekp ->
-                    converter.getPrivateKey(ekp.decryptKeyPair(decrypter).getPrivateKeyInfo());
-                default ->
-                    throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
-                            .formatted(entry.getClass().getName()));
+                case PEMEncryptedKeyPair ekp -> converter.getPrivateKey(
+                        ekp.decryptKeyPair(decrypter).getPrivateKeyInfo());
+                default -> throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
+                        .formatted(entry.getClass().getName()));
             };
         } catch (IOException | PKCSException e) {
             throw new KeyLoadingException(
