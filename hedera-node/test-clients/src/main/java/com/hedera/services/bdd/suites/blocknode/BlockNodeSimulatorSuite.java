@@ -47,7 +47,7 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        simulatorPriorities = {0})
+                        blockNodePriorities = {0})
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
@@ -68,19 +68,19 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        simulatorPriorities = {0}),
+                        blockNodePriorities = {0}),
                 @SubProcessNodeConfig(
                         nodeId = 1,
                         blockNodeIds = {1},
-                        simulatorPriorities = {0}),
+                        blockNodePriorities = {0}),
                 @SubProcessNodeConfig(
                         nodeId = 2,
                         blockNodeIds = {2},
-                        simulatorPriorities = {0}),
+                        blockNodePriorities = {0}),
                 @SubProcessNodeConfig(
                         nodeId = 3,
                         blockNodeIds = {3},
-                        simulatorPriorities = {0}),
+                        blockNodePriorities = {0}),
             })
     @Order(1)
     final Stream<DynamicTest> allNodesStreamingHappyPath() {
@@ -97,86 +97,31 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        simulatorPriorities = {0})
+                        blockNodePriorities = {0})
             })
     @Order(2)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsCanStreamGenesisBlock() {
+        AtomicReference<Instant> time = new AtomicReference<>();
+        List<Integer> portNumbers = new ArrayList<>();
         return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).shutDownImmediately(), // Shutdown BN 0
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).startImmediately(), // Start BN 0
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            networkSize = 1,
-            blockNodeConfigs = {
-                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
-            },
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0, 1},
-                        simulatorPriorities = {0, 1})
-            })
-    @Order(3)
-    final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsSwitchLower() {
-        AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
-        return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                doingContextual(spec -> connectionDropTime.set(Instant.now())),
-                blockNodeSimulator(0).shutDownImmediately(),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                // TODO assert that consensus node switches to lower priority block node
-                blockNodeSimulator(0).startImmediately(),
-                // TODO assert that consensus node switches back to higher priority block node
-                waitUntilNextBlock().withBackgroundTraffic(true));
-        // TODO Switching back, assert that the consensus node is able to stream from the appropriate block through it's
-        // buffer
-        //  currently the simulator always restarts from block 0.
+                doingContextual(spec -> {
+                    portNumbers.add(spec.getBlockNodePortById(0));
+                }),
+                waitUntilNextBlocks(5).withBackgroundTraffic(true),
+                doingContextual(spec -> time.set(Instant.now())),
+                blockNodeSimulator(0)
+                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_BEHIND)
+                        .withBlockNumber(Long.MAX_VALUE),
+                sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
+                        byNodeId(0),
+                        time::get,
+                        Duration.of(10, SECONDS),
+                        Duration.of(45, SECONDS),
+                        "Block node localhost:" + portNumbers.getFirst()
+                                + " reported it is behind. Will restart stream at block 0.",
+                        "Received EndOfStream from block node localhost:" + portNumbers.getFirst()
+                                + " at block 9223372036854775807 with PublishStreamResponseCode STREAM_ITEMS_BEHIND")),
+                waitUntilNextBlocks(5).withBackgroundTraffic(true));
     }
 
     @HapiTest
@@ -192,9 +137,9 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0, 1, 2, 3},
-                        simulatorPriorities = {0, 1, 2, 3})
+                        blockNodePriorities = {0, 1, 2, 3})
             })
-    @Order(4)
+    @Order(3)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickle() {
         AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
         List<Integer> portNumbers = new ArrayList<>();
@@ -256,176 +201,33 @@ public class BlockNodeSimulatorSuite {
 
     @HapiTest
     @HapiBlockNode(
-            networkSize = 1,
-            blockNodeConfigs = {
-                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-            },
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        simulatorPriorities = {0})
-            })
-    @Order(5)
-    final Stream<DynamicTest> node0StreamingBlockNodeMultipleEndOfStreamInSuccession() {
-        AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
-        return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                doingContextual(spec -> connectionDropTime.set(Instant.now())),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR),
-                // TODO assert that the consensus node restarts stream
-                doingContextual(spec -> {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR),
-                // TODO assert that the consensus node restarts stream
-                doingContextual(spec -> {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR),
-                // TODO assert that the consensus node restarts stream
-                doingContextual(spec -> {
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }),
-                waitUntilNextBlock().withBackgroundTraffic(true)
-                // TODO assert that the consensus node goes into exponential backoff
-                );
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            networkSize = 1,
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        simulatorPriorities = {0})
-            })
-    @Order(6)
-    final Stream<DynamicTest> node0StreamingBlockNodeEndOfStreamResponseCodes() {
-        return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_UNKNOWN),
-                // TODO assert that the consensus node restarts stream
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT),
-                // TODO assert that the consensus node restarts stream
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER),
-                // TODO assert that the consensus node restarts stream
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_BAD_STATE_PROOF),
-                // TODO assert that the consensus node restarts stream
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_BEHIND),
-                // TODO assert that the consensus node restarts stream
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR),
-                // TODO assert that the consensus node restarts stream
-                // this should immediately go into a longer backoff time period
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_PERSISTENCE_FAILED),
-                // TODO assert that the consensus node restarts stream
-                // this should immediately go into a longer backoff time period
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            networkSize = 2,
-            blockNodeConfigs = {
-                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
-            },
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        simulatorPriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 1,
-                        blockNodeIds = {1},
-                        simulatorPriorities = {0})
-            })
-    @Order(7)
-    final Stream<DynamicTest> twoNodesStreamingHappyPath() {
-        return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
             networkSize = 2,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        simulatorPriorities = {0}),
+                        blockNodePriorities = {0}),
                 @SubProcessNodeConfig(
                         nodeId = 1,
                         blockNodeIds = {0},
-                        simulatorPriorities = {0})
+                        blockNodePriorities = {0})
+            })
+    @Order(4)
+    final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
+        return hapiTest(waitUntilNextBlocks(10).withBackgroundTraffic(true));
+    }
+
+    @HapiTest
+    @HapiBlockNode(
+            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
+            subProcessNodeConfigs = {
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(8)
-    final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
-        return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                // TODO assert that the consensus node should eventually receive a SkipBlock message as blocks are
-                // being produced
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        simulatorPriorities = {0})
-            })
-    @Order(9)
     final Stream<DynamicTest> node0StreamingResendBlock() {
         AtomicLong lastVerifiedBlock = new AtomicLong();
         return hapiTest(
@@ -447,9 +249,9 @@ public class BlockNodeSimulatorSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        simulatorPriorities = {0})
+                        blockNodePriorities = {0})
             })
-    @Order(10)
+    @Order(9)
     final Stream<DynamicTest> node0StreamingBufferFullHappyPath() {
         AtomicLong lastVerifiedBlock = new AtomicLong();
         return hapiTest(

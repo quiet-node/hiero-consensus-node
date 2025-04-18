@@ -49,6 +49,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final AtomicInteger currentRequestIndex = new AtomicInteger(0);
     private final AtomicInteger endOfStreamExpBackoffs = new AtomicInteger(0);
     private final AtomicInteger endOfStreamImmediateRestarts = new AtomicInteger(0);
+    private final AtomicLong jumpTargetBlock = new AtomicLong(-1);
 
     // Notification objects
     private final Object newBlockAvailable = new Object();
@@ -152,6 +153,17 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void requestWorkerLoop() {
         while (isActive()) {
             try {
+                final long targetBlock = jumpTargetBlock.getAndSet(-1); // Check and clear jump signal atomically
+                if (targetBlock >= 0) {
+                    logger.debug(
+                            "[{}] Worker received jump signal to block {} for node {}",
+                            Thread.currentThread().getName(),
+                            targetBlock,
+                            connectionDescriptor);
+                    setCurrentBlockNumber(targetBlock); // Updates currentBlockNumber and resets requestIndex
+                    continue; // Restart loop iteration for the new block
+                }
+
                 final var currentBlock = getCurrentBlockNumber();
                 // Get the current block state
                 final BlockState blockState = blockStreamStateManager.getBlockState(currentBlock);
@@ -339,13 +351,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             }
 
             if (blockAlreadyExists) {
-                logger.trace(
+                logger.debug(
                         "[{}] Block {} already exists on block node {}",
                         Thread.currentThread().getName(),
                         acknowledgedBlockNumber,
                         connectionDescriptor);
             } else {
-                logger.trace(
+                logger.debug(
                         "[{}] Block {} acknowledgement received from block node {}",
                         Thread.currentThread().getName(),
                         acknowledgedBlockNumber,
@@ -474,12 +486,17 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void handleSkipBlock(@NonNull SkipBlock skipBlock) {
         final var skipBlockNumber = skipBlock.blockNumber();
 
+        // Only jump if the skip is for the block we are currently processing
         if (skipBlockNumber == getCurrentBlockNumber()) {
-            logger.debug(
-                    "Skipping ahead to Block {} because of SkipBlock from {}",
-                    skipBlockNumber + 1,
+            final var nextBlock = skipBlockNumber + 1L;
+            logger.debug("Skipping ahead to Block {} because of SkipBlock from {}", nextBlock, connectionDescriptor);
+            jumpToBlock(nextBlock); // Now uses signaling instead of thread interruption
+        } else {
+            logger.warn(
+                    "Received SkipBlock for {} but currently processing block {}, ignoring. {}",
+                    skipBlockNumber,
+                    getCurrentBlockNumber(),
                     connectionDescriptor);
-            jumpToBlock(skipBlockNumber + 1L);
         }
     }
 
@@ -675,16 +692,24 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void jumpToBlock(long blockNumber) {
         logger.debug(
-                "Setting current block number to {} for node {} without ending stream",
+                "[{}] Jumping to block {} for node {}",
+                Thread.currentThread().getName(),
                 blockNumber,
                 connectionDescriptor);
+        // Set the target block for the worker loop to pick up
+        jumpTargetBlock.set(blockNumber);
 
-        stopWorkerThread();
-        setCurrentBlockNumber(blockNumber);
-        startRequestWorker();
-        notifyNewBlockAvailable();
-
-        logger.debug("Worker thread restarted and jumped to block {} for node {}", blockNumber, connectionDescriptor);
+        // Ensure the worker thread wakes up if it's waiting for a new block
+        // It might be waiting on newBlockAvailable or newRequestAvailable
+        synchronized (newBlockAvailable) {
+            newBlockAvailable.notifyAll(); // Notify potentially waiting worker
+        }
+        synchronized (newRequestAvailable) {
+            newRequestAvailable.notifyAll(); // Notify potentially waiting worker
+        }
+        // No longer need to interrupt/restart the thread
+        // stopWorkerThread(); // Removed
+        // startRequestWorker(); // Removed
     }
 
     /**
