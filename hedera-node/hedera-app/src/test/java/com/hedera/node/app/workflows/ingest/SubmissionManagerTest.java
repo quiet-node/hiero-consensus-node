@@ -5,6 +5,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.DUPLICATE_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.PLATFORM_TRANSACTION_NOT_CREATED;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -100,24 +101,16 @@ final class SubmissionManagerTest extends AppTestBase {
         }
 
         @Test
-        @DisplayName("Null cannot be provided as any of the 'submit' args")
-        @SuppressWarnings("ConstantConditions")
-        void testSubmitWithIllegalParameters() {
-            assertThatThrownBy(() -> submissionManager.submit(null, bytes)).isInstanceOf(NullPointerException.class);
-            assertThatThrownBy(() -> submissionManager.submit(txBody, null)).isInstanceOf(NullPointerException.class);
-        }
-
-        @Test
         @DisplayName("Submission of the transaction to the platform is a success")
         void submittingToPlatformSucceeds() throws PreCheckException {
             // Given a platform that will succeed in taking bytes
-            when(platform.createTransaction(any())).thenReturn(true);
+            when(platform.createTransaction(any(), anyBoolean())).thenReturn(true);
 
             // When we submit bytes
-            submissionManager.submit(txBody, bytes);
+            submissionManager.submit(txBody, bytes, false);
 
             // Then the platform actually receives the bytes
-            verify(platform).createTransaction(bytes.toByteArray());
+            verify(platform).createTransaction(bytes.toByteArray(), false);
             // And the metrics keeping track of errors submitting are NOT touched
             verify(platformTxnRejections, never()).cycle();
             // And the deduplication cache is updated
@@ -128,10 +121,10 @@ final class SubmissionManagerTest extends AppTestBase {
         @DisplayName("If the platform fails to onConsensusRound the bytes, a PreCheckException is thrown")
         void testSubmittingToPlatformFails() {
             // Given a platform that will **fail** in taking bytes
-            when(platform.createTransaction(any())).thenReturn(false);
+            when(platform.createTransaction(any(), anyBoolean())).thenReturn(false);
 
             // When we submit bytes, then we fail by exception
-            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes))
+            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes, false))
                     .isInstanceOf(PreCheckException.class)
                     .extracting(t -> ((PreCheckException) t).responseCode())
                     .isEqualTo(PLATFORM_TRANSACTION_NOT_CREATED);
@@ -145,15 +138,15 @@ final class SubmissionManagerTest extends AppTestBase {
         @DisplayName("Submitting the same transaction twice in close succession rejects the duplicate")
         void testSubmittingDuplicateTransactionsCloseTogether() throws PreCheckException {
             // Given a platform that will succeed in taking bytes
-            when(platform.createTransaction(any())).thenReturn(true);
+            when(platform.createTransaction(any(), anyBoolean())).thenReturn(true);
             when(deduplicationCache.contains(txBody.transactionIDOrThrow()))
                     .thenReturn(false)
                     .thenReturn(true);
 
             // When we submit a duplicate transaction twice in close succession, then the second one fails
             // with a DUPLICATE_TRANSACTION error
-            submissionManager.submit(txBody, bytes);
-            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes))
+            submissionManager.submit(txBody, bytes, true);
+            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes, true))
                     .isInstanceOf(PreCheckException.class)
                     .extracting(t -> ((PreCheckException) t).responseCode())
                     .isEqualTo(DUPLICATE_TRANSACTION);
@@ -209,13 +202,11 @@ final class SubmissionManagerTest extends AppTestBase {
         @DisplayName("An unchecked transaction not in PROD mode can be submitted")
         void testSuccessWithUncheckedSubmit() throws PreCheckException {
             // Given a platform that will succeed in taking the *unchecked* bytes
-            when(platform.createTransaction(uncheckedBytes)).thenReturn(true);
+            when(platform.createTransaction(uncheckedBytes, true)).thenReturn(true);
 
             // When we submit an unchecked transaction, and separate bytes
-            submissionManager.submit(txBody, bytes);
+            submissionManager.submit(txBody, bytes, true);
 
-            // Then the platform actually sees the unchecked bytes
-            verify(platform).createTransaction(uncheckedBytes);
             // And the metrics keeping track of errors submitting are NOT touched
             verify(platformTxnRejections, never()).cycle();
             // And the deduplication cache is updated
@@ -236,7 +227,7 @@ final class SubmissionManagerTest extends AppTestBase {
 
             // When we submit an unchecked transaction, and separate bytes, then the
             // submission FAILS because we are in PROD mode
-            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes))
+            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes, true))
                     .isInstanceOf(PreCheckException.class)
                     .hasFieldOrPropertyWithValue("responseCode", PLATFORM_TRANSACTION_NOT_CREATED);
 
@@ -262,7 +253,7 @@ final class SubmissionManagerTest extends AppTestBase {
 
             // When we submit an unchecked transaction, and separate bytes, then the
             // submission FAILS because we are in PROD mode
-            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes))
+            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes, true))
                     .isInstanceOf(PreCheckException.class)
                     .hasFieldOrPropertyWithValue("responseCode", PLATFORM_TRANSACTION_NOT_CREATED);
 
@@ -288,7 +279,7 @@ final class SubmissionManagerTest extends AppTestBase {
 
             // When we submit an unchecked transaction, and separate bytes, then the
             // submission FAILS because we are in PROD mode
-            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes))
+            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes, true))
                     .isInstanceOf(PreCheckException.class)
                     .hasFieldOrPropertyWithValue("responseCode", PLATFORM_TRANSACTION_NOT_CREATED);
 
@@ -314,7 +305,7 @@ final class SubmissionManagerTest extends AppTestBase {
 
             // When we submit an unchecked transaction, and separate bytes, then the
             // submission FAILS because we are in PROD mode
-            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes))
+            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes, true))
                     .isInstanceOf(PreCheckException.class)
                     .hasFieldOrPropertyWithValue("responseCode", PLATFORM_TRANSACTION_NOT_CREATED);
 
@@ -349,7 +340,7 @@ final class SubmissionManagerTest extends AppTestBase {
 
             // When we submit an unchecked transaction with bogus bytes, and separate bytes, then the
             // submission FAILS because of the bogus bytes
-            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes))
+            assertThatThrownBy(() -> submissionManager.submit(txBody, bytes, true))
                     .isInstanceOf(PreCheckException.class)
                     .hasFieldOrPropertyWithValue("responseCode", PLATFORM_TRANSACTION_NOT_CREATED);
 

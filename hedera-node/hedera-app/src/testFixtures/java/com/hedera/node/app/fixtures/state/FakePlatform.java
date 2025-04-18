@@ -128,5 +128,10 @@ public final class FakePlatform implements Platform {
     }
 
     @Override
+    public boolean createTransaction(@NonNull byte[] transaction, boolean force) {
+        return false;
+    }
+
+    @Override
     public void start() {}
 }

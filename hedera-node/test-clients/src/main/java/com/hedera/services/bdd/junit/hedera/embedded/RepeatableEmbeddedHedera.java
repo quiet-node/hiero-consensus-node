@@ -190,7 +190,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
         }
 
         @Override
-        public boolean createTransaction(@NonNull final byte[] transaction) {
+        public boolean createTransaction(@NonNull byte[] transaction, boolean force) {
             lastCreatedEvent = new FakeEvent(defaultNodeId, time.now(), version, createAppPayloadWrapper(transaction));
             return true;
         }

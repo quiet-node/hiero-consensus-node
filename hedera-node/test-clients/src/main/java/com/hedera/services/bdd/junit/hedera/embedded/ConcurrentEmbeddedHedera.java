@@ -141,7 +141,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
         }
 
         @Override
-        public boolean createTransaction(@NonNull byte[] transaction) {
+        public boolean createTransaction(@NonNull byte[] transaction, boolean force) {
             return queue.add(new FakeEvent(defaultNodeId, now(), version, createAppPayloadWrapper(transaction)));
         }
 

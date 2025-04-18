@@ -814,7 +814,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 throw new IllegalArgumentException("" + NOT_SUPPORTED);
             }
             final var payload = com.hedera.hapi.node.base.Transaction.PROTOBUF.toBytes(nodeTransactionWith(body));
-            requireNonNull(daggerApp).submissionManager().submit(body, payload);
+            requireNonNull(daggerApp).submissionManager().submit(body, payload, true);
         } catch (PreCheckException e) {
             final var reason = e.responseCode();
             if (reason == DUPLICATE_TRANSACTION) {

@@ -101,12 +101,14 @@ public class SubmissionManager {
      * Submit a transaction to the {@link Platform}. If the transaction is an unchecked submit, we ignored the given tx
      * bytes and send in the other bytes.
      *
-     * @param txBody  the {@link TransactionBody} that should be submitted to the platform
+     * @param txBody the {@link TransactionBody} that should be submitted to the platform
      * @param txBytes the bytes of the data that should be submitted (the full transaction bytes as received from gRPC)
+     * @param forceSubmit whether to use priority platform submission
      * @throws NullPointerException if one of the arguments is {@code null}
-     * @throws PreCheckException    if the transaction could not be submitted
+     * @throws PreCheckException if the transaction could not be submitted
      */
-    public void submit(@NonNull final TransactionBody txBody, @NonNull final Bytes txBytes) throws PreCheckException {
+    public void submit(@NonNull final TransactionBody txBody, @NonNull final Bytes txBytes, final boolean forceSubmit)
+            throws PreCheckException {
         requireNonNull(txBody);
         requireNonNull(txBytes);
 
@@ -148,7 +150,7 @@ public class SubmissionManager {
             // This call to submit to the platform should almost always work. Maybe under extreme load it will fail,
             // or while the system is being shut down. In any event, the user will receive an error code indicating
             // that the transaction was not submitted and they can retry.
-            final var success = platform.createTransaction(payload.toByteArray());
+            final var success = platform.createTransaction(payload.toByteArray(), forceSubmit);
             if (success) {
                 submittedTxns.add(txId);
             } else {

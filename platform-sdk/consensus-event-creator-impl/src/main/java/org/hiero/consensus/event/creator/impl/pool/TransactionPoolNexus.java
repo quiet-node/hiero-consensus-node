@@ -117,9 +117,10 @@ public class TransactionPoolNexus implements TransactionSupplier {
      * {@link #submitTransaction} but with extra safeguards.
      *
      * @param appTransaction the transaction to submit
+     * @param forceSubmit use a priority status for the transaction
      * @return true if the transaction passed all validity checks and was accepted by the consumer
      */
-    public synchronized boolean submitApplicationTransaction(@NonNull final Bytes appTransaction) {
+    public synchronized boolean submitApplicationTransaction(@NonNull final Bytes appTransaction, boolean forceSubmit) {
         if (!healthy || platformStatus != PlatformStatus.ACTIVE) {
             return false;
         }
@@ -139,7 +140,7 @@ public class TransactionPoolNexus implements TransactionSupplier {
             return false;
         }
 
-        return submitTransaction(appTransaction, false);
+        return submitTransaction(appTransaction, forceSubmit);
     }
 
     /**

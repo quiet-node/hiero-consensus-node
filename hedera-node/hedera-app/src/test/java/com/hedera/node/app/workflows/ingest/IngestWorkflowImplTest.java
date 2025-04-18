@@ -13,6 +13,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_HAS_UNKNOWN
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_OVERSIZE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mock.Strictness.LENIENT;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -141,7 +142,7 @@ class IngestWorkflowImplTest extends AppTestBase {
         // The cost *MUST* be zero, it is only non-zero for insufficient balance errors
         assertThat(response.cost()).isZero();
         // And that the transaction and its bytes were actually passed to the submission manager
-        verify(submissionManager).submit(transactionBody, requestBuffer);
+        verify(submissionManager).submit(transactionBody, requestBuffer, false);
     }
 
     @Nested
@@ -169,7 +170,7 @@ class IngestWorkflowImplTest extends AppTestBase {
                 // The cost *MUST* be zero, it is only non-zero for insufficient balance errors
                 assertThat(response.cost()).isZero();
                 // And the transaction is not submitted to the platform
-                verify(submissionManager, never()).submit(any(), any());
+                verify(submissionManager, never()).submit(any(), any(), anyBoolean());
             }
         }
     }
@@ -206,7 +207,7 @@ class IngestWorkflowImplTest extends AppTestBase {
             // The cost *MUST* be zero, it is only non-zero for insufficient balance errors
             assertThat(response.cost()).isZero();
             // And the transaction is not submitted to the platform
-            verify(submissionManager, never()).submit(any(), any());
+            verify(submissionManager, never()).submit(any(), any(), anyBoolean());
         }
 
         @Test
@@ -224,7 +225,7 @@ class IngestWorkflowImplTest extends AppTestBase {
             // And the cost will be zero
             assertThat(response.cost()).isZero();
             // And the transaction is not submitted to the platform
-            verify(submissionManager, never()).submit(any(), any());
+            verify(submissionManager, never()).submit(any(), any(), anyBoolean());
         }
     }
 
@@ -256,7 +257,7 @@ class IngestWorkflowImplTest extends AppTestBase {
             // The cost *MUST* be zero, it is only non-zero for insufficient balance errors
             assertThat(response.cost()).isZero();
             // And the transaction is not submitted to the platform
-            verify(submissionManager, never()).submit(any(), any());
+            verify(submissionManager, never()).submit(any(), any(), anyBoolean());
         }
 
         @Test
@@ -275,7 +276,7 @@ class IngestWorkflowImplTest extends AppTestBase {
             // And the cost will be zero
             assertThat(response.cost()).isZero();
             // And the transaction is not submitted to the platform
-            verify(submissionManager, never()).submit(any(), any());
+            verify(submissionManager, never()).submit(any(), any(), anyBoolean());
         }
     }
 
@@ -289,7 +290,7 @@ class IngestWorkflowImplTest extends AppTestBase {
             // Given a SubmissionManager that will fail the submit
             doThrow(new PreCheckException(PLATFORM_TRANSACTION_NOT_CREATED))
                     .when(submissionManager)
-                    .submit(any(), any());
+                    .submit(any(), any(), anyBoolean());
 
             // When we submit a transaction
             workflow.submitTransaction(requestBuffer, responseBuffer);
@@ -307,7 +308,7 @@ class IngestWorkflowImplTest extends AppTestBase {
             // Given a SubmissionManager that will throw a RuntimeException from submit
             doThrow(new RuntimeException("submit exception"))
                     .when(submissionManager)
-                    .submit(any(), any());
+                    .submit(any(), any(), anyBoolean());
 
             // When the transaction is submitted
             workflow.submitTransaction(requestBuffer, responseBuffer);

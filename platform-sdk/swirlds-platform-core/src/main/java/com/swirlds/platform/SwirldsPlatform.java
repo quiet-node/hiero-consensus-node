@@ -478,12 +478,9 @@ public class SwirldsPlatform implements Platform {
                         new DoneReplayingEventsAction(platformContext.getTime().now()));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public boolean createTransaction(@NonNull final byte[] transaction) {
-        return transactionPoolNexus.submitApplicationTransaction(Bytes.wrap(transaction));
+    public boolean createTransaction(@NonNull byte[] transaction, boolean force) {
+        return transactionPoolNexus.submitApplicationTransaction(Bytes.wrap(transaction), force);
     }
 
     /**

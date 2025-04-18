@@ -84,7 +84,11 @@ public interface Platform {
      * @return true if the transaction is accepted, false if it is rejected. Being accepted does not guarantee that the
      * transaction will ever reach consensus, only that this node will make a best-effort attempt to make that happen.
      */
-    boolean createTransaction(@NonNull byte[] transaction);
+    default boolean createTransaction(@NonNull byte[] transaction) {
+        return createTransaction(transaction, false);
+    }
+
+    boolean createTransaction(@NonNull byte[] transaction, boolean force);
 
     /**
      * generate signature bytes for given data

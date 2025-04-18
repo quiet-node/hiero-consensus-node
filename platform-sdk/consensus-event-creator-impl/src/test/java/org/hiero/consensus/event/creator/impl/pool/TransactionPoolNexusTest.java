@@ -55,7 +55,7 @@ class TransactionPoolNexusTest {
         final Randotron rand = Randotron.create();
         final Bytes tx = Bytes.wrap(rand.nextByteArray(txNumBytes));
 
-        assertEquals(shouldSucceed, nexus.submitApplicationTransaction(tx));
+        assertEquals(shouldSucceed, nexus.submitApplicationTransaction(tx, false));
     }
 
     static List<Arguments> testSubmitApplicationTransactionArgs() {
@@ -77,12 +77,12 @@ class TransactionPoolNexusTest {
             rem -= txSize;
             numCreated++;
             final Bytes tx = Bytes.wrap(rand.nextByteArray(txSize));
-            assertTrue(nexus.submitApplicationTransaction(tx));
+            assertTrue(nexus.submitApplicationTransaction(tx, false));
         }
 
         // create one more transaction that is the max size. this tx will be forced into a new event
         final Bytes tx = Bytes.wrap(rand.nextByteArray(TX_MAX_BYTES));
-        assertTrue(nexus.submitApplicationTransaction(tx));
+        assertTrue(nexus.submitApplicationTransaction(tx, false));
 
         // get the transactions
         // this should happen in two batches, the first will all of the random size transactions created in the loop
