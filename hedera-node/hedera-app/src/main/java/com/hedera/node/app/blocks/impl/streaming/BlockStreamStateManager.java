@@ -39,7 +39,8 @@ public class BlockStreamStateManager {
      *
      * @param configProvider the configuration provider
      */
-    public BlockStreamStateManager(@NonNull final ConfigProvider configProvider, @NonNull BlockStreamMetrics blockStreamMetrics) {
+    public BlockStreamStateManager(
+            @NonNull final ConfigProvider configProvider, @NonNull BlockStreamMetrics blockStreamMetrics) {
         this.blockItemBatchSize = configProvider
                 .getConfiguration()
                 .getConfigData(BlockStreamConfig.class)

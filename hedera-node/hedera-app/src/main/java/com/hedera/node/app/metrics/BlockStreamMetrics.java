@@ -41,9 +41,7 @@ public class BlockStreamMetrics {
     private LongGauge producingBlockNumberGauge;
 
     @Inject
-    public BlockStreamMetrics(
-            @NonNull final Metrics metrics,
-            @NonNull final NetworkInfo networkInfo) {
+    public BlockStreamMetrics(@NonNull final Metrics metrics, @NonNull final NetworkInfo networkInfo) {
         this.metrics = requireNonNull(metrics);
         this.networkInfo = requireNonNull(networkInfo);
         registerMetrics();

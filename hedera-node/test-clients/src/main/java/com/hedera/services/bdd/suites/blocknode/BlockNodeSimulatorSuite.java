@@ -2,12 +2,13 @@
 package com.hedera.services.bdd.suites.blocknode;
 
 import static com.hedera.services.bdd.junit.TestTags.BLOCK_NODE_SIMULATOR;
+import static com.hedera.services.bdd.junit.hedera.NodeSelector.byNodeId;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.utilops.BlockNodeSimulatorVerbs.blockNodeSimulator;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogContainsTimeframe;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
-import static com.hedera.services.bdd.suites.regression.system.MixedOperations.burstOfTps;
 import static java.time.temporal.ChronoUnit.SECONDS;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
@@ -17,10 +18,10 @@ import com.hedera.services.bdd.HapiBlockNode.SubProcessNodeConfig;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.OrderedInIsolation;
 import com.hedera.services.bdd.junit.hedera.BlockNodeMode;
-import com.hedera.services.bdd.junit.hedera.NodeSelector;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
@@ -208,12 +209,27 @@ public class BlockNodeSimulatorSuite {
     @Order(4)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickle() {
         AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
+        List<Integer> portNumbers = new ArrayList<>();
         return hapiTest(
+                doingContextual(spec -> {
+                    portNumbers.add(spec.getBlockNodePortById(0));
+                    portNumbers.add(spec.getBlockNodePortById(1));
+                    portNumbers.add(spec.getBlockNodePortById(2));
+                    portNumbers.add(spec.getBlockNodePortById(3));
+                }),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(), // Pri 0
+                sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
+                        byNodeId(0),
+                        connectionDropTime::get,
+                        Duration.of(10, SECONDS),
+                        Duration.of(45, SECONDS),
+                        "Error on stream from block node localhost:" + portNumbers.getFirst(),
+                        "Selected block node localhost:" + portNumbers.get(1) + " for connection attempt.",
+                        "Connection task for block node localhost:" + portNumbers.get(1) + " ConnectionState: ACTIVE")),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -221,7 +237,16 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
+                doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(1).shutDownImmediately(), // Pri 1
+                sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
+                        byNodeId(0),
+                        connectionDropTime::get,
+                        Duration.of(10, SECONDS),
+                        Duration.of(45, SECONDS),
+                        "Error on stream from block node localhost:" + portNumbers.get(1),
+                        "Selected block node localhost:" + portNumbers.get(2) + " for connection attempt.",
+                        "Connection task for block node localhost:" + portNumbers.get(2) + " ConnectionState: ACTIVE")),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -229,7 +254,16 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
+                doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(2).shutDownImmediately(), // Pri 2
+                sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
+                        byNodeId(0),
+                        connectionDropTime::get,
+                        Duration.of(10, SECONDS),
+                        Duration.of(45, SECONDS),
+                        "Error on stream from block node localhost:" + portNumbers.get(2),
+                        "Selected block node localhost:" + portNumbers.get(3) + " for connection attempt.",
+                        "Connection task for block node localhost:" + portNumbers.get(3) + " ConnectionState: ACTIVE")),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -239,7 +273,18 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
+                doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(1).startImmediately(),
+                sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
+                        byNodeId(0),
+                        connectionDropTime::get,
+                        Duration.of(10, SECONDS),
+                        Duration.of(45, SECONDS),
+                        "Connection task for block node localhost:" + portNumbers.get(1) + " ConnectionState: PENDING",
+                        "Connection task for block node localhost:" + portNumbers.get(2)
+                                + " is stopping due to active connection with higher priority",
+                        "Transitioning higher priority pending connection: localhost:" + portNumbers.get(1)
+                                + " Priority: 1 to ACTIVE")),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -251,10 +296,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true)
-                );
+                waitUntilNextBlock().withBackgroundTraffic(true));
     }
 
     @HapiTest
