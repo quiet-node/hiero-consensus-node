@@ -966,10 +966,11 @@ public class EnhancedKeyStoreLoader {
             return switch (entry) {
                 case SubjectPublicKeyInfo spki -> converter.getPublicKey(spki);
                 case PEMKeyPair kp -> converter.getPublicKey(kp.getPublicKeyInfo());
-                case PEMEncryptedKeyPair ekp -> converter.getPublicKey(
-                        ekp.decryptKeyPair(decrypter).getPublicKeyInfo());
-                default -> throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
-                        .formatted(entry.getClass().getName()));
+                case PEMEncryptedKeyPair ekp ->
+                    converter.getPublicKey(ekp.decryptKeyPair(decrypter).getPublicKeyInfo());
+                default ->
+                    throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
+                            .formatted(entry.getClass().getName()));
             };
         } catch (IOException e) {
             throw new KeyLoadingException(
@@ -1001,13 +1002,14 @@ public class EnhancedKeyStoreLoader {
 
             return switch (entry) {
                 case PrivateKeyInfo pki -> converter.getPrivateKey(pki);
-                case PKCS8EncryptedPrivateKeyInfo epki -> converter.getPrivateKey(
-                        epki.decryptPrivateKeyInfo(inputDecrypter));
+                case PKCS8EncryptedPrivateKeyInfo epki ->
+                    converter.getPrivateKey(epki.decryptPrivateKeyInfo(inputDecrypter));
                 case PEMKeyPair kp -> converter.getPrivateKey(kp.getPrivateKeyInfo());
-                case PEMEncryptedKeyPair ekp -> converter.getPrivateKey(
-                        ekp.decryptKeyPair(decrypter).getPrivateKeyInfo());
-                default -> throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
-                        .formatted(entry.getClass().getName()));
+                case PEMEncryptedKeyPair ekp ->
+                    converter.getPrivateKey(ekp.decryptKeyPair(decrypter).getPrivateKeyInfo());
+                default ->
+                    throw new KeyLoadingException("Unsupported entry type [ entryType = %s ]"
+                            .formatted(entry.getClass().getName()));
             };
         } catch (IOException | PKCSException e) {
             throw new KeyLoadingException(
@@ -1063,14 +1065,14 @@ public class EnhancedKeyStoreLoader {
 
         if (entryType.isAssignableFrom(PublicKey.class)
                 && (entry instanceof SubjectPublicKeyInfo
-                || entry instanceof PEMKeyPair
-                || entry instanceof PEMEncryptedKeyPair)) {
+                        || entry instanceof PEMKeyPair
+                        || entry instanceof PEMEncryptedKeyPair)) {
             return true;
         } else if (entryType.isAssignableFrom(PrivateKey.class)
                 && (entry instanceof PEMKeyPair
-                || entry instanceof PrivateKeyInfo
-                || entry instanceof PKCS8EncryptedPrivateKeyInfo
-                || entry instanceof PEMEncryptedKeyPair)) {
+                        || entry instanceof PrivateKeyInfo
+                        || entry instanceof PKCS8EncryptedPrivateKeyInfo
+                        || entry instanceof PEMEncryptedKeyPair)) {
             return true;
         } else if (entryType.isAssignableFrom(KeyPair.class)
                 && (entry instanceof PEMKeyPair || entry instanceof PEMEncryptedKeyPair)) {
@@ -1302,8 +1304,8 @@ public class EnhancedKeyStoreLoader {
                 final PrivateKey pemPrivateKey = readPrivateKey(nodeId, ksLocation);
                 if (pemPrivateKey == null
                         || !Arrays.equals(
-                        pemPrivateKey.getEncoded(),
-                        pfxPrivateKeys.get(nodeId).getEncoded())) {
+                                pemPrivateKey.getEncoded(),
+                                pfxPrivateKeys.get(nodeId).getEncoded())) {
                     logger.error(
                             ERROR.getMarker(), "Private key for nodeId: {} does not match the migrated key", nodeId);
                     errorCount.incrementAndGet();
@@ -1317,8 +1319,8 @@ public class EnhancedKeyStoreLoader {
                 try {
                     if (pemCertificate == null
                             || !Arrays.equals(
-                            pemCertificate.getEncoded(),
-                            pfxCertificates.get(nodeId).getEncoded())) {
+                                    pemCertificate.getEncoded(),
+                                    pfxCertificates.get(nodeId).getEncoded())) {
                         logger.error(
                                 ERROR.getMarker(),
                                 "Certificate for nodeId: {} does not match the migrated certificate",
@@ -1424,7 +1426,7 @@ public class EnhancedKeyStoreLoader {
                 if (sPrivatePfx.exists()
                         && sPrivatePfx.isFile()
                         && !sPrivatePfx.renameTo(
-                        pfxDateDirectory.resolve(sPrivatePfx.getName()).toFile())) {
+                                pfxDateDirectory.resolve(sPrivatePfx.getName()).toFile())) {
                     cleanupErrorCount.incrementAndGet();
                 }
             }
@@ -1433,7 +1435,7 @@ public class EnhancedKeyStoreLoader {
         if (sPublicPfx.exists()
                 && sPublicPfx.isFile()
                 && !sPublicPfx.renameTo(
-                pfxDateDirectory.resolve(sPublicPfx.getName()).toFile())) {
+                        pfxDateDirectory.resolve(sPublicPfx.getName()).toFile())) {
             cleanupErrorCount.incrementAndGet();
         }
         if (cleanupErrorCount.get() > 0) {
