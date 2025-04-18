@@ -52,9 +52,7 @@ public class BlockNodeConnectionManager {
 
     private final BlockNodeConfigExtractor blockNodeConfigurations;
     private final BlockStreamStateManager blockStreamStateManager;
-
-    private final Object lockObject = new Object(); // Use intrinsic lock monitor
-    private final ScheduledExecutorService connectionExecutor = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService connectionExecutor = Executors.newScheduledThreadPool(4);
     private final BlockStreamMetrics blockStreamMetrics;
 
     /**
@@ -113,9 +111,6 @@ public class BlockNodeConnectionManager {
      * @param connection the connection that received the error
      */
     public void handleConnectionError(@NonNull final BlockNodeConnection connection) {
-        logger.debug(
-                "[{}] Acquiring connection lock for connection error handling",
-                Thread.currentThread().getName());
         synchronized (connections) {
             logger.warn(
                     "[{}] Handling connection error for {}",
@@ -126,9 +121,6 @@ public class BlockNodeConnectionManager {
             // Immediately try to find and connect to the next available node
             selectBlockNodeForStreaming();
         }
-        logger.debug(
-                "[{}] Released connection lock after handling connection error",
-                Thread.currentThread().getName());
     }
 
     /**
@@ -280,9 +272,6 @@ public class BlockNodeConnectionManager {
      */
     @VisibleForTesting
     void selectBlockNodeForStreaming() {
-        logger.debug(
-                "[{}] Acquiring connection lock for block node selection",
-                Thread.currentThread().getName());
         synchronized (connections) {
             final BlockNodeConfig selectedNode = getNextPriorityBlockNode();
 
@@ -301,9 +290,6 @@ public class BlockNodeConnectionManager {
             // If we selected a node, schedule the connection attempt.
             connectToNode(selectedNode);
         }
-        logger.debug(
-                "[{}] Released connection lock after block node selection",
-                Thread.currentThread().getName());
     }
 
     public BlockNodeConfig getNextPriorityBlockNode() {
@@ -588,11 +574,6 @@ public class BlockNodeConnectionManager {
         public void run() {
             final var nodeConfig = connection.getNodeConfig();
             try {
-                logger.debug(
-                        "[{}] Attempting connectionLock.lock() - Running connection task for block node {} ConnectionState: {} ",
-                        Thread.currentThread().getName(),
-                        blockNodeName(nodeConfig),
-                        connection.getConnectionState());
                 synchronized (connections) {
                     logger.debug(
                             "[{}] Running connection task for block node {} ConnectionState: {}",

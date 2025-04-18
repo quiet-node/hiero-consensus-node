@@ -33,9 +33,24 @@ public class HapiSpecWaitUntilNextBlock extends UtilOp {
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
     private boolean backgroundTraffic;
+    private int blocksToWaitFor = 1; // Default to waiting for the next single block
 
     public HapiSpecWaitUntilNextBlock withBackgroundTraffic(final boolean backgroundTraffic) {
         this.backgroundTraffic = backgroundTraffic;
+        return this;
+    }
+
+    /**
+     * Sets the number of blocks to wait for after the current latest block.
+     *
+     * @param count the number of blocks to wait for
+     * @return this operation
+     */
+    public HapiSpecWaitUntilNextBlock waitingForBlocks(final int count) {
+        if (count <= 0) {
+            throw new IllegalArgumentException("Must wait for at least one block");
+        }
+        this.blocksToWaitFor = count;
         return this;
     }
 
@@ -53,9 +68,13 @@ public class HapiSpecWaitUntilNextBlock extends UtilOp {
         }
 
         final var currentBlock = findLatestBlockNumber(blockDir);
-        final var targetBlock = currentBlock + 1;
+        final var targetBlock = currentBlock + blocksToWaitFor;
 
-        log.info("Waiting for block {} to appear (current block is {})", targetBlock, currentBlock);
+        log.info(
+                "Waiting for block {} to appear (current block is {}, waiting for {})",
+                targetBlock,
+                currentBlock,
+                blocksToWaitFor);
 
         // Start background traffic if configured
         final var stopTraffic = new AtomicBoolean(false);

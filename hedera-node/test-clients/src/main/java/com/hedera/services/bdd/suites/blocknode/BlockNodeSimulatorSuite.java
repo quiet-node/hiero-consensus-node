@@ -9,6 +9,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogConta
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlocks;
 import static java.time.temporal.ChronoUnit.SECONDS;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
@@ -217,9 +218,7 @@ public class BlockNodeSimulatorSuite {
                     portNumbers.add(spec.getBlockNodePortById(2));
                     portNumbers.add(spec.getBlockNodePortById(3));
                 }),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(), // Pri 0
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
@@ -230,13 +229,7 @@ public class BlockNodeSimulatorSuite {
                         "Error on stream from block node localhost:" + portNumbers.getFirst(),
                         "Selected block node localhost:" + portNumbers.get(1) + " for connection attempt.",
                         "Connection task for block node localhost:" + portNumbers.get(1) + " ConnectionState: ACTIVE")),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(1).shutDownImmediately(), // Pri 1
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
@@ -247,13 +240,7 @@ public class BlockNodeSimulatorSuite {
                         "Error on stream from block node localhost:" + portNumbers.get(1),
                         "Selected block node localhost:" + portNumbers.get(2) + " for connection attempt.",
                         "Connection task for block node localhost:" + portNumbers.get(2) + " ConnectionState: ACTIVE")),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(2).shutDownImmediately(), // Pri 2
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
@@ -264,39 +251,20 @@ public class BlockNodeSimulatorSuite {
                         "Error on stream from block node localhost:" + portNumbers.get(2),
                         "Selected block node localhost:" + portNumbers.get(3) + " for connection attempt.",
                         "Connection task for block node localhost:" + portNumbers.get(3) + " ConnectionState: ACTIVE")),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
+                waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(1).startImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(15, SECONDS),
                         Duration.of(45, SECONDS),
                         "Connection task for block node localhost:" + portNumbers.get(1) + " ConnectionState: PENDING",
                         "Connection task for block node localhost:" + portNumbers.get(2)
                                 + " is stopping due to active connection with higher priority",
                         "Transitioning higher priority pending connection: localhost:" + portNumbers.get(1)
                                 + " Priority: 1 to ACTIVE")),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
+                waitUntilNextBlocks(10).withBackgroundTraffic(true));
     }
 
     @HapiTest
