@@ -2,10 +2,12 @@
 package com.hedera.services.bdd.suites.blocknode;
 
 import static com.hedera.services.bdd.junit.TestTags.BLOCK_NODE_SIMULATOR;
+import static com.hedera.services.bdd.junit.hedera.NodeSelector.allNodes;
 import static com.hedera.services.bdd.junit.hedera.NodeSelector.byNodeId;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.utilops.BlockNodeSimulatorVerbs.blockNodeSimulator;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogContainsTimeframe;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogDoesNotContain;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
@@ -50,21 +52,8 @@ public class BlockNodeSimulatorSuite {
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
         return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
+                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                assertHgcaaLogDoesNotContain(byNodeId(0), "ERROR", Duration.ofSeconds(5)));
     }
 
     @HapiTest
@@ -96,11 +85,8 @@ public class BlockNodeSimulatorSuite {
     @Order(1)
     final Stream<DynamicTest> allNodesStreamingHappyPath() {
         return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
+                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                assertHgcaaLogDoesNotContain(allNodes(), "ERROR", Duration.ofSeconds(5)));
     }
 
     @HapiTest
@@ -122,6 +108,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 blockNodeSimulator(0).startImmediately(), // Start BN 0
+                waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 waitUntilNextBlock().withBackgroundTraffic(true),
