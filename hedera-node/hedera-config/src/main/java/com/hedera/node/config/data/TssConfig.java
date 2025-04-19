@@ -3,6 +3,7 @@ package com.hedera.node.config.data;
 
 import com.hedera.node.config.NetworkProperty;
 import com.hedera.node.config.NodeProperty;
+import com.hedera.node.config.types.TssSigAggregation;
 import com.swirlds.config.api.ConfigData;
 import com.swirlds.config.api.ConfigProperty;
 import java.time.Duration;
@@ -24,4 +25,5 @@ public record TssConfig(
         @ConfigProperty(defaultValue = "false") @NetworkProperty boolean historyEnabled,
         // Must be true if enabling TSS while also using an override network,
         // to give express consent for breaking the address book chain of trust
-        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean forceHandoffs) {}
+        @ConfigProperty(defaultValue = "false") @NetworkProperty boolean forceHandoffs,
+        @ConfigProperty(defaultValue = "CONSENSUS") @NodeProperty TssSigAggregation tssSigAggregation) {}

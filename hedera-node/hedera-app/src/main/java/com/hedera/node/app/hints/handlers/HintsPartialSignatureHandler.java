@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.hints.handlers;
 
+import static com.hedera.node.config.types.TssSigAggregation.CONSENSUS;
+import static com.hedera.node.config.types.TssSigAggregation.PREHANDLE;
 import static java.util.Objects.requireNonNull;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -15,6 +17,7 @@ import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.PureChecksContext;
 import com.hedera.node.app.spi.workflows.TransactionHandler;
+import com.hedera.node.config.data.TssConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -66,7 +69,7 @@ public class HintsPartialSignatureHandler implements TransactionHandler {
         this.hintsContext = requireNonNull(context);
         this.currentRoster = requireNonNull(currentRoster);
         cache = Caffeine.newBuilder()
-                .expireAfterAccess(Math.max(1, 2 * blockPeriod.getSeconds()), TimeUnit.SECONDS)
+                .expireAfterAccess(Math.max(1, 10 * blockPeriod.getSeconds()), TimeUnit.SECONDS)
                 .softValues()
                 .build(this::validate);
     }
@@ -80,35 +83,49 @@ public class HintsPartialSignatureHandler implements TransactionHandler {
     public void preHandle(@NonNull final PreHandleContext context) throws PreCheckException {
         requireNonNull(context);
         final var hintsStore = context.createStore(ReadableHintsStore.class);
-        // We don't care about the result, just that it's in the cache
         try {
-            cache.get(new PartialSignature(
+            final boolean isValid = Boolean.TRUE.equals(cache.get(new PartialSignature(
                     hintsContext.constructionIdOrThrow(),
                     requireNonNull(hintsStore.crsIfKnown()),
                     context.creatorInfo().nodeId(),
-                    context.body().hintsPartialSignatureOrThrow()));
+                    context.body().hintsPartialSignatureOrThrow())));
+            if (isValid
+                    && context.configuration().getConfigData(TssConfig.class).tssSigAggregation() == PREHANDLE) {
+                final var op = context.body().hintsPartialSignatureOrThrow();
+                final var crs = requireNonNull(hintsStore.crsIfKnown());
+                final var creatorId = context.creatorInfo().nodeId();
+                signings.computeIfAbsent(
+                                op.message(),
+                                b -> hintsContext.newSigning(
+                                        b, requireNonNull(currentRoster.get()), () -> signings.remove(op.message())))
+                        .incorporateValid(crs, creatorId, op.partialSignature());
+            }
         } catch (Exception ignore) {
-            // Ignore any exceptions
         }
     }
 
     @Override
     public void handle(@NonNull final HandleContext context) throws HandleException {
         requireNonNull(context);
-        final var op = context.body().hintsPartialSignatureOrThrow();
-        final var creatorId = context.creatorInfo().nodeId();
-        final var hintsStore = context.storeFactory().readableStore(ReadableHintsStore.class);
-        final var crs = requireNonNull(hintsStore.crsIfKnown());
-        final boolean isValid = Boolean.TRUE.equals(cache.get(new PartialSignature(
-                hintsContext.constructionIdOrThrow(), crs, context.creatorInfo().nodeId(), op)));
-        if (isValid) {
-            signings.computeIfAbsent(
-                            op.message(),
-                            b -> hintsContext.newSigning(
-                                    b, requireNonNull(currentRoster.get()), () -> signings.remove(op.message())))
-                    .incorporateValid(crs, creatorId, op.partialSignature());
-        } else {
-            log.warn("Ignoring invalid partial signature on '{}' from node{}", op.message(), creatorId);
+        if (context.configuration().getConfigData(TssConfig.class).tssSigAggregation() == CONSENSUS) {
+            final var op = context.body().hintsPartialSignatureOrThrow();
+            final var creatorId = context.creatorInfo().nodeId();
+            final var hintsStore = context.storeFactory().readableStore(ReadableHintsStore.class);
+            final var crs = requireNonNull(hintsStore.crsIfKnown());
+            final boolean isValid = Boolean.TRUE.equals(cache.get(new PartialSignature(
+                    hintsContext.constructionIdOrThrow(),
+                    crs,
+                    context.creatorInfo().nodeId(),
+                    op)));
+            if (isValid) {
+                signings.computeIfAbsent(
+                                op.message(),
+                                b -> hintsContext.newSigning(
+                                        b, requireNonNull(currentRoster.get()), () -> signings.remove(op.message())))
+                        .incorporateValid(crs, creatorId, op.partialSignature());
+            } else {
+                log.warn("Ignoring invalid partial signature on '{}' from node{}", op.message(), creatorId);
+            }
         }
     }
 
