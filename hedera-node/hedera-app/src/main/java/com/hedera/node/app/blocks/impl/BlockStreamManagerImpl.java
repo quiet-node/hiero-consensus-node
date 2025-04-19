@@ -47,6 +47,8 @@ import com.hedera.node.config.types.DiskNetworkExport;
 import com.hedera.node.internal.network.PendingProof;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.LongGauge;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
@@ -89,6 +91,9 @@ import org.hiero.consensus.model.hashgraph.Round;
 public class BlockStreamManagerImpl implements BlockStreamManager {
     private static final Logger log = LogManager.getLogger(BlockStreamManagerImpl.class);
 
+    private static final LongGauge.Config SIGN_TIME_MS_GAUGE_CONFIG = new LongGauge.Config("app", "signTimeMs")
+            .withDescription("The number of milliseconds it last took to sign a block hash");
+
     private final int roundsPerBlock;
     private final Duration blockPeriod;
     private final int hashCombineBatchSize;
@@ -108,6 +113,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private final BlockHashManager blockHashManager;
     private final RunningHashManager runningHashManager;
     private final boolean streamToBlockNodes;
+    private final LongGauge signTimeGauge;
 
     // The status of pending work
     private PendingWork pendingWork = NONE;
@@ -190,6 +196,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
     @Inject
     public BlockStreamManagerImpl(
+            @NonNull final Metrics metrics,
             @NonNull final BlockHashSigner blockHashSigner,
             @NonNull final Supplier<BlockItemWriter> writerSupplier,
             @NonNull final ExecutorService executor,
@@ -223,6 +230,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.blockHashManager = new BlockHashManager(config);
         this.runningHashManager = new RunningHashManager();
         this.lastRoundOfPrevBlock = initialStateHash.roundNum();
+        this.signTimeGauge = metrics.getOrCreate(SIGN_TIME_MS_GAUGE_CONFIG);
         final var hashFuture = initialStateHash.hashFuture();
         endRoundStateHashes.put(lastRoundOfPrevBlock, hashFuture);
         log.info(
@@ -446,9 +454,11 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 pendingBlocks.forEach(block -> block.flushPending(hasPrecedingUnproven.getAndSet(true)));
             } else {
                 final var schemeId = blockHashSigner.activeSchemeId();
-                blockHashSigner
-                        .signFuture(blockHash)
-                        .thenAcceptAsync(signature -> finishProofWithSignature(blockHash, signature, schemeId));
+                final long startTime = System.currentTimeMillis();
+                blockHashSigner.signFuture(blockHash).thenAcceptAsync(signature -> {
+                    finishProofWithSignature(blockHash, signature, schemeId);
+                    signTimeGauge.set(System.currentTimeMillis() - startTime);
+                });
             }
 
             final var exportNetworkToDisk =

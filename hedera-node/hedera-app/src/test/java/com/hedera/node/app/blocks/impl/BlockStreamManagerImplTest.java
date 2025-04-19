@@ -53,6 +53,8 @@ import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.metrics.api.LongGauge;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.state.State;
@@ -139,6 +141,12 @@ class BlockStreamManagerImplTest {
     @Mock
     private CompletableFuture<Bytes> mockSigningFuture;
 
+    @Mock
+    private Metrics metrics;
+
+    @Mock
+    private LongGauge gauge;
+
     private WritableStates writableStates;
 
     @Mock
@@ -217,6 +225,7 @@ class BlockStreamManagerImplTest {
     void canUpdateDistinguishedTimes() {
         given(configProvider.getConfiguration()).willReturn(new VersionedConfigImpl(DEFAULT_CONFIG, 1L));
         subject = new BlockStreamManagerImpl(
+                metrics,
                 blockHashSigner,
                 () -> aWriter,
                 ForkJoinPool.commonPool(),
@@ -240,6 +249,7 @@ class BlockStreamManagerImplTest {
     void requiresLastHashToBeInitialized() {
         given(configProvider.getConfiguration()).willReturn(new VersionedConfigImpl(DEFAULT_CONFIG, 1));
         subject = new BlockStreamManagerImpl(
+                metrics,
                 blockHashSigner,
                 () -> aWriter,
                 ForkJoinPool.commonPool(),
@@ -911,7 +921,9 @@ class BlockStreamManagerImplTest {
                 .withValue("blockStream.blockPeriod", Duration.of(blockPeriod, ChronoUnit.SECONDS))
                 .getOrCreateConfig();
         given(configProvider.getConfiguration()).willReturn(new VersionedConfigImpl(config, 1L));
+        given(metrics.getOrCreate(any())).willReturn(gauge);
         subject = new BlockStreamManagerImpl(
+                metrics,
                 blockHashSigner,
                 () -> writers[nextWriter.getAndIncrement()],
                 ForkJoinPool.commonPool(),
