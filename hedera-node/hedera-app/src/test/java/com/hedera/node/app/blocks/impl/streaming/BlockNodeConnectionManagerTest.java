@@ -155,7 +155,7 @@ class BlockNodeConnectionManagerTest {
         blockNodeConnectionManager.scheduleRetry(mockConnection, INITIAL_DELAY);
 
         // There should be no immediate attempt to establish a stream
-        verify(mockConnection, times(0)).establishStream();
+        verify(mockConnection, times(0)).createRequestObserver();
 
         Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
 
@@ -163,7 +163,7 @@ class BlockNodeConnectionManagerTest {
                 .filter(log -> log.contains("Retrying in"))
                 .findFirst();
         assertThat(retryLog).isNotEmpty();
-        verify(mockConnection, times(1)).establishStream();
+        verify(mockConnection, times(1)).createRequestObserver();
     }
 
     @Test
@@ -172,12 +172,12 @@ class BlockNodeConnectionManagerTest {
                 .willReturn(BlockNodeConfig.newBuilder().build());
         blockNodeConnectionManager.scheduleRetry(mockConnection, INITIAL_DELAY);
 
-        verify(mockConnection, never()).establishStream(); // there should be no immediate attempt to establish a stream
+        verify(mockConnection, never()).createRequestObserver();
         final var initialDelay = BlockNodeConnectionManager.INITIAL_RETRY_DELAY;
         Thread.sleep(initialDelay.plusMillis(100));
 
         assertThat(logCaptor.debugLogs()).containsAnyElementsOf(generateExpectedRetryLogs(initialDelay));
-        verify(mockConnection, times(1)).establishStream();
+        verify(mockConnection, times(1)).createRequestObserver();
     }
 
     @Test
@@ -207,7 +207,7 @@ class BlockNodeConnectionManagerTest {
         lenient().doReturn(mockBlockState).when(mockStateManager).getBlockState(TEST_BLOCK_NUMBER);
 
         // When connection error occurs
-        blockNodeConnectionManager.handleConnectionError(activeConnection);
+        blockNodeConnectionManager.handleConnectionFailure(activeConnection);
 
         final var newActiveConnection =
                 blockNodeConnectionManager.getActiveConnection().get();
@@ -217,8 +217,7 @@ class BlockNodeConnectionManagerTest {
 
         Thread.sleep(BlockNodeConnectionManager.INITIAL_RETRY_DELAY.plusMillis(100));
 
-        assertThat(activeConnection.getConnectionState()).isEqualTo(BlockNodeConnection.ConnectionState.RETRYING);
-        assertThat(blockNodeConnectionManager.isRetrying(activeConnection)).isTrue();
+        assertThat(activeConnection.getConnectionState()).isEqualTo(BlockNodeConnection.ConnectionState.UNINITIALIZED);
 
         // Verify that the first connection is with higher priority than
         // the new connection, and it is ready connection

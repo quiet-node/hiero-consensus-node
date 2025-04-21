@@ -117,7 +117,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         this.connectionState = ConnectionState.UNINITIALIZED;
     }
 
-    public void createRequestObserver() throws RuntimeException {
+    public void createRequestObserver() {
         requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
     }
 
