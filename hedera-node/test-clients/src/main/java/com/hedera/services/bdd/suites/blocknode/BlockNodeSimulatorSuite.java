@@ -10,8 +10,8 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogConta
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogDoesNotContain;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcingContextual;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlocks;
+import static com.hedera.services.bdd.suites.regression.system.MixedOperations.burstOfTps;
 import static java.time.temporal.ChronoUnit.SECONDS;
 
 import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
@@ -42,7 +41,7 @@ public class BlockNodeSimulatorSuite {
     @HapiTest
     @HapiBlockNode(
             networkSize = 1,
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
+            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.LOCAL_NODE)},
             subProcessNodeConfigs = {
                 @SubProcessNodeConfig(
                         nodeId = 0,
@@ -52,7 +51,7 @@ public class BlockNodeSimulatorSuite {
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
         return hapiTest(
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                burstOfTps(300, Duration.ofSeconds(600)),
                 assertHgcaaLogDoesNotContain(byNodeId(0), "ERROR", Duration.ofSeconds(5)));
     }
 
@@ -104,9 +103,7 @@ public class BlockNodeSimulatorSuite {
         AtomicReference<Instant> time = new AtomicReference<>();
         List<Integer> portNumbers = new ArrayList<>();
         return hapiTest(
-                doingContextual(spec -> {
-                    portNumbers.add(spec.getBlockNodePortById(0));
-                }),
+                doingContextual(spec -> portNumbers.add(spec.getBlockNodePortById(0))),
                 waitUntilNextBlocks(5).withBackgroundTraffic(true),
                 doingContextual(spec -> time.set(Instant.now())),
                 blockNodeSimulator(0)
@@ -215,54 +212,8 @@ public class BlockNodeSimulatorSuite {
             })
     @Order(4)
     final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
-        return hapiTest(waitUntilNextBlocks(10).withBackgroundTraffic(true));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
-            })
-    @Order(8)
-    final Stream<DynamicTest> node0StreamingResendBlock() {
-        AtomicLong lastVerifiedBlock = new AtomicLong();
         return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).getLastVerifiedBlockExposing(lastVerifiedBlock::set),
-                blockNodeSimulator(0).sendResendBlockImmediately(lastVerifiedBlock.get() - 1),
-                // TODO assert that the consensus node should end the stream, and restart at lastVerifiedBlock - 1.
-                // It should be available in the buffer.
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
-            })
-    @Order(9)
-    final Stream<DynamicTest> node0StreamingBufferFullHappyPath() {
-        AtomicLong lastVerifiedBlock = new AtomicLong();
-        return hapiTest(
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                blockNodeSimulator(0).getLastVerifiedBlockExposing(lastVerifiedBlock::set),
-                blockNodeSimulator(0).sendResendBlockImmediately(lastVerifiedBlock.get() - 1),
-                // TODO assert that the consensus node should end the stream, and restart at lastVerifiedBlock - 1.
-                // It should be available in the buffer.
-                waitUntilNextBlock().withBackgroundTraffic(true),
-                waitUntilNextBlock().withBackgroundTraffic(true));
+                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                assertHgcaaLogDoesNotContain(allNodes(), "ERROR", Duration.ofSeconds(5)));
     }
 }

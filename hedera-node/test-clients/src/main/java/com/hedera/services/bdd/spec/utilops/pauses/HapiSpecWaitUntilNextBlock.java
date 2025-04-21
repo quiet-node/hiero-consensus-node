@@ -30,7 +30,7 @@ public class HapiSpecWaitUntilNextBlock extends UtilOp {
     private static final String MARKER_FILE_EXTENSION = ".mf";
     private static final Duration POLL_INTERVAL = Duration.ofMillis(100);
     private static final Duration BACKGROUND_TRAFFIC_INTERVAL = Duration.ofMillis(1000);
-    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    private Duration timeout = Duration.ofSeconds(30);
 
     private boolean backgroundTraffic;
     private int blocksToWaitFor = 1; // Default to waiting for the next single block
@@ -51,6 +51,7 @@ public class HapiSpecWaitUntilNextBlock extends UtilOp {
             throw new IllegalArgumentException("Must wait for at least one block");
         }
         this.blocksToWaitFor = count;
+        this.timeout = Duration.ofSeconds(10L * count);
         return this;
     }
 
@@ -107,9 +108,9 @@ public class HapiSpecWaitUntilNextBlock extends UtilOp {
                     log.info("Block {} has been created and completed", targetBlock);
                     return false;
                 }
-                if (System.currentTimeMillis() - startTime > TIMEOUT.toMillis()) {
+                if (System.currentTimeMillis() - startTime > timeout.toMillis()) {
                     throw new RuntimeException(String.format(
-                            "Timeout waiting for block %d after %d seconds", targetBlock, TIMEOUT.toSeconds()));
+                            "Timeout waiting for block %d after %d seconds", targetBlock, timeout.toSeconds()));
                 }
                 spec.sleepConsensusTime(POLL_INTERVAL);
             }

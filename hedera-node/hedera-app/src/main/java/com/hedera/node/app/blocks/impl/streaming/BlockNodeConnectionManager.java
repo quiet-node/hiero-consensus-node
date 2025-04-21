@@ -141,7 +141,7 @@ public class BlockNodeConnectionManager {
             delayMillis = 0;
         }
 
-        logger.debug(
+        logger.info(
                 "[{}] Scheduling connection task for block node {} in {} ms",
                 Thread.currentThread().getName(),
                 blockNodeName(nodeConfig),
@@ -150,7 +150,7 @@ public class BlockNodeConnectionManager {
         // Schedule the first attempt using the connectionExecutor
         try {
             connectionExecutor.schedule(new RetryTask(connection, initialDelay), delayMillis, TimeUnit.MILLISECONDS);
-            logger.info(
+            logger.debug(
                     "[{}] Successfully scheduled connection task for {}.",
                     Thread.currentThread().getName(),
                     blockNodeName(nodeConfig));
@@ -527,12 +527,6 @@ public class BlockNodeConnectionManager {
         final Long latestBlock = getLastVerifiedBlock(blockNodeConfig);
         if (blockNumber != null && blockNumber > latestBlock) {
             lastVerifiedBlockPerConnection.put(blockNodeConfig, blockNumber);
-        } else {
-            logger.warn(
-                    "Attempted to update connection {} with invalid block number {} (highest {})",
-                    blockNodeConfig,
-                    blockNumber,
-                    latestBlock);
         }
     }
 

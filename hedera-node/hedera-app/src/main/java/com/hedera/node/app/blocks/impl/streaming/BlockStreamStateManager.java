@@ -10,8 +10,9 @@ import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
@@ -139,9 +140,11 @@ public class BlockStreamStateManager {
                     "Creating request from remaining items in block {} size {}",
                     blockNumber,
                     blockState.items().size());
+            createRequestFromCurrentItems(blockState);
             // Mark the block as complete
             blockState.setComplete();
-            createRequestFromCurrentItems(blockState);
+            // Notify the connection manager
+            blockNodeConnectionManager.notifyConnectionsOfNewRequest();
         }
 
         logger.debug(
@@ -187,19 +190,34 @@ public class BlockStreamStateManager {
      * @param blockNumber the block number
      */
     public void removeBlockStatesUpTo(long blockNumber) {
-        // Remove only if the greatest blockNumber in blockStates minus the blockNumber is greater than 50.
-        // This is a crude buffer in-memory, but only BlockAcknowledgement's remove BlockStates at the moment.
-        if (Collections.max(blockStates.keySet()) - blockNumber <= 50) {
-            logger.debug(
-                    "Not removing block states up to {} - max block number is {}",
-                    blockNumber,
-                    Collections.max(blockStates.keySet()));
-            return;
-        }
-
         // Use keySet().removeIf for atomic removal of multiple entries
-        blockStates.keySet().removeIf(key -> key <= blockNumber);
-        logger.debug("Removed block states up to and including block {}", blockNumber);
+        final Instant fiveMinutesAgo = Instant.now().minus(Duration.ofMinutes(5));
+        final var removed = blockStates.entrySet().removeIf(entry -> {
+            final long key = entry.getKey();
+            final BlockState state = entry.getValue();
+
+            // Check if the block number is less than or equal to the acknowledged block number
+            if (key <= blockNumber) {
+                // Check if the block state is complete and older than 5 minutes
+                if (state.isComplete()) {
+                    final Instant completionTime = state.getCompletionTime();
+                    // If completionTime is null (shouldn't happen if isComplete is true, but defensive check),
+                    // or if it's older than 5 minutes, mark for removal.
+                    return completionTime == null || completionTime.isBefore(fiveMinutesAgo);
+                } else {
+                    // If the block state is not complete, it's not eligible for removal based on the new rule.
+                    // Keep blocks that are <= blockNumber but not yet complete.
+                    return false;
+                }
+            } else {
+                // If the block number is greater than the acknowledged block number, don't remove.
+                return false;
+            }
+        });
+
+        if (removed) {
+            logger.debug("Removed completed block states up to block {} that were older than 5 minutes.", blockNumber);
+        }
     }
 
     /**
