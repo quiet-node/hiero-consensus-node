@@ -6,9 +6,12 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.block.BlockItemSet;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,16 +33,20 @@ public class BlockStreamStateManager {
     // Reference to the connection manager for notifications
     private BlockNodeConnectionManager blockNodeConnectionManager;
 
+    private BlockStreamMetrics blockStreamMetrics = null;
+
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
      *
      * @param configProvider the configuration provider
      */
-    public BlockStreamStateManager(@NonNull final ConfigProvider configProvider) {
+    public BlockStreamStateManager(
+            @NonNull final ConfigProvider configProvider, @NonNull BlockStreamMetrics blockStreamMetrics) {
         this.blockItemBatchSize = configProvider
                 .getConfiguration()
                 .getConfigData(BlockStreamConfig.class)
                 .blockItemBatchSize();
+        this.blockStreamMetrics = blockStreamMetrics;
     }
 
     /**
@@ -63,6 +70,7 @@ public class BlockStreamStateManager {
         // Create a new block state
         blockStates.put(blockNumber, new BlockState(blockNumber, new ArrayList<>()));
         this.blockNumber = blockNumber;
+        blockStreamMetrics.setProducingBlockNumber(blockNumber);
 
         blockNodeConnectionManager.openBlock(blockNumber);
     }
@@ -132,9 +140,11 @@ public class BlockStreamStateManager {
                     "Creating request from remaining items in block {} size {}",
                     blockNumber,
                     blockState.items().size());
+            createRequestFromCurrentItems(blockState);
             // Mark the block as complete
             blockState.setComplete();
-            createRequestFromCurrentItems(blockState);
+            // Notify the connection manager
+            blockNodeConnectionManager.notifyConnectionsOfNewRequest();
         }
 
         logger.debug(
@@ -181,8 +191,33 @@ public class BlockStreamStateManager {
      */
     public void removeBlockStatesUpTo(long blockNumber) {
         // Use keySet().removeIf for atomic removal of multiple entries
-        blockStates.keySet().removeIf(key -> key <= blockNumber);
-        logger.debug("Removed block states up to and including block {}", blockNumber);
+        final Instant fiveMinutesAgo = Instant.now().minus(Duration.ofMinutes(5));
+        final var removed = blockStates.entrySet().removeIf(entry -> {
+            final long key = entry.getKey();
+            final BlockState state = entry.getValue();
+
+            // Check if the block number is less than or equal to the acknowledged block number
+            if (key <= blockNumber) {
+                // Check if the block state is complete and older than 5 minutes
+                if (state.isComplete()) {
+                    final Instant completionTime = state.getCompletionTime();
+                    // If completionTime is null (shouldn't happen if isComplete is true, but defensive check),
+                    // or if it's older than 5 minutes, mark for removal.
+                    return completionTime == null || completionTime.isBefore(fiveMinutesAgo);
+                } else {
+                    // If the block state is not complete, it's not eligible for removal based on the new rule.
+                    // Keep blocks that are <= blockNumber but not yet complete.
+                    return false;
+                }
+            } else {
+                // If the block number is greater than the acknowledged block number, don't remove.
+                return false;
+            }
+        });
+
+        if (removed) {
+            logger.debug("Removed completed block states up to block {} that were older than 5 minutes.", blockNumber);
+        }
     }
 
     /**
