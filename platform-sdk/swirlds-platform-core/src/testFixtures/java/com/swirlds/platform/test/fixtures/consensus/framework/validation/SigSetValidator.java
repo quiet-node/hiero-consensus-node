@@ -39,7 +39,7 @@ public class SigSetValidator {
      * @param reservedSignedState the signed state to validate
      * @param nodeId              the node id to validate
      */
-    public void validate(@NonNull final ReservedSignedState reservedSignedState, final NodeId nodeId) {
+    public void validate(@NonNull final ReservedSignedState reservedSignedState, @NonNull final NodeId nodeId) {
         for (final SigSetValidation validation : sigSetValidations) {
             validation.validate(reservedSignedState, nodeId);
         }
