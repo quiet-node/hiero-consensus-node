@@ -16,7 +16,7 @@ import com.swirlds.platform.metrics.StateMetrics;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
-import org.hiero.consensus.model.crypto.DigestType;
+import org.hiero.base.crypto.DigestType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

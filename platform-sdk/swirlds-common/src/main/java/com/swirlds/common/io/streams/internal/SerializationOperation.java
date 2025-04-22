@@ -2,7 +2,6 @@
 package com.swirlds.common.io.streams.internal;
 
 import com.swirlds.common.io.streams.MerkleDataInputStream;
-import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
 import com.swirlds.config.api.Configuration;
 import java.io.DataInputStream;
 import java.io.InputStream;

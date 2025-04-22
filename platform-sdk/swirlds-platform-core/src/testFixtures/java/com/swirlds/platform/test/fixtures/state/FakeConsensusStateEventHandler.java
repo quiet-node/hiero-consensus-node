@@ -230,8 +230,9 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
         switch (state) {
             case MerkleStateRoot<?> merkle -> state.putServiceStateIfAbsent(md, nodeSupplier);
             case NewStateRoot<?> newRoot -> state.initializeState(md);
-            default -> throw new IllegalStateException(
-                    "Expecting MerkleStateRoot or NewStateRoot instance to be used for state initialization");
+            default ->
+                throw new IllegalStateException(
+                        "Expecting MerkleStateRoot or NewStateRoot instance to be used for state initialization");
         }
     }
 }

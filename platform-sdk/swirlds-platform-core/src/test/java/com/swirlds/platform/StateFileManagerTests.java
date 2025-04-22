@@ -483,10 +483,6 @@ class StateFileManagerTests {
         }
     }
 
-    private static void hashState(MerkleNodeState merkleNodeState) {
-        TestMerkleCryptoFactory.getInstance().digestTreeSync(merkleNodeState.getRoot());
-    }
-
     private static void hashState(MerkleNodeState state) {
         TestMerkleCryptoFactory.getInstance().digestTreeSync(state.getRoot());
     }
