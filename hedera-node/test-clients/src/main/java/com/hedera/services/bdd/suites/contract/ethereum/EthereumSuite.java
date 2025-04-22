@@ -1291,7 +1291,6 @@ public class EthereumSuite {
                         .hasPrecheck(INVALID_ETHEREUM_TRANSACTION));
     }
 
-
     // Ensuring that the BLS12 precompile is not working before the Pectra support
     @HapiTest
     final Stream<DynamicTest> tryBlsPrecompile(@Contract(contract = "PectraTest") SpecContract contract) {
