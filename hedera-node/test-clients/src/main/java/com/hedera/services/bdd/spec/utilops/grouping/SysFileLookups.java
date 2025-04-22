@@ -2,6 +2,8 @@
 package com.hedera.services.bdd.spec.utilops.grouping;
 
 import static com.hedera.node.app.hapi.utils.ByteStringUtils.unwrapUnsafelyIfPossible;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getFileContents;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static java.util.Objects.requireNonNull;
@@ -44,13 +46,11 @@ public class SysFileLookups extends UtilOp {
      */
     public static Map<FileID, Bytes> getSystemFileContents(
             @NonNull final HapiSpec spec, @NonNull final LongPredicate test) {
-        var shard = spec.startupProperties().getLong("hedera.shard");
-        var realm = spec.startupProperties().getLong("hedera.realm");
         return allSystemFileNums(spec)
                 .filter(test)
                 .boxed()
-                .collect(Collectors.toMap(fileNum -> new FileID(shard, realm, fileNum), fileNum -> {
-                    final var query = getFileContents(String.format("%s.%s.%s", shard, realm, fileNum))
+                .collect(Collectors.toMap(fileNum -> new FileID(SHARD, REALM, fileNum), fileNum -> {
+                    final var query = getFileContents(String.format("%s.%s.%s", SHARD, REALM, fileNum))
                             .noLogging();
                     allRunFor(spec, query);
                     final var contents = query.getResponse()

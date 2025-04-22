@@ -12,6 +12,8 @@ import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.ensureD
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccountString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.idAsHeadlongAddress;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.TargetNetworkType.EMBEDDED_NETWORK;
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.contractWith;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
@@ -294,9 +296,7 @@ public class UtilVerbs {
      */
     public static SpecOperation doWithShardAndRealm(@NonNull final BiFunction<Long, Long, SpecOperation> factory) {
         return withOpContext((spec, opLog) -> {
-            final long shard = spec.targetNetworkOrThrow().startupProperties().getLong("hedera.shard");
-            final long realm = spec.targetNetworkOrThrow().startupProperties().getLong("hedera.realm");
-            allRunFor(spec, factory.apply(shard, realm));
+            allRunFor(spec, factory.apply((long) SHARD, REALM));
         });
     }
 
@@ -1482,10 +1482,7 @@ public class UtilVerbs {
             long tinyBarMaxNetworkFee,
             long tinyBarMaxServiceFee) {
         return withOpContext((spec, opLog) -> {
-            var shard = spec.startupProperties().getLong("hedera.shard");
-            var realm = spec.startupProperties().getLong("hedera.realm");
-
-            if (!spec.setup().defaultNode().equals(asAccount(String.format("%d.%d.3", shard, realm)))) {
+            if (!spec.setup().defaultNode().equals(asAccount(String.format("%d.%d.3", SHARD, REALM)))) {
                 opLog.info("Sleeping to wait for fee reduction...");
                 Thread.sleep(20000);
                 return;
@@ -2075,8 +2072,6 @@ public class UtilVerbs {
     }
 
     public static HapiSpecOperation validateRecordTransactionFees(HapiSpec spec, String txn) {
-        var shard = spec.startupProperties().getLong("hedera.shard");
-        var realm = spec.startupProperties().getLong("hedera.realm");
         var fundingAccount = spec.startupProperties().getLong("ledger.fundingAccount");
         var stakingRewardAccount = spec.startupProperties().getLong("accounts.stakingRewardAccount");
         var nodeRewardAccount = spec.startupProperties().getLong("accounts.nodeRewardAccount");
@@ -2084,10 +2079,10 @@ public class UtilVerbs {
         return validateRecordTransactionFees(
                 txn,
                 Set.of(
-                        asAccount(String.format("%s.%s.3", shard, realm)),
-                        asAccount(String.format("%s.%s.%s", shard, realm, fundingAccount)),
-                        asAccount(String.format("%s.%s.%s", shard, realm, stakingRewardAccount)),
-                        asAccount(String.format("%s.%s.%s", shard, realm, nodeRewardAccount))));
+                        asAccount(String.format("%s.%s.3", SHARD, REALM)),
+                        asAccount(String.format("%s.%s.%s", SHARD, REALM, fundingAccount)),
+                        asAccount(String.format("%s.%s.%s", SHARD, REALM, stakingRewardAccount)),
+                        asAccount(String.format("%s.%s.%s", SHARD, REALM, nodeRewardAccount))));
     }
 
     /**

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.utilops;
 
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getFileContents;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.updateLargeFile;
@@ -75,11 +77,7 @@ public class SysFileOverrideOp extends UtilOp {
 
     @Override
     protected boolean submitOp(@NonNull final HapiSpec spec) throws Throwable {
-        var fileNumber = String.format(
-                "%s.%s.%s",
-                spec.startupProperties().getLong("hedera.shard"),
-                spec.startupProperties().getLong("hedera.realm"),
-                target.number());
+        var fileNumber = String.format("%s.%s.%s", SHARD, REALM, target.number());
 
         allRunFor(spec, getFileContents(fileNumber).consumedBy(bytes -> this.originalContents = bytes));
         log.info("Took snapshot of {}", target);
@@ -110,11 +108,7 @@ public class SysFileOverrideOp extends UtilOp {
     public void restoreContentsIfNeeded(@NonNull final HapiSpec spec) {
         requireNonNull(spec);
         if (originalContents != null) {
-            final var fileNumber = String.format(
-                    "%s.%s.%s",
-                    spec.startupProperties().getLong("hedera.shard"),
-                    spec.startupProperties().getLong("hedera.realm"),
-                    target.number());
+            final var fileNumber = String.format("%s.%s.%s", SHARD, REALM, target.number());
 
             allRunFor(
                     spec,
