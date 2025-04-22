@@ -4,12 +4,12 @@ package com.swirlds.platform.test.fixtures.graph;
 import static com.swirlds.platform.test.fixtures.event.EventImplTestUtils.createEventImpl;
 
 import com.swirlds.platform.internal.EventImpl;
-import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
 import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.utility.test.fixtures.event.TestingEventBuilder;
 
 public class SimpleGraphs {
     /**

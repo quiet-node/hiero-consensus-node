@@ -6,6 +6,7 @@ application.mainClass = "com.swirlds.demo.iss.ISSTestingToolMain"
 mainModuleInfo { annotationProcessor("com.swirlds.config.processor") }
 
 testModuleInfo {
+    requires("org.hiero.consensus.utility.test.fixtures")
     requires("org.assertj.core")
     requires("org.junit.jupiter.api")
     requires("org.mockito")

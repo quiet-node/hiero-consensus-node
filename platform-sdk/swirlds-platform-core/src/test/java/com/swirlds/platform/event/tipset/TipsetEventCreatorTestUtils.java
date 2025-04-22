@@ -26,7 +26,6 @@ import com.swirlds.platform.event.creation.tipset.TipsetWeightCalculator;
 import com.swirlds.platform.event.orphan.DefaultOrphanBuffer;
 import com.swirlds.platform.event.orphan.OrphanBuffer;
 import com.swirlds.platform.gossip.IntakeEventCounter;
-import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
@@ -45,6 +44,7 @@ import org.hiero.consensus.model.event.EventDescriptorWrapper;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.transaction.TransactionWrapper;
+import org.hiero.consensus.utility.test.fixtures.event.TestingEventBuilder;
 import org.junit.jupiter.api.Assertions;
 
 public class TipsetEventCreatorTestUtils {
