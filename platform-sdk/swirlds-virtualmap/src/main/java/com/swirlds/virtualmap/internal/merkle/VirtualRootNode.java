@@ -1186,14 +1186,14 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
         final long estimatedDirtyLeavesCount = cache.estimatedDirtyLeavesCount();
         final long estimatedLeavesSize = estimatedDirtyLeavesCount
                 * (Long.BYTES // path
-                + DigestType.SHA_384.digestLength() // hash
-                + keySerializer.getTypicalSerializedSize() // key
-                + valueSerializer.getTypicalSerializedSize()); // value
+                        + DigestType.SHA_384.digestLength() // hash
+                        + keySerializer.getTypicalSerializedSize() // key
+                        + valueSerializer.getTypicalSerializedSize()); // value
 
         final long estimatedInternalsCount = cache.estimatedHashesCount();
         final long estimatedInternalsSize = estimatedInternalsCount
                 * (Long.BYTES // path
-                + DigestType.SHA_384.digestLength()); // hash
+                        + DigestType.SHA_384.digestLength()); // hash
 
         return estimatedInternalsSize + estimatedLeavesSize;
     }
