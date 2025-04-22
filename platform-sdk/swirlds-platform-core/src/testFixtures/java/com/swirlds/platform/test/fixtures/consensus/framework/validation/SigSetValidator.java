@@ -2,6 +2,7 @@
 package com.swirlds.platform.test.fixtures.consensus.framework.validation;
 
 import com.swirlds.platform.state.signed.ReservedSignedState;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashSet;
 import java.util.Set;
 import org.hiero.consensus.model.node.NodeId;
@@ -28,7 +29,7 @@ public class SigSetValidator {
     /**
      * Creates a new instance of the validator with a custom set of {@link ReservedSignedState}.
      */
-    public SigSetValidator(Set<SigSetValidation> sigSetValidations) {
+    public SigSetValidator(@NonNull final Set<SigSetValidation> sigSetValidations) {
         this.sigSetValidations = sigSetValidations;
     }
 
@@ -38,8 +39,8 @@ public class SigSetValidator {
      * @param reservedSignedState the signed state to validate
      * @param nodeId              the node id to validate
      */
-    public void validate(ReservedSignedState reservedSignedState, NodeId nodeId) {
-        for (SigSetValidation validation : sigSetValidations) {
+    public void validate(@NonNull final ReservedSignedState reservedSignedState, final NodeId nodeId) {
+        for (final SigSetValidation validation : sigSetValidations) {
             validation.validate(reservedSignedState, nodeId);
         }
     }

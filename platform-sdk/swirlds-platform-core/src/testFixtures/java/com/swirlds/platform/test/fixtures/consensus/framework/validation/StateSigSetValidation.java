@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.consensus.framework.validation;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -19,7 +19,7 @@ public class StateSigSetValidation implements SigSetValidation {
      * @param nodeId             the node id to validate
      */
     @Override
-    public void validate(@NonNull ReservedSignedState reservedSignedState, @NonNull NodeId nodeId) {
-        assertTrue(reservedSignedState.get().getSigSet().hasSignature(nodeId));
+    public void validate(@NonNull final ReservedSignedState reservedSignedState, @NonNull final NodeId nodeId) {
+        assertThat(reservedSignedState.get().getSigSet().hasSignature(nodeId)).isTrue();
     }
 }

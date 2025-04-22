@@ -2,6 +2,7 @@
 package com.swirlds.platform.test.fixtures.consensus.framework.validation;
 
 import com.swirlds.platform.state.signed.ReservedSignedState;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,7 +30,7 @@ public class ConsensusStateValidator {
     /**
      * Creates a new instance of the validator with a custom set of {@link ReservedSignedState}.
      */
-    public ConsensusStateValidator(Set<ConsensusStateValidation> consensusStateValidations) {
+    public ConsensusStateValidator(@NonNull final Set<ConsensusStateValidation> consensusStateValidations) {
         this.consensusStateValidations = consensusStateValidations;
     }
 
@@ -38,8 +39,8 @@ public class ConsensusStateValidator {
      *
      * @param reservedSignedState the signed state to validate
      */
-    public void validate(ReservedSignedState reservedSignedState) {
-        for (ConsensusStateValidation validation : consensusStateValidations) {
+    public void validate(@NonNull final ReservedSignedState reservedSignedState) {
+        for (final ConsensusStateValidation validation : consensusStateValidations) {
             validation.validate(reservedSignedState);
         }
     }

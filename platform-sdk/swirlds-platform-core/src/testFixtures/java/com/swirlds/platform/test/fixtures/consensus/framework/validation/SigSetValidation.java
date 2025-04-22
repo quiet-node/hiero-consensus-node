@@ -17,5 +17,5 @@ public interface SigSetValidation {
      * @param reservedSignedStates the signed state to validate
      * @param nodeId              the node id to validate
      */
-    void validate(@NonNull final ReservedSignedState reservedSignedStates, @NonNull NodeId nodeId);
+    void validate(@NonNull final ReservedSignedState reservedSignedStates, @NonNull final NodeId nodeId);
 }

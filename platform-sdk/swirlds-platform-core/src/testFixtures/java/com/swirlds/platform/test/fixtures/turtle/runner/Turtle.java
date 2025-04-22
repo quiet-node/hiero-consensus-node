@@ -168,7 +168,7 @@ public class Turtle {
                 final List<ReservedSignedState> reservedSignedStates =
                         node.getSignedStatesTestCollector().getFilteredSignedStates(commonSignedState);
 
-                for (ReservedSignedState reservedSignedState : reservedSignedStates) {
+                for (final ReservedSignedState reservedSignedState : reservedSignedStates) {
                     consensusStateValidator.validate(reservedSignedState);
                 }
 
