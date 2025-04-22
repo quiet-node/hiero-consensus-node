@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.common.io.streams.internal;
 
-import com.swirlds.common.io.streams.AugmentedDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.SerializableDataInputStreamImpl;
 import com.swirlds.config.api.Configuration;
@@ -11,6 +10,7 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
+import org.hiero.base.io.streams.AugmentedDataInputStream;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 
 /**
@@ -186,7 +186,7 @@ public enum SerializationOperation {
 
     /**
      * All variants of {@link SerializableDataInputStream#readSerializableList(int, boolean, Supplier)}
-     * and {@link SerializableDataInputStreamImpl#readSerializableArray(IntFunction, int, boolean, Set)}
+     * and {@link SerializableDataInputStream#readSerializableArray(IntFunction, int, boolean, Set)}
      */
     READ_SERIALIZABLE_LIST,
 

@@ -7,10 +7,7 @@ import static com.swirlds.common.merkle.iterators.MerkleIterationOrder.BREADTH_F
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.crypto.Cryptography;
-import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.streams.SerializableDataOutputStreamImpl;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
@@ -30,8 +27,10 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.base.crypto.Cryptography;
+import org.hiero.base.crypto.CryptographyProvider;
+import org.hiero.base.crypto.Hash;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
-import org.hiero.consensus.model.crypto.Hash;
 
 // Note: This class is intended to be used with a human in the loop who is watching standard in and standard err.
 
@@ -98,7 +97,7 @@ public class VirtualMerkleLeafHasher {
      */
     public Hash computeNextHash(final Hash prevHash, final VirtualLeafNode leaf) throws IOException {
         try (final ByteArrayOutputStream bout = new ByteArrayOutputStream();
-                final SerializableDataOutputStream out = new SerializableDataOutputStreamImpl(bout)) {
+                final SerializableDataOutputStream out = new SerializableDataOutputStream(bout)) {
 
             if (prevHash != null) {
                 // add Previous Hash
@@ -118,7 +117,7 @@ public class VirtualMerkleLeafHasher {
 
     /**
      * Generates the hash of the provided byte array. Uses the default hash algorithm as specified by {@link
-     * com.swirlds.common.crypto.Cryptography#digestSync(byte[])}.
+     * org.hiero.base.crypto.Cryptography#digestSync(byte[])}.
      *
      * @param content
      * 		the content for which the hash is to be computed
@@ -171,7 +170,7 @@ public class VirtualMerkleLeafHasher {
             try {
                 // AccountVirtualMapKey -> AccountVirtualMapValue
                 final VirtualMap accountsMap = new VirtualMap(CONFIGURATION);
-                accountsMap.loadFromFile(roundFolder.resolve(accountsName));
+                accountsMap.loadFromFile(roundFolder.resolve(accountsName), false);
                 final VirtualMerkleLeafHasher accountsHasher = new VirtualMerkleLeafHasher(accountsMap);
                 accountsHash = accountsHasher.validate();
             } catch (final IOException e) {
@@ -181,7 +180,7 @@ public class VirtualMerkleLeafHasher {
             try {
                 // SmartContractMapKey -> SmartContractMapValue
                 final VirtualMap scMap = new VirtualMap(CONFIGURATION);
-                scMap.loadFromFile(roundFolder.resolve(scName));
+                scMap.loadFromFile(roundFolder.resolve(scName), false);
                 final VirtualMerkleLeafHasher scHasher = new VirtualMerkleLeafHasher(scMap);
                 scHash = scHasher.validate();
             } catch (final IOException e) {
@@ -191,7 +190,7 @@ public class VirtualMerkleLeafHasher {
             try {
                 // SmartContractByteCodeMapKey -> SmartContractByteCodeMapValue
                 final VirtualMap byteCodeMap = new VirtualMap(CONFIGURATION);
-                byteCodeMap.loadFromFile(roundFolder.resolve(scByteCodeName));
+                byteCodeMap.loadFromFile(roundFolder.resolve(scByteCodeName), false);
                 final VirtualMerkleLeafHasher byteCodeHasher = new VirtualMerkleLeafHasher(byteCodeMap);
                 byteCodeHash = byteCodeHasher.validate();
             } catch (final IOException e) {

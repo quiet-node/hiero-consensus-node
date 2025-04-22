@@ -27,7 +27,7 @@ import com.swirlds.common.threading.pool.StandardWorkGroup;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.ConcurrentNodeStatusTracker;
 import com.swirlds.virtualmap.internal.RecordAccessor;
-import com.swirlds.virtualmap.internal.VirtualStateAccessor;
+import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import com.swirlds.virtualmap.internal.pipeline.VirtualPipeline;
 import java.io.IOException;
@@ -37,8 +37,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Hash;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
-import org.hiero.consensus.model.crypto.Hash;
 
 /**
  * An implementation of {@link TeacherTreeView} designed for virtual merkle trees.
@@ -137,7 +137,7 @@ public final class TeacherPushVirtualTreeView extends VirtualTreeViewBase implem
             final ThreadManager threadManager,
             final ReconnectConfig reconnectConfig,
             final VirtualRootNode root,
-            final VirtualStateAccessor state,
+            final VirtualMapState state,
             final VirtualPipeline pipeline) {
         // There is no distinction between originalState and reconnectState in this implementation
         super(root, state, state);

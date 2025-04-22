@@ -11,8 +11,8 @@ import com.swirlds.common.merkle.route.MerkleRouteIterator;
 import com.swirlds.common.merkle.synchronization.views.MaybeCustomReconnectRoot;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.hiero.base.crypto.Hashable;
 import org.hiero.base.io.SerializableDet;
-import org.hiero.consensus.model.crypto.Hashable;
 
 /**
  * A MerkleNode object has the following properties

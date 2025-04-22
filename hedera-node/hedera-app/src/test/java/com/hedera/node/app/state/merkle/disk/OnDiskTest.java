@@ -26,7 +26,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Set;
-import org.hiero.consensus.model.crypto.DigestType;
+import org.hiero.base.crypto.DigestType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -86,7 +86,7 @@ class OnDiskTest extends MerkleTestBase {
         CRYPTO.digestTreeSync(map);
 
         // Flush to disk
-        final VirtualRootNode root = map.getChild(1);
+        final VirtualRootNode root = map.getChild(0);
         root.enableFlush();
         map.release();
         try {

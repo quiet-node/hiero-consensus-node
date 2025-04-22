@@ -35,6 +35,8 @@ timingSensitiveModuleInfo {
     requires("com.swirlds.platform.core")
     requires("com.swirlds.platform.core.test.fixtures")
     requires("com.swirlds.config.api")
+    requires("org.hiero.base.crypto")
+    requires("org.hiero.base.crypto.test.fixtures")
     requires("org.hiero.base.utility")
     requires("org.hiero.consensus.model")
     requires("org.junit.jupiter.api")

@@ -161,6 +161,7 @@ public class DebuggableMerkleDataInputStream extends MerkleDataInputStream {
      * {@inheritDoc}
      */
     @Override
+    @NonNull
     public byte[] readAllBytes() throws IOException {
         startOperation(SerializationOperation.READ_ALL_BYTES);
         try {
@@ -174,6 +175,7 @@ public class DebuggableMerkleDataInputStream extends MerkleDataInputStream {
      * {@inheritDoc}
      */
     @Override
+    @NonNull
     public byte[] readNBytes(final int len) throws IOException {
         startOperation(SerializationOperation.READ_N_BYTES);
         try {
@@ -187,7 +189,7 @@ public class DebuggableMerkleDataInputStream extends MerkleDataInputStream {
      * {@inheritDoc}
      */
     @Override
-    public int readNBytes(final byte[] b, final int off, final int len) throws IOException {
+    public int readNBytes(@NonNull final byte[] b, final int off, final int len) throws IOException {
         startOperation(SerializationOperation.READ_N_BYTES_ARRAY);
         try {
             return super.readNBytes(b, off, len);
@@ -226,7 +228,7 @@ public class DebuggableMerkleDataInputStream extends MerkleDataInputStream {
      * {@inheritDoc}
      */
     @Override
-    public void readFully(final byte[] b) throws IOException {
+    public void readFully(@NonNull final byte[] b) throws IOException {
         startOperation(SerializationOperation.READ_FULLY);
         try {
             super.readFully(b);
@@ -239,7 +241,7 @@ public class DebuggableMerkleDataInputStream extends MerkleDataInputStream {
      * {@inheritDoc}
      */
     @Override
-    public void readFully(final byte[] b, final int off, final int len) throws IOException {
+    public void readFully(@NonNull final byte[] b, final int off, final int len) throws IOException {
         startOperation(SerializationOperation.READ_FULLY_OFFSET);
         try {
             super.readFully(b, off, len);
@@ -382,6 +384,7 @@ public class DebuggableMerkleDataInputStream extends MerkleDataInputStream {
      * {@inheritDoc}
      */
     @Override
+    @NonNull
     public String readUTF() throws IOException {
         startOperation(SerializationOperation.READ_UTF);
         try {

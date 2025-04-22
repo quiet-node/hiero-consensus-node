@@ -90,7 +90,7 @@ class StateFileManagerTests {
     static void beforeAll() throws ConstructableRegistryException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
-        registry.registerConstructables("org.hiero.consensus");
+        registry.registerConstructables("org.hiero.base.crypto");
         FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
     }
 
@@ -485,6 +485,10 @@ class StateFileManagerTests {
 
     private static void hashState(MerkleNodeState merkleNodeState) {
         TestMerkleCryptoFactory.getInstance().digestTreeSync(merkleNodeState.getRoot());
+    }
+
+    private static void hashState(MerkleNodeState state) {
+        TestMerkleCryptoFactory.getInstance().digestTreeSync(state.getRoot());
     }
 
     private static void makeImmutable(SignedState signedState) {

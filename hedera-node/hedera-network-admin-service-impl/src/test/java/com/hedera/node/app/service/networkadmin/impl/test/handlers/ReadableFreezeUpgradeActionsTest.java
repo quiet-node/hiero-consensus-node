@@ -438,7 +438,8 @@ class ReadableFreezeUpgradeActionsTest {
                 2,
                 false,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var node2 = new Node(
                 2,
                 asAccount(0L, 0L, 4),
@@ -452,7 +453,8 @@ class ReadableFreezeUpgradeActionsTest {
                 4,
                 false,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var node3 = new Node(
                 3,
                 asAccount(0L, 0L, 6),
@@ -466,7 +468,8 @@ class ReadableFreezeUpgradeActionsTest {
                 1,
                 true,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var node4 = new Node(
                 4,
                 asAccount(0L, 0L, 8),
@@ -481,7 +484,8 @@ class ReadableFreezeUpgradeActionsTest {
                 8,
                 false,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var readableNodeState = MapReadableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY)
                 .value(new EntityNumber(4), node4)
                 .value(new EntityNumber(2), node2)
@@ -573,7 +577,8 @@ class ReadableFreezeUpgradeActionsTest {
                 2,
                 false,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var node2 = new Node(
                 1,
                 asAccount(0L, 0L, 4),
@@ -587,7 +592,8 @@ class ReadableFreezeUpgradeActionsTest {
                 4,
                 false,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var node3 = new Node(
                 2,
                 asAccount(0L, 0L, 6),
@@ -601,7 +607,8 @@ class ReadableFreezeUpgradeActionsTest {
                 1,
                 false,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var node4 = new Node(
                 3,
                 asAccount(0L, 0L, 8),
@@ -616,7 +623,8 @@ class ReadableFreezeUpgradeActionsTest {
                 8,
                 true,
                 A_COMPLEX_KEY,
-                false);
+                false,
+                null);
         final var readableNodeState = MapReadableKVState.<EntityNumber, Node>builder(AddressBookService.NAME, NODES_KEY)
                 .value(new EntityNumber(3), node4)
                 .value(new EntityNumber(1), node2)

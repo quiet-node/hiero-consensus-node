@@ -11,7 +11,6 @@ import com.hedera.node.config.data.HederaConfig;
 import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
@@ -50,6 +49,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Set;
 import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.base.constructable.RuntimeConstructable;
+import org.hiero.base.crypto.config.CryptoConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -143,8 +144,8 @@ class SerializationTest extends MerkleTestBase {
                 vmField.setAccessible(true);
                 VirtualMap vm = (VirtualMap) vmField.get(state);
 
-                final VirtualRootNode root = vm.getRight();
-                if (!vm.isEmpty()) {
+                final VirtualRootNode root = vm.getLeft();
+                if (vm.size() > 1) {
                     root.enableFlush();
                     vm.release();
                     root.waitUntilFlushed();

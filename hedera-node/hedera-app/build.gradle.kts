@@ -33,6 +33,7 @@ testModuleInfo {
     requires("com.swirlds.state.api.test.fixtures")
     requires("com.swirlds.state.impl.test.fixtures")
     requires("com.swirlds.base.test.fixtures")
+    requires("org.hiero.base.crypto.test.fixtures")
     requires("com.esaulpaugh.headlong")
     requires("org.assertj.core")
     requires("org.bouncycastle.provider")
@@ -52,9 +53,8 @@ jmhModuleInfo {
     requires("com.hedera.node.app.test.fixtures")
     requires("com.hedera.node.hapi")
     requires("com.hedera.pbj.runtime")
-    requires("com.swirlds.common")
     requires("jmh.core")
-    requires("org.hiero.consensus.model")
+    requires("org.hiero.base.crypto")
 }
 
 // Add all the libs dependencies into the jar manifest!
