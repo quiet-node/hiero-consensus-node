@@ -1391,6 +1391,7 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     private record ShardRealm(long shard, long realm) {}
 
+	// (FUTURE) Refactor to a more intuitive location
     private static ShardRealm determineShardRealm(@NonNull final HederaNetwork targetNetwork) {
         var shard = targetNetwork.shard();
         if (shard < 0) {
