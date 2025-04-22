@@ -6,8 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
+/**
+ * Validate state has enough signatures so that it can be trusted to be valid
+ *
+ */
 public class StateVerifiableValidation implements ConsensusStateValidation {
 
+    /**
+     * Validate that the state has enough signatures.
+     *
+     * @param reservedSignedState the state to validate
+     */
     @Override
     public void validate(@NonNull ReservedSignedState reservedSignedState) {
         assertTrue(reservedSignedState.get().isVerifiable());

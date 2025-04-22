@@ -3,6 +3,7 @@ package com.swirlds.platform.test.fixtures.turtle.runner;
 
 import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.common.test.fixtures.Randotron;
+import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusRoundValidator;
@@ -150,6 +151,29 @@ public class Turtle {
             network.tick(time.now());
             tickAllNodes();
             validateConsensusRounds();
+            validateSignedState();
+        }
+    }
+
+    /**
+     * Validate all commonly collected {@link ReservedSignedState} instances by all nodes participating in the Turtle
+     * network using the configured validators.
+     * At the end of the validation, the specified commonly collected items are cleared to keep memory usage low.
+     */
+    public void validateSignedState() {
+        final Set<Long> commonSignedState = getCommonSignedState();
+
+        if (!commonSignedState.isEmpty()) {
+            for (final TurtleNode node : nodes) {
+                final List<ReservedSignedState> reservedSignedStates =
+                        node.getSignedStatesTestCollector().getFilteredSignedStates(commonSignedState);
+
+                for (ReservedSignedState reservedSignedState : reservedSignedStates) {
+                    consensusStateValidator.validate(reservedSignedState);
+                }
+
+                node.getSignedStatesTestCollector().clear(commonSignedState);
+            }
         }
     }
 
@@ -196,6 +220,27 @@ public class Turtle {
             final Set<Long> roundNumbersForOtherNode = nodes.get(i)
                     .getConsensusRoundsTestCollector()
                     .getCollectedRounds()
+                    .keySet();
+            commonRoundNumbers.retainAll(roundNumbersForOtherNode);
+        }
+
+        return commonRoundNumbers;
+    }
+
+    /**
+     * Collect signed state that reached consensus in all nodes participating in the Turtle network.
+     *
+     * @return the set of numbers that represent signed state that reached consensus in all nodes
+     */
+    private Set<Long> getCommonSignedState() {
+        final Set<Long> commonRoundNumbers = new HashSet<>(nodes.getFirst()
+                .getSignedStatesTestCollector()
+                .getCollectedSignedStates()
+                .keySet());
+        for (int i = 1; i < nodes.size(); i++) {
+            final Set<Long> roundNumbersForOtherNode = nodes.get(i)
+                    .getSignedStatesTestCollector()
+                    .getCollectedSignedStates()
                     .keySet();
             commonRoundNumbers.retainAll(roundNumbersForOtherNode);
         }

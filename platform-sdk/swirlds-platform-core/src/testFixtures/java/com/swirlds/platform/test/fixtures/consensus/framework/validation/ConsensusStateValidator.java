@@ -5,10 +5,20 @@ import com.swirlds.platform.state.signed.ReservedSignedState;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * This is a specific validator for signed state related tests. It allows defining custom validations related to
+ * {@link ReservedSignedState}
+ *
+ * Each custom validation should be initialized in the constructor and added to the set of validations.
+ * A separate constructor is provided to allow custom set of validations to be added.
+ */
 public class ConsensusStateValidator {
 
     private final Set<ConsensusStateValidation> consensusStateValidations;
 
+    /**
+     * Creates a new instance of the validator with validations for {@link ReservedSignedState}.
+     */
     public ConsensusStateValidator() {
         consensusStateValidations = new HashSet<>();
         consensusStateValidations.add(new StateCompletionValidation());
@@ -16,10 +26,18 @@ public class ConsensusStateValidator {
         consensusStateValidations.add(new StateCreationTimestampValidation());
     }
 
+    /**
+     * Creates a new instance of the validator with a custom set of {@link ReservedSignedState}.
+     */
     public ConsensusStateValidator(Set<ConsensusStateValidation> consensusStateValidations) {
         this.consensusStateValidations = consensusStateValidations;
     }
 
+    /**
+     * Validates the given {@link ReservedSignedState} object.
+     *
+     * @param reservedSignedState the signed state to validate
+     */
     public void validate(ReservedSignedState reservedSignedState) {
         for (ConsensusStateValidation validation : consensusStateValidations) {
             validation.validate(reservedSignedState);
