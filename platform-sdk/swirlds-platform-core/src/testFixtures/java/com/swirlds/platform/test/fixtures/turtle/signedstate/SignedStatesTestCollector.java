@@ -21,7 +21,9 @@ public interface SignedStatesTestCollector {
     void interceptReservedSignedState(@NonNull final ReservedSignedState signedState);
 
     /**
-     * Clear the internal state of this collector.
+     * Clear the internal state of this collector. It's important this method to be called
+     * as frequently as possible, since {@link ReservedSignedState} objects might accumulate a lot of memory usage.
+     * Ideally, this method could be used to clear collected states after each round.
      *
      * @param roundNumbers the round numbers to use to clear specific signed states
      */
