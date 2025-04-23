@@ -210,7 +210,7 @@ public class HapiCryptoUpdate extends HapiTxnOp<HapiCryptoUpdate> {
 
                             if (newStakee.isPresent()) {
                                 var newStakeeId = newStakee.get();
-                                if (!isIdLiteral(newStakeeId)) {
+                                if (!isIdLiteral(newStakeeId) && newStakeeId.matches("\\d+")) {
                                     newStakeeId = asEntityString(spec.shard(), spec.realm(), newStakeeId);
                                 }
                                 builder.setStakedAccountId(TxnUtils.asId(newStakeeId, spec));
