@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+// TODO: update `MerkleStateRoot` to new class name
 /**
  * A utility for extracting child hashes from a text visualization of a Merkle tree.
  */
