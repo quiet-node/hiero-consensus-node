@@ -146,10 +146,7 @@ public class TurtleNode {
                 recycleBin,
                 version,
                 TurtleTestingToolState::getStateRootNode,
-                // TODO: GH issue
-                (virtualMap) -> {
-                    throw new UnsupportedOperationException();
-                },
+                TurtleTestingToolState::new,
                 "foo",
                 "bar",
                 nodeId,
@@ -168,8 +165,7 @@ public class TurtleNode {
                         AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
                         RosterUtils.buildRosterHistory(initialState.get().getState(), platformStateFacade),
                         platformStateFacade,
-                        // FIXME
-                        null)
+                        TurtleTestingToolState::new)
                 .withModel(model)
                 .withRandomBuilder(new RandomBuilder(randotron.nextLong()))
                 .withKeysAndCerts(privateKeys)

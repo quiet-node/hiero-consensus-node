@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.turtle.runner;
 
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 
+import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.*;
-import com.swirlds.state.merkle.MerkleStateRoot;
+import com.swirlds.state.merkle.NewStateRoot;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
@@ -15,19 +18,16 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  *   ﹉∏﹉∏﹉                   ﹉∏﹉∏﹉
  * </pre>
  */
-public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolState> implements MerkleNodeState {
-
-    private static final long CLASS_ID = 0xa49b3822a4136ac6L;
-
-    private static final class ClassVersion {
-
-        public static final int ORIGINAL = 1;
-    }
+public class TurtleTestingToolState extends NewStateRoot<TurtleTestingToolState> implements MerkleNodeState {
 
     long state;
 
-    public TurtleTestingToolState() {
-        // empty
+    public TurtleTestingToolState(@NonNull final Configuration configuration) {
+        super(configuration);
+    }
+
+    public TurtleTestingToolState(@NonNull final VirtualMap virtualMap) {
+        super(virtualMap);
     }
 
     /**
@@ -43,33 +43,20 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     /**
      * {@inheritDoc}
      */
-    @Override
-    public long getClassId() {
-        return CLASS_ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int getVersion() {
-        return ClassVersion.ORIGINAL;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @NonNull
     @Override
     public TurtleTestingToolState copy() {
-        throwIfImmutable();
-        setImmutable(true);
         return new TurtleTestingToolState(this);
     }
 
     @Override
     protected TurtleTestingToolState copyingConstructor() {
         return new TurtleTestingToolState(this);
+    }
+
+    @Override
+    protected TurtleTestingToolState newInstance(@NonNull VirtualMap virtualMap) {
+        return new TurtleTestingToolState(virtualMap);
     }
 
     /**
@@ -79,15 +66,10 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
      */
     @NonNull
     public static MerkleNodeState getStateRootNode() {
-        final MerkleNodeState state = new TurtleTestingToolState();
+        final MerkleNodeState state = new TurtleTestingToolState(CONFIGURATION);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initRosterState(state);
 
         return state;
-    }
-
-    @Override
-    public int getMinimumSupportedVersion() {
-        return ClassVersion.ORIGINAL;
     }
 }

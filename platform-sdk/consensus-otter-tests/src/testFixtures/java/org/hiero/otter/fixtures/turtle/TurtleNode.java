@@ -306,10 +306,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                 recycleBin,
                 version,
                 TurtleTestingToolState::getStateRootNode,
-                // TODO: GH issue
-                (virtualMap) -> {
-                    throw new UnsupportedOperationException();
-                },
+                TurtleTestingToolState::new,
                 APP_NAME,
                 SWIRLD_NAME,
                 selfId,
@@ -328,10 +325,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                         AddressBookUtils.formatConsensusEventStreamName(addressBook, selfId),
                         RosterUtils.buildRosterHistory(initialState.get().getState(), platformStateFacade),
                         platformStateFacade,
-                        // TODO: GH issue
-                        (virtualMap) -> {
-                            throw new UnsupportedOperationException();
-                        })
+                        TurtleTestingToolState::new)
                 .withModel(model)
                 .withRandomBuilder(new RandomBuilder(randotron.nextLong()))
                 .withKeysAndCerts(privateKeys)
