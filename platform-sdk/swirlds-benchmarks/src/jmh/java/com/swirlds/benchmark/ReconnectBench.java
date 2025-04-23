@@ -193,7 +193,7 @@ public class ReconnectBench extends VirtualMapBaseBench {
     public void tearDownInvocation() throws Exception {
         try {
             for (final VirtualMap learnerMap : learnerMaps) {
-                final VirtualRoot root = learnerMap.getRight();
+                final VirtualRoot root = learnerMap.getLeft();
                 if (!root.isHashed()) {
                     throw new IllegalStateException("Learner root node must be hashed");
                 }

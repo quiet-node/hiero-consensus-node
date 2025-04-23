@@ -629,7 +629,7 @@ class VirtualMapTests extends VirtualTestBase {
             fcm.release();
             completed.release();
 
-            final VirtualRootNode root = fcm.getRight();
+            final VirtualRootNode root = fcm.getLeft();
             assertTrue(root.getPipeline().awaitTermination(10, SECONDS), "Pipeline termination timed out");
         }
     }
@@ -1073,7 +1073,7 @@ class VirtualMapTests extends VirtualTestBase {
                 assertNull(map.getBytes(TestKey.longToKey(i)), "The old value should not exist anymore");
             }
         } finally {
-            final VirtualRootNode root = map.getRight();
+            final VirtualRootNode root = map.getLeft();
             map.release();
             assertTrue(root.getPipeline().awaitTermination(30, SECONDS), "Pipeline termination timed out");
         }
