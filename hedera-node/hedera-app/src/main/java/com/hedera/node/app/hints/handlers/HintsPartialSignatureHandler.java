@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.hints.handlers;
 
-import static com.hedera.node.config.types.TssSigAggregation.CONSENSUS;
-import static com.hedera.node.config.types.TssSigAggregation.PREHANDLE;
+import static com.hedera.node.config.types.SigAggregationPoint.CONSENSUS;
+import static com.hedera.node.config.types.SigAggregationPoint.PREHANDLE;
 import static java.util.Objects.requireNonNull;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -90,7 +90,7 @@ public class HintsPartialSignatureHandler implements TransactionHandler {
                     context.creatorInfo().nodeId(),
                     context.body().hintsPartialSignatureOrThrow())));
             if (isValid
-                    && context.configuration().getConfigData(TssConfig.class).tssSigAggregation() == PREHANDLE) {
+                    && context.configuration().getConfigData(TssConfig.class).sigAggregationPoint() == PREHANDLE) {
                 final var op = context.body().hintsPartialSignatureOrThrow();
                 final var crs = requireNonNull(hintsStore.crsIfKnown());
                 final var creatorId = context.creatorInfo().nodeId();
@@ -107,7 +107,7 @@ public class HintsPartialSignatureHandler implements TransactionHandler {
     @Override
     public void handle(@NonNull final HandleContext context) throws HandleException {
         requireNonNull(context);
-        if (context.configuration().getConfigData(TssConfig.class).tssSigAggregation() == CONSENSUS) {
+        if (context.configuration().getConfigData(TssConfig.class).sigAggregationPoint() == CONSENSUS) {
             final var op = context.body().hintsPartialSignatureOrThrow();
             final var creatorId = context.creatorInfo().nodeId();
             final var hintsStore = context.storeFactory().readableStore(ReadableHintsStore.class);

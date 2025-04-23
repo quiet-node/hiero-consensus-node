@@ -4,7 +4,7 @@ package com.hedera.node.config.types;
 /**
  * Enum representing the TSS signature aggregation strategy.
  */
-public enum TssSigAggregation {
+public enum SigAggregationPoint {
     /**
      * Nodes should aggregate TSS signatures in prehandle phase.
      */
