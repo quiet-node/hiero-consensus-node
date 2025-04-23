@@ -10,6 +10,7 @@ testModuleInfo {
     requires("com.swirlds.config.api")
     requires("com.swirlds.base")
     requires("com.swirlds.common.test.fixtures")
+    requires("com.swirlds.merkle.test.fixtures")
     requires("org.hiero.base.concurrent")
     requires("org.hiero.base.crypto.test.fixtures")
     requires("org.hiero.base.utility.test.fixtures")
