@@ -85,6 +85,7 @@ import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.EntityIdFactory;
 import com.swirlds.state.lifecycle.StartupNetworks;
@@ -103,6 +104,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import org.apache.tuweni.bytes.Bytes32;
+import org.hiero.base.crypto.internal.DetRandomProvider;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.AddressBook;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
@@ -128,7 +132,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
  */
 @ExtendWith(MockitoExtension.class)
 public class TransactionExecutorsTest {
-    private static final long GAS = 100_000L;
+    private static final long GAS = 400_000L;
     private static final long EXPECTED_LUCKY_NUMBER = 42L;
     private static final EntityIdFactory idFactory = new AppEntityIdFactory(DEFAULT_CONFIG);
     private static final AccountID TREASURY_ID = idFactory.newAccountId(2);
@@ -140,7 +144,7 @@ public class TransactionExecutorsTest {
     private static final com.esaulpaugh.headlong.abi.Function GET_LAST_BLOCKHASH_FUNCTION =
             new com.esaulpaugh.headlong.abi.Function("getLastBlockHash()", "(bytes32)");
     private static final String EXPECTED_TRACE_START =
-            "{\"pc\":0,\"op\":96,\"gas\":\"0x13458\",\"gasCost\":\"0x3\",\"memSize\":0,\"depth\":1,\"refund\":0,\"opName\":\"PUSH1\"}";
+            "{\"pc\":0,\"op\":96,\"gas\":\"0x5c838\",\"gasCost\":\"0x3\",\"memSize\":0,\"depth\":1,\"refund\":0,\"opName\":\"PUSH1\"}";
     private static final NodeInfo DEFAULT_NODE_INFO =
             new NodeInfoImpl(0, idFactory.newAccountId(3L), 10, List.of(), Bytes.EMPTY, List.of(), true);
 
