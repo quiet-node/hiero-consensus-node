@@ -115,6 +115,23 @@ public class HintsLibraryImpl implements HintsLibrary {
     }
 
     @Override
+    public boolean verifyBlsBatch(
+            @NonNull final Bytes crs,
+            @NonNull final Bytes message,
+            @NonNull final Bytes aggregationKey,
+            @NonNull final Map<Integer, Bytes> partialSignatures) {
+        final int n = partialSignatures.size();
+        final int[] partyIds =
+                partialSignatures.keySet().stream().mapToInt(Integer::intValue).toArray();
+        final byte[][] signatures = new byte[n][];
+        for (int i = 0; i < n; i++) {
+            signatures[i] = partialSignatures.get(partyIds[i]).toByteArray();
+        }
+        return BRIDGE.verifyBlsBatch(
+                crs.toByteArray(), message.toByteArray(), aggregationKey.toByteArray(), partyIds, signatures);
+    }
+
+    @Override
     public Bytes aggregateSignatures(
             @NonNull final Bytes crs,
             @NonNull final Bytes aggregationKey,

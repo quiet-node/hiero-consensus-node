@@ -130,6 +130,21 @@ public interface HintsLibrary {
             int partyId);
 
     /**
+     * Checks that a signature on a message verifies under a BLS public key.
+     *
+     * @param crs the final CRS used by the network
+     * @param message the message
+     * @param aggregationKey the aggregation public key
+     * @param partialSignatures the BLS signatures by party id
+     * @return true if the signature is valid; false otherwise
+     */
+    boolean verifyBlsBatch(
+            @NonNull Bytes crs,
+            @NonNull Bytes message,
+            @NonNull Bytes aggregationKey,
+            @NonNull Map<Integer, Bytes> partialSignatures);
+
+    /**
      * Aggregates the signatures for party ids using hinTS aggregation and verification keys.
      *
      * @param crs the final CRS used by the network

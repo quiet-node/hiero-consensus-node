@@ -2,6 +2,7 @@
 package com.hedera.node.app.hints.impl;
 
 import static com.hedera.hapi.node.state.hints.CRSStage.COMPLETED;
+import static com.hedera.node.config.types.SigAggregationPoint.PREHANDLE;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -16,6 +17,7 @@ import com.hedera.node.app.roster.ActiveRosters;
 import com.hedera.node.app.spi.AppContext;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -24,6 +26,7 @@ import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -36,6 +39,8 @@ public class HintsServiceImpl implements HintsService {
     private final HintsServiceComponent component;
 
     private final HintsLibrary library;
+
+    private final Supplier<Configuration> configSupplier;
 
     @NonNull
     private final AtomicReference<Roster> currentRoster = new AtomicReference<>();
@@ -50,12 +55,14 @@ public class HintsServiceImpl implements HintsService {
         // Fully qualified for benefit of javadoc
         this.component = com.hedera.node.app.hints.impl.DaggerHintsServiceComponent.factory()
                 .create(library, appContext, executor, metrics, currentRoster, blockPeriod);
+        this.configSupplier = appContext.configSupplier();
     }
 
     @VisibleForTesting
     HintsServiceImpl(@NonNull final HintsServiceComponent component, @NonNull final HintsLibrary library) {
         this.component = requireNonNull(component);
         this.library = requireNonNull(library);
+        this.configSupplier = requireNonNull(component.configSupplier());
     }
 
     @Override
@@ -92,7 +99,7 @@ public class HintsServiceImpl implements HintsService {
         requireNonNull(adoptedRosterHash);
         if (hintsStore.updateAtHandoff(previousRoster, adoptedRoster, adoptedRosterHash, forceHandoff)) {
             final var activeConstruction = requireNonNull(hintsStore.getActiveConstruction());
-            component.signingContext().setConstructions(activeConstruction);
+            component.signingContext().setActiveConstruction(activeConstruction);
             logger.info("Updated hinTS construction in signing context to #{}", activeConstruction.constructionId());
         }
     }
@@ -162,11 +169,15 @@ public class HintsServiceImpl implements HintsService {
         if (!isReady()) {
             throw new IllegalStateException("hinTS service not ready to sign block hash " + blockHash);
         }
+        final boolean aggregateImmediately =
+                configSupplier.get().getConfigData(TssConfig.class).sigAggregationPoint() == PREHANDLE;
         final var signing = component.signings().computeIfAbsent(blockHash, b -> component
                 .signingContext()
-                .newSigning(b, requireNonNull(currentRoster.get()), () -> component
-                        .signings()
-                        .remove(blockHash)));
+                .newSigning(
+                        b,
+                        requireNonNull(currentRoster.get()),
+                        () -> component.signings().remove(blockHash),
+                        aggregateImmediately));
         component.submissions().submitPartialSignature(blockHash).exceptionally(t -> {
             logger.warn("Failed to submit partial signature for block hash {}", blockHash, t);
             return null;
