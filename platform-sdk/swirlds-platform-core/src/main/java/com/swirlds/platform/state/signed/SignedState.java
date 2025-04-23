@@ -14,7 +14,6 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Signature;
 import com.swirlds.common.utility.ReferenceCounter;
 import com.swirlds.common.utility.RuntimeObjectRecord;
 import com.swirlds.common.utility.RuntimeObjectRegistry;
@@ -41,6 +40,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Signature;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
@@ -272,7 +272,7 @@ public class SignedState implements SignedStateInfo {
         Ideally the roster would be captured in the constructor but due to the mutable underlying state, the roster
         can change from underneath us. Therefore, the roster must be regenerated on each access.
          */
-        final Roster roster = RosterRetriever.retrieveActiveOrGenesisRoster(state, platformStateFacade);
+        final Roster roster = RosterRetriever.retrieveActive(state, getRound());
         return requireNonNull(roster, "Roster stored in signed state is null (this should never happen)");
     }
 

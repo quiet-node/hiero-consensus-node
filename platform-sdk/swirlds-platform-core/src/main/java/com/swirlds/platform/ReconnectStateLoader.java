@@ -27,8 +27,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.config.EventConfig;
-import org.hiero.consensus.model.crypto.Hash;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 
@@ -112,7 +112,8 @@ public class ReconnectStateLoader {
             }
 
             // Before attempting to load the state, verify that the platform roster matches the state roster.
-            final Roster stateRoster = RosterRetriever.retrieveActiveOrGenesisRoster(state, platformStateFacade);
+            final long round = platformStateFacade.roundOf(state);
+            final Roster stateRoster = RosterRetriever.retrieveActive(state, round);
             if (!roster.equals(stateRoster)) {
                 throw new IllegalStateException("Current roster and state-based roster do not contain the same nodes "
                         + " (currentRoster=" + Roster.JSON.toJSON(roster) + ") (stateRoster="
