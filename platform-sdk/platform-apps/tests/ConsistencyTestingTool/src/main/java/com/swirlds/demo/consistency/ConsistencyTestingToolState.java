@@ -54,7 +54,7 @@ public class ConsistencyTestingToolState extends MerkleStateRoot<ConsistencyTest
 
     /**
      * The number of rounds handled by this app. Is incremented each time
-     * {@link ConsistencyTestingToolConsensusStateEventHandler#onHandleConsensusRound(Round, ConsistencyTestingToolState, Consumer < ScopedSystemTransaction < StateSignatureTransaction >>)} is called. Note that this may not actually equal the round
+     * {@link ConsistencyTestingToolConsensusStateEventHandler#onHandleConsensusRound(Round, ConsistencyTestingToolState, Consumer)} is called. Note that this may not actually equal the round
      * number, since we don't call {@link ConsistencyTestingToolConsensusStateEventHandler#onHandleConsensusRound(Round, ConsistencyTestingToolState, Consumer<ScopedSystemTransaction<StateSignatureTransaction>>)} for rounds with no events.
      *
      * <p>
