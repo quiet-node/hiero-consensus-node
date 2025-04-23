@@ -562,6 +562,14 @@ public interface HapiPropertySource {
                 .build());
     }
 
+    static String asEntityString(final long shard, final long realm, final long num) {
+        return String.format(ENTITY_STRING, shard, realm, num);
+    }
+
+    static String asEntityString(final long shard, final long realm, final String num) {
+        return String.format("%d.%d.%s", shard, realm, num);
+    }
+
     static String asEntityString(final long num) {
         return String.format(ENTITY_STRING, shard, realm, num);
     }
