@@ -1006,7 +1006,9 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
             // Validate all states migrated to the Virtual Map
             if (VALIDATE_MIGRATION_FF) {
-                assert virtualMapRef.get().size() == totalMigratedObjects.get();
+                // The `+1` accounts for the `VirtualMapState`, which is expected to already exist in the VirtualMap
+                // before the migration begins.
+                assert virtualMapRef.get().size() == totalMigratedObjects.get() + 1;
                 logger.info(STARTUP.getMarker(), "Total validation time {} ms", totalValidationTimeMs.get());
             }
 
