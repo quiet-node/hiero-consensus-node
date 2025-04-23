@@ -195,14 +195,11 @@ class HalfDiskHashMapTest {
         final MemoryIndexDiskKeyValueStore kv = createNewTempKV(testType, 100);
         kv.startWriting();
         kv.updateValidKeyRange(2, 4);
-        final VirtualLeafBytes rec2 =
-                new VirtualLeafBytes(2, key2, Bytes.wrap("12"));
+        final VirtualLeafBytes rec2 = new VirtualLeafBytes(2, key2, Bytes.wrap("12"));
         kv.put(2, rec2::writeTo, rec2.getSizeInBytes());
-        final VirtualLeafBytes rec3 =
-                new VirtualLeafBytes(3, key3,  Bytes.wrap("13"));
+        final VirtualLeafBytes rec3 = new VirtualLeafBytes(3, key3, Bytes.wrap("13"));
         kv.put(3, rec3::writeTo, rec3.getSizeInBytes());
-        final VirtualLeafBytes rec4 =
-                new VirtualLeafBytes(4, key4,  Bytes.wrap("14"));
+        final VirtualLeafBytes rec4 = new VirtualLeafBytes(4, key4, Bytes.wrap("14"));
         kv.put(4, rec4::writeTo, rec4.getSizeInBytes());
         kv.endWriting();
 
