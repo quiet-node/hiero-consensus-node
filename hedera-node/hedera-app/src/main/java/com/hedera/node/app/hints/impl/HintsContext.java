@@ -380,7 +380,8 @@ public class HintsContext {
                             }
                         }
                     }
-                    if (!inBatch) {
+                    // If not aggregating immediately, we have to be prepared to need this signature at consensus
+                    if (!inBatch && !aggregateImmediately) {
                         if (validate(nodeId, crs, op)) {
                             signatures.put(partyIds.get(nodeId), op.partialSignature());
                             verifiedWeight.addAndGet(weight);
