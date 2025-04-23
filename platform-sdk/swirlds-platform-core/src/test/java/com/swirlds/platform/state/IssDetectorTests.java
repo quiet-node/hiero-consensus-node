@@ -59,7 +59,8 @@ class IssDetectorTests extends PlatformTest {
     void stateReservationIsReleased() {
         final Randotron random = Randotron.create();
         final RandomSignedStateGenerator stateGenerator = new RandomSignedStateGenerator(random);
-        final ReservedSignedState stateWrapperForTest = stateGenerator.build().reserve("Test caller reference");
+        final ReservedSignedState stateWrapperForTest =
+                stateGenerator.setCalculateHash(true).build().reserve("Test caller reference");
         final ReservedSignedState stateWrapperForIssDetector =
                 stateWrapperForTest.getAndReserve("ISS Detector caller reference");
         assertEquals(
@@ -279,10 +280,11 @@ class IssDetectorTests extends PlatformTest {
                     switch (expectedRoundStatus.get((int) notification.getRound())) {
                         case SELF_ISS -> IssNotification.IssType.SELF_ISS;
                         case CATASTROPHIC_ISS -> IssNotification.IssType.CATASTROPHIC_ISS;
-                            // if there was an other-ISS, then the round should still be valid
+                        // if there was an other-ISS, then the round should still be valid
                         case VALID -> IssNotification.IssType.OTHER_ISS;
-                        default -> throw new IllegalStateException(
-                                "Unexpected value: " + expectedRoundStatus.get((int) notification.getRound()));
+                        default ->
+                            throw new IllegalStateException(
+                                    "Unexpected value: " + expectedRoundStatus.get((int) notification.getRound()));
                     };
             assertEquals(
                     expectedType,

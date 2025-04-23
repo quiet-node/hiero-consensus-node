@@ -12,11 +12,10 @@ import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.merkledb.files.DataFileCompactor;
 import com.swirlds.merkledb.files.MemoryIndexDiskKeyValueStore;
 import com.swirlds.merkledb.test.fixtures.files.FilesTestType;
+import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Random;
-
-import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -238,14 +237,11 @@ class HalfDiskHashMapTest {
         final MemoryIndexDiskKeyValueStore kv = createNewTempKV(testType, 100);
         kv.startWriting();
         kv.updateValidKeyRange(2, 4);
-        final VirtualLeafBytes rec2 =
-                new VirtualLeafBytes(2, key2, Bytes.wrap("12"));
+        final VirtualLeafBytes rec2 = new VirtualLeafBytes(2, key2, Bytes.wrap("12"));
         kv.put(2, rec2::writeTo, rec2.getSizeInBytes());
-        final VirtualLeafBytes rec3 =
-                new VirtualLeafBytes(3, key3, Bytes.wrap("13"));
+        final VirtualLeafBytes rec3 = new VirtualLeafBytes(3, key3, Bytes.wrap("13"));
         kv.put(3, rec3::writeTo, rec3.getSizeInBytes());
-        final VirtualLeafBytes rec4 =
-                new VirtualLeafBytes(4, key4, Bytes.wrap("14"));
+        final VirtualLeafBytes rec4 = new VirtualLeafBytes(4, key4, Bytes.wrap("14"));
         kv.put(4, rec4::writeTo, rec4.getSizeInBytes());
         kv.endWriting();
 
