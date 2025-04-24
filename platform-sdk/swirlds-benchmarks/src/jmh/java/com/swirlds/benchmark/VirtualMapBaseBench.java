@@ -143,7 +143,7 @@ public abstract class VirtualMapBaseBench extends BaseBench {
     }
 
     protected VirtualMap copyMap(final VirtualMap virtualMap) {
-        final VirtualRoot root = virtualMap.getRight();
+        final VirtualRoot root = virtualMap.getLeft();
         final VirtualMap newCopy = virtualMap.copy();
         hasher.execute(root::getHash);
 
@@ -155,7 +155,7 @@ public abstract class VirtualMapBaseBench extends BaseBench {
                             if (!Files.exists(savedDir)) {
                                 Files.createDirectory(savedDir);
                             }
-                            virtualMap.getRight().getHash();
+                            virtualMap.getLeft().getHash();
                             try (final SerializableDataOutputStream out = new SerializableDataOutputStream(
                                     Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
                                 virtualMap.serialize(out, savedDir);
@@ -188,7 +188,7 @@ public abstract class VirtualMapBaseBench extends BaseBench {
         final VirtualMap oldCopy = curMap;
         curMap = curMap.copy();
         oldCopy.release();
-        final VirtualRootNode root = oldCopy.getRight();
+        final VirtualRootNode root = oldCopy.getLeft();
         root.enableFlush();
         try {
             root.waitUntilFlushed();
@@ -263,7 +263,7 @@ public abstract class VirtualMapBaseBench extends BaseBench {
                         final String label = state.getLabel();
                         final VirtualMap curMap = virtualMap.copy();
 
-                        virtualMap.getRight().getHash();
+                        virtualMap.getLeft().getHash();
                         try (final SerializableDataOutputStream out = new SerializableDataOutputStream(
                                 Files.newOutputStream(finalSavedDir.resolve(label + SERDE_SUFFIX)))) {
                             virtualMap.serialize(out, finalSavedDir);
@@ -298,7 +298,7 @@ public abstract class VirtualMapBaseBench extends BaseBench {
                 }
             }
             Files.createDirectories(savedDir);
-            virtualMap.getRight().getHash();
+            virtualMap.getLeft().getHash();
             try (final SerializableDataOutputStream out =
                     new SerializableDataOutputStream(Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
                 virtualMap.serialize(out, savedDir);

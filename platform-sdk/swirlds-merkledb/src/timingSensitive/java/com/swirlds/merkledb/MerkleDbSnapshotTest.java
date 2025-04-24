@@ -4,6 +4,7 @@ package com.swirlds.merkledb;
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyTrue;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.CONFIGURATION;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -40,6 +41,7 @@ import java.time.Duration;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
@@ -107,7 +109,7 @@ class MerkleDbSnapshotTest {
             final ExternalVirtualMapState state = vm.getLeft();
             System.out.println("state.getFirstLeafPath() = " + state.getFirstLeafPath());
             System.out.println("state.getLastLeafPath() = " + state.getLastLeafPath());
-            final VirtualRootNode root = vm.getRight();
+            final VirtualRootNode root = vm.getLeft();
             for (int path = 0; path <= state.getLastLeafPath(); path++) {
                 final Hash hash = root.getRecords().findHash(path);
                 Assertions.assertNotNull(hash);
@@ -136,7 +138,7 @@ class MerkleDbSnapshotTest {
             final MerkleInternal newStateRoot = stateRoot.copy();
             for (int i = 0; i < MAPS_COUNT; i++) {
                 final VirtualMap vm = newStateRoot.getChild(i);
-                final VirtualRootNode root = vm.getRight();
+                final VirtualRootNode root = vm.getLeft();
                 root.enableFlush();
                 for (int k = 0; k < ROUND_CHANGES; k++) {
                     final Bytes key = ExampleLongKey.longToKey(keyId++);
@@ -189,7 +191,7 @@ class MerkleDbSnapshotTest {
                         final MerkleInternal newStateRoot = stateRoot.copy();
                         for (int i = 0; i < MAPS_COUNT; i++) {
                             final VirtualMap vm = newStateRoot.getChild(i);
-                            final VirtualRootNode root = vm.getRight();
+                            final VirtualRootNode root = vm.getLeft();
                             root.enableFlush();
                             for (int k = 0; k < ROUND_CHANGES; k++) {
                                 final Bytes key = ExampleLongKey.longToKey(keyId++);
@@ -209,7 +211,8 @@ class MerkleDbSnapshotTest {
                 })
                 .start();
 
-        startSnapshotLatch.await();
+        startSnapshotLatch.await(10, TimeUnit.SECONDS);
+        assertEquals(0, startSnapshotLatch.getCount());
         assertEventuallyTrue(() -> lastRoot.get() != null, Duration.ofSeconds(10), "lastRoot is null");
 
         TestMerkleCryptoFactory.getInstance().digestTreeSync(rootToSnapshot.get());

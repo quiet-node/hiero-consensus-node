@@ -90,7 +90,7 @@ public abstract class VirtualMapReconnectBenchBase {
         try {
             final var node = MerkleTestUtils.hashAndTestSynchronization(learnerTree, teacherTree, reconnectConfig);
             node.release();
-            final VirtualRoot root = learnerMap.getRight();
+            final VirtualRoot root = learnerMap.getLeft();
             Assertions.assertTrue(root.isHashed(), "Learner root node must be hashed");
         } finally {
             teacherTree.release();

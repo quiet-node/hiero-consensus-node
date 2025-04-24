@@ -133,7 +133,7 @@ public abstract class VirtualMapReconnectTestBase {
                             MerkleTestUtils.hashAndTestSynchronization(learnerTree, teacherTree, reconnectConfig);
                     node.release();
                     assertEquals(attempts - 1, i, "We should only succeed on the last try");
-                    final VirtualRoot root = learnerMap.getRight();
+                    final VirtualRoot root = learnerMap.getLeft();
                     assertTrue(root.isHashed(), "Learner root node must be hashed");
                 } catch (Exception e) {
                     if (i == attempts - 1) {
