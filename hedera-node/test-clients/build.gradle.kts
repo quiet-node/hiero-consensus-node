@@ -99,6 +99,9 @@ val prCheckStartPorts =
         "hapiTestIss" to "26400",
         "hapiTestMisc" to "26800",
     )
+val shard = 11
+val realm = 12
+
 val prCheckPropOverrides =
     mapOf(
         "hapiTestAdhoc" to
@@ -106,7 +109,7 @@ val prCheckPropOverrides =
         "hapiTestCrypto" to "tss.hintsEnabled=true,blockStream.blockPeriod=1s",
         "hapiTestSmartContract" to "tss.historyEnabled=false",
         "hapiTestRestart" to
-            "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s",
+            "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s, hapi.spec.default.shard=${shard}, hapi.spec.default.realm=${realm})",
         "hapiTestMisc" to "nodes.nodeRewardsEnabled=false",
         "hapiTestTimeConsuming" to "nodes.nodeRewardsEnabled=false",
     )
@@ -230,17 +233,12 @@ tasks.register<Test>("testSubprocess") {
             .orElse("")
     systemProperty("hapi.spec.initial.port", initialPort)
 
-    val defaultShard = 11
-    val defaultRealm = 12
-    systemProperty("hapi.spec.default.shard", defaultShard)
-    systemProperty("hapi.spec.default.realm", defaultRealm)
-
     // Gather overrides into a single comma‐separated list
     val testOverrides =
         gradle.startParameter.taskNames
             .mapNotNull { prCheckPropOverrides[it] }
-            .plus("hedera.shard=$defaultShard")
-            .plus("hedera.realm=$defaultRealm")
+            .plus("hedera.shard=${shard}")
+            .plus("hedera.realm=${realm}")
             .joinToString(separator = ",")
     // Only set the system property if non-empty
     if (testOverrides.isNotBlank()) {
