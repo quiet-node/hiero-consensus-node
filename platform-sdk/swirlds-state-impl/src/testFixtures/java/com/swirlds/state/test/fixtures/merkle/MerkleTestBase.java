@@ -142,19 +142,21 @@ public class MerkleTestBase extends StateTestBase {
     protected String countryLabel;
     protected SingletonNode<String> countrySingleton;
 
-    // This static mock instance will override calls to the static methods in StateUtils
-    // for the duration of the tests in this class.
+    /**
+     * This static mock instance will override calls to the static methods in StateUtils
+     * (specifically {@code #stateIdFor} method for now).
+     */
     private static MockedStatic<StateUtils> stateUtilsMock;
 
     /**
-     * Initializes the static mock of StateUtils before all tests run.
+     * Sets up a static mock for {@code StateUtils} before all tests, partially mocking
+     * the {@code stateIdFor(String, String)} method. Real method calls are allowed unless
+     * explicitly stubbed, ensuring the original behavior is retained where possible.
      *
      * <p>
-     * We mock the static method {@code StateUtils.stateIdFor(String, String)} with CALLS_REAL_METHODS,
-     * meaning that only the methods we explicitly stub will be replaced with custom behavior.
-     * Other calls will use the actual implementation. This is needed because the commit method in
-     * State APIs internally calls {@code StateUtils.stateIdFor()}, and when using made-up service
-     * names or state keys, it would throw an IllegalStateException.
+     * If the real method fails, predefined mappings return specific IDs for known
+     * test cases (e.g., "fruit" -> {@code FRUIT_STATE_ID}), while unmatched inputs
+     * return {@code 65000}. This prevents errors when using test-specific names or keys.
      * </p>
      */
     @BeforeAll
@@ -164,7 +166,7 @@ public class MerkleTestBase extends StateTestBase {
                 .when(() -> StateUtils.stateIdFor(anyString(), anyString()))
                 .thenAnswer(invocation -> {
                     try {
-                        //                         First, try calling the real method.
+                        // First, try calling the real method.
                         return invocation.callRealMethod();
                     } catch (Exception e) {
                         // The real method couldn't find a valid mapping.
