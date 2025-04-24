@@ -4,6 +4,7 @@ package com.swirlds.merkledb;
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyTrue;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.CONFIGURATION;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,7 +31,7 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
-import com.swirlds.virtualmap.internal.merkle.ExternalVirtualMapState;
+import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,6 +41,7 @@ import java.time.Duration;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
@@ -84,6 +86,17 @@ class MerkleDbSnapshotTest {
 
     @AfterEach
     public void afterTest() {
+        for (int i = 0; i < 10; i++) {
+            if (MerkleDbDataSource.getCountOfOpenDatabases() == 0L) {
+                break;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // check db count
         AssertionUtils.assertEventuallyEquals(
                 0L,
@@ -104,10 +117,10 @@ class MerkleDbSnapshotTest {
     private void verify(final MerkleInternal stateRoot) {
         for (int i = 0; i < MAPS_COUNT; i++) {
             final VirtualMap vm = stateRoot.getChild(i);
-            final ExternalVirtualMapState state = vm.getLeft();
+            final VirtualMapState state = new VirtualMapState(vm.getBytes(VirtualMapState.VM_STATE_KEY));
             System.out.println("state.getFirstLeafPath() = " + state.getFirstLeafPath());
             System.out.println("state.getLastLeafPath() = " + state.getLastLeafPath());
-            final VirtualRootNode root = vm.getRight();
+            final VirtualRootNode root = vm.getLeft();
             for (int path = 0; path <= state.getLastLeafPath(); path++) {
                 final Hash hash = root.getRecords().findHash(path);
                 Assertions.assertNotNull(hash);
@@ -136,7 +149,7 @@ class MerkleDbSnapshotTest {
             final MerkleInternal newStateRoot = stateRoot.copy();
             for (int i = 0; i < MAPS_COUNT; i++) {
                 final VirtualMap vm = newStateRoot.getChild(i);
-                final VirtualRootNode root = vm.getRight();
+                final VirtualRootNode root = vm.getLeft();
                 root.enableFlush();
                 for (int k = 0; k < ROUND_CHANGES; k++) {
                     final Bytes key = ExampleLongKey.longToKey(keyId++);
@@ -189,7 +202,7 @@ class MerkleDbSnapshotTest {
                         final MerkleInternal newStateRoot = stateRoot.copy();
                         for (int i = 0; i < MAPS_COUNT; i++) {
                             final VirtualMap vm = newStateRoot.getChild(i);
-                            final VirtualRootNode root = vm.getRight();
+                            final VirtualRootNode root = vm.getLeft();
                             root.enableFlush();
                             for (int k = 0; k < ROUND_CHANGES; k++) {
                                 final Bytes key = ExampleLongKey.longToKey(keyId++);
@@ -209,7 +222,8 @@ class MerkleDbSnapshotTest {
                 })
                 .start();
 
-        startSnapshotLatch.await();
+        startSnapshotLatch.await(10, TimeUnit.SECONDS);
+        assertEquals(0, startSnapshotLatch.getCount());
         assertEventuallyTrue(() -> lastRoot.get() != null, Duration.ofSeconds(10), "lastRoot is null");
 
         TestMerkleCryptoFactory.getInstance().digestTreeSync(rootToSnapshot.get());

@@ -84,7 +84,7 @@ public class CloseFlushTest {
                 map = copy;
             }
             copy = map.copy();
-            final VirtualRootNode root = map.getRight();
+            final VirtualRootNode root = map.getLeft();
             root.enableFlush();
             final VirtualMap lastMap = map;
             final Future<?> job = exec.submit(() -> {
