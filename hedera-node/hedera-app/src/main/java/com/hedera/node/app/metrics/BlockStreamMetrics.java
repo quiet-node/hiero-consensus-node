@@ -39,6 +39,8 @@ public class BlockStreamMetrics {
     private Counter blockAckReceivedCounter;
 
     private LongGauge producingBlockNumberGauge;
+    private LongGauge oldestUnacknowledgedBlockTimeGauge;
+    private LongGauge latestAcknowledgedBlockNumberGauge;
 
     @Inject
     public BlockStreamMetrics(@NonNull final Metrics metrics, @NonNull final NetworkInfo networkInfo) {
@@ -87,6 +89,18 @@ public class BlockStreamMetrics {
         final String producingBlockNumMetricName = "producingBlockNumber" + nodeLabel;
         producingBlockNumberGauge = metrics.getOrCreate(new LongGauge.Config(APP_CATEGORY, producingBlockNumMetricName)
                 .withDescription("Current block number being produced by node " + localNodeId));
+
+        // Register Oldest Unacknowledged Block Time gauge
+        final String oldestUnackTimeMetricName = "timeOfOldestUnacknowledgedBlock" + nodeLabel;
+        oldestUnacknowledgedBlockTimeGauge =
+                metrics.getOrCreate(new LongGauge.Config(APP_CATEGORY, oldestUnackTimeMetricName)
+                        .withDescription("Timestamp of the oldest unacknowledged block for node " + localNodeId));
+
+        // Register Latest Acknowledged Block Number gauge
+        final String latestAckBlockNumMetricName = "latestAcknowledgedBlockNumber" + nodeLabel;
+        latestAcknowledgedBlockNumberGauge =
+                metrics.getOrCreate(new LongGauge.Config(APP_CATEGORY, latestAckBlockNumMetricName)
+                        .withDescription("Latest block number acknowledged for node " + localNodeId));
 
         logger.info("Finished registering BlockStreamMetrics for node {}", localNodeId);
     }
@@ -155,6 +169,34 @@ public class BlockStreamMetrics {
         } else {
             // Should not happen if registration was successful
             logger.warn("producingBlockNumberGauge not found.");
+        }
+    }
+
+    /**
+     * Sets the timestamp of the oldest unacknowledged block.
+     *
+     * @param timestamp The timestamp in milliseconds since epoch.
+     */
+    public void setOldestUnacknowledgedBlockTime(long timestamp) {
+        if (oldestUnacknowledgedBlockTimeGauge != null) {
+            oldestUnacknowledgedBlockTimeGauge.set(timestamp);
+        } else {
+            // Should not happen if registration was successful
+            logger.warn("oldestUnacknowledgedBlockTimeGauge not found.");
+        }
+    }
+
+    /**
+     * Sets the latest block number that has been acknowledged.
+     *
+     * @param blockNumber The block number of the latest acknowledgement.
+     */
+    public void setLatestAcknowledgedBlockNumber(long blockNumber) {
+        if (latestAcknowledgedBlockNumberGauge != null) {
+            latestAcknowledgedBlockNumberGauge.set(blockNumber);
+        } else {
+            // Should not happen if registration was successful
+            logger.warn("latestAcknowledgedBlockNumberGauge not found.");
         }
     }
 }
