@@ -17,9 +17,6 @@ import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
-import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
@@ -27,9 +24,7 @@ import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.EmptyReadableStates;
-import com.swirlds.virtualmap.VirtualMap;
 import java.time.Instant;
-import org.hiero.base.crypto.DigestType;
 import org.hiero.base.utility.test.fixtures.RandomUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -190,14 +185,8 @@ class PlatformStateFacadeTest {
 
     @Test
     void testSetSnapshotTo() {
-        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final var tableConfig = new MerkleDbTableConfig(
-                (short) 1, DigestType.SHA_384, 100_000, merkleDbConfig.hashesRamToDiskThreshold());
-        final var virtualMapLabel = "VirtualMap-PlatformStateFacadeTest";
-        final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
-        final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, CONFIGURATION);
-
-        TestNewMerkleStateRoot randomState = new TestNewMerkleStateRoot(virtualMap);
+        TestNewMerkleStateRoot randomState =
+                TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(PlatformStateFacadeTest.class.getSimpleName());
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(randomState);
         PlatformStateModifier randomPlatformState = randomPlatformState(randomState, platformStateFacade);
         final var newSnapshot = randomPlatformState.getSnapshot();

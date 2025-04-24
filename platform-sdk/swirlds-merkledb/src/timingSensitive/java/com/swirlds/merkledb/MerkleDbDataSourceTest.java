@@ -709,6 +709,7 @@ class MerkleDbDataSourceTest {
                 .withConfigDataType(TemporaryFileConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
                 .withConfigDataType(FileSystemManagerConfig.class)
+                .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                 .withSource(new SimpleConfigSource("merkleDb.tablesToRepairHdhm", ""))
                 .build();
         final MerkleDb snapshotDb1 = MerkleDb.getInstance(snapshotDbPath1, config1);
@@ -725,6 +726,7 @@ class MerkleDbDataSourceTest {
                 .withConfigDataType(TemporaryFileConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
                 .withConfigDataType(FileSystemManagerConfig.class)
+                .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                 .withSource(new SimpleConfigSource("merkleDb.tablesToRepairHdhm", label))
                 .build();
         final MerkleDb snapshotDb2 = MerkleDb.getInstance(snapshotDbPath2, config2);

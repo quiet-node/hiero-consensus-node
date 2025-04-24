@@ -112,16 +112,13 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         final MerkleDbDataSourceBuilder dsBuilder;
 
         try {
-            // Config constant (TODO: move to config)
-            long MEGA_MAP_MAX_KEYS_HINT = 1_000_000_000;
-
             final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
             final var tableConfig = new MerkleDbTableConfig(
                     (short) 1,
                     DigestType.SHA_384,
                     // Future work: drop StateDefinition.maxKeysHint and load VM size
                     // from VirtualMapConfig.size instead
-                    MEGA_MAP_MAX_KEYS_HINT,
+                    merkleDbConfig.maxNumOfKeys(),
                     merkleDbConfig.hashesRamToDiskThreshold());
             virtualMapLabel = "VirtualMap";
             dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);

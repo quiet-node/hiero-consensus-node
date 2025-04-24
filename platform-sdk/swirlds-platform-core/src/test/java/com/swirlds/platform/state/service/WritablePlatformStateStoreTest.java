@@ -4,7 +4,6 @@ package com.swirlds.platform.state.service;
 import static com.swirlds.platform.state.service.PbjConverter.toPbjPlatformState;
 import static com.swirlds.platform.state.service.PbjConverterTest.randomPlatformState;
 import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
-import static com.swirlds.platform.test.fixtures.config.ConfigUtils.CONFIGURATION;
 import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomHash;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.nextInt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,15 +12,11 @@ import static org.mockito.Mockito.when;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.common.test.fixtures.Randotron;
-import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
-import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.config.MerkleDbConfig;
+import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.disk.OnDiskWritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
-import com.swirlds.virtualmap.VirtualMap;
 import java.time.Instant;
-import org.hiero.base.crypto.DigestType;
 import org.hiero.base.utility.CommonUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,12 +38,8 @@ class WritablePlatformStateStoreTest {
     void setUp() {
         randotron = Randotron.create();
 
-        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final var tableConfig =
-                new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 1, merkleDbConfig.hashesRamToDiskThreshold());
         final String virtualMapLabel = "VirtualMap-" + randotron.nextString(100);
-        final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
-        final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, CONFIGURATION);
+        final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel, 1);
 
         virtualMap.put(
                 StateUtils.getVirtualMapKey(PlatformStateService.NAME, PLATFORM_STATE_KEY),

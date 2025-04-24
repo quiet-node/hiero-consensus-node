@@ -47,6 +47,7 @@ class HashListByteBufferTest {
     public HashListByteBuffer createHashList(final int hashesPerBuffer, final long capacity, final boolean offHeap) {
         final Configuration config = ConfigurationBuilder.create()
                 .withConfigDataType(MerkleDbConfig.class)
+                .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                 .withSource(new SimpleConfigSource("merkleDb.hashStoreRamBufferSize", hashesPerBuffer))
                 .withSource(new SimpleConfigSource("merkleDb.hashStoreRamOffHeapBuffers", offHeap))
                 .build();
@@ -57,6 +58,7 @@ class HashListByteBufferTest {
             final Path file, final int hashesPerBuffer, final long capacity, final boolean offHeap) throws IOException {
         final Configuration config = ConfigurationBuilder.create()
                 .withConfigDataType(MerkleDbConfig.class)
+                .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                 .withSource(new SimpleConfigSource("merkleDb.hashStoreRamBufferSize", hashesPerBuffer))
                 .withSource(new SimpleConfigSource("merkleDb.hashStoreRamOffHeapBuffers", offHeap))
                 .build();

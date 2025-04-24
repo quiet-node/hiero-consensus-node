@@ -70,6 +70,7 @@ import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.prometheus.PrometheusConfig;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.config.AddressBookConfig;
@@ -123,6 +124,7 @@ public final class HederaTestConfigBuilder {
                 .withConfigDataType(PrometheusConfig.class)
                 .withConfigDataType(PlatformStatusConfig.class)
                 .withConfigDataType(MerkleDbConfig.class)
+                .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                 .withConfigDataType(AddressBookConfig.class)
                 /*
                 These data types from the platform were not available on the classpath. Add if needed later.

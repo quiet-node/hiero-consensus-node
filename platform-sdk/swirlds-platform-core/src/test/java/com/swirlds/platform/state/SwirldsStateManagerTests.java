@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state;
 
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.nextInt;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,9 +15,6 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
-import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.SwirldsPlatform;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
@@ -26,8 +22,6 @@ import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
-import com.swirlds.virtualmap.VirtualMap;
-import org.hiero.base.crypto.DigestType;
 import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.AfterEach;
@@ -133,15 +127,8 @@ class SwirldsStateManagerTests {
     }
 
     private static MerkleNodeState newState(PlatformStateFacade platformStateFacade) {
-
-        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final var tableConfig = new MerkleDbTableConfig(
-                (short) 1, DigestType.SHA_384, 100_000, merkleDbConfig.hashesRamToDiskThreshold());
-        final var virtualMapLabel = "VirtualMap-SwirldsStateManagerTests";
-        final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
-        final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, CONFIGURATION);
-
-        final MerkleNodeState state = new TestNewMerkleStateRoot(virtualMap);
+        final MerkleNodeState state = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(
+                SwirldsStateManagerTests.class.getSimpleName());
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
 
         platformStateFacade.setCreationSoftwareVersionTo(

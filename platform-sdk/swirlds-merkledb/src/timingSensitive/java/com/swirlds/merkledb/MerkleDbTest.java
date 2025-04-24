@@ -95,6 +95,7 @@ public class MerkleDbTest {
     @ValueSource(booleans = {false, true})
     void testLoadMetadata(final boolean sourceUsePbj) throws IOException {
         final Configuration sourceConfig = ConfigurationBuilder.create()
+                .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                 .withSources(new SimpleConfigSource("merkleDb.usePbj", sourceUsePbj))
                 .withConfigDataType(MerkleDbConfig.class)
                 .withConfigDataType(TemporaryFileConfig.class)
@@ -114,6 +115,7 @@ public class MerkleDbTest {
             FileUtils.hardLinkTree(dbDir, snapshotDir.resolve("db"));
 
             final Configuration snapshotConfig = ConfigurationBuilder.create()
+                    .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                     .withSources(new SimpleConfigSource("merkleDb.usePbj", snapshotUsePbj))
                     .withConfigDataType(MerkleDbConfig.class)
                     .build();

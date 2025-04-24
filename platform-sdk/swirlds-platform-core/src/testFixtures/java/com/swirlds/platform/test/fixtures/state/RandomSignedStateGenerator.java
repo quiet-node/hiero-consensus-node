@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.state;
 
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomHash;
@@ -25,9 +24,6 @@ import com.swirlds.common.test.fixtures.WeightGenerators;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
-import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
-import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.SignatureVerifier;
 import com.swirlds.platform.roster.RosterUtils;
@@ -36,7 +32,6 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.manager.SignatureVerificationTestUtils;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -48,7 +43,6 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.hiero.base.crypto.DigestType;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.Signature;
 import org.hiero.base.utility.CommonUtils;
@@ -156,13 +150,8 @@ public class RandomSignedStateGenerator {
             if (useBlockingState) {
                 stateInstance = new BlockingState(platformStateFacade);
             } else {
-                final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-                final var tableConfig = new MerkleDbTableConfig(
-                        (short) 1, DigestType.SHA_384, 100_000, merkleDbConfig.hashesRamToDiskThreshold());
-                final var virtualMapLabel = "VirtualMap-RandomSignedStateGenerator";
-                final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
-                final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, CONFIGURATION);
-                stateInstance = new TestNewMerkleStateRoot(virtualMap);
+                stateInstance = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(
+                        RandomSignedStateGenerator.class.getSimpleName());
             }
             stateInstance.init(
                     Time.getCurrent(),

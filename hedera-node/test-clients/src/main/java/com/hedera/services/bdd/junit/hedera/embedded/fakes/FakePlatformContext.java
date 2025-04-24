@@ -14,6 +14,7 @@ import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
+import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.config.BasicConfig;
@@ -35,6 +36,7 @@ public class FakePlatformContext implements PlatformContext {
             .withConfigDataType(MerkleDbConfig.class)
             .withConfigDataType(TemporaryFileConfig.class)
             .withConfigDataType(StateCommonConfig.class)
+            .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
             .build();
 
     private final Metrics metrics;
