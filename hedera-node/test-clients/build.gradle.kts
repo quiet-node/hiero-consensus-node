@@ -109,7 +109,8 @@ val prCheckPropOverrides =
         "hapiTestCrypto" to "tss.hintsEnabled=true,blockStream.blockPeriod=1s",
         "hapiTestSmartContract" to "tss.historyEnabled=false",
         "hapiTestRestart" to
-            "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s, hapi.spec.default.shard=${shard}, hapi.spec.default.realm=${realm})",
+            "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s," +
+                "hapi.spec.default.shard=${shard}, hapi.spec.default.realm=${realm}, hedera.shard=${shard}, hedera.realm=${realm})",
         "hapiTestMisc" to "nodes.nodeRewardsEnabled=false",
         "hapiTestTimeConsuming" to "nodes.nodeRewardsEnabled=false",
     )
@@ -237,8 +238,6 @@ tasks.register<Test>("testSubprocess") {
     val testOverrides =
         gradle.startParameter.taskNames
             .mapNotNull { prCheckPropOverrides[it] }
-            .plus("hedera.shard=${shard}")
-            .plus("hedera.realm=${realm}")
             .joinToString(separator = ",")
     // Only set the system property if non-empty
     if (testOverrides.isNotBlank()) {
