@@ -511,7 +511,7 @@ class MerkleDbDataSourceTest {
 
     @Test
     void preservesInterruptStatusWhenInterruptedClosing() throws IOException {
-        createAndApplyDataSource(testDirectory, "test8", TestType.long_fixed, 1000, dataSource -> {
+        createAndApplyDataSource(testDirectory, "test8", TestType.long_fixed, 1001, dataSource -> {
             /* Keep an executor busy */
             final InterruptRememberingThread savingThread = slowRecordSavingThread(dataSource);
             savingThread.start();

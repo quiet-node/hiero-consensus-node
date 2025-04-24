@@ -32,6 +32,7 @@ import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import com.swirlds.virtualmap.internal.merkle.ExternalVirtualMapState;
+import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -86,6 +87,17 @@ class MerkleDbSnapshotTest {
 
     @AfterEach
     public void afterTest() {
+        for (int i = 0; i < 10; i++) {
+            if(MerkleDbDataSource.getCountOfOpenDatabases() == 0L) {
+                break;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // check db count
         AssertionUtils.assertEventuallyEquals(
                 0L,
@@ -106,7 +118,7 @@ class MerkleDbSnapshotTest {
     private void verify(final MerkleInternal stateRoot) {
         for (int i = 0; i < MAPS_COUNT; i++) {
             final VirtualMap vm = stateRoot.getChild(i);
-            final ExternalVirtualMapState state = vm.getLeft();
+            final VirtualMapState state = new VirtualMapState(vm.getBytes(VirtualMapState.VM_STATE_KEY));
             System.out.println("state.getFirstLeafPath() = " + state.getFirstLeafPath());
             System.out.println("state.getLastLeafPath() = " + state.getLastLeafPath());
             final VirtualRootNode root = vm.getLeft();
