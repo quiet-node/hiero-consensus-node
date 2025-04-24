@@ -31,7 +31,6 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
-import com.swirlds.virtualmap.internal.merkle.ExternalVirtualMapState;
 import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import java.io.IOException;
@@ -88,7 +87,7 @@ class MerkleDbSnapshotTest {
     @AfterEach
     public void afterTest() {
         for (int i = 0; i < 10; i++) {
-            if(MerkleDbDataSource.getCountOfOpenDatabases() == 0L) {
+            if (MerkleDbDataSource.getCountOfOpenDatabases() == 0L) {
                 break;
             }
             try {
