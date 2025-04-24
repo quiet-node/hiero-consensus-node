@@ -12,20 +12,24 @@ import org.junit.jupiter.api.Disabled;
 public class HappyPathTest {
 
     @OtterTest
-    @Disabled
     void testHappyPath(TestEnvironment env) throws InterruptedException {
-        final Network network = env.network();
-        final TimeManager timeManager = env.timeManager();
+        while (true) {
 
-        // Setup simulation
-        network.addNodes(4);
-        network.start(Duration.ofMinutes(1L));
-        env.generator().start();
+            final Network network = env.network();
+            final TimeManager timeManager = env.timeManager();
 
-        // Wait for two minutes
-        timeManager.waitFor(Duration.ofMinutes(2L));
+            // Setup simulation
+            network.addNodes(4);
+            network.start(Duration.ofMinutes(1L));
+            env.generator().start();
 
-        // Validations
-        env.validator().validateRemaining(Profile.DEFAULT);
+            // Wait for two minutes
+            timeManager.waitFor(Duration.ofMinutes(2L));
+
+            // Validations
+            env.validator().validateRemaining(Profile.DEFAULT);
+            env.destroy();
+            network.setState();
+        }
     }
 }

@@ -230,8 +230,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
-            checkLifeCycle(LifeCycle.STARTED, "Node has already been started.");
-            checkLifeCycle(LifeCycle.DESTROYED, "Node has already been destroyed.");
+//            checkLifeCycle(LifeCycle.STARTED, "Node has already been started.");
+//            checkLifeCycle(LifeCycle.DESTROYED, "Node has already been destroyed.");
 
             // Clean the output directory and start the node
             final String rootPath =

@@ -65,4 +65,6 @@ public interface Network {
      * @throws InterruptedException if the thread is interrupted while waiting
      */
     void resume(@NonNull Duration duration) throws InterruptedException;
+
+    void setState();
 }

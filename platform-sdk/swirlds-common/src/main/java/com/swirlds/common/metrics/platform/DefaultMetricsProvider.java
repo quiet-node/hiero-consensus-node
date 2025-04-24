@@ -106,9 +106,9 @@ public class DefaultMetricsProvider implements PlatformMetricsProvider, Lifecycl
                 new DefaultPlatformMetrics(nodeId, metricKeyRegistry, executor, factory, metricsConfig);
 
         final DefaultPlatformMetrics oldMetrics = platformMetrics.putIfAbsent(nodeId, newMetrics);
-        if (oldMetrics != null) {
-            throw new IllegalStateException(String.format("PlatformMetrics for %s already exists", nodeId));
-        }
+//        if (oldMetrics != null) {
+//            throw new IllegalStateException(String.format("PlatformMetrics for %s already exists", nodeId));
+//        }
 
         final Runnable unsubscribeGlobalMetrics = globalMetrics.subscribe(newMetrics::handleGlobalMetrics);
         unsubscribers.put(nodeId, List.of(unsubscribeGlobalMetrics));
@@ -146,14 +146,14 @@ public class DefaultMetricsProvider implements PlatformMetricsProvider, Lifecycl
         Objects.requireNonNull(nodeId, "nodeId must not be null");
 
         final DefaultPlatformMetrics metrics = platformMetrics.get(nodeId);
-        if (metrics == null) {
-            throw new IllegalArgumentException(String.format("PlatformMetrics for %s does not exist", nodeId));
-        }
+//        if (metrics == null) {
+//            throw new IllegalArgumentException(String.format("PlatformMetrics for %s does not exist", nodeId));
+//        }
 
-        metrics.shutdown();
-        unsubscribers.remove(nodeId).forEach(Runnable::run);
-        snapshotService.removePlatformMetric(metrics);
-        platformMetrics.remove(nodeId);
+//        metrics.shutdown();
+//        unsubscribers.remove(nodeId).forEach(Runnable::run);
+//        snapshotService.removePlatformMetric(metrics);
+//        platformMetrics.remove(nodeId);
     }
 
     @Override
