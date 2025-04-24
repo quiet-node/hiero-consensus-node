@@ -864,8 +864,7 @@ public class PlatformWiring {
      */
     @NonNull
     public OutputWire<ReservedSignedState> getReservedSignedStateCollectorOutputWire() {
-        return allReservedSignedStatesWire.buildAdvancedTransformer(
-                new SignedStateReserver("readOnlyAllStatesReserver"));
+        return allReservedSignedStatesWire;
     }
 
     /**
