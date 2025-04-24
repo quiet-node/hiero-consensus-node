@@ -35,7 +35,6 @@ import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.turtle.consensus.ConsensusRoundsTestCollector;
 import com.swirlds.platform.test.fixtures.turtle.consensus.DefaultConsensusRoundsTestCollector;
@@ -52,6 +51,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.AddressBook;
 
 /**
  * Encapsulates a single node running in a TURTLE network.
