@@ -793,7 +793,7 @@ class MerkleStateRootTest extends MerkleTestBase {
     @DisplayName("Migrate test")
     class MigrateTest {
         @Test
-        @DisplayName("If the version is current, nothing ever happens")
+        @DisplayName("If the version is current, migration happens")
         void migrate_currentVersion() {
             var node1 = mock(MerkleNode.class);
             stateRoot.setChild(0, node1);
@@ -807,8 +807,8 @@ class MerkleStateRootTest extends MerkleTestBase {
         }
 
         @Test
-        @DisplayName("Migration from previous versions is not supported")
-        void migration_not_supported() {
+        @DisplayName("Migration from previous versions is supported")
+        void migration_supported() {
             assertDoesNotThrow(() -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1));
         }
     }
