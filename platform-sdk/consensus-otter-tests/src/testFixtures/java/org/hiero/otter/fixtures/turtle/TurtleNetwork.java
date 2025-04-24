@@ -232,6 +232,14 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         executorService.shutdownNow();
     }
 
+    public void stop() throws InterruptedException {
+        log.info("Stopping network...");
+        for (final TurtleNode node : nodes) {
+            node.shutdownGracefully(Duration.ZERO);
+        }
+        executorService.shutdownNow();
+    }
+
     /**
      * Creates a {@link BooleanSupplier} that returns {@code true} if all nodes are in the given {@link PlatformStatus}.
      *
