@@ -20,6 +20,6 @@ public class Version063FeatureFlags extends Version062FeatureFlags {
 
     public boolean isNativeLibVerificationEnabled(@NonNull Configuration config) {
         requireNonNull(config);
-        return config.getConfigData(ContractsConfig.class).nativeLibVerificationEnabled();
+        return config.getConfigData(ContractsConfig.class).nativeLibVerificationHaltEnabled();
     }
 }
