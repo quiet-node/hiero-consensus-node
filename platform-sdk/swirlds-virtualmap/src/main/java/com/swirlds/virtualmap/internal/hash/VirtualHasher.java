@@ -501,4 +501,9 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
     public Hash emptyRootHash() {
         return ChunkHashTask.hash(ROOT_PATH, Cryptography.NULL_HASH, Cryptography.NULL_HASH);
     }
+
+    public void terminate() {
+//        for(final var entry: task)
+        HASH_BUILDER_THREAD_LOCAL.remove();
+    }
 }

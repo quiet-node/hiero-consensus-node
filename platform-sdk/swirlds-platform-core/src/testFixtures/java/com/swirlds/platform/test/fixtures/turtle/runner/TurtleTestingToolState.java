@@ -90,4 +90,8 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     public int getMinimumSupportedVersion() {
         return ClassVersion.ORIGINAL;
     }
+
+    public static void closeState() {
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.close();
+    }
 }

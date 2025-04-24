@@ -25,4 +25,6 @@ public interface LatestCompleteStateNexus extends SignedStateNexus {
      */
     @InputWireLabel("complete state")
     void setStateIfNewer(@NonNull ReservedSignedState reservedSignedState);
+
+    void delete();
 }

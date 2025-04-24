@@ -221,4 +221,8 @@ public class ReservedSignedState implements AutoCloseableNonThrowing {
     public boolean isClosed() {
         return closed;
     }
+
+    public void delete() {
+        signedState.delete();
+    }
 }
