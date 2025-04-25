@@ -143,6 +143,15 @@ public class BlockStreamStateManager {
             createRequestFromCurrentItems(blockState);
             // Mark the block as complete
             blockState.setComplete();
+
+            // TODO: temporarily set here until we have the buffering implemented
+            final Long oldestUnackBlockNum = blockStates.keySet().stream()
+                    .sorted(Long::compareTo)
+                    .findFirst()
+                    .orElse(blockNumber);
+            blockStreamMetrics.setOldestUnacknowledgedBlockTime(
+                    getBlockState(oldestUnackBlockNum).getCompletionTime().toEpochMilli() / 1000L);
+
             // Notify the connection manager
             blockNodeConnectionManager.notifyConnectionsOfNewRequest();
         }
