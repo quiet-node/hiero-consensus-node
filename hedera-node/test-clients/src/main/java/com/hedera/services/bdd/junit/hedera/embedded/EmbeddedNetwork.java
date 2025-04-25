@@ -2,6 +2,8 @@
 package com.hedera.services.bdd.junit.hedera.embedded;
 
 import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.CLASSIC_HAPI_TEST_NETWORK_SIZE;
+import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.CONFIG_REALM;
+import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.CONFIG_SHARD;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.APPLICATION_PROPERTIES;
 import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.REPEATABLE;
 import static com.hedera.services.bdd.junit.hedera.subprocess.ConditionStatus.PENDING;
@@ -52,6 +54,8 @@ public class EmbeddedNetwork extends AbstractNetwork {
     private final String configTxt;
     private final EmbeddedMode mode;
     private final EmbeddedNode embeddedNode;
+    private final long shard;
+    private final long realm;
 
     @Nullable
     private EmbeddedHedera embeddedHedera;
@@ -77,8 +81,20 @@ public class EmbeddedNetwork extends AbstractNetwork {
                         .<HederaNode>mapToObj(nodeId -> new EmbeddedNode(
                                 // All non-embedded node working directories are mapped to the embedded node0
                                 classicMetadataFor(
-                                        nodeId, name, FAKE_HOST, 0, 0, 0, 0, 0, workingDirFor(0, workingDir))))
+                                        nodeId,
+                                        name,
+                                        FAKE_HOST,
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                        0,
+                                        workingDirFor(0, workingDir),
+                                        CONFIG_SHARD,
+                                        CONFIG_REALM)))
                         .toList());
+        this.shard = CONFIG_SHARD;
+        this.realm = CONFIG_REALM;
         this.mode = requireNonNull(mode);
         this.embeddedNode = (EmbeddedNode) nodes().getFirst();
         // Even though we are only embedding node0, we generate an address book
@@ -198,7 +214,18 @@ public class EmbeddedNetwork extends AbstractNetwork {
         // Start the embedded Hedera "network"
         embeddedHedera = switch (mode) {
             case REPEATABLE -> new RepeatableEmbeddedHedera(embeddedNode);
-            case CONCURRENT -> new ConcurrentEmbeddedHedera(embeddedNode);};
+            case CONCURRENT -> new ConcurrentEmbeddedHedera(embeddedNode);
+        };
         start.accept(embeddedHedera);
+    }
+
+    @Override
+    public long shard() {
+        return shard;
+    }
+
+    @Override
+    public long realm() {
+        return realm;
     }
 }
