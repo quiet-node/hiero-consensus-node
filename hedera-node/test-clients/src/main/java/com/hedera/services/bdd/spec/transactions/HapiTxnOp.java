@@ -783,8 +783,14 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
         return self();
     }
 
+    public T setNodeId(AccountID account) {
+        node = Optional.of(account);
+        return self();
+    }
+
     public T setNode(String account) {
-        nodeNum = Optional.of(account);
+        node = Optional.of(HapiPropertySource.asAccount(account));
+
         return self();
     }
 
@@ -887,5 +893,9 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
 
     public Optional<AccountID> getNode() {
         return node;
+    }
+
+    public Optional<String> getNodeNum() {
+        return nodeNum;
     }
 }

@@ -35,8 +35,14 @@ import org.junit.platform.launcher.TestPlan;
  * plan execution finishes.
  */
 public class SharedNetworkLauncherSessionListener implements LauncherSessionListener {
-    public static final int CLASSIC_HAPI_TEST_NETWORK_SIZE = 4;
     private static final Logger log = LogManager.getLogger(SharedNetworkLauncherSessionListener.class);
+    public static final int CLASSIC_HAPI_TEST_NETWORK_SIZE = 4;
+    public static final long CONFIG_SHARD = Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
+            .map(Long::parseLong)
+            .orElse((long) SHARD);
+    public static final long CONFIG_REALM = Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
+            .map(Long::parseLong)
+            .orElse(REALM);
 
     @Override
     public void launcherSessionOpened(@NonNull final LauncherSession session) {
@@ -122,13 +128,6 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                     .map(Integer::parseInt)
                     .orElse(CLASSIC_HAPI_TEST_NETWORK_SIZE);
 
-            final long shard = Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
-                    .map(Long::parseLong)
-                    .orElse((long) SHARD);
-            final long realm = Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
-                    .map(Long::parseLong)
-                    .orElse(REALM);
-
             final var initialPortProperty = System.getProperty("hapi.spec.initial.port");
             if (!initialPortProperty.isBlank()) {
                 final var initialPort = Integer.parseInt(initialPortProperty);
@@ -147,7 +146,7 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                 }
             }
             SubProcessNetwork subProcessNetwork =
-                    (SubProcessNetwork) SubProcessNetwork.newSharedNetwork(networkSize, shard, realm);
+                    (SubProcessNetwork) SubProcessNetwork.newSharedNetwork(networkSize, CONFIG_SHARD, CONFIG_REALM);
 
             // Check for the blocknode mode system property
             String blockNodeModeProperty = System.getProperty("hapi.spec.blocknode.mode");
