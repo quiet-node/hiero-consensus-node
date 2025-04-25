@@ -138,8 +138,8 @@ public final class EventRecoveryWorkflow {
 
         try (final ReservedSignedState initialState = SignedStateFileReader.readStateFile(
                         signedStateFile,
-                        // FIXME
                         (virtualMap) -> {
+                            https: // github.com/hiero-ledger/hiero-consensus-node/issues/19003
                             throw new UnsupportedOperationException();
                         },
                         platformStateFacade,

@@ -66,8 +66,8 @@ public class GenesisPlatformStateCommand extends AbstractCommand {
         final PlatformStateFacade stateFacade = DEFAULT_PLATFORM_STATE_FACADE;
         final DeserializedSignedState deserializedSignedState = SignedStateFileReader.readStateFile(
                 statePath,
-                // FIXME
                 (virtualMap) -> {
+                    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
                     throw new UnsupportedOperationException();
                 },
                 stateFacade,

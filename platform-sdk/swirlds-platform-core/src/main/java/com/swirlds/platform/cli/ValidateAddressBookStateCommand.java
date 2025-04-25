@@ -60,8 +60,9 @@ public class ValidateAddressBookStateCommand extends AbstractCommand {
 
         System.out.printf("Reading state from %s %n", statePath.toAbsolutePath());
         final DeserializedSignedState deserializedSignedState = SignedStateFileReader.readStateFile(
-                statePath, // FIXME
+                statePath,
                 (virtualMap) -> {
+                    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
                     throw new UnsupportedOperationException();
                 },
                 DEFAULT_PLATFORM_STATE_FACADE,

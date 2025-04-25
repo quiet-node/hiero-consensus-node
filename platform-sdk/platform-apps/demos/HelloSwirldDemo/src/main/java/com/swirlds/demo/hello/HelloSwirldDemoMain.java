@@ -124,7 +124,7 @@ public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
         return state;
     }
 
-    // TODO: GitHub issue TBD
+    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19004
     @Override
     public Function<VirtualMap, HelloSwirldDemoState> stateRootFromVirtualMap() {
         throw new UnsupportedOperationException();

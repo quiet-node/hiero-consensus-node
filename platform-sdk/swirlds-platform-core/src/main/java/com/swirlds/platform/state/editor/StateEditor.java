@@ -52,8 +52,9 @@ public class StateEditor {
         platformContext = PlatformContext.create(configuration);
 
         final DeserializedSignedState deserializedSignedState = SignedStateFileReader.readStateFile(
-                statePath, // FIXME
+                statePath,
                 (virtualMap) -> {
+                    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19003
                     throw new UnsupportedOperationException();
                 },
                 DEFAULT_PLATFORM_STATE_FACADE,

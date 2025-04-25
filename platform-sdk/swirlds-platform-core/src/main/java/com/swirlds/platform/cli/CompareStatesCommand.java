@@ -122,8 +122,8 @@ public final class CompareStatesCommand extends AbstractCommand {
 
         final ReservedSignedState signedState = SignedStateFileReader.readStateFile(
                         statePath,
-                        // FIXME
                         (virtualMap) -> {
+                            // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
                             throw new UnsupportedOperationException();
                         },
                         DEFAULT_PLATFORM_STATE_FACADE,
