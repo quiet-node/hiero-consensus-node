@@ -31,11 +31,9 @@ import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
 import com.swirlds.platform.config.BasicConfig_;
 import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.turtle.consensus.ConsensusRoundsTestCollector;
 import com.swirlds.platform.test.fixtures.turtle.consensus.DefaultConsensusRoundsTestCollector;
@@ -46,11 +44,14 @@ import com.swirlds.platform.test.fixtures.turtle.signedstate.SignedStatesTestCol
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformSchedulersConfig_;
 import com.swirlds.platform.wiring.PlatformWiring;
+import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Path;
 import java.util.List;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.AddressBook;
+import org.hiero.consensus.roster.RosterUtils;
 
 /**
  * Encapsulates a single node running in a TURTLE network.
@@ -160,6 +161,8 @@ public class TurtleNode {
                 platformContext);
         final var initialState = reservedState.state();
 
+        final State state = initialState.get().getState();
+        final long round = platformStateFacade.roundOf(state);
         final PlatformBuilder platformBuilder = PlatformBuilder.create(
                         "foo",
                         "bar",
@@ -168,7 +171,7 @@ public class TurtleNode {
                         TURTLE_CONSENSUS_STATE_EVENT_HANDLER,
                         nodeId,
                         AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
-                        RosterUtils.buildRosterHistory(initialState.get().getState(), platformStateFacade),
+                        RosterUtils.buildRosterHistory(initialState.get().getState(), round),
                         platformStateFacade)
                 .withModel(model)
                 .withRandomBuilder(new RandomBuilder(randotron.nextLong()))

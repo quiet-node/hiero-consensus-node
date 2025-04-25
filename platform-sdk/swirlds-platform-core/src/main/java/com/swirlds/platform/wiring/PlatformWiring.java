@@ -39,7 +39,6 @@ import com.swirlds.platform.event.orphan.OrphanBuffer;
 import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
 import com.swirlds.platform.event.preconsensus.PcesReplayer;
 import com.swirlds.platform.event.resubmitter.TransactionResubmitter;
-import com.swirlds.platform.event.stale.StaleEventDetector;
 import com.swirlds.platform.event.stream.ConsensusEventStream;
 import com.swirlds.platform.event.validation.EventSignatureValidator;
 import com.swirlds.platform.event.validation.InternalEventValidator;
@@ -81,6 +80,7 @@ import org.hiero.consensus.config.EventConfig;
 import org.hiero.consensus.event.creator.impl.EventCreationManager;
 import org.hiero.consensus.event.creator.impl.config.EventCreationConfig;
 import org.hiero.consensus.event.creator.impl.pool.TransactionPool;
+import org.hiero.consensus.event.creator.impl.stale.StaleEventDetector;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.event.StaleEventDetectorOutput;
@@ -148,7 +148,7 @@ public class PlatformWiring {
     private final ComponentWiring<StatusStateMachine, PlatformStatus> statusStateMachineWiring;
     private final ComponentWiring<BranchDetector, PlatformEvent> branchDetectorWiring;
     private final ComponentWiring<BranchReporter, Void> branchReporterWiring;
-    private OutputWire<ReservedSignedState> allReservedSignedStatesWire;
+    private final OutputWire<ReservedSignedState> allReservedSignedStatesWire;
 
     /**
      * Constructor.
@@ -268,6 +268,14 @@ public class PlatformWiring {
         transactionPoolWiring = new ComponentWiring<>(model, TransactionPool.class, config.transactionPool());
         branchDetectorWiring = new ComponentWiring<>(model, BranchDetector.class, config.branchDetector());
         branchReporterWiring = new ComponentWiring<>(model, BranchReporter.class, config.branchReporter());
+
+        // Split output of StateSignatureCollector into single ReservedSignedStates.
+        final OutputWire<ReservedSignedState> splitReservedSignedStateWire = stateSignatureCollectorWiring
+                .getOutputWire()
+                .buildSplitter("reservedStateSplitter", "reserved state lists");
+        // Add another reservation to the signed states since we are soldering to multiple input wires
+        allReservedSignedStatesWire =
+                splitReservedSignedStateWire.buildAdvancedTransformer(new SignedStateReserver("allStatesReserver"));
 
         platformCoordinator = new PlatformCoordinator(
                 eventHasherWiring::flush,
@@ -465,14 +473,6 @@ public class PlatformWiring {
                 .getOutputWire()
                 .solderTo(stateSignatureCollectorWiring.getInputWire(
                         StateSignatureCollector::handlePreconsensusSignatures));
-
-        // Split output of StateSignatureCollector into single ReservedSignedStates.
-        final OutputWire<ReservedSignedState> splitReservedSignedStateWire = stateSignatureCollectorWiring
-                .getOutputWire()
-                .buildSplitter("reservedStateSplitter", "reserved state lists");
-        // Add another reservation to the signed states since we are soldering to two different input wires
-        allReservedSignedStatesWire =
-                splitReservedSignedStateWire.buildAdvancedTransformer(new SignedStateReserver("allStatesReserver"));
 
         // Future work: this should be a full component in its own right or folded in with the state file manager.
         final WireFilter<ReservedSignedState> saveToDiskFilter =
