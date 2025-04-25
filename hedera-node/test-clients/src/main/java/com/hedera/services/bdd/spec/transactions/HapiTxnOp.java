@@ -789,8 +789,7 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
     }
 
     public T setNode(String account) {
-        node = Optional.of(HapiPropertySource.asAccount(account));
-
+        nodeNum = Optional.of(account);
         return self();
     }
 
