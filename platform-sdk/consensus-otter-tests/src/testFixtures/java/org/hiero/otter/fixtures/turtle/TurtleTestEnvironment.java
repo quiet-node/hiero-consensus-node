@@ -47,9 +47,11 @@ public class TurtleTestEnvironment implements TestEnvironment {
     static final Duration AVERAGE_NETWORK_DELAY = Duration.ofMillis(200);
     static final Duration STANDARD_DEVIATION_NETWORK_DELAY = Duration.ofMillis(10);
 
-    private final TurtleNetwork network;
-    private final TurtleTransactionGenerator generator;
+    private TurtleNetwork network;
+    private TurtleTransactionGenerator generator;
     private final TurtleTimeManager timeManager;
+    private final Randotron randotron;
+    private final Path rootOutputDirectory;
 
     /**
      * Constructor for the {@link TurtleTestEnvironment} class.
@@ -78,7 +80,7 @@ public class TurtleTestEnvironment implements TestEnvironment {
             loggerContext.updateLoggers();
         }
 
-        final Randotron randotron = Randotron.create();
+        randotron = Randotron.create();
 
         try {
             final ConstructableRegistry registry = ConstructableRegistry.getInstance();
@@ -91,7 +93,7 @@ public class TurtleTestEnvironment implements TestEnvironment {
 
         final FakeTime time = new FakeTime(randotron.nextInstant(), Duration.ZERO);
 
-        final Path rootOutputDirectory = Path.of("build", "turtle");
+        rootOutputDirectory = Path.of("build", "turtle");
         try {
             if (Files.exists(rootOutputDirectory)) {
                 FileUtils.deleteDirectory(rootOutputDirectory);
@@ -116,6 +118,12 @@ public class TurtleTestEnvironment implements TestEnvironment {
     @Override
     @NonNull
     public Network network() {
+//        return network;
+        network = new TurtleNetwork(randotron, timeManager, rootOutputDirectory);
+        generator = new TurtleTransactionGenerator(network, randotron);
+
+        timeManager.addTimeTickReceiver(network);
+        timeManager.addTimeTickReceiver(generator);
         return network;
     }
 
@@ -154,5 +162,11 @@ public class TurtleTestEnvironment implements TestEnvironment {
     public void destroy() throws InterruptedException {
         generator.stop();
         network.destroy();
+    }
+
+    @Override
+    public void stop() throws InterruptedException {
+        generator.stop();
+        network.stop();
     }
 }
