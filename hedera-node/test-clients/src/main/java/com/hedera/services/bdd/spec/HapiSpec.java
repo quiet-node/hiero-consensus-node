@@ -41,7 +41,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.MoreObjects;
-import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.TimestampSeconds;
 import com.hedera.hapi.node.state.addressbook.Node;
 import com.hedera.hapi.node.state.common.EntityNumber;
@@ -321,15 +320,11 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
     }
 
     public long shard() {
-        return anyNodeAccountId().shardNum();
+        return requireNonNull(targetNetwork).shard();
     }
 
     public long realm() {
-        return anyNodeAccountId().realmNum();
-    }
-
-    private AccountID anyNodeAccountId() {
-        return getNetworkNodes().getFirst().getAccountId();
+        return requireNonNull(targetNetwork).realm();
     }
 
     public void adhocIncrement() {
