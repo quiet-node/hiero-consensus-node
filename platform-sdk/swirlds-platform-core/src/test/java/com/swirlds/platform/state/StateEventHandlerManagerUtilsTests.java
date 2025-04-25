@@ -21,8 +21,9 @@ public class StateEventHandlerManagerUtilsTests {
 
     @Test
     void testFastCopyIsMutable() {
-        final MerkleNodeState state = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(
-                StateEventHandlerManagerUtilsTests.class.getSimpleName());
+        final String virtualMapLabel =
+                "vm-" + StateEventHandlerManagerUtilsTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        final MerkleNodeState state = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
         state.getRoot().reserve();
         final StateMetrics stats = mock(StateMetrics.class);

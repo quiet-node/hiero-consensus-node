@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.state;
 
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
-
 import com.swirlds.config.api.Configuration;
-import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.merkle.NewStateRoot;
@@ -38,8 +35,7 @@ public class TestNewMerkleStateRoot extends NewStateRoot<TestNewMerkleStateRoot>
     }
 
     public static TestNewMerkleStateRoot createInstanceWithVirtualMapLabel(@NonNull final String virtualMapLabel) {
-        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel, merkleDbConfig.maxNumOfKeys());
+        final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
         return new TestNewMerkleStateRoot(virtualMap);
     }
 }

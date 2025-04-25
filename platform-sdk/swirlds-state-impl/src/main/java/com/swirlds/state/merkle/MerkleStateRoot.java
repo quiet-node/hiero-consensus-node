@@ -962,6 +962,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     // Threads which iterate over the given Virtual Map, perform some operation and write into its own output
     // queue/buffer
     private static final int THREAD_COUNT = 1;
+    private static final long MEGA_MAP_MAX_KEYS_HINT =
+            1_000_000_000; // if fetched from config, figure out consistency with tests
     private static final int DATA_PER_COPY = 10_213;
     private static final boolean VALIDATE_MIGRATION_FF = true;
 
@@ -977,7 +979,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     DigestType.SHA_384,
                     // Future work: drop StateDefinition.maxKeysHint and load VM size
                     // from VirtualMapConfig.size instead
-                    merkleDbConfig.maxNumOfKeys(),
+                    MEGA_MAP_MAX_KEYS_HINT,
                     merkleDbConfig.hashesRamToDiskThreshold());
             final var virtualMapLabel = "VirtualMap";
             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);

@@ -5,7 +5,6 @@ import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
-import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.demo.platform.fs.stresstest.proto.CreateSmartContract;
 import com.swirlds.demo.platform.fs.stresstest.proto.VirtualMerkleTransaction;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
@@ -25,7 +24,6 @@ public class VirtualMerkleTransactionHandlerTest {
             .withConfigDataType(VirtualMapConfig.class)
             .withConfigDataType(TemporaryFileConfig.class)
             .withConfigDataType(StateCommonConfig.class)
-            .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
             .build();
 
     private static VirtualMap smartContract;

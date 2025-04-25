@@ -3,7 +3,6 @@ package com.swirlds.platform.state.service;
 
 import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.UNINITIALIZED_PLATFORM_STATE;
 import static com.swirlds.platform.test.fixtures.PlatformStateUtils.randomPlatformState;
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomHash;
@@ -19,9 +18,9 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateModifier;
-import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
+import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.EmptyReadableStates;
 import java.time.Instant;
@@ -39,9 +38,13 @@ class PlatformStateFacadeTest {
 
     @BeforeAll
     static void beforeAll() {
-        state = new TestNewMerkleStateRoot(CONFIGURATION);
+        final String virtualMapLabelForState =
+                "vm-state-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        state = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabelForState);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
-        emptyState = new TestMerkleStateRoot();
+        final String virtualMapLabelForEmptyState =
+                "vm-state-empty-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        emptyState = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabelForEmptyState);
         platformStateFacade = new TestPlatformStateFacade();
         platformStateModifier = randomPlatformState(state, platformStateFacade);
     }
@@ -95,7 +98,11 @@ class PlatformStateFacadeTest {
 
     @Test
     void testPlatformStateOf_noPlatformState() {
-        final TestMerkleStateRoot noPlatformState = new TestMerkleStateRoot();
+        final var virtualMapLabel =
+                "vm-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
+
+        final TestNewMerkleStateRoot noPlatformState = new TestNewMerkleStateRoot(virtualMap);
         noPlatformState.getReadableStates(PlatformStateService.NAME);
         assertSame(UNINITIALIZED_PLATFORM_STATE, platformStateFacade.platformStateOf(noPlatformState));
     }
@@ -185,8 +192,9 @@ class PlatformStateFacadeTest {
 
     @Test
     void testSetSnapshotTo() {
-        TestNewMerkleStateRoot randomState =
-                TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(PlatformStateFacadeTest.class.getSimpleName());
+        final String virtualMapLabel =
+                "vm-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        TestNewMerkleStateRoot randomState = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(randomState);
         PlatformStateModifier randomPlatformState = randomPlatformState(randomState, platformStateFacade);
         final var newSnapshot = randomPlatformState.getSnapshot();

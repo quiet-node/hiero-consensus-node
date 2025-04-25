@@ -46,4 +46,5 @@ module com.swirlds.platform.core.test.fixtures {
     exports com.swirlds.platform.test.fixtures.turtle.consensus;
     exports com.swirlds.platform.test.fixtures.turtle.gossip;
     exports com.swirlds.platform.test.fixtures.turtle.runner;
+    exports com.swirlds.platform.test.fixtures.virtualmap;
 }

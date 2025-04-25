@@ -26,6 +26,9 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+/**
+ * @deprecated This test class is only required for the testing of MerkleStateRoot class and will be removed together with that class.
+ */
 @Deprecated
 @DisplayName("State Registry Tests")
 class StateRegistryTests {

@@ -40,7 +40,8 @@ import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
+import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
+import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.Service;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
@@ -123,7 +124,10 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
                 .state(entityCountsState)
                 .build();
 
-        state = new TestMerkleStateRoot() {
+        final var virtualMapLabel = "vm-" + AppTestBase.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
+
+        state = new TestNewMerkleStateRoot(virtualMap) {
             @NonNull
             @Override
             public ReadableStates getReadableStates(@NonNull String serviceName) {

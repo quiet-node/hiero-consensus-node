@@ -48,7 +48,8 @@ class WritableRosterStoreTest {
 
     @BeforeEach
     void setUp() {
-        final String virtualMapLabel = "VirtualMap-" + System.currentTimeMillis();
+        final String virtualMapLabel =
+                "vm-" + WritablePlatformStateStoreTest.class.getSimpleName() + java.util.UUID.randomUUID();
         final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel, 1);
 
         final WritableKVState<ProtoBytes, Roster> rosters = MapWritableKVState.<ProtoBytes, Roster>builder(

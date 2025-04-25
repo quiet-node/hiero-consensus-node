@@ -38,7 +38,8 @@ class WritablePlatformStateStoreTest {
     void setUp() {
         randotron = Randotron.create();
 
-        final String virtualMapLabel = "VirtualMap-" + randotron.nextString(100);
+        final String virtualMapLabel =
+                "vm-" + WritablePlatformStateStoreTest.class.getSimpleName() + java.util.UUID.randomUUID();
         final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel, 1);
 
         virtualMap.put(

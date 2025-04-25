@@ -20,6 +20,7 @@ import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
+import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StartupNetworks;
@@ -178,9 +179,12 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
          * Utility method that migrates from version 9 to 10
          */
         void migrateFromV9ToV10() {
+            final var virtualMapLabel =
+                    "vm-" + MerkleSchemaRegistryTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+            final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
             SemanticVersion latestVersion = version(10, 0, 0);
             schemaRegistry.migrate(
-                    new TestNewMerkleStateRoot(CONFIGURATION),
+                    new TestNewMerkleStateRoot(virtualMap),
                     version(9, 0, 0),
                     latestVersion,
                     config,
@@ -206,7 +210,10 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             for (int i = 1; i < versions.length; i++) {
                 versions[i] = version(0, i, 0);
             }
-            merkleTree = new TestNewMerkleStateRoot(CONFIGURATION);
+            final var virtualMapLabel =
+                    "vm-" + MerkleSchemaRegistryTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+            final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
+            merkleTree = new TestNewMerkleStateRoot(virtualMap);
         }
 
         @Test

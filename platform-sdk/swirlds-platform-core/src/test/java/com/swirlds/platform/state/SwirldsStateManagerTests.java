@@ -127,8 +127,9 @@ class SwirldsStateManagerTests {
     }
 
     private static MerkleNodeState newState(PlatformStateFacade platformStateFacade) {
-        final MerkleNodeState state = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(
-                SwirldsStateManagerTests.class.getSimpleName());
+        final String virtualMapLabel =
+                SwirldsStateManagerTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        final MerkleNodeState state = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
 
         platformStateFacade.setCreationSoftwareVersionTo(

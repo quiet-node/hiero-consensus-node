@@ -219,7 +219,6 @@ abstract class AbstractLongListTest<T extends AbstractLongList<?>> {
                 .withConfigDataType(MerkleDbConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
                 .withConfigDataType(TemporaryFileConfig.class)
-                .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
                 .withSource(new SimpleConfigSource("merkleDb.longListChunkSize", "12000"))
                 .withSource(new SimpleConfigSource("merkleDb.longListReservedBufferSize", "1111"))
                 .build();

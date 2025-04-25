@@ -150,8 +150,9 @@ public class RandomSignedStateGenerator {
             if (useBlockingState) {
                 stateInstance = new BlockingState(platformStateFacade);
             } else {
-                stateInstance = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(
-                        RandomSignedStateGenerator.class.getSimpleName());
+                final String virtualMapLabel =
+                        "vm-" + RandomSignedStateGenerator.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+                stateInstance = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
             }
             stateInstance.init(
                     Time.getCurrent(),

@@ -2,7 +2,6 @@
 package com.swirlds.platform.state;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyTrue;
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,6 +24,7 @@ import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
+import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +67,9 @@ class SignedStateTests {
      */
     private MerkleNodeState buildMockState(
             final Random random, final Runnable reserveCallback, final Runnable releaseCallback) {
-        final var real = new TestNewMerkleStateRoot(CONFIGURATION);
+        final var virtualMapLabel = "vm-" + SignedStateTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
+        final var real = new TestNewMerkleStateRoot(virtualMap);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(real);
         RosterUtils.setActiveRoster(real, RandomRosterBuilder.create(random).build(), 0L);
         final MerkleNodeState state = spy(real);
@@ -216,7 +218,10 @@ class SignedStateTests {
     @Test
     @DisplayName("Alternate Constructor Reservations Test")
     void alternateConstructorReservationsTest() {
-        final MerkleNodeState state = spy(new TestNewMerkleStateRoot(CONFIGURATION));
+        final var virtualMapLabel = "vm-" + SignedStateTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+        final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
+
+        final MerkleNodeState state = spy(new TestNewMerkleStateRoot(virtualMap));
         final PlatformStateModifier platformState = mock(PlatformStateModifier.class);
         final TestPlatformStateFacade platformStateFacade = mock(TestPlatformStateFacade.class);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
