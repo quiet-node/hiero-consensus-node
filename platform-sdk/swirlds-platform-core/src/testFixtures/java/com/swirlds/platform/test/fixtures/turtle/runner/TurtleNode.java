@@ -26,13 +26,17 @@ import com.swirlds.component.framework.wires.output.OutputWire;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
+import com.swirlds.platform.builder.internal.StaticPlatformBuilder;
 import com.swirlds.platform.config.BasicConfig_;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.platform.state.signed.HashedReservedSignedState;
+import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.turtle.consensus.ConsensusRoundsHolder;
@@ -46,6 +50,8 @@ import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.roster.AddressBook;
@@ -69,6 +75,10 @@ public class TurtleNode {
 
     private final DeterministicWiringModel model;
     private final Platform platform;
+    private final Metrics metrics;
+    private final RecycleBin recycleBin;
+    private final HashedReservedSignedState reservedState;
+    private final ReservedSignedState initialState;
     private final ConsensusRoundsHolder consensusRoundsHolder;
 
     @NonNull
@@ -138,12 +148,12 @@ public class TurtleNode {
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
         final var version = SemanticVersion.newBuilder().major(1).build();
         MerkleDb.resetDefaultInstancePath();
-        final var metrics = getMetricsProvider().createPlatformMetrics(nodeId);
+        metrics = getMetricsProvider().createPlatformMetrics(nodeId);
         final var fileSystemManager = FileSystemManager.create(configuration);
-        final var recycleBin =
+        recycleBin =
                 RecycleBin.create(metrics, configuration, getStaticThreadManager(), time, fileSystemManager, nodeId);
 
-        final var reservedState = getInitialState(
+        reservedState = getInitialState(
                 recycleBin,
                 version,
                 TurtleTestingToolState::getStateRootNode,
@@ -153,7 +163,7 @@ public class TurtleNode {
                 addressBook,
                 platformStateFacade,
                 platformContext);
-        final var initialState = reservedState.state();
+        initialState = reservedState.state();
 
         final State state = initialState.get().getState();
         final long round = platformStateFacade.roundOf(state);
@@ -218,7 +228,25 @@ public class TurtleNode {
     }
 
     public void stop() {
+//        model.stop();
+//        platform.stop();
+//        StaticPlatformBuilder.stop();
+
+
+//        metrics.resetAll();
+//        recycleBin.stop();
+//        initialState.delete();
+//        reservedState.state().delete();
+
+//        ForkJoinPool.commonPool().shutdownNow();
+//        TurtleTestingToolState.closeState();
+
+//        StaticPlatformBuilder.stop();
         platform.stop();
+
+//        StaticPlatformBuilder.stop();
+
+//        ForkJoinPool.commonPool().shutdownNow();
     }
 
     /**

@@ -112,6 +112,8 @@ class MetricsUpdateService implements Startable {
                 // ignore, this is expected behavior
             }
         }
+
+        executor.shutdownNow();
         return true;
     }
 

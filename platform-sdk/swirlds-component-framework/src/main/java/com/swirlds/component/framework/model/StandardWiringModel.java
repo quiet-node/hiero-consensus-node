@@ -231,6 +231,8 @@ public class StandardWiringModel extends TraceableWiringModel {
         if (anchor != null) {
             anchor.stop();
         }
+
+        defaultPool.shutdownNow();
     }
 
     /**

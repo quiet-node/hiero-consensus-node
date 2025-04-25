@@ -69,6 +69,8 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
             .withConfigDataType(FileSystemManagerConfig.class)
             .build();
 
+    public static List<VirtualMap> virtualMaps = new ArrayList<>();
+
     /**
      * Register the class IDs for the {@link MerkleStateRoot} and its required children, specifically those
      * used by the {@link PlatformStateService} and {@code RosterService}.
@@ -170,6 +172,7 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
                             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
                             final var virtualMap =
                                     new VirtualMap<>(label, keySerializer, valueSerializer, dsBuilder, CONFIGURATION);
+                            virtualMaps.add(virtualMap);
                             return virtualMap;
                         });
                     } else {
@@ -226,5 +229,10 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
     @Override
     public void onNewRecoveredState(@NonNull MerkleNodeState recoveredState) {
         // no-op
+    }
+
+    public void close() {
+        virtualMaps.forEach(v -> v.stop());
+        virtualMaps = new ArrayList<>();
     }
 }

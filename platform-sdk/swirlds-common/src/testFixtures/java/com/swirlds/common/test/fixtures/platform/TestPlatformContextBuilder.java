@@ -33,6 +33,7 @@ public final class TestPlatformContextBuilder {
     private static final Configuration defaultConfig =
             ConfigurationBuilder.create().autoDiscoverExtensions().build();
     private static final MerkleCryptography defaultMerkleCryptography = MerkleCryptographyFactory.create(defaultConfig);
+//    private static final MerkleCryptography defaultMerkleCryptography = new FakeMerkleCryptography();
     private Configuration configuration;
     private Metrics metrics;
     private Time time = Time.getCurrent();

@@ -55,4 +55,16 @@ public class LockFreeStateNexus implements SignedStateNexus {
     public long getRound() {
         return currentStateRound.get();
     }
+
+    @Override
+    public void clear() {
+//        currentState.get().close();
+        currentState.get().delete();
+    }
+
+    @Override
+    public void stop() {
+//        currentState.get().close();
+        currentState.get().delete();
+    }
 }

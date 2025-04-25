@@ -359,4 +359,9 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
         lifeCycle = LifeCycle.STARTED;
     }
+
+    @Override
+    public void stop() {
+        platform.stop();
+    }
 }

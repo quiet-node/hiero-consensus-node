@@ -15,9 +15,11 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.IOIterator;
+import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.common.utility.AutoCloseableWrapper;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
 import com.swirlds.platform.components.AppNotifier;
@@ -165,6 +167,8 @@ public class SwirldsPlatform implements Platform {
      */
     private final AncientMode ancientMode;
 
+    final SignedState initialState;
+
     /**
      * Constructor.
      *
@@ -182,7 +186,7 @@ public class SwirldsPlatform implements Platform {
                 .getAncientMode();
 
         // The reservation on this state is held by the caller of this constructor.
-        final SignedState initialState = blocks.initialState().get();
+        initialState = blocks.initialState().get();
 
         // This method is a no-op if we are not in birth round mode, or if we have already migrated.
         final SemanticVersion appVersion = blocks.appVersion();
@@ -320,7 +324,7 @@ public class SwirldsPlatform implements Platform {
         } else {
             initialAncientThreshold = platformStateFacade.ancientThresholdOf(initialState.getState());
             startingRound = initialState.getRound();
-
+//
             platformWiring.sendStateToHashLogger(initialState);
             platformWiring
                     .getSignatureCollectorStateInput()
@@ -330,10 +334,10 @@ public class SwirldsPlatform implements Platform {
 
             platformWiring.consensusSnapshotOverride(
                     Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(initialState.getState())));
-
-            // We only load non-ancient events during start up, so the initial expired threshold will be
-            // equal to the ancient threshold when the system first starts. Over time as we get more events,
-            // the expired threshold will continue to expand until it reaches its full size.
+//
+//            // We only load non-ancient events during start up, so the initial expired threshold will be
+//            // equal to the ancient threshold when the system first starts. Over time as we get more events,
+//            // the expired threshold will continue to expand until it reaches its full size.
             platformWiring.updateEventWindow(new EventWindow(
                     initialState.getRound(), initialAncientThreshold, initialAncientThreshold, ancientMode));
             platformWiring.overrideIssDetectorState(initialState.reserve("initialize issDetector"));
@@ -414,13 +418,23 @@ public class SwirldsPlatform implements Platform {
 
     @Override
     public void stop() {
-
         platformContext.getRecycleBin().stop();
+
         platformWiring.stop();
-
         platformWiring.stopGossip();
-        platformWiring.clear();
 
+        notificationEngine.shutdown();
+
+        latestImmutableStateNexus.stop();
+
+//        final Metrics metrics = platformContext.getMetrics();
+//        if (metrics instanceof DefaultPlatformMetrics defaultPlatformMetrics) {
+//            try {
+//                defaultPlatformMetrics.shutdown();
+//            } catch (InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+//        }
     }
 
     /**

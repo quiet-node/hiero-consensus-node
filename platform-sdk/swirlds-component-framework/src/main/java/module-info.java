@@ -12,6 +12,7 @@ module com.swirlds.component.framework {
     exports com.swirlds.component.framework.wires;
     exports com.swirlds.component.framework.wires.input;
     exports com.swirlds.component.framework.wires.output;
+    exports com.swirlds.component.framework.model.internal.deterministic;
 
     requires transitive com.swirlds.base;
     requires transitive com.swirlds.common;

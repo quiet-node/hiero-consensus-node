@@ -55,4 +55,6 @@ public interface Node {
      */
     @NonNull
     NodeConfiguration getConfiguration();
+
+    void stop();
 }

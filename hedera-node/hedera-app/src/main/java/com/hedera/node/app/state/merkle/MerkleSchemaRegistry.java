@@ -40,6 +40,7 @@ import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -90,6 +91,8 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
      * The analysis to use when determining how to apply a schema.
      */
     private final SchemaApplications schemaApplications;
+
+    private List<VirtualMap> virtualMaps = new ArrayList<>();
 
     /**
      * Create a new instance with the default {@link SchemaApplications}.
@@ -335,6 +338,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                                             new MerkleDbDataSourceBuilder(tableConfig, platformConfiguration);
                                     final var virtualMap = new VirtualMap<>(
                                             label, keySerializer, valueSerializer, dsBuilder, platformConfiguration);
+                                    virtualMaps.add(virtualMap);
                                     return virtualMap;
                                 },
                                 // Register the metrics for the virtual map if they are available.
@@ -358,5 +362,11 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
         logger.info("  Removing states {} from service {}", statesToRemove, serviceName);
         final var newStates = new FilteredWritableStates(writableStates, remainingStates);
         return new RedefinedWritableStates(writableStates, newStates);
+    }
+
+    public void stop() {
+        for(final var virtualMap: virtualMaps) {
+            virtualMap.stop();
+        }
     }
 }
