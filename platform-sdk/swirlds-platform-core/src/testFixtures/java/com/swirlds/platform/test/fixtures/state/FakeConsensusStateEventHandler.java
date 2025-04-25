@@ -16,7 +16,6 @@ import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
-import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
@@ -69,7 +68,6 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
             .withConfigDataType(TemporaryFileConfig.class)
             .withConfigDataType(StateCommonConfig.class)
             .withConfigDataType(FileSystemManagerConfig.class)
-            .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
             .build();
 
     /**
