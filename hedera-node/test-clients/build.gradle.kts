@@ -99,9 +99,6 @@ val prCheckStartPorts =
         "hapiTestIss" to "26400",
         "hapiTestMisc" to "26800",
     )
-val shard = 11
-val realm = 12
-
 val prCheckPropOverrides =
     mapOf(
         "hapiTestAdhoc" to
@@ -109,8 +106,7 @@ val prCheckPropOverrides =
         "hapiTestCrypto" to "tss.hintsEnabled=true,blockStream.blockPeriod=1s",
         "hapiTestSmartContract" to "tss.historyEnabled=false",
         "hapiTestRestart" to
-            "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s," +
-                "hapi.spec.default.shard=${shard}, hapi.spec.default.realm=${realm}, hedera.shard=${shard}, hedera.realm=${realm})",
+            "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s",
         "hapiTestMisc" to "nodes.nodeRewardsEnabled=false",
         "hapiTestTimeConsuming" to "nodes.nodeRewardsEnabled=false",
     )
