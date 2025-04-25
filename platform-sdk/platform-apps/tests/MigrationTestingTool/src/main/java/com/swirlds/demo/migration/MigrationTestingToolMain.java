@@ -175,7 +175,7 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
         return state;
     }
 
-    // TODO: GitHub issue TBD
+    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
     @Override
     public Function<VirtualMap, MigrationTestingToolState> stateRootFromVirtualMap() {
         throw new UnsupportedOperationException();

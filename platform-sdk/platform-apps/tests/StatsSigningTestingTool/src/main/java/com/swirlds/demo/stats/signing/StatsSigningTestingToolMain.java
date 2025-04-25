@@ -294,7 +294,7 @@ public class StatsSigningTestingToolMain implements SwirldMain<StatsSigningTesti
         return state;
     }
 
-    // TODO: GitHub issue TBD
+    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
     @Override
     public Function<VirtualMap, StatsSigningTestingToolState> stateRootFromVirtualMap() {
         throw new UnsupportedOperationException();
