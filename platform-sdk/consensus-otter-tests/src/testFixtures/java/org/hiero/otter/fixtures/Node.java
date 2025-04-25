@@ -56,5 +56,5 @@ public interface Node {
     @NonNull
     NodeConfiguration getConfiguration();
 
-    void stop();
+    void stop() throws InterruptedException;
 }

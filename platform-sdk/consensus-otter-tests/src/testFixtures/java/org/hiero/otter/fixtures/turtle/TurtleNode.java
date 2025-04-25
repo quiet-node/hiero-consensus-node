@@ -277,12 +277,15 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-            platformWiring.stop();
-            platform.getNotificationEngine().unregisterAll();
+//            platformWiring.stop();
+            platform.stop();
+//            platform.getNotificationEngine().unregisterAll();
             platformStatus = null;
             platform = null;
             platformWiring = null;
             model = null;
+
+            TurtleTestingToolState.closeState();
         }
         lifeCycle = LifeCycle.SHUTDOWN;
     }
@@ -361,7 +364,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     }
 
     @Override
-    public void stop() {
-        platform.stop();
+    public void stop() throws InterruptedException {
+//        platform.stop();
+        doShutdownNode();
     }
 }

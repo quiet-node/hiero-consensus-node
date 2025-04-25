@@ -423,6 +423,7 @@ public class SwirldsPlatform implements Platform {
         platformWiring.stop();
         platformWiring.stopGossip();
 
+        notificationEngine.unregisterAll();
         notificationEngine.shutdown();
 
         latestImmutableStateNexus.stop();
