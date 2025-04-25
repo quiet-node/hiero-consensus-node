@@ -37,6 +37,8 @@ public class BlockStreamMetrics {
     private Counter resendBlockCounter;
     // Counter for Acknowledgement responses
     private Counter blockAckReceivedCounter;
+    // Counter for BlockNodeConnection.onError invocations
+    private Counter blockNodeConnectionErrorCounter;
 
     private LongGauge producingBlockNumberGauge;
     private LongGauge oldestUnacknowledgedBlockTimeGauge;
@@ -84,6 +86,12 @@ public class BlockStreamMetrics {
         final String ackMetricName = "blockAckReceivedCount" + nodeLabel;
         blockAckReceivedCounter = metrics.getOrCreate(new Counter.Config(APP_CATEGORY, ackMetricName)
                 .withDescription("Total number of block acknowledgements received by node " + localNodeId));
+
+        // Register blockNodeConnectionError counter
+        final String blockNodeConnectionErrorMetricName = "blockNodeConnectionErrorCount" + nodeLabel;
+        blockNodeConnectionErrorCounter =
+                metrics.getOrCreate(new Counter.Config(APP_CATEGORY, blockNodeConnectionErrorMetricName)
+                        .withDescription("Total number of block node connection errors for node " + localNodeId));
 
         // Register Producing Block Number gauge
         final String producingBlockNumMetricName = "producingBlockNumber" + nodeLabel;
@@ -197,6 +205,18 @@ public class BlockStreamMetrics {
         } else {
             // Should not happen if registration was successful
             logger.warn("latestAcknowledgedBlockNumberGauge not found.");
+        }
+    }
+
+    /**
+     * Increments the counter for onError invocations.
+     */
+    public void incrementOnErrorCount() {
+        if (blockNodeConnectionErrorCounter != null) {
+            blockNodeConnectionErrorCounter.increment();
+        } else {
+            // Should not happen if registration was successful
+            logger.warn("onErrorCounter not found.");
         }
     }
 }
