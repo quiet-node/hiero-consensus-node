@@ -420,9 +420,9 @@ public class Utils {
         return Address.wrap(toChecksumAddress("0x" + addr));
     }
 
-    public static Address mirrorAddrWith(final long num) {
-        return Address.wrap(
-                toChecksumAddress(new BigInteger(1, HapiPropertySource.asSolidityAddress(shard, realm, num))));
+    public static Address mirrorAddrWith(HapiSpec spec, final long num) {
+        return Address.wrap(toChecksumAddress(
+                new BigInteger(1, HapiPropertySource.asSolidityAddress((int) spec.shard(), spec.realm(), num))));
     }
 
     public static Address nonMirrorAddrWith(final long num) {

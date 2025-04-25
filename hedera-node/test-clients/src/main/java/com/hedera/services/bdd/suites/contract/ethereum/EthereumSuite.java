@@ -464,10 +464,8 @@ public class EthereumSuite {
                             .balance(INITIAL_BALANCE)
                             .gasPrice(10L)
                             .maxGasAllowance(ONE_HUNDRED_HBARS)
-                            .exposingNumTo(num -> contractID.set(asHexedSolidityAddress(
-                                    (int) spec.setup().defaultShard().getShardNum(),
-                                    spec.setup().defaultRealm().getRealmNum(),
-                                    num)))
+                            .exposingNumTo(num ->
+                                    contractID.set(asHexedSolidityAddress((int) spec.shard(), spec.realm(), num)))
                             .gasLimit(1_000_000L)
                             .hasKnownStatus(SUCCESS);
                     getContractInfo(PAY_RECEIVABLE_CONTRACT).has(contractWith().defaultAdminKey());

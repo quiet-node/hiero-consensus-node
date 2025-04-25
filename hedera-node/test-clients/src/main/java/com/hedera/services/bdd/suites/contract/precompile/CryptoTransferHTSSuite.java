@@ -1683,7 +1683,7 @@ public class CryptoTransferHTSSuite {
                                                 asAddress(spec.registry().getTokenID(NFT_TOKEN))),
                                         HapiParserUtil.asHeadlongAddress(
                                                 asAddress(spec.registry().getAccountID(OWNER))),
-                                        mirrorAddrWith(nonExistingSystemAccounts.get(finalI)),
+                                        mirrorAddrWith(spec, nonExistingSystemAccounts.get(finalI)),
                                         BigInteger.TWO)
                                 .via("nftTransfer" + finalI)
                                 .gas(1000000)

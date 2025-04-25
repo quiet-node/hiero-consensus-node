@@ -97,17 +97,23 @@ public class ExtCodeHashOperationSuite {
         final HapiSpecOperation[] opsArray = new HapiSpecOperation[systemAccounts.size() * 2];
 
         for (int i = 0; i < systemAccounts.size(); i++) {
+            final var index = i;
             // add contract call for all accounts in the list
-            opsArray[i] = contractCall(contract, hashOf, mirrorAddrWith(systemAccounts.get(i)))
-                    .hasKnownStatus(SUCCESS);
+            opsArray[i] = withOpContext((spec, log) -> {
+                final var callOp = contractCall(contract, hashOf, mirrorAddrWith(spec, systemAccounts.get(index)))
+                        .hasKnownStatus(SUCCESS);
+                allRunFor(spec, callOp);
+            });
 
             // add contract call local for all accounts in the list
-            opsArray[systemAccounts.size() + i] = contractCallLocal(
-                            contract, hashOf, mirrorAddrWith(systemAccounts.get(i)))
-                    .has(ContractFnResultAsserts.resultWith()
-                            .resultThruAbi(
-                                    getABIFor(FUNCTION, hashOf, contract),
-                                    ContractFnResultAsserts.isLiteralResult(new Object[] {new byte[32]})));
+            opsArray[systemAccounts.size() + i] = withOpContext((spec, log) -> {
+                final var callOp = contractCallLocal(contract, hashOf, mirrorAddrWith(spec, systemAccounts.get(index)))
+                        .has(ContractFnResultAsserts.resultWith()
+                                .resultThruAbi(
+                                        getABIFor(FUNCTION, hashOf, contract),
+                                        ContractFnResultAsserts.isLiteralResult(new Object[] {new byte[32]})));
+                allRunFor(spec, callOp);
+            });
         }
 
         return hapiTest(flattened(uploadInitCode(contract), contractCreate(contract), cryptoCreate(account), opsArray));

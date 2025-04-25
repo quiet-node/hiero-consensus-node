@@ -872,7 +872,7 @@ public class LeakyContractTestsSuite {
                             contractCall(
                                             LAZY_CREATE_CONTRACT,
                                             callLazyCreateFunction,
-                                            mirrorAddrWith(NONEXISTENT_CONTRACT_NUM))
+                                            mirrorAddrWith(spec, NONEXISTENT_CONTRACT_NUM))
                                     .sending(depositAmount)
                                     .via(mirrorTxn)
                                     .hasKnownStatus(CONTRACT_REVERT_EXECUTED)

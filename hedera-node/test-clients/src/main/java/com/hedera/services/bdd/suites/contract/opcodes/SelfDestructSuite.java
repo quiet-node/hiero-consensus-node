@@ -17,7 +17,6 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.uploadInitCode;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcing;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HBAR;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
@@ -275,11 +274,14 @@ public class SelfDestructSuite {
                         .receiverSigRequired(true)
                         .exposingCreatedIdTo(id -> beneficiaryId.set(id.getAccountNum())),
                 contractCreate(SELF_DESTRUCT_CALLABLE_CONTRACT).balance(ONE_HBAR),
-                sourcing(() -> contractCall(
-                                SELF_DESTRUCT_CALLABLE_CONTRACT,
-                                "destroyExplicitBeneficiary",
-                                mirrorAddrWith(beneficiaryId.get()))
-                        .hasKnownStatus(INVALID_SIGNATURE)),
+                withOpContext((spec, logger) -> {
+                    final var callOp = contractCall(
+                                    SELF_DESTRUCT_CALLABLE_CONTRACT,
+                                    "destroyExplicitBeneficiary",
+                                    mirrorAddrWith(spec, beneficiaryId.get()))
+                            .hasKnownStatus(INVALID_SIGNATURE);
+                    allRunFor(spec, callOp);
+                }),
                 getAccountInfo(BENEFICIARY).has(accountWith().balance(ONE_HUNDRED_HBARS)),
                 getContractInfo(SELF_DESTRUCT_CALLABLE_CONTRACT)
                         .has(contractWith().balance(ONE_HBAR)));
@@ -292,11 +294,14 @@ public class SelfDestructSuite {
                 contractCreate(SELF_DESTRUCT_CALLABLE_CONTRACT)
                         .balance(ONE_HBAR)
                         .exposingNumTo(contractNum::set),
-                sourcing(() -> contractCall(
-                                SELF_DESTRUCT_CALLABLE_CONTRACT,
-                                DESTROY_EXPLICIT_BENEFICIARY,
-                                mirrorAddrWith(contractNum.get()))
-                        .hasKnownStatus(OBTAINER_SAME_CONTRACT_ID)),
+                withOpContext((spec, log) -> {
+                    final var callOp = contractCall(
+                                    SELF_DESTRUCT_CALLABLE_CONTRACT,
+                                    DESTROY_EXPLICIT_BENEFICIARY,
+                                    mirrorAddrWith(spec, contractNum.get()))
+                            .hasKnownStatus(OBTAINER_SAME_CONTRACT_ID);
+                    allRunFor(spec, callOp);
+                }),
                 getContractInfo(SELF_DESTRUCT_CALLABLE_CONTRACT)
                         .has(contractWith().balance(ONE_HBAR)));
     }
@@ -304,9 +309,14 @@ public class SelfDestructSuite {
     final Stream<DynamicTest> selfDestructViaCallLocalWithAccount999ResultsInLocalCallModificationPrecheckFailed(
             @NonNull final String evmVersion) {
         return hapiTest(
-                contractCreate(SELF_DESTRUCT_CALLABLE_CONTRACT).balance(ONE_HBAR),
-                contractCallLocal(SELF_DESTRUCT_CALLABLE_CONTRACT, "destroyExplicitBeneficiary", mirrorAddrWith(999L))
-                        .hasAnswerOnlyPrecheck(LOCAL_CALL_MODIFICATION_EXCEPTION));
+                contractCreate(SELF_DESTRUCT_CALLABLE_CONTRACT).balance(ONE_HBAR), withOpContext((spec, log) -> {
+                    final var callOp = contractCallLocal(
+                                    SELF_DESTRUCT_CALLABLE_CONTRACT,
+                                    "destroyExplicitBeneficiary",
+                                    mirrorAddrWith(spec, 999L))
+                            .hasAnswerOnlyPrecheck(LOCAL_CALL_MODIFICATION_EXCEPTION);
+                    allRunFor(spec, callOp);
+                }));
     }
 
     final Stream<DynamicTest> testSelfDestructForSystemAccounts(@NonNull final String evmVersion) {
@@ -413,8 +423,12 @@ public class SelfDestructSuite {
             List<Long> accounts, String contract, String methodName, ResponseCodeEnum status) {
         HapiSpecOperation[] opsArray = new HapiSpecOperation[accounts.size()];
         for (int i = 0; i < accounts.size(); i++) {
-            opsArray[i] = contractCall(contract, methodName, mirrorAddrWith(accounts.get(i)))
-                    .hasKnownStatus(status);
+            final var index = i;
+            opsArray[i] = withOpContext((spec, log) -> {
+                final var callOp = contractCall(contract, methodName, mirrorAddrWith(spec, accounts.get(index)))
+                        .hasKnownStatus(status);
+                allRunFor(spec, callOp);
+            });
         }
         return opsArray;
     }

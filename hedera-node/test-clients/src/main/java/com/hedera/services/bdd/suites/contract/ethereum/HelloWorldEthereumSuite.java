@@ -199,10 +199,8 @@ public class HelloWorldEthereumSuite {
                 withOpContext((spec, opLog) -> {
                     final var create = cryptoCreate(RELAYER)
                             .balance(10 * ONE_MILLION_HBARS)
-                            .exposingCreatedIdTo(id -> relayerEvmAddress.set(asHexedSolidityAddress(
-                                    (int) spec.setup().defaultShard().getShardNum(),
-                                    spec.setup().defaultRealm().getRealmNum(),
-                                    id.getAccountNum())));
+                            .exposingCreatedIdTo(id -> relayerEvmAddress.set(
+                                    asHexedSolidityAddress((int) spec.shard(), spec.realm(), id.getAccountNum())));
                     final var transfer = cryptoTransfer(
                                     tinyBarsFromAccountToAlias(GENESIS, maliciousEOA, maliciousStartBalance))
                             .via(maliciousAutoCreation);
@@ -638,11 +636,7 @@ public class HelloWorldEthereumSuite {
                 cryptoCreate(RELAYER).balance(123 * ONE_HUNDRED_HBARS),
                 cryptoTransfer(tinyBarsFromAccountToAlias(GENESIS, SECP_256K1_SOURCE_KEY, ONE_HUNDRED_HBARS)),
                 withOpContext((spec, opLog) -> ethereumCryptoTransferToExplicit(
-                                Utils.asSolidityAddress(
-                                        (int) spec.setup().defaultShard().getShardNum(),
-                                        spec.setup().defaultRealm().getRealmNum(),
-                                        666_666),
-                                123)
+                                Utils.asSolidityAddress((int) spec.shard(), spec.realm(), 666_666), 123)
                         .type(EthTxData.EthTransactionType.EIP1559)
                         .signingWith(SECP_256K1_SOURCE_KEY)
                         .payingWith(RELAYER)

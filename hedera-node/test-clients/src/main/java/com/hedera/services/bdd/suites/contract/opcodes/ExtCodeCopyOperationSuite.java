@@ -15,6 +15,8 @@ import static com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil.
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
+import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
+import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrWith;
 import static com.hedera.services.bdd.suites.contract.evm.Evm46ValidationSuite.systemAccounts;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
@@ -23,6 +25,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
+import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
@@ -90,13 +93,16 @@ public class ExtCodeCopyOperationSuite {
 
         for (int i = 0; i < systemAccounts.size(); i++) {
             // add contract call for all accounts in the list
-            opsArray[i] = contractCall(contract, codeCopyOf, mirrorAddrWith(systemAccounts.get(i)))
+            final var index = i;
+            opsArray[i] = contractCall(contract, getABIFor(FUNCTION, codeCopyOf, contract), spec -> List.of(
+                                    mirrorAddrWith(spec, systemAccounts.get(index)))
+                            .toArray())
                     .hasKnownStatus(SUCCESS);
 
             // add contract call local for all accounts in the list
             int finalI = i;
             opsArray[systemAccounts.size() + i] = withOpContext((spec, opLog) -> {
-                final var accountSolidityAddress = mirrorAddrWith(systemAccounts.get(finalI));
+                final var accountSolidityAddress = mirrorAddrWith(spec, systemAccounts.get(finalI));
 
                 final var accountCodeCallLocal = contractCallLocal(contract, codeCopyOf, accountSolidityAddress)
                         .saveResultTo("accountCode");

@@ -26,6 +26,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 import static com.hedera.services.bdd.suites.HapiSuite.SECP_256K1_SHAPE;
+import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
 import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrWith;
 import static com.hedera.services.bdd.suites.contract.leaky.LeakyContractTestsSuite.RECEIVER;
@@ -51,6 +52,7 @@ import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.ScheduleID;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.bouncycastle.jcajce.provider.digest.Keccak;
@@ -100,10 +102,10 @@ public class ContractSignScheduleTest {
         final Stream<DynamicTest> authorizeScheduleWithContract() {
             return hapiTest(
                     getScheduleInfo(SCHEDULE_A).isNotExecuted(),
-                    contractCall(
-                                    CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL,
-                                    mirrorAddrWith(scheduleID_A.get().getScheduleNum()))
+                    contractCall(CONTRACT, getABIFor(FUNCTION, AUTHORIZE_SCHEDULE_CALL, CONTRACT), spec -> List.of(
+                                            mirrorAddrWith(
+                                                    spec, scheduleID_A.get().getScheduleNum()))
+                                    .toArray())
                             .gas(1_000_000L),
                     sleepFor(1_000),
                     getScheduleInfo(SCHEDULE_A).isExecuted());
@@ -114,10 +116,10 @@ public class ContractSignScheduleTest {
         final Stream<DynamicTest> authorizeScheduleWithContractNoExec() {
             return hapiTest(
                     getScheduleInfo(SCHEDULE_B).isNotExecuted(),
-                    contractCall(
-                                    CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL,
-                                    mirrorAddrWith(scheduleID_B.get().getScheduleNum()))
+                    contractCall(CONTRACT, getABIFor(FUNCTION, AUTHORIZE_SCHEDULE_CALL, CONTRACT), spec -> List.of(
+                                            mirrorAddrWith(
+                                                    spec, scheduleID_B.get().getScheduleNum()))
+                                    .toArray())
                             .gas(1_000_000L),
                     getScheduleInfo(SCHEDULE_B).isNotExecuted());
         }
@@ -154,10 +156,10 @@ public class ContractSignScheduleTest {
         final Stream<DynamicTest> authorizeScheduleWithContract() {
             return hapiTest(
                     getScheduleInfo(SCHEDULE_C).isNotExecuted(),
-                    contractCall(
-                                    CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL,
-                                    mirrorAddrWith(scheduleID_C.get().getScheduleNum()))
+                    contractCall(CONTRACT, getABIFor(FUNCTION, AUTHORIZE_SCHEDULE_CALL, CONTRACT), spec -> List.of(
+                                            mirrorAddrWith(
+                                                    spec, scheduleID_C.get().getScheduleNum()))
+                                    .toArray())
                             .gas(1_000_000L),
                     sleepFor(1000L),
                     getScheduleInfo(SCHEDULE_C).isExecuted());
@@ -168,10 +170,10 @@ public class ContractSignScheduleTest {
         final Stream<DynamicTest> authorizeScheduleWithContractNoExec() {
             return hapiTest(
                     getScheduleInfo(SCHEDULE_D).isNotExecuted(),
-                    contractCall(
-                                    CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL,
-                                    mirrorAddrWith(scheduleID_D.get().getScheduleNum()))
+                    contractCall(CONTRACT, getABIFor(FUNCTION, AUTHORIZE_SCHEDULE_CALL, CONTRACT), spec -> List.of(
+                                            mirrorAddrWith(
+                                                    spec, scheduleID_D.get().getScheduleNum()))
+                                    .toArray())
                             .gas(1_000_000L),
                     getScheduleInfo(SCHEDULE_D).isNotExecuted());
         }
@@ -208,12 +210,7 @@ public class ContractSignScheduleTest {
             var scheduleAddress = asEntityString(scheduleID_E.get().getScheduleNum());
             return hapiTest(
                     getScheduleInfo(SCHEDULE_E).isNotExecuted(),
-                    contractCallWithFunctionAbi(
-                                    scheduleAddress,
-                                    getABIFor(
-                                            com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION,
-                                            SIGN_SCHEDULE,
-                                            IHRC755))
+                    contractCallWithFunctionAbi(scheduleAddress, getABIFor(FUNCTION, SIGN_SCHEDULE, IHRC755))
                             .payingWith(SENDER)
                             .gas(1_000_000),
                     getScheduleInfo(SCHEDULE_E).isExecuted());
@@ -225,12 +222,7 @@ public class ContractSignScheduleTest {
             var scheduleAddress = "0.0." + scheduleID_F.get().getScheduleNum();
             return hapiTest(
                     getScheduleInfo(SCHEDULE_F).isNotExecuted(),
-                    contractCallWithFunctionAbi(
-                                    scheduleAddress,
-                                    getABIFor(
-                                            com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION,
-                                            SIGN_SCHEDULE,
-                                            IHRC755))
+                    contractCallWithFunctionAbi(scheduleAddress, getABIFor(FUNCTION, SIGN_SCHEDULE, IHRC755))
                             .payingWith(SENDER)
                             .gas(1_000_000),
                     getScheduleInfo(SCHEDULE_F).isNotExecuted());
@@ -313,7 +305,7 @@ public class ContractSignScheduleTest {
                 final var call = contractCall(
                                 CONTRACT,
                                 SIGN_SCHEDULE_CALL,
-                                mirrorAddrWith(scheduleID.get().getScheduleNum()),
+                                mirrorAddrWith(spec, scheduleID.get().getScheduleNum()),
                                 signatureMapBytes)
                         .gas(2_000_000L)
                         .hasKnownStatus(expectedStatus);
@@ -344,7 +336,7 @@ public class ContractSignScheduleTest {
                 final var call = contractCall(
                                 CONTRACT,
                                 SIGN_SCHEDULE_CALL,
-                                mirrorAddrWith(scheduleID.get().getScheduleNum()),
+                                mirrorAddrWith(spec, scheduleID.get().getScheduleNum()),
                                 signatureMapBytes)
                         .gas(2_000_000L)
                         .hasKnownStatus(expectedStatus);

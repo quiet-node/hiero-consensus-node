@@ -4,8 +4,6 @@ package com.hedera.services.bdd.spec.infrastructure;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccountString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asScheduleString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asTokenString;
-import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
-import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
 import static com.hedera.services.bdd.suites.HapiSuite.DEFAULT_CONTRACT_RECEIVER;
 import static com.hedera.services.bdd.suites.HapiSuite.DEFAULT_CONTRACT_SENDER;
 
@@ -623,8 +621,8 @@ public class HapiSpecRegistry {
     public AccountID keyAliasIdFor(String keyName) {
         final var key = get(keyName, Key.class);
         return AccountID.newBuilder()
-                .setShardNum(shard)
-                .setRealmNum(realm)
+                .setShardNum(setup.shard())
+                .setRealmNum(setup.realm())
                 .setAlias(key.toByteString())
                 .build();
     }
