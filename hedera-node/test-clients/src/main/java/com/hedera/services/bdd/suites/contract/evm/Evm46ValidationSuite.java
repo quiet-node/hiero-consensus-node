@@ -379,8 +379,8 @@ public class Evm46ValidationSuite {
                     spec.registry()
                             .saveContractId(
                                     "mirrorAddress",
-                                    asContract(spec.setup().defaultShard().getShardNum() + "."
-                                            + spec.setup().defaultRealm().getRealmNum() + "."
+                                    asContract(spec.shard() + "."
+                                            + spec.realm() + "."
                                             + mirrorAccountID.get().getAccountNum()));
                     updateSpecFor(spec, ECDSA_KEY);
                     final var ecdsaKey = spec.registry()
@@ -392,16 +392,16 @@ public class Evm46ValidationSuite {
                             .saveContractId(
                                     "nonMirrorAddress",
                                     ContractID.newBuilder()
-                                            .setShardNum(shard)
-                                            .setRealmNum(realm)
+                                            .setShardNum(spec.shard())
+                                            .setRealmNum(spec.realm())
                                             .setEvmAddress(senderAddress)
                                             .build());
                     spec.registry()
                             .saveAccountId(
                                     "NonMirrorAccount",
                                     AccountID.newBuilder()
-                                            .setShardNum(shard)
-                                            .setRealmNum(realm)
+                                            .setShardNum(spec.shard())
+                                            .setRealmNum(spec.realm())
                                             .setAccountNum(spec.registry()
                                                     .getAccountID(ECDSA_KEY)
                                                     .getAccountNum())
@@ -1339,21 +1339,24 @@ public class Evm46ValidationSuite {
         for (int i = 0; i < existingSystemAccounts.size(); i++) {
             final var index = i;
             // add contract call for all accounts in the list
-            opsArray[i] = contractCall(contract, getABIFor(FUNCTION, BALANCE_OF, contract), spec -> List.of(
-                                    mirrorAddrWith(spec, existingSystemAccounts.get(index)))
-                            .toArray())
-                    .hasKnownStatus(SUCCESS);
+            opsArray[i] = withOpContext((spec, log) -> {
+                final var callOp = contractCall(
+                                contract, BALANCE_OF, mirrorAddrWith(spec, existingSystemAccounts.get(index)))
+                        .hasKnownStatus(SUCCESS);
+                allRunFor(spec, callOp);
+            });
 
             // add contract call local for all accounts in the list
-            opsArray[existingSystemAccounts.size() + i] = contractCallLocal(
-                            contract, getABIFor(FUNCTION, BALANCE_OF, contract), spec -> List.of(
-                                            mirrorAddrWith(spec, existingSystemAccounts.get(index)))
-                                    .toArray())
-                    .has(ContractFnResultAsserts.resultWith()
-                            .resultThruAbi(
-                                    getABIFor(FUNCTION, BALANCE_OF, contract),
-                                    ContractFnResultAsserts.isEqualOrGreaterThan(
-                                            BigInteger.valueOf(systemAccountBalance))));
+            opsArray[existingSystemAccounts.size() + i] = withOpContext((spec, log) -> {
+                final var callOp = contractCallLocal(
+                                contract, BALANCE_OF, mirrorAddrWith(spec, existingSystemAccounts.get(index)))
+                        .has(ContractFnResultAsserts.resultWith()
+                                .resultThruAbi(
+                                        getABIFor(FUNCTION, BALANCE_OF, contract),
+                                        ContractFnResultAsserts.isEqualOrGreaterThan(
+                                                BigInteger.valueOf(systemAccountBalance))));
+                allRunFor(spec, callOp);
+            });
         }
         return hapiTest(flattened(
                 cryptoCreate("testAccount").balance(balance),
@@ -1372,21 +1375,24 @@ public class Evm46ValidationSuite {
         for (int i = 0; i < nonExistingSystemAccounts.size(); i++) {
             final var index = i;
             // add contract call for all accounts in the list
-            opsArray[i] = contractCall(contract, getABIFor(FUNCTION, BALANCE_OF, contract), spec -> List.of(
-                                    mirrorAddrWith(spec, nonExistingSystemAccounts.get(index)))
-                            .toArray())
-                    .hasKnownStatus(SUCCESS);
+            opsArray[i] = withOpContext((spec, log) -> {
+                final var callOp = contractCall(
+                                contract, BALANCE_OF, mirrorAddrWith(spec, nonExistingSystemAccounts.get(index)))
+                        .hasKnownStatus(SUCCESS);
+                allRunFor(spec, callOp);
+            });
 
             // add contract call local for all accounts in the list
-            opsArray[nonExistingSystemAccounts.size() + i] = contractCallLocal(
-                            contract, getABIFor(FUNCTION, BALANCE_OF, contract), spec -> List.of(
-                                            mirrorAddrWith(spec, nonExistingSystemAccounts.get(index)))
-                                    .toArray())
-                    .has(ContractFnResultAsserts.resultWith()
-                            .resultThruAbi(
-                                    getABIFor(FUNCTION, BALANCE_OF, contract),
-                                    ContractFnResultAsserts.isLiteralResult(
-                                            new Object[] {BigInteger.valueOf(systemAccountBalance)})));
+            opsArray[nonExistingSystemAccounts.size() + i] = withOpContext((spec, log) -> {
+                final var callOp = contractCallLocal(
+                                contract, BALANCE_OF, mirrorAddrWith(spec, nonExistingSystemAccounts.get(index)))
+                        .has(ContractFnResultAsserts.resultWith()
+                                .resultThruAbi(
+                                        getABIFor(FUNCTION, BALANCE_OF, contract),
+                                        ContractFnResultAsserts.isLiteralResult(
+                                                new Object[] {BigInteger.valueOf(systemAccountBalance)})));
+                allRunFor(spec, callOp);
+            });
         }
         return hapiTest(flattened(
                 cryptoCreate("testAccount").balance(balance),
