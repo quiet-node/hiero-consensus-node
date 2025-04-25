@@ -86,17 +86,6 @@ class MerkleDbSnapshotTest {
 
     @AfterEach
     public void afterTest() {
-        for (int i = 0; i < 10; i++) {
-            if (MerkleDbDataSource.getCountOfOpenDatabases() == 0L) {
-                break;
-            }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
         // check db count
         AssertionUtils.assertEventuallyEquals(
                 0L,
