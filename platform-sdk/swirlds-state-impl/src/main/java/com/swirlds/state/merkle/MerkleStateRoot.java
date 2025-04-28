@@ -109,6 +109,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
     private Metrics metrics;
 
+    private List<MerkleNode> merkleNodes = new ArrayList<>();
+
     /**
      * Metrics for the snapshot creation process
      */
@@ -179,6 +181,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             final var childToCopy = from.getChild(childIndex);
             if (childToCopy != null) {
                 setChild(childIndex, childToCopy.copy());
+                merkleNodes.add(childToCopy);
             }
         }
     }
@@ -535,7 +538,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
             final var md = stateMetadata.get(stateKey);
             if (md == null || !md.stateDefinition().singleton()) {
-                throw new IllegalArgumentException("Unknown singleton state key '" + stateKey + "'");
+//                throw new IllegalArgumentException("Unknown singleton state key '" + stateKey + "'");
             }
 
             final var node = findNode(md);
@@ -905,5 +908,16 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @Override
     public T loadSnapshot(@NonNull Path targetPath) throws IOException {
         return (T) MerkleTreeSnapshotReader.readStateFileData(targetPath).stateRoot();
+    }
+
+    public void clean() {
+        for(final var node : merkleNodes) {
+            if (node instanceof SingletonNode<?>) {
+                ((SingletonNode)node).clean();
+            } else if (
+                    node instanceof VirtualMap<?,?>) {
+                ((VirtualMap)node).stop();
+            }
+        }
     }
 }

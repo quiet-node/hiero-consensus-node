@@ -15,6 +15,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.IOIterator;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningEventHashOverride;
@@ -167,7 +168,9 @@ public class SwirldsPlatform implements Platform {
      */
     private final AncientMode ancientMode;
 
-    final SignedState initialState;
+    SignedState initialState;
+
+    SwirldStateManager swirldStateManager;
 
     /**
      * Constructor.
@@ -261,7 +264,7 @@ public class SwirldsPlatform implements Platform {
         /**
          * Handles all interaction with {@link ConsensusStateEventHandler}
          */
-        SwirldStateManager swirldStateManager = blocks.swirldStateManager();
+        swirldStateManager = blocks.swirldStateManager();
         swirldStateManager.setInitialState(initialState.getState());
 
         final EventWindowManager eventWindowManager = new DefaultEventWindowManager();
@@ -420,22 +423,31 @@ public class SwirldsPlatform implements Platform {
     public void stop() {
         platformContext.getRecycleBin().stop();
 
+        platformWiring.flushIntakePipeline();
         platformWiring.stop();
         platformWiring.stopGossip();
+
 
         notificationEngine.unregisterAll();
         notificationEngine.shutdown();
 
         latestImmutableStateNexus.stop();
+        latestImmutableStateNexus.clear();
+        swirldStateManager.stop();
 
-//        final Metrics metrics = platformContext.getMetrics();
-//        if (metrics instanceof DefaultPlatformMetrics defaultPlatformMetrics) {
-//            try {
-//                defaultPlatformMetrics.shutdown();
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-//        }
+        initialState.stop();
+        initialState = null;
+
+        final Metrics metrics = platformContext.getMetrics();
+        if (metrics instanceof DefaultPlatformMetrics defaultPlatformMetrics) {
+            try {
+                defaultPlatformMetrics.shutdown();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } else if (metrics instanceof NoOpMetrics noOpMetrics){
+            noOpMetrics.clear();
+        }
     }
 
     /**

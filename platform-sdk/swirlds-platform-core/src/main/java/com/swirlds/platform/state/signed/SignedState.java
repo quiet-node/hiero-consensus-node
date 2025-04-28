@@ -26,8 +26,6 @@ import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedStateHistory.SignedStateAction;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
-import com.swirlds.platform.system.address.Address;
-import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.security.cert.X509Certificate;
@@ -94,7 +92,7 @@ public class SignedState implements SignedStateInfo {
     /**
      * The root of the merkle state.
      */
-    private final MerkleNodeState state;
+    private MerkleNodeState state;
 
     /**
      * The timestamp of when this object was created.
@@ -408,7 +406,7 @@ public class SignedState implements SignedStateInfo {
      * that, this method must be synchronized.
      * </p>
      */
-    synchronized void delete() {
+    public synchronized void delete() {
         if (reservations.isDestroyed()) {
             if (!deleted) {
                 try {
@@ -735,5 +733,7 @@ public class SignedState implements SignedStateInfo {
 
     public void stop() {
         state.release();
+//        registryRecord.release();
+        state = null;
     }
 }

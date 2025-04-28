@@ -24,8 +24,8 @@ import org.hiero.base.crypto.Hash;
  * Extends the read-only platform state store to provide write access to the platform state.
  */
 public class WritablePlatformStateStore extends ReadablePlatformStateStore implements PlatformStateModifier {
-    private final WritableStates writableStates;
-    private final WritableSingletonState<PlatformState> state;
+    private WritableStates writableStates;
+    private WritableSingletonState<PlatformState> state;
 
     /**
      * Constructor that can be used to change and access any part of state.
@@ -195,5 +195,11 @@ public class WritablePlatformStateStore extends ReadablePlatformStateStore imple
         if (writableStates instanceof CommittableWritableStates committableWritableStates) {
             committableWritableStates.commit();
         }
+    }
+
+    @Override
+    public void clean() {
+        writableStates = null;
+        state = null;
     }
 }

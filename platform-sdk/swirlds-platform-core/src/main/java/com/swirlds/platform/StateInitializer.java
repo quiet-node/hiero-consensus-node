@@ -86,11 +86,11 @@ public final class StateInitializer {
         signedState.pruneInvalidSignatures();
 
         final StateConfig stateConfig = platformContext.getConfiguration().getConfigData(StateConfig.class);
-        logger.info(
-                STARTUP.getMarker(),
-                """
-                        The platform is using the following initial state:
-                        {}""",
-                platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
+//        logger.info(
+//                STARTUP.getMarker(),
+//                """
+//                        The platform is using the following initial state:
+//                        {}""",
+//                platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
     }
 }

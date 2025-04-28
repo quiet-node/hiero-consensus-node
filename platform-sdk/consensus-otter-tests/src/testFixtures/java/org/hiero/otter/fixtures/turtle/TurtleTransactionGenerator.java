@@ -49,8 +49,9 @@ public class TurtleTransactionGenerator implements TransactionGenerator, TimeTic
      * {@inheritDoc}
      */
     @Override
-    public void stop() {
+    public void stop() throws InterruptedException {
         running = false;
+        network.stop();
     }
 
     /**

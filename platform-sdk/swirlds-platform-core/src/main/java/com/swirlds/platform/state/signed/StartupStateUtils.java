@@ -19,6 +19,7 @@ import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.internal.SignedStateLoadingException;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.state.snapshot.SavedStateInfo;
@@ -347,7 +348,7 @@ public final class StartupStateUtils {
      * @param addressBook the current address book
      * @param appVersion the software version of the app
      */
-    private static void initGenesisState(
+    public static PlatformStateModifier initGenesisState(
             final Configuration configuration,
             final State state,
             final PlatformStateFacade platformStateFacade,
@@ -355,7 +356,7 @@ public final class StartupStateUtils {
             final SemanticVersion appVersion) {
         final long round = 0L;
 
-        platformStateFacade.bulkUpdateOf(state, v -> {
+        final PlatformStateModifier platformStateModifier = platformStateFacade.bulkUpdateOf(state, v -> {
             v.setCreationSoftwareVersion(appVersion);
             v.setRound(round);
             v.setLegacyRunningEventHash(null);
@@ -370,5 +371,7 @@ public final class StartupStateUtils {
         });
 
         RosterUtils.setActiveRoster(state, RosterRetriever.buildRoster(addressBook), round);
+
+        return platformStateModifier;
     }
 }

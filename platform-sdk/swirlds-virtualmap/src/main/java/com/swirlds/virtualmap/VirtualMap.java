@@ -495,5 +495,13 @@ public final class VirtualMap<K extends VirtualKey, V extends VirtualValue> exte
         if (child instanceof VirtualRootNode) {
             ((VirtualRootNode<K, V>) child).stop();
         }
+
+        state = null;
+        root = null;
+        var left = getLeft();
+        left = null;
+
+        var right = getRight();
+        right = null;
     }
 }
