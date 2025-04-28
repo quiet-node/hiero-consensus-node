@@ -249,8 +249,7 @@ public class PlatformStateFacade {
      * This is a convenience method to update multiple fields in the platform state in a single operation.
      * @param updater a consumer that updates the platform state
      */
-    public PlatformStateModifier bulkUpdateOf(
-            @NonNull final State state, @NonNull Consumer<PlatformStateModifier> updater) {
+    public PlatformStateModifier bulkUpdateOf(@NonNull final State state, @NonNull Consumer<PlatformStateModifier> updater) {
         final var bulkModifier = new PlatformStateValueAccumulator();
         bulkModifier.bulkUpdate(updater);
         return bulkModifier;

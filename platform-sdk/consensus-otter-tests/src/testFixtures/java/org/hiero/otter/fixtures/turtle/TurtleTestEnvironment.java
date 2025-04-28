@@ -52,6 +52,9 @@ public class TurtleTestEnvironment implements TestEnvironment {
     private final TurtleTimeManager timeManager;
     private InMemoryAppender inMemoryAppender;
 
+    private final ConstructableRegistry registry;
+    private final ConstructableRegistry registry2;
+
     /**
      * Constructor for the {@link TurtleTestEnvironment} class.
      */
@@ -82,10 +85,10 @@ public class TurtleTestEnvironment implements TestEnvironment {
         final Randotron randotron = Randotron.create();
 
         try {
-            final ConstructableRegistry registry = ConstructableRegistry.getInstance();
+            registry = ConstructableRegistry.getInstance();
             registry.registerConstructables("org.hiero");
             registry.registerConstructables("com.swirlds");
-            registerMerkleStateRootClassIds();
+            registry2 =  registerMerkleStateRootClassIds();
         } catch (final ConstructableRegistryException e) {
             throw new RuntimeException(e);
         }

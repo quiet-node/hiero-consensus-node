@@ -75,7 +75,7 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
      * Register the class IDs for the {@link MerkleStateRoot} and its required children, specifically those
      * used by the {@link PlatformStateService} and {@code RosterService}.
      */
-    public static void registerMerkleStateRootClassIds() {
+    public static ConstructableRegistry registerMerkleStateRootClassIds() {
         try {
             ConstructableRegistry registry = ConstructableRegistry.getInstance();
             registry.registerConstructable(
@@ -91,6 +91,8 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
                     () -> new VirtualNodeCache(CONFIGURATION.getConfigData(VirtualMapConfig.class))));
             registerConstructablesForSchema(registry, new V0540PlatformStateSchema(), PlatformStateService.NAME);
             registerConstructablesForSchema(registry, new V0540RosterBaseSchema(), RosterStateId.NAME);
+
+            return registry;
         } catch (ConstructableRegistryException e) {
             throw new IllegalStateException(e);
         }
@@ -236,5 +238,7 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
         virtualMaps = new ArrayList<>();
     }
 
-    public void unregister() {}
+    public void unregister() {
+
+    }
 }
