@@ -3,12 +3,12 @@ package com.swirlds.platform.reconnect;
 
 import static com.swirlds.common.formatting.StringFormattingUtils.formattedList;
 import static com.swirlds.logging.legacy.LogMarker.RECONNECT;
+import static com.swirlds.platform.StateInitializer.initializeMerkleNodeState;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
-import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.synchronization.LearningSynchronizer;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.threading.manager.ThreadManager;
@@ -77,6 +77,8 @@ public class ReconnectLearner {
      * 		reconnect metrics
      * @param platformStateFacade
      *      the facade to access the platform state
+     * @param stateRootFunction
+     *      a function to instantiate the state root object from a Virtual Map
      */
     public ReconnectLearner(
             @NonNull final PlatformContext platformContext,
@@ -87,8 +89,7 @@ public class ReconnectLearner {
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics statistics,
             @NonNull final PlatformStateFacade platformStateFacade,
-            // TODO: add javadoc
-            @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction) {
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
         this.stateRootFunction = Objects.requireNonNull(stateRootFunction);
 
@@ -203,16 +204,7 @@ public class ReconnectLearner {
                 platformContext.getMetrics());
         synchronizer.synchronize();
 
-        final MerkleNode stateRoot = synchronizer.getRoot();
-        MerkleNodeState merkleNodeState;
-
-        // TODO: add comments
-        // move to stateUtils ?
-        if (stateRoot instanceof VirtualMap virtualMap) {
-            merkleNodeState = stateRootFunction.apply(virtualMap);
-        } else {
-            merkleNodeState = (MerkleNodeState) stateRoot;
-        }
+        final MerkleNodeState merkleNodeState = initializeMerkleNodeState(stateRootFunction, synchronizer.getRoot());
 
         final SignedState newSignedState = new SignedState(
                 platformContext.getConfiguration(),

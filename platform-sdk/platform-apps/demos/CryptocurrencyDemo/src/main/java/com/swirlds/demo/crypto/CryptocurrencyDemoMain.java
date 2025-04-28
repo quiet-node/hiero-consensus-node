@@ -199,7 +199,12 @@ public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoStat
         return state;
     }
 
-    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19004
+    /**
+     * {@inheritDoc}
+     * <p>
+     * FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19004
+     * </p>
+     */
     @Override
     public Function<VirtualMap, CryptocurrencyDemoState> stateRootFromVirtualMap() {
         throw new UnsupportedOperationException();

@@ -86,6 +86,7 @@ import org.hiero.consensus.model.node.NodeId;
  *                                               reconnect, can be removed once reconnect is made compatible with the
  *                                               wiring framework
  * @param platformStateFacade                    the facade to access the platform state
+ * @param stateRootFunction                      a function to instantiate the state root object from a Virtual Map
  */
 public record PlatformBuildingBlocks(
         @NonNull PlatformWiring platformWiring,
@@ -118,7 +119,6 @@ public record PlatformBuildingBlocks(
         boolean firstPlatform,
         @NonNull ConsensusStateEventHandler consensusStateEventHandler,
         @NonNull PlatformStateFacade platformStateFacade,
-        // TODO: add javadoc
         @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction) {
 
     public PlatformBuildingBlocks {

@@ -150,8 +150,9 @@ public final class PlatformBuilder {
      * @param consensusStateEventHandler          the state lifecycle events handler
      * @param selfId                   the ID of this node
      * @param consensusEventStreamName a part of the name of the directory where the consensus event stream is written
-     * @param platformStateFacade      the facade to access the platform state
      * @param rosterHistory            the roster history provided by the application to use at startup
+     * @param platformStateFacade      the facade to access the platform state
+     * @param stateRootFunction        a function to instantiate the state root object from a Virtual Map
      */
     @NonNull
     public static PlatformBuilder create(
@@ -164,8 +165,7 @@ public final class PlatformBuilder {
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
             @NonNull final PlatformStateFacade platformStateFacade,
-            // TODO: add javadoc
-            @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction) {
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
         return new PlatformBuilder(
                 appName,
                 swirldName,
@@ -192,6 +192,7 @@ public final class PlatformBuilder {
      * @param consensusEventStreamName a part of the name of the directory where the consensus event stream is written
      * @param rosterHistory            the roster history provided by the application to use at startup
      * @param platformStateFacade      the facade to access the platform state
+     * @param stateRootFunction        a function to instantiate the state root object from a Virtual Map
      */
     private PlatformBuilder(
             @NonNull final String appName,
@@ -203,8 +204,7 @@ public final class PlatformBuilder {
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
             @NonNull final PlatformStateFacade platformStateFacade,
-            // TODO: add javadoc
-            @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction) {
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
 
         this.appName = Objects.requireNonNull(appName);
         this.swirldName = Objects.requireNonNull(swirldName);

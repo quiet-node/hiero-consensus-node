@@ -580,6 +580,9 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         return stateRootSupplier.get();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap() {
         return HederaNewStateRoot::new;

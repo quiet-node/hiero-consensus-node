@@ -33,6 +33,7 @@ public class ReconnectLearnerFactory {
      * @param reconnectSocketTimeout the socket timeout to use during the reconnect
      * @param statistics             reconnect metrics
      * @param platformStateFacade    the facade to access the platform state
+     * @param stateRootFunction      a function to instantiate the state root object from a Virtual Map
      */
     public ReconnectLearnerFactory(
             @NonNull final PlatformContext platformContext,
@@ -41,8 +42,7 @@ public class ReconnectLearnerFactory {
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics statistics,
             @NonNull final PlatformStateFacade platformStateFacade,
-            // TODO: add javadoc
-            @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction) {
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
         this.platformContext = Objects.requireNonNull(platformContext);
         this.threadManager = Objects.requireNonNull(threadManager);
         this.roster = Objects.requireNonNull(roster);

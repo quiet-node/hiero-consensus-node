@@ -119,7 +119,12 @@ public class AddressBookTestingToolMain implements SwirldMain<AddressBookTesting
         return state;
     }
 
-    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
+    /**
+     * {@inheritDoc}
+     * <p>
+     * FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
+     * </p>
+     */
     @Override
     public Function<VirtualMap, AddressBookTestingToolState> stateRootFromVirtualMap() {
         throw new UnsupportedOperationException();

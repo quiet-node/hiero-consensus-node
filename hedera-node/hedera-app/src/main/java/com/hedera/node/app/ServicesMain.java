@@ -159,6 +159,10 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         return hederaOrThrow().newStateRoot();
     }
 
+    /**
+     * {@inheritDoc}
+     * Specifically, {@link HederaNewStateRoot}.
+     */
     @Override
     public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap() {
         return hederaOrThrow().stateRootFromVirtualMap();
@@ -535,6 +539,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * @param configuration      the configuration for this node
      * @param softwareVersion     the software version of the app
      * @param stateRootSupplier a supplier that can build a genesis state
+     * @param stateRootFunction   a function to instantiate the state root object from a Virtual Map
      * @param mainClassName       the name of the app's SwirldMain class
      * @param swirldName          the name of this swirld
      * @param selfId              the node id of this node

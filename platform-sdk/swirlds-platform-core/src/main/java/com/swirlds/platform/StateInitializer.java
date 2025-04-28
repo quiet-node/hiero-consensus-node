@@ -8,6 +8,7 @@ import static org.hiero.base.concurrent.interrupt.Uninterruptable.abortAndThrowI
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -15,8 +16,10 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -92,5 +95,27 @@ public final class StateInitializer {
                         The platform is using the following initial state:
                         {}""",
                 platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
+    }
+
+    /**
+     * Initializes a {@link MerkleNodeState} from the given state root.
+     * <p>
+     * If the state root is an instance of {@link VirtualMap}, it means this is a "Mega Map" and provided function
+     * is used to create the {@code MerkleNodeState} (i.e. {@code HederaNewStateRoot}). Otherwise, it casts the state root directly
+     * to {@code MerkleNodeState}.
+     * </p>
+     *
+     * @param stateRootFunction a function to instantiate the state root object from a Virtual Map
+     * @param stateRoot         the root of the state to initialize
+     * @return the initialized {@code MerkleNodeState}
+     */
+    public static MerkleNodeState initializeMerkleNodeState(
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
+            @NonNull final MerkleNode stateRoot) {
+        if (stateRoot instanceof VirtualMap virtualMap) {
+            return stateRootFunction.apply(virtualMap);
+        } else {
+            return (MerkleNodeState) stateRoot;
+        }
     }
 }

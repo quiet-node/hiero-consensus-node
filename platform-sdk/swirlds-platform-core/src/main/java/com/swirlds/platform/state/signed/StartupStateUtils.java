@@ -57,6 +57,7 @@ public final class StartupStateUtils {
      *
      * @param softwareVersion     the software version of the app
      * @param genesisStateBuilder a supplier that can build a genesis state
+     * @param stateRootFunction   a function to instantiate the state root object from a Virtual Map
      * @param mainClassName       the name of the app's SwirldMain class
      * @param swirldName          the name of this swirld
      * @param selfId              the node id of this node
@@ -122,6 +123,7 @@ public final class StartupStateUtils {
      * @param selfId                   the ID of this node
      * @param mainClassName            the name of the main class
      * @param swirldName               the name of the swirld
+     * @param stateRootFunction        a function to instantiate the state root object from a Virtual Map
      * @param currentSoftwareVersion   the current software version
      * @return a reserved signed state (wrapped state will be null if no state could be loaded)
      * @throws SignedStateLoadingException if there was a problem parsing states on disk and we are not configured to
@@ -220,6 +222,7 @@ public final class StartupStateUtils {
      *
      * @param currentSoftwareVersion the current software version
      * @param savedStateFiles        the saved states to try
+     * @param stateRootFunction      a function to instantiate the state root object from a Virtual Map
      * @return the loaded state
      */
     private static ReservedSignedState loadLatestState(
@@ -255,6 +258,7 @@ public final class StartupStateUtils {
      *
      * @param currentSoftwareVersion the current software version
      * @param savedStateFile         the state to load
+     * @param stateRootFunction      a function to instantiate the state root object from a Virtual Map
      * @return the loaded state, or null if the state could not be loaded. Will be fully hashed if non-null.
      */
     @Nullable

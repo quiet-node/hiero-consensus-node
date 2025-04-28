@@ -2,6 +2,7 @@
 package com.swirlds.platform.state.snapshot;
 
 import static com.swirlds.common.io.streams.StreamDebugUtils.deserializeAndDebugOnFailure;
+import static com.swirlds.platform.StateInitializer.initializeMerkleNodeState;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.SIGNATURE_SET_FILE_NAME;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.SUPPORTED_SIGSET_VERSIONS;
 import static java.nio.file.Files.exists;
@@ -10,7 +11,6 @@ import static java.util.Objects.requireNonNull;
 import com.swirlds.common.RosterStateId;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
-import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.crypto.CryptoStatic;
@@ -45,6 +45,8 @@ public final class SignedStateFileReader {
      * Reads a SignedState from disk. If the reader throws an exception, it is propagated by this method to the caller.
      *
      * @param stateFile                     the file to read from
+     * @param stateRootFunction             a function to instantiate the state root object from a Virtual Map
+     * @param stateFacade                   the facade to access the platform state
      * @return a signed state with it's associated hash (as computed when the state was serialized)
      * @throws IOException if there is any problems with reading from a file
      */
@@ -71,16 +73,7 @@ public final class SignedStateFileReader {
                     return in.readSerializable();
                 });
 
-        MerkleNode stateRoot = data.stateRoot();
-        MerkleNodeState merkleNodeState;
-
-        // TODO: add comments
-        // move to stateUtils ?
-        if (stateRoot instanceof VirtualMap virtualMap) {
-            merkleNodeState = stateRootFunction.apply(virtualMap);
-        } else {
-            merkleNodeState = (MerkleNodeState) stateRoot;
-        }
+        final MerkleNodeState merkleNodeState = initializeMerkleNodeState(stateRootFunction, data.stateRoot());
 
         final SignedState newSignedState = new SignedState(
                 conf,

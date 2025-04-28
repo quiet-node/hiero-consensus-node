@@ -865,7 +865,12 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
         return state;
     }
 
-    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
+    /**
+     * {@inheritDoc}
+     * <p>
+     * FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
+     * </p>
+     */
     @Override
     public Function<VirtualMap, PlatformTestingToolState> stateRootFromVirtualMap() {
         throw new UnsupportedOperationException();
