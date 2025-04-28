@@ -724,9 +724,7 @@ public class Evm46ValidationSuite {
                                         .toArray())
                         .gas(ENOUGH_GAS_LIMIT_FOR_CREATION),
                 withOpContext((spec, op) -> getAccountBalance(
-                                spec.setup().defaultShard().getShardNum() + "."
-                                        + spec.setup().defaultRealm().getRealmNum()
-                                        + "." + (FIRST_NONEXISTENT_CONTRACT_NUM + 6))
+                                spec.shard() + "." + spec.realm() + "." + (FIRST_NONEXISTENT_CONTRACT_NUM + 6))
                         .nodePayment(ONE_HBAR)
                         .hasAnswerOnlyPrecheck(INVALID_ACCOUNT_ID)));
     }

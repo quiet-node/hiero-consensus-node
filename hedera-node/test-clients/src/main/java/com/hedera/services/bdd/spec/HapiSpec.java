@@ -756,7 +756,7 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
             }
         }
         try {
-            hapiRegistry = new HapiSpecRegistry(hapiSetup);
+            hapiRegistry = new HapiSpecRegistry(hapiSetup, shard(), realm());
             keyFactory = new KeyFactory(hapiSetup, hapiRegistry);
             if (sharedStates != null) {
                 sharedStates.forEach(sharedState -> {

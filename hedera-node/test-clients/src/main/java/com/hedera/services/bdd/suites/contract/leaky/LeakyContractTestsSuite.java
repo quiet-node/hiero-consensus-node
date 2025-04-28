@@ -9,8 +9,6 @@ import static com.hedera.services.bdd.spec.HapiPropertySource.asContract;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asHexedSolidityAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountDetailsAsserts.accountDetailsWith;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
@@ -165,6 +163,7 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -249,8 +248,13 @@ public class LeakyContractTestsSuite {
         final AtomicReference<String> mergedAliasAddr2 = new AtomicReference<>();
         final AtomicReference<String> mergedMirrorAddr2 = new AtomicReference<>();
         final AtomicReference<byte[]> testContractInitcode = new AtomicReference<>();
-
+        final var shard = new AtomicInteger();
+        final var realm = new AtomicInteger();
         return hapiTest(
+                withOpContext((spec, opLog) -> {
+                    shard.set((int) spec.shard());
+                    realm.set((int) spec.realm());
+                }),
                 overriding("contracts.evm.version", "v0.46"),
                 newKeyNamed(adminKey),
                 newKeyNamed(MULTI_KEY),
@@ -260,7 +264,8 @@ public class LeakyContractTestsSuite {
                         .adminKey(adminKey)
                         .entityMemo(ENTITY_MEMO)
                         .via(CREATE_2_TXN)
-                        .exposingNumTo(num -> factoryEvmAddress.set(asHexedSolidityAddress(SHARD, REALM, num))),
+                        .exposingNumTo(
+                                num -> factoryEvmAddress.set(asHexedSolidityAddress(shard.get(), realm.get(), num))),
                 sourcing(() -> contractCallLocal(
                                 contract, GET_BYTECODE, asHeadlongAddress(factoryEvmAddress.get()), salt)
                         .exposingTypedResultsTo(results -> {
@@ -512,8 +517,13 @@ public class LeakyContractTestsSuite {
         final AtomicLong normalPayerGasUsed = new AtomicLong();
         final AtomicLong longLivedPayerGasUsed = new AtomicLong();
         final AtomicReference<String> toyMakerMirror = new AtomicReference<>();
-
+        final var shard = new AtomicInteger();
+        final var realm = new AtomicInteger();
         return hapiTest(
+                withOpContext((spec, opLog) -> {
+                    shard.set((int) spec.shard());
+                    realm.set((int) spec.realm());
+                }),
                 overridingTwo(
                         "ledger.autoRenewPeriod.maxDuration", "" + longLifetime,
                         "entities.maxLifetime", "" + longLifetime),
@@ -521,7 +531,8 @@ public class LeakyContractTestsSuite {
                 cryptoCreate(longLivedPayer).autoRenewSecs(longLifetime - 12345),
                 uploadInitCode(toyMaker, createIndirectly),
                 contractCreate(toyMaker)
-                        .exposingNumTo(num -> toyMakerMirror.set(asHexedSolidityAddress(SHARD, REALM, num))),
+                        .exposingNumTo(
+                                num -> toyMakerMirror.set(asHexedSolidityAddress(shard.get(), realm.get(), num))),
                 sourcing(() -> contractCreate(createIndirectly)
                         .autoRenewSecs(longLifetime - 12345)
                         .payingWith(GENESIS)),
@@ -735,15 +746,15 @@ public class LeakyContractTestsSuite {
                     final var expectedGrandChildContractAddress = contractAddress(expectedChildContractAddress, 1L);
 
                     final var childId = ContractID.newBuilder()
-                            .setShardNum(SHARD)
-                            .setRealmNum(REALM)
+                            .setShardNum(spec.shard())
+                            .setRealmNum(spec.realm())
                             .setContractNum(parentNum.getContractNum() + 1L)
                             .build();
                     childLiteralId.set(HapiPropertySource.asContractString(childId));
                     expectedChildAddress.set(ByteString.copyFrom(expectedChildContractAddress.toArray()));
                     final var grandChildId = ContractID.newBuilder()
-                            .setShardNum(SHARD)
-                            .setRealmNum(REALM)
+                            .setShardNum(spec.shard())
+                            .setRealmNum(spec.realm())
                             .setContractNum(parentNum.getContractNum() + 2L)
                             .build();
                     grandChildLiteralId.set(HapiPropertySource.asContractString(grandChildId));
@@ -989,8 +1000,13 @@ public class LeakyContractTestsSuite {
         final AtomicReference<TokenID> tokenID = new AtomicReference<>();
         final AtomicReference<String> attackerMirrorAddr = new AtomicReference<>();
         final AtomicReference<String> whitelistedCalleeMirrorAddr = new AtomicReference<>();
-
+        final var shard = new AtomicInteger();
+        final var realm = new AtomicInteger();
         return hapiTest(
+                withOpContext((spec, opLog) -> {
+                    shard.set((int) spec.shard());
+                    realm.set((int) spec.realm());
+                }),
                 cryptoCreate(TOKEN_TREASURY),
                 cryptoCreate(PRETEND_ATTACKER)
                         .exposingCreatedIdTo(id -> attackerMirrorAddr.set(asHexedSolidityAddress(id))),
@@ -1006,7 +1022,7 @@ public class LeakyContractTestsSuite {
                         .adminKey(DEFAULT_PAYER)
                         .exposingNumTo(num -> {
                             whitelistedCalleeMirrorNum.set(num);
-                            whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(SHARD, REALM, num));
+                            whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(shard.get(), realm.get(), num));
                         }),
                 tokenAssociate(PRETEND_PAIR, FUNGIBLE_TOKEN),
                 tokenAssociate(DELEGATE_PRECOMPILE_CALLEE, FUNGIBLE_TOKEN),
@@ -1037,8 +1053,13 @@ public class LeakyContractTestsSuite {
         final AtomicReference<String> attackerMirrorAddr = new AtomicReference<>();
         final AtomicReference<String> unListedCalleeMirrorAddr = new AtomicReference<>();
         final AtomicReference<String> whitelistedCalleeMirrorAddr = new AtomicReference<>();
-
+        final var shard = new AtomicInteger();
+        final var realm = new AtomicInteger();
         return hapiTest(
+                withOpContext((spec, opLog) -> {
+                    shard.set((int) spec.shard());
+                    realm.set((int) spec.realm());
+                }),
                 cryptoCreate(TOKEN_TREASURY),
                 cryptoCreate(PRETEND_ATTACKER)
                         .exposingCreatedIdTo(id -> attackerMirrorAddr.set(asHexedSolidityAddress(id))),
@@ -1052,14 +1073,14 @@ public class LeakyContractTestsSuite {
                 uploadInitCode(DELEGATE_ERC_CALLEE),
                 contractCreate(DELEGATE_ERC_CALLEE).adminKey(DEFAULT_PAYER).exposingNumTo(num -> {
                     whitelistedCalleeMirrorNum.set(num);
-                    whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(SHARD, REALM, num));
+                    whitelistedCalleeMirrorAddr.set(asHexedSolidityAddress(shard.get(), realm.get(), num));
                 }),
                 uploadInitCode(DELEGATE_PRECOMPILE_CALLEE),
                 contractCreate(DELEGATE_PRECOMPILE_CALLEE)
                         .adminKey(DEFAULT_PAYER)
                         .exposingNumTo(num -> {
                             unlistedCalleeMirrorNum.set(num);
-                            unListedCalleeMirrorAddr.set(asHexedSolidityAddress(SHARD, REALM, num));
+                            unListedCalleeMirrorAddr.set(asHexedSolidityAddress(shard.get(), realm.get(), num));
                         }),
                 tokenAssociate(PRETEND_PAIR, FUNGIBLE_TOKEN),
                 tokenAssociate(DELEGATE_ERC_CALLEE, FUNGIBLE_TOKEN),

@@ -56,8 +56,13 @@ public class HapiSpecRegistry {
 
     private static final Integer ZERO = 0;
 
-    public HapiSpecRegistry(HapiSpecSetup setup) throws Exception {
+    private final long shard;
+    private final long realm;
+
+    public HapiSpecRegistry(HapiSpecSetup setup, long shard, long realm) throws Exception {
         this.setup = setup;
+        this.shard = shard;
+        this.realm = realm;
 
         final var key = TypedKey.from(setup.payerKey());
         final var genesisKey = asPublicKey(key.pubKey(), key.type());
