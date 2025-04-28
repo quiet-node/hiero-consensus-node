@@ -1332,7 +1332,7 @@ public class UtilVerbs {
     }
 
     public static Function<HapiSpec, RecordStreamAssertion> sidecarIdValidator() {
-        return spec -> new ValidContractIdsAssertion();
+        return ValidContractIdsAssertion::new;
     }
 
     public static Function<HapiSpec, RecordStreamAssertion> visibleItems(
