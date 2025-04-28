@@ -299,4 +299,82 @@ class BlockNodeConnectionManagerTest {
             };
         }
     }
+
+    @Test
+    void testUpdateLastVerifiedBlock_WhenNewBlockNumberIsGreater() {
+        // Given
+        final var blockNodeConfig = localBlockNodeConfigEntry(8080, 1);
+        final var initialBlockNumber = 10L;
+        final var newBlockNumber = 20L;
+
+        // Set initial block number
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, initialBlockNumber);
+
+        // When
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, newBlockNumber);
+
+        // Then
+        assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
+                .isEqualTo(newBlockNumber);
+        verify(blockStreamMetrics).setLatestAcknowledgedBlockNumber(newBlockNumber);
+    }
+
+    @Test
+    void testUpdateLastVerifiedBlock_WhenNewBlockNumberIsLess() {
+        // Given
+        final var blockNodeConfig = localBlockNodeConfigEntry(8080, 1);
+        final var initialBlockNumber = 20L;
+        final var newBlockNumber = 10L;
+
+        // Set initial block number
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, initialBlockNumber);
+
+        // When
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, newBlockNumber);
+
+        // Then
+        assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
+                .isEqualTo(initialBlockNumber);
+        verify(blockStreamMetrics, never()).setLatestAcknowledgedBlockNumber(newBlockNumber);
+    }
+
+    @Test
+    void testUpdateLastVerifiedBlock_WhenNewBlockNumberIsEqual() {
+        // Given
+        final var blockNodeConfig = localBlockNodeConfigEntry(8080, 1);
+        final var blockNumber = 20L;
+
+        // Set initial block number
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, blockNumber);
+
+        // Reset mock to verify it's not called again
+        verify(blockStreamMetrics).setLatestAcknowledgedBlockNumber(blockNumber);
+
+        // When
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, blockNumber);
+
+        // Then
+        assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
+                .isEqualTo(blockNumber);
+        // Verify it was called only once (from the initial setup)
+        verify(blockStreamMetrics, times(1)).setLatestAcknowledgedBlockNumber(blockNumber);
+    }
+
+    @Test
+    void testUpdateLastVerifiedBlock_WhenNewBlockNumberIsNull() {
+        // Given
+        final var blockNodeConfig = localBlockNodeConfigEntry(8080, 1);
+        final var initialBlockNumber = 20L;
+
+        // Set initial block number
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, initialBlockNumber);
+
+        // When
+        blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, null);
+
+        // Then
+        assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
+                .isEqualTo(initialBlockNumber);
+        verify(blockStreamMetrics, times(1)).setLatestAcknowledgedBlockNumber(initialBlockNumber);
+    }
 }
