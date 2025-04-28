@@ -82,9 +82,9 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         if (state != State.INIT) {
             throw new IllegalStateException("Cannot add nodes after the network has been started.");
         }
-//        if (!nodes.isEmpty()) {
-//            throw new UnsupportedOperationException("Adding nodes incrementally is not supported yet.");
-//        }
+        if (!nodes.isEmpty()) {
+            throw new UnsupportedOperationException("Adding nodes incrementally is not supported yet.");
+        }
 
         executorService = Executors.newFixedThreadPool(
                 Math.min(count, Runtime.getRuntime().availableProcessors()));
@@ -237,6 +237,7 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         for (final TurtleNode node : nodes) {
             node.shutdownGracefully(Duration.ZERO);
         }
+        nodes.clear();
         executorService.shutdownNow();
     }
 

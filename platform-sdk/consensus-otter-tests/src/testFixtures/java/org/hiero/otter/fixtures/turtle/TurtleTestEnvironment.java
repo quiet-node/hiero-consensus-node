@@ -53,9 +53,6 @@ public class TurtleTestEnvironment implements TestEnvironment {
     private final Randotron randotron;
     private final Path rootOutputDirectory;
 
-    private final ConstructableRegistry registry;
-    private final ConstructableRegistry registry2;
-
     /**
      * Constructor for the {@link TurtleTestEnvironment} class.
      */
@@ -86,10 +83,9 @@ public class TurtleTestEnvironment implements TestEnvironment {
         randotron = Randotron.create();
 
         try {
-            registry = ConstructableRegistry.getInstance();
+            final ConstructableRegistry registry = ConstructableRegistry.getInstance();
             registry.registerConstructables("org.hiero");
             registry.registerConstructables("com.swirlds");
-            registry2 =  registerMerkleStateRootClassIds();
         } catch (final ConstructableRegistryException e) {
             throw new RuntimeException(e);
         }
@@ -121,12 +117,6 @@ public class TurtleTestEnvironment implements TestEnvironment {
     @Override
     @NonNull
     public Network network() {
-//        return network;
-        network = new TurtleNetwork(randotron, timeManager, rootOutputDirectory);
-        generator = new TurtleTransactionGenerator(network, randotron);
-
-        timeManager.addTimeTickReceiver(network);
-        timeManager.addTimeTickReceiver(generator);
         return network;
     }
 
@@ -170,12 +160,5 @@ public class TurtleTestEnvironment implements TestEnvironment {
     @Override
     public void stop() throws InterruptedException {
         generator.stop();
-//        network.stop();
-        network = null;
-
-        registry.reset();
-        registry2.reset();
-
-        timeManager.clear();
     }
 }

@@ -100,11 +100,9 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     private DeterministicWiringModel model;
     private Platform platform;
-    private PlatformWiring platformWiring;
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
-    private HashedReservedSignedState reservedState;
     private ReservedSignedState initialState;
     private State state;
     private MerkleNodeState rootNode;
@@ -180,10 +178,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     public void shutdownGracefully(@NonNull final Duration timeout) throws InterruptedException {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
-
-//            platformWiring.flushIntakePipeline();
             doShutdownNode();
-
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
@@ -309,23 +304,15 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-//            platformWiring.stop();
             platform.stop();
-
-//            rootNode.release();
-//            platform.getNotificationEngine().unregisterAll();
 
             platformStatus = null;
             platform = null;
-            platformWiring = null;
+//            platformWiring = null;
             model = null;
-//            reservedState = null;
 
             rootNode = null;
-//            if (!initialState.is()) {
-//            initialState.close();
             initialState.delete();
-//            }
 
             initialState = null;
             state = null;
@@ -339,7 +326,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             platformStateFacade = null;
 
             turtleTestingToolState.destroy();
-//            turtleTestingToolState = null;
         }
         lifeCycle = LifeCycle.SHUTDOWN;
     }
@@ -418,7 +404,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
         platformComponentBuilder.withMetricsDocumentationEnabled(false).withGossip(network.getGossipInstance(selfId));
 
-        platformWiring = platformBuildingBlocks.platformWiring();
+        final PlatformWiring platformWiring = platformBuildingBlocks.platformWiring();
 
         platform = platformComponentBuilder.build();
         platformStatus = PlatformStatus.STARTING_UP;
