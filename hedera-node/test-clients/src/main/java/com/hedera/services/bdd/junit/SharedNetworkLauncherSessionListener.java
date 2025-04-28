@@ -37,12 +37,6 @@ import org.junit.platform.launcher.TestPlan;
 public class SharedNetworkLauncherSessionListener implements LauncherSessionListener {
     private static final Logger log = LogManager.getLogger(SharedNetworkLauncherSessionListener.class);
     public static final int CLASSIC_HAPI_TEST_NETWORK_SIZE = 4;
-    public static final long CONFIG_SHARD = Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
-            .map(Long::parseLong)
-            .orElse((long) SHARD);
-    public static final long CONFIG_REALM = Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
-            .map(Long::parseLong)
-            .orElse(REALM);
 
     @Override
     public void launcherSessionOpened(@NonNull final LauncherSession session) {
@@ -145,8 +139,14 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                     HapiSpec.doDelayedPrepareUpgrades(offsets);
                 }
             }
+            final long configShard = Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
+                    .map(Long::parseLong)
+                    .orElse((long) SHARD);
+            final long configRealm = Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
+                    .map(Long::parseLong)
+                    .orElse(REALM);
             SubProcessNetwork subProcessNetwork =
-                    (SubProcessNetwork) SubProcessNetwork.newSharedNetwork(networkSize, CONFIG_SHARD, CONFIG_REALM);
+                    (SubProcessNetwork) SubProcessNetwork.newSharedNetwork(networkSize, configShard, configRealm);
 
             // Check for the blocknode mode system property
             String blockNodeModeProperty = System.getProperty("hapi.spec.blocknode.mode");
