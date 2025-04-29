@@ -36,6 +36,6 @@ class NativeLibVerifierTest {
         given(contractsConfig.nativeLibVerificationHaltEnabled()).willReturn(true);
         assertThatExceptionOfType(IllegalStateException.class)
                 .isThrownBy(() -> verifier.verifyNativeLibs())
-                .withMessageContaining("Native library");
+                .withMessageContaining("Native libraries");
     }
 }
