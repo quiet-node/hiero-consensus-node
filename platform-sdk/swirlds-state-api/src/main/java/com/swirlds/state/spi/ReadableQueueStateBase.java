@@ -27,14 +27,14 @@ public abstract class ReadableQueueStateBase<E> implements ReadableQueueState<E>
 
     @Override
     @NonNull
-    public final String getStateKey() {
-        return stateKey;
+    public final String getServiceName() {
+        return serviceName;
     }
 
     @Override
     @NonNull
-    public final String getServiceName() {
-        return serviceName;
+    public final String getStateKey() {
+        return stateKey;
     }
 
     @Nullable
