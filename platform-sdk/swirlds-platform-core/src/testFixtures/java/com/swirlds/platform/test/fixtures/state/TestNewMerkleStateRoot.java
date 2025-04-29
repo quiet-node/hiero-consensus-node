@@ -11,7 +11,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 
 public class TestNewMerkleStateRoot extends NewStateRoot<TestNewMerkleStateRoot> implements MerkleNodeState {
 
-    public TestNewMerkleStateRoot(@NonNull final Configuration configuration, Metrics metrics) {
+    public TestNewMerkleStateRoot(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
         super(configuration, metrics);
     }
 
