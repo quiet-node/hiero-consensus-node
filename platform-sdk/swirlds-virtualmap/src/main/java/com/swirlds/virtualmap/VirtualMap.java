@@ -498,10 +498,5 @@ public final class VirtualMap<K extends VirtualKey, V extends VirtualValue> exte
 
         state = null;
         root = null;
-        var left = getLeft();
-        left = null;
-
-        var right = getRight();
-        right = null;
     }
 }

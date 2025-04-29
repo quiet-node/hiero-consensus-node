@@ -53,5 +53,7 @@ public interface TestEnvironment {
      */
     void destroy() throws InterruptedException;
 
+    void start();
+
     void stop() throws InterruptedException;
 }

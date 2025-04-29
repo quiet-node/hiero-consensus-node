@@ -158,7 +158,7 @@ public class TurtleNode {
         reservedState = getInitialState(
                 recycleBin,
                 version,
-                () -> turtleTestingToolState.getStateRootNode(),
+                () -> TurtleTestingToolState.getStateRootNode(),
                 "foo",
                 "bar",
                 nodeId,
@@ -230,25 +230,7 @@ public class TurtleNode {
     }
 
     public void stop() {
-//        model.stop();
-//        platform.stop();
-//        StaticPlatformBuilder.stop();
-
-
-//        metrics.resetAll();
-//        recycleBin.stop();
-//        initialState.delete();
-//        reservedState.state().delete();
-
-//        ForkJoinPool.commonPool().shutdownNow();
-//        TurtleTestingToolState.closeState();
-
-//        StaticPlatformBuilder.stop();
         platform.stop();
-
-//        StaticPlatformBuilder.stop();
-
-//        ForkJoinPool.commonPool().shutdownNow();
     }
 
     /**

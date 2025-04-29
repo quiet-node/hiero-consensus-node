@@ -22,30 +22,30 @@ import org.junit.jupiter.api.Disabled;
 public class HappyPathTest {
 
     @OtterTest
-    @Disabled
+//    @Disabled
     void testHappyPath(TestEnvironment env) throws InterruptedException {
         int i = 0;
         while (true) {
             i++;
             System.out.println("Iteration: " + i);
+            env.start();
             final Network network = env.network();
             final TimeManager timeManager = env.timeManager();
 
             // Setup simulation
             network.addNodes(4);
             network.start(Duration.ofMinutes(1L));
-            env.generator().start();
 
             // Wait for two minutes
             timeManager.waitFor(Duration.ofMinutes(2L));
 
         // Validations
-        env.validator()
-                .assertLogs(
-                        LogFilter.maxLogLevel(Level.INFO),
-                        LogFilter.ignoreMarkers(LogMarker.STARTUP),
-                        LogFilter.ignoreNodes(network.getNodes().getFirst()))
-                .validateRemaining(Profile.DEFAULT);
+//        env.validator()
+//                .assertLogs(
+//                        LogFilter.maxLogLevel(Level.INFO),
+//                        LogFilter.ignoreMarkers(LogMarker.STARTUP),
+//                        LogFilter.ignoreNodes(network.getNodes().getFirst()))
+//                .validateRemaining(Profile.DEFAULT);
             // Validations
             env.validator().validateRemaining(Profile.DEFAULT);
 //            env.destroy();

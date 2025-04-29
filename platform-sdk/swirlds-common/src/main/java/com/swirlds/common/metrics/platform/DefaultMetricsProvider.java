@@ -146,14 +146,14 @@ public class DefaultMetricsProvider implements PlatformMetricsProvider, Lifecycl
         Objects.requireNonNull(nodeId, "nodeId must not be null");
 
         final DefaultPlatformMetrics metrics = platformMetrics.get(nodeId);
-//        if (metrics == null) {
-//            throw new IllegalArgumentException(String.format("PlatformMetrics for %s does not exist", nodeId));
-//        }
+        if (metrics == null) {
+            throw new IllegalArgumentException(String.format("PlatformMetrics for %s does not exist", nodeId));
+        }
 
-//        metrics.shutdown();
-//        unsubscribers.remove(nodeId).forEach(Runnable::run);
-//        snapshotService.removePlatformMetric(metrics);
-//        platformMetrics.remove(nodeId);
+        metrics.shutdown();
+        unsubscribers.remove(nodeId).forEach(Runnable::run);
+        snapshotService.removePlatformMetric(metrics);
+        platformMetrics.remove(nodeId);
     }
 
     @Override

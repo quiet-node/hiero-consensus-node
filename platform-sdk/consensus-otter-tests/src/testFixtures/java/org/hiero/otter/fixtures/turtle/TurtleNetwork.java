@@ -120,8 +120,8 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
      */
     @Override
     public void start(@NonNull final Duration timeout) {
-        if (state != State.INIT) {
-            throw new IllegalStateException("Cannot start the network more than once.");
+        if (state != State.SHUTDOWN && state != State.INIT) {
+            throw new IllegalStateException("Cannot start the network more than once or if it was not previously shut down.");
         }
 
         log.info("Starting network...");
@@ -232,13 +232,14 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         executorService.shutdownNow();
     }
 
-    public void stop() throws InterruptedException {
+    public void shutdown() throws InterruptedException {
         log.info("Stopping network...");
         for (final TurtleNode node : nodes) {
             node.shutdownGracefully(Duration.ZERO);
         }
         nodes.clear();
         executorService.shutdownNow();
+        this.state = State.SHUTDOWN;
     }
 
     /**
