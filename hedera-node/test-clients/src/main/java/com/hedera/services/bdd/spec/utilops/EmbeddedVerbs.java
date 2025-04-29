@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.utilops;
 
 import static com.hedera.node.config.types.StreamMode.RECORDS;
@@ -29,17 +14,12 @@ import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.state.addressbook.Node;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
-import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.schedule.ScheduledCounts;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.state.token.AccountPendingAirdrop;
 import com.hedera.hapi.node.state.token.StakingNodeInfo;
 import com.hedera.hapi.node.state.token.Token;
-import com.hedera.hapi.node.state.tss.TssMessageMapKey;
-import com.hedera.hapi.node.state.tss.TssVoteMapKey;
 import com.hedera.hapi.node.transaction.TransactionBody;
-import com.hedera.hapi.services.auxiliary.tss.TssMessageTransactionBody;
-import com.hedera.hapi.services.auxiliary.tss.TssVoteTransactionBody;
 import com.hedera.node.app.hapi.utils.CommonPbjConverters;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
 import com.hedera.node.app.workflows.TransactionInfo;
@@ -50,10 +30,9 @@ import com.hedera.services.bdd.spec.utilops.embedded.MutateAccountOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateKVStateOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateNodeOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateScheduleCountsOp;
+import com.hedera.services.bdd.spec.utilops.embedded.MutateSingletonOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateStakingInfosOp;
 import com.hedera.services.bdd.spec.utilops.embedded.MutateTokenOp;
-import com.hedera.services.bdd.spec.utilops.embedded.MutateTssMessagesOp;
-import com.hedera.services.bdd.spec.utilops.embedded.MutateTssVotesOp;
 import com.hedera.services.bdd.spec.utilops.embedded.ViewAccountOp;
 import com.hedera.services.bdd.spec.utilops.embedded.ViewKVStateOp;
 import com.hedera.services.bdd.spec.utilops.embedded.ViewMappingValueOp;
@@ -69,6 +48,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
+import java.util.function.UnaryOperator;
 
 /**
  * Contains operations that are usable only with an {@link EmbeddedNetwork}.
@@ -76,6 +56,14 @@ import java.util.function.IntConsumer;
 public final class EmbeddedVerbs {
     private EmbeddedVerbs() {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Returns an operation that allows the test author to handle the next round in a repeatable embedded network,
+     * typically useful to handle the query payment from a just-submitted transaction.
+     */
+    public static SpecOperation handleAnyRepeatableQueryPayment() {
+        return doingContextual(spec -> spec.repeatableEmbeddedHederaOrThrow().handleNextRoundIfPresent());
     }
 
     /**
@@ -120,31 +108,10 @@ public final class EmbeddedVerbs {
      * @return the operation that will mutate the staking infos
      */
     public static MutateStakingInfosOp mutateStakingInfos(
-            @NonNull final Consumer<WritableKVState<EntityNumber, StakingNodeInfo>> mutation) {
-        return new MutateStakingInfosOp(mutation);
+            final String nodeId, @NonNull final Consumer<StakingNodeInfo.Builder> mutation) {
+        return new MutateStakingInfosOp(nodeId, mutation);
     }
 
-    /**
-     * Returns an operation that allows the test author to directly mutate the TSS messages.
-     *
-     * @param mutation the mutation to apply to the TSS messages
-     * @return the operation that will mutate the TSS messages
-     */
-    public static MutateTssMessagesOp mutateTssMessages(
-            @NonNull final Consumer<WritableKVState<TssMessageMapKey, TssMessageTransactionBody>> mutation) {
-        return new MutateTssMessagesOp(mutation);
-    }
-
-    /**
-     * Returns an operation that allows the test author to directly mutate the TSS votes.
-     *
-     * @param mutation the mutation to apply to the TSS votes
-     * @return the operation that will mutate the TSS votes
-     */
-    public static MutateTssVotesOp mutateTssVotes(
-            @NonNull final Consumer<WritableKVState<TssVoteMapKey, TssVoteTransactionBody>> mutation) {
-        return new MutateTssVotesOp(mutation);
-    }
     /**
      * Returns an operation that allows the test author to directly mutate an account.
      *
@@ -164,12 +131,30 @@ public final class EmbeddedVerbs {
      * @return the operation that will expose the record to the observer
      * @param <T> the type of the record
      */
-    public static <T extends Record> ViewSingletonOp<T> viewSingleton(
+    public static <T> ViewSingletonOp<T> viewSingleton(
             @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Consumer<T> observer) {
         requireNonNull(serviceName);
         requireNonNull(stateKey);
         requireNonNull(observer);
-        return new ViewSingletonOp<T>(serviceName, stateKey, observer);
+        return new ViewSingletonOp<>(serviceName, stateKey, observer);
+    }
+
+    /**
+     * Returns an operation that allows the test author to mutate a singleton record in an embedded state.
+     * @param serviceName the name of the service that manages the record
+     * @param stateKey the key of the record in the state
+     * @param mutator the observer that will receive the record
+     * @return the operation that will expose the record to the mutator
+     * @param <T> the type of the record
+     */
+    public static <T> MutateSingletonOp<T> mutateSingleton(
+            @NonNull final String serviceName,
+            @NonNull final String stateKey,
+            @NonNull final UnaryOperator<T> mutator) {
+        requireNonNull(serviceName);
+        requireNonNull(stateKey);
+        requireNonNull(mutator);
+        return new MutateSingletonOp<>(serviceName, stateKey, mutator);
     }
 
     /**
@@ -182,7 +167,7 @@ public final class EmbeddedVerbs {
      * @param <K> the type of the key
      * @param <V> the type of the value
      */
-    public static <K extends Record, V extends Record> ViewKVStateOp<K, V> viewKVState(
+    public static <K, V> ViewKVStateOp<K, V> viewKVState(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final Consumer<ReadableKVState<K, V>> observer) {
@@ -202,7 +187,7 @@ public final class EmbeddedVerbs {
      * @param <K> the type of the key
      * @param <V> the type of the value
      */
-    public static <K extends Record, V extends Record> MutateKVStateOp<K, V> mutateKVState(
+    public static <K, V> MutateKVStateOp<K, V> mutateKVState(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final Consumer<WritableKVState<K, V>> observer) {
@@ -222,7 +207,7 @@ public final class EmbeddedVerbs {
      * @param <K> the type of the key
      * @param <V> the type of the value
      */
-    public static <K extends Record, V extends Record> ViewMappingValueOp<K, V> viewMappedValue(
+    public static <K, V> ViewMappingValueOp<K, V> viewMappedValue(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final K key,
@@ -276,6 +261,7 @@ public final class EmbeddedVerbs {
                     capacityUtilization::asApproxCapacitySplit,
                     ThrottleAccumulator.ThrottleType.BACKEND_THROTTLE);
             throttleAccumulator.applyGasConfig();
+            throttleAccumulator.applyBytesConfig();
             throttleAccumulator.rebuildFor(hedera.activeThrottleDefinitions());
             final var now = spec.consensusTime();
             final var state = spec.embeddedStateOrThrow();

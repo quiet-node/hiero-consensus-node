@@ -1,33 +1,22 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.support.translators;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CALL;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.ETHEREUM_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.ENDING_PARENT;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.PARENT;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.STANDALONE;
+import static com.hedera.hapi.platform.event.TransactionGroupRole.STARTING_PARENT;
 import static com.hedera.hapi.util.HapiUtils.asInstant;
-import static com.hedera.hapi.util.HapiUtils.asTimestamp;
-import static com.hedera.node.config.types.EntityType.ACCOUNT;
-import static com.hedera.node.config.types.EntityType.FILE;
-import static com.hedera.node.config.types.EntityType.NODE;
-import static com.hedera.node.config.types.EntityType.SCHEDULE;
-import static com.hedera.node.config.types.EntityType.TOKEN;
-import static com.hedera.node.config.types.EntityType.TOPIC;
+import static com.hedera.node.app.hapi.utils.EntityType.ACCOUNT;
+import static com.hedera.node.app.hapi.utils.EntityType.FILE;
+import static com.hedera.node.app.hapi.utils.EntityType.NODE;
+import static com.hedera.node.app.hapi.utils.EntityType.SCHEDULE;
+import static com.hedera.node.app.hapi.utils.EntityType.TOKEN;
+import static com.hedera.node.app.hapi.utils.EntityType.TOPIC;
+import static com.hedera.node.app.service.schedule.impl.handlers.HandlerUtility.scheduledTxnIdFrom;
 import static com.hedera.services.bdd.junit.support.translators.impl.FileUpdateTranslator.EXCHANGE_RATES_FILE_NUM;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
@@ -50,9 +39,10 @@ import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.PendingAirdropRecord;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
+import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.TransactionSidecarRecord;
+import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.state.SingleTransactionRecord;
-import com.hedera.node.config.types.EntityType;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.services.bdd.junit.support.translators.inputs.BlockTransactionParts;
 import com.hedera.services.bdd.junit.support.translators.inputs.BlockTransactionalUnit;
@@ -62,12 +52,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -79,16 +71,22 @@ import org.apache.logging.log4j.Logger;
 public class BaseTranslator {
     private static final Logger log = LogManager.getLogger(BaseTranslator.class);
 
+    private static final Set<TransactionGroupRole> PARENT_ROLES =
+            EnumSet.of(STANDALONE, PARENT, ENDING_PARENT, STARTING_PARENT);
+
     /**
      * These fields are context maintained for the full lifetime of the translator.
      */
     private long highestKnownEntityNum = 0L;
 
-    private long highestKnownNodeId;
+    private long highestKnownNodeId =
+            -1L; // Default to negative value so that we allow for nodeId with 0 value to be created
 
     private ExchangeRateSet activeRates;
     private final Map<TokenID, Long> totalSupplies = new HashMap<>();
     private final Map<TokenID, TokenType> tokenTypes = new HashMap<>();
+    private final Map<TransactionID, ScheduleID> scheduleRefs = new HashMap<>();
+    private final Map<ScheduleID, TransactionID> scheduleTxnIds = new HashMap<>();
     private final Set<TokenAssociation> knownAssociations = new HashSet<>();
     private final Map<PendingAirdropId, PendingAirdropValue> pendingAirdrops = new HashMap<>();
 
@@ -98,11 +96,11 @@ public class BaseTranslator {
     private long prevHighestKnownEntityNum = 0L;
 
     private Instant userTimestamp;
-    private ScheduleID scheduleRef;
     private final List<TransactionSidecarRecord> sidecarRecords = new ArrayList<>();
     private final Map<TokenID, Integer> numMints = new HashMap<>();
     private final Map<TokenID, List<Long>> highestPutSerialNos = new HashMap<>();
     private final Map<EntityType, List<Long>> nextCreatedNums = new EnumMap<>(EntityType.class);
+    private final Set<ScheduleID> purgedScheduleIds = new HashSet<>();
 
     /**
      * Defines how a translator specifies details of a translated transaction record.
@@ -114,11 +112,10 @@ public class BaseTranslator {
     }
 
     /**
-     * Constructs a translator with the given highest known node ID.
-     * @param highestKnownNodeId the highest known node ID
+     * Constructs a base translator.
      */
-    public BaseTranslator(final long highestKnownNodeId) {
-        this.highestKnownNodeId = highestKnownNodeId;
+    public BaseTranslator() {
+        // Using default field values
     }
 
     /**
@@ -169,7 +166,7 @@ public class BaseTranslator {
         highestPutSerialNos.clear();
         nextCreatedNums.clear();
         sidecarRecords.clear();
-        scheduleRef = null;
+        purgedScheduleIds.clear();
         scanUnit(unit);
         nextCreatedNums.values().forEach(list -> {
             final Set<Long> distinctNums = Set.copyOf(list);
@@ -190,6 +187,13 @@ public class BaseTranslator {
         }
         highestKnownEntityNum =
                 nextCreatedNums.values().stream().mapToLong(List::getLast).max().orElse(highestKnownEntityNum);
+    }
+
+    /**
+     * Finishes the ongoing transactional unit, purging any schedules that were deleted.
+     */
+    public void finishLastUnit() {
+        purgedScheduleIds.forEach(scheduleId -> scheduleRefs.remove(scheduleTxnIds.remove(scheduleId)));
     }
 
     /**
@@ -336,25 +340,26 @@ public class BaseTranslator {
                 .transferList(parts.transferList())
                 .tokenTransferLists(parts.tokenTransferLists())
                 .automaticTokenAssociations(parts.automaticTokenAssociations())
-                .paidStakingRewards(parts.paidStakingRewards());
+                .paidStakingRewards(parts.paidStakingRewards())
+                .parentConsensusTimestamp(parts.parentConsensusTimestamp());
         final var receiptBuilder =
                 TransactionReceipt.newBuilder().status(parts.transactionResult().status());
         final boolean followsUserRecord = asInstant(parts.consensusTimestamp()).isAfter(userTimestamp);
-        if (followsUserRecord && !parts.transactionIdOrThrow().scheduled()) {
-            recordBuilder.parentConsensusTimestamp(asTimestamp(userTimestamp));
-        }
-        if (!followsUserRecord || parts.transactionIdOrThrow().scheduled()) {
+        if ((!followsUserRecord || parts.transactionIdOrThrow().scheduled())
+                && parts.parentConsensusTimestamp() == null) {
             // Only preceding and user transactions get exchange rates in their receipts; note that
             // auto-account creations are always preceding dispatches and so get exchange rates
             receiptBuilder.exchangeRate(activeRates);
         }
+
         spec.accept(receiptBuilder, recordBuilder);
         if (!isContractOp(parts) && parts.hasContractOutput()) {
             final var output = parts.callContractOutputOrThrow();
             recordBuilder.contractCallResult(output.contractCallResultOrThrow());
         }
+        // If this transaction was executed by virtue of being scheduled, set its schedule ref
         if (parts.transactionIdOrThrow().scheduled()) {
-            recordBuilder.scheduleRef(scheduleRefOrThrow());
+            Optional.ofNullable(scheduleRefs.get(parts.transactionIdOrThrow())).ifPresent(recordBuilder::scheduleRef);
         }
         return new SingleTransactionRecord(
                 parts.transactionParts().wrapper(),
@@ -386,22 +391,13 @@ public class BaseTranslator {
         return activeRates;
     }
 
-    /**
-     * Returns the modified schedule id for the ongoing transactional unit.
-     *
-     * @return the modified schedule id
-     */
-    public @NonNull ScheduleID scheduleRefOrThrow() {
-        return requireNonNull(scheduleRef);
-    }
-
     private void scanUnit(@NonNull final BlockTransactionalUnit unit) {
         unit.stateChanges().forEach(stateChange -> {
             if (stateChange.hasMapDelete()) {
                 final var mapDelete = stateChange.mapDeleteOrThrow();
                 final var key = mapDelete.keyOrThrow();
                 if (key.hasScheduleIdKey()) {
-                    scheduleRef = key.scheduleIdKeyOrThrow();
+                    purgedScheduleIds.add(key.scheduleIdKeyOrThrow());
                 }
             } else if (stateChange.hasMapUpdate()) {
                 final var mapUpdate = stateChange.mapUpdateOrThrow();
@@ -439,7 +435,12 @@ public class BaseTranslator {
                                 .computeIfAbsent(SCHEDULE, ignore -> new LinkedList<>())
                                 .add(num);
                     }
-                    scheduleRef = key.scheduleIdKeyOrThrow();
+                    final var schedule = mapUpdate.valueOrThrow().scheduleValueOrThrow();
+                    final var scheduleId = key.scheduleIdKeyOrThrow();
+                    final var scheduledTxnId = scheduledTxnIdFrom(
+                            schedule.originalCreateTransactionOrThrow().transactionIDOrThrow());
+                    scheduleRefs.put(scheduledTxnId, scheduleId);
+                    scheduleTxnIds.put(scheduleId, scheduledTxnId);
                 } else if (key.hasAccountIdKey()) {
                     final var num = key.accountIdKeyOrThrow().accountNumOrThrow();
                     if (num > highestKnownEntityNum) {
@@ -466,9 +467,9 @@ public class BaseTranslator {
                 }
             }
         });
+        userTimestamp = null;
         unit.blockTransactionParts().forEach(parts -> {
-            if (parts.transactionIdOrThrow().nonce() == 0
-                    && !parts.transactionIdOrThrow().scheduled()) {
+            if (PARENT_ROLES.contains(parts.role())) {
                 userTimestamp = asInstant(parts.consensusTimestamp());
             }
             switch (parts.functionality()) {

@@ -1,23 +1,8 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.prehandle;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.UNKNOWN;
-import static com.hedera.node.app.spi.key.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.IMMUTABILITY_SENTINEL_KEY;
 import static com.hedera.node.app.workflows.prehandle.PreHandleResult.Status.NODE_DUE_DILIGENCE_FAILURE;
 import static java.util.Objects.requireNonNull;
 
@@ -32,6 +17,7 @@ import com.hedera.node.app.workflows.TransactionInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -56,7 +42,7 @@ import java.util.concurrent.Future;
  * @param verificationResults A map of {@link Future<SignatureVerificationFuture>} yielding the
  *                            {@link SignatureVerificationFuture} for a given cryptographic key. Ony cryptographic keys
  *                            are used as the key of this map.
- * @param innerResult {@link PreHandleResult} of the inner transaction (where appropriate)
+ * @param innerResults {@link PreHandleResult}s of the inner transactions if this is an atomic batch transaction.
  * @param configVersion The version of the configuration that was used during pre-handle
  */
 public record PreHandleResult(
@@ -69,7 +55,7 @@ public record PreHandleResult(
         @Nullable Set<Key> optionalKeys,
         @Nullable Set<Account> hollowAccounts,
         @Nullable Map<Key, SignatureVerificationFuture> verificationResults,
-        @Nullable PreHandleResult innerResult,
+        @Nullable List<PreHandleResult> innerResults,
         long configVersion) {
 
     /**
@@ -96,6 +82,13 @@ public record PreHandleResult(
         return status == NODE_DUE_DILIGENCE_FAILURE
                 ? HederaRecordCache.DueDiligenceFailure.YES
                 : HederaRecordCache.DueDiligenceFailure.NO;
+    }
+
+    /**
+     * Returns the transaction info for this result, or throws an exception if it is not available.
+     */
+    public @NonNull TransactionInfo txnInfoOrThrow() {
+        return requireNonNull(txInfo);
     }
 
     /**
@@ -235,5 +228,14 @@ public record PreHandleResult(
                 verificationResults,
                 null,
                 UNKNOWN_VERSION);
+    }
+
+    /**
+     * Creates a new {@link PreHandleResult} when encountering a {@link com.hedera.hapi.platform.event.StateSignatureTransaction}.
+     */
+    @NonNull
+    public static PreHandleResult stateSignatureTransactionEncountered(@NonNull final TransactionInfo txInfo) {
+        return new PreHandleResult(
+                null, null, Status.SO_FAR_SO_GOOD, UNKNOWN, txInfo, null, null, null, null, null, UNKNOWN_VERSION);
     }
 }

@@ -1,27 +1,12 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.prehandle;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_PAYER_ACCOUNT_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.UNRESOLVABLE_REQUIRED_SIGNERS;
 import static com.hedera.hapi.util.HapiUtils.EMPTY_KEY_LIST;
 import static com.hedera.hapi.util.HapiUtils.isHollow;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.isValid;
 import static com.hedera.node.app.service.token.impl.util.TokenHandlerHelper.verifyNotEmptyKey;
-import static com.hedera.node.app.spi.key.KeyUtils.isValid;
 import static com.hedera.node.app.spi.validation.Validations.mustExist;
 import static java.util.Objects.requireNonNull;
 
@@ -38,10 +23,13 @@ import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.spi.workflows.TransactionKeys;
 import com.hedera.node.app.store.ReadableStoreFactory;
+import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.node.app.workflows.dispatcher.TransactionDispatcher;
+import com.hedera.node.app.workflows.purechecks.PureChecksContextImpl;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Collections;
@@ -89,12 +77,9 @@ public class PreHandleContextImpl implements PreHandleContext {
      * The set of all hollow accounts that <strong>might</strong> need to be validated, but also might not.
      */
     private final Set<Account> optionalHollowAccounts = new LinkedHashSet<>();
-    /**
-     * Scheduled transactions have a secondary "inner context". Seems not quite right.
-     */
-    private PreHandleContext innerContext;
 
     private final ReadableStoreFactory storeFactory;
+    private final NodeInfo creatorInfo;
 
     /**
      * Configuration to be used during pre-handle
@@ -103,20 +88,25 @@ public class PreHandleContextImpl implements PreHandleContext {
 
     private final TransactionDispatcher dispatcher;
     private final boolean isUserTx;
+    private final TransactionChecker transactionChecker;
 
     public PreHandleContextImpl(
             @NonNull final ReadableStoreFactory storeFactory,
             @NonNull final TransactionBody txn,
             @NonNull final Configuration configuration,
-            @NonNull final TransactionDispatcher dispatcher)
+            @NonNull final TransactionDispatcher dispatcher,
+            @NonNull final TransactionChecker transactionChecker,
+            @NonNull final NodeInfo creatorInfo)
             throws PreCheckException {
         this(
                 storeFactory,
                 txn,
                 txn.transactionIDOrElse(TransactionID.DEFAULT).accountIDOrElse(AccountID.DEFAULT),
+                creatorInfo,
                 configuration,
                 dispatcher,
-                true);
+                true,
+                transactionChecker);
     }
 
     public PreHandleContextImpl(
@@ -124,9 +114,11 @@ public class PreHandleContextImpl implements PreHandleContext {
             @NonNull final TransactionBody txn,
             @NonNull final AccountID payer,
             @NonNull final Configuration configuration,
-            @NonNull final TransactionDispatcher dispatcher)
+            @NonNull final TransactionDispatcher dispatcher,
+            @NonNull final TransactionChecker transactionChecker,
+            @NonNull final NodeInfo creatorInfo)
             throws PreCheckException {
-        this(storeFactory, txn, payer, configuration, dispatcher, false);
+        this(storeFactory, txn, payer, creatorInfo, configuration, dispatcher, false, transactionChecker);
     }
 
     /**
@@ -137,13 +129,16 @@ public class PreHandleContextImpl implements PreHandleContext {
             @NonNull final ReadableStoreFactory storeFactory,
             @NonNull final TransactionBody txn,
             @NonNull final AccountID payerId,
+            @NonNull final NodeInfo creatorInfo,
             @NonNull final Configuration configuration,
             @NonNull final TransactionDispatcher dispatcher,
-            final boolean isUserTx)
+            final boolean isUserTx,
+            @NonNull final TransactionChecker transactionChecker)
             throws PreCheckException {
         this.storeFactory = requireNonNull(storeFactory, "storeFactory must not be null.");
         this.txn = requireNonNull(txn, "txn must not be null!");
         this.payerId = requireNonNull(payerId, "payer must not be null!");
+        this.creatorInfo = requireNonNull(creatorInfo);
         this.configuration = requireNonNull(configuration, "configuration must not be null!");
         this.dispatcher = requireNonNull(dispatcher, "dispatcher must not be null!");
         this.isUserTx = isUserTx;
@@ -152,6 +147,7 @@ public class PreHandleContextImpl implements PreHandleContext {
         final var payer = mustExist(accountStore.getAccountById(payerId), INVALID_PAYER_ACCOUNT_ID);
         // It would be a catastrophic invariant failure if an account in state didn't have a key
         payerKey = payer.keyOrThrow();
+        this.transactionChecker = requireNonNull(transactionChecker, "transactionChecker must not be null!");
     }
 
     @Override
@@ -479,9 +475,11 @@ public class PreHandleContextImpl implements PreHandleContext {
     public TransactionKeys allKeysForTransaction(@NonNull TransactionBody body, @NonNull final AccountID payerId)
             throws PreCheckException {
         // Throws PreCheckException if the transaction body is structurally invalid
-        dispatcher.dispatchPureChecks(body);
+        final var pureChecksContext = new PureChecksContextImpl(body, dispatcher);
+        dispatcher.dispatchPureChecks(pureChecksContext);
         // Throws PreCheckException if the payer account does not exist
-        final var context = new PreHandleContextImpl(storeFactory, body, payerId, configuration, dispatcher);
+        final var context = new PreHandleContextImpl(
+                storeFactory, body, payerId, configuration, dispatcher, transactionChecker, creatorInfo);
         try {
             // Accumulate all required keys in the context
             dispatcher.dispatchPreHandle(context);
@@ -493,14 +491,18 @@ public class PreHandleContextImpl implements PreHandleContext {
     }
 
     @Override
+    public NodeInfo creatorInfo() {
+        return creatorInfo;
+    }
+
+    @Override
     public String toString() {
         return "PreHandleContextImpl{" + "accountStore="
                 + accountStore + ", txn="
                 + txn + ", payerId="
                 + payerId + ", payerKey="
                 + payerKey + ", requiredNonPayerKeys="
-                + requiredNonPayerKeys + ", innerContext="
-                + innerContext + ", storeFactory="
+                + requiredNonPayerKeys + ", storeFactory="
                 + storeFactory + '}';
     }
 

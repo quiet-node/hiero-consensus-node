@@ -1,25 +1,9 @@
-/*
- * Copyright (C) 2018-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event;
-
-import static com.swirlds.platform.consensus.ConsensusConstants.MIN_TRANS_TIMESTAMP_INCR_NANOS;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
+import org.hiero.consensus.model.event.PlatformEvent;
 
 /**
  * Utility methods for events.
@@ -58,23 +42,6 @@ public final class EventUtils {
     }
 
     /**
-     * Returns the timestamp of the transaction with given index in this event
-     *
-     * @param event            the event to get the transaction time from
-     * @param transactionIndex index of the transaction in this event
-     * @return timestamp of the given index transaction
-     */
-    public static @NonNull Instant getTransactionTime(@NonNull final PlatformEvent event, final int transactionIndex) {
-        if (event.getConsensusTimestamp() == null) {
-            throw new IllegalArgumentException("Event is not a consensus event");
-        }
-        if (transactionIndex >= event.getTransactionCount()) {
-            throw new IllegalArgumentException("Event does not have a transaction with index: " + transactionIndex);
-        }
-        return event.getConsensusTimestamp().plusNanos(transactionIndex * MIN_TRANS_TIMESTAMP_INCR_NANOS);
-    }
-
-    /**
      * Returns the timestamp of the last transaction in this event. If this event has no transaction, then the timestamp
      * of the event will be returned
      *
@@ -90,6 +57,6 @@ public final class EventUtils {
         if (event.getTransactionCount() <= 1) {
             return event.getConsensusTimestamp();
         }
-        return getTransactionTime(event, event.getTransactionCount() - 1);
+        return event.getTransactionTime(event.getTransactionCount() - 1);
     }
 }

@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.internal.pipeline;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyTrue;
@@ -28,14 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.metrics.platform.MetricKeyRegistry;
 import com.swirlds.common.metrics.platform.PlatformMetricsFactoryImpl;
-import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
-import com.swirlds.common.threading.interrupt.InterruptableRunnable;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
@@ -61,6 +43,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.hiero.base.concurrent.interrupt.InterruptableRunnable;
+import org.hiero.base.crypto.Hash;
+import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -190,9 +175,9 @@ class VirtualPipelineTests {
             }
         }
 
-        if (allAreDestroyed && copies.size() > 0) {
+        if (allAreDestroyed && !copies.isEmpty()) {
             final VirtualPipeline<VirtualKey, VirtualValue> pipeline =
-                    copies.get(0).getPipeline();
+                    copies.getFirst().getPipeline();
             assertTrue(pipeline.awaitTermination(2, TimeUnit.SECONDS), "thread should stop");
         }
     }
@@ -616,7 +601,7 @@ class VirtualPipelineTests {
         }
 
         @Override
-        public boolean flush() {
+        public void flush() {
             try {
                 if (!flushFinishedLatch.await(30, TimeUnit.SECONDS)) {
                     throw new RuntimeException("Wait exceeded");
@@ -625,7 +610,7 @@ class VirtualPipelineTests {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException(ex);
             }
-            return super.flush();
+            super.flush();
         }
 
         @Override

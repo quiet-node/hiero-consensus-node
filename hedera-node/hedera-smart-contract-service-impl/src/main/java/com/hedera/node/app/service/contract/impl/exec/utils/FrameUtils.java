@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.exec.utils;
 
 import static com.hedera.hapi.streams.SidecarType.CONTRACT_ACTION;
@@ -35,6 +20,7 @@ import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import com.hedera.node.app.spi.workflows.record.DeleteCapableTransactionStreamBuilder;
 import com.hedera.node.config.data.ContractsConfig;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Optional;
@@ -49,6 +35,7 @@ public class FrameUtils {
     public static final String PROPAGATED_CALL_FAILURE_CONTEXT_VARIABLE = "propagatedCallFailure";
     public static final String SYSTEM_CONTRACT_GAS_CALCULATOR_CONTEXT_VARIABLE = "systemContractGasCalculator";
     public static final String PENDING_CREATION_BUILDER_CONTEXT_VARIABLE = "pendingCreationBuilder";
+    public static final String HEDERA_GAS_COUNTER = "hederaGasCounter";
 
     public enum EntityType {
         TOKEN,
@@ -318,9 +305,10 @@ public class FrameUtils {
         requireNonNull(featureFlags);
 
         Long maybeGrandfatheredNumber = null;
-        if (isLongZero(address)) {
+        if (isLongZero(entityIdFactory(frame), address)) {
             try {
-                maybeGrandfatheredNumber = asNumberedContractId(address).contractNum();
+                maybeGrandfatheredNumber =
+                        asNumberedContractId(entityIdFactory(frame), address).contractNum();
             } catch (final ArithmeticException ignore) {
                 // Not a valid numbered contract id
             }
@@ -367,7 +355,48 @@ public class FrameUtils {
     }
 
     private static boolean isQualifiedDelegate(@NonNull final Address recipient, @NonNull final MessageFrame frame) {
-        return isLongZero(recipient)
+        return isLongZero(entityIdFactory(frame), recipient)
                 && contractsConfigOf(frame).permittedDelegateCallers().contains(numberOfLongZero(recipient));
+    }
+
+    public static boolean isPrecompileEnabled(
+            @NonNull final Address precompileAddress, @NonNull final MessageFrame frame) {
+        return contractsConfigOf(frame).disabledPrecompiles().stream()
+                .map(Address::precompiled)
+                .filter(precompileAddress::equals)
+                .findAny()
+                .isEmpty();
+    }
+
+    /**
+     * Returns the {@link com.swirlds.state.lifecycle.EntityIdFactory}
+     *
+     * @param frame the current frame
+     * @return the entity id factory
+     */
+    public static EntityIdFactory entityIdFactory(@NonNull final MessageFrame frame) {
+        return proxyUpdaterFor(frame).entityIdFactory();
+    }
+
+    /**
+     * Increments the Hedera gas usage in the top level frame by the given amount.
+     *
+     * @param frame the current frame
+     * @param gas the amount of gas to increment by
+     */
+    public static void incrementHederaGasUsage(@NonNull final MessageFrame frame, final long gas) {
+        final HederaGasCounter gasCounter = initialFrameOf(frame).getContextVariable(HEDERA_GAS_COUNTER);
+        gasCounter.incrementGasConsumed(gas);
+    }
+
+    /**
+     * Increments the Hedera gas usage in the top level frame by the given amount.
+     *
+     * @param frame the current frame
+     * @return the total Hedera gas consumed until now
+     */
+    public static long getHederaGasUsed(@NonNull final MessageFrame frame) {
+        final HederaGasCounter gasCounter = initialFrameOf(frame).getContextVariable(HEDERA_GAS_COUNTER);
+        return gasCounter.getGasConsumed();
     }
 }

@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl;
 
 import com.hedera.hapi.block.stream.output.StateChange;
@@ -37,6 +22,7 @@ import com.hedera.hapi.node.transaction.AssessedCustomFee;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.PendingAirdropRecord;
 import com.hedera.hapi.node.transaction.TransactionBody;
+import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChanges;
@@ -67,6 +53,7 @@ import com.hedera.node.app.service.token.records.TokenCreateStreamBuilder;
 import com.hedera.node.app.service.token.records.TokenMintStreamBuilder;
 import com.hedera.node.app.service.token.records.TokenUpdateStreamBuilder;
 import com.hedera.node.app.service.util.impl.records.PrngStreamBuilder;
+import com.hedera.node.app.service.util.impl.records.ReplayableFeeStreamBuilder;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.workflows.handle.record.RecordStreamBuilder;
@@ -108,7 +95,8 @@ public class PairedStreamBuilder
                 TokenAccountWipeStreamBuilder,
                 CryptoUpdateStreamBuilder,
                 NodeCreateStreamBuilder,
-                TokenAirdropStreamBuilder {
+                TokenAirdropStreamBuilder,
+                ReplayableFeeStreamBuilder {
     private final BlockStreamBuilder blockStreamBuilder;
     private final RecordStreamBuilder recordStreamBuilder;
 
@@ -135,6 +123,11 @@ public class PairedStreamBuilder
     }
 
     @Override
+    public void setTransactionGroupRole(@NonNull final TransactionGroupRole role) {
+        blockStreamBuilder.setTransactionGroupRole(role);
+    }
+
+    @Override
     public @NonNull PairedStreamBuilder transaction(@NonNull final Transaction transaction) {
         recordStreamBuilder.transaction(transaction);
         blockStreamBuilder.transaction(transaction);
@@ -158,6 +151,11 @@ public class PairedStreamBuilder
     @Override
     public int getNumAutoAssociations() {
         return blockStreamBuilder.getNumAutoAssociations();
+    }
+
+    @Override
+    public ScheduleID scheduleID() {
+        return blockStreamBuilder.scheduleID();
     }
 
     @Override
@@ -480,6 +478,12 @@ public class PairedStreamBuilder
         return this;
     }
 
+    @Override
+    public void setReplayedFees(@NonNull final TransferList transferList) {
+        recordStreamBuilder.setReplayedFees(transferList);
+        blockStreamBuilder.setReplayedFees(transferList);
+    }
+
     @NonNull
     @Override
     public CryptoTransferStreamBuilder tokenTransferLists(@NonNull List<TokenTransferList> tokenTransferLists) {
@@ -590,5 +594,10 @@ public class PairedStreamBuilder
             @NonNull AccountID deletedAccountID, @NonNull AccountID beneficiaryForDeletedAccount) {
         recordStreamBuilder.addBeneficiaryForDeletedAccount(deletedAccountID, beneficiaryForDeletedAccount);
         blockStreamBuilder.addBeneficiaryForDeletedAccount(deletedAccountID, beneficiaryForDeletedAccount);
+    }
+
+    @Override
+    public HederaFunctionality functionality() {
+        return blockStreamBuilder.functionality();
     }
 }

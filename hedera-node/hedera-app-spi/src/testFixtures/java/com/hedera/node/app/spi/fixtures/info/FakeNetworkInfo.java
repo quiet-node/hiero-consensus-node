@@ -1,34 +1,18 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.spi.fixtures.info;
 
 import static com.swirlds.platform.system.address.AddressBookUtils.endpointFor;
 
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.ServiceEndpoint;
-import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Holds fake network information for testing.
@@ -36,25 +20,31 @@ import java.util.List;
 public class FakeNetworkInfo implements NetworkInfo {
     private static final Bytes DEV_LEDGER_ID = Bytes.wrap(new byte[] {0x03});
     private static final List<NodeId> FAKE_NODE_INFO_IDS = List.of(NodeId.of(2), NodeId.of(4), NodeId.of(8));
-    private static final List<NodeInfo> FAKE_NODE_INFOS = List.of(
+    public static final List<NodeInfo> FAKE_NODE_INFOS = List.of(
             fakeInfoWith(
                     2L,
                     AccountID.newBuilder().accountNum(3).build(),
                     30,
                     List.of(endpointFor("333.333.333.333", 50233), endpointFor("127.0.0.1", 20)),
-                    Bytes.wrap("cert1")),
+                    Bytes.wrap("cert1"),
+                    List.of(endpointFor("333.333.333.333", 50233)),
+                    false),
             fakeInfoWith(
                     4L,
                     AccountID.newBuilder().accountNum(4).build(),
                     40,
                     List.of(endpointFor("444.444.444.444", 50244), endpointFor("127.0.0.2", 21)),
-                    Bytes.wrap("cert2")),
+                    Bytes.wrap("cert2"),
+                    List.of(endpointFor("444.444.444.444", 50211)),
+                    false),
             fakeInfoWith(
                     8L,
                     AccountID.newBuilder().accountNum(5).build(),
                     50,
                     List.of(endpointFor("555.555.555.555", 50255), endpointFor("127.0.0.3", 22)),
-                    Bytes.wrap("cert3")));
+                    Bytes.wrap("cert3"),
+                    List.of(endpointFor("555.555.555.555", 50211)),
+                    false));
 
     @NonNull
     @Override
@@ -90,17 +80,14 @@ public class FakeNetworkInfo implements NetworkInfo {
         throw new UnsupportedOperationException("Not implemented");
     }
 
-    @Override
-    public Roster roster() {
-        return Roster.DEFAULT;
-    }
-
     private static NodeInfo fakeInfoWith(
             final long nodeId,
             @NonNull final AccountID nodeAccountId,
-            long stake,
+            long weight,
             List<ServiceEndpoint> gossipEndpoints,
-            @Nullable Bytes sigCertBytes) {
+            @Nullable Bytes sigCertBytes,
+            List<ServiceEndpoint> hapiEndpoints,
+            boolean declineReward) {
         return new NodeInfo() {
             @Override
             public long nodeId() {
@@ -113,8 +100,8 @@ public class FakeNetworkInfo implements NetworkInfo {
             }
 
             @Override
-            public long stake() {
-                return stake;
+            public long weight() {
+                return weight;
             }
 
             @Override
@@ -125,6 +112,16 @@ public class FakeNetworkInfo implements NetworkInfo {
             @Override
             public List<ServiceEndpoint> gossipEndpoints() {
                 return gossipEndpoints;
+            }
+
+            @Override
+            public @NonNull List<ServiceEndpoint> hapiEndpoints() {
+                return hapiEndpoints;
+            }
+
+            @Override
+            public boolean declineReward() {
+                return declineReward;
             }
         };
     }

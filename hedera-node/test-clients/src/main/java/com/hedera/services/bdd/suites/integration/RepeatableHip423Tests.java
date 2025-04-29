@@ -1,23 +1,7 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.integration;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_SIGNATURE;
-import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSFER_LIST_SIZE_LIMIT_EXCEEDED;
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.protoToPbj;
 import static com.hedera.node.app.service.schedule.impl.ScheduleStoreUtility.calculateBytesHash;
@@ -28,6 +12,7 @@ import static com.hedera.node.app.service.schedule.impl.schemas.V0570ScheduleSch
 import static com.hedera.node.app.service.schedule.impl.schemas.V0570ScheduleSchema.SCHEDULE_ID_BY_EQUALITY_KEY;
 import static com.hedera.services.bdd.junit.RepeatableReason.NEEDS_LAST_ASSIGNED_CONSENSUS_TIME;
 import static com.hedera.services.bdd.junit.RepeatableReason.NEEDS_STATE_ACCESS;
+import static com.hedera.services.bdd.junit.RepeatableReason.NEEDS_SYNCHRONOUS_HANDLE_WORKFLOW;
 import static com.hedera.services.bdd.junit.RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION;
 import static com.hedera.services.bdd.junit.RepeatableReason.THROTTLE_OVERRIDES;
 import static com.hedera.services.bdd.junit.TestTags.INTEGRATION;
@@ -55,6 +40,9 @@ import static com.hedera.services.bdd.spec.queries.QueryVerbs.getFileContents;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getScheduleInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.queries.crypto.ExpectedTokenRel.relationshipWith;
+import static com.hedera.services.bdd.spec.transactions.TxnUtils.asId;
+import static com.hedera.services.bdd.spec.transactions.TxnUtils.randomUppercase;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.atomicBatch;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.burnToken;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCreate;
@@ -65,11 +53,13 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoDelete;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoUpdate;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileUpdate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.scheduleCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.scheduleDelete;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.scheduleSign;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.submitMessageTo;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.systemFileDelete;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenAssociate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenFeeScheduleUpdate;
@@ -117,19 +107,29 @@ import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_MILLION_HBARS;
 import static com.hedera.services.bdd.suites.HapiSuite.STAKING_REWARD;
 import static com.hedera.services.bdd.suites.HapiSuite.SYSTEM_ADMIN;
+import static com.hedera.services.bdd.suites.HapiSuite.THREE_MONTHS_IN_SECONDS;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
 import static com.hedera.services.bdd.suites.contract.Utils.asAddress;
 import static com.hedera.services.bdd.suites.contract.Utils.getNestedContractAddress;
 import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.CREATE_TXN;
 import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.NEW_SENDER_KEY;
+import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.ORIG_FILE;
+import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.PAYING_ACCOUNT_2;
 import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.SENDER_KEY;
 import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.SENDER_TXN;
+import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.TRIGGERING_TXN;
+import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.VALID_SCHEDULE;
+import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.transferListCheck;
 import static com.hedera.services.bdd.suites.hip423.LongTermScheduleUtils.triggerSchedule;
+import static com.hedera.services.bdd.suites.integration.RepeatableScheduleLongTermExecutionTest.BASIC_XFER;
+import static com.hedera.services.bdd.suites.integration.RepeatableScheduleLongTermExecutionTest.CREATE_TX;
+import static com.hedera.services.bdd.suites.integration.RepeatableScheduleLongTermExecutionTest.SIGN_TX;
 import static com.hedera.services.bdd.suites.utils.contracts.precompile.HTSPrecompileResult.htsPrecompileResult;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.ConsensusCreateTopic;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.ACCOUNT_DELETED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.BUSY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_REVERT_EXECUTED;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INNER_TRANSACTION_FAILED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ALIAS_KEY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_FULL_PREFIX_SIGNATURE_FOR_PRECOMPILE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_MAX_AUTO_ASSOCIATIONS;
@@ -149,6 +149,7 @@ import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.ByteString;
 import com.hedera.hapi.node.base.HederaFunctionality;
@@ -179,10 +180,11 @@ import com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil;
 import com.hedera.services.bdd.spec.transactions.token.TokenMovement;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.Key;
+import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.TokenType;
-import com.swirlds.common.utility.CommonUtils;
 import com.swirlds.state.spi.ReadableKVState;
-import com.swirlds.state.spi.WritableKVState;
+import com.swirlds.state.test.fixtures.MapReadableKVState;
+import com.swirlds.state.test.fixtures.MapWritableKVState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.math.BigInteger;
 import java.time.Duration;
@@ -199,20 +201,17 @@ import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import org.junit.jupiter.api.Assertions;
+import org.hiero.base.utility.CommonUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.TestMethodOrder;
 
 @Order(3)
 @Tag(INTEGRATION)
 @HapiTestLifecycle
 @TargetEmbeddedMode(REPEATABLE)
-@TestMethodOrder(OrderAnnotation.class)
 public class RepeatableHip423Tests {
 
     private static final long ONE_MINUTE = 60;
@@ -621,6 +620,7 @@ public class RepeatableHip423Tests {
                 "consensus.handle.maxPrecedingRecords",
                 "consensus.handle.maxFollowingRecords",
                 "scheduling.consTimeSeparationNanos",
+                "scheduling.reservedSystemTxnNanos",
             })
     final Stream<DynamicTest> executionPurgesScheduleStateAsWhenRunningOutOfConsensusTimes() {
         final var lastSecond = new AtomicLong();
@@ -634,7 +634,8 @@ public class RepeatableHip423Tests {
                 overridingAllOf(Map.of(
                         "consensus.handle.maxPrecedingRecords", "2",
                         "consensus.handle.maxFollowingRecords", "1",
-                        "scheduling.consTimeSeparationNanos", "15")),
+                        "scheduling.consTimeSeparationNanos", "16",
+                        "scheduling.reservedSystemTxnNanos", "1")),
                 // Schedule the four transfers to lucky you
                 sourcing(() -> scheduleCreate("one", cryptoTransfer(tinyBarsFromTo(DEFAULT_PAYER, "luckyYou", 1L)))
                         .waitForExpiry()
@@ -667,7 +668,8 @@ public class RepeatableHip423Tests {
     @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     final Stream<DynamicTest> executionResultsAreStreamedAsExpected() {
         return hapiTest(
-                blockStreamMustIncludePassFrom(scheduledExecutionResult("one", withStatus(SUCCESS))),
+                blockStreamMustIncludePassFrom(scheduledExecutionResult(
+                        "one", withStatus(com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS))),
                 blockStreamMustIncludePassFrom(scheduledExecutionResult("two", withStatus(INVALID_SIGNATURE))),
                 cryptoCreate("luckyYou").balance(0L),
                 cryptoCreate("cautiousYou").balance(0L).receiverSigRequired(true),
@@ -1156,8 +1158,7 @@ public class RepeatableHip423Tests {
                                                 .hasRetryPrecheckFrom(BUSY)
                                                 .via("fungibleTokenAssociate")
                                                 .gas(4_000_000L)
-                                                .hasKnownStatus(
-                                                        com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS))
+                                                .hasKnownStatus(ResponseCodeEnum.SUCCESS))
                                 .waitForExpiry(true)
                                 .expiringIn(THIRTY_MINUTES))),
                 sleepForSeconds(THIRTY_MINUTES * 2),
@@ -1292,8 +1293,8 @@ public class RepeatableHip423Tests {
                 getTxnRecord("second").exposingTo(record -> secondFee.set(record.getTransactionFee())),
                 getTxnRecord("third").exposingTo(record -> thirdFee.set(record.getTransactionFee())),
                 withOpContext((spec, log) -> {
-                    Assertions.assertEquals(firstFee.get(), secondFee.get());
-                    Assertions.assertTrue(secondFee.get() < thirdFee.get());
+                    assertEquals(firstFee.get(), secondFee.get());
+                    assertTrue(secondFee.get() < thirdFee.get());
                 }));
     }
 
@@ -1353,7 +1354,7 @@ public class RepeatableHip423Tests {
 
     @LeakyRepeatableHapiTest(
             value = NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION,
-            overrides = {"scheduling.whitelist", "contracts.maxGasPerSec"})
+            overrides = {"scheduling.whitelist", "contracts.maxGasPerSec", "contracts.maxGasPerSecBackend"})
     @DisplayName("Gas throttle works as expected")
     final Stream<DynamicTest> gasThrottleWorksAsExpected() {
         final var contract = "TestContract";
@@ -1364,6 +1365,7 @@ public class RepeatableHip423Tests {
         final var gasToOffer = 2_000_000L;
         return hapiTest(flattened(
                 overriding("contracts.maxGasPerSec", "4000000"),
+                overriding("contracts.maxGasPerSecBackend", "4000000"),
                 cryptoCreate("PAYING_ACCOUNT"),
                 uploadTestContracts(contract),
                 contractCreate(contract, addressTwo, BigInteger.ONE)
@@ -1562,6 +1564,187 @@ public class RepeatableHip423Tests {
                 getAccountInfo(account).hasToken(relationshipWith(token))));
     }
 
+    @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
+    public Stream<DynamicTest> executionWithDefaultPayerWorks() {
+        long transferAmount = 1;
+        return hapiTest(
+                cryptoCreate(SENDER).via(SENDER_TXN),
+                cryptoCreate(RECEIVER),
+                cryptoCreate(PAYING_ACCOUNT),
+                scheduleCreate(BASIC_XFER, cryptoTransfer(tinyBarsFromTo(SENDER, RECEIVER, transferAmount)))
+                        .waitForExpiry()
+                        .withRelativeExpiry(SENDER_TXN, 5)
+                        .payingWith(PAYING_ACCOUNT)
+                        .recordingScheduledTxn()
+                        .via(CREATE_TX),
+                scheduleSign(BASIC_XFER).alsoSigningWith(SENDER).via(SIGN_TX),
+                getScheduleInfo(BASIC_XFER)
+                        .hasScheduleId(BASIC_XFER)
+                        .hasWaitForExpiry()
+                        .isNotExecuted()
+                        .isNotDeleted()
+                        .hasRelativeExpiry(SENDER_TXN, 5)
+                        .hasRecordedScheduledTxn(),
+                sleepFor(5000),
+                cryptoCreate("foo").via(TRIGGERING_TXN),
+                getScheduleInfo(BASIC_XFER).hasCostAnswerPrecheck(INVALID_SCHEDULE_ID),
+                withOpContext((spec, opLog) -> {
+                    var createTx = getTxnRecord(CREATE_TX);
+                    var signTx = getTxnRecord(SIGN_TX);
+                    var triggeringTx = getTxnRecord(TRIGGERING_TXN);
+                    var triggeredTx = getTxnRecord(CREATE_TX).scheduled();
+                    allRunFor(spec, createTx, signTx, triggeredTx, triggeringTx);
+
+                    assertEquals(
+                            ResponseCodeEnum.SUCCESS,
+                            triggeredTx.getResponseRecord().getReceipt().getStatus(),
+                            "Scheduled transaction must succeed");
+                    final var triggerTime = Instant.ofEpochSecond(
+                            triggeringTx
+                                    .getResponseRecord()
+                                    .getConsensusTimestamp()
+                                    .getSeconds(),
+                            triggeringTx
+                                    .getResponseRecord()
+                                    .getConsensusTimestamp()
+                                    .getNanos());
+                    final var triggeredTime = Instant.ofEpochSecond(
+                            triggeredTx
+                                    .getResponseRecord()
+                                    .getConsensusTimestamp()
+                                    .getSeconds(),
+                            triggeredTx
+                                    .getResponseRecord()
+                                    .getConsensusTimestamp()
+                                    .getNanos());
+                    assertTrue(triggerTime.isBefore(triggeredTime), "Wrong consensus timestamp");
+                    assertEquals(
+                            createTx.getResponseRecord().getTransactionID().getTransactionValidStart(),
+                            triggeredTx.getResponseRecord().getTransactionID().getTransactionValidStart(),
+                            "Wrong transaction valid start");
+                    assertEquals(
+                            createTx.getResponseRecord().getTransactionID().getAccountID(),
+                            triggeredTx.getResponseRecord().getTransactionID().getAccountID(),
+                            "Wrong record account ID");
+                    assertTrue(
+                            triggeredTx.getResponseRecord().getTransactionID().getScheduled(),
+                            "Transaction not scheduled");
+                    assertEquals(
+                            createTx.getResponseRecord().getReceipt().getScheduleID(),
+                            triggeredTx.getResponseRecord().getScheduleRef(),
+                            "Wrong schedule ID");
+                    assertTrue(
+                            transferListCheck(
+                                    triggeredTx,
+                                    asId(SENDER, spec),
+                                    asId(RECEIVER, spec),
+                                    asId(PAYING_ACCOUNT, spec),
+                                    transferAmount),
+                            "Wrong transfer list");
+                }));
+    }
+
+    @RepeatableHapiTest(NEEDS_SYNCHRONOUS_HANDLE_WORKFLOW)
+    final Stream<DynamicTest> scheduleCreateMinimumTime() {
+        return hapiTest(
+                cryptoCreate(RECEIVER).balance(0L),
+                scheduleCreate("one", cryptoTransfer(tinyBarsFromTo(DEFAULT_PAYER, RECEIVER, 1L)))
+                        .waitForExpiry(false)
+                        .expiringIn(2)
+                        .via("createTxn"),
+                getScheduleInfo("one").isExecuted().hasRelativeExpiry("createTxn", 1));
+    }
+
+    @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
+    final Stream<DynamicTest> scheduleCreateDefaultLifetimeIs30Min() {
+        final var lastSecond = new AtomicLong();
+        return hapiTest(
+                cryptoCreate(RECEIVER).receiverSigRequired(true).balance(0L),
+                scheduleCreate("one", cryptoTransfer(tinyBarsFromTo(DEFAULT_PAYER, RECEIVER, 1L))),
+                exposeSpecSecondTo(lastSecond::set),
+                sourcing(() -> getScheduleInfo("one").hasExpiry(lastSecond.get() + 1800)));
+    }
+
+    @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
+    final Stream<DynamicTest> multiSigRequirementsCanAccumulate() {
+        var senderShape = threshOf(1, 3);
+        var sigOne = senderShape.signedWith(sigs(ON, OFF, OFF));
+        var sigTwo = senderShape.signedWith(sigs(OFF, ON, OFF));
+        String sender = "X";
+        String receiver = "Y";
+        String schedule = "Z";
+        String senderKey = "sKey";
+
+        return hapiTest(flattened(
+                newKeyNamed(senderKey).shape(senderShape),
+                cryptoCreate(sender).key(senderKey).via(SENDER_TXN),
+                cryptoCreate(receiver).balance(0L).receiverSigRequired(true),
+                scheduleCreate(schedule, cryptoTransfer(tinyBarsFromTo(sender, receiver, 1)))
+                        .waitForExpiry()
+                        .withRelativeExpiry(SENDER_TXN, 10)
+                        .recordingScheduledTxn()
+                        .payingWith(DEFAULT_PAYER),
+                getAccountBalance(receiver).hasTinyBars(0L),
+                scheduleSign(schedule).alsoSigningWith(senderKey).sigControl(forKey(senderKey, sigOne)),
+                getAccountBalance(receiver).hasTinyBars(0L),
+                scheduleSign(schedule).alsoSigningWith(senderKey).sigControl(forKey(senderKey, sigTwo)),
+                getAccountBalance(receiver).hasTinyBars(0L),
+                scheduleSign(schedule).alsoSigningWith(receiver),
+                getAccountBalance(receiver).hasTinyBars(0L),
+                getScheduleInfo(schedule)
+                        .hasScheduleId(schedule)
+                        .hasWaitForExpiry()
+                        .isNotExecuted()
+                        .isNotDeleted()
+                        .hasRelativeExpiry(SENDER_TXN, 10)
+                        .hasRecordedScheduledTxn(),
+                triggerSchedule(schedule, 10),
+                getAccountBalance(receiver).hasTinyBars(1L)));
+    }
+
+    @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
+    final Stream<DynamicTest> scheduledSystemDeleteUnauthorizedPayerFails() {
+        return hapiTest(
+                cryptoCreate(PAYING_ACCOUNT).via("creation"),
+                cryptoCreate(PAYING_ACCOUNT_2),
+                fileCreate("tbd").lifetime(THREE_MONTHS_IN_SECONDS).contents(ORIG_FILE),
+                scheduleCreate(VALID_SCHEDULE, systemFileDelete("tbd").updatingExpiry(1L))
+                        .withEntityMemo(randomUppercase(100))
+                        .designatingPayer(PAYING_ACCOUNT_2)
+                        .payingWith(PAYING_ACCOUNT)
+                        .waitForExpiry()
+                        .withRelativeExpiry("creation", 4)
+                        .hasKnownStatus(SCHEDULE_EXPIRY_IS_BUSY));
+    }
+
+    @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
+    @DisplayName("Failing batch will trigger schedule")
+    // BATCH_14
+    final Stream<DynamicTest> failingBatchWillTriggerSchedule() {
+        final var sender = "sender";
+        final var receiver = "receiver";
+        final var schedule = "scheduledXfer";
+        final var batchOperator = "batchOperator";
+        return hapiTest(
+                cryptoCreate(batchOperator),
+                cryptoCreate(sender).balance(ONE_HBAR).via("createSender"),
+                cryptoCreate(receiver).balance(0L),
+                // create a failing scheduled transaction (transfer more than the balance)
+                scheduleCreate(schedule, cryptoTransfer(tinyBarsFromTo(sender, receiver, 10L)))
+                        .waitForExpiry(true)
+                        .withRelativeExpiry("createSender", 4)
+                        .signedByPayerAnd(sender)
+                        .via("scheduleCreate"),
+                sleepFor(8_000),
+                // trigger with failing batch
+                atomicBatch(cryptoTransfer(tinyBarsFromTo(sender, receiver, ONE_HUNDRED_HBARS))
+                                .batchKey(batchOperator))
+                        .signedByPayerAnd(batchOperator)
+                        .hasKnownStatus(INNER_TRANSACTION_FAILED),
+                // validate the result of the schedule
+                getAccountBalance(receiver).hasTinyBars(10L));
+    }
+
     private SpecOperation[] uploadTestContracts(String... contracts) {
         final var ops = new ArrayList<>(List.of(
                 uploadScheduledContractPrices(GENESIS),
@@ -1577,16 +1760,14 @@ public class RepeatableHip423Tests {
                 .scheduled()
                 .andAllChildRecords()
                 .hasChildRecords(recordWith()
-                        .status(com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS)
+                        .status(ResponseCodeEnum.SUCCESS)
                         .contractCallResult(resultWith()
-                                .contractCallResult(htsPrecompileResult()
-                                        .withStatus(com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS))));
+                                .contractCallResult(htsPrecompileResult().withStatus(ResponseCodeEnum.SUCCESS))));
     }
 
     private SpecOperation[] triggerAndValidateSuccessfulExecution(
             final long sleepDuration, String... scheduledTransactions) {
-        return triggerAndValidateStatus(
-                sleepDuration, com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS, scheduledTransactions);
+        return triggerAndValidateStatus(sleepDuration, ResponseCodeEnum.SUCCESS, scheduledTransactions);
     }
 
     private SpecOperation[] triggerAndValidateStatus(
@@ -1607,8 +1788,7 @@ public class RepeatableHip423Tests {
                 allRunFor(spec, ops.toArray(SpecOperation[]::new));
                 ops.forEach(op -> {
                     // assert success
-                    Assertions.assertEquals(
-                            status, op.getResponseRecord().getReceipt().getStatus());
+                    assertEquals(status, op.getResponseRecord().getReceipt().getStatus());
                 });
             }),
         };
@@ -1660,11 +1840,11 @@ public class RepeatableHip423Tests {
 
     private interface ScheduleStateConsumer {
         void accept(
-                @NonNull ReadableKVState<ScheduleID, Schedule> schedulesById,
-                @NonNull ReadableKVState<TimestampSeconds, ScheduledCounts> scheduledCounts,
-                @NonNull ReadableKVState<TimestampSeconds, ThrottleUsageSnapshots> scheduledUsages,
-                @NonNull ReadableKVState<ScheduledOrder, ScheduleID> scheduledOrders,
-                @NonNull ReadableKVState<ProtoBytes, ScheduleID> scheduleIdByEquality);
+                @NonNull MapReadableKVState<ScheduleID, Schedule> schedulesById,
+                @NonNull MapReadableKVState<TimestampSeconds, ScheduledCounts> scheduledCounts,
+                @NonNull MapReadableKVState<TimestampSeconds, ThrottleUsageSnapshots> scheduledUsages,
+                @NonNull MapReadableKVState<ScheduledOrder, ScheduleID> scheduledOrders,
+                @NonNull MapReadableKVState<ProtoBytes, ScheduleID> scheduleIdByEquality);
     }
 
     private static SpecOperation viewScheduleStateSizes(@NonNull final Consumer<ScheduleStateSizes> consumer) {
@@ -1678,25 +1858,34 @@ public class RepeatableHip423Tests {
             final var state = spec.embeddedStateOrThrow();
             final var readableStates = state.getReadableStates(ScheduleService.NAME);
             consumer.accept(
-                    readableStates.get(SCHEDULES_BY_ID_KEY),
-                    readableStates.get(SCHEDULED_COUNTS_KEY),
-                    readableStates.get(SCHEDULED_USAGES_KEY),
-                    readableStates.get(SCHEDULED_ORDERS_KEY),
-                    readableStates.get(SCHEDULE_ID_BY_EQUALITY_KEY));
+                    (MapReadableKVState<ScheduleID, Schedule>)
+                            readableStates.<ScheduleID, Schedule>get(SCHEDULES_BY_ID_KEY),
+                    (MapReadableKVState<TimestampSeconds, ScheduledCounts>)
+                            readableStates.<TimestampSeconds, ScheduledCounts>get(SCHEDULED_COUNTS_KEY),
+                    (MapReadableKVState<TimestampSeconds, ThrottleUsageSnapshots>)
+                            readableStates.<TimestampSeconds, ThrottleUsageSnapshots>get(SCHEDULED_USAGES_KEY),
+                    (MapReadableKVState<ScheduledOrder, ScheduleID>)
+                            readableStates.<ScheduledOrder, ScheduleID>get(SCHEDULED_ORDERS_KEY),
+                    (MapReadableKVState<ProtoBytes, ScheduleID>)
+                            readableStates.<ProtoBytes, ScheduleID>get(SCHEDULE_ID_BY_EQUALITY_KEY));
         });
     }
 
+    @SuppressWarnings("rawtypes,unchecked")
     private static SpecOperation purgeExpiringWithin(final long seconds) {
         return doingContextual(spec -> {
             final var lastExpiry = spec.consensusTime().getEpochSecond() + seconds;
             allRunFor(spec, sleepFor(seconds * 1_000L));
-            final WritableKVState<TimestampSeconds, ScheduledCounts> counts = spec.embeddedStateOrThrow()
-                    .getWritableStates(ScheduleService.NAME)
-                    .get(SCHEDULED_COUNTS_KEY);
-            final int numEarlier =
-                    (int) StreamSupport.stream(spliteratorUnknownSize(counts.keys(), DISTINCT | NONNULL), false)
-                            .filter(k -> k.seconds() <= lastExpiry)
-                            .count();
+            final MapWritableKVState<TimestampSeconds, ScheduledCounts> counts =
+                    (MapWritableKVState) spec.embeddedStateOrThrow()
+                            .getWritableStates(ScheduleService.NAME)
+                            .get(SCHEDULED_COUNTS_KEY);
+            final int numEarlier = (int) StreamSupport.stream(
+                            spliteratorUnknownSize(
+                                    counts.getBackingStore().keySet().iterator(), DISTINCT | NONNULL),
+                            false)
+                    .filter(k -> k.seconds() <= lastExpiry)
+                    .count();
             final var expectedSize = (int) counts.size() - numEarlier;
             for (int i = 0; i < numEarlier; i++) {
                 allRunFor(spec, cryptoTransfer(tinyBarsFromTo(DEFAULT_PAYER, FUNDING, 1L)));

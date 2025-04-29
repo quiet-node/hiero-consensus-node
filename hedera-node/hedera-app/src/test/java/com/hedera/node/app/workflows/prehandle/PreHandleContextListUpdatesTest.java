@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.prehandle;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_ACCOUNT_ID;
@@ -22,11 +7,8 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_PAYER_ACCOUNT_I
 import static com.hedera.hapi.util.HapiUtils.EMPTY_KEY_LIST;
 import static com.hedera.node.app.service.token.impl.handlers.BaseCryptoHandler.asAccount;
 import static com.hedera.node.app.spi.fixtures.Assertions.assertThrowsPreCheck;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -43,10 +25,12 @@ import com.hedera.node.app.service.token.ReadableAccountStore;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.PreHandleContext;
 import com.hedera.node.app.store.ReadableStoreFactory;
+import com.hedera.node.app.workflows.TransactionChecker;
 import com.hedera.node.app.workflows.dispatcher.TransactionDispatcher;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.state.lifecycle.info.NodeInfo;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -73,7 +57,6 @@ class PreHandleContextListUpdatesTest {
             Timestamp.newBuilder().seconds(1_234_567L).build();
     private Key key = A_COMPLEX_KEY;
     private AccountID payer = AccountID.newBuilder().accountNum(3L).build();
-    private Long payerNum = 3L;
     private Key payerKey = A_COMPLEX_KEY;
 
     final ContractID otherContractId =
@@ -109,10 +92,16 @@ class PreHandleContextListUpdatesTest {
     private Account account;
 
     @Mock
+    private NodeInfo creatorInfo;
+
+    @Mock
     private Account contractAccount;
 
     @Mock
     private TransactionDispatcher dispatcher;
+
+    @Mock
+    private TransactionChecker transactionChecker;
 
     private PreHandleContext subject;
 
@@ -125,47 +114,13 @@ class PreHandleContextListUpdatesTest {
         final var txn = createAccountTransaction();
 
         // When we create a PreHandleContext
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // Then the body, payer, and required keys are as expected
         assertEquals(txn, subject.body());
         assertEquals(payerKey, subject.payerKey());
         assertEquals(Set.of(), subject.requiredNonPayerKeys());
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    @Test
-    void nullInputToBuilderArgumentsThrows() throws PreCheckException {
-        // Given an account with a key, and a transaction using that account as the payer
-        given(accountStore.getAccountById(payer)).willReturn(account);
-        given(account.keyOrThrow()).willReturn(payerKey);
-        given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
-
-        // When we create a PreHandleContext by passing null as either argument
-        // Then we get a null pointer exception
-        final var txn = createAccountTransaction();
-        assertThatThrownBy(() -> new PreHandleContextImpl(null, txn, CONFIG, dispatcher))
-                .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new PreHandleContextImpl(storeFactory, null, CONFIG, dispatcher))
-                .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new PreHandleContextImpl(storeFactory, txn, null, dispatcher))
-                .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new PreHandleContextImpl(storeFactory, txn, CONFIG, null))
-                .isInstanceOf(NullPointerException.class);
-
-        // When we pass null to requireKeyOrThrow for the account ID then we get a PreCheckException
-        final var subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
-        assertThrows(PreCheckException.class, () -> subject.requireKeyOrThrow((AccountID) null, INVALID_ACCOUNT_ID));
-        // When we pass null to requireKeyOrThrow for the response code then we get a null pointer exception
-        assertThrows(NullPointerException.class, () -> subject.requireKeyOrThrow(payer, null));
-        // When we pass a null to requireKeyIfReceiverSigRequired for the account ID then nothing happens
-        assertDoesNotThrow(() -> subject.requireKeyIfReceiverSigRequired((AccountID) null, INVALID_ACCOUNT_ID));
-        // When we pass a null to requireKeyIfReceiverSigRequired for the response code then we get a null pointer
-        // exception
-        assertThrows(NullPointerException.class, () -> subject.requireKeyIfReceiverSigRequired(payer, null));
-        // When we pass non-null to requireKeyOrThrow or requireKeyIfReceiverSigRequired, then it succeeds
-        assertDoesNotThrow(() -> subject.requireKeyOrThrow(payer, INVALID_ACCOUNT_ID));
-        assertDoesNotThrow(() -> subject.requireKeyIfReceiverSigRequired(payer, INVALID_ACCOUNT_ID));
     }
 
     @Test
@@ -174,7 +129,8 @@ class PreHandleContextListUpdatesTest {
         given(accountStore.getAccountById(payer)).willReturn(account);
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // When we require some other key on the context
         subject.requireKey(otherKey);
@@ -189,7 +145,8 @@ class PreHandleContextListUpdatesTest {
         given(accountStore.getAccountById(payer)).willReturn(account);
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // When we require some other key on the context more than once
         subject.requireKey(otherKey);
@@ -205,7 +162,8 @@ class PreHandleContextListUpdatesTest {
         given(accountStore.getAccountById(payer)).willReturn(account);
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // When we require the payer key on the context
         subject.requireKey(payerKey);
@@ -223,7 +181,8 @@ class PreHandleContextListUpdatesTest {
 
         // When we create a PreHandleContext, then it fails with INVALID_PAYER_ACCOUNT_ID
         assertThrowsPreCheck(
-                () -> new PreHandleContextImpl(storeFactory, txn, CONFIG, dispatcher), INVALID_PAYER_ACCOUNT_ID);
+                () -> new PreHandleContextImpl(storeFactory, txn, CONFIG, dispatcher, transactionChecker, creatorInfo),
+                INVALID_PAYER_ACCOUNT_ID);
     }
 
     @Test
@@ -232,7 +191,8 @@ class PreHandleContextListUpdatesTest {
         given(accountStore.getAccountById(payer)).willReturn(account);
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // When we require the payer to exist (or throw INVALID_ACCOUNT_ID)
         subject.requireKeyOrThrow(payer, INVALID_ACCOUNT_ID);
@@ -252,7 +212,8 @@ class PreHandleContextListUpdatesTest {
         given(accountStore.getAccountById(payer)).willReturn(account);
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // When we require an accountID that doesn't exist, then we get a PreCheckException
         final var bogus = AccountID.newBuilder().build();
@@ -268,9 +229,10 @@ class PreHandleContextListUpdatesTest {
         given(accountStore.getContractById(otherContractId)).willReturn(contractAccount);
         given(contractAccount.key()).willReturn(contractIdKey);
         given(contractAccount.keyOrElse(EMPTY_KEY_LIST)).willReturn(contractIdKey);
-        given(contractAccount.accountIdOrThrow()).willReturn(asAccount(otherContractId.contractNum()));
+        given(contractAccount.accountIdOrThrow()).willReturn(asAccount(0L, 0L, otherContractId.contractNum()));
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // When we require the contract account's key,
         subject.requireKeyOrThrow(otherContractId, INVALID_CONTRACT_ID);
@@ -288,7 +250,8 @@ class PreHandleContextListUpdatesTest {
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
         given(account.accountIdOrThrow()).willReturn(payer);
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
 
         // When we require the account by alias
         subject.requireKeyOrThrow(alias, INVALID_ACCOUNT_ID);
@@ -304,12 +267,13 @@ class PreHandleContextListUpdatesTest {
         given(accountStore.getContractById(alias)).willReturn(contractAccount);
         given(contractAccount.key()).willReturn(otherKey);
         given(contractAccount.keyOrElse(EMPTY_KEY_LIST)).willReturn(otherKey);
-        given(contractAccount.accountIdOrThrow()).willReturn(asAccount(otherContractId.contractNum()));
+        given(contractAccount.accountIdOrThrow()).willReturn(asAccount(0L, 0L, otherContractId.contractNum()));
         given(accountStore.getAccountById(payer)).willReturn(account);
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
 
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher)
+        subject = new PreHandleContextImpl(
+                        storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo)
                 .requireKeyOrThrow(alias, INVALID_CONTRACT_ID);
 
         assertEquals(payerKey, subject.payerKey());
@@ -324,7 +288,8 @@ class PreHandleContextListUpdatesTest {
         given(account.keyOrThrow()).willReturn(payerKey);
         given(storeFactory.getStore(ReadableAccountStore.class)).willReturn(accountStore);
 
-        subject = new PreHandleContextImpl(storeFactory, createAccountTransaction(), CONFIG, dispatcher);
+        subject = new PreHandleContextImpl(
+                storeFactory, createAccountTransaction(), CONFIG, dispatcher, transactionChecker, creatorInfo);
         assertThrowsPreCheck(() -> subject.requireKeyOrThrow(alias, INVALID_ACCOUNT_ID), INVALID_ACCOUNT_ID);
     }
 

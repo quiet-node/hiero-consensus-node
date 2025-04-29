@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.token.api;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -29,6 +14,8 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.function.LongConsumer;
+import java.util.function.ObjLongConsumer;
 
 /**
  * Defines mutations that can't be expressed as a {@link com.hedera.hapi.node.transaction.TransactionBody} dispatch.
@@ -46,38 +33,19 @@ public interface TokenServiceApi {
     boolean checkForCustomFees(@NonNull CryptoTransferTransactionBody op);
 
     /**
-     * Whether to free the alias when account is deleted or not.
-     * Aliases are always freed when we use ContractDeleteTransactionBody.
-     * Aliases are freed when we use CryptoDeleteTransactionBody based on the value of the
-     * accountsConfig#releaseAliasAfterDeletion
-     */
-    enum FreeAliasOnDeletion {
-        /**
-         * Free the alias on deletion.
-         */
-        YES,
-        /**
-         * Do not free the alias on deletion.
-         */
-        NO
-    }
-
-    /**
      * Deletes the account with the given id and transfers any remaining hbar balance to the given obtainer id.
      *
      * @param deletedId the id of the account to delete
      * @param obtainerId the id of the account to transfer the remaining hbar balance to
      * @param expiryValidator the expiry validator to use
      * @param recordBuilder the record builder to record the transfer in
-     * @param freeAliasOnDeletion whether to free the deleted account's alias (if any)
      * @throws HandleException if the account could not be deleted for some reason
      */
     void deleteAndTransfer(
             @NonNull AccountID deletedId,
             @NonNull AccountID obtainerId,
             @NonNull ExpiryValidator expiryValidator,
-            @NonNull DeleteCapableTransactionStreamBuilder recordBuilder,
-            @NonNull FreeAliasOnDeletion freeAliasOnDeletion);
+            @NonNull DeleteCapableTransactionStreamBuilder recordBuilder);
 
     /**
      * Validates the creation of a given staking election relative to the given account store, network info,
@@ -198,32 +166,58 @@ public interface TokenServiceApi {
      * @param payer the id of the account that should be charged
      * @param amount the amount to charge
      * @param recordBuilder the record builder to record the fees in
-     * @return true if the full amount was charged, false otherwise
+     * @param cb if not null, a callback to receive the fee disbursements
+     * @return the total fees charged
      */
-    boolean chargeNetworkFee(@NonNull AccountID payer, long amount, @NonNull FeeStreamBuilder recordBuilder);
+    Fees chargeFee(
+            @NonNull AccountID payer,
+            long amount,
+            @NonNull FeeStreamBuilder recordBuilder,
+            @Nullable ObjLongConsumer<AccountID> cb);
+
+    /**
+     * Refunds the given fees to the given receiver, and records those refunds in the given record builder.
+     *
+     * @param payerId the id of the account that should be refunded
+     * @param amount the amount to refund
+     * @param recordBuilder the record builder to record the fees in
+     */
+    void refundFee(@NonNull AccountID payerId, long amount, @NonNull FeeStreamBuilder recordBuilder);
 
     /**
      * Charges the payer the given fees, and records those fees in the given record builder.
      *
      * @param payer the id of the account that should be charged
-     * @param nodeAccount the id of the node that should receive the node fee, if present and payable
+     * @param nodeAccountId the id of the node that should receive the node fee, if present and payable
      * @param fees the fees to charge
      * @param recordBuilder the record builder to record the fees in
+     * @param cb if not null, a map to record the balance adjustments in
+     * @param onNodeFee a callback to receive the node fee disbursement
+     * @return the amount of fees charged
      */
-    void chargeFees(
+    Fees chargeFees(
             @NonNull AccountID payer,
-            AccountID nodeAccount,
+            @NonNull AccountID nodeAccountId,
             @NonNull Fees fees,
-            @NonNull FeeStreamBuilder recordBuilder);
+            @NonNull FeeStreamBuilder recordBuilder,
+            @Nullable ObjLongConsumer<AccountID> cb,
+            @NonNull LongConsumer onNodeFee);
 
     /**
      * Refunds the given fees to the given receiver, and records those fees in the given record builder.
      *
-     * @param receiver      the id of the account that should be refunded
-     * @param fees          the fees to refund
+     * @param payerId the id of the account that should be refunded
+     * @param nodeAccountId the id of the node fee collection account
+     * @param fees the fees to refund
      * @param recordBuilder the record builder to record the fees in
+     * @param onNodeRefund a callback to receive the node fee refund
      */
-    void refundFees(@NonNull AccountID receiver, @NonNull Fees fees, @NonNull FeeStreamBuilder recordBuilder);
+    void refundFees(
+            @NonNull AccountID payerId,
+            @NonNull AccountID nodeAccountId,
+            @NonNull Fees fees,
+            @NonNull FeeStreamBuilder recordBuilder,
+            @NonNull LongConsumer onNodeRefund);
 
     /**
      * Returns the number of storage slots used by the given account before any changes were made via

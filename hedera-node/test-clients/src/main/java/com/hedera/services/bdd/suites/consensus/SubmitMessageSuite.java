@@ -1,22 +1,6 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.consensus;
 
-import static com.hedera.services.bdd.junit.TestTags.ADHOC;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.keys.ControlForKey.forKey;
 import static com.hedera.services.bdd.spec.keys.KeyShape.SIMPLE;
@@ -36,7 +20,6 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.inParallel;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.submitModified;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.validateChargedUsd;
 import static com.hedera.services.bdd.spec.utilops.mod.ModificationUtils.withSuccessivelyVariedBodyIds;
 import static com.hedera.services.bdd.suites.HapiSuite.asOpArray;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
@@ -57,9 +40,7 @@ import com.hedera.services.bdd.spec.keys.SigControl;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Tag;
 
-@Tag(ADHOC)
 public class SubmitMessageSuite {
     private static final int CHUNK_SIZE = 1024;
 
@@ -174,23 +155,6 @@ public class SubmitMessageSuite {
                         // In hedera-app we don't enforce such prechecks
                         .hasPrecheckFrom(TRANSACTION_OVERSIZE, BUSY, OK)
                         .hasKnownStatus(MESSAGE_SIZE_TOO_LARGE));
-    }
-
-    @HapiTest
-    final Stream<DynamicTest> feeAsExpected() {
-        final byte[] messageBytes = new byte[100]; // 4k
-        Arrays.fill(messageBytes, (byte) 0b1);
-        return hapiTest(
-                cryptoCreate("payer").hasRetryPrecheckFrom(BUSY),
-                createTopic("testTopic").submitKeyName("payer").hasRetryPrecheckFrom(BUSY),
-                submitMessageTo("testTopic")
-                        .blankMemo()
-                        .payingWith("payer")
-                        .message(new String(messageBytes))
-                        .hasRetryPrecheckFrom(BUSY)
-                        .via("submitMessage"),
-                sleepFor(1000),
-                validateChargedUsd("submitMessage", 0.0001));
     }
 
     @HapiTest

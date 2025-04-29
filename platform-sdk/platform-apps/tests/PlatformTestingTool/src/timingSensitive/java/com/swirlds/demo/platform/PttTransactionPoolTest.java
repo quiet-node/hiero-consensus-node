@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.platform;
 
 import static com.swirlds.merkle.test.fixtures.map.lifecycle.EntityType.FCQ;
@@ -22,13 +7,10 @@ import static com.swirlds.merkle.test.fixtures.map.lifecycle.TransactionType.Cre
 import static com.swirlds.merkle.test.fixtures.map.lifecycle.TransactionType.Delete;
 import static com.swirlds.merkle.test.fixtures.map.lifecycle.TransactionType.Update;
 import static com.swirlds.merkle.test.fixtures.map.pta.TransactionRecord.DEFAULT_EXPIRATION_TIME;
-import static com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.platform.NodeId;
-import com.swirlds.common.test.fixtures.crypto.ED25519SigningProvider;
 import com.swirlds.demo.merkle.map.FCMConfig;
 import com.swirlds.demo.merkle.map.FCMFamily;
 import com.swirlds.demo.merkle.map.FCMTransactionHandler;
@@ -44,11 +26,12 @@ import com.swirlds.merkle.test.fixtures.map.lifecycle.ExpectedValue;
 import com.swirlds.merkle.test.fixtures.map.lifecycle.LifecycleStatus;
 import com.swirlds.merkle.test.fixtures.map.lifecycle.TransactionState;
 import com.swirlds.merkle.test.fixtures.map.pta.MapKey;
-import com.swirlds.platform.system.BasicSoftwareVersion;
 import com.swirlds.platform.system.Platform;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Random;
+import org.hiero.base.crypto.test.fixtures.ED25519SigningProvider;
+import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -182,8 +165,7 @@ public class PttTransactionPoolTest {
                 .setOriginNode(otherID)
                 .build();
         try {
-            final PlatformTestingToolState state =
-                    new PlatformTestingToolState(FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(1));
+            final PlatformTestingToolState state = new PlatformTestingToolState();
             state.setFcmFamily(fCMFamily);
             handler.performOperation(
                     trans,
@@ -240,8 +222,7 @@ public class PttTransactionPoolTest {
                 .setOriginNode(otherID)
                 .build();
         try {
-            final PlatformTestingToolState state =
-                    new PlatformTestingToolState(FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(1));
+            final PlatformTestingToolState state = new PlatformTestingToolState();
             state.setFcmFamily(fCMFamily);
             handler.performOperation(
                     trans,

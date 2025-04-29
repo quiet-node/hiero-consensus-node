@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.system.address;
 
 import static org.assertj.core.api.Fail.fail;
@@ -24,15 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.crypto.PlatformSigner;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.PublicKey;
+import org.hiero.base.crypto.Signature;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.roster.RosterUtils;
 import org.junit.jupiter.api.Test;
 
 class RandomRosterBuilderTests {
@@ -107,7 +93,7 @@ class RandomRosterBuilderTests {
 
             final byte[] dataArray = randotron.nextByteArray(64);
             final Bytes dataBytes = Bytes.wrap(dataArray);
-            final com.swirlds.common.crypto.Signature signature = new PlatformSigner(privateKeys).sign(dataArray);
+            final Signature signature = new PlatformSigner(privateKeys).sign(dataArray);
 
             assertTrue(CryptoStatic.verifySignature(dataBytes, signature.getBytes(), signaturePublicKey));
 

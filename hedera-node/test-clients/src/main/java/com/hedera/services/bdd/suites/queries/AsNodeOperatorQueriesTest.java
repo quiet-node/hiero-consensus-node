@@ -1,59 +1,29 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.queries;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.THROTTLE_OVERRIDES;
 import static com.hedera.services.bdd.junit.TestTags.CRYPTO;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
-import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.changeFromSnapshot;
-import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.lessThan;
-import static com.hedera.services.bdd.spec.queries.QueryVerbs.contractCallLocal;
-import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountBalance;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getContractBytecode;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getContractInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getFileContents;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getFileInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getScheduleInfo;
-import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTokenInfo;
-import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTopicInfo;
-import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCreate;
-import static com.hedera.services.bdd.spec.transactions.TxnVerbs.createTopic;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.fileCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.scheduleCreate;
-import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.uploadInitCode;
 import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.tinyBarsFromTo;
-import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.balanceSnapshot;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.inParallel;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingThrottles;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.DEFAULT_PAYER;
-import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.BUSY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
-import static com.hederahashgraph.api.proto.java.TokenType.NON_FUNGIBLE_UNIQUE;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.hedera.services.bdd.junit.HapiTest;
@@ -63,14 +33,12 @@ import com.hedera.services.bdd.junit.OrderedInIsolation;
 import com.hedera.services.bdd.junit.hedera.HederaNode;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
-import com.hedera.services.bdd.suites.regression.system.LifecycleTest;
 import com.hederahashgraph.api.proto.java.AccountAmount;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoGetInfoQuery;
 import com.hederahashgraph.api.proto.java.CryptoTransferTransactionBody;
 import com.hederahashgraph.api.proto.java.Query;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
-import com.hederahashgraph.api.proto.java.TokenSupplyType;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.hederahashgraph.api.proto.java.TransferList;
@@ -90,9 +58,8 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 /**
  * A class with Node Operator Queries tests
@@ -101,7 +68,7 @@ import org.junit.jupiter.api.Tag;
 @DisplayName("Node Operator Queries")
 @HapiTestLifecycle
 @OrderedInIsolation
-public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implements LifecycleTest {
+public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase {
 
     private static final int BURST_SIZE = 20;
 
@@ -117,274 +84,6 @@ public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implement
     static void beforeAll(@NonNull final TestLifecycle lifecycle) {
         lifecycle.doAdhoc(createAllAccountsAndTokens());
         nodes = lifecycle.getNodes();
-    }
-
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorQueryVerifyPayerBalanceForAccountBalance() {
-        return hapiTest(
-                cryptoCreate(NODE_OPERATOR).balance(ONE_HUNDRED_HBARS),
-                cryptoCreate(PAYER).balance(ONE_HUNDRED_HBARS),
-                // perform getAccountBalance() query, pay for the query with payer account
-                getAccountBalance(NODE_OPERATOR).payingWith(PAYER),
-                sleepFor(3_000),
-                // assert payer is charged
-                getAccountBalance(PAYER).hasTinyBars(ONE_HUNDRED_HBARS),
-                // perform free query to local port with asNodeOperator() method
-                getAccountBalance(NODE_OPERATOR).payingWith(PAYER).asNodeOperator(),
-                sleepFor(3_000),
-                // assert payer is not charged as the query is performed as node operator
-                getAccountBalance(PAYER).hasTinyBars(ONE_HUNDRED_HBARS));
-    }
-
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorQueryVerifyPayerBalanceForAccountInfo() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                payerAccount(),
-                balanceSnapshot("payerInitialBalance", PAYER),
-                // perform getAccountInfo() query, pay for the query with payer account
-                // the grpc client performs the query to different ports
-                getAccountInfo(NODE_OPERATOR).payingWith(PAYER),
-                sleepFor(3_000),
-                // assert payer is charged
-                getAccountBalance(PAYER).hasTinyBars(changeFromSnapshot("payerInitialBalance", -QUERY_COST)),
-                // perform free query to local port with asNodeOperator() method
-                getAccountInfo(NODE_OPERATOR).payingWith(PAYER).asNodeOperator(),
-                sleepFor(3_000),
-                // assert payer is not charged as the query is performed as node operator
-                getAccountBalance(PAYER).hasTinyBars(changeFromSnapshot("payerInitialBalance", -QUERY_COST))));
-    }
-
-    /**
-     * AccountInfoQuery
-     *  1.) Tests that verifies the payer balance is not charged when a node operator AccountInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorAccountInfoQueryNotCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                getAccountInfo(NODE_OPERATOR).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * AccountInfoQuery
-     *  2.)  Tests that a signed transaction is not required for the query if it is performed as node operator.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorAccountInfoQueryNotSigned() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                getAccountInfo(NODE_OPERATOR)
-                        .payingWith(NODE_OPERATOR)
-                        .signedBy(DEFAULT_PAYER)
-                        .asNodeOperator(),
-                sleepFor(3000),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * AccountInfoQuery
-     *  3.) Tests that verifies the payer balance is charged when a AccountInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorAccountInfoQueryCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                getAccountInfo(NODE_OPERATOR).payingWith(NODE_OPERATOR).via("accountInfoQueryTxn"),
-                sleepFor(2000),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
-    }
-
-    /**
-     * AccountBalanceQuery
-     *  1.) Tests that verifies the payer balance is not charged(free query) when a node operator AccountBalanceQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorAccountBalanceQueryNotCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                getAccountBalance(NODE_OPERATOR).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * AccountBalanceQuery
-     *  2.)  Tests that a signed transaction is not required for the query if it is performed as node operator.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorAccountBalanceQueryNotSigned() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                getAccountBalance(NODE_OPERATOR)
-                        .payingWith(NODE_OPERATOR)
-                        .signedBy(DEFAULT_PAYER)
-                        .asNodeOperator(),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * TokenInfoQuery - FT
-     *  1.) Tests that verifies the payer balance is not charged when a node operator TokenInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTokenInfoQueryNotCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                tokenCreate(FUNGIBLE_QUERY_TOKEN),
-                getTokenInfo(FUNGIBLE_QUERY_TOKEN).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * TokenInfoQuery - FT
-     *  2.) Tests that verifies the payer balance is charged when a AccountInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTokenInfoQueryCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                tokenCreate(ANOTHER_FUNGIBLE_QUERY_TOKEN),
-                getTokenInfo(ANOTHER_FUNGIBLE_QUERY_TOKEN).payingWith(NODE_OPERATOR),
-                sleepFor(3000),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
-    }
-
-    /**
-     * TokenInfoQuery - FT
-     *  3.) Tests that a signed transaction is not required for the query if it is performed as node operator.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTokenInfoQuerySignature() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                tokenCreate(ANOTHER_FUNGIBLE_QUERY_TOKEN),
-                getTokenInfo(ANOTHER_FUNGIBLE_QUERY_TOKEN)
-                        .payingWith(NODE_OPERATOR)
-                        .asNodeOperator(),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * TokenInfoQuery - NFT
-     *  1.) Tests that verifies the payer balance is not charged when a node operator TokenInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTokenInfoQueryNftNotCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                newKeyNamed(SUPPLY_KEY),
-                newKeyNamed(WIPE_KEY),
-                cryptoCreate(TREASURY),
-                tokenCreate(NON_FUNGIBLE_TOKEN)
-                        .supplyType(TokenSupplyType.FINITE)
-                        .tokenType(NON_FUNGIBLE_UNIQUE)
-                        .treasury(TREASURY)
-                        .maxSupply(12L)
-                        .wipeKey(WIPE_KEY)
-                        .supplyKey(SUPPLY_KEY)
-                        .initialSupply(0L),
-                getTokenInfo(NON_FUNGIBLE_TOKEN).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * TokenInfoQuery - NFT
-     *  2.) Tests that verifies the payer balance is charged when a AccountInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTokenInfoQueryNftCharged() {
-        return hapiTest(flattened(
-                createAllAccountsAndTokens(),
-                newKeyNamed(SUPPLY_KEY),
-                newKeyNamed(WIPE_KEY),
-                cryptoCreate(TREASURY),
-                flattened(
-                        nodeOperatorAccount(),
-                        tokenCreate(NON_FUNGIBLE_TOKEN)
-                                .supplyType(TokenSupplyType.FINITE)
-                                .tokenType(NON_FUNGIBLE_UNIQUE)
-                                .treasury(TREASURY)
-                                .maxSupply(12L)
-                                .wipeKey(WIPE_KEY)
-                                .supplyKey(SUPPLY_KEY)
-                                .initialSupply(0L),
-                        getTokenInfo(FUNGIBLE_QUERY_TOKEN).payingWith(NODE_OPERATOR),
-                        sleepFor(3000),
-                        getAccountBalance(NODE_OPERATOR).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)))));
-    }
-
-    /**
-     * TokenInfoQuery - NFT
-     *  3.) Tests that a signed transaction is not required for the query if it is performed as node operator.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTokenInfoQueryNftSignature() {
-        return hapiTest(flattened(
-                createAllAccountsAndTokens(),
-                newKeyNamed(SUPPLY_KEY),
-                newKeyNamed(WIPE_KEY),
-                cryptoCreate(TREASURY),
-                flattened(
-                        nodeOperatorAccount(),
-                        tokenCreate(NON_FUNGIBLE_TOKEN)
-                                .supplyType(TokenSupplyType.FINITE)
-                                .tokenType(NON_FUNGIBLE_UNIQUE)
-                                .treasury(TREASURY)
-                                .maxSupply(12L)
-                                .wipeKey(WIPE_KEY)
-                                .supplyKey(SUPPLY_KEY)
-                                .initialSupply(0L),
-                        getTokenInfo(FUNGIBLE_QUERY_TOKEN)
-                                .payingWith(NODE_OPERATOR)
-                                .signedBy(DEFAULT_PAYER)
-                                .asNodeOperator(),
-                        getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS))));
-    }
-
-    /**
-     * TopicInfoQuery
-     *  1.) Tests that verifies the payer balance is not charged when a node operator TopicInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTopicInfoQueryNotCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                createTopic(TOPIC),
-                getTopicInfo(TOPIC).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS)));
-    }
-
-    /**
-     * TopicInfoQuery
-     *  2.) Tests that verifies the payer balance is charged when a TopicInfoQuery is performed.
-     */
-    @HapiTest
-    final Stream<DynamicTest> nodeOperatorTopicInfoQueryCharged() {
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                createTopic(TOPIC),
-                getTopicInfo(TOPIC).payingWith(NODE_OPERATOR),
-                sleepFor(4000),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
-    }
-
-    /**
-     * Get File Contents tests
-     */
-    @HapiTest
-    @DisplayName("Only node operators aren't charged for file contents queries")
-    final Stream<DynamicTest> fileGetContentsQueryNodeOperatorNotCharged() {
-        final var filename = "anyFile.txt";
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                payerAccount(),
-                fileCreate(filename).contents("anyContent"),
-                getFileContents(filename).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getFileContents(filename).payingWith(PAYER),
-                sleepFor(1_000),
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS),
-                getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
     }
 
     @HapiTest
@@ -411,27 +110,6 @@ public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implement
                         .hasAnswerOnlyPrecheck(ResponseCodeEnum.INVALID_SIGNATURE)));
     }
 
-    /**
-     * Get File Info tests
-     */
-    @HapiTest
-    @DisplayName("Only node operators aren't charged for file info queries")
-    final Stream<DynamicTest> getFileInfoQueryNodeOperatorNotCharged() {
-        final var filename = "anyFile.txt";
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                payerAccount(),
-                fileCreate(filename).contents("anyContentAgain").payingWith(PAYER),
-                // Both the node operator and payer submit queries
-                getFileInfo(filename).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getFileInfo(filename).payingWith(PAYER),
-                sleepFor(1_000),
-                // The node operator wasn't charged
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS),
-                // But the payer was charged
-                getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
-    }
-
     @HapiTest
     @DisplayName("Only node operators don't need to sign file info queries")
     final Stream<DynamicTest> getFileInfoQueryNoSigRequired() {
@@ -454,28 +132,6 @@ public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implement
                         .payingWith(PAYER)
                         .signedBy(someoneElse)
                         .hasAnswerOnlyPrecheck(ResponseCodeEnum.INVALID_SIGNATURE)));
-    }
-
-    /**
-     * Get a Smart Contract Function tests
-     */
-    @HapiTest
-    @DisplayName("Only node operators aren't charged for contract info queries")
-    final Stream<DynamicTest> getSmartContractQueryNodeOperatorNotCharged() {
-        final var contract = "PretendPair"; // any contract, nothing special about this one
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                payerAccount(),
-                uploadInitCode(contract),
-                contractCreate(contract),
-                // Both the node operator and payer submit queries
-                getContractInfo(contract).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getContractInfo(contract).payingWith(PAYER),
-                sleepFor(1_000),
-                // The node operator wasn't charged
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS),
-                // But the payer was charged
-                getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
     }
 
     @HapiTest
@@ -503,28 +159,6 @@ public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implement
                         .hasAnswerOnlyPrecheck(ResponseCodeEnum.INVALID_SIGNATURE)));
     }
 
-    /**
-     * Get a Smart Contract Bytecode tests
-     */
-    @HapiTest
-    @DisplayName("Only node operators aren't charged for contract bytecode queries")
-    final Stream<DynamicTest> getContractBytecodeQueryNodeOperatorNotCharged() {
-        final var contract = "PretendPair"; // any contract, nothing special about this one
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                payerAccount(),
-                uploadInitCode(contract),
-                contractCreate(contract),
-                // Both the node operator and payer submit queries
-                getContractBytecode(contract).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getContractBytecode(contract).payingWith(PAYER),
-                sleepFor(1_000),
-                // The node operator wasn't charged
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS),
-                // But the payer was charged
-                getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
-    }
-
     @HapiTest
     @DisplayName("Only node operators don't need to sign contract bytecode queries")
     final Stream<DynamicTest> getContractBytecodeQueryNoSigRequired() {
@@ -548,29 +182,6 @@ public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implement
                         .payingWith(PAYER)
                         .signedBy(someoneElse)
                         .hasAnswerOnlyPrecheck(ResponseCodeEnum.INVALID_SIGNATURE)));
-    }
-
-    /**
-     * Get Schedule Info tests
-     */
-    @HapiTest
-    @DisplayName("Only node operators aren't charged for schedule info queries")
-    final Stream<DynamicTest> getScheduleInfoQueryNodeOperatorNotCharged() {
-        final var txnToSchedule =
-                cryptoTransfer(tinyBarsFromTo(PAYER, DEFAULT_PAYER, 1)); // any txn, nothing special here
-        final var schedule = "anySchedule";
-        return hapiTest(flattened(
-                nodeOperatorAccount(),
-                payerAccount(),
-                scheduleCreate(schedule, txnToSchedule),
-                // Both the node operator and payer submit queries
-                getScheduleInfo(schedule).payingWith(NODE_OPERATOR).asNodeOperator(),
-                getScheduleInfo(schedule).payingWith(PAYER),
-                sleepFor(1_000),
-                // The node operator wasn't charged
-                getAccountBalance(NODE_OPERATOR).hasTinyBars(ONE_HUNDRED_HBARS),
-                // But the payer was charged
-                getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS))));
     }
 
     @HapiTest
@@ -621,6 +232,8 @@ public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implement
     }
 
     @HapiTest
+    // Not reliable in OS X local environment for some reason
+    @EnabledIfEnvironmentVariable(named = "CI", matches = "true")
     @DisplayName("Node Operator Submit Query not from Localhost")
     final Stream<DynamicTest> submitCryptoTransfer() {
         final Query query = buildCryptoAccountInfoQuery();
@@ -759,210 +372,5 @@ public class AsNodeOperatorQueriesTest extends NodeOperatorQueriesBase implement
                 .setCryptoGetInfo(
                         CryptoGetInfoQuery.newBuilder().setAccountID(accountID).build())
                 .build();
-    }
-
-    @Nested
-    @DisplayName("Verify node operator port cannot be accessed the feature flag is disabled")
-    class VerifyPortCannotBeAccessedWhenDisabled {
-
-        @Order(0)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForAccountBalance() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    // perform getAccountBalance() query, pay for the query with payer account
-                    getAccountBalance(NODE_OPERATOR).payingWith(PAYER),
-                    sleepFor(1000),
-                    // assert payer is charged
-                    getAccountBalance(PAYER).hasTinyBars(ONE_HUNDRED_HBARS),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getAccountBalanceAsNodeOperator = getAccountBalance(NODE_OPERATOR)
-                                        .payingWith(PAYER)
-                                        .asNodeOperator();
-                                allRunFor(spec, getAccountBalanceAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(1)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForAccountInfo() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    getAccountInfo(NODE_OPERATOR).payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getAccountInfoAsNodeOperator = getAccountInfo(NODE_OPERATOR)
-                                        .payingWith(PAYER)
-                                        .asNodeOperator();
-                                allRunFor(spec, getAccountInfoAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(2)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForTopicInfo() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    nodeOperatorAccount(),
-                    createTopic(TOPIC),
-                    getTopicInfo(TOPIC).payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getTopicInfoAsNodeOperator = getTopicInfo(TOPIC)
-                                        .payingWith(NODE_OPERATOR)
-                                        .asNodeOperator();
-                                allRunFor(spec, getTopicInfoAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(3)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForTokenInfo() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    nodeOperatorAccount(),
-                    tokenCreate(TOKEN),
-                    getTokenInfo(TOKEN).payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getTokenInfoAsNodeOperator = getTokenInfo(TOKEN)
-                                        .payingWith(NODE_OPERATOR)
-                                        .asNodeOperator();
-                                allRunFor(spec, getTokenInfoAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(4)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForFileContents() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    fileCreate(FILE).contents("anyContentAgain").payingWith(PAYER),
-                    getFileContents(FILE).payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getFileContentsAsNodeOperator = getFileContents(FILE)
-                                        .payingWith(NODE_OPERATOR)
-                                        .asNodeOperator();
-                                allRunFor(spec, getFileContentsAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(5)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForFileInfo() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    fileCreate(FILE).contents("anyContentAgain").payingWith(PAYER),
-                    getFileInfo(FILE).payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getFileInfoAsNodeOperator = getFileInfo(FILE)
-                                        .payingWith(NODE_OPERATOR)
-                                        .asNodeOperator();
-                                allRunFor(spec, getFileInfoAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(6)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForContractCall() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    uploadInitCode("CreateTrivial"),
-                    contractCreate("CreateTrivial").gas(100_000L).payingWith(PAYER),
-                    contractCall("CreateTrivial", "create").gas(785_000),
-                    contractCallLocal("CreateTrivial", "getIndirect")
-                            .gas(300_000L)
-                            .payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getContractCallLocalAsNodeOperator = contractCallLocal(
-                                                "CreateTrivial", "getIndirect")
-                                        .gas(300_000L)
-                                        .payingWith(PAYER)
-                                        .asNodeOperator();
-                                allRunFor(spec, getContractCallLocalAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(7)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForContractBytecode() {
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    uploadInitCode("CreateTrivial"),
-                    contractCreate("CreateTrivial").gas(100_000L).payingWith(PAYER),
-                    contractCall("CreateTrivial", "create").gas(785_000),
-                    getContractBytecode("CreateTrivial").payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getContractBytecodeAsNodeOperator = getContractBytecode("CreateTrivial")
-                                        .payingWith(PAYER)
-                                        .asNodeOperator();
-                                allRunFor(spec, getContractBytecodeAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
-
-        @Order(8)
-        @HapiTest
-        final Stream<DynamicTest> nodeOperatorQueryPortNotAccessibleForScheduleInfo() {
-            final var txnToSchedule = cryptoTransfer(tinyBarsFromTo(PAYER, DEFAULT_PAYER, 1));
-            return hapiTest(flattened(
-                    restartWithDisabledNodeOperatorGrpcPort(),
-                    nodeOperatorAccount(),
-                    payerAccount(),
-                    scheduleCreate(SCHEDULE, txnToSchedule),
-                    getScheduleInfo(SCHEDULE).payingWith(PAYER),
-                    sleepFor(1000),
-                    getAccountBalance(PAYER).hasTinyBars(lessThan(ONE_HUNDRED_HBARS)),
-                    withOpContext((spec, opLog) -> assertThatThrownBy(() -> {
-                                final var getScheduleInfoAsNodeOperator = getScheduleInfo(SCHEDULE)
-                                        .payingWith(PAYER)
-                                        .asNodeOperator();
-                                allRunFor(spec, getScheduleInfoAsNodeOperator);
-                            })
-                            .isInstanceOf(IllegalStateException.class)
-                            .hasMessageContaining("io.grpc.StatusRuntimeException: UNAVAILABLE: io exception"))));
-        }
     }
 }

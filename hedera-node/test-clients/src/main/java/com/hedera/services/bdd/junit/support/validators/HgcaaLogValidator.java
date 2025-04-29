@@ -1,21 +1,7 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.support.validators;
 
+import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.workingDirFor;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
 
@@ -40,6 +26,16 @@ public class HgcaaLogValidator {
     private static final String POSSIBLY_CATASTROPHIC = "Possibly CATASTROPHIC";
     private final String logFileLocation;
     private final Map<Long, Key> overrideNodeAdminKeys;
+
+    public static void main(String[] args) throws IOException {
+        final var node0Dir = Paths.get("hedera-node/test-clients")
+                .resolve(workingDirFor(0, "hapi"))
+                .toAbsolutePath()
+                .normalize();
+        final var validator =
+                new HgcaaLogValidator(node0Dir.resolve("output/hgcaa.log").toString(), Map.of());
+        validator.validate();
+    }
 
     public HgcaaLogValidator(
             @NonNull final String logFileLocation, @NonNull final Map<Long, Key> overrideNodeAdminKeys) {
@@ -89,7 +85,19 @@ public class HgcaaLogValidator {
                 List.of("Properties file", "does not exist and won't be used as configuration source"),
                 // Using a 1-minute staking period in CI can lead to periods with no transactions, breaking invariants
                 List.of("StakingRewardsHelper", "Pending rewards decreased"),
-                List.of("Throttle multiplier for CryptoTransfer throughput congestion has no throttle buckets"));
+                // Some PR checks don't stake any HBAR, so after crossing a staking boundary all nodes
+                // have zero weight and the RosterStore rejects a zero-weight roster as invalid
+                List.of("Candidate roster was rejected"),
+                List.of("Throttle multiplier for CryptoTransfer throughput congestion has no throttle buckets"),
+                // Although we do want a little more visibility for these messages, they shouldn't fail a CI run
+                List.of("Proof future for construction", "must wait until previous finished"),
+                List.of("Ignoring forced handoff to incomplete construction"),
+                List.of("Completing signing attempt"),
+                List.of("No pending blocks found"),
+                List.of("Forcing handoff to construction", "with different target roster"),
+                List.of("HintsSubmissions", "Failed to submit", "(PLATFORM_NOT_ACTIVE)"),
+                List.of("Ignoring invalid partial signature"),
+                List.of("Action stack prematurely empty"));
 
         private int numProblems = 0;
         private int linesSinceInitialProblem = -1;

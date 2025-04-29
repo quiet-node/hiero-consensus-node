@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.hello;
 /*
  * This file is public domain.
@@ -27,41 +12,42 @@ package com.swirlds.demo.hello;
  */
 
 import static com.swirlds.platform.gui.SwirldsGui.createConsole;
-import static com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
-import static com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles.registerMerkleStateRootClassIds;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.Console;
-import com.swirlds.common.constructable.ClassConstructorPair;
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.platform.Browser;
 import com.swirlds.platform.SwirldsPlatform;
 import com.swirlds.platform.listeners.PlatformStatusChangeListener;
 import com.swirlds.platform.listeners.PlatformStatusChangeNotification;
-import com.swirlds.platform.roster.RosterUtils;
-import com.swirlds.platform.state.PlatformMerkleStateRoot;
-import com.swirlds.platform.system.BasicSoftwareVersion;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
-import com.swirlds.platform.system.status.PlatformStatus;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.charset.StandardCharsets;
+import org.hiero.base.constructable.ClassConstructorPair;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.status.PlatformStatus;
+import org.hiero.consensus.roster.RosterUtils;
 
 /**
  * This HelloSwirld creates a single transaction, consisting of the string "Hello Swirld", and then goes
  * into a busy loop (checking once a second) to see when the state gets the transaction. When it does, it
  * prints it, too.
  */
-public class HelloSwirldDemoMain implements SwirldMain {
+public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
 
     static {
         try {
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(new ClassConstructorPair(HelloSwirldDemoState.class, () -> {
-                HelloSwirldDemoState helloSwirldDemoState = new HelloSwirldDemoState(
-                        FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
+                HelloSwirldDemoState helloSwirldDemoState = new HelloSwirldDemoState();
                 return helloSwirldDemoState;
             }));
             registerMerkleStateRootClassIds();
@@ -79,7 +65,8 @@ public class HelloSwirldDemoMain implements SwirldMain {
     /** sleep this many milliseconds after each sync */
     public final int sleepPeriod = 100;
 
-    private static final BasicSoftwareVersion softwareVersion = new BasicSoftwareVersion(1);
+    private static final SemanticVersion semanticVersion =
+            SemanticVersion.newBuilder().major(1).build();
 
     /**
      * This is just for debugging: it allows the app to run in Eclipse. If the config.txt exists and lists a
@@ -129,12 +116,16 @@ public class HelloSwirldDemoMain implements SwirldMain {
 
     @NonNull
     @Override
-    public PlatformMerkleStateRoot newMerkleStateRoot() {
-        final PlatformMerkleStateRoot state = new HelloSwirldDemoState(
-                FAKE_MERKLE_STATE_LIFECYCLES,
-                version -> new BasicSoftwareVersion(softwareVersion.getSoftwareVersion()));
-        FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
+    public HelloSwirldDemoState newStateRoot() {
+        final HelloSwirldDemoState state = new HelloSwirldDemoState();
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(state);
         return state;
+    }
+
+    @NonNull
+    @Override
+    public ConsensusStateEventHandler<HelloSwirldDemoState> newConsensusStateEvenHandler() {
+        return new HelloSwirldDemoConsensusStateEventHandler();
     }
 
     private void platformStatusChange(final PlatformStatusChangeNotification notification) {
@@ -163,7 +154,12 @@ public class HelloSwirldDemoMain implements SwirldMain {
      * {@inheritDoc}
      */
     @Override
-    public BasicSoftwareVersion getSoftwareVersion() {
-        return softwareVersion;
+    public SemanticVersion getSemanticVersion() {
+        return semanticVersion;
+    }
+
+    @Override
+    public Bytes encodeSystemTransaction(@NonNull StateSignatureTransaction transaction) {
+        return StateSignatureTransaction.PROTOBUF.toBytes(transaction);
     }
 }

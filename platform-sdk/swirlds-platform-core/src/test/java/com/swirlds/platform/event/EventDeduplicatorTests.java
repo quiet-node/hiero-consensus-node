@@ -1,24 +1,9 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event;
 
-import static com.swirlds.common.test.fixtures.RandomUtils.getRandomPrintSeed;
-import static com.swirlds.common.test.fixtures.RandomUtils.randomSignatureBytes;
 import static com.swirlds.platform.test.fixtures.event.EventUtils.serializePlatformEvent;
+import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomSignatureBytes;
+import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,17 +12,11 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
 import com.hedera.hapi.platform.event.GossipEvent;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
-import com.swirlds.platform.consensus.ConsensusConstants;
-import com.swirlds.platform.consensus.EventWindow;
 import com.swirlds.platform.event.deduplication.EventDeduplicator;
 import com.swirlds.platform.event.deduplication.StandardEventDeduplicator;
-import com.swirlds.platform.eventhandling.EventConfig_;
 import com.swirlds.platform.gossip.IntakeEventCounter;
-import com.swirlds.platform.system.events.EventConstants;
-import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.ByteBuffer;
@@ -47,6 +26,14 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
+import org.hiero.consensus.config.EventConfig_;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.event.EventConstants;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.ConsensusConstants;
+import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.test.fixtures.event.TestingEventBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -200,18 +187,15 @@ class EventDeduplicatorTests {
                 final PlatformEvent duplicateEvent = new PlatformEvent(new GossipEvent.Builder()
                         .eventCore(platformEvent.getGossipEvent().eventCore())
                         .signature(randomSignatureBytes(random)) // randomize the signature
-                        .eventTransaction(platformEvent.getGossipEvent().eventTransaction())
+                        .transactions(platformEvent.getGossipEvent().transactions())
                         .build());
                 duplicateEvent.setHash(platformEvent.getHash());
 
-                if (ancientMode == AncientMode.BIRTH_ROUND_THRESHOLD) {
-                    if (duplicateEvent.getDescriptor().eventDescriptor().birthRound() < minimumRoundNonAncient) {
-                        ancientEventCount++;
-                    }
-                } else {
-                    if (duplicateEvent.getDescriptor().eventDescriptor().generation() < minimumGenerationNonAncient) {
-                        ancientEventCount++;
-                    }
+                final long ancientThreshold = ancientMode == AncientMode.BIRTH_ROUND_THRESHOLD
+                        ? minimumRoundNonAncient
+                        : minimumGenerationNonAncient;
+                if (ancientMode.selectIndicator(duplicateEvent.getDescriptor()) < ancientThreshold) {
+                    ancientEventCount++;
                 }
 
                 validateEmittedEvent(

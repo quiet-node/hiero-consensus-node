@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.transactions.token;
 
 import static com.hedera.node.app.hapi.fees.usage.token.TokenOpsUsageUtils.TOKEN_OPS_USAGE_UTILS;
 import static com.hedera.node.app.hapi.utils.CommonUtils.extractTransactionBodyUnchecked;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asTokenString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.idAsHeadlongAddress;
 import static com.hedera.services.bdd.spec.transactions.TxnFactory.defaultExpiryNowFor;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.bannerWith;
@@ -41,7 +27,7 @@ import com.hedera.services.bdd.spec.HapiPropertySource;
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.dsl.utils.KeyMetadata;
 import com.hedera.services.bdd.spec.fees.AdapterUtils;
-import com.hedera.services.bdd.spec.infrastructure.HapiSpecRegistry;
+import com.hedera.services.bdd.spec.keys.KeyRole;
 import com.hedera.services.bdd.spec.transactions.HapiTxnOp;
 import com.hedera.services.bdd.spec.transactions.TxnUtils;
 import com.hedera.services.bdd.suites.utils.contracts.precompile.TokenKeyType;
@@ -404,8 +390,8 @@ public class HapiTokenCreate extends HapiTxnOp<HapiTokenCreate> {
                                         case SUPPLY_KEY -> b.setSupplyKey(contractKey);
                                         case WIPE_KEY -> b.setWipeKey(contractKey);
                                         case METADATA_KEY -> b.setMetadataKey(contractKey);
-                                        default -> throw new IllegalStateException(
-                                                "Unexpected tokenKeyType: " + tokenKeyType);
+                                        default ->
+                                            throw new IllegalStateException("Unexpected tokenKeyType: " + tokenKeyType);
                                     }
                                 }
                             }
@@ -436,7 +422,7 @@ public class HapiTokenCreate extends HapiTxnOp<HapiTokenCreate> {
         registerAttributes(spec);
         if (advertiseCreation) {
             final String banner = "\n\n"
-                    + bannerWith(String.format("Created token '%s' with id '0.0.%d'.", token, tokenID.getTokenNum()));
+                    + bannerWith(String.format("Created token '%s' with id '%s'.", token, asTokenString(tokenID)));
             log.info(banner);
         }
         if (asCallableContract) {
@@ -475,29 +461,12 @@ public class HapiTokenCreate extends HapiTxnOp<HapiTokenCreate> {
         final var registry = spec.registry();
         final var submittedBody = extractTransactionBodyUnchecked(txnSubmitted);
         final var op = submittedBody.getTokenCreation();
-        if (op.hasKycKey()) {
-            registry.saveKycKey(token, op.getKycKey());
-        }
-        if (op.hasWipeKey()) {
-            registry.saveWipeKey(token, op.getWipeKey());
-        }
-        if (op.hasAdminKey()) {
-            registry.saveAdminKey(token, op.getAdminKey());
-        }
-        if (op.hasSupplyKey()) {
-            registry.saveSupplyKey(token, op.getSupplyKey());
-        }
-        if (op.hasFreezeKey()) {
-            registry.saveFreezeKey(token, op.getFreezeKey());
-        }
-        if (op.hasFeeScheduleKey()) {
-            registry.saveFeeScheduleKey(token, op.getFeeScheduleKey());
-        }
-        if (op.hasPauseKey()) {
-            registry.savePauseKey(token, op.getPauseKey());
-        }
-        if (op.hasMetadataKey()) {
-            registry.saveMetadataKey(token, op.getMetadataKey());
+
+        for (KeyRole role : KeyRole.values()) {
+            final var key = getKeyFromOp(op, role);
+            if (key != null) {
+                registry.saveRoleKey(token, role, key);
+            }
         }
     }
 
@@ -519,30 +488,27 @@ public class HapiTokenCreate extends HapiTxnOp<HapiTokenCreate> {
         final List<KeyMetadata> metadata = new ArrayList<>();
         final var submittedBody = extractTransactionBodyUnchecked(txnSubmitted);
         final var op = submittedBody.getTokenCreation();
-        if (op.hasKycKey()) {
-            metadata.add(KeyMetadata.from(op.getKycKey(), spec, HapiSpecRegistry::saveKycKey));
+
+        for (KeyRole role : KeyRole.values()) {
+            final var key = getKeyFromOp(op, role);
+            if (key != null) {
+                metadata.add(KeyMetadata.from(key, spec, KeyMetadata.roleBasedRegistration(role)));
+            }
         }
-        if (op.hasWipeKey()) {
-            metadata.add(KeyMetadata.from(op.getWipeKey(), spec, HapiSpecRegistry::saveWipeKey));
-        }
-        if (op.hasAdminKey()) {
-            metadata.add(KeyMetadata.from(op.getAdminKey(), spec, HapiSpecRegistry::saveAdminKey));
-        }
-        if (op.hasSupplyKey()) {
-            metadata.add(KeyMetadata.from(op.getSupplyKey(), spec, HapiSpecRegistry::saveSupplyKey));
-        }
-        if (op.hasFreezeKey()) {
-            metadata.add(KeyMetadata.from(op.getFreezeKey(), spec, HapiSpecRegistry::saveFreezeKey));
-        }
-        if (op.hasFeeScheduleKey()) {
-            metadata.add(KeyMetadata.from(op.getFeeScheduleKey(), spec, HapiSpecRegistry::saveFeeScheduleKey));
-        }
-        if (op.hasPauseKey()) {
-            metadata.add(KeyMetadata.from(op.getPauseKey(), spec, HapiSpecRegistry::savePauseKey));
-        }
-        if (op.hasMetadataKey()) {
-            metadata.add(KeyMetadata.from(op.getMetadataKey(), spec, HapiSpecRegistry::saveMetadataKey));
-        }
+
         return metadata;
+    }
+
+    private Key getKeyFromOp(TokenCreateTransactionBody op, KeyRole role) {
+        return switch (role) {
+            case KYC -> op.hasKycKey() ? op.getKycKey() : null;
+            case WIPE -> op.hasWipeKey() ? op.getWipeKey() : null;
+            case ADMIN -> op.hasAdminKey() ? op.getAdminKey() : null;
+            case SUPPLY -> op.hasSupplyKey() ? op.getSupplyKey() : null;
+            case FREEZE -> op.hasFreezeKey() ? op.getFreezeKey() : null;
+            case FEE_SCHEDULE -> op.hasFeeScheduleKey() ? op.getFeeScheduleKey() : null;
+            case PAUSE -> op.hasPauseKey() ? op.getPauseKey() : null;
+            case METADATA -> op.hasMetadataKey() ? op.getMetadataKey() : null;
+        };
     }
 }

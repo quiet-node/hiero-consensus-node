@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.gossip.shadowgraph;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
@@ -21,14 +6,7 @@ import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.logging.legacy.LogMarker.SYNC_INFO;
 
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.utility.Clearable;
-import com.swirlds.platform.consensus.EventWindow;
-import com.swirlds.platform.event.AncientMode;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.gossip.IntakeEventCounter;
-import com.swirlds.platform.system.events.EventDescriptorWrapper;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayDeque;
@@ -48,6 +26,13 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.Clearable;
+import org.hiero.base.crypto.Hash;
+import org.hiero.consensus.config.EventConfig;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.event.EventDescriptorWrapper;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.EventWindow;
 
 /**
  * The primary purpose of the shadowgraph is to unlink events when it is safe to do so. In order to decide when it is
@@ -392,13 +377,7 @@ public class Shadowgraph implements Clearable {
 
         while (oldestUnexpiredIndicator < minimumIndicatorToKeep) {
             final Set<ShadowEvent> shadowsToExpire = indicatorToShadowEvent.remove(oldestUnexpiredIndicator);
-            // shadowsToExpire should never be null, but check just in case.
-            if (shadowsToExpire == null) {
-                logger.error(
-                        EXCEPTION.getMarker(),
-                        "There were no events with ancient indicator {} to expire.",
-                        oldestUnexpiredIndicator);
-            } else {
+            if (shadowsToExpire != null) {
                 shadowsToExpire.forEach(this::expire);
             }
             oldestUnexpiredIndicator++;
@@ -629,7 +608,7 @@ public class Shadowgraph implements Clearable {
 
         hashToShadowEvent.put(se.getEventBaseHash(), se);
 
-        final long ancientIndicator = event.getAncientIndicator(ancientMode);
+        final long ancientIndicator = ancientMode.selectIndicator(event);
         if (!indicatorToShadowEvent.containsKey(ancientIndicator)) {
             indicatorToShadowEvent.put(ancientIndicator, new HashSet<>());
         }
@@ -715,7 +694,7 @@ public class Shadowgraph implements Clearable {
             final boolean knownOP = shadow(otherParent) != null;
             final boolean expiredOP = expired(otherParent);
             if (!knownOP && !expiredOP) {
-                logger.warn(STARTUP.getMarker(), "Missing non-expired other parent for {}", e);
+                logger.info(STARTUP.getMarker(), "Missing non-expired other parent for {}", e);
             }
         }
 
@@ -723,7 +702,7 @@ public class Shadowgraph implements Clearable {
             final boolean knownSP = shadow(e.getSelfParent()) != null;
             final boolean expiredSP = expired(e.getSelfParent());
             if (!knownSP && !expiredSP) {
-                logger.warn(STARTUP.getMarker(), "Missing non-expired self parent for {}", e);
+                logger.info(STARTUP.getMarker(), "Missing non-expired self parent for {}", e);
             }
         }
 

@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.records;
 
 import static com.hedera.services.bdd.spec.HapiSpec.customHapiSpec;
@@ -23,6 +8,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_DELET
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 
 import com.hedera.services.bdd.junit.support.validators.utils.AccountClassifier;
+import com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
 import com.hedera.services.bdd.spec.queries.QueryVerbs;
 import com.hedera.services.bdd.suites.HapiSuite;
@@ -38,15 +24,24 @@ public class BalanceValidation extends HapiSuite {
 
     private final Map<Long, Long> expectedBalances;
     private final AccountClassifier accountClassifier;
+    private final long shard;
+    private final long realm;
 
-    public BalanceValidation(final Map<Long, Long> expectedBalances, final AccountClassifier accountClassifier) {
+    public BalanceValidation(
+            final Map<Long, Long> expectedBalances, final AccountClassifier accountClassifier, long shard, long realm) {
         this.expectedBalances = expectedBalances;
         this.accountClassifier = accountClassifier;
+        this.shard = shard;
+        this.realm = realm;
     }
 
     public static void main(String... args) {
         // Treasury starts with 50B hbar
-        new BalanceValidation(Map.of(2L, 50_000_000_000L * TINY_PARTS_PER_WHOLE), new AccountClassifier())
+        new BalanceValidation(
+                        Map.of(2L, 50_000_000_000L * TINY_PARTS_PER_WHOLE),
+                        new AccountClassifier(),
+                        HapiPropertySourceStaticInitializer.SHARD,
+                        HapiPropertySourceStaticInitializer.REALM)
                 .runSuiteSync();
     }
 
@@ -71,7 +66,8 @@ public class BalanceValidation extends HapiSuite {
                                 .map(entry -> {
                                     final var accountNum = entry.getKey();
                                     return QueryVerbs.getAccountBalance(
-                                                    "0.0." + accountNum, accountClassifier.isContract(accountNum))
+                                                    String.format("%d.%d.%d", shard, realm, accountNum),
+                                                    accountClassifier.isContract(accountNum))
                                             .hasAnswerOnlyPrecheckFrom(CONTRACT_DELETED, ACCOUNT_DELETED, OK)
                                             .hasTinyBars(entry.getValue());
                                 })

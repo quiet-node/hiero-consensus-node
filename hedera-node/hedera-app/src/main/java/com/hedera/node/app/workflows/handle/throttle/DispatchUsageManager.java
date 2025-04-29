@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle.throttle;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CREATE;
@@ -104,7 +89,7 @@ public class DispatchUsageManager {
             leakUnusedGas(dispatch);
         }
         if ((dispatch.txnCategory() == USER || dispatch.txnCategory() == NODE)
-                && dispatch.recordBuilder().status() != SUCCESS) {
+                && dispatch.streamBuilder().status() != SUCCESS) {
             if (canAutoCreate(function)) {
                 reclaimFailedCryptoCreateCapacity(dispatch);
             }
@@ -129,7 +114,7 @@ public class DispatchUsageManager {
      * @param dispatch the dispatch
      */
     private void leakUnusedGas(@NonNull final Dispatch dispatch) {
-        final var builder = dispatch.recordBuilder();
+        final var builder = dispatch.streamBuilder();
         // (FUTURE) There can be cases where the EVM halts and consumes all gas even though not
         // much actual work was done; in such cases, the gas used is still reported to be at
         // least 80% of the gas limit. If we want to be more precise, we can probably use the

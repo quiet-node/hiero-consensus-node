@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.hts.create;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.TOKEN_CREATE;
@@ -21,6 +6,10 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INSUFFICIENT_TX_FEE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TOKEN_HAS_NO_SUPPLY_KEY;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.ReturnTypes.ZERO_ADDRESS;
+import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.address_0x16c.CreateTranslator.CREATE_FUNGIBLE_TOKEN_WITH_METADATA;
+import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.address_0x16c.CreateTranslator.CREATE_FUNGIBLE_TOKEN_WITH_METADATA_AND_CUSTOM_FEES;
+import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.address_0x16c.CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_METADATA;
+import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.address_0x16c.CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_METADATA_AND_CUSTOM_FEES;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.CONFIG_CONTEXT_VARIABLE;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.ALIASED_SOMEBODY;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.A_NEW_ACCOUNT_ID;
@@ -28,7 +17,9 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.EIP_1014_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.FUNGIBLE_TOKEN_ID;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SENDER_ID;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.entityIdFactory;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.readableRevertReason;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,14 +27,17 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 
 import com.esaulpaugh.headlong.abi.Address;
+import com.esaulpaugh.headlong.abi.Tuple;
 import com.hedera.hapi.node.base.Timestamp;
+import com.hedera.hapi.node.scheduled.SchedulableTransactionBody;
 import com.hedera.hapi.node.token.TokenCreateTransactionBody;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.contract.impl.exec.scope.VerificationStrategy;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.AddressIdConverter;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.ClassicCreatesCall;
-import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.CreateTranslator;
+import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.address_0x167.CreateTranslator;
 import com.hedera.node.app.service.contract.impl.records.ContractCallStreamBuilder;
+import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.common.CallTestBase;
 import java.math.BigInteger;
 import java.util.ArrayDeque;
@@ -73,6 +67,9 @@ public class ClassicCreatesCallTest extends CallTestBase {
     @Mock
     private BlockValues blockValues;
 
+    @Mock
+    private ProxyWorldUpdater updater;
+
     private static final TransactionBody PRETEND_CREATE_TOKEN = TransactionBody.newBuilder()
             .tokenCreation(TokenCreateTransactionBody.newBuilder()
                     .symbol("FT")
@@ -99,7 +96,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_TOKEN_V1
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -115,7 +112,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_TOKEN_V2
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -131,7 +128,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_TOKEN_V3
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -145,9 +142,9 @@ public class ClassicCreatesCallTest extends CallTestBase {
 
         assertEquals(MessageFrame.State.COMPLETED_SUCCESS, result.getState());
         assertEquals(
-                Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_TOKEN_WITH_METADATA
+                Bytes.wrap(CREATE_FUNGIBLE_TOKEN_WITH_METADATA
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -163,7 +160,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_WITH_CUSTOM_FEES_V1
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -179,7 +176,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_WITH_CUSTOM_FEES_V2
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -195,7 +192,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_WITH_CUSTOM_FEES_V3
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -209,9 +206,9 @@ public class ClassicCreatesCallTest extends CallTestBase {
 
         assertEquals(MessageFrame.State.COMPLETED_SUCCESS, result.getState());
         assertEquals(
-                Bytes.wrap(CreateTranslator.CREATE_FUNGIBLE_TOKEN_WITH_METADATA_AND_CUSTOM_FEES
+                Bytes.wrap(CREATE_FUNGIBLE_TOKEN_WITH_METADATA_AND_CUSTOM_FEES
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -227,7 +224,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_V1
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -243,7 +240,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_V2
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -259,7 +256,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_V3
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -273,9 +270,9 @@ public class ClassicCreatesCallTest extends CallTestBase {
 
         assertEquals(MessageFrame.State.COMPLETED_SUCCESS, result.getState());
         assertEquals(
-                Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_METADATA
+                Bytes.wrap(CREATE_NON_FUNGIBLE_TOKEN_WITH_METADATA
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -291,7 +288,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_CUSTOM_FEES_V1
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -307,7 +304,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_CUSTOM_FEES_V2
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -323,7 +320,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_CUSTOM_FEES_V3
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
@@ -337,16 +334,16 @@ public class ClassicCreatesCallTest extends CallTestBase {
 
         assertEquals(MessageFrame.State.COMPLETED_SUCCESS, result.getState());
         assertEquals(
-                Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_METADATA_AND_CUSTOM_FEES
+                Bytes.wrap(CREATE_NON_FUNGIBLE_TOKEN_WITH_METADATA_AND_CUSTOM_FEES
                         .getOutputs()
-                        .encodeElements((long) SUCCESS.protoOrdinal(), tokenId)
+                        .encode(Tuple.of((long) SUCCESS.protoOrdinal(), tokenId))
                         .array()),
                 result.getOutput());
     }
 
     @Test
     void requiresNonGasCostToBeProvidedAsValue() {
-        commonGivens(200_000L, 99_999L, true);
+        commonGivens(200_000L, 99_999L, true, false);
         given(recordBuilder.status()).willReturn(SUCCESS);
         given(systemContractOperations.externalizePreemptedDispatch(any(), eq(INSUFFICIENT_TX_FEE), eq(TOKEN_CREATE)))
                 .willReturn(recordBuilder);
@@ -357,7 +354,7 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(
                 Bytes.wrap(CreateTranslator.CREATE_NON_FUNGIBLE_TOKEN_WITH_CUSTOM_FEES_V3
                         .getOutputs()
-                        .encodeElements((long) INSUFFICIENT_TX_FEE.protoOrdinal(), ZERO_ADDRESS)
+                        .encode(Tuple.of((long) INSUFFICIENT_TX_FEE.protoOrdinal(), ZERO_ADDRESS))
                         .array()),
                 result.getOutput());
     }
@@ -373,11 +370,40 @@ public class ClassicCreatesCallTest extends CallTestBase {
         assertEquals(readableRevertReason(recordBuilder.status()), result.getOutput());
     }
 
-    private void commonGivens() {
-        commonGivens(0L, 0L, false);
+    @Test
+    void isSchedulableDispatchInFailsWithNullBody() {
+        // given
+        subject =
+                new ClassicCreatesCall(gasCalculator, mockEnhancement(), null, verificationStrategy, A_NEW_ACCOUNT_ID);
+
+        // when/then
+        assertThatExceptionOfType(UnsupportedOperationException.class)
+                .isThrownBy(() -> subject.asSchedulableDispatchIn())
+                .withMessage("Needs scheduleNative() support");
     }
 
-    private void commonGivens(long baseCost, long value, boolean shouldBePreempted) {
+    @Test
+    void isSchedulableDispatchInHappyPath() {
+        // given
+        final var txnBody = TransactionBody.newBuilder()
+                .tokenCreation(TokenCreateTransactionBody.DEFAULT)
+                .build();
+        final var expectedBody = SchedulableTransactionBody.newBuilder()
+                .tokenCreation(TokenCreateTransactionBody.DEFAULT)
+                .build();
+        subject = new ClassicCreatesCall(
+                gasCalculator, mockEnhancement(), txnBody, verificationStrategy, A_NEW_ACCOUNT_ID);
+
+        // when/then
+        final var response = subject.asSchedulableDispatchIn();
+        assertEquals(expectedBody, response);
+    }
+
+    private void commonGivens() {
+        commonGivens(0L, 0L, false, true);
+    }
+
+    private void commonGivens(long baseCost, long value, boolean shouldBePreempted, boolean shouldHaveRealmAndShard) {
         given(frame.getValue()).willReturn(Wei.of(value));
         given(gasCalculator.feeCalculatorPriceInTinyBars(any(), any())).willReturn(baseCost);
         stack.push(frame);
@@ -394,6 +420,10 @@ public class ClassicCreatesCallTest extends CallTestBase {
                     .willReturn(recordBuilder);
         }
         given(frame.getBlockValues()).willReturn(blockValues);
+        if (shouldHaveRealmAndShard) {
+            given(frame.getWorldUpdater()).willReturn(updater);
+            given(updater.entityIdFactory()).willReturn(entityIdFactory);
+        }
         given(blockValues.getTimestamp()).willReturn(Timestamp.DEFAULT.seconds());
         subject = new ClassicCreatesCall(
                 gasCalculator, mockEnhancement(), PRETEND_CREATE_TOKEN, verificationStrategy, A_NEW_ACCOUNT_ID);

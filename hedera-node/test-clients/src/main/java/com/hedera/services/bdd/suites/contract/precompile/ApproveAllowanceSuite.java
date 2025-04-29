@@ -1,24 +1,12 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.contract.precompile;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asHexedSolidityAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD_AND_REALM;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountDetailsAsserts.accountDetailsWith;
 import static com.hedera.services.bdd.spec.assertions.AssertUtils.inOrder;
@@ -195,8 +183,8 @@ public class ApproveAllowanceSuite {
                 withOpContext((spec, opLog) -> {
                     final var sender = spec.registry().getContractId(HTS_APPROVE_ALLOWANCE_CONTRACT);
                     final var receiver = spec.registry().getContractId(nestedContract);
-                    final var idOfToken =
-                            "0.0." + (spec.registry().getTokenID(FUNGIBLE_TOKEN).getTokenNum());
+                    final var idOfToken = SHARD_AND_REALM
+                            + (spec.registry().getTokenID(FUNGIBLE_TOKEN).getTokenNum());
                     var txnRecord = getTxnRecord(approveTxn)
                             .hasPriority(recordWith()
                                     .contractCallResult(resultWith()
@@ -204,8 +192,14 @@ public class ApproveAllowanceSuite {
                                                     .contract(idOfToken)
                                                     .withTopicsInOrder(List.of(
                                                             eventSignatureOf(APPROVE_SIGNATURE),
-                                                            parsedToByteString(sender.getContractNum()),
-                                                            parsedToByteString(receiver.getContractNum())))
+                                                            parsedToByteString(
+                                                                    sender.getShardNum(),
+                                                                    sender.getRealmNum(),
+                                                                    sender.getContractNum()),
+                                                            parsedToByteString(
+                                                                    receiver.getShardNum(),
+                                                                    receiver.getRealmNum(),
+                                                                    receiver.getContractNum())))
                                                     .longValue(10)))))
                             .andAllChildRecords()
                             .logged();
@@ -344,8 +338,8 @@ public class ApproveAllowanceSuite {
                 withOpContext((spec, opLog) -> {
                     final var sender = spec.registry().getContractId(HTS_APPROVE_ALLOWANCE_CONTRACT);
                     final var receiver = spec.registry().getAccountID(theSpender);
-                    final var idOfToken =
-                            "0.0." + (spec.registry().getTokenID(FUNGIBLE_TOKEN).getTokenNum());
+                    final var idOfToken = SHARD_AND_REALM
+                            + (spec.registry().getTokenID(FUNGIBLE_TOKEN).getTokenNum());
                     var txnRecord = getTxnRecord(approveTxn)
                             .hasPriority(recordWith()
                                     .contractCallResult(resultWith()
@@ -353,8 +347,14 @@ public class ApproveAllowanceSuite {
                                                     .contract(idOfToken)
                                                     .withTopicsInOrder(List.of(
                                                             eventSignatureOf(APPROVE_SIGNATURE),
-                                                            parsedToByteString(sender.getContractNum()),
-                                                            parsedToByteString(receiver.getAccountNum())))
+                                                            parsedToByteString(
+                                                                    sender.getShardNum(),
+                                                                    sender.getRealmNum(),
+                                                                    sender.getContractNum()),
+                                                            parsedToByteString(
+                                                                    receiver.getShardNum(),
+                                                                    receiver.getRealmNum(),
+                                                                    receiver.getAccountNum())))
                                                     .longValue(10)))))
                             .andAllChildRecords();
                     allRunFor(spec, txnRecord);
@@ -550,7 +550,7 @@ public class ApproveAllowanceSuite {
                 withOpContext((spec, opLog) -> {
                     final var sender = spec.registry().getContractId(HTS_APPROVE_ALLOWANCE_CONTRACT);
                     final var receiver = spec.registry().getAccountID(theSpender);
-                    final var idOfToken = "0.0."
+                    final var idOfToken = SHARD_AND_REALM
                             + (spec.registry().getTokenID(NON_FUNGIBLE_TOKEN).getTokenNum());
                     var txnRecord = getTxnRecord(allowanceTxn)
                             .hasPriority(recordWith()
@@ -559,8 +559,14 @@ public class ApproveAllowanceSuite {
                                                     .contract(idOfToken)
                                                     .withTopicsInOrder(List.of(
                                                             eventSignatureOf(APPROVE_FOR_ALL_SIGNATURE),
-                                                            parsedToByteString(sender.getContractNum()),
-                                                            parsedToByteString(receiver.getAccountNum())))
+                                                            parsedToByteString(
+                                                                    sender.getShardNum(),
+                                                                    sender.getRealmNum(),
+                                                                    sender.getContractNum()),
+                                                            parsedToByteString(
+                                                                    receiver.getShardNum(),
+                                                                    receiver.getRealmNum(),
+                                                                    receiver.getAccountNum())))
                                                     .booleanValue(true)))))
                             .andAllChildRecords()
                             .logged();
@@ -612,7 +618,7 @@ public class ApproveAllowanceSuite {
                 contractCreate(callee)
                         .refusingEthConversion()
                         .adminKey(DEFAULT_PAYER)
-                        .exposingNumTo(num -> calleeMirrorAddr.set(asHexedSolidityAddress(0, 0, num))),
+                        .exposingNumTo(num -> calleeMirrorAddr.set(asHexedSolidityAddress(SHARD, REALM, num))),
                 tokenAssociate(PRETEND_PAIR, FUNGIBLE_TOKEN),
                 tokenAssociate(callee, FUNGIBLE_TOKEN),
                 sourcing(() -> contractCall(

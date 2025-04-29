@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec;
 
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
@@ -25,20 +10,38 @@ import static com.hedera.services.bdd.spec.transactions.TxnUtils.bytecodePath;
 
 import com.hedera.node.app.hapi.utils.CommonPbjConverters;
 import com.hedera.node.app.hapi.utils.keys.Ed25519Utils;
+import com.hedera.node.app.hapi.utils.keys.Secp256k1Utils;
 import com.hedera.services.bdd.spec.keys.SigControl;
 import com.hedera.services.bdd.spec.keys.deterministic.Bip0032;
 import com.hedera.services.bdd.spec.props.JutilPropertySource;
 import com.hedera.services.bdd.spec.props.MapPropertySource;
 import com.hedera.services.bdd.spec.props.NodeConnectInfo;
+import com.hedera.services.bdd.spec.remote.RemoteNetworkSpec;
 import com.hedera.services.bdd.spec.transactions.HapiTxnOp;
-import com.hederahashgraph.api.proto.java.*;
+import com.hederahashgraph.api.proto.java.AccountID;
+import com.hederahashgraph.api.proto.java.ContractID;
+import com.hederahashgraph.api.proto.java.Duration;
+import com.hederahashgraph.api.proto.java.FileID;
+import com.hederahashgraph.api.proto.java.RealmID;
+import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
+import com.hederahashgraph.api.proto.java.ServiceEndpoint;
+import com.hederahashgraph.api.proto.java.ShardID;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.*;
+import java.io.File;
+import java.security.PrivateKey;
+import java.security.interfaces.ECPrivateKey;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SplittableRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.i2p.crypto.eddsa.EdDSAPrivateKey;
 import org.apache.commons.lang3.StringUtils;
+import org.hiero.base.utility.CommonUtils;
 
 /**
  * Aggregates the properties to be used in setting up a {@link HapiSpec}.
@@ -101,14 +104,22 @@ public class HapiSpecSetup {
         this.props = props;
     }
 
+    public PrivateKey payerKey() {
+        try {
+            return payerKeyAsEd25519();
+        } catch (Exception e) {
+            return payerKeyAsEcdsa();
+        }
+    }
+
     /**
-     * Returns the Ed25519 private key for the default payer in this spec setup.
+     * Returns the Ed25519 private key for the default payer in this spec setup.  This method will only return an Ed25519 key if the default payer key does point to an Ed25519 key
      *
      * @return the Ed25519 private key for the default payer in this spec setup
      */
-    public EdDSAPrivateKey payerKey() {
+    private EdDSAPrivateKey payerKeyAsEd25519() {
         if (StringUtils.isNotEmpty(defaultPayerKey())) {
-            return Ed25519Utils.keyFrom(com.swirlds.common.utility.CommonUtils.unhex(defaultPayerKey()));
+            return Ed25519Utils.keyFrom(CommonUtils.unhex(defaultPayerKey()));
         } else if (StringUtils.isNotEmpty(defaultPayerMnemonic())) {
             return mnemonicToEd25519Key(defaultPayerMnemonic());
         } else if (StringUtils.isNotEmpty(defaultPayerMnemonicFile())) {
@@ -120,6 +131,19 @@ public class HapiSpecSetup {
     }
 
     /**
+     * Returns the ECDSA private key for the default payer in this spec setup. This method will only return an ECDSA key if the default payer key does point to an ECDSA key.
+     *
+     * @return the ECDSA private key for the default payer in this spec setup
+     */
+    private ECPrivateKey payerKeyAsEcdsa() {
+        if (StringUtils.isNotEmpty(defaultPayerKey())) {
+            return Secp256k1Utils.readECKeyFrom(CommonUtils.unhex(defaultPayerKey()));
+        } else {
+            return Secp256k1Utils.readECKeyFrom(new File(defaultPayerPemKeyLoc()), defaultPayerPemKeyPassphrase());
+        }
+    }
+
+    /**
      * Add new properties that would merge with existing ones, if a property already exist then
      * override it with new value
      *
@@ -127,6 +151,14 @@ public class HapiSpecSetup {
      */
     public void addOverrides(@NonNull final Map<String, String> props) {
         this.props = HapiPropertySource.inPriorityOrder(new MapPropertySource(props), this.props);
+    }
+
+    /**
+     * Returns whether the default transaction memo should be the name of the {@link HapiSpec}
+     * submitting the transaction.
+     */
+    public boolean useSpecName() {
+        return props.getBoolean("memo.useSpecName");
     }
 
     public FileID addressBookId() {
@@ -292,6 +324,9 @@ public class HapiSpecSetup {
         return props.get("default.payer.name");
     }
 
+    // (FUTURE) Don't distinguish between default and custom shard/realm in the public contract. Encapsulate each as an
+    // implementation detail instead
+    @Deprecated
     public RealmID defaultRealm() {
         return props.getRealm("default.realm");
     }
@@ -319,6 +354,9 @@ public class HapiSpecSetup {
         return props.getBoolean("default.receiverSigRequired");
     }
 
+    // (FUTURE) Don't distinguish between default and custom shard/realm in the public contract. Encapsulate as an
+    // implementation detail instead
+    @Deprecated
     public ShardID defaultShard() {
         return props.getShard("default.shard");
     }
@@ -502,16 +540,24 @@ public class HapiSpecSetup {
         return props.getLong("status.wait.timeout.ms");
     }
 
+    public long shard() {
+        return props.getShard();
+    }
+
+    public long realm() {
+        return props.getRealm();
+    }
+
     public AccountID nodeRewardAccount() {
-        return asAccount("0.0.801");
+        return asAccount(shard(), realm(), 801L);
     }
 
     public AccountID stakingRewardAccount() {
-        return asAccount("0.0.800");
+        return asAccount(shard(), realm(), 800);
     }
 
     public AccountID feeCollectorAccount() {
-        return asAccount("0.0.802");
+        return asAccount(shard(), realm(), 802);
     }
 
     public String nodeRewardAccountName() {
@@ -591,6 +637,13 @@ public class HapiSpecSetup {
 
     public String systemUndeleteAdminName() {
         return props.get("systemUndeleteAdmin.name");
+    }
+
+    /**
+     * Returns the location of a YAML file that should be mappable to {@link RemoteNetworkSpec}.
+     */
+    public String remoteNodesYmlLoc() {
+        return props.get("nodes.remoteYml");
     }
 
     /**

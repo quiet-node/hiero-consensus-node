@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.test.grpc;
 
 import com.hedera.hapi.node.base.Transaction;
@@ -28,15 +13,14 @@ import com.hedera.node.app.workflows.query.QueryWorkflow;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.data.GrpcConfig;
 import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.config.data.JumboTransactionsConfig;
 import com.hedera.node.config.data.NettyConfig;
 import com.hedera.pbj.runtime.RpcMethodDefinition;
 import com.hedera.pbj.runtime.RpcServiceDefinition;
-import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.metrics.platform.MetricKeyRegistry;
 import com.swirlds.common.metrics.platform.PlatformMetricsFactoryImpl;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.config.api.source.ConfigSource;
@@ -59,11 +43,14 @@ import java.net.ConnectException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import org.assertj.core.api.Assumptions;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.AfterEach;
 
 /**
@@ -95,6 +82,7 @@ abstract class GrpcTestBase extends TestBase {
     private NettyGrpcServerManager grpcServer;
 
     private final Configuration configuration = ConfigurationBuilder.create()
+            .withConfigDataType(JumboTransactionsConfig.class)
             .withConfigDataType(MetricsConfig.class)
             .build();
 
@@ -168,8 +156,8 @@ abstract class GrpcTestBase extends TestBase {
 
                     @NonNull
                     @Override
-                    public Set<RpcMethodDefinition<? extends Record, ? extends Record>> methods() {
-                        final var set = new HashSet<RpcMethodDefinition<? extends Record, ? extends Record>>();
+                    public Set<RpcMethodDefinition<?, ?>> methods() {
+                        final var set = new HashSet<RpcMethodDefinition<?, ?>>();
                         if (queryMethodName != null) {
                             set.add(new RpcMethodDefinition<>(queryMethodName, Query.class, Response.class));
                         }
@@ -275,6 +263,7 @@ abstract class GrpcTestBase extends TestBase {
                 .withConfigDataType(GrpcConfig.class)
                 .withConfigDataType(NettyConfig.class)
                 .withConfigDataType(HederaConfig.class)
+                .withConfigDataType(JumboTransactionsConfig.class)
                 .withSource(testConfig)
                 .build();
     }
@@ -332,6 +321,17 @@ abstract class GrpcTestBase extends TestBase {
                 case "netty.startRetries" -> String.valueOf(startRetries);
                 default -> null;
             };
+        }
+
+        @Override
+        public boolean isListProperty(@NonNull final String propertyName) throws NoSuchElementException {
+            return false;
+        }
+
+        @NonNull
+        @Override
+        public List<String> getListValue(@NonNull final String propertyName) throws NoSuchElementException {
+            return List.of();
         }
 
         public int port() {

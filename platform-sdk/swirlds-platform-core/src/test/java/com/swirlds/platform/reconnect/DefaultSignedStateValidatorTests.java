@@ -1,39 +1,19 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.reconnect;
 
-import static com.swirlds.common.test.fixtures.RandomUtils.randomHash;
 import static com.swirlds.common.utility.Threshold.MAJORITY;
+import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
+import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomHash;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.crypto.Signature;
-import com.swirlds.common.crypto.SignatureType;
-import com.swirlds.common.platform.NodeId;
-import com.swirlds.common.test.fixtures.RandomUtils;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.crypto.SignatureVerifier;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateInvalidException;
 import com.swirlds.platform.state.signed.SignedStateValidationData;
@@ -50,6 +30,11 @@ import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.hiero.base.crypto.Hash;
+import org.hiero.base.crypto.Signature;
+import org.hiero.base.crypto.SignatureType;
+import org.hiero.base.utility.test.fixtures.RandomUtils;
+import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -122,10 +107,15 @@ class DefaultSignedStateValidatorTests {
             final List<Node> signingNodes = getRandomizedSigningNodes(r, nodes);
             final long validSigningWeight = getValidSignatureWeight(signingNodes);
             final long totalWeight = getTotalWeight(nodes);
-            final String desc = String.format(
-                    "\nseed: %sL:, valid signing weight: %s, total weight: %s\n",
-                    seed, validSigningWeight, totalWeight);
-            arguments.add(Arguments.of(desc, nodes, signingNodes));
+
+            // A Roster object is considered invalid if it has a total weight of zero
+            // because such a Roster is practically unusable. Therefore, we don't test it.
+            if (totalWeight != 0L) {
+                final String desc = String.format(
+                        "\nseed: %sL:, valid signing weight: %s, total weight: %s\n",
+                        seed, validSigningWeight, totalWeight);
+                arguments.add(Arguments.of(desc, nodes, signingNodes));
+            }
         }
 
         return arguments.stream();
@@ -269,11 +259,11 @@ class DefaultSignedStateValidatorTests {
         final PlatformContext platformContext =
                 TestPlatformContextBuilder.create().build();
 
-        validator = new DefaultSignedStateValidator(platformContext);
+        validator = new DefaultSignedStateValidator(platformContext, TEST_PLATFORM_STATE_FACADE);
 
         final SignedState signedState = stateSignedByNodes(signingNodes);
         final SignedStateValidationData originalData =
-                new SignedStateValidationData(signedState.getState().getReadablePlatformState(), roster);
+                new SignedStateValidationData(signedState.getState(), roster, TEST_PLATFORM_STATE_FACADE);
 
         final boolean shouldSucceed = stateHasEnoughWeight(nodes, signingNodes);
         if (shouldSucceed) {
@@ -344,7 +334,7 @@ class DefaultSignedStateValidatorTests {
 
         return new RandomSignedStateGenerator()
                 .setRound(ROUND)
-                .setAddressBook(RosterUtils.buildAddressBook(roster))
+                .setRoster(roster)
                 .setStateHash(stateHash)
                 .setSignatures(nodeSigs(signingNodes))
                 .setSignatureVerifier(signatureVerifier)

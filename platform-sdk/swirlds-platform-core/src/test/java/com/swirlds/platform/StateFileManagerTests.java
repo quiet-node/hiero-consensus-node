@@ -1,55 +1,38 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
-import static com.swirlds.common.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStateFile;
 import static com.swirlds.platform.state.snapshot.StateToDiskReason.FATAL_ERROR;
 import static com.swirlds.platform.state.snapshot.StateToDiskReason.ISS;
 import static com.swirlds.platform.state.snapshot.StateToDiskReason.PERIODIC_SNAPSHOT;
+import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static java.nio.file.Files.exists;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.config.StateCommonConfig_;
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
-import com.swirlds.common.merkle.crypto.MerkleCryptoFactory;
-import com.swirlds.common.platform.NodeId;
+import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
+import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
-import com.swirlds.common.utility.CompareTo;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.components.DefaultSavedStateController;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.config.StateConfig_;
-import com.swirlds.platform.internal.ConsensusRound;
+import com.swirlds.platform.eventhandling.StateWithHashComplexity;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.snapshot.DefaultStateSnapshotManager;
@@ -60,13 +43,10 @@ import com.swirlds.platform.state.snapshot.SignedStateFilePath;
 import com.swirlds.platform.state.snapshot.SignedStateFileReader;
 import com.swirlds.platform.state.snapshot.SignedStateFileUtils;
 import com.swirlds.platform.state.snapshot.StateDumpRequest;
-import com.swirlds.platform.state.snapshot.StateSavingResult;
 import com.swirlds.platform.state.snapshot.StateSnapshotManager;
-import com.swirlds.platform.test.fixtures.state.BlockingSwirldState;
-import com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles;
+import com.swirlds.platform.test.fixtures.state.BlockingState;
+import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
-import com.swirlds.platform.wiring.components.StateAndRound;
-import com.swirlds.state.merkle.MerkleTreeSnapshotReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -76,6 +56,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
+import org.hiero.base.CompareTo;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.state.StateSavingResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -100,15 +86,17 @@ class StateFileManagerTests {
 
     @BeforeAll
     static void beforeAll() throws ConstructableRegistryException {
-        ConstructableRegistry.getInstance().registerConstructables("com.swirlds");
-        FakeMerkleStateLifecycles.registerMerkleStateRootClassIds();
+        final ConstructableRegistry registry = ConstructableRegistry.getInstance();
+        registry.registerConstructables("com.swirlds");
+        registry.registerConstructables("org.hiero.base.crypto");
+        FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
     }
 
     @BeforeEach
     void beforeEach() throws IOException {
         // Don't use JUnit @TempDir as it runs into a thread race with Merkle DB DataSource release...
         testDirectory = LegacyTemporaryFileBuilder.buildTemporaryFile(
-                "SignedStateFileReadWriteTest", FakeMerkleStateLifecycles.CONFIGURATION);
+                "SignedStateFileReadWriteTest", FakeConsensusStateEventHandler.CONFIGURATION);
         LegacyTemporaryFileBuilder.overrideTemporaryFileLocation(testDirectory);
         MerkleDb.resetDefaultInstancePath();
         final TestConfigBuilder configBuilder = new TestConfigBuilder()
@@ -156,11 +144,17 @@ class StateFileManagerTests {
 
         assertEquals(-1, originalState.getReservationCount(), "invalid reservation count");
 
+        MerkleDb.resetDefaultInstancePath();
+        Configuration configuration =
+                TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState =
-                readStateFile(TestPlatformContextBuilder.create().build().getConfiguration(), stateFile);
-        MerkleCryptoFactory.getInstance()
-                .digestTreeSync(
-                        deserializedSignedState.reservedSignedState().get().getState());
+                readStateFile(stateFile, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
+        TestMerkleCryptoFactory.getInstance()
+                .digestTreeSync(deserializedSignedState
+                        .reservedSignedState()
+                        .get()
+                        .getState()
+                        .getRoot());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
         assertNotSame(
@@ -190,8 +184,8 @@ class StateFileManagerTests {
             Files.createFile(savedDir);
         }
 
-        final StateSnapshotManager manager =
-                new DefaultStateSnapshotManager(context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME);
+        final StateSnapshotManager manager = new DefaultStateSnapshotManager(
+                context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
 
         final StateSavingResult stateSavingResult = manager.saveStateTask(signedState.reserve("test"));
 
@@ -208,10 +202,10 @@ class StateFileManagerTests {
     void saveFatalSignedState() throws InterruptedException, IOException {
         final SignedState signedState =
                 new RandomSignedStateGenerator().setUseBlockingState(true).build();
-        ((BlockingSwirldState) signedState.getSwirldState()).enableBlockingSerialization();
+        ((BlockingState) signedState.getState()).enableBlockingSerialization();
 
-        final StateSnapshotManager manager =
-                new DefaultStateSnapshotManager(context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME);
+        final StateSnapshotManager manager = new DefaultStateSnapshotManager(
+                context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
         signedState.markAsStateToSave(FATAL_ERROR);
         makeImmutable(signedState);
 
@@ -225,7 +219,7 @@ class StateFileManagerTests {
         // shouldn't be finished yet
         assertTrue(thread.isAlive(), "thread should still be blocked");
 
-        ((BlockingSwirldState) signedState.getSwirldState()).unblockSerialization();
+        ((BlockingState) signedState.getState()).unblockSerialization();
         thread.join(1000);
 
         final Path stateDirectory = testDirectory.resolve("fatal").resolve("node1234_round" + signedState.getRound());
@@ -237,8 +231,8 @@ class StateFileManagerTests {
     void saveISSignedState() throws IOException {
         final SignedState signedState = new RandomSignedStateGenerator().build();
 
-        final StateSnapshotManager manager =
-                new DefaultStateSnapshotManager(context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME);
+        final StateSnapshotManager manager = new DefaultStateSnapshotManager(
+                context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
         signedState.markAsStateToSave(ISS);
         makeImmutable(signedState);
         manager.dumpStateTask(StateDumpRequest.create(signedState.reserve("test")));
@@ -271,12 +265,15 @@ class StateFileManagerTests {
                 .withConfiguration(configBuilder.getOrCreateConfig())
                 .build();
 
-        final int totalStates = 100;
+        // Each state now has a VirtualMap for ROSTERS, and each VirtualMap consumes a lot of RAM.
+        // So one cannot keep too many VirtualMaps in memory at once, or OOMs pop up.
+        // Therefore, the number of states this test can use at once should be reasonably small:
+        final int totalStates = 10;
         final int averageTimeBetweenStates = 10;
         final double standardDeviationTimeBetweenStates = 0.5;
 
-        final StateSnapshotManager manager =
-                new DefaultStateSnapshotManager(context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME);
+        final StateSnapshotManager manager = new DefaultStateSnapshotManager(
+                context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
         final SavedStateController controller = new DefaultSavedStateController(context);
 
         Instant timestamp;
@@ -317,7 +314,7 @@ class StateFileManagerTests {
                     .build();
             final ReservedSignedState reservedSignedState = signedState.reserve("initialTestReservation");
 
-            controller.markSavedState(new StateAndRound(reservedSignedState, mock(ConsensusRound.class)));
+            controller.markSavedState(new StateWithHashComplexity(reservedSignedState, 1));
             makeImmutable(reservedSignedState.get());
 
             if (signedState.isStateToSave()) {
@@ -350,12 +347,13 @@ class StateFileManagerTests {
 
                     final SavedStateInfo savedStateInfo = currentStatesOnDisk.get(index);
 
+                    Configuration configuration =
+                            TestPlatformContextBuilder.create().build().getConfiguration();
                     final SignedState stateFromDisk = assertDoesNotThrow(
                             () -> SignedStateFileReader.readStateFile(
-                                            TestPlatformContextBuilder.create()
-                                                    .build()
-                                                    .getConfiguration(),
-                                            savedStateInfo.stateFile())
+                                            savedStateInfo.stateFile(),
+                                            TEST_PLATFORM_STATE_FACADE,
+                                            PlatformContext.create(configuration))
                                     .reservedSignedState()
                                     .get(),
                             "should be able to read state on disk");
@@ -398,8 +396,8 @@ class StateFileManagerTests {
 
         final int count = 10;
 
-        final StateSnapshotManager manager =
-                new DefaultStateSnapshotManager(context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME);
+        final StateSnapshotManager manager = new DefaultStateSnapshotManager(
+                context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
 
         final Path statesDirectory =
                 signedStateFilePath.getSignedStatesDirectoryForSwirld(MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME);
@@ -453,9 +451,13 @@ class StateFileManagerTests {
             }
 
             // Verify that old states are properly deleted
+            int filesCount;
+            try (Stream<Path> list = Files.list(statesDirectory)) {
+                filesCount = (int) list.count();
+            }
             assertEquals(
                     Math.min(statesOnDisk, round),
-                    (int) Files.list(statesDirectory).count(),
+                    filesCount,
                     "unexpected number of states on disk after saving round " + round);
 
             // ISS/fatal state should still be in place

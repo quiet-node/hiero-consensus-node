@@ -1,35 +1,22 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.addressbook;
 
-import static com.swirlds.common.utility.CommonUtils.nameToAlias;
 import static com.swirlds.platform.crypto.KeyCertPurpose.SIGNING;
 
 import com.hedera.hapi.node.state.roster.Roster;
-import com.swirlds.common.platform.NodeId;
+import com.swirlds.common.test.fixtures.WeightGenerator;
+import com.swirlds.common.test.fixtures.WeightGenerators;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.crypto.PublicStores;
-import com.swirlds.platform.crypto.SerializableX509Certificate;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.IntStream;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.SerializableX509Certificate;
 
 /**
  * A utility for generating a random roster.
@@ -46,37 +33,7 @@ public class RandomRosterBuilder {
      */
     private int size = 4;
 
-    /**
-     * Describes different ways that the random roster has its weight distributed if the custom strategy lambda is
-     * unset.
-     */
-    public enum WeightDistributionStrategy {
-        /**
-         * All nodes have equal weight.
-         */
-        BALANCED,
-        /**
-         * Nodes are given weight with a gaussian distribution.
-         */
-        GAUSSIAN
-    }
-
-    /**
-     * The weight distribution strategy.
-     */
-    private WeightDistributionStrategy weightDistributionStrategy = WeightDistributionStrategy.GAUSSIAN;
-
-    /**
-     * The average weight. Used directly if using {@link WeightDistributionStrategy#BALANCED}, used as mean if using
-     * {@link WeightDistributionStrategy#GAUSSIAN}.
-     */
-    private long averageWeight = 1000;
-
-    /**
-     * The standard deviation of the weight, ignored if distribution strategy is not
-     * {@link WeightDistributionStrategy#GAUSSIAN}.
-     */
-    private long weightStandardDeviation = 100;
+    private WeightGenerator weightGenerator = WeightGenerators.GAUSSIAN;
 
     /**
      * The minimum weight to give to any particular address.
@@ -135,13 +92,15 @@ public class RandomRosterBuilder {
             maximumWeight = Long.MAX_VALUE / size;
         }
 
+        final List<Long> weights = weightGenerator.getWeights(random.nextLong(), size).stream()
+                .map(this::applyWeightBounds)
+                .toList();
         builder.rosterEntries(IntStream.range(0, size)
                 .mapToObj(index -> {
                     final NodeId nodeId = getNextNodeId();
                     final RandomRosterEntryBuilder addressBuilder = RandomRosterEntryBuilder.create(random)
                             .withNodeId(nodeId.id())
-                            .withWeight(getNextWeight());
-
+                            .withWeight(weights.get(index));
                     generateKeys(nodeId, addressBuilder);
                     return addressBuilder.build();
                 })
@@ -162,27 +121,13 @@ public class RandomRosterBuilder {
     }
 
     /**
-     * Set the average weight for an address. If the weight distribution strategy is
-     * {@link WeightDistributionStrategy#BALANCED}, all addresses will have this weight. If the weight distribution
-     * strategy is {@link WeightDistributionStrategy#GAUSSIAN}, this will be the mean weight.
+     * Set the weight generator for the roster.
      *
      * @return this object
      */
     @NonNull
-    public RandomRosterBuilder withAverageWeight(final long averageWeight) {
-        this.averageWeight = averageWeight;
-        return this;
-    }
-
-    /**
-     * Set the standard deviation for the weight for an address. Ignored unless the weight distribution strategy is
-     * {@link WeightDistributionStrategy#GAUSSIAN}.
-     *
-     * @return this object
-     */
-    @NonNull
-    public RandomRosterBuilder withWeightStandardDeviation(final long weightStandardDeviation) {
-        this.weightStandardDeviation = weightStandardDeviation;
+    public RandomRosterBuilder withWeightGenerator(@NonNull final WeightGenerator weightGenerator) {
+        this.weightGenerator = weightGenerator;
         return this;
     }
 
@@ -205,19 +150,6 @@ public class RandomRosterBuilder {
     @NonNull
     public RandomRosterBuilder withMaximumWeight(final long maximumWeight) {
         this.maximumWeight = maximumWeight;
-        return this;
-    }
-
-    /**
-     * Set the strategy used for deciding distribution of weight.
-     *
-     * @return this object
-     */
-    @NonNull
-    public RandomRosterBuilder withWeightDistributionStrategy(
-            @NonNull final WeightDistributionStrategy weightDistributionStrategy) {
-
-        this.weightDistributionStrategy = weightDistributionStrategy;
         return this;
     }
 
@@ -265,19 +197,8 @@ public class RandomRosterBuilder {
         return nextId;
     }
 
-    /**
-     * Generate the next weight for the next address.
-     */
-    private long getNextWeight() {
-        final long unboundedWeight;
-        switch (weightDistributionStrategy) {
-            case BALANCED -> unboundedWeight = averageWeight;
-            case GAUSSIAN -> unboundedWeight =
-                    Math.max(0, (long) (averageWeight + random.nextGaussian() * weightStandardDeviation));
-            default -> throw new IllegalStateException("Unexpected value: " + weightDistributionStrategy);
-        }
-
-        return Math.min(maximumWeight, Math.max(minimumWeight, unboundedWeight));
+    private long applyWeightBounds(final long weight) {
+        return Math.min(maximumWeight, Math.max(minimumWeight, weight));
     }
 
     /**
@@ -287,19 +208,16 @@ public class RandomRosterBuilder {
         if (realKeys) {
             try {
                 final PublicStores publicStores = new PublicStores();
-                final String name = nodeId.toString();
 
                 final byte[] masterKey = new byte[64];
                 random.nextBytes(masterKey);
 
                 final KeysAndCerts keysAndCerts =
-                        KeysAndCerts.generate(name, new byte[] {}, masterKey, new byte[] {}, publicStores);
+                        KeysAndCerts.generate(nodeId, new byte[] {}, masterKey, new byte[] {}, publicStores);
                 privateKeys.put(nodeId, keysAndCerts);
 
-                final String alias = nameToAlias(name);
-
                 final SerializableX509Certificate sigCert =
-                        new SerializableX509Certificate(publicStores.getCertificate(SIGNING, alias));
+                        new SerializableX509Certificate(publicStores.getCertificate(SIGNING, nodeId));
 
                 addressBuilder.withSigCert(sigCert);
 

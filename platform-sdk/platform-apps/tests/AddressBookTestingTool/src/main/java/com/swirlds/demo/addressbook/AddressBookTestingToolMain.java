@@ -1,35 +1,19 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.addressbook;
 
 import static com.swirlds.common.io.utility.FileUtils.getAbsolutePath;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
-import static com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles.registerMerkleStateRootClassIds;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 
-import com.swirlds.common.constructable.ClassConstructorPair;
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.platform.NodeId;
+import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.config.DefaultConfiguration;
-import com.swirlds.platform.state.PlatformMerkleStateRoot;
-import com.swirlds.platform.system.BasicSoftwareVersion;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -41,6 +25,10 @@ import java.util.List;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.constructable.ClassConstructorPair;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * <p>
@@ -56,7 +44,7 @@ import org.apache.logging.log4j.Logger;
  * </li>
  * </ol>
  */
-public class AddressBookTestingToolMain implements SwirldMain {
+public class AddressBookTestingToolMain implements SwirldMain<AddressBookTestingToolState> {
 
     /** The logger for this class. */
     private static final Logger logger = LogManager.getLogger(AddressBookTestingToolMain.class);
@@ -66,11 +54,7 @@ public class AddressBookTestingToolMain implements SwirldMain {
             logger.info(STARTUP.getMarker(), "Registering AddressBookTestingToolState with ConstructableRegistry");
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(
-                    new ClassConstructorPair(AddressBookTestingToolState.class, () -> {
-                        AddressBookTestingToolState addressBookTestingToolState = new AddressBookTestingToolState(
-                                FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
-                        return addressBookTestingToolState;
-                    }));
+                    new ClassConstructorPair(AddressBookTestingToolState.class, AddressBookTestingToolState::new));
             registerMerkleStateRootClassIds();
             logger.info(STARTUP.getMarker(), "AddressBookTestingToolState is registered with ConstructableRegistry");
         } catch (ConstructableRegistryException e) {
@@ -79,8 +63,8 @@ public class AddressBookTestingToolMain implements SwirldMain {
         }
     }
 
-    /** The software version of this application. */
-    private BasicSoftwareVersion softwareVersion;
+    /** The semantic version of this application. */
+    private SemanticVersion semanticVersion;
 
     /** The platform. */
     private Platform platform;
@@ -127,22 +111,25 @@ public class AddressBookTestingToolMain implements SwirldMain {
      */
     @Override
     @NonNull
-    public PlatformMerkleStateRoot newMerkleStateRoot() {
-        final PlatformMerkleStateRoot state = new AddressBookTestingToolState(
-                FAKE_MERKLE_STATE_LIFECYCLES,
-                version -> new BasicSoftwareVersion(softwareVersion.getSoftwareVersion()));
-        FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
+    public AddressBookTestingToolState newStateRoot() {
+        final AddressBookTestingToolState state = new AddressBookTestingToolState();
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(state);
         return state;
+    }
+
+    @Override
+    @NonNull
+    public ConsensusStateEventHandler<AddressBookTestingToolState> newConsensusStateEvenHandler() {
+        return new AddressBookTestingToolConsensusStateEventHandler(new PlatformStateFacade());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    @NonNull
-    public BasicSoftwareVersion getSoftwareVersion() {
-        if (softwareVersion != null) {
-            return softwareVersion;
+    public SemanticVersion getSemanticVersion() {
+        if (semanticVersion != null) {
+            return semanticVersion;
         }
 
         // Preload configuration so that we can change the software version on the fly
@@ -158,9 +145,14 @@ public class AddressBookTestingToolMain implements SwirldMain {
 
         final int version =
                 configuration.getConfigData(AddressBookTestingToolConfig.class).softwareVersion();
-        this.softwareVersion = new BasicSoftwareVersion(version);
+        this.semanticVersion = SemanticVersion.newBuilder().major(version).build();
 
-        logger.info(STARTUP.getMarker(), "returning software version {}", softwareVersion);
-        return softwareVersion;
+        logger.info(STARTUP.getMarker(), "returning semantic version {}", semanticVersion);
+        return semanticVersion;
+    }
+
+    @Override
+    public Bytes encodeSystemTransaction(@NonNull final StateSignatureTransaction transaction) {
+        return StateSignatureTransaction.PROTOBUF.toBytes(transaction);
     }
 }

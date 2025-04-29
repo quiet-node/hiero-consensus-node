@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.merkledb.files;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyTrue;
@@ -61,6 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Logger;
 import org.junit.jupiter.api.AfterEach;
@@ -137,7 +123,7 @@ class DataFileCollectionTest {
 
         fileCollectionMap.put(testType, fileCollection);
         // create stored offsets list
-        final LongListHeap storedOffsets = new LongListHeap(5000);
+        final LongListHeap storedOffsets = new LongListHeap(5000, Integer.MAX_VALUE, 0);
         storedOffsets.updateValidRange(0, 1100);
         storedOffsetsMap.put(testType, storedOffsets);
         // create 10x 100 item files
@@ -172,7 +158,11 @@ class DataFileCollectionTest {
             count += 100;
         }
         // check 10 files were created
-        assertEquals(10, Files.list(tempFileDir.resolve(testType.name())).count(), "unexpected file count");
+        int filesCount;
+        try (Stream<Path> list = Files.list(tempFileDir.resolve(testType.name()))) {
+            filesCount = (int) list.count();
+        }
+        assertEquals(10, filesCount, "unexpected file count");
     }
 
     @Order(3)
@@ -223,13 +213,14 @@ class DataFileCollectionTest {
         reinitializeDirectMemoryUsage();
         // check that the 10 files were created previously (in the very first unit test) still are
         // readable
-        assertEquals(
-                10,
-                Files.list(tempFileDir.resolve(testType.name()))
-                        .filter(f -> f.toString().endsWith(".pbj"))
-                        .filter(f -> !f.toString().contains("metadata"))
-                        .count(),
-                "Temp file should not have changed since previous test in sequence");
+        try (Stream<Path> list = Files.list(tempFileDir.resolve(testType.name()))) {
+            assertEquals(
+                    10,
+                    list.filter(f -> f.toString().endsWith(".pbj"))
+                            .filter(f -> !f.toString().contains("metadata"))
+                            .count(),
+                    "Temp file should not have changed since previous test in sequence");
+        }
         // examine loadedDataCallbackImpl content's map sizes as well as checking the data
         assertEquals(
                 1000,
@@ -436,13 +427,14 @@ class DataFileCollectionTest {
             }
         });
         // check we only have 1 file left
-        assertEquals(
-                1,
-                Files.list(tempFileDir.resolve(testType.name()))
-                        .filter(f -> f.toString().endsWith(".pbj"))
-                        .filter(f -> !f.toString().contains("metadata"))
-                        .count(),
-                "unexpected # of files #1");
+        try (Stream<Path> list = Files.list(tempFileDir.resolve(testType.name()))) {
+            assertEquals(
+                    1,
+                    list.filter(f -> f.toString().endsWith(".pbj"))
+                            .filter(f -> !f.toString().contains("metadata"))
+                            .count(),
+                    "unexpected # of files #1");
+        }
         // After merge is complete, there should be only 1 "fully written" file, and that it is
         // empty.
         List<DataFileReader> filesLeft = fileCollection.getAllCompletedFiles();
@@ -485,13 +477,14 @@ class DataFileCollectionTest {
         }
         fileCollection.endWriting(0, 1000).setFileCompleted();
         // check we now have 2 files
-        assertEquals(
-                2,
-                Files.list(tempFileDir.resolve(testType.name()))
-                        .filter(f -> f.toString().endsWith(".pbj"))
-                        .filter(f -> !f.toString().contains("metadata"))
-                        .count(),
-                "unexpected # of files");
+        try (Stream<Path> list = Files.list(tempFileDir.resolve(testType.name()))) {
+            assertEquals(
+                    2,
+                    list.filter(f -> f.toString().endsWith(".pbj"))
+                            .filter(f -> !f.toString().contains("metadata"))
+                            .count(),
+                    "unexpected # of files");
+        }
     }
 
     @Order(201)
@@ -592,13 +585,14 @@ class DataFileCollectionTest {
             }
         });
         // check we 7 files left, as we merged 5 out of 11
-        assertEquals(
-                1,
-                Files.list(tempFileDir.resolve(testType.name()))
-                        .filter(f -> f.toString().endsWith(".pbj"))
-                        .filter(f -> !f.toString().contains("metadata"))
-                        .count(),
-                "unexpected # of files");
+        try (Stream<Path> list = Files.list(tempFileDir.resolve(testType.name()))) {
+            assertEquals(
+                    1,
+                    list.filter(f -> f.toString().endsWith(".pbj"))
+                            .filter(f -> !f.toString().contains("metadata"))
+                            .count(),
+                    "unexpected # of files");
+        }
     }
 
     private static DataFileCompactor createFileCompactor(
@@ -637,18 +631,19 @@ class DataFileCollectionTest {
         assertSame(0, fileCollection.getAllCompletedFiles().size(), "Should be no files");
         fileCollectionMap.put(testType, fileCollection);
         // create stored offsets list
-        final LongListHeap storedOffsets = new LongListHeap(5000);
+        final LongListHeap storedOffsets = new LongListHeap(5000, Integer.MAX_VALUE, 0);
         storedOffsets.updateValidRange(0, 1100);
         storedOffsetsMap.put(testType, storedOffsets);
         // create 10x 100 item files
         populateDataFileCollection(testType, fileCollection, storedOffsets);
         // check 10 files were created and data is correct
-        assertEquals(
-                10,
-                Files.list(dbDir)
-                        .filter(file -> file.getFileName().toString().startsWith(storeName))
-                        .count(),
-                "expected 10 db files");
+        try (Stream<Path> list = Files.list(dbDir)) {
+            assertEquals(
+                    10,
+                    list.filter(file -> file.getFileName().toString().startsWith(storeName))
+                            .count(),
+                    "expected 10 db files");
+        }
         assertSame(10, fileCollection.getAllCompletedFiles().size(), "Should be 10 files");
         checkData(fileCollectionMap.get(testType), storedOffsetsMap.get(testType), testType, 0, 1000, 10_000);
         // check all files are available for merge
@@ -724,7 +719,7 @@ class DataFileCollectionTest {
 
         // init file collection with some content to compact
         final DataFileCollection fileCollection = new DataFileCollection(MERKLE_DB_CONFIG, dbDir, storeName, null);
-        final LongListHeap storedOffsets = new LongListHeap(5000);
+        final LongListHeap storedOffsets = new LongListHeap(5000, Integer.MAX_VALUE, 0);
         storedOffsets.updateValidRange(0, 1100);
         final DataFileCompactor compactor = new DataFileCompactor(
                 MERKLE_DB_CONFIG, storeName, fileCollection, storedOffsets, null, null, null, null);

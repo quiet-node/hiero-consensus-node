@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.state.merkle.disk;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,16 +10,14 @@ import com.hedera.hapi.node.state.token.Account;
 import com.hedera.node.app.state.merkle.MerkleSchemaRegistry;
 import com.hedera.node.app.state.merkle.SchemaApplications;
 import com.hedera.node.config.data.HederaConfig;
-import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
-import com.swirlds.state.merkle.StateUtils;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.disk.OnDiskKey;
 import com.swirlds.state.merkle.disk.OnDiskKeySerializer;
 import com.swirlds.state.merkle.disk.OnDiskReadableKVState;
@@ -49,6 +32,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Set;
+import org.hiero.base.crypto.DigestType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -90,20 +74,17 @@ class OnDiskTest extends MerkleTestBase {
                 onDiskValueSerializerClassId(SERVICE_NAME, ACCOUNT_STATE_KEY),
                 onDiskValueClassId(SERVICE_NAME, ACCOUNT_STATE_KEY),
                 Account.PROTOBUF);
-        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
         final var tableConfig = new MerkleDbTableConfig(
                 (short) 1,
                 DigestType.SHA_384,
-                merkleDbConfig.maxNumOfKeys(),
-                merkleDbConfig.hashesRamToDiskThreshold());
-        // Force all hashes to disk, to make sure we're going through all the
-        // serialization paths we can
-        tableConfig.hashesRamToDiskThreshold(0);
-        tableConfig.maxNumberOfKeys(100);
+                100,
+                // Force all hashes to disk, to make sure we're going through all the
+                // serialization paths we can
+                0);
 
         final var builder = new MerkleDbDataSourceBuilder(storageDir, tableConfig, CONFIGURATION);
         virtualMap = new VirtualMap<>(
-                StateUtils.computeLabel(SERVICE_NAME, ACCOUNT_STATE_KEY),
+                StateMetadata.computeLabel(SERVICE_NAME, ACCOUNT_STATE_KEY),
                 keySerializer,
                 valueSerializer,
                 builder,

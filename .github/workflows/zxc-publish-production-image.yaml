@@ -1,19 +1,4 @@
-##
-# Copyright (C) 2024 Hedera Hashgraph, LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-##
-
+# SPDX-License-Identifier: Apache-2.0
 name: "ZXC: Publish Production Image"
 on:
   workflow_call:
@@ -79,7 +64,7 @@ permissions:
 jobs:
   publish-image:
     name: ${{ inputs.custom-job-name || 'Publish Production Image (GCP)' }}
-    runs-on: network-node-linux-large
+    runs-on: hiero-network-node-linux-large
     if: ${{ !github.event.workflow_call.repository.fork }}
     outputs:
       docker-registry: ${{ steps.set-registry.outputs.docker-registry }}
@@ -88,7 +73,7 @@ jobs:
       docker-image-tag: ${{ inputs.version }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
           egress-policy: audit
 
@@ -104,7 +89,7 @@ jobs:
 
       - name: Authenticate to Google Cloud
         id: google-auth
-        uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f # v2.1.7
+        uses: google-github-actions/auth@71f986410dfbc7added4569d411d040a91dc6935 # v2.1.8
         if: ${{ inputs.dry-run-enabled != true && inputs.registry-name == 'gcp' && !cancelled() && !failure() }}
         with:
           token_format: "access_token"
@@ -112,7 +97,7 @@ jobs:
           service_account: "swirlds-automation@hedera-registry.iam.gserviceaccount.com"
 
       - name: Setup JFrog CLI
-        uses: jfrog/setup-jfrog-cli@96153976e4e81b3701e9cc0a5b9597e80614af81 # v4.5.1
+        uses: jfrog/setup-jfrog-cli@611876cbed7d009aab97257020a59ddde6e840c0 # v4.5.8
         if: ${{ inputs.dry-run-enabled != true && inputs.registry-name == 'jfrog' && !cancelled() && !failure() }}
         env:
           JF_URL: ${{ secrets.jf-url }}
@@ -152,10 +137,10 @@ jobs:
           echo "docker-tag-base=${DOCKER_TAG_BASE}" >>"${GITHUB_OUTPUT}"
 
       - name: Setup QEmu Support
-        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+        uses: docker/setup-qemu-action@5964de0df58d5ad28b04d8fe2e6b80ad47105b91 # v3.5.0
 
       - name: Setup Docker Buildx Support
-        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
         with:
           version: v0.16.2
           driver-opts: network=host
@@ -168,7 +153,7 @@ jobs:
         run: docker run -d -p 5000:5000 --restart=always --name registry registry:latest
 
       - name: Docker Login (GCP)
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         if: ${{ inputs.dry-run-enabled != true && inputs.registry-name == 'gcp' && !cancelled() && !failure() }}
         with:
           registry: ${{ steps.set-registry.outputs.docker-registry }}
@@ -176,7 +161,7 @@ jobs:
           password: ${{ steps.google-auth.outputs.access_token }}
 
       - name: Docker Login (JFrog)
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         if: ${{ inputs.dry-run-enabled != true && inputs.registry-name == 'jfrog' && !cancelled() && !failure() }}
         with:
           registry: ${{ steps.set-registry.outputs.docker-registry }}
@@ -189,7 +174,7 @@ jobs:
           cp -rvf ~/artifact-build/* hedera-node/infrastructure/docker/containers/production-next/consensus-node/sdk/
 
       - name: Build Consensus Node Image
-        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355 # v6.10.0
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
         env:
           SOURCE_DATE_EPOCH: ${{ steps.commit.outputs.source-date }}
         with:

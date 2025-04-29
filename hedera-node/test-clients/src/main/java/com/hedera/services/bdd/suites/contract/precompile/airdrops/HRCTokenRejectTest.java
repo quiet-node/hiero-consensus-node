@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.contract.precompile.airdrops;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
@@ -23,10 +8,12 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_REVER
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_TOKEN_BALANCE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_OWNER_ID;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.TOKEN_REFERENCE_LIST_SIZE_LIMIT_EXCEEDED;
 
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
-import com.hedera.services.bdd.junit.OrderedInIsolation;
+import com.hedera.services.bdd.junit.RepeatableHapiTest;
+import com.hedera.services.bdd.junit.RepeatableReason;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
 import com.hedera.services.bdd.spec.dsl.annotations.Account;
 import com.hedera.services.bdd.spec.dsl.annotations.FungibleToken;
@@ -42,7 +29,6 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
 @Tag(SMART_CONTRACT)
-@OrderedInIsolation
 @HapiTestLifecycle
 public class HRCTokenRejectTest {
 
@@ -55,6 +41,7 @@ public class HRCTokenRejectTest {
     }
 
     @HapiTest
+    @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     @DisplayName("HRC rejectTokenFT works")
     public Stream<DynamicTest> hrcFungibleWorks(@FungibleToken(initialSupply = 1000) SpecFungibleToken token) {
         return hapiTest(
@@ -68,6 +55,7 @@ public class HRCTokenRejectTest {
     }
 
     @HapiTest
+    @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     @DisplayName("HRC rejectTokenNFTs works")
     public Stream<DynamicTest> hrcNftWorks(@NonFungibleToken(numPreMints = 1) SpecNonFungibleToken nft) {
         return hapiTest(
@@ -81,6 +69,7 @@ public class HRCTokenRejectTest {
     }
 
     @HapiTest
+    @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     @DisplayName("HRC rejectTokenNFTs works for max allowed serials")
     public Stream<DynamicTest> hrcNftWorksForMultipleSerials(
             @NonFungibleToken(numPreMints = 10) SpecNonFungibleToken nft) {
@@ -97,6 +86,7 @@ public class HRCTokenRejectTest {
     }
 
     @HapiTest
+    @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     @DisplayName("HRC rejectTokenNFTs fails if account has no nft balance")
     public Stream<DynamicTest> hrcNftFailsIfAccountHasNoBalance(
             @NonFungibleToken(numPreMints = 1) SpecNonFungibleToken nft) {
@@ -109,6 +99,7 @@ public class HRCTokenRejectTest {
     }
 
     @HapiTest
+    @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     @DisplayName("HRC rejectTokenFT fails if account has no token balance")
     public Stream<DynamicTest> hrcFungibleFailsIfAccountHasNoBalance(@FungibleToken SpecFungibleToken token) {
         return hapiTest(
@@ -120,6 +111,7 @@ public class HRCTokenRejectTest {
     }
 
     @HapiTest
+    @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     @DisplayName("HRC rejectTokenNFTs fails if serials exceed limit")
     public Stream<DynamicTest> hrcNftFailsForMultipleSerials(
             @NonFungibleToken(numPreMints = 11) SpecNonFungibleToken nft) {
@@ -131,6 +123,7 @@ public class HRCTokenRejectTest {
                 nft.call(HRC904, "rejectTokenNFTs", new long[] {1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L})
                         .with(call -> call.payingWith(sender.name()))
                         .gas(1_000_000L)
-                        .andAssert(txn -> txn.hasKnownStatuses(CONTRACT_REVERT_EXECUTED)));
+                        .andAssert(txn -> txn.hasKnownStatuses(
+                                CONTRACT_REVERT_EXECUTED, TOKEN_REFERENCE_LIST_SIZE_LIMIT_EXCEEDED)));
     }
 }

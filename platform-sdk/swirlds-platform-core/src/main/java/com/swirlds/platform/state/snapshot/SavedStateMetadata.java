@@ -1,23 +1,7 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state.snapshot;
 
 import static com.swirlds.common.formatting.StringFormattingUtils.formattedList;
-import static com.swirlds.common.utility.CommonUtils.unhex;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.platform.state.snapshot.SavedStateMetadataField.CONSENSUS_TIMESTAMP;
 import static com.swirlds.platform.state.snapshot.SavedStateMetadataField.HASH;
@@ -33,12 +17,14 @@ import static com.swirlds.platform.state.snapshot.SavedStateMetadataField.SIGNIN
 import static com.swirlds.platform.state.snapshot.SavedStateMetadataField.SOFTWARE_VERSION;
 import static com.swirlds.platform.state.snapshot.SavedStateMetadataField.TOTAL_WEIGHT;
 import static com.swirlds.platform.state.snapshot.SavedStateMetadataField.WALL_CLOCK_TIME;
+import static org.hiero.base.utility.CommonUtils.unhex;
 
-import com.swirlds.common.crypto.Hash;
+import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.formatting.TextTable;
-import com.swirlds.common.platform.NodeId;
-import com.swirlds.platform.state.PlatformStateAccessor;
+import com.swirlds.common.utility.Mnemonics;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
+import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.BufferedReader;
@@ -58,6 +44,10 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Hash;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.roster.RosterRetriever;
+import org.hiero.consensus.roster.RosterUtils;
 
 /**
  * Metadata about a saved state. Fields in this record may be null if they are not present in the metadata file. All
@@ -159,36 +149,40 @@ public record SavedStateMetadata(
      * @param signedState the signed state
      * @param selfId      the ID of the node that created the signed state
      * @param now         the current time
+     * @param platformStateFacade  the facade to access the platform state
      * @return the signed state metadata
      */
     public static SavedStateMetadata create(
-            @NonNull final SignedState signedState, @NonNull final NodeId selfId, @NonNull final Instant now) {
+            @NonNull final SignedState signedState,
+            @NonNull final NodeId selfId,
+            @NonNull final Instant now,
+            @NonNull final PlatformStateFacade platformStateFacade) {
         Objects.requireNonNull(signedState, "signedState must not be null");
-        Objects.requireNonNull(signedState.getState().getHash(), "state must be hashed");
+        final State state = signedState.getState();
+        Objects.requireNonNull(state.getHash(), "state must be hashed");
         Objects.requireNonNull(now, "now must not be null");
 
-        final PlatformStateAccessor platformState = signedState.getState().getReadablePlatformState();
+        final long round = platformStateFacade.roundOf(state);
+        final Roster roster = RosterRetriever.retrieveActive(state, round);
 
         final List<NodeId> signingNodes = signedState.getSigSet().getSigningNodes();
         Collections.sort(signingNodes);
 
         return new SavedStateMetadata(
                 signedState.getRound(),
-                signedState.getState().getHash(),
-                signedState.getState().getHash().toMnemonic(),
-                platformState.getSnapshot().nextConsensusNumber(),
+                state.getHash(),
+                Mnemonics.generateMnemonic(state.getHash()),
+                platformStateFacade.consensusSnapshotOf(state).nextConsensusNumber(),
                 signedState.getConsensusTimestamp(),
-                platformState.getLegacyRunningEventHash(),
-                platformState.getLegacyRunningEventHash().toMnemonic(),
-                platformState.getAncientThreshold(),
-                convertToString(platformState.getCreationSoftwareVersion()),
+                platformStateFacade.legacyRunningEventHashOf(state),
+                Mnemonics.generateMnemonic(platformStateFacade.legacyRunningEventHashOf(state)),
+                platformStateFacade.ancientThresholdOf(state),
+                convertToString(platformStateFacade.creationSoftwareVersionOf(state)),
                 now,
                 selfId,
                 signingNodes,
                 signedState.getSigningWeight(),
-                platformState.getAddressBook() == null
-                        ? 0
-                        : platformState.getAddressBook().getTotalWeight());
+                roster == null ? 0 : RosterUtils.computeTotalWeight(roster));
     }
 
     /**

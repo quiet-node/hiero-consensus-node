@@ -1,26 +1,12 @@
-/*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.crypto;
 
 import static com.google.protobuf.ByteString.copyFromUtf8;
 import static com.hedera.node.app.hapi.utils.EthSigsUtils.recoverAddressFromPubKey;
-import static com.hedera.services.bdd.junit.TestTags.ADHOC;
 import static com.hedera.services.bdd.junit.TestTags.CRYPTO;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
+import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
+import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.PropertySource.asAccount;
 import static com.hedera.services.bdd.spec.PropertySource.asAccountString;
@@ -99,6 +85,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.spec.keys.KeyShape;
+import com.hedera.services.bdd.spec.queries.meta.HapiGetTxnRecord;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ContractID;
 import com.hederahashgraph.api.proto.java.Key;
@@ -111,7 +98,6 @@ import com.hederahashgraph.api.proto.java.TokenTransferList;
 import com.hederahashgraph.api.proto.java.TokenType;
 import com.hederahashgraph.api.proto.java.TransactionRecord;
 import com.hederahashgraph.api.proto.java.TransferList;
-import com.swirlds.common.utility.CommonUtils;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -123,7 +109,6 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
 @Tag(CRYPTO)
-@Tag(ADHOC)
 public class AutoAccountCreationSuite {
 
     private static final long INITIAL_BALANCE = 1000L;
@@ -1533,7 +1518,7 @@ public class AutoAccountCreationSuite {
     @HapiTest
     final Stream<DynamicTest> cannotAutoCreateWithTxnToLongZero() {
         final AtomicReference<ByteString> evmAddress = new AtomicReference<>();
-        final var longZeroAddress = ByteString.copyFrom(CommonUtils.unhex("0000000000000000000000000000000fffffffff"));
+        final var longZeroAddress = ByteString.copyFrom(asSolidityAddress(shard, realm, 5555));
 
         return hapiTest(
                 newKeyNamed(SECP_256K1_SOURCE_KEY).shape(SECP_256K1_SHAPE),
@@ -1564,6 +1549,35 @@ public class AutoAccountCreationSuite {
                             .hasChildRecordCount(1)
                             .hasChildRecords(
                                     recordWith().status(SUCCESS).memo(LAZY_MEMO).alias(evmAddress.get()));
+                }));
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> hollowAccountCompletionWithSimultaneousPropertiesUpdate() {
+        return hapiTest(
+                newKeyNamed(SECP_256K1_SOURCE_KEY).shape(SECP_256K1_SHAPE),
+                cryptoCreate(LAZY_CREATE_SPONSOR).balance(INITIAL_BALANCE * ONE_HBAR),
+                cryptoCreate(CRYPTO_TRANSFER_RECEIVER).balance(INITIAL_BALANCE * ONE_HBAR),
+                withOpContext((spec, opLog) -> {
+                    final var ecdsaKey = spec.registry()
+                            .getKey(SECP_256K1_SOURCE_KEY)
+                            .getECDSASecp256K1()
+                            .toByteArray();
+                    final var evmAddress = ByteString.copyFrom(recoverAddressFromPubKey(ecdsaKey));
+                    final var op = cryptoTransfer(tinyBarsFromTo(LAZY_CREATE_SPONSOR, evmAddress, ONE_HUNDRED_HBARS))
+                            .hasKnownStatus(SUCCESS)
+                            .via(TRANSFER_TXN);
+
+                    final HapiGetTxnRecord hapiGetTxnRecord =
+                            getTxnRecord(TRANSFER_TXN).andAllChildRecords().logged();
+
+                    allRunFor(spec, op, hapiGetTxnRecord);
+
+                    final AccountID newAccountID = hapiGetTxnRecord
+                            .getFirstNonStakingChildRecord()
+                            .getReceipt()
+                            .getAccountID();
+                    spec.registry().saveAccountId(SECP_256K1_SOURCE_KEY, newAccountID);
                 }));
     }
 }

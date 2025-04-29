@@ -1,32 +1,17 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.system.events;
 
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.consensus.ConsensusConstants.ROUND_FIRST;
+import static org.hiero.consensus.model.hashgraph.ConsensusConstants.ROUND_FIRST;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.metrics.SpeedometerMetric;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.lifecycle.HapiUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.event.PlatformEvent;
 
 /**
  * Default implementation of the {@link BirthRoundMigrationShim}.
@@ -54,7 +39,7 @@ public class DefaultBirthRoundMigrationShim implements BirthRoundMigrationShim {
      * not modified by this object. Events from earlier software versions have their birth rounds modified by this
      * object.
      */
-    private final SoftwareVersion firstVersionInBirthRoundMode;
+    private final SemanticVersion firstVersionInBirthRoundMode;
 
     /**
      * The last round before the birth round mode was enabled.
@@ -78,7 +63,7 @@ public class DefaultBirthRoundMigrationShim implements BirthRoundMigrationShim {
      */
     public DefaultBirthRoundMigrationShim(
             @NonNull final PlatformContext platformContext,
-            @NonNull final SoftwareVersion firstVersionInBirthRoundMode,
+            @NonNull final SemanticVersion firstVersionInBirthRoundMode,
             final long lastRoundBeforeBirthRoundMode,
             final long lowestJudgeGenerationBeforeBirthRoundMode) {
 
@@ -104,8 +89,7 @@ public class DefaultBirthRoundMigrationShim implements BirthRoundMigrationShim {
     @Override
     @NonNull
     public PlatformEvent migrateEvent(@NonNull final PlatformEvent event) {
-        if (HapiUtils.SEMANTIC_VERSION_COMPARATOR.compare(
-                        event.getSoftwareVersion(), firstVersionInBirthRoundMode.getPbjSemanticVersion())
+        if (HapiUtils.SEMANTIC_VERSION_COMPARATOR.compare(event.getSoftwareVersion(), firstVersionInBirthRoundMode)
                 < 0) {
             // The event was created before the birth round mode was enabled.
             // We need to migrate the event's birth round.
@@ -113,12 +97,22 @@ public class DefaultBirthRoundMigrationShim implements BirthRoundMigrationShim {
             if (event.getGeneration() >= lowestJudgeGenerationBeforeBirthRoundMode) {
                 // Any event with a generation greater than or equal to the lowest pre-migration judge generation
                 // is given a birth round that will be non-ancient at migration time.
-                event.overrideBirthRound(lastRoundBeforeBirthRoundMode);
+                logger.debug(
+                        STARTUP.getMarker(),
+                        "Event migrated to use birth rounds prev={} new={} (non-ancient)",
+                        event.getBirthRound(),
+                        lastRoundBeforeBirthRoundMode);
+                event.overrideBirthRound(lastRoundBeforeBirthRoundMode, lowestJudgeGenerationBeforeBirthRoundMode);
                 shimBarelyNonAncientEvents.cycle();
             } else {
                 // All other pre-migration events are given a birth round that will
                 // cause them to be immediately ancient.
-                event.overrideBirthRound(ROUND_FIRST);
+                logger.debug(
+                        STARTUP.getMarker(),
+                        "Event migrated to use birth rounds prev={} new={} (ancient)",
+                        event.getBirthRound(),
+                        ROUND_FIRST);
+                event.overrideBirthRound(ROUND_FIRST, lowestJudgeGenerationBeforeBirthRoundMode);
                 shimAncientEvents.cycle();
             }
         }

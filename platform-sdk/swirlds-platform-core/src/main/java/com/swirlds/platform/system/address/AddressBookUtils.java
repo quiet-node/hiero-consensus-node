@@ -1,39 +1,29 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.system.address;
 
 import static com.swirlds.platform.util.BootstrapUtils.detectSoftwareUpgrade;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.ServiceEndpoint;
+import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.formatting.TextTable;
-import com.swirlds.common.platform.NodeId;
-import com.swirlds.platform.config.AddressBookConfig;
-import com.swirlds.platform.state.MerkleRoot;
-import com.swirlds.platform.state.PlatformStateModifier;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.address.AddressBookInitializer;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
-import com.swirlds.platform.system.SoftwareVersion;
+import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.text.ParseException;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.Address;
+import org.hiero.consensus.model.roster.AddressBook;
+import org.hiero.consensus.roster.RosterRetriever;
+import org.hiero.consensus.roster.RosterUtils;
 
 /**
  * A utility class for AddressBook functionality.
@@ -242,39 +232,59 @@ public class AddressBookUtils {
      */
     public static @NonNull AddressBook initializeAddressBook(
             @NonNull final NodeId selfId,
-            @NonNull final SoftwareVersion version,
+            @NonNull final SemanticVersion version,
             @NonNull final ReservedSignedState initialState,
             @NonNull final AddressBook bootstrapAddressBook,
-            @NonNull final PlatformContext platformContext) {
-        final boolean softwareUpgrade = detectSoftwareUpgrade(version, initialState.get());
+            @NonNull final PlatformContext platformContext,
+            @NonNull final ConsensusStateEventHandler<?> consensusStateEventHandler,
+            @NonNull final PlatformStateFacade platformStateFacade) {
+        final boolean softwareUpgrade = detectSoftwareUpgrade(version, initialState.get(), platformStateFacade);
         // Initialize the address book from the configuration and platform saved state.
         final AddressBookInitializer addressBookInitializer = new AddressBookInitializer(
-                selfId, version, softwareUpgrade, initialState.get(), bootstrapAddressBook.copy(), platformContext);
+                selfId,
+                softwareUpgrade,
+                initialState.get(),
+                bootstrapAddressBook.copy(),
+                platformContext,
+                consensusStateEventHandler,
+                platformStateFacade);
+        final State state = initialState.get().getState();
 
-        final boolean useRosterLifecycle = platformContext
-                .getConfiguration()
-                .getConfigData(AddressBookConfig.class)
-                .useRosterLifecycle();
-        if (!useRosterLifecycle && addressBookInitializer.hasAddressBookChanged()) {
-            final MerkleRoot state = initialState.get().getState();
-            // Update the address book with the current address book read from config.txt.
-            // Eventually we will not do this, and only transactions will be capable of
-            // modifying the address book.
-            final PlatformStateModifier platformState = state.getWritablePlatformState();
-            platformState.bulkUpdate(v -> {
-                v.setAddressBook(addressBookInitializer.getCurrentAddressBook().copy());
-                v.setPreviousAddressBook(
-                        addressBookInitializer.getPreviousAddressBook() == null
-                                ? null
-                                : addressBookInitializer
-                                        .getPreviousAddressBook()
-                                        .copy());
-            });
+        if (addressBookInitializer.hasAddressBookChanged()) {
+            if (addressBookInitializer.getPreviousAddressBook() != null) {
+                // We cannot really "update" the previous roster because we don't know the round number
+                // at which it became active. And we shouldn't do that anyway because under normal circumstances
+                // the RosterService tracks the roster history correctly. However, since we're given a non-null
+                // previous AddressBook, and per the current implementation we know it comes from the state,
+                // we might as well validate this fact here just to ensure the update is correct.
+                final Roster previousRoster =
+                        RosterRetriever.buildRoster(addressBookInitializer.getPreviousAddressBook());
+                final long round = platformStateFacade.roundOf(state);
+                if (!previousRoster.equals(RosterRetriever.retrieveActive(state, round))
+                        && !previousRoster.equals(RosterRetriever.retrievePreviousRoster(state))) {
+                    throw new IllegalStateException(
+                            "The previousRoster in the AddressBookInitializer doesn't match either the active or previous roster in state."
+                                    + " AddressBookInitializer previousRoster = " + RosterUtils.toString(previousRoster)
+                                    + ", state currentRoster = "
+                                    + RosterUtils.toString(RosterRetriever.retrieveActive(state, round))
+                                    + ", state previousRoster = "
+                                    + RosterUtils.toString(RosterRetriever.retrievePreviousRoster(state)));
+                }
+            }
+
+            // The active roster is already initialized when creating a genesis state, so only set it here
+            // if it's not for the genesis state (round 0)
+            if (initialState.get().getRound() > 0) {
+                RosterUtils.setActiveRoster(
+                        state,
+                        RosterRetriever.buildRoster(addressBookInitializer.getCurrentAddressBook()),
+                        platformStateFacade.roundOf(state));
+            }
         }
 
         // At this point the initial state must have the current address book set.  If not, something is wrong.
-        final AddressBook addressBook =
-                initialState.get().getState().getReadablePlatformState().getAddressBook();
+        final long round = platformStateFacade.roundOf(state);
+        final AddressBook addressBook = RosterUtils.buildAddressBook(RosterRetriever.retrieveActive(state, round));
         if (addressBook == null) {
             throw new IllegalStateException("The current address book of the initial state is null.");
         }
@@ -283,21 +293,21 @@ public class AddressBookUtils {
 
     /**
      * Format a "consensusEventStreamName" using the "memo" field from the self-Address.
-     *
+     * <p>
      * !!! IMPORTANT !!!: It's imperative to retain the logic that is based on the current content of the "memo" field,
-     * even if the code is updated to source the content of "memo" from another place. The "consensusEventStreamName" is used
-     * as a directory name to save some files on disk, and the directory name should remain unchanged for now.
+     * even if the code is updated to source the content of "memo" from another place. The "consensusEventStreamName" is
+     * used as a directory name to save some files on disk, and the directory name should remain unchanged for now.
      * <p>
-     * Per @lpetrovic05 : "As far as I know, CES isn't really used for anything.
-     * It is however, uploaded to google storage, so maybe the name change might affect the uploader."
+     * Per @lpetrovic05 : "As far as I know, CES isn't really used for anything. It is however, uploaded to google
+     * storage, so maybe the name change might affect the uploader."
      * <p>
-     * This logic could and should eventually change to use the nodeId only (see the else{} branch below.)
-     * However, this change needs to be coordinated with DevOps and NodeOps to ensure the data continues to be uploaded.
-     * Replacing the directory and starting with an empty one may or may not affect the DefaultConsensusEventStream
-     * which will need to be tested when this change takes place.
+     * This logic could and should eventually change to use the nodeId only (see the else{} branch below.) However, this
+     * change needs to be coordinated with DevOps and NodeOps to ensure the data continues to be uploaded. Replacing the
+     * directory and starting with an empty one may or may not affect the DefaultConsensusEventStream which will need to
+     * be tested when this change takes place.
      *
      * @param addressBook an AddressBook
-     * @param selfId a NodeId for self
+     * @param selfId      a NodeId for self
      * @return consensusEventStreamName
      */
     @NonNull

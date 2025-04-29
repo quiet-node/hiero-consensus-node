@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.addressbook.impl.validators;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.FQDN_SIZE_TOO_LARGE;
@@ -30,10 +15,10 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_SERVICE_ENDPOIN
 import static com.hedera.hapi.node.base.ResponseCodeEnum.IP_FQDN_CANNOT_BE_SET_FOR_SAME_ENDPOINT;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.KEY_REQUIRED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SERVICE_ENDPOINTS_EXCEEDED_LIMIT;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.isEmpty;
+import static com.hedera.node.app.hapi.utils.keys.KeyUtils.isValid;
 import static com.hedera.node.app.service.addressbook.AddressBookHelper.readCertificatePemFile;
 import static com.hedera.node.app.service.addressbook.AddressBookHelper.writeCertificatePemFile;
-import static com.hedera.node.app.spi.key.KeyUtils.isEmpty;
-import static com.hedera.node.app.spi.key.KeyUtils.isValid;
 import static com.hedera.node.app.spi.validation.Validations.validateAccountID;
 import static com.hedera.node.app.spi.workflows.HandleException.validateFalse;
 import static com.hedera.node.app.spi.workflows.PreCheckException.validateFalsePreCheck;
@@ -108,9 +93,6 @@ public class AddressBookValidator {
 
         validateFalse(endpointList == null || endpointList.isEmpty(), INVALID_GOSSIP_ENDPOINT);
         validateFalse(endpointList.size() > nodesConfig.maxGossipEndpoint(), GOSSIP_ENDPOINTS_EXCEEDED_LIMIT);
-        // for phase 2: The first in the list is used as the Internal IP address in config.txt,
-        // the second in the list is used as the External IP address in config.txt
-        validateFalse(endpointList.size() < 2, INVALID_GOSSIP_ENDPOINT);
 
         for (final var endpoint : endpointList) {
             validateFalse(
@@ -161,7 +143,7 @@ public class AddressBookValidator {
                 !requireNonNull(accountId).hasAccountNum() && accountId.hasAlias(), INVALID_NODE_ACCOUNT_ID);
     }
 
-    private void validateEndpoint(@NonNull final ServiceEndpoint endpoint, @NonNull final NodesConfig nodesConfig) {
+    public void validateEndpoint(@NonNull final ServiceEndpoint endpoint, @NonNull final NodesConfig nodesConfig) {
         requireNonNull(endpoint);
         requireNonNull(nodesConfig);
 

@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.records;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.SYSTEM_ACCOUNT_BALANCES;
-import static com.hedera.services.bdd.spec.HapiSpec.defaultHapiSpec;
+import static com.hedera.services.bdd.junit.RepeatableReason.NEEDS_SYNCHRONOUS_HANDLE_WORKFLOW;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.changeFromSnapshot;
 import static com.hedera.services.bdd.spec.assertions.AssertUtils.inOrder;
@@ -42,26 +28,38 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ZERO_B
 
 import com.hedera.node.app.hapi.utils.fee.FeeObject;
 import com.hedera.services.bdd.junit.HapiTest;
+import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
+import com.hedera.services.bdd.junit.RepeatableHapiTest;
+import com.hedera.services.bdd.junit.support.TestLifecycle;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DynamicTest;
 
+@HapiTestLifecycle
 public class RecordCreationSuite {
     private static final long SLEEP_MS = 1_000L;
     private static final String BEFORE = "before";
     private static final String FUNDING_BEFORE = "fundingBefore";
     private static final String STAKING_REWARD1 = "stakingReward";
     private static final String NODE_REWARD1 = "nodeReward";
-    private static final String FOR_ACCOUNT_FUNDING = "0.0.98";
-    private static final String FOR_ACCOUNT_STAKING_REWARDS = "0.0.800";
-    private static final String FOR_ACCOUNT_NODE_REWARD = "0.0.801";
+    private static final String FOR_ACCOUNT_FUNDING = asEntityString(98);
+    private static final String FOR_ACCOUNT_STAKING_REWARDS = asEntityString(800);
+    private static final String FOR_ACCOUNT_NODE_REWARD = asEntityString(801);
     private static final String PAYER = "payer";
     private static final String THIS_IS_OK_IT_S_FINE_IT_S_WHATEVER = "This is ok, it's fine, it's whatever.";
-    private static final String TO_ACCOUNT = "0.0.3";
+    private static final String TO_ACCOUNT = asEntityString(3);
     private static final String TXN_ID = "txnId";
-    public static final String STAKING_FEES_NODE_REWARD_PERCENTAGE = "staking.fees.nodeRewardPercentage";
-    public static final String STAKING_FEES_STAKING_REWARD_PERCENTAGE = "staking.fees.stakingRewardPercentage";
+
+    @BeforeAll
+    static void beforeAll(@NonNull final TestLifecycle testLifecycle) {
+        testLifecycle.overrideInClass(Map.of(
+                "nodes.nodeRewardsEnabled", "false",
+                "nodes.preserveMinNodeRewardBalance", "false"));
+    }
 
     @LeakyHapiTest(requirement = SYSTEM_ACCOUNT_BALANCES)
     final Stream<DynamicTest> submittingNodeStillPaidIfServiceFeesOmitted() {
@@ -111,7 +109,7 @@ public class RecordCreationSuite {
                         .logged()));
     }
 
-    @LeakyHapiTest(requirement = SYSTEM_ACCOUNT_BALANCES)
+    @RepeatableHapiTest(NEEDS_SYNCHRONOUS_HANDLE_WORKFLOW)
     final Stream<DynamicTest> submittingNodeChargedNetworkFeeForLackOfDueDiligence() {
         final String comfortingMemo = THIS_IS_OK_IT_S_FINE_IT_S_WHATEVER;
         final String disquietingMemo = "\u0000his is ok, it's fine, it's whatever.";
@@ -134,7 +132,6 @@ public class RecordCreationSuite {
                                 .payingWith(PAYER)
                                 .txnId(TXN_ID))
                         .payingWith(GENESIS),
-                sleepFor(SLEEP_MS),
                 sourcing(() -> getAccountBalance(TO_ACCOUNT)
                         .hasTinyBars(changeFromSnapshot(BEFORE, -feeObs.get().networkFee()))),
                 sourcing(() -> getAccountBalance(FOR_ACCOUNT_FUNDING)
@@ -209,11 +206,11 @@ public class RecordCreationSuite {
     final Stream<DynamicTest> accountsGetPayerRecordsIfSoConfigured() {
         final var txn = "ofRecord";
 
-        return defaultHapiSpec("AccountsGetPayerRecordsIfSoConfigured")
-                .given(cryptoCreate(PAYER))
-                .when(cryptoTransfer(tinyBarsFromTo(GENESIS, FUNDING, 1_000L))
+        return hapiTest(
+                cryptoCreate(PAYER),
+                cryptoTransfer(tinyBarsFromTo(GENESIS, FUNDING, 1_000L))
                         .payingWith(PAYER)
-                        .via(txn))
-                .then(getAccountRecords(PAYER).has(inOrder(recordWith().txnId(txn))));
+                        .via(txn),
+                getAccountRecords(PAYER).has(inOrder(recordWith().txnId(txn))));
     }
 }

@@ -1,30 +1,21 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.extensions;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.FEE_SCHEDULE_OVERRIDES;
 import static com.hedera.services.bdd.junit.ContextRequirement.THROTTLE_OVERRIDES;
 import static com.hedera.services.bdd.junit.extensions.ExtensionUtils.hapiTestMethodOf;
 import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.CONCURRENT;
+import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.REPEATABLE;
+import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.workingDirVersion;
+import static com.hedera.services.bdd.spec.HapiSpec.doTargetSpec;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.platform.commons.support.AnnotationSupport.isAnnotated;
 
-import com.hedera.services.bdd.junit.BootstrapOverride;
+import com.hedera.hapi.util.HapiUtils;
+import com.hedera.node.app.fixtures.state.FakeState;
+import com.hedera.services.bdd.junit.ConfigOverride;
 import com.hedera.services.bdd.junit.ContextRequirement;
 import com.hedera.services.bdd.junit.GenesisHapiTest;
 import com.hedera.services.bdd.junit.HapiTest;
@@ -36,12 +27,17 @@ import com.hedera.services.bdd.junit.TargetEmbeddedMode;
 import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode;
 import com.hedera.services.bdd.junit.hedera.embedded.EmbeddedNetwork;
+import com.hedera.services.bdd.junit.restart.RestartHapiTest;
+import com.hedera.services.bdd.junit.restart.SavedStateSpec;
 import com.hedera.services.bdd.spec.HapiSpec;
+import com.hedera.services.bdd.spec.SpecOperation;
 import com.hedera.services.bdd.spec.keys.RepeatableKeyGenerator;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.extension.AfterEachCallback;
@@ -57,6 +53,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  * networks for annotated test classes and targeting them instead of the shared network.
  */
 public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachCallback {
+    private static final String SPEC_NAME = "<RESTART>";
+
     public static final AtomicReference<HederaNetwork> SHARED_NETWORK = new AtomicReference<>();
     public static final AtomicReference<RepeatableKeyGenerator> REPEATABLE_KEY_GENERATOR = new AtomicReference<>();
 
@@ -68,8 +66,34 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
                         new EmbeddedNetwork(method.getName().toUpperCase(), method.getName(), CONCURRENT);
                 final var a = method.getAnnotation(GenesisHapiTest.class);
                 final var bootstrapOverrides = Arrays.stream(a.bootstrapOverrides())
-                        .collect(toMap(BootstrapOverride::key, BootstrapOverride::value));
-                targetNetwork.startWithOverrides(bootstrapOverrides);
+                        .collect(toMap(ConfigOverride::key, ConfigOverride::value));
+                targetNetwork.startWith(bootstrapOverrides);
+                HapiSpec.TARGET_NETWORK.set(targetNetwork);
+            } else if (isAnnotated(method, RestartHapiTest.class)) {
+                final var targetNetwork =
+                        new EmbeddedNetwork(method.getName().toUpperCase(), method.getName(), REPEATABLE);
+                final var a = method.getAnnotation(RestartHapiTest.class);
+
+                final var setupOverrides =
+                        Arrays.stream(a.setupOverrides()).collect(toMap(ConfigOverride::key, ConfigOverride::value));
+
+                final var restartOverrides =
+                        Arrays.stream(a.restartOverrides()).collect(toMap(ConfigOverride::key, ConfigOverride::value));
+
+                switch (a.restartType()) {
+                    case GENESIS -> targetNetwork.startWith(restartOverrides);
+                    case SAME_VERSION -> targetNetwork.startWith(setupOverrides);
+                    case UPGRADE_BOUNDARY -> startFromPreviousVersion(targetNetwork, setupOverrides);
+                }
+                switch (a.restartType()) {
+                    case GENESIS -> {
+                        // The restart was from genesis, so nothing else to do
+                    }
+                    case SAME_VERSION, UPGRADE_BOUNDARY -> {
+                        final var state = postGenesisStateOf(targetNetwork, a);
+                        targetNetwork.restart(state, restartOverrides);
+                    }
+                }
                 HapiSpec.TARGET_NETWORK.set(targetNetwork);
             } else {
                 ensureEmbeddedNetwork(extensionContext);
@@ -100,6 +124,7 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
 
     /**
      * Ensures that the embedded network is running, if required by the test class or method.
+     *
      * @param extensionContext the extension context
      */
     public static void ensureEmbeddedNetwork(@NonNull final ExtensionContext extensionContext) {
@@ -110,6 +135,7 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
 
     /**
      * Returns the embedded mode required by the test class or method, if any.
+     *
      * @param extensionContext the extension context
      * @return the embedded mode
      */
@@ -135,6 +161,7 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
     /**
      * If there is an explicit resource to load, returns it; otherwise returns null if the test's
      * context requirement does not include the relevant requirement.
+     *
      * @param contextRequirements the context requirements of the test
      * @param relevantRequirement the relevant context requirement
      * @param resource the path to the resource
@@ -148,5 +175,46 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
             return resource;
         }
         return List.of(contextRequirements).contains(relevantRequirement) ? "" : null;
+    }
+
+    /**
+     * Starts the given target embedded network from the previous version with any other requested overrides.
+     *
+     * @param targetNetwork the target network
+     * @param overrides the overrides
+     */
+    private void startFromPreviousVersion(
+            @NonNull final EmbeddedNetwork targetNetwork, @NonNull final Map<String, String> overrides) {
+        final Map<String, String> netOverrides = new HashMap<>(overrides);
+        final var currentVersion = workingDirVersion();
+        final var previousVersion = currentVersion
+                .copyBuilder()
+                .minor(currentVersion.minor() - 1)
+                .patch(0)
+                .pre("")
+                .build("")
+                .build();
+        netOverrides.put("hedera.services.version", HapiUtils.toString(previousVersion));
+        targetNetwork.startWith(netOverrides);
+    }
+
+    private FakeState postGenesisStateOf(
+            @NonNull final EmbeddedNetwork targetNetwork, @NonNull final RestartHapiTest a) {
+        final var spec = new HapiSpec(SPEC_NAME, new SpecOperation[] {cryptoCreate("genesisAccount")});
+        doTargetSpec(spec, targetNetwork);
+        try {
+            spec.execute();
+        } catch (Throwable e) {
+            throw new IllegalStateException(e);
+        }
+        final SavedStateSpec savedStateSpec;
+        try {
+            savedStateSpec = a.savedStateSpec().getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        final var state = targetNetwork.embeddedHederaOrThrow().state();
+        savedStateSpec.accept(state);
+        return state;
     }
 }

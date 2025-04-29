@@ -1,49 +1,36 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform;
 
 import static com.swirlds.logging.legacy.LogMarker.RECONNECT;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.platform.components.AppNotifier;
 import com.swirlds.platform.components.SavedStateController;
-import com.swirlds.platform.consensus.EventWindow;
-import com.swirlds.platform.event.AncientMode;
 import com.swirlds.platform.event.validation.RosterUpdate;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.listeners.ReconnectCompleteNotification;
-import com.swirlds.platform.roster.RosterRetriever;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.nexus.SignedStateNexus;
+import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.status.actions.ReconnectCompleteAction;
 import com.swirlds.platform.wiring.PlatformWiring;
-import com.swirlds.state.State;
-import com.swirlds.state.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Hash;
+import org.hiero.consensus.config.EventConfig;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.roster.RosterRetriever;
 
 // FUTURE WORK: this data should be traveling out over the wiring framework.
 
@@ -60,6 +47,8 @@ public class ReconnectStateLoader {
     private final SignedStateNexus latestImmutableStateNexus;
     private final SavedStateController savedStateController;
     private final Roster roster;
+    private final ConsensusStateEventHandler consensusStateEventHandler;
+    private final PlatformStateFacade platformStateFacade;
 
     /**
      * Constructor.
@@ -71,6 +60,7 @@ public class ReconnectStateLoader {
      * @param latestImmutableStateNexus holds the latest immutable state
      * @param savedStateController      manages how states are saved
      * @param roster                    the current roster
+     * @param consensusStateEventHandler           state lifecycle event handler
      */
     public ReconnectStateLoader(
             @NonNull final Platform platform,
@@ -79,7 +69,9 @@ public class ReconnectStateLoader {
             @NonNull final SwirldStateManager swirldStateManager,
             @NonNull final SignedStateNexus latestImmutableStateNexus,
             @NonNull final SavedStateController savedStateController,
-            @NonNull final Roster roster) {
+            @NonNull final Roster roster,
+            @NonNull final ConsensusStateEventHandler consensusStateEventHandler,
+            @NonNull final PlatformStateFacade platformStateFacade) {
         this.platform = Objects.requireNonNull(platform);
         this.platformContext = Objects.requireNonNull(platformContext);
         this.platformWiring = Objects.requireNonNull(platformWiring);
@@ -87,6 +79,8 @@ public class ReconnectStateLoader {
         this.latestImmutableStateNexus = Objects.requireNonNull(latestImmutableStateNexus);
         this.savedStateController = Objects.requireNonNull(savedStateController);
         this.roster = Objects.requireNonNull(roster);
+        this.consensusStateEventHandler = consensusStateEventHandler;
+        this.platformStateFacade = platformStateFacade;
     }
 
     /**
@@ -104,12 +98,12 @@ public class ReconnectStateLoader {
             // It's important to call init() before loading the signed state. The loading process makes copies
             // of the state, and we want to be sure that the first state in the chain of copies has been initialized.
             final Hash reconnectHash = signedState.getState().getHash();
-            signedState
-                    .getSwirldState()
-                    .init(
-                            platform,
-                            InitTrigger.RECONNECT,
-                            signedState.getState().getReadablePlatformState().getCreationSoftwareVersion());
+            final MerkleNodeState state = signedState.getState();
+            final SemanticVersion creationSoftwareVersion = platformStateFacade.creationSoftwareVersionOf(state);
+            signedState.init(platformContext);
+            consensusStateEventHandler.onStateInitialized(
+                    state, platform, InitTrigger.RECONNECT, creationSoftwareVersion);
+
             if (!Objects.equals(signedState.getState().getHash(), reconnectHash)) {
                 throw new IllegalStateException(
                         "State hash is not permitted to change during a reconnect init() call. Previous hash was "
@@ -118,8 +112,8 @@ public class ReconnectStateLoader {
             }
 
             // Before attempting to load the state, verify that the platform roster matches the state roster.
-            final State state = (MerkleStateRoot<?>) signedState.getState().getSwirldState();
-            final Roster stateRoster = RosterRetriever.retrieveActiveOrGenesisRoster(state);
+            final long round = platformStateFacade.roundOf(state);
+            final Roster stateRoster = RosterRetriever.retrieveActive(state, round);
             if (!roster.equals(stateRoster)) {
                 throw new IllegalStateException("Current roster and state-based roster do not contain the same nodes "
                         + " (currentRoster=" + Roster.JSON.toJSON(roster) + ") (stateRoster="
@@ -143,8 +137,8 @@ public class ReconnectStateLoader {
             platformWiring
                     .getSignatureCollectorStateInput()
                     .put(signedState.reserve("loading reconnect state into sig collector"));
-            platformWiring.consensusSnapshotOverride(Objects.requireNonNull(
-                    signedState.getState().getReadablePlatformState().getSnapshot()));
+            platformWiring.consensusSnapshotOverride(
+                    Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(state)));
 
             final Roster previousRoster = RosterRetriever.retrievePreviousRoster(state);
             platformWiring.getRosterUpdateInput().inject(new RosterUpdate(previousRoster, roster));
@@ -156,12 +150,12 @@ public class ReconnectStateLoader {
 
             platformWiring.updateEventWindow(new EventWindow(
                     signedState.getRound(),
-                    signedState.getState().getReadablePlatformState().getAncientThreshold(),
-                    signedState.getState().getReadablePlatformState().getAncientThreshold(),
+                    platformStateFacade.ancientThresholdOf(state),
+                    platformStateFacade.ancientThresholdOf(state),
                     ancientMode));
 
-            final RunningEventHashOverride runningEventHashOverride = new RunningEventHashOverride(
-                    signedState.getState().getReadablePlatformState().getLegacyRunningEventHash(), true);
+            final RunningEventHashOverride runningEventHashOverride =
+                    new RunningEventHashOverride(platformStateFacade.legacyRunningEventHashOf(state), true);
             platformWiring.updateRunningHash(runningEventHashOverride);
             platformWiring.getPcesWriterRegisterDiscontinuityInput().inject(signedState.getRound());
 
@@ -170,9 +164,7 @@ public class ReconnectStateLoader {
                     .getNotifierWiring()
                     .getInputWire(AppNotifier::sendReconnectCompleteNotification)
                     .put(new ReconnectCompleteNotification(
-                            signedState.getRound(),
-                            signedState.getConsensusTimestamp(),
-                            signedState.getState().getSwirldState()));
+                            signedState.getRound(), signedState.getConsensusTimestamp(), signedState.getState()));
 
         } catch (final RuntimeException e) {
             logger.debug(RECONNECT.getMarker(), "`loadReconnectState` : FAILED, reason: {}", e.getMessage());

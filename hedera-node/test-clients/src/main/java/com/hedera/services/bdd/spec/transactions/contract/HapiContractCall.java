@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.transactions.contract;
 
 import static com.hedera.node.app.hapi.utils.CommonUtils.extractTransactionBody;
@@ -42,7 +27,6 @@ import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import com.hederahashgraph.api.proto.java.TransactionRecord;
-import com.swirlds.common.utility.CommonUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayList;
@@ -57,6 +41,7 @@ import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.ObjLongConsumer;
 import java.util.function.Supplier;
+import org.hiero.base.utility.CommonUtils;
 
 public class HapiContractCall extends HapiBaseCall<HapiContractCall> {
     public static final String DEFAULT_ID_SENTINEL = "<DEFAULT_ID>";
@@ -349,7 +334,7 @@ public class HapiContractCall extends HapiBaseCall<HapiContractCall> {
                         .getContractCallResult()
                         .getContractCallResult()
                         .toByteArray());
-                resultObserver.accept(result.toList().toArray());
+                resultObserver.accept(result.toArray());
             });
         }
     }

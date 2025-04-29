@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.merkledb;
 
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.CONFIGURATION;
@@ -21,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.crypto.DigestType;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
@@ -29,6 +13,7 @@ import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import java.io.IOException;
 import java.nio.file.Path;
+import org.hiero.base.crypto.DigestType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -56,6 +41,11 @@ class MerkleDbBuilderTest {
                 DigestType.SHA_384,
                 merkleDbConfig.maxNumOfKeys(),
                 merkleDbConfig.hashesRamToDiskThreshold());
+    }
+
+    private MerkleDbTableConfig createTableConfig(final long maxNumOfKeys, final long hashesRamToDiskThreshold) {
+        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
+        return new MerkleDbTableConfig((short) 1, DigestType.SHA_384, maxNumOfKeys, hashesRamToDiskThreshold);
     }
 
     @Test
@@ -109,10 +99,9 @@ class MerkleDbBuilderTest {
     }
 
     @Test
-    @DisplayName("Test data source config overrides")
-    public void testBuilderOverrides() throws IOException {
-        final MerkleDbTableConfig tableConfig = createTableConfig();
-        tableConfig.maxNumberOfKeys(1999).hashesRamToDiskThreshold(Integer.MAX_VALUE >> 4);
+    @DisplayName("Test custom table config values")
+    public void testCustomTableConfig() throws IOException {
+        final MerkleDbTableConfig tableConfig = createTableConfig(1999, Integer.MAX_VALUE >> 4);
         final MerkleDbDataSourceBuilder builder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
         final Path defaultDbPath = testDirectory.resolve("defaultDatabasePath");
         MerkleDb.setDefaultPath(defaultDbPath);

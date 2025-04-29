@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.standalone.impl;
 
 import static com.hedera.node.app.util.FileUtilities.createFileID;
@@ -23,7 +8,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.NodeAddressBook;
-import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.node.app.info.NodeInfoImpl;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.FilesConfig;
@@ -68,7 +52,7 @@ public class StandaloneNetworkInfo implements NetworkInfo {
         this.configProvider = requireNonNull(configProvider);
         final var config = configProvider.getConfiguration();
         this.ledgerId = config.getConfigData(LedgerConfig.class).id();
-        this.selfNodeInfo = new NodeInfoImpl(0, AccountID.DEFAULT, 0, List.of(), Bytes.EMPTY);
+        this.selfNodeInfo = new NodeInfoImpl(0, AccountID.DEFAULT, 0, List.of(), Bytes.EMPTY, List.of(), false);
     }
 
     /**
@@ -88,7 +72,13 @@ public class StandaloneNetworkInfo implements NetworkInfo {
             final var nodeAddressBook = NodeAddressBook.PROTOBUF.parse(nodeDetails);
             nodeInfos = nodeAddressBook.nodeAddress().stream()
                     .<NodeInfo>map(address -> new NodeInfoImpl(
-                            address.nodeId(), address.nodeAccountIdOrThrow(), address.stake(), List.of(), Bytes.EMPTY))
+                            address.nodeId(),
+                            address.nodeAccountIdOrThrow(),
+                            address.stake(),
+                            List.of(),
+                            Bytes.EMPTY,
+                            List.of(),
+                            false))
                     .toList();
         } catch (ParseException e) {
             log.warn("Failed to parse node details", e);
@@ -130,11 +120,6 @@ public class StandaloneNetworkInfo implements NetworkInfo {
 
     @Override
     public void updateFrom(final State state) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public Roster roster() {
         throw new UnsupportedOperationException("Not implemented");
     }
 

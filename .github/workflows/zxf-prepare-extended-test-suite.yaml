@@ -1,19 +1,4 @@
-##
-# Copyright (C) 2023-2024 Hedera Hashgraph, LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-##
-
+# SPDX-License-Identifier: Apache-2.0
 name: "ZXF: Prepare Extended Test Suite"
 on:
   workflow_dispatch:
@@ -39,18 +24,18 @@ env:
 jobs:
   tag-for-xts:
     name: Tag for XTS promotion
-    runs-on: network-node-linux-medium
+    runs-on: hiero-network-node-linux-medium
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
         with:
           egress-policy: audit
 
       - name: Checkout Default Branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: '0'
-          ref: 'develop'
+          fetch-depth: "0"
+          ref: "main"
           token: ${{ secrets.GH_ACCESS_TOKEN }}
 
       - name: Validate Input Ref
@@ -58,10 +43,10 @@ jobs:
         env:
           COMMIT_ID: ${{ inputs.ref }}
         run: |
-          if git merge-base --is-ancestor "${COMMIT_ID}" develop >/dev/null 2>&1; then
+          if git merge-base --is-ancestor "${COMMIT_ID}" main >/dev/null 2>&1; then
             echo "commit_on_dev=true" >> $GITHUB_OUTPUT
           else
-            echo "::error title=Branch Alignment::The provided commit (${COMMIT_ID}) is not present on the develop branch."
+            echo "::error title=Branch Alignment::The provided commit (${COMMIT_ID}) is not present on the main branch."
             exit 1
           fi
 
@@ -69,7 +54,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         if: ${{ steps.validate-input.outputs.commit_on_dev == 'true'}}
         with:
-          fetch-depth: '0'
+          fetch-depth: "0"
           ref: ${{ inputs.ref }}
           token: ${{ secrets.GH_ACCESS_TOKEN }}
 

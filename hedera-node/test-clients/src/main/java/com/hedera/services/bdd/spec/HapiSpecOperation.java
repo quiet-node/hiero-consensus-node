@@ -1,23 +1,9 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec;
 
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.fromPbj;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
+import static com.hedera.services.bdd.spec.transactions.TxnUtils.asId;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.asIdWithAlias;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.extractTxnId;
 import static java.util.Collections.EMPTY_LIST;
@@ -45,6 +31,7 @@ import com.hedera.services.bdd.spec.transactions.TxnUtils;
 import com.hedera.services.bdd.spec.utilops.mod.BodyMutation;
 import com.hedera.services.bdd.suites.HapiSuite;
 import com.hederahashgraph.api.proto.java.AccountID;
+import com.hederahashgraph.api.proto.java.CustomFeeLimit;
 import com.hederahashgraph.api.proto.java.Duration;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.Key;
@@ -56,6 +43,7 @@ import com.hederahashgraph.api.proto.java.TransactionID;
 import com.hederahashgraph.api.proto.java.TransactionRecord;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -127,7 +115,9 @@ public abstract class HapiSpecOperation implements SpecOperation {
     protected Optional<ControlForKey[]> controlOverrides = Optional.empty();
     protected Map<Key, SigControl> overrides = Collections.EMPTY_MAP;
 
+    protected Optional<Function<HapiSpec, Key>> batchKey = Optional.empty();
     protected Optional<Long> fee = Optional.empty();
+    protected List<Function<HapiSpec, CustomFeeLimit>> maxCustomFeeList = new ArrayList<>();
     protected Optional<Long> validDurationSecs = Optional.empty();
     protected Optional<String> customTxnId = Optional.empty();
     protected Optional<String> memo = Optional.empty();
@@ -135,6 +125,7 @@ public abstract class HapiSpecOperation implements SpecOperation {
     protected Optional<String> payer = Optional.empty();
     protected Optional<Boolean> genRecord = Optional.empty();
     protected Optional<AccountID> node = Optional.empty();
+    protected Optional<String> nodeNum = Optional.empty();
     protected Optional<Supplier<AccountID>> nodeSupplier = Optional.empty();
     protected OptionalDouble usdFee = OptionalDouble.empty();
     protected Optional<Integer> retryLimits = Optional.empty();
@@ -194,6 +185,7 @@ public abstract class HapiSpecOperation implements SpecOperation {
     }
 
     protected void fixNodeFor(final HapiSpec spec) {
+        nodeNum.ifPresent(s -> node = Optional.of(asId(s, spec)));
         if (node.isPresent()) {
             return;
         }
@@ -289,6 +281,7 @@ public abstract class HapiSpecOperation implements SpecOperation {
                     Duration.newBuilder().setSeconds(s).build()));
             genRecord.ifPresent(builder::setGenerateRecord);
             memo.ifPresent(builder::setMemo);
+            batchKey.ifPresent(k -> builder.setBatchKey(k.apply(spec)));
         };
     }
 
@@ -317,6 +310,10 @@ public abstract class HapiSpecOperation implements SpecOperation {
         Consumer<TransactionBody.Builder> netDef = fee.map(amount -> minDef.andThen(b -> b.setTransactionFee(amount)))
                 .orElse(minDef)
                 .andThen(opDef);
+
+        for (final var supplier : maxCustomFeeList) {
+            netDef = netDef.andThen(b -> b.addMaxCustomFees(supplier.apply(spec)));
+        }
 
         setKeyControlOverrides(spec);
         List<Key> keys = signersToUseFor(spec);

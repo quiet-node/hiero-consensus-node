@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.test.exec;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_CONTRACT_ID;
@@ -28,7 +13,6 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SUCCESS
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SUCCESS_RESULT_WITH_SIGNER_NONCE;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.assertFailsWith;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.processorsForAllCurrentEvmVersions;
-import static com.hedera.node.app.service.contract.impl.test.TestHelpers.wellKnownRelayedHapiCallWithGasLimit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -37,15 +21,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.hedera.hapi.node.base.AccountID;
-import com.hedera.hapi.node.base.TimestampSeconds;
 import com.hedera.hapi.node.base.TransactionID;
-import com.hedera.hapi.node.transaction.ExchangeRate;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.contract.impl.exec.CallOutcome;
 import com.hedera.node.app.service.contract.impl.exec.ContextTransactionProcessor;
 import com.hedera.node.app.service.contract.impl.exec.TransactionProcessor;
 import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCharging;
-import com.hedera.node.app.service.contract.impl.exec.gas.SystemContractGasCalculator;
 import com.hedera.node.app.service.contract.impl.exec.tracers.EvmActionTracer;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmContext;
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
@@ -53,12 +34,12 @@ import com.hedera.node.app.service.contract.impl.hevm.HydratedEthTxData;
 import com.hedera.node.app.service.contract.impl.infra.HevmTransactionFactory;
 import com.hedera.node.app.service.contract.impl.state.HederaEvmAccount;
 import com.hedera.node.app.service.contract.impl.state.RootProxyWorldUpdater;
-import com.hedera.node.app.spi.fees.ExchangeRateInfo;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.config.data.ContractsConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -109,10 +90,7 @@ class ContextTransactionProcessorTest {
     private HederaEvmAccount senderAccount;
 
     @Mock
-    private SystemContractGasCalculator systemContractGasCalculator;
-
-    @Mock
-    private ExchangeRateInfo exchangeRateInfo;
+    private EntityIdFactory entityIdFactory;
 
     @Test
     void callsComponentInfraAsExpectedForValidEthTx() {
@@ -209,6 +187,7 @@ class ContextTransactionProcessorTest {
         given(processor.processTransaction(
                         HEVM_CREATION, rootProxyWorldUpdater, feesOnlyUpdater, hederaEvmContext, tracer, CONFIGURATION))
                 .willReturn(SUCCESS_RESULT);
+        given(rootProxyWorldUpdater.entityIdFactory()).willReturn(entityIdFactory);
 
         final var protoResult = SUCCESS_RESULT.asProtoResultOf(null, rootProxyWorldUpdater);
         final var expectedResult = new CallOutcome(
@@ -244,44 +223,6 @@ class ContextTransactionProcessorTest {
 
         verify(customGasCharging).chargeGasForAbortedTransaction(any(), any(), any(), any());
         verify(rootProxyWorldUpdater).commit();
-    }
-
-    @Test
-    void chargeHapiFeeOnFailedEthTransaction() {
-        final var contractsConfig = CONFIGURATION.getConfigData(ContractsConfig.class);
-        final var processors = processorsForAllCurrentEvmVersions(processor);
-        final var subject = new ContextTransactionProcessor(
-                null,
-                context,
-                contractsConfig,
-                CONFIGURATION,
-                hederaEvmContext,
-                null,
-                tracer,
-                rootProxyWorldUpdater,
-                hevmTransactionFactory,
-                feesOnlyUpdater,
-                processor,
-                customGasCharging);
-
-        given(context.body()).willReturn(TransactionBody.DEFAULT);
-        given(context.payer()).willReturn(AccountID.DEFAULT);
-        final var ethTx = wellKnownRelayedHapiCallWithGasLimit(1_000_000L);
-        given(hevmTransactionFactory.fromHapiTransaction(TransactionBody.DEFAULT, context.payer()))
-                .willReturn(ethTx);
-        given(processor.processTransaction(
-                        ethTx, rootProxyWorldUpdater, feesOnlyUpdater, hederaEvmContext, tracer, CONFIGURATION))
-                .willThrow(new HandleException(INVALID_CONTRACT_ID));
-
-        given(hederaEvmContext.systemContractGasCalculator()).willReturn(systemContractGasCalculator);
-        given(systemContractGasCalculator.canonicalPriceInTinycents(any())).willReturn(1000L);
-        given(context.exchangeRateInfo()).willReturn(exchangeRateInfo);
-        final ExchangeRate exchangeRate = new ExchangeRate(1, 2, TimestampSeconds.DEFAULT);
-        given(exchangeRateInfo.activeRate(any())).willReturn(exchangeRate);
-
-        subject.call();
-        verify(rootProxyWorldUpdater).commit();
-        verify(rootProxyWorldUpdater).collectFee(any(), anyLong());
     }
 
     @Test
@@ -470,6 +411,7 @@ class ContextTransactionProcessorTest {
 
     void givenSenderAccount() {
         given(rootProxyWorldUpdater.getHederaAccount(SENDER_ID)).willReturn(senderAccount);
+        given(rootProxyWorldUpdater.entityIdFactory()).willReturn(entityIdFactory);
         given(senderAccount.getNonce()).willReturn(1L);
     }
 

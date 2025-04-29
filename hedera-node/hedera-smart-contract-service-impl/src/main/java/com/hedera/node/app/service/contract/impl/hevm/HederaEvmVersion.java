@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.hevm;
 
 import java.util.Map;
@@ -42,7 +27,11 @@ public enum HederaEvmVersion {
     /**
      * EVM version 0.51
      */
-    VERSION_051("v0.51") /* Hedera Account Service System Contract */;
+    VERSION_051("v0.51"), /* Hedera Account Service System Contract */
+    /**
+     * EVM version 0.62
+     */
+    VERSION_062("v0.62"); /* Alternate gas schedule */
 
     /**
      * All supported EVM versions
@@ -53,7 +42,8 @@ public enum HederaEvmVersion {
             VERSION_038.key(), VERSION_038,
             VERSION_046.key(), VERSION_046,
             VERSION_050.key(), VERSION_050,
-            VERSION_051.key(), VERSION_051);
+            VERSION_051.key(), VERSION_051,
+            VERSION_062.key(), VERSION_062);
 
     HederaEvmVersion(String key) {
         this.key = key;

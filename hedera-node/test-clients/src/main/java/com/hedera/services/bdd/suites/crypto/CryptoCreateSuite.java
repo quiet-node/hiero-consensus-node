@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.crypto;
 
 import static com.hedera.node.app.hapi.utils.EthSigsUtils.recoverAddressFromPubKey;
@@ -32,11 +17,13 @@ import static com.hedera.services.bdd.spec.keys.TrieSigMapGenerator.uniqueWithFu
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountBalance;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAliasedAccountInfo;
+import static com.hedera.services.bdd.spec.queries.QueryVerbs.getScheduleInfo;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
 import static com.hedera.services.bdd.spec.transactions.TxnUtils.randomUtf8Bytes;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoDelete;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
+import static com.hedera.services.bdd.spec.transactions.TxnVerbs.scheduleCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenCreate;
 import static com.hedera.services.bdd.spec.transactions.token.TokenMovement.moving;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
@@ -59,11 +46,11 @@ import static com.hedera.services.bdd.suites.HapiSuite.THREE_MONTHS_IN_SECONDS;
 import static com.hedera.services.bdd.suites.HapiSuite.TOKEN_TREASURY;
 import static com.hedera.services.bdd.suites.HapiSuite.ZERO_BYTE_MEMO;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
+import static com.hedera.services.bdd.suites.token.TokenTransactSpecs.PAYER;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.ALIAS_ALREADY_ASSIGNED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.AUTORENEW_DURATION_NOT_IN_RANGE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.BAD_ENCODING;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_GAS;
-import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_TX_FEE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ACCOUNT_ID;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ADMIN_KEY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ALIAS_KEY;
@@ -72,6 +59,7 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_SIGNAT
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_STAKING_ID;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ZERO_BYTE_IN_STRING;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.KEY_REQUIRED;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
 import static com.hederahashgraph.api.proto.java.TokenType.FUNGIBLE_COMMON;
 
 import com.esaulpaugh.headlong.abi.Address;
@@ -89,9 +77,9 @@ import com.hederahashgraph.api.proto.java.KeyList;
 import com.hederahashgraph.api.proto.java.RealmID;
 import com.hederahashgraph.api.proto.java.ShardID;
 import com.hederahashgraph.api.proto.java.ThresholdKey;
-import com.swirlds.common.utility.CommonUtils;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.hiero.base.utility.CommonUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
@@ -101,7 +89,8 @@ public class CryptoCreateSuite {
     public static final String ACCOUNT = "account";
     public static final String ANOTHER_ACCOUNT = "anotherAccount";
     public static final String ED_25519_KEY = "ed25519Alias";
-    public static final String ACCOUNT_ID = "0.0.10";
+    public static final String ACCOUNT_ID = "10";
+    public static final String STAKED_ACCOUNT_ID = "3";
     public static final String CIVILIAN = "civilian";
     public static final String NO_KEYS = "noKeys";
     public static final String SHORT_KEY = "shortKey";
@@ -111,13 +100,67 @@ public class CryptoCreateSuite {
     @HapiTest
     final Stream<DynamicTest> idVariantsTreatedAsExpected() {
         return hapiTest(submitModified(
-                withSuccessivelyVariedBodyIds(), () -> cryptoCreate("account").stakedAccountId("0.0.3")));
+                withSuccessivelyVariedBodyIds(), () -> cryptoCreate("account").stakedAccountId(STAKED_ACCOUNT_ID)));
+    }
+
+    @HapiTest
+    public Stream<DynamicTest> cantCreateTwoAccountsWithSameAlias() {
+        final String ecKey = "ecKey";
+        final String key1 = "key1";
+        final String key2 = "key2";
+
+        return hapiTest(
+                newKeyNamed(ecKey).shape(SECP_256K1_SHAPE),
+                newKeyNamed(key1),
+                newKeyNamed(key2),
+                cryptoCreate(PAYER).balance(10 * ONE_HBAR),
+                withOpContext((spec, opLog) -> {
+                    final var registry = spec.registry();
+                    final var key = registry.getKey(ecKey);
+                    final var evmAddress = ByteString.copyFrom(
+                            recoverAddressFromPubKey(key.getECDSASecp256K1().toByteArray()));
+                    final var op1 = cryptoCreate("account1")
+                            .balance(ONE_HBAR)
+                            .key(key1)
+                            .alias(key.toByteString())
+                            .signedBy(key1, PAYER)
+                            .payingWith(PAYER)
+                            .hasKnownStatus(INVALID_ALIAS_KEY);
+                    final var op2 = cryptoCreate("evmAccount")
+                            .balance(ONE_HBAR)
+                            .key(key2)
+                            .signedBy(key2, ecKey, PAYER)
+                            .alias(evmAddress)
+                            .sigMapPrefixes(uniqueWithFullPrefixesFor(ecKey))
+                            .payingWith(PAYER)
+                            .via("creation");
+                    final var op4 = getAccountBalance("evmAccount").hasTinyBars(ONE_HBAR);
+                    final var op5 = scheduleCreate(
+                                    "createKeyAliasAccount",
+                                    cryptoCreate("account1")
+                                            .balance(ONE_HBAR)
+                                            .key(key1)
+                                            .alias(key.toByteString())
+                                            .payingWith(PAYER))
+                            .alsoSigningWith(key1, ecKey, PAYER)
+                            .via("scheduleCreate")
+                            .recordingScheduledTxn();
+
+                    final var op6 = getTxnRecord("scheduleCreate")
+                            .scheduled()
+                            .hasPriority(recordWith().status(ALIAS_ALREADY_ASSIGNED))
+                            .logged();
+                    final var op7 = getScheduleInfo("createKeyAliasAccount")
+                            .isExecuted()
+                            .hasRecordedScheduledTxn();
+                    allRunFor(spec, op1, op2, op4, op5, op6, op7);
+                }));
     }
 
     @HapiTest
     @DisplayName("canonical EVM addresses are determined by aliases")
     final Stream<DynamicTest> canonicalEvmAddressesDeterminedByAliases(
-            @Contract(contract = "MakeCalls") SpecContract makeCalls) {
+            @Contract(contract = "MakeCalls", creationGas = 3_000_000) SpecContract makeCalls) {
         return hapiTest(
                 newKeyNamed("oneKey").shape(SECP256K1_ON),
                 newKeyNamed("twoKey").shape(SECP256K1_ON),
@@ -184,11 +227,13 @@ public class CryptoCreateSuite {
                                 .isDeclinedReward(false)
                                 .noStakingNodeId()
                                 .stakedAccountId(ACCOUNT_ID)),
-                /* --- sentiel values throw */
+                /* --- sentinel values throw */
                 cryptoCreate("invalidStakedAccount")
                         .balance(ONE_HUNDRED_HBARS)
                         .declinedReward(false)
-                        .stakedAccountId("0.0.0")
+                        .shardId(ShardID.newBuilder().setShardNum(0).build())
+                        .realmId(RealmID.newBuilder().setRealmNum(0).build())
+                        .stakedAccountId("0")
                         .hasPrecheck(INVALID_STAKING_ID),
                 cryptoCreate("invalidStakedNode")
                         .balance(ONE_HUNDRED_HBARS)
@@ -218,97 +263,6 @@ public class CryptoCreateSuite {
                         .alias(evmAddress.get())
                         .via(creation)),
                 sourcing(() -> getTxnRecord(creation).logged()));
-    }
-
-    @HapiTest
-    final Stream<DynamicTest> usdFeeAsExpected() {
-        double expectedPriceUsd = 0.05;
-        final var noAutoAssocSlots = "noAutoAssocSlots";
-        final var oneAutoAssocSlot = "oneAutoAssocSlot";
-        final var tenAutoAssocSlots = "tenAutoAssocSlots";
-        final var negativeAutoAssocSlots = "negativeAutoAssocSlots";
-        final var positiveOverflowAutoAssocSlots = "positiveOverflowAutoAssocSlots";
-        final var unlimitedAutoAssocSlots = "unlimitedAutoAssocSlots";
-        final var token = "token";
-        return hapiTest(
-                cryptoCreate(CIVILIAN).balance(5 * ONE_HUNDRED_HBARS),
-                getAccountBalance(CIVILIAN).hasTinyBars(5 * ONE_HUNDRED_HBARS),
-                tokenCreate(token).autoRenewPeriod(THREE_MONTHS_IN_SECONDS),
-                cryptoCreate("neverToBe")
-                        .balance(0L)
-                        .memo("")
-                        .entityMemo("")
-                        .autoRenewSecs(THREE_MONTHS_IN_SECONDS)
-                        .payingWith(CIVILIAN)
-                        .feeUsd(0.01)
-                        .hasPrecheck(INSUFFICIENT_TX_FEE),
-                getAccountBalance(CIVILIAN).hasTinyBars(5 * ONE_HUNDRED_HBARS),
-                cryptoCreate(noAutoAssocSlots)
-                        .key(CIVILIAN)
-                        .balance(0L)
-                        .via(noAutoAssocSlots)
-                        .blankMemo()
-                        .autoRenewSecs(THREE_MONTHS_IN_SECONDS)
-                        .signedBy(CIVILIAN)
-                        .payingWith(CIVILIAN),
-                cryptoCreate(oneAutoAssocSlot)
-                        .key(CIVILIAN)
-                        .balance(0L)
-                        .maxAutomaticTokenAssociations(1)
-                        .via(oneAutoAssocSlot)
-                        .blankMemo()
-                        .autoRenewSecs(THREE_MONTHS_IN_SECONDS)
-                        .signedBy(CIVILIAN)
-                        .payingWith(CIVILIAN),
-                cryptoCreate(tenAutoAssocSlots)
-                        .key(CIVILIAN)
-                        .balance(0L)
-                        .maxAutomaticTokenAssociations(10)
-                        .via(tenAutoAssocSlots)
-                        .blankMemo()
-                        .autoRenewSecs(THREE_MONTHS_IN_SECONDS)
-                        .signedBy(CIVILIAN)
-                        .payingWith(CIVILIAN),
-                cryptoCreate(negativeAutoAssocSlots)
-                        .key(CIVILIAN)
-                        .balance(0L)
-                        .maxAutomaticTokenAssociations(-2)
-                        .via(negativeAutoAssocSlots)
-                        .blankMemo()
-                        .autoRenewSecs(THREE_MONTHS_IN_SECONDS)
-                        .signedBy(CIVILIAN)
-                        .payingWith(CIVILIAN)
-                        .logged()
-                        .hasPrecheck(INVALID_MAX_AUTO_ASSOCIATIONS),
-                cryptoCreate(positiveOverflowAutoAssocSlots)
-                        .key(CIVILIAN)
-                        .balance(0L)
-                        .maxAutomaticTokenAssociations(5001)
-                        .via(positiveOverflowAutoAssocSlots)
-                        .blankMemo()
-                        .autoRenewSecs(THREE_MONTHS_IN_SECONDS)
-                        .signedBy(CIVILIAN)
-                        .payingWith(CIVILIAN)
-                        .logged()
-                        .hasKnownStatus(INVALID_MAX_AUTO_ASSOCIATIONS),
-                cryptoCreate(unlimitedAutoAssocSlots)
-                        .key(CIVILIAN)
-                        .balance(0L)
-                        .maxAutomaticTokenAssociations(-1)
-                        .via(unlimitedAutoAssocSlots)
-                        .blankMemo()
-                        .autoRenewSecs(THREE_MONTHS_IN_SECONDS)
-                        .signedBy(CIVILIAN)
-                        .payingWith(CIVILIAN),
-                getTxnRecord(tenAutoAssocSlots).logged(),
-                validateChargedUsd(noAutoAssocSlots, expectedPriceUsd),
-                getAccountInfo(noAutoAssocSlots).hasMaxAutomaticAssociations(0),
-                validateChargedUsd(oneAutoAssocSlot, expectedPriceUsd),
-                getAccountInfo(oneAutoAssocSlot).hasMaxAutomaticAssociations(1),
-                validateChargedUsd(tenAutoAssocSlots, expectedPriceUsd),
-                getAccountInfo(tenAutoAssocSlots).hasMaxAutomaticAssociations(10),
-                validateChargedUsd(unlimitedAutoAssocSlots, expectedPriceUsd),
-                getAccountInfo(unlimitedAutoAssocSlots).hasMaxAutomaticAssociations(-1));
     }
 
     @LeakyHapiTest(overrides = {"entities.unlimitedAutoAssociationsEnabled"})
@@ -356,15 +310,11 @@ public class CryptoCreateSuite {
     final Stream<DynamicTest> createAnAccountEmptyKeyList() {
         KeyShape shape = listOf(0);
         long initialBalance = 10_000L;
-        ShardID shardID = ShardID.newBuilder().build();
-        RealmID realmID = RealmID.newBuilder().build();
 
         return hapiTest(
                 cryptoCreate(NO_KEYS)
                         .keyShape(shape)
                         .balance(initialBalance)
-                        .shardId(shardID)
-                        .realmId(realmID)
                         .logged()
                         .hasPrecheck(KEY_REQUIRED)
                 // In modular code this error is thrown in handle, but it is fixed using dynamic property
@@ -1065,5 +1015,24 @@ public class CryptoCreateSuite {
                     .hasPrecheck(INVALID_ALIAS_KEY);
             allRunFor(spec, op);
         }));
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> accountsWithDifferentShardOrRealmNotCreated() {
+        final String key = "key";
+        return hapiTest(
+                newKeyNamed(key),
+                cryptoCreate("control").key(key).balance(1L).hasKnownStatus(SUCCESS),
+                cryptoCreate("differentShard")
+                        .key(key)
+                        .balance(1L)
+                        .shardId(ShardID.newBuilder().setShardNum(1).build())
+                        .hasKnownStatus(INVALID_ACCOUNT_ID),
+                // expected realm is 2
+                cryptoCreate("differentRealm")
+                        .key(key)
+                        .balance(1L)
+                        .realmId(RealmID.newBuilder().setRealmNum(1).build())
+                        .hasKnownStatus(INVALID_ACCOUNT_ID));
     }
 }

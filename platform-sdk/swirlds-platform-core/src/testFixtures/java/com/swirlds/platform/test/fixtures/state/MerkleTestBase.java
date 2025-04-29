@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.test.fixtures.state;
 
 import com.hedera.hapi.node.base.SemanticVersion;
@@ -22,11 +7,9 @@ import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.utility.Labeled;
 import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.platform.system.BasicSoftwareVersion;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.lifecycle.StateDefinition;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.StateMetadata;
 import com.swirlds.state.merkle.disk.OnDiskKey;
 import com.swirlds.state.merkle.disk.OnDiskValue;
 import com.swirlds.state.merkle.memory.InMemoryKey;
@@ -34,7 +17,6 @@ import com.swirlds.state.merkle.memory.InMemoryValue;
 import com.swirlds.state.test.fixtures.StateTestBase;
 import com.swirlds.state.test.fixtures.merkle.TestSchema;
 import com.swirlds.virtualmap.VirtualMap;
-import java.util.function.Function;
 import org.junit.jupiter.api.AfterEach;
 
 /**
@@ -62,8 +44,6 @@ import org.junit.jupiter.api.AfterEach;
 public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.MerkleTestBase {
 
     protected SemanticVersion v1 = SemanticVersion.newBuilder().major(1).build();
-    protected final Function<SemanticVersion, SoftwareVersion> softwareVersionSupplier =
-            version -> new BasicSoftwareVersion(version.major());
 
     protected StateMetadata<String, String> fruitMetadata;
     protected StateMetadata<String, String> fruitVirtualMetadata;

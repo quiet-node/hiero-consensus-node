@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.regression.factories;
 
 import static com.hedera.services.bdd.spec.infrastructure.OpProvider.UNIQUE_PAYER_ACCOUNT;
@@ -196,7 +181,7 @@ public class IdFuzzingProviderFactory {
         return new HapiSpecOperation[] {
             cryptoCreate(SENDER).balance(INITIAL_SUPPLY).key(MULTI_KEY).maxAutomaticTokenAssociations(5),
             uploadInitCode(NESTED_LAZY_PRECOMPILE_CONTRACT),
-            contractCreate(NESTED_LAZY_PRECOMPILE_CONTRACT),
+            contractCreate(NESTED_LAZY_PRECOMPILE_CONTRACT).gas(3_000_000),
         };
     }
 
@@ -213,7 +198,7 @@ public class IdFuzzingProviderFactory {
                     .exposingCreatedIdTo(id ->
                             tokenAddr.set(HapiPropertySource.asHexedSolidityAddress(HapiPropertySource.asToken(id)))),
             uploadInitCode(TRANSFER_TO_ALIAS_PRECOMPILE_CONTRACT),
-            contractCreate(TRANSFER_TO_ALIAS_PRECOMPILE_CONTRACT).gas(500_000L),
+            contractCreate(TRANSFER_TO_ALIAS_PRECOMPILE_CONTRACT).gas(3_000_000L),
             tokenAssociate(OWNER, List.of(FUNGIBLE_TOKEN)),
             cryptoTransfer(moving(INITIAL_SUPPLY, FUNGIBLE_TOKEN).between(TOKEN_TREASURY, OWNER))
         };
@@ -265,7 +250,7 @@ public class IdFuzzingProviderFactory {
                     .adminKey(MULTI_KEY)
                     .supplyKey(MULTI_KEY),
             uploadInitCode(ERC_721_CONTRACT),
-            contractCreate(ERC_721_CONTRACT),
+            contractCreate(ERC_721_CONTRACT).gas(3_000_000L),
             tokenAssociate(OWNER, ERC_NON_FUNGIBLE_TOKEN),
             tokenAssociate(SPENDER, ERC_NON_FUNGIBLE_TOKEN),
             tokenAssociate(ERC_721_CONTRACT, ERC_NON_FUNGIBLE_TOKEN),

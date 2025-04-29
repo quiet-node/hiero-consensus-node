@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.crypto;
 /*
  * This file is public domain.
@@ -28,41 +13,42 @@ package com.swirlds.demo.crypto;
 
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.platform.gui.SwirldsGui.createConsole;
-import static com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles.FAKE_MERKLE_STATE_LIFECYCLES;
-import static com.swirlds.platform.test.fixtures.state.FakeMerkleStateLifecycles.registerMerkleStateRootClassIds;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
+import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.Console;
-import com.swirlds.common.constructable.ClassConstructorPair;
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.constructable.ConstructableRegistryException;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.threading.framework.StoppableThread;
 import com.swirlds.common.threading.framework.config.StoppableThreadConfiguration;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Browser;
-import com.swirlds.platform.state.PlatformMerkleStateRoot;
-import com.swirlds.platform.system.BasicSoftwareVersion;
+import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.Random;
+import org.hiero.base.constructable.ClassConstructorPair;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * This demonstrates a cryptocurrency and a stock market. There are 10 stocks, and each member repeatedly generates an
  * ask or a bid on a stock, offering to sell or buy, respectively, a single share at a random price between 1 and 127
  * cents (inclusive).
  */
-public class CryptocurrencyDemoMain implements SwirldMain {
+public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoState> {
 
     static {
         try {
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(new ClassConstructorPair(CryptocurrencyDemoState.class, () -> {
-                CryptocurrencyDemoState cryptocurrencyDemoState = new CryptocurrencyDemoState(
-                        FAKE_MERKLE_STATE_LIFECYCLES, version -> new BasicSoftwareVersion(version.major()));
+                CryptocurrencyDemoState cryptocurrencyDemoState = new CryptocurrencyDemoState();
                 return cryptocurrencyDemoState;
             }));
             registerMerkleStateRootClassIds();
@@ -88,7 +74,8 @@ public class CryptocurrencyDemoMain implements SwirldMain {
     /** is the simulation running fast now? */
     private boolean isFast = false;
 
-    private static final BasicSoftwareVersion softwareVersion = new BasicSoftwareVersion(1);
+    private static final SemanticVersion semanticVersion =
+            SemanticVersion.newBuilder().major(1).build();
 
     private final StoppableThread transactionGenerator;
 
@@ -199,13 +186,14 @@ public class CryptocurrencyDemoMain implements SwirldMain {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @NonNull
-    public PlatformMerkleStateRoot newMerkleStateRoot() {
-        final PlatformMerkleStateRoot state = new CryptocurrencyDemoState(
-                FAKE_MERKLE_STATE_LIFECYCLES,
-                version -> new BasicSoftwareVersion(softwareVersion.getSoftwareVersion()));
-        FAKE_MERKLE_STATE_LIFECYCLES.initStates(state);
+    public CryptocurrencyDemoState newStateRoot() {
+        final CryptocurrencyDemoState state = new CryptocurrencyDemoState();
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(state);
         return state;
     }
 
@@ -213,7 +201,21 @@ public class CryptocurrencyDemoMain implements SwirldMain {
      * {@inheritDoc}
      */
     @Override
-    public BasicSoftwareVersion getSoftwareVersion() {
-        return softwareVersion;
+    @NonNull
+    public ConsensusStateEventHandler<CryptocurrencyDemoState> newConsensusStateEvenHandler() {
+        return new CryptocurrencyDemoConsensusStateEventHandler();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public SemanticVersion getSemanticVersion() {
+        return semanticVersion;
+    }
+
+    @Override
+    public Bytes encodeSystemTransaction(@NonNull StateSignatureTransaction transaction) {
+        return StateSignatureTransaction.PROTOBUF.toBytes(transaction);
     }
 }

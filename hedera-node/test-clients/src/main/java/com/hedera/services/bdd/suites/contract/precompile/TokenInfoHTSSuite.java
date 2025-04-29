@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.contract.precompile;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
@@ -173,9 +158,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(PAUSE_KEY),
                 newKeyNamed(TokenKeyType.METADATA_KEY.name()),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
-                uploadInitCode("TokenInfo"),
-                contractCreate("TokenInfo").gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(PRIMARY_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -218,14 +201,7 @@ public class TokenInfoHTSSuite {
                                 TOKEN_INFO_CONTRACT,
                                 GET_INFORMATION_FOR_TOKEN,
                                 HapiParserUtil.asHeadlongAddress(
-                                        asAddress(spec.registry().getTokenID(PRIMARY_TOKEN_NAME)))),
-                        contractCall(
-                                        "TokenInfo",
-                                        "getInformationForTokenV2",
-                                        HapiParserUtil.asHeadlongAddress(
-                                                asAddress(spec.registry().getTokenID(PRIMARY_TOKEN_NAME))))
-                                .via("TOKEN_INFO_TXN_V2")
-                                .gas(1_000_000L))),
+                                        asAddress(spec.registry().getTokenID(PRIMARY_TOKEN_NAME)))))),
                 exposeTargetLedgerIdTo(targetLedgerId::set),
                 withOpContext((spec, opLog) -> {
                     final var getTokenInfoQuery = getTokenInfo(PRIMARY_TOKEN_NAME);
@@ -261,28 +237,6 @@ public class TokenInfoHTSSuite {
                                                                                     spec, TokenKeyType.ADMIN_KEY),
                                                                             expirySecond,
                                                                             targetLedgerId.get(),
-                                                                            TokenKycStatus.Revoked))))),
-                            childRecordsCheck(
-                                    "TOKEN_INFO_TXN_V2",
-                                    SUCCESS,
-                                    recordWith()
-                                            .status(SUCCESS)
-                                            .contractCallResult(resultWith()
-                                                    .contractCallResult(htsPrecompileResult()
-                                                            .forFunction(FunctionType.HAPI_GET_TOKEN_INFO_V2)
-                                                            .withStatus(SUCCESS)
-                                                            .withTokenInfo(
-                                                                    getTokenInfoStructForFungibleTokenV2(
-                                                                            spec,
-                                                                            PRIMARY_TOKEN_NAME,
-                                                                            SYMBOL,
-                                                                            MEMO,
-                                                                            spec.registry()
-                                                                                    .getAccountID(TOKEN_TREASURY),
-                                                                            getTokenKeyFromSpec(
-                                                                                    spec, TokenKeyType.ADMIN_KEY),
-                                                                            expirySecond,
-                                                                            targetLedgerId.get(),
                                                                             TokenKycStatus.Revoked))))));
                 }));
     }
@@ -304,9 +258,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(PAUSE_KEY),
                 newKeyNamed(TokenKeyType.METADATA_KEY.name()),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
-                uploadInitCode("TokenInfo"),
-                contractCreate("TokenInfo").gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(FUNGIBLE_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -350,14 +302,7 @@ public class TokenInfoHTSSuite {
                                 TOKEN_INFO_CONTRACT,
                                 GET_INFORMATION_FOR_FUNGIBLE_TOKEN,
                                 HapiParserUtil.asHeadlongAddress(
-                                        asAddress(spec.registry().getTokenID(FUNGIBLE_TOKEN_NAME)))),
-                        contractCall(
-                                        "TokenInfo",
-                                        "getInformationForFungibleTokenV2",
-                                        HapiParserUtil.asHeadlongAddress(
-                                                asAddress(spec.registry().getTokenID(FUNGIBLE_TOKEN_NAME))))
-                                .via("FUNGIBLE_TOKEN_INFO_TXN_V2")
-                                .gas(1_000_000L))),
+                                        asAddress(spec.registry().getTokenID(FUNGIBLE_TOKEN_NAME)))))),
                 exposeTargetLedgerIdTo(targetLedgerId::set),
                 withOpContext((spec, opLog) -> {
                     final var getTokenInfoQuery = getTokenInfo(FUNGIBLE_TOKEN_NAME);
@@ -393,29 +338,6 @@ public class TokenInfoHTSSuite {
                                                                                     spec, TokenKeyType.ADMIN_KEY),
                                                                             expirySecond,
                                                                             targetLedgerId.get(),
-                                                                            TokenKycStatus.Revoked))))),
-                            childRecordsCheck(
-                                    "FUNGIBLE_TOKEN_INFO_TXN_V2",
-                                    SUCCESS,
-                                    recordWith()
-                                            .status(SUCCESS)
-                                            .contractCallResult(resultWith()
-                                                    .contractCallResult(htsPrecompileResult()
-                                                            .forFunction(FunctionType.HAPI_GET_FUNGIBLE_TOKEN_INFO_V2)
-                                                            .withStatus(SUCCESS)
-                                                            .withDecimals(decimals)
-                                                            .withTokenInfo(
-                                                                    getTokenInfoStructForFungibleTokenV2(
-                                                                            spec,
-                                                                            FUNGIBLE_TOKEN_NAME,
-                                                                            FUNGIBLE_SYMBOL,
-                                                                            MEMO,
-                                                                            spec.registry()
-                                                                                    .getAccountID(TOKEN_TREASURY),
-                                                                            getTokenKeyFromSpec(
-                                                                                    spec, TokenKeyType.ADMIN_KEY),
-                                                                            expirySecond,
-                                                                            targetLedgerId.get(),
                                                                             TokenKycStatus.Revoked))))));
                 }));
     }
@@ -440,9 +362,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(PAUSE_KEY),
                 newKeyNamed(TokenKeyType.METADATA_KEY.name()),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
-                uploadInitCode("TokenInfo"),
-                contractCreate("TokenInfo").gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(FEE_DENOM).treasury(HTS_COLLECTOR),
                 tokenCreate(NON_FUNGIBLE_TOKEN_NAME)
                         .tokenType(TokenType.NON_FUNGIBLE_UNIQUE)
@@ -495,15 +415,7 @@ public class TokenInfoHTSSuite {
                                 GET_INFORMATION_FOR_NON_FUNGIBLE_TOKEN,
                                 HapiParserUtil.asHeadlongAddress(
                                         asAddress(spec.registry().getTokenID(NON_FUNGIBLE_TOKEN_NAME))),
-                                1L),
-                        contractCall(
-                                        "TokenInfo",
-                                        "getInformationForNonFungibleTokenV2",
-                                        HapiParserUtil.asHeadlongAddress(
-                                                asAddress(spec.registry().getTokenID(NON_FUNGIBLE_TOKEN_NAME))),
-                                        1L)
-                                .via("NON_FUNGIBLE_TOKEN_INFO_TXN_V2")
-                                .gas(1_000_000L))),
+                                1L))),
                 exposeTargetLedgerIdTo(targetLedgerId::set),
                 withOpContext((spec, opLog) -> {
                     final var getTokenInfoQuery = getTokenInfo(NON_FUNGIBLE_TOKEN_NAME);
@@ -544,28 +456,8 @@ public class TokenInfoHTSSuite {
                                                                                     spec, TokenKeyType.ADMIN_KEY),
                                                                             expirySecond,
                                                                             targetLedgerId.get(),
-                                                                            TokenKycStatus.Revoked))
-                                                            .withNftTokenInfo(nftTokenInfo)))),
-                            childRecordsCheck(
-                                    "NON_FUNGIBLE_TOKEN_INFO_TXN_V2",
-                                    SUCCESS,
-                                    recordWith()
-                                            .status(SUCCESS)
-                                            .contractCallResult(resultWith()
-                                                    .contractCallResult(htsPrecompileResult()
-                                                            .forFunction(
-                                                                    FunctionType.HAPI_GET_NON_FUNGIBLE_TOKEN_INFO_V2)
-                                                            .withStatus(SUCCESS)
-                                                            .withTokenInfo(
-                                                                    getTokenInfoStructForNonFungibleTokenV2(
-                                                                            spec,
-                                                                            spec.registry()
-                                                                                    .getAccountID(TOKEN_TREASURY),
-                                                                            getTokenKeyFromSpec(
-                                                                                    spec, TokenKeyType.ADMIN_KEY),
-                                                                            expirySecond,
-                                                                            targetLedgerId.get(),
-                                                                            TokenKycStatus.Revoked))
+                                                                            TokenKycStatus.Revoked,
+                                                                            1L))
                                                             .withNftTokenInfo(nftTokenInfo)))));
                 }));
     }
@@ -578,7 +470,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(ADMIN_KEY),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(PRIMARY_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -622,7 +514,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(ADMIN_KEY),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(PRIMARY_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -664,7 +556,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(ADMIN_KEY),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(NON_FUNGIBLE_TOKEN_NAME)
                         .tokenType(TokenType.NON_FUNGIBLE_UNIQUE)
                         .supplyType(TokenSupplyType.FINITE)
@@ -704,7 +596,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(ADMIN_KEY),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(NON_FUNGIBLE_TOKEN_NAME)
                         .tokenType(TokenType.NON_FUNGIBLE_UNIQUE)
                         .supplyType(TokenSupplyType.FINITE)
@@ -781,7 +673,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(ADMIN_KEY),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(PRIMARY_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -817,7 +709,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(ADMIN_KEY),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(PRIMARY_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -859,7 +751,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(ADMIN_KEY),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(NON_FUNGIBLE_TOKEN_NAME)
                         .tokenType(TokenType.NON_FUNGIBLE_UNIQUE)
                         .supplyType(TokenSupplyType.FINITE)
@@ -895,7 +787,7 @@ public class TokenInfoHTSSuite {
                 cryptoCreate(AUTO_RENEW_ACCOUNT).balance(0L),
                 cryptoCreate(HTS_COLLECTOR),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(PRIMARY_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .name(PRIMARY_TOKEN_NAME)
@@ -965,7 +857,7 @@ public class TokenInfoHTSSuite {
                 cryptoCreate(HTS_COLLECTOR),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(FEE_DENOM).treasury(HTS_COLLECTOR),
                 tokenCreate(NON_FUNGIBLE_TOKEN_NAME)
                         .tokenType(TokenType.NON_FUNGIBLE_UNIQUE)
@@ -1034,7 +926,7 @@ public class TokenInfoHTSSuite {
                 cryptoCreate(HTS_COLLECTOR),
                 newKeyNamed(SUPPLY_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(FEE_DENOM).treasury(HTS_COLLECTOR),
                 tokenCreate(NON_FUNGIBLE_TOKEN_NAME)
                         .tokenType(TokenType.NON_FUNGIBLE_UNIQUE)
@@ -1113,7 +1005,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(FEE_SCHEDULE_KEY),
                 newKeyNamed(PAUSE_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(FUNGIBLE_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -1224,7 +1116,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(FEE_SCHEDULE_KEY),
                 newKeyNamed(PAUSE_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(FUNGIBLE_TOKEN_NAME)
                         .supplyType(TokenSupplyType.FINITE)
                         .entityMemo(MEMO)
@@ -1337,7 +1229,7 @@ public class TokenInfoHTSSuite {
                 newKeyNamed(FEE_SCHEDULE_KEY),
                 newKeyNamed(PAUSE_KEY),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 tokenCreate(FEE_DENOM).treasury(HTS_COLLECTOR),
                 tokenCreate(NON_FUNGIBLE_TOKEN_NAME)
                         .tokenType(TokenType.NON_FUNGIBLE_UNIQUE)
@@ -1434,7 +1326,8 @@ public class TokenInfoHTSSuite {
                                                                                     .getKey(CONTRACT_KEY),
                                                                             expirySecond,
                                                                             targetLedgerId.get(),
-                                                                            TokenKycStatus.Revoked))
+                                                                            TokenKycStatus.Revoked,
+                                                                            1L))
                                                             .withNftTokenInfo(nftTokenInfo)))));
                 }));
     }
@@ -1448,7 +1341,7 @@ public class TokenInfoHTSSuite {
                 cryptoCreate(HTS_COLLECTOR),
                 cryptoCreate(ACCOUNT),
                 uploadInitCode(TOKEN_INFO_CONTRACT),
-                contractCreate(TOKEN_INFO_CONTRACT).gas(1_000_000L),
+                contractCreate(TOKEN_INFO_CONTRACT).gas(4_000_000L),
                 newKeyNamed(MULTI_KEY),
                 newKeyNamed(TOKEN_INFO_AS_KEY).shape(CONTRACT.signedWith(TOKEN_INFO_CONTRACT)),
                 tokenCreate(FUNGIBLE_TOKEN_NAME)
@@ -1477,7 +1370,7 @@ public class TokenInfoHTSSuite {
                                         HapiParserUtil.asHeadlongAddress(
                                                 asAddress(spec.registry().getContractId(TOKEN_INFO_CONTRACT))))
                                 .via(UPDATE_AND_GET_TOKEN_KEYS_INFO_TXN)
-                                .gas(117000L)
+                                .gas(118000L)
                                 .alsoSigningWithFullPrefix(MULTI_KEY))),
                 withOpContext((spec, opLog) -> allRunFor(
                         spec,
@@ -1582,7 +1475,7 @@ public class TokenInfoHTSSuite {
                 .build();
     }
 
-    private TokenInfo getTokenInfoStructForFungibleToken(
+    public static TokenInfo getTokenInfoStructForFungibleToken(
             final HapiSpec spec,
             final String tokenName,
             final String symbol,
@@ -1597,26 +1490,7 @@ public class TokenInfoHTSSuite {
                 .build();
     }
 
-    private TokenInfo getTokenInfoStructForFungibleTokenV2(
-            final HapiSpec spec,
-            final String tokenName,
-            final String symbol,
-            final String memo,
-            final AccountID treasury,
-            final Key adminKey,
-            final long expirySecond,
-            ByteString ledgerId,
-            final TokenKycStatus kycDefault) {
-
-        final ByteString meta = ByteString.copyFrom("metadata".getBytes(StandardCharsets.UTF_8));
-
-        return buildBaseTokenInfo(spec, tokenName, symbol, memo, treasury, adminKey, expirySecond, ledgerId, kycDefault)
-                .setMetadata(meta)
-                .setMetadataKey(getTokenKeyFromSpec(spec, TokenKeyType.METADATA_KEY))
-                .build();
-    }
-
-    private TokenInfo.Builder buildBaseTokenInfo(
+    private static TokenInfo.Builder buildBaseTokenInfo(
             final HapiSpec spec,
             final String tokenName,
             final String symbol,
@@ -1656,7 +1530,7 @@ public class TokenInfoHTSSuite {
     }
 
     @NonNull
-    private ArrayList<CustomFee> getExpectedCustomFees(final HapiSpec spec) {
+    private static ArrayList<CustomFee> getExpectedCustomFees(final HapiSpec spec) {
         final var fixedFee = FixedFee.newBuilder().setAmount(500L).build();
         final var customFixedFee = CustomFee.newBuilder()
                 .setFixedFee(fixedFee)
@@ -1695,7 +1569,7 @@ public class TokenInfoHTSSuite {
         return customFees;
     }
 
-    private TokenInfo getTokenInfoStructForNonFungibleToken(
+    public static TokenInfo getTokenInfoStructForNonFungibleToken(
             final HapiSpec spec,
             final String tokenName,
             final String symbol,
@@ -1704,34 +1578,24 @@ public class TokenInfoHTSSuite {
             final Key adminKey,
             final long expirySecond,
             final ByteString ledgerId,
-            final TokenKycStatus kycDefault) {
-        return buildTokenInfo(
-                spec, tokenName, symbol, memo, treasury, adminKey, expirySecond, ledgerId, null, false, kycDefault);
-    }
-
-    private TokenInfo getTokenInfoStructForNonFungibleTokenV2(
-            final HapiSpec spec,
-            final AccountID treasury,
-            final Key adminKey,
-            final long expirySecond,
-            final ByteString ledgerId,
-            final TokenKycStatus kycDefault) {
-        final ByteString meta = ByteString.copyFrom("metadata".getBytes(StandardCharsets.UTF_8));
+            final TokenKycStatus kycDefault,
+            final long totalSupply) {
         return buildTokenInfo(
                 spec,
-                TokenInfoHTSSuite.NON_FUNGIBLE_TOKEN_NAME,
-                TokenInfoHTSSuite.NON_FUNGIBLE_SYMBOL,
-                TokenInfoHTSSuite.MEMO,
+                tokenName,
+                symbol,
+                memo,
                 treasury,
                 adminKey,
                 expirySecond,
                 ledgerId,
-                meta,
-                true,
-                kycDefault);
+                null,
+                false,
+                kycDefault,
+                totalSupply);
     }
 
-    private TokenInfo buildTokenInfo(
+    private static TokenInfo buildTokenInfo(
             final HapiSpec spec,
             final String tokenName,
             final String symbol,
@@ -1742,7 +1606,8 @@ public class TokenInfoHTSSuite {
             final ByteString ledgerId,
             final ByteString metadata,
             final boolean includeMetadataKey,
-            final TokenKycStatus kycDefault) {
+            final TokenKycStatus kycDefault,
+            final long totalSupply) {
         final var autoRenewAccount = spec.registry().getAccountID(AUTO_RENEW_ACCOUNT);
 
         TokenInfo.Builder builder = TokenInfo.newBuilder()
@@ -1757,7 +1622,7 @@ public class TokenInfoHTSSuite {
                 .setName(tokenName)
                 .setMemo(memo)
                 .setTreasury(treasury)
-                .setTotalSupply(1L)
+                .setTotalSupply(totalSupply)
                 .setMaxSupply(10L)
                 .addAllCustomFees(getCustomFeeForNFT(spec))
                 .setAdminKey(adminKey)
@@ -1781,7 +1646,7 @@ public class TokenInfoHTSSuite {
     }
 
     @NonNull
-    private ArrayList<CustomFee> getCustomFeeForNFT(final HapiSpec spec) {
+    private static ArrayList<CustomFee> getCustomFeeForNFT(final HapiSpec spec) {
         final var fraction = Fraction.newBuilder()
                 .setNumerator(NUMERATOR)
                 .setDenominator(DENOMINATOR)
@@ -1806,7 +1671,7 @@ public class TokenInfoHTSSuite {
         return customFees;
     }
 
-    private Key getTokenKeyFromSpec(final HapiSpec spec, final TokenKeyType type) {
+    public static Key getTokenKeyFromSpec(final HapiSpec spec, final TokenKeyType type) {
         final var key = spec.registry().getKey(type.name());
 
         final var keyBuilder = Key.newBuilder();

@@ -1,24 +1,10 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.lifecycle;
+
+import static com.swirlds.state.lifecycle.HapiUtils.SEMANTIC_VERSION_COMPARATOR;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -55,35 +41,28 @@ public interface MigrationContext {
     WritableStates newStates();
 
     /**
-     * The {@link Configuration} for this migration. Any portion of this configuration which was based on state (such
-     * as, in our case, file 121) will be current as of the previous state. This configuration is read-only. Having this
-     * configuration is useful for migrations that should behavior differently based on configuration.
+     * The app {@link Configuration} for this migration. Any portion of this configuration which was based on state
+     * (such as, in our case, file 121) will be current as of the previous state. This configuration is read-only.
+     * Having this configuration is useful for migrations that should behavior differently based on configuration.
      *
-     * @return The configuration to use.
+     * @return The application configuration to use.
      */
     @NonNull
-    Configuration configuration();
+    Configuration appConfig();
 
     /**
-     * Information about the network itself. Generally, this is not useful information for migrations, but is used at
-     * genesis for the file service. In the future, this may no longer be required.
+     * The platform {@link Configuration} for this migration.
      *
-     * @return The {@link NetworkInfo} of the network at the time of migration.
+     * @return The platform configuration to use
      */
-    @Nullable
-    NetworkInfo genesisNetworkInfo();
+    @NonNull
+    Configuration platformConfig();
 
     /**
      * Returns the startup networks in use.
      */
     @NonNull
     StartupNetworks startupNetworks();
-
-    /**
-     * Consumes and returns the next entity number. For use by migrations that need to create entities.
-     * @return the next entity number
-     */
-    long newEntityNum();
 
     /**
      * Copies and releases the underlying on-disk state for the given key. If this is not called
@@ -102,17 +81,29 @@ public interface MigrationContext {
     SemanticVersion previousVersion();
 
     /**
-     * Returns whether this is a genesis migration.
-     */
-    default boolean isGenesis() {
-        return previousVersion() == null;
-    }
-
-    /**
      * Returns a mutable "scratchpad" that can be used to share values between different services
      * during a migration.
      *
      * @return the shared values map
      */
     Map<String, Object> sharedValues();
+
+    /**
+     * Returns whether this is a genesis migration.
+     */
+    default boolean isGenesis() {
+        return previousVersion() == null || previousVersion() == SemanticVersion.DEFAULT;
+    }
+
+    /**
+     * Returns whether the current version is an upgrade from the previous version, relative to the ordering
+     * implied by the given functions used to compare the version in the current app configuration and the
+     * previous state version.
+     * @param currentVersion the function to compute the current version from the app configuration
+     * @return whether the current version is an upgrade from the previous version
+     * @param <T> the type of the version
+     */
+    default <T extends Comparable<? super T>> boolean isUpgrade(@NonNull final SemanticVersion currentVersion) {
+        return SEMANTIC_VERSION_COMPARATOR.compare(currentVersion, previousVersion()) > 0;
+    }
 }

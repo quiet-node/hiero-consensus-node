@@ -1,27 +1,10 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.virtualmerkle;
 
 import static com.swirlds.demo.virtualmerkle.VirtualMerkleLeafHasher.hashOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.crypto.DigestType;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
@@ -40,6 +23,8 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import org.hiero.base.crypto.DigestType;
+import org.hiero.base.crypto.Hash;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -68,14 +53,7 @@ class VirtualMerkleLeafHasherTest {
         keySerializer = new SmartContractByteCodeMapKeySerializer();
         valueSerializer = new SmartContractByteCodeMapValueSerializer();
 
-        final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final MerkleDbTableConfig tableConfig = new MerkleDbTableConfig(
-                        (short) 1,
-                        DigestType.SHA_384,
-                        merkleDbConfig.maxNumOfKeys(),
-                        merkleDbConfig.hashesRamToDiskThreshold())
-                .maxNumberOfKeys(50_000_000)
-                .hashesRamToDiskThreshold(0);
+        final MerkleDbTableConfig tableConfig = new MerkleDbTableConfig((short) 1, DigestType.SHA_384, 50_000_000, 0);
         dataSourceBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
     }
 
@@ -213,7 +191,7 @@ class VirtualMerkleLeafHasherTest {
             hash.getBytes().writeTo(bb);
         }
 
-        // key serializaion
+        // key serialization
         bb.putLong(keyInput);
 
         // value serialization

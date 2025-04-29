@@ -1,43 +1,20 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event.validation;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.metrics.api.Metrics.PLATFORM_CATEGORY;
-import static com.swirlds.platform.consensus.ConsensusConstants.ROUND_NEGATIVE_INFINITY;
-import static com.swirlds.platform.system.events.EventConstants.FIRST_GENERATION;
+import static org.hiero.consensus.model.event.EventConstants.FIRST_GENERATION;
+import static org.hiero.consensus.model.hashgraph.ConsensusConstants.ROUND_NEGATIVE_INFINITY;
 
 import com.hedera.hapi.platform.event.EventCore;
 import com.hedera.hapi.platform.event.EventDescriptor;
-import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.event.GossipEvent;
+import com.hedera.hapi.util.EventMigrationUtils;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.DigestType;
-import com.swirlds.common.crypto.SignatureType;
 import com.swirlds.common.utility.throttle.RateLimitedLogger;
 import com.swirlds.metrics.api.LongAccumulator;
-import com.swirlds.platform.config.TransactionConfig;
-import com.swirlds.platform.event.AncientMode;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.gossip.IntakeEventCounter;
-import com.swirlds.platform.system.events.EventConstants;
-import com.swirlds.platform.system.events.EventDescriptorWrapper;
-import com.swirlds.platform.system.transaction.Transaction;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
@@ -45,6 +22,15 @@ import java.util.Iterator;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.DigestType;
+import org.hiero.base.crypto.SignatureType;
+import org.hiero.consensus.config.EventConfig;
+import org.hiero.consensus.config.TransactionConfig;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.event.EventConstants;
+import org.hiero.consensus.model.event.EventDescriptorWrapper;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.transaction.Transaction;
 
 /**
  * A default implementation of the {@link InternalEventValidator} interface.
@@ -74,18 +60,14 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
     private final RateLimitedLogger nullFieldLogger;
     private final RateLimitedLogger fieldLengthLogger;
     private final RateLimitedLogger tooManyTransactionBytesLogger;
-    private final RateLimitedLogger inconsistentSelfParentLogger;
-    private final RateLimitedLogger inconsistentOtherParentLogger;
-    private final RateLimitedLogger identicalParentsLogger;
+    private final RateLimitedLogger invalidParentsLogger;
     private final RateLimitedLogger invalidGenerationLogger;
     private final RateLimitedLogger invalidBirthRoundLogger;
 
     private final LongAccumulator nullFieldAccumulator;
     private final LongAccumulator fieldLengthAccumulator;
     private final LongAccumulator tooManyTransactionBytesAccumulator;
-    private final LongAccumulator inconsistentSelfParentAccumulator;
-    private final LongAccumulator inconsistentOtherParentAccumulator;
-    private final LongAccumulator identicalParentsAccumulator;
+    private final LongAccumulator invalidParentsAccumulator;
     private final LongAccumulator invalidGenerationAccumulator;
     private final LongAccumulator invalidBirthRoundAccumulator;
 
@@ -114,11 +96,7 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
         this.fieldLengthLogger = new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
         this.tooManyTransactionBytesLogger =
                 new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
-        this.inconsistentSelfParentLogger =
-                new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
-        this.inconsistentOtherParentLogger =
-                new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
-        this.identicalParentsLogger = new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
+        this.invalidParentsLogger = new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
         this.invalidGenerationLogger = new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
         this.invalidBirthRoundLogger = new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
 
@@ -137,20 +115,10 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
                 .getOrCreate(new LongAccumulator.Config(PLATFORM_CATEGORY, "eventsWithTooManyTransactionBytes")
                         .withDescription("Events that had more transaction bytes than permitted")
                         .withUnit("events"));
-        this.inconsistentSelfParentAccumulator = platformContext
+        this.invalidParentsAccumulator = platformContext
                 .getMetrics()
-                .getOrCreate(new LongAccumulator.Config(PLATFORM_CATEGORY, "eventsWithInconsistentSelfParent")
-                        .withDescription("Events that had an internal self-parent inconsistency")
-                        .withUnit("events"));
-        this.inconsistentOtherParentAccumulator = platformContext
-                .getMetrics()
-                .getOrCreate(new LongAccumulator.Config(PLATFORM_CATEGORY, "eventsWithInconsistentOtherParent")
-                        .withDescription("Events that had an internal other-parent inconsistency")
-                        .withUnit("events"));
-        this.identicalParentsAccumulator = platformContext
-                .getMetrics()
-                .getOrCreate(new LongAccumulator.Config(PLATFORM_CATEGORY, "eventsWithIdenticalParents")
-                        .withDescription("Events with identical self-parent and other-parent hash")
+                .getOrCreate(new LongAccumulator.Config(PLATFORM_CATEGORY, "eventsWithInvalidParents")
+                        .withDescription("Events that have invalid parents")
                         .withUnit("events"));
         this.invalidGenerationAccumulator = platformContext
                 .getMetrics()
@@ -180,9 +148,9 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
             nullField = "timeCreated";
         } else if (eventCore.version() == null) {
             nullField = "version";
-        } else if (eventCore.parents().stream().anyMatch(Objects::isNull)) {
+        } else if (EventMigrationUtils.getParents(gossipEvent).stream().anyMatch(Objects::isNull)) {
             nullField = "parent";
-        } else if (gossipEvent.eventTransaction().stream().anyMatch(DefaultInternalEventValidator::isTransactionNull)) {
+        } else if (gossipEvent.transactions().stream().anyMatch(DefaultInternalEventValidator::isTransactionNull)) {
             nullField = "transaction";
         }
         if (nullField != null) {
@@ -199,10 +167,8 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
      * @param transaction the transaction to check
      * @return true if the transaction is null, otherwise false
      */
-    private static boolean isTransactionNull(@Nullable final EventTransaction transaction) {
-        return transaction == null
-                || transaction.transaction() == null
-                || transaction.transaction().value() == null;
+    private static boolean isTransactionNull(@Nullable final Bytes transaction) {
+        return transaction == null || transaction.length() == 0;
     }
 
     /**
@@ -213,13 +179,12 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
      */
     private boolean areByteFieldsCorrectLength(@NonNull final PlatformEvent event) {
         final GossipEvent gossipEvent = event.getGossipEvent();
-        final EventCore eventCore = gossipEvent.eventCore();
         if (gossipEvent.signature().length() != SignatureType.RSA.signatureLength()) {
             fieldLengthLogger.error(EXCEPTION.getMarker(), "Event signature is the wrong length {}", gossipEvent);
             fieldLengthAccumulator.update(1);
             return false;
         }
-        if (eventCore.parents().stream()
+        if (EventMigrationUtils.getParents(gossipEvent).stream()
                 .map(EventDescriptor::hash)
                 .anyMatch(hash -> hash.length() != DigestType.SHA_384.digestLength())) {
             fieldLengthLogger.error(
@@ -239,7 +204,7 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
      * @return true if the total byte count of transactions in the event is less than the maximum, otherwise false
      */
     private boolean isTransactionByteCountValid(@NonNull final PlatformEvent event) {
-        int totalTransactionBytes = 0;
+        long totalTransactionBytes = 0;
         final Iterator<Transaction> iterator = event.transactionIterator();
         while (iterator.hasNext()) {
             totalTransactionBytes += iterator.next().getSize();
@@ -265,27 +230,34 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
      * @return true if the parent hashes and generations of the event are internally consistent, otherwise false
      */
     private boolean areParentsInternallyConsistent(@NonNull final PlatformEvent event) {
-        // If a parent is not missing, then the generation and birth round must be valid.
+        if (!EventMigrationUtils.areParentsPopulatedCorrectly(event.getGossipEvent())) {
+            invalidParentsLogger.error(
+                    EXCEPTION.getMarker(),
+                    "Event %s has parents populated in both EventCore and GossipEvent".formatted(event));
+            invalidParentsAccumulator.update(1);
+            return false;
+        }
 
+        // If a parent is not missing, then the generation and birth round must be valid.
         final EventDescriptorWrapper selfParent = event.getSelfParent();
         if (selfParent != null) {
             if (selfParent.eventDescriptor().generation() < FIRST_GENERATION) {
-                inconsistentSelfParentLogger.error(
+                invalidParentsLogger.error(
                         EXCEPTION.getMarker(),
                         "Event %s has self parent with generation less than the FIRST_GENERATION. self-parent generation: %s"
                                 .formatted(event, selfParent.eventDescriptor().generation()));
-                inconsistentSelfParentAccumulator.update(1);
+                invalidParentsAccumulator.update(1);
                 return false;
             }
         }
 
         for (final EventDescriptorWrapper otherParent : event.getOtherParents()) {
             if (otherParent.eventDescriptor().generation() < FIRST_GENERATION) {
-                inconsistentOtherParentLogger.error(
+                invalidParentsLogger.error(
                         EXCEPTION.getMarker(),
                         "Event %s has other parent with generation less than the FIRST_GENERATION. other-parent: %s"
                                 .formatted(event, otherParent));
-                inconsistentOtherParentAccumulator.update(1);
+                invalidParentsAccumulator.update(1);
                 return false;
             }
         }
@@ -294,11 +266,11 @@ public class DefaultInternalEventValidator implements InternalEventValidator {
         if (!singleNodeNetwork && selfParent != null) {
             for (final EventDescriptorWrapper otherParent : event.getOtherParents()) {
                 if (selfParent.hash().equals(otherParent.hash())) {
-                    identicalParentsLogger.error(
+                    invalidParentsLogger.error(
                             EXCEPTION.getMarker(),
                             "Event %s has identical self-parent and other-parent hash: %s"
                                     .formatted(event, selfParent.hash()));
-                    identicalParentsAccumulator.update(1);
+                    invalidParentsAccumulator.update(1);
                     return false;
                 }
             }

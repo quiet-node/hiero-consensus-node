@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.hedera.embedded;
 
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.APPLICATION_PROPERTIES;
@@ -35,12 +20,12 @@ import com.hedera.services.bdd.junit.hedera.HederaNode;
 import com.hedera.services.bdd.junit.hedera.NodeMetadata;
 import com.hedera.services.bdd.junit.hedera.subprocess.NodeStatus;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.status.PlatformStatus;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.hiero.consensus.model.status.PlatformStatus;
 
 /**
  * A node running in the same OS process as the JUnit test runner, with a direct reference
@@ -79,6 +64,13 @@ public class EmbeddedNode extends AbstractLocalNode<EmbeddedNode> implements Hed
                 "bootstrap.nodeAdminKeys.path",
                 getExternalPath(NODE_ADMIN_KEYS_JSON).toAbsolutePath().toString());
         System.setProperty("hedera.profiles.active", "DEV");
+
+        // We get the shard/realm from the metadata account which is coming from the property file
+        var shard = metadata().accountId().shardNum();
+        var realm = metadata().accountId().realmNum();
+        System.setProperty("hedera.shard", String.valueOf(shard));
+        System.setProperty("hedera.realm", String.valueOf(realm));
+
         final var log4j2ConfigLoc = getExternalPath(LOG4J2_XML).toString();
         if (isForShared(log4j2ConfigLoc)) {
             System.setProperty("log4j.configurationFile", log4j2ConfigLoc);
@@ -90,7 +82,7 @@ public class EmbeddedNode extends AbstractLocalNode<EmbeddedNode> implements Hed
     }
 
     @Override
-    public EmbeddedNode initWorkingDir(@NonNull final String configTxt) {
+    public @NonNull EmbeddedNode initWorkingDir(@NonNull final String configTxt) {
         super.initWorkingDir(configTxt);
         updateUpgradeArtifactsProperty(getExternalPath(APPLICATION_PROPERTIES), getExternalPath(UPGRADE_ARTIFACTS_DIR));
         return this;
@@ -98,8 +90,13 @@ public class EmbeddedNode extends AbstractLocalNode<EmbeddedNode> implements Hed
 
     @Override
     public CompletableFuture<Void> statusFuture(
-            @NonNull final PlatformStatus status, @Nullable final Consumer<NodeStatus> nodeStatusObserver) {
+            @Nullable final Consumer<NodeStatus> nodeStatusObserver, @NonNull final PlatformStatus... statuses) {
         throw new UnsupportedOperationException("Prefer awaiting status of the embedded network");
+    }
+
+    @Override
+    public CompletableFuture<Void> minLogsFuture(@NonNull final String pattern, final int n) {
+        throw new UnsupportedOperationException("Logs not reliably written in an embedded network");
     }
 
     @Override

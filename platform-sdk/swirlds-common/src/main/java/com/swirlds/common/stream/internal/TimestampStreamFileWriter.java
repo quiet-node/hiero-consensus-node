@@ -1,44 +1,19 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.common.stream.internal;
 
-import static com.swirlds.common.crypto.DigestType.SHA_384;
-import static com.swirlds.common.crypto.SignatureType.RSA;
 import static com.swirlds.common.stream.LinkedObjectStreamUtilities.generateSigFilePath;
 import static com.swirlds.common.stream.LinkedObjectStreamUtilities.generateStreamFileNameFromInstant;
 import static com.swirlds.common.stream.LinkedObjectStreamUtilities.getPeriod;
-import static com.swirlds.common.stream.StreamAligned.NO_ALIGNMENT;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.logging.legacy.LogMarker.FREEZE;
 import static com.swirlds.logging.legacy.LogMarker.OBJECT_STREAM;
 import static com.swirlds.logging.legacy.LogMarker.OBJECT_STREAM_FILE;
+import static org.hiero.base.crypto.DigestType.SHA_384;
+import static org.hiero.base.crypto.SignatureType.RSA;
+import static org.hiero.consensus.model.stream.StreamAligned.NO_ALIGNMENT;
 
-import com.swirlds.common.crypto.Hash;
-import com.swirlds.common.crypto.HashingOutputStream;
-import com.swirlds.common.crypto.RunningHash;
-import com.swirlds.common.crypto.RunningHashable;
-import com.swirlds.common.crypto.SerializableHashable;
-import com.swirlds.common.crypto.Signature;
-import com.swirlds.common.crypto.SignatureType;
-import com.swirlds.common.io.streams.SerializableDataOutputStream;
 import com.swirlds.common.stream.Signer;
-import com.swirlds.common.stream.StreamAligned;
 import com.swirlds.common.stream.StreamType;
-import com.swirlds.common.stream.Timestamped;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -50,6 +25,16 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Hash;
+import org.hiero.base.crypto.HashingOutputStream;
+import org.hiero.base.crypto.RunningHash;
+import org.hiero.base.crypto.RunningHashable;
+import org.hiero.base.crypto.SerializableHashable;
+import org.hiero.base.crypto.Signature;
+import org.hiero.base.crypto.SignatureType;
+import org.hiero.base.io.streams.SerializableDataOutputStream;
+import org.hiero.consensus.model.stream.StreamAligned;
+import org.hiero.consensus.model.stream.Timestamped;
 
 /**
  * <p>

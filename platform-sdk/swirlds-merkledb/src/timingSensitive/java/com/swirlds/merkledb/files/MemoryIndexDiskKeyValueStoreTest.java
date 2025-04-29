@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.merkledb.files;
 
 import static com.swirlds.merkledb.files.DataFileCommon.deleteDirectoryAndContents;
@@ -38,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -182,7 +168,7 @@ class MemoryIndexDiskKeyValueStoreTest {
     void createDataAndCheckImpl(final FilesTestType testType) throws Exception {
         // let's store hashes as easy test class
         final Path tempDir = testDirectory.resolve("DataFileTest");
-        final LongListOffHeap index = new LongListOffHeap();
+        final LongListOffHeap index = new LongListOffHeap(1024, 1_000_000, 256);
         final AtomicLong timeSpent = new AtomicLong(0);
         final AtomicDouble savedSpace = new AtomicDouble(0.0);
         String storeName = "MemoryIndexDiskKeyValueStoreTest";
@@ -212,11 +198,18 @@ class MemoryIndexDiskKeyValueStoreTest {
         writeBatch(testType, store, 1500, 2000, 3500, 1234);
         checkRange(testType, store, 0, 2000, 1234);
         // check number of files created
-        assertEquals(3, Files.list(tempDir).count(), "unexpected # of files #1");
+        int filesCount;
+        try (Stream<Path> list = Files.list(tempDir)) {
+            filesCount = (int) list.count();
+        }
+        assertEquals(3, filesCount, "unexpected # of files #1");
         // compact all files
         dataFileCompactor.compact();
         // check number of files after merge
-        assertEquals(1, Files.list(tempDir).count(), "unexpected # of files #2");
+        try (Stream<Path> list = Files.list(tempDir)) {
+            filesCount = (int) list.count();
+        }
+        assertEquals(1, filesCount, "unexpected # of files #2");
         // check all data
         checkRange(testType, store, 0, 2000, 1234);
         // check metrics are reported
@@ -265,25 +258,30 @@ class MemoryIndexDiskKeyValueStoreTest {
         checkRange(testType, store, 0, 2000, 8910);
         checkRange(testType, store, 2000, 48_000, 56_000);
         // check number of files created
-        assertEquals(2, Files.list(tempDir).count(), "unexpected # of files #3");
+        try (Stream<Path> list = Files.list(tempDir)) {
+            filesCount = (int) list.count();
+        }
+        assertEquals(2, filesCount, "unexpected # of files #3");
 
         // create a snapshot
         final Path tempSnapshotDir = testDirectory.resolve("DataFileTestSnapshot");
         store.snapshot(tempSnapshotDir);
         // check all files are in new dir
-        Files.list(tempDir).forEach(file -> {
-            assertTrue(Files.exists(tempSnapshotDir.resolve(file.getFileName())), "Expected file does not exist");
-            try {
-                assertEquals(
-                        Files.size(file),
-                        Files.size(tempSnapshotDir.resolve(file.getFileName())),
-                        "Unexpected value from Files.size()");
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
+        try (Stream<Path> list = Files.list(tempDir)) {
+            list.forEach(file -> {
+                assertTrue(Files.exists(tempSnapshotDir.resolve(file.getFileName())), "Expected file does not exist");
+                try {
+                    assertEquals(
+                            Files.size(file),
+                            Files.size(tempSnapshotDir.resolve(file.getFileName())),
+                            "Unexpected value from Files.size()");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
         // open snapshot and check data
-        final LongListOffHeap snapshotIndex = new LongListOffHeap();
+        final LongListOffHeap snapshotIndex = new LongListOffHeap(1024, 1_000_000, 256);
         final MemoryIndexDiskKeyValueStore storeFromSnapshot = new MemoryIndexDiskKeyValueStore(
                 CONFIGURATION.getConfigData(MerkleDbConfig.class),
                 tempSnapshotDir,

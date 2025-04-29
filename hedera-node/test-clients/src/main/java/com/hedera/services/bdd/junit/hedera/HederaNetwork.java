@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.hedera;
 
 import static java.util.Objects.requireNonNull;
@@ -156,10 +141,11 @@ public interface HederaNetwork {
     void start();
 
     /**
-     * Starts all nodes in the network with the given overrides.
+     * Starts all nodes in the network with the given customizations.
+     *
      * @param bootstrapOverrides the overrides
      */
-    default void startWithOverrides(@NonNull Map<String, String> bootstrapOverrides) {
+    default void startWith(@NonNull final Map<String, String> bootstrapOverrides) {
         throw new UnsupportedOperationException();
     }
 
@@ -172,4 +158,22 @@ public interface HederaNetwork {
      * Waits for all nodes in the network to be ready within the given timeout.
      */
     void awaitReady(@NonNull Duration timeout);
+
+    /**
+     * Returns the shard of the network.
+     * <p>
+     * (FUTURE) Implement sensibly for non-{@link RemoteNetwork} implementations.
+     */
+    default long shard() {
+        return 0;
+    }
+
+    /**
+     * Returns the realm of the network.
+     * <p>
+     * (FUTURE) Implement sensibly for non-{@link RemoteNetwork} implementations.
+     */
+    default long realm() {
+        return 0;
+    }
 }

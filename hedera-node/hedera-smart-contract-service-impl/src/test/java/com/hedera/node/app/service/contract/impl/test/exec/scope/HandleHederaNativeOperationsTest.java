@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.test.exec.scope;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_SIGNATURE;
@@ -26,6 +11,8 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.A_NEW_A
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.A_SECP256K1_KEY;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CANONICAL_ALIAS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CIVILIAN_OWNED_NFT;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT_CONFIG;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT_HEDERA_CONFIG;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.EIP_1014_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.FUNGIBLE_TOKEN;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.FUNGIBLE_TOKEN_ID;
@@ -64,11 +51,15 @@ import com.hedera.node.app.service.token.ReadableTokenRelationStore;
 import com.hedera.node.app.service.token.ReadableTokenStore;
 import com.hedera.node.app.service.token.api.TokenServiceApi;
 import com.hedera.node.app.service.token.records.CryptoCreateStreamBuilder;
+import com.hedera.node.app.spi.key.KeyVerifier;
 import com.hedera.node.app.spi.store.StoreFactory;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.record.DeleteCapableTransactionStreamBuilder;
+import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.SortedSet;
 import java.util.function.Predicate;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.junit.jupiter.api.BeforeEach;
@@ -112,6 +103,15 @@ class HandleHederaNativeOperationsTest {
     @Mock
     private ReadableNftStore nftStore;
 
+    @Mock
+    private KeyVerifier keyVerifier;
+
+    @Mock
+    private SortedSet<Key> keys;
+
+    @Mock
+    EntityIdFactory entityIdFactory;
+
     private final Deque<MessageFrame> stack = new ArrayDeque<>();
 
     private HandleHederaNativeOperations subject;
@@ -122,7 +122,7 @@ class HandleHederaNativeOperationsTest {
 
     @BeforeEach
     void setUp() {
-        subject = new HandleHederaNativeOperations(context, A_SECP256K1_KEY);
+        subject = new HandleHederaNativeOperations(context, A_SECP256K1_KEY, entityIdFactory);
         deletedAccount = AccountID.newBuilder().accountNum(1L).build();
         beneficiaryAccount = AccountID.newBuilder().accountNum(2L).build();
     }
@@ -132,7 +132,7 @@ class HandleHederaNativeOperationsTest {
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
         given(accountStore.getAccountById(NON_SYSTEM_ACCOUNT_ID)).willReturn(Account.DEFAULT);
-        assertSame(Account.DEFAULT, subject.getAccount(NON_SYSTEM_ACCOUNT_ID.accountNumOrThrow()));
+        assertSame(Account.DEFAULT, subject.getAccount(NON_SYSTEM_ACCOUNT_ID));
     }
 
     @Test
@@ -154,7 +154,7 @@ class HandleHederaNativeOperationsTest {
     void resolveAliasReturnsMissingNumIfNotPresent() {
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
-        assertEquals(MISSING_ENTITY_NUMBER, subject.resolveAlias(tuweniToPbjBytes(EIP_1014_ADDRESS)));
+        assertEquals(MISSING_ENTITY_NUMBER, subject.resolveAlias(0, 0, tuweniToPbjBytes(EIP_1014_ADDRESS)));
     }
 
     @Test
@@ -162,8 +162,8 @@ class HandleHederaNativeOperationsTest {
         final var alias = tuweniToPbjBytes(EIP_1014_ADDRESS);
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
-        given(accountStore.getAccountIDByAlias(alias)).willReturn(NON_SYSTEM_ACCOUNT_ID);
-        assertEquals(NON_SYSTEM_ACCOUNT_ID.accountNumOrThrow(), subject.resolveAlias(alias));
+        given(accountStore.getAccountIDByAlias(0, 0, alias)).willReturn(NON_SYSTEM_ACCOUNT_ID);
+        assertEquals(NON_SYSTEM_ACCOUNT_ID.accountNumOrThrow(), subject.resolveAlias(0, 0, alias));
     }
 
     @Test
@@ -171,7 +171,7 @@ class HandleHederaNativeOperationsTest {
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.readableStore(ReadableTokenStore.class)).willReturn(tokenStore);
         given(tokenStore.get(FUNGIBLE_TOKEN_ID)).willReturn(FUNGIBLE_TOKEN);
-        assertSame(FUNGIBLE_TOKEN, subject.getToken(FUNGIBLE_TOKEN_ID.tokenNum()));
+        assertSame(FUNGIBLE_TOKEN, subject.getToken(FUNGIBLE_TOKEN_ID));
     }
 
     @Test
@@ -212,7 +212,10 @@ class HandleHederaNativeOperationsTest {
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.serviceApi(TokenServiceApi.class)).willReturn(tokenServiceApi);
         given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
-        given(accountStore.getAccountIDByAlias(CANONICAL_ALIAS)).willReturn(A_NEW_ACCOUNT_ID);
+        given(accountStore.getAccountIDByAlias(
+                        DEFAULT_HEDERA_CONFIG.shard(), DEFAULT_HEDERA_CONFIG.realm(), CANONICAL_ALIAS))
+                .willReturn(A_NEW_ACCOUNT_ID);
+        given(context.configuration()).willReturn(DEFAULT_CONFIG);
 
         subject.finalizeHollowAccountAsContract(CANONICAL_ALIAS);
 
@@ -300,6 +303,11 @@ class HandleHederaNativeOperationsTest {
 
     @Test
     void settingNonceUsesApi() {
+        final var configuration = HederaTestConfigBuilder.create()
+                .withValue("hedera.shard", 0)
+                .withValue("hedera.realm", 0)
+                .getOrCreateConfig();
+        given(context.configuration()).willReturn(configuration);
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.serviceApi(TokenServiceApi.class)).willReturn(tokenServiceApi);
 
@@ -313,9 +321,7 @@ class HandleHederaNativeOperationsTest {
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.readableStore(ReadableTokenRelationStore.class)).willReturn(relationStore);
         given(relationStore.get(A_NEW_ACCOUNT_ID, FUNGIBLE_TOKEN_ID)).willReturn(A_FUNGIBLE_RELATION);
-        assertSame(
-                A_FUNGIBLE_RELATION,
-                subject.getTokenRelation(A_NEW_ACCOUNT_ID.accountNumOrThrow(), FUNGIBLE_TOKEN_ID.tokenNum()));
+        assertSame(A_FUNGIBLE_RELATION, subject.getTokenRelation(A_NEW_ACCOUNT_ID, FUNGIBLE_TOKEN_ID));
     }
 
     @Test
@@ -323,7 +329,7 @@ class HandleHederaNativeOperationsTest {
         given(context.storeFactory()).willReturn(storeFactory);
         given(storeFactory.readableStore(ReadableNftStore.class)).willReturn(nftStore);
         given(nftStore.get(CIVILIAN_OWNED_NFT.nftIdOrThrow())).willReturn(CIVILIAN_OWNED_NFT);
-        assertSame(CIVILIAN_OWNED_NFT, subject.getNft(NON_FUNGIBLE_TOKEN_ID.tokenNum(), NFT_SERIAL_NO));
+        assertSame(CIVILIAN_OWNED_NFT, subject.getNft(NON_FUNGIBLE_TOKEN_ID, NFT_SERIAL_NO));
     }
 
     @Test
@@ -334,5 +340,12 @@ class HandleHederaNativeOperationsTest {
                 .willReturn(true);
         final var result = subject.checkForCustomFees(CryptoTransferTransactionBody.DEFAULT);
         assertTrue(result);
+    }
+
+    @Test
+    void authorizingSimpleKeysTest() {
+        given(context.keyVerifier()).willReturn(keyVerifier);
+        given(keyVerifier.authorizingSimpleKeys()).willReturn(keys);
+        assertSame(keys, subject.authorizingSimpleKeys());
     }
 }

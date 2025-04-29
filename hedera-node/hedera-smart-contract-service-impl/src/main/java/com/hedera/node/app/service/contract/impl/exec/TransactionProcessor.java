@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.exec;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_ACCOUNT_ID;
@@ -319,15 +304,19 @@ public class TransactionProcessor {
                 updater.setupTopLevelLazyCreate(requireNonNull(parties.receiverAddress));
             } else {
                 updater.setContractNotRequired();
-                parties =
-                        new InvolvedParties(sender, relayer, contractIDToBesuAddress(transaction.contractIdOrThrow()));
+                parties = new InvolvedParties(
+                        sender,
+                        relayer,
+                        contractIDToBesuAddress(updater.entityIdFactory(), transaction.contractIdOrThrow()));
             }
         } else {
             updater.setContractNotRequired();
             parties = new InvolvedParties(
                     sender,
                     relayer,
-                    to != null ? to.getAddress() : contractIDToBesuAddress(transaction.contractIdOrThrow()));
+                    to != null
+                            ? to.getAddress()
+                            : contractIDToBesuAddress(updater.entityIdFactory(), transaction.contractIdOrThrow()));
         }
         return parties;
     }
@@ -336,6 +325,6 @@ public class TransactionProcessor {
             @NonNull final HederaEvmTransaction transaction,
             @Nullable final HederaEvmAccount to,
             @NonNull final Configuration config) {
-        return to == null && transaction.isEthereumTransaction() && messageCall.isImplicitCreationEnabled(config);
+        return to == null && transaction.isEthereumTransaction() && messageCall.isImplicitCreationEnabled();
     }
 }

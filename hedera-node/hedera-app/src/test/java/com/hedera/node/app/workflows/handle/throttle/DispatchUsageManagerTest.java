@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle.throttle;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.CONSENSUS_SUBMIT_MESSAGE;
@@ -227,7 +212,7 @@ class DispatchUsageManagerTest {
         given(dispatch.txnCategory()).willReturn(HandleContext.TransactionCategory.USER);
         given(dispatch.txnInfo()).willReturn(CRYPTO_TRANSFER_TXN_INFO);
         given(recordBuilder.status()).willReturn(SUCCESS);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(dispatch.stack()).willReturn(stack);
 
         subject.finalizeAndSaveUsage(dispatch);
@@ -240,7 +225,7 @@ class DispatchUsageManagerTest {
         given(dispatch.txnCategory()).willReturn(HandleContext.TransactionCategory.USER);
         given(dispatch.txnInfo()).willReturn(SUBMIT_TXN_INFO);
         given(dispatch.stack()).willReturn(stack);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
 
         subject.finalizeAndSaveUsage(dispatch);
 
@@ -254,7 +239,7 @@ class DispatchUsageManagerTest {
         given(dispatch.txnInfo()).willReturn(CONTRACT_CALL_TXN_INFO);
         given(recordBuilder.hasContractResult()).willReturn(true);
         given(recordBuilder.getGasUsedForContractTxn()).willReturn(GAS_USED);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(dispatch.config()).willReturn(DEFAULT_CONFIG);
         given(dispatch.stack()).willReturn(stack);
 
@@ -271,7 +256,7 @@ class DispatchUsageManagerTest {
         given(dispatch.txnInfo()).willReturn(CONTRACT_CREATE_TXN_INFO);
         given(recordBuilder.hasContractResult()).willReturn(true);
         given(recordBuilder.getGasUsedForContractTxn()).willReturn(GAS_USED);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(dispatch.config()).willReturn(DEFAULT_CONFIG);
         given(dispatch.stack()).willReturn(stack);
 
@@ -289,7 +274,7 @@ class DispatchUsageManagerTest {
         given(dispatch.txnInfo()).willReturn(ETH_TXN_INFO);
         given(recordBuilder.hasContractResult()).willReturn(true);
         given(recordBuilder.getGasUsedForContractTxn()).willReturn(GAS_USED);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(dispatch.config()).willReturn(DEFAULT_CONFIG);
         given(dispatch.stack()).willReturn(stack);
         given(dispatch.readableStoreFactory()).willReturn(readableStoreFactory);
@@ -307,7 +292,7 @@ class DispatchUsageManagerTest {
     void doesNotLeakUnusedGasForContractOperationWithoutResult() {
         given(dispatch.txnCategory()).willReturn(HandleContext.TransactionCategory.USER);
         given(dispatch.txnInfo()).willReturn(CONTRACT_CALL_TXN_INFO);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(dispatch.stack()).willReturn(stack);
 
         subject.finalizeAndSaveUsage(dispatch);
@@ -321,7 +306,7 @@ class DispatchUsageManagerTest {
     void reclaimsSelfFrontendCapacityOnFailedImplicitCreation() {
         given(dispatch.txnCategory()).willReturn(HandleContext.TransactionCategory.USER);
         given(dispatch.txnInfo()).willReturn(CRYPTO_TRANSFER_TXN_INFO);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(recordBuilder.status()).willReturn(INVALID_ACCOUNT_AMOUNTS);
         given(dispatch.stack()).willReturn(stack);
         given(dispatch.readableStoreFactory()).willReturn(readableStoreFactory);
@@ -341,7 +326,7 @@ class DispatchUsageManagerTest {
     void doesNotReclaimSelfFrontendCapacityOnZeroFailedImplicitCreation() {
         given(dispatch.txnCategory()).willReturn(HandleContext.TransactionCategory.USER);
         given(dispatch.txnInfo()).willReturn(CRYPTO_TRANSFER_TXN_INFO);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(recordBuilder.status()).willReturn(INVALID_ACCOUNT_AMOUNTS);
         given(dispatch.stack()).willReturn(stack);
         given(dispatch.readableStoreFactory()).willReturn(readableStoreFactory);
@@ -359,7 +344,7 @@ class DispatchUsageManagerTest {
     void doesntReclaimSelfFrontendCapacityOnFailedImplicitCreationFromOtherNode() {
         given(dispatch.txnCategory()).willReturn(HandleContext.TransactionCategory.USER);
         given(dispatch.txnInfo()).willReturn(CRYPTO_TRANSFER_TXN_INFO);
-        given(dispatch.recordBuilder()).willReturn(recordBuilder);
+        given(dispatch.streamBuilder()).willReturn(recordBuilder);
         given(recordBuilder.status()).willReturn(INVALID_ACCOUNT_AMOUNTS);
         given(dispatch.stack()).willReturn(stack);
         given(dispatch.readableStoreFactory()).willReturn(readableStoreFactory);

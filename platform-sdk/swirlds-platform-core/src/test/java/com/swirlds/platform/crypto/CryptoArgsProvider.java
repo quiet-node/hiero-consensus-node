@@ -1,44 +1,28 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.crypto;
 
 import com.hedera.hapi.node.state.roster.Roster;
-import com.swirlds.common.crypto.config.CryptoConfig;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.Randotron;
+import com.swirlds.common.test.fixtures.WeightGenerators;
 import com.swirlds.common.test.fixtures.io.ResourceLoader;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.config.PathsConfig;
-import com.swirlds.platform.roster.RosterRetriever;
-import com.swirlds.platform.roster.RosterUtils;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
-import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder.WeightDistributionStrategy;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.UnrecoverableKeyException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Stream;
+import org.hiero.base.crypto.config.CryptoConfig;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.AddressBook;
+import org.hiero.consensus.roster.RosterRetriever;
+import org.hiero.consensus.roster.RosterUtils;
 import org.junit.jupiter.params.provider.Arguments;
 
 /**
@@ -66,7 +50,7 @@ public class CryptoArgsProvider {
     public static AddressBook createAddressBook(final int size) {
         final Roster roster = RandomRosterBuilder.create(Randotron.create())
                 .withSize(size)
-                .withWeightDistributionStrategy(WeightDistributionStrategy.BALANCED)
+                .withWeightGenerator(WeightGenerators.BALANCED_1000_PER_NODE)
                 .build();
 
         // We still use the keys injection mechanism from the EnhancedKeyStoreLoader and CryptoStatic,
@@ -102,11 +86,13 @@ public class CryptoArgsProvider {
      */
     @NonNull
     public static RosterAndCerts loadAddressBookWithKeys(final int size)
-            throws URISyntaxException, UnrecoverableKeyException, KeyLoadingException, KeyStoreException,
-                    NoSuchAlgorithmException, KeyGeneratingException, NoSuchProviderException {
+            throws URISyntaxException, KeyLoadingException, KeyStoreException, NoSuchAlgorithmException,
+                    KeyGeneratingException, NoSuchProviderException {
         final AddressBook createdAB = createAddressBook(size);
         final Map<NodeId, KeysAndCerts> loadedC = EnhancedKeyStoreLoader.using(
-                        createdAB, configure(ResourceLoader.getFile("preGeneratedPEMKeysAndCerts/")))
+                        createdAB,
+                        configure(ResourceLoader.getFile("preGeneratedPEMKeysAndCerts/")),
+                        createdAB.getNodeIdSet())
                 .scan()
                 .generate()
                 .verify()

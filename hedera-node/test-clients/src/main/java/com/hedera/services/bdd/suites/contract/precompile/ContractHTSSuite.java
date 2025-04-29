@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2021-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.contract.precompile;
 
 import static com.google.protobuf.ByteString.copyFromUtf8;
@@ -33,6 +18,7 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenAssociate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.uploadInitCode;
 import static com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil.asHeadlongAddress;
+import static com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil.toAddressStringWithShardAndRealm;
 import static com.hedera.services.bdd.spec.transactions.token.TokenMovement.moving;
 import static com.hedera.services.bdd.spec.transactions.token.TokenMovement.movingUnique;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
@@ -48,8 +34,8 @@ import static com.hedera.services.bdd.suites.contract.Utils.asAddress;
 import static com.hedera.services.bdd.suites.contract.Utils.asToken;
 import static com.hedera.services.bdd.suites.contract.Utils.getNestedContractAddress;
 import static com.hedera.services.bdd.suites.contract.hapi.ContractCallSuite.RECEIVER_2;
-import static com.hedera.services.bdd.suites.leaky.LeakyContractTestsSuite.TOKEN_TRANSFER_CONTRACT;
-import static com.hedera.services.bdd.suites.leaky.LeakyContractTestsSuite.TRANSFER_TOKEN_PUBLIC;
+import static com.hedera.services.bdd.suites.contract.leaky.LeakyContractTestsSuite.TOKEN_TRANSFER_CONTRACT;
+import static com.hedera.services.bdd.suites.contract.leaky.LeakyContractTestsSuite.TRANSFER_TOKEN_PUBLIC;
 import static com.hedera.services.bdd.suites.token.TokenAssociationSpecs.KNOWABLE_TOKEN;
 import static com.hedera.services.bdd.suites.token.TokenAssociationSpecs.VANILLA_TOKEN;
 import static com.hedera.services.bdd.suites.token.TokenTransactSpecs.SUPPLY_KEY;
@@ -88,7 +74,7 @@ public class ContractHTSSuite {
     public static final String TRANSFER_NFT = "transferNFTPublic";
     public static final String TRANSFER_NFTS = "transferNFTsPublic";
 
-    private static final long GAS_TO_OFFER = 2_000_000L;
+    private static final long GAS_TO_OFFER = 4_000_000L;
     private static final long TOTAL_SUPPLY = 1_000;
     private static final String TOKEN_TREASURY = "treasury";
 
@@ -144,7 +130,7 @@ public class ContractHTSSuite {
                 cryptoTransfer(moving(500, VANILLA_TOKEN).between(TOKEN_TREASURY, ACCOUNT)),
                 cryptoTransfer(movingUnique(KNOWABLE_TOKEN, 1, 2, 3, 4).between(TOKEN_TREASURY, ACCOUNT)),
                 uploadInitCode(contract),
-                contractCreate(contract).gas(500_000L),
+                contractCreate(contract).gas(GAS_TO_OFFER),
                 // Do transfers by calling contract from EOA, and should be failing with
                 // CONTRACT_REVERT_EXECUTED
                 withOpContext((spec, opLog) -> {
@@ -256,7 +242,7 @@ public class ContractHTSSuite {
                 tokenAssociate(RECEIVER, VANILLA_TOKEN),
                 cryptoTransfer(moving(500, VANILLA_TOKEN).between(TOKEN_TREASURY, ACCOUNT)),
                 uploadInitCode(contract),
-                contractCreate(contract).gas(500_000L),
+                contractCreate(contract).gas(GAS_TO_OFFER),
                 withOpContext((spec, opLog) -> {
                     final var receiver1 =
                             asHeadlongAddress(asAddress(spec.registry().getAccountID(RECEIVER)));
@@ -795,7 +781,7 @@ public class ContractHTSSuite {
                                             HapiParserUtil.asHeadlongAddress(
                                                     asAddress(spec.registry().getTokenID(NON_FUNGIBLE_TOKEN))),
                                             sender,
-                                            asHeadlongAddress(new byte[20]),
+                                            asHeadlongAddress(toAddressStringWithShardAndRealm("0")),
                                             1L)
                                     .payingWith(GENESIS)
                                     .gas(GAS_TO_OFFER)

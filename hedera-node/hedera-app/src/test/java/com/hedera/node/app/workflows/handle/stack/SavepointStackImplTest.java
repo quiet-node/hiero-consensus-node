@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle.stack;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.NO_SCHEDULING_ALLOWED_AFTER_SCHEDULED_RECURSION;
@@ -683,7 +668,7 @@ class SavepointStackImplTest extends StateTestBase {
             assertThat(baseState.getWritableStates(FOOD_SERVICE)).has(content(BASE_DATA));
 
             // when
-            stack.commitSystemStateChanges();
+            stack.commitFullStack();
 
             // then
             final var newData = new HashMap<>(BASE_DATA);
@@ -707,7 +692,7 @@ class SavepointStackImplTest extends StateTestBase {
 
             // when
             stack.commit();
-            stack.commitSystemStateChanges();
+            stack.commitFullStack();
 
             // then
             final var newData = new HashMap<>(BASE_DATA);
@@ -731,7 +716,7 @@ class SavepointStackImplTest extends StateTestBase {
 
             // when
             stack.rollback();
-            stack.commitSystemStateChanges();
+            stack.commitFullStack();
 
             // then
             assertThat(baseState.getReadableStates(FOOD_SERVICE)).has(content(BASE_DATA));
@@ -745,13 +730,13 @@ class SavepointStackImplTest extends StateTestBase {
                     baseState, 3, 50, roundStateChangeListener, kvStateChangeListener, streamMode);
 
             // when
-            stack.commitSystemStateChanges();
+            stack.commitFullStack();
 
             // then
             assertThatThrownBy(stack::commit).isInstanceOf(IllegalStateException.class);
             assertThatThrownBy(stack::rollback).isInstanceOf(IllegalStateException.class);
             assertThat(stack.depth()).isOne();
-            assertThatCode(stack::commitSystemStateChanges).doesNotThrowAnyException();
+            assertThatCode(stack::commitFullStack).doesNotThrowAnyException();
             assertThatCode(stack::createSavepoint).doesNotThrowAnyException();
         }
 
@@ -766,7 +751,7 @@ class SavepointStackImplTest extends StateTestBase {
             newData.put(A_KEY, ACAI);
 
             // when
-            stack.commitSystemStateChanges();
+            stack.commitFullStack();
 
             // then
             assertThat(stack.getReadableStates(FOOD_SERVICE)).has(content(newData));

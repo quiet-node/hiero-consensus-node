@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.transfer;
 
 import static java.util.Objects.requireNonNull;
@@ -103,7 +88,8 @@ public class ClassicTransfersDecoder {
     public TransactionBody decodeCryptoTransferV2(
             @NonNull final byte[] encoded, @NonNull final AddressIdConverter addressIdConverter) {
         final var call = ClassicTransfersTranslator.CRYPTO_TRANSFER_V2.decodeCall(encoded);
-        final var transferList = convertingMaybeApprovedAdjustments(((Tuple) call.get(0)).get(0), addressIdConverter);
+        final var transferList = consolidatedTransferList(
+                convertingMaybeApprovedAdjustments(((Tuple) call.get(0)).get(0), addressIdConverter));
 
         final var cryptoTransfersBody = tokenTransfers(convertTokenTransfers(
                 call.get(1),
@@ -282,6 +268,14 @@ public class ClassicTransfersDecoder {
         return CryptoTransferTransactionBody.newBuilder().tokenTransfers(tokenTransferLists);
     }
 
+    private TransferList consolidatedTransferList(@NonNull final TransferList fromTransferList) {
+        final Map<AccountID, AccountAmount> consolidatedTransfers = new LinkedHashMap<>();
+        for (final var accountAmount : fromTransferList.accountAmounts()) {
+            consolidatedTransfers.merge(accountAmount.accountIDOrThrow(), accountAmount, this::mergeAdjusts);
+        }
+        return new TransferList(consolidatedTransfers.values().stream().toList());
+    }
+
     private TokenTransferList mergeTokenTransferLists(
             @NonNull final TokenTransferList from, @NonNull final TokenTransferList to) {
         return from.copyBuilder()
@@ -309,7 +303,7 @@ public class ClassicTransfersDecoder {
 
     private AccountAmount mergeAdjusts(@NonNull final AccountAmount from, @NonNull final AccountAmount to) {
         return from.copyBuilder()
-                .amount(from.amount() + to.amount())
+                .amount(Math.addExact(from.amount(), to.amount()))
                 .isApproval(from.isApproval() || to.isApproval())
                 .build();
     }

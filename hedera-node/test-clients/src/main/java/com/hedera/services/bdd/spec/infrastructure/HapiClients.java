@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.infrastructure;
 
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.pbjToProto;
@@ -159,12 +144,16 @@ public class HapiClients {
         if (existingPool.size() < MAX_DESIRED_CHANNELS_PER_NODE) {
             final var channel = createNettyChannel(false, node.getHost(), node.getGrpcNodeOperatorPort(), -1);
             requireNonNull(channel, "FATAL: Cannot continue without additional Netty channel");
-            existingPool.add(ChannelStubs.from(channel, new NodeConnectInfo(node.hapiSpecInfo()), false));
+            existingPool.add(ChannelStubs.from(
+                    channel,
+                    new NodeConnectInfo(node.hapiSpecInfo(
+                            node.getAccountId().shardNum(), node.getAccountId().realmNum())),
+                    false));
         }
         stubSequences.putIfAbsent(channelUri, new AtomicInteger());
     }
 
-    private HapiClients(final Supplier<List<NodeConnectInfo>> nodeInfosSupplier) {
+    public HapiClients(@NonNull final Supplier<List<NodeConnectInfo>> nodeInfosSupplier) {
         this.nodes = Collections.emptyList();
         this.nodeInfos = nodeInfosSupplier.get();
         stubIds = nodeInfos.stream().collect(Collectors.toMap(NodeConnectInfo::getAccount, NodeConnectInfo::uri));
@@ -200,7 +189,7 @@ public class HapiClients {
     }
 
     public static HapiClients clientsFor(HapiSpecSetup setup) {
-        return new HapiClients(() -> setup.nodes());
+        return new HapiClients(setup::nodes);
     }
 
     public static HapiClients clientsFor(@NonNull final HederaNetwork network) {

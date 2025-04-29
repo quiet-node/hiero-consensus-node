@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.throttle;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
@@ -24,21 +9,18 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
-import com.hedera.hapi.node.base.FileID;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.congestion.CongestionLevelStarts;
-import com.hedera.hapi.node.state.file.File;
 import com.hedera.hapi.node.state.throttles.ThrottleUsageSnapshot;
 import com.hedera.hapi.node.state.throttles.ThrottleUsageSnapshots;
 import com.hedera.hapi.node.transaction.ThrottleDefinitions;
 import com.hedera.node.app.fees.congestion.CongestionMultipliers;
 import com.hedera.node.app.hapi.utils.throttles.DeterministicThrottle;
-import com.hedera.node.app.hapi.utils.throttles.GasLimitDeterministicThrottle;
+import com.hedera.node.app.hapi.utils.throttles.LeakyBucketDeterministicThrottle;
 import com.hedera.node.app.throttle.schemas.V0490CongestionThrottleSchema;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.State;
-import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
@@ -87,16 +69,10 @@ class ThrottleServiceManagerTest {
     private WritableSingletonState<CongestionLevelStarts> writableLevelStarts;
 
     @Mock
-    private ReadableStates fileReadableStates;
-
-    @Mock
     private ReadableStates throttleReadableStates;
 
     @Mock
     private State state;
-
-    @Mock
-    private ReadableKVState<FileID, File> blobs;
 
     @Mock
     private ReadableSingletonState<ThrottleUsageSnapshots> throttleUsageSnapshots;
@@ -105,7 +81,10 @@ class ThrottleServiceManagerTest {
     private ReadableSingletonState<CongestionLevelStarts> congestionLevelStarts;
 
     @Mock
-    private GasLimitDeterministicThrottle gasThrottle;
+    private LeakyBucketDeterministicThrottle gasThrottle;
+
+    @Mock
+    private LeakyBucketDeterministicThrottle bytesThrottle;
 
     @Mock
     private DeterministicThrottle cryptoTransferThrottle;
@@ -129,12 +108,14 @@ class ThrottleServiceManagerTest {
                 backendThrottle,
                 congestionMultipliers,
                 cryptoTransferThrottle,
-                gasThrottle);
+                gasThrottle,
+                bytesThrottle);
 
         subject.init(state, MOCK_ENCODED_THROTTLE_DEFS);
 
         inOrder.verify(ingestThrottle).applyGasConfig();
         inOrder.verify(backendThrottle).applyGasConfig();
+        inOrder.verify(ingestThrottle).applyBytesConfig();
         inOrder.verify(ingestThrottle).rebuildFor(MOCK_THROTTLE_DEFS);
         inOrder.verify(backendThrottle).rebuildFor(MOCK_THROTTLE_DEFS);
         inOrder.verify(congestionMultipliers).resetExpectations();

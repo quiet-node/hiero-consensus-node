@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event.deduplication;
 
 import static com.swirlds.metrics.api.FloatFormats.FORMAT_10_2;
@@ -25,14 +10,7 @@ import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.common.metrics.extensions.CountPerSecond;
 import com.swirlds.metrics.api.LongAccumulator;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.consensus.EventWindow;
-import com.swirlds.platform.event.AncientMode;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.gossip.IntakeEventCounter;
-import com.swirlds.platform.sequence.map.SequenceMap;
-import com.swirlds.platform.sequence.map.StandardSequenceMap;
-import com.swirlds.platform.system.events.EventDescriptorWrapper;
 import com.swirlds.platform.wiring.NoInput;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -40,6 +18,13 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import org.hiero.consensus.config.EventConfig;
+import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.consensus.model.event.EventDescriptorWrapper;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.sequence.map.SequenceMap;
+import org.hiero.consensus.model.sequence.map.StandardSequenceMap;
 
 /**
  * A standard implementation of an {@link EventDeduplicator}.
@@ -111,13 +96,7 @@ public class StandardEventDeduplicator implements EventDeduplicator {
                 .getConfigData(EventConfig.class)
                 .getAncientMode();
         this.eventWindow = EventWindow.getGenesisEventWindow(ancientMode);
-        if (ancientMode == AncientMode.BIRTH_ROUND_THRESHOLD) {
-            observedEvents = new StandardSequenceMap<>(
-                    0, INITIAL_CAPACITY, true, ed -> ed.eventDescriptor().birthRound());
-        } else {
-            observedEvents = new StandardSequenceMap<>(
-                    0, INITIAL_CAPACITY, true, ed -> ed.eventDescriptor().generation());
-        }
+        this.observedEvents = new StandardSequenceMap<>(0, INITIAL_CAPACITY, true, ancientMode::selectIndicator);
     }
 
     /**

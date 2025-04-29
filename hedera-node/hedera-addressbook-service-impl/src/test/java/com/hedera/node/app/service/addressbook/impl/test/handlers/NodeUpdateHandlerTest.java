@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.addressbook.impl.test.handlers;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_ADMIN_KEY;
@@ -30,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -59,6 +45,7 @@ import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.PreHandleContext;
+import com.hedera.node.app.spi.workflows.PureChecksContext;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.security.cert.CertificateEncodingException;
@@ -77,6 +64,9 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
 
     @Mock(strictness = LENIENT)
     private HandleContext handleContext;
+
+    @Mock
+    private PureChecksContext pureChecksContext;
 
     @Mock
     private StoreFactory storeFactory;
@@ -106,7 +96,8 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
     @DisplayName("pureChecks fail when nodeId is negative")
     void nodeIdCannotNegative() {
         txn = new NodeUpdateBuilder().build();
-        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(txn));
+        given(pureChecksContext.body()).willReturn(txn);
+        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(pureChecksContext));
         assertThat(msg.responseCode()).isEqualTo(INVALID_NODE_ID);
     }
 
@@ -118,7 +109,8 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
                 .withAccountId(accountId)
                 .withGossipCaCertificate(Bytes.EMPTY)
                 .build();
-        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(txn));
+        given(pureChecksContext.body()).willReturn(txn);
+        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(pureChecksContext));
         assertThat(msg.responseCode()).isEqualTo(INVALID_GOSSIP_CA_CERTIFICATE);
     }
 
@@ -130,7 +122,8 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
                 .withAccountId(accountId)
                 .withGrpcCertificateHash(Bytes.EMPTY)
                 .build();
-        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(txn));
+        given(pureChecksContext.body()).willReturn(txn);
+        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(pureChecksContext));
         assertThat(msg.responseCode()).isEqualTo(INVALID_GRPC_CERTIFICATE_HASH);
     }
 
@@ -142,7 +135,8 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
                 .withAccountId(accountId)
                 .withAdminKey(invalidKey)
                 .build();
-        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(txn));
+        given(pureChecksContext.body()).willReturn(txn);
+        final var msg = assertThrows(PreCheckException.class, () -> subject.pureChecks(pureChecksContext));
         assertThat(msg.responseCode()).isEqualTo(INVALID_ADMIN_KEY);
     }
 
@@ -155,7 +149,8 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
                 .withGossipCaCertificate(Bytes.wrap(certList.get(1).getEncoded()))
                 .withAdminKey(key)
                 .build();
-        assertDoesNotThrow(() -> subject.pureChecks(txn));
+        given(pureChecksContext.body()).willReturn(txn);
+        assertDoesNotThrow(() -> subject.pureChecks(pureChecksContext));
     }
 
     @Test
@@ -240,19 +235,6 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
 
         final var msg = assertThrows(HandleException.class, () -> subject.handle(handleContext));
         assertEquals(ResponseCodeEnum.GOSSIP_ENDPOINTS_EXCEEDED_LIMIT, msg.getStatus());
-    }
-
-    @Test
-    void failsWhenGossipEndpointTooSmall() {
-        txn = new NodeUpdateBuilder()
-                .withNodeId(1L)
-                .withAccountId(accountId)
-                .withGossipEndpoint(List.of(endpoint1))
-                .build();
-        setupHandle();
-
-        final var msg = assertThrows(HandleException.class, () -> subject.handle(handleContext));
-        assertEquals(ResponseCodeEnum.INVALID_GOSSIP_ENDPOINT, msg.getStatus());
     }
 
     @Test
@@ -355,7 +337,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
     }
 
     @Test
-    void hanldeWorkAsExpected() throws CertificateEncodingException {
+    void handleWorkAsExpected() throws CertificateEncodingException {
         txn = new NodeUpdateBuilder()
                 .withNodeId(1L)
                 .withAccountId(accountId)
@@ -365,6 +347,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
                 .withGossipCaCertificate(Bytes.wrap(certList.get(2).getEncoded()))
                 .withGrpcCertificateHash(Bytes.wrap("hash"))
                 .withAdminKey(key)
+                .withDeclineReward(true)
                 .build();
         given(handleContext.body()).willReturn(txn);
         refreshStoresWithMoreNodeInWritable();
@@ -395,6 +378,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
         assertArrayEquals(
                 certList.get(2).getEncoded(), updatedNode.gossipCaCertificate().toByteArray());
         assertArrayEquals("hash".getBytes(), updatedNode.grpcCertificateHash().toByteArray());
+        assertTrue(updatedNode.declineReward());
         assertEquals(key, updatedNode.adminKey());
     }
 
@@ -419,7 +403,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
     void preHandleRequiresAdminKeySigForNonAddressBookAdmin() throws PreCheckException {
         txn = new NodeUpdateBuilder()
                 .withNodeId(nodeId.number())
-                .withAccountId(asAccount(53))
+                .withAccountId(asAccount(0L, 0L, 53))
                 .withAdminKey(key)
                 .build();
         final var context = setupPreHandle(true, txn);
@@ -491,7 +475,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
         txn = new NodeUpdateBuilder()
                 .withNodeId(nodeId.number())
                 .withAdminKey(key)
-                .withAccountId(asAccount(53))
+                .withAccountId(asAccount(0L, 0L, 53))
                 .build();
         final var context = setupPreHandle(false, txn);
         assertThrowsPreCheck(() -> subject.preHandle(context), UPDATE_NODE_ACCOUNT_NOT_ALLOWED);
@@ -558,6 +542,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
         private Bytes grpcCertificateHash = null;
         private Key adminKey = null;
         private AccountID contextPayerId = payerId;
+        private boolean declineReward = false;
 
         private NodeUpdateBuilder() {}
 
@@ -587,6 +572,7 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
             if (adminKey != null) {
                 op.adminKey(adminKey);
             }
+            op.declineReward(declineReward);
 
             return TransactionBody.newBuilder()
                     .transactionID(txnId)
@@ -636,6 +622,11 @@ class NodeUpdateHandlerTest extends AddressBookTestBase {
 
         public NodeUpdateBuilder withAdminKey(final Key adminKey) {
             this.adminKey = adminKey;
+            return this;
+        }
+
+        public NodeUpdateBuilder withDeclineReward(final boolean declineReward) {
+            this.declineReward = declineReward;
             return this;
         }
     }

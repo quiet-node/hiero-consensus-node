@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2023-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.fixtures.state;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
@@ -31,7 +16,6 @@ import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import com.swirlds.state.lifecycle.StartupNetworks;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.FilteredReadableStates;
 import com.swirlds.state.spi.FilteredWritableStates;
 import com.swirlds.state.spi.ReadableStates;
@@ -46,7 +30,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -71,28 +54,24 @@ public class FakeSchemaRegistry implements SchemaRegistry {
     public void migrate(
             @NonNull final String serviceName,
             @NonNull final FakeState state,
-            @NonNull final NetworkInfo networkInfo,
             @NonNull final StartupNetworks startupNetworks) {
-        migrate(
-                serviceName,
-                state,
-                CURRENT_VERSION,
-                networkInfo,
-                DEFAULT_CONFIG,
-                new HashMap<>(),
-                new AtomicLong(),
-                startupNetworks);
+        migrate(serviceName, state, CURRENT_VERSION, DEFAULT_CONFIG, DEFAULT_CONFIG, new HashMap<>(), startupNetworks);
     }
 
     public void migrate(
             @NonNull final String serviceName,
             @NonNull final FakeState state,
             @Nullable final SemanticVersion previousVersion,
-            @NonNull final NetworkInfo networkInfo,
-            @NonNull final Configuration config,
+            @NonNull final Configuration appConfig,
+            @NonNull final Configuration platformConfig,
             @NonNull final Map<String, Object> sharedValues,
-            @NonNull final AtomicLong nextEntityNum,
             @NonNull final StartupNetworks startupNetworks) {
+        requireNonNull(serviceName);
+        requireNonNull(state);
+        requireNonNull(appConfig);
+        requireNonNull(platformConfig);
+        requireNonNull(sharedValues);
+        requireNonNull(startupNetworks);
         if (schemas.isEmpty()) {
             logger.info("Service {} does not use state", serviceName);
             return;
@@ -108,14 +87,14 @@ public class FakeSchemaRegistry implements SchemaRegistry {
                 () -> HapiUtils.toString(latestVersion));
         for (final var schema : schemas) {
             final var applications =
-                    schemaApplications.computeApplications(previousVersion, latestVersion, schema, config);
+                    schemaApplications.computeApplications(previousVersion, latestVersion, schema, appConfig);
             logger.info("Applying {} schema {} ({})", serviceName, schema.getVersion(), applications);
             final var readableStates = state.getReadableStates(serviceName);
             final var previousStates = new FilteredReadableStates(readableStates, readableStates.stateKeys());
             final WritableStates writableStates;
             final WritableStates newStates;
             if (applications.contains(STATE_DEFINITIONS)) {
-                final var redefinedWritableStates = applyStateDefinitions(serviceName, schema, config, state);
+                final var redefinedWritableStates = applyStateDefinitions(serviceName, schema, appConfig, state);
                 writableStates = redefinedWritableStates.beforeStates();
                 newStates = redefinedWritableStates.afterStates();
             } else {
@@ -125,9 +104,8 @@ public class FakeSchemaRegistry implements SchemaRegistry {
                     previousVersion,
                     previousStates,
                     newStates,
-                    config,
-                    networkInfo,
-                    nextEntityNum,
+                    appConfig,
+                    platformConfig,
                     sharedValues,
                     startupNetworks);
             if (applications.contains(MIGRATION)) {
@@ -183,9 +161,8 @@ public class FakeSchemaRegistry implements SchemaRegistry {
             @Nullable final SemanticVersion previousVersion,
             @NonNull final ReadableStates previousStates,
             @NonNull final WritableStates writableStates,
-            @NonNull final Configuration config,
-            @NonNull final NetworkInfo networkInfo,
-            @NonNull final AtomicLong nextEntityNum,
+            @NonNull final Configuration appConfig,
+            @NonNull final Configuration platformConfig,
             @NonNull final Map<String, Object> sharedValues,
             @NonNull final StartupNetworks startupNetworks) {
         return new MigrationContext() {
@@ -224,18 +201,14 @@ public class FakeSchemaRegistry implements SchemaRegistry {
 
             @NonNull
             @Override
-            public Configuration configuration() {
-                return config;
+            public Configuration appConfig() {
+                return appConfig;
             }
 
+            @NonNull
             @Override
-            public NetworkInfo genesisNetworkInfo() {
-                return networkInfo;
-            }
-
-            @Override
-            public long newEntityNum() {
-                return nextEntityNum.getAndIncrement();
+            public Configuration platformConfig() {
+                return platformConfig;
             }
 
             @Override

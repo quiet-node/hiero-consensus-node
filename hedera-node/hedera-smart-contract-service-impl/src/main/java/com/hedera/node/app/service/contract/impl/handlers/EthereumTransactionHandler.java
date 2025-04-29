@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2022-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.handlers;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.ETHEREUM_TRANSACTION;
@@ -34,11 +19,9 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.SubType;
 import com.hedera.hapi.node.contract.EthereumTransactionBody;
-import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.hapi.utils.ethereum.EthTxSigs;
 import com.hedera.node.app.service.contract.impl.ContractServiceComponent;
 import com.hedera.node.app.service.contract.impl.exec.TransactionComponent;
-import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.app.service.contract.impl.infra.EthTxSigsCache;
 import com.hedera.node.app.service.contract.impl.infra.EthereumCallDataHydration;
 import com.hedera.node.app.service.contract.impl.records.ContractCallStreamBuilder;
@@ -51,7 +34,7 @@ import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.PreHandleContext;
-import com.hedera.node.config.data.ContractsConfig;
+import com.hedera.node.app.spi.workflows.PureChecksContext;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
@@ -102,8 +85,10 @@ public class EthereumTransactionHandler extends AbstractContractTransactionHandl
     }
 
     @Override
-    public void pureChecks(@NonNull final TransactionBody txn) throws PreCheckException {
+    public void pureChecks(@NonNull final PureChecksContext context) throws PreCheckException {
+        requireNonNull(context);
         try {
+            final var txn = context.body();
             final var ethTxData = populateEthTxData(
                     requireNonNull(txn.ethereumTransactionOrThrow().ethereumData())
                             .toByteArray());
@@ -155,7 +140,7 @@ public class EthereumTransactionHandler extends AbstractContractTransactionHandl
     @Override
     public void handle(@NonNull final HandleContext context) throws HandleException {
         // Create the transaction-scoped component
-        final var component = provider.get().create(context, ETHEREUM_TRANSACTION);
+        final var component = getTransactionComponent(context, ETHEREUM_TRANSACTION);
 
         // Run its in-scope transaction and get the outcome
         final var outcome = component.contextTransactionProcessor().call();
@@ -180,7 +165,7 @@ public class EthereumTransactionHandler extends AbstractContractTransactionHandl
      * @param context the handle context
      */
     public void handleThrottled(@NonNull final HandleContext context) {
-        final var component = provider.get().create(context, ETHEREUM_TRANSACTION);
+        final var component = getTransactionComponent(context, ETHEREUM_TRANSACTION);
         final var ethTxData =
                 requireNonNull(requireNonNull(component.hydratedEthTxData()).ethTxData());
         context.savepointStack()
@@ -188,24 +173,9 @@ public class EthereumTransactionHandler extends AbstractContractTransactionHandl
                 .ethereumHash(Bytes.wrap(ethTxData.getEthereumHash()));
     }
 
-    /**
-     * Calculates the fees for the given {@link FeeContext}.
-     * Even though the actual fees are not charged if the evmEthTransactionZeroHapiFeesEnabled feature flag is enabled
-     * if the transaction fails, there is a fee charged to the relayer account
-     * (see {@link com.hedera.node.app.service.contract.impl.exec.ContextTransactionProcessor#chargeOnFailedEthTxn(HederaEvmTransaction) chargeOnFailedEthTxn})
-     * @param feeContext the {@link FeeContext} with all information needed for the calculation
-     * @return
-     */
-    @NonNull
     @Override
-    public Fees calculateFees(@NonNull final FeeContext feeContext) {
+    public @NonNull Fees calculateFees(@NonNull final FeeContext feeContext) {
         requireNonNull(feeContext);
-        final var zeroHapiFeeEnabled =
-                feeContext.configuration().getConfigData(ContractsConfig.class).evmEthTransactionZeroHapiFeesEnabled();
-        return zeroHapiFeeEnabled ? Fees.FREE : getLegacyCalculateFees(feeContext);
-    }
-
-    private Fees getLegacyCalculateFees(@NonNull final FeeContext feeContext) {
         final var body = feeContext.body();
         return feeContext
                 .feeCalculatorFactory()

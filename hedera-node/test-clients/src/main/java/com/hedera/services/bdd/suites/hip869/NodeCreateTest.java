@@ -1,26 +1,11 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.hip869;
 
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.toPbj;
 import static com.hedera.services.bdd.junit.EmbeddedReason.MUST_SKIP_INGEST;
 import static com.hedera.services.bdd.junit.EmbeddedReason.NEEDS_STATE_ACCESS;
 import static com.hedera.services.bdd.junit.hedera.utils.AddressBookUtils.endpointFor;
-import static com.hedera.services.bdd.spec.HapiSpec.defaultHapiSpec;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.PropertySource.asAccount;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getTxnRecord;
@@ -31,14 +16,18 @@ import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.viewNode;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.validateChargedUsdWithin;
+import static com.hedera.services.bdd.suites.HapiSuite.ADDRESS_BOOK_CONTROL;
+import static com.hedera.services.bdd.suites.HapiSuite.DEFAULT_PAYER;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.NONSENSE_KEY;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HBAR;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
+import static com.hedera.services.bdd.suites.HapiSuite.SYSTEM_ADMIN;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.GOSSIP_ENDPOINTS_EXCEEDED_LIMIT;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.GOSSIP_ENDPOINT_CANNOT_HAVE_FQDN;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INSUFFICIENT_TX_FEE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ADMIN_KEY;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ENDPOINT;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_GOSSIP_CA_CERTIFICATE;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_GOSSIP_ENDPOINT;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_NODE_ACCOUNT_ID;
@@ -60,13 +49,10 @@ import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.LeakyEmbeddedHapiTest;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
-import com.hedera.services.bdd.junit.support.TestLifecycle;
 import com.hedera.services.bdd.spec.keys.KeyShape;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ServiceEndpoint;
-import com.swirlds.platform.system.address.Address;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -76,6 +62,7 @@ import java.util.Spliterators;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+import org.hiero.consensus.model.roster.Address;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -87,17 +74,18 @@ public class NodeCreateTest {
     public static List<ServiceEndpoint> GOSSIP_ENDPOINTS = Arrays.asList(
             ServiceEndpoint.newBuilder().setDomainName("test.com").setPort(123).build(),
             ServiceEndpoint.newBuilder().setDomainName("test2.com").setPort(123).build());
-    public static List<ServiceEndpoint> SERVICES_ENDPOINTS = Arrays.asList(ServiceEndpoint.newBuilder()
+    public static List<ServiceEndpoint> SERVICES_ENDPOINTS = List.of(ServiceEndpoint.newBuilder()
             .setDomainName("service.com")
             .setPort(234)
             .build());
+    private static final ServiceEndpoint GRPC_PROXY_ENDPOINT = endpointFor("grpc.web.proxy.com", 123);
     public static List<ServiceEndpoint> GOSSIP_ENDPOINTS_IPS =
             Arrays.asList(endpointFor("192.168.1.200", 123), endpointFor("192.168.1.201", 123));
-    public static List<ServiceEndpoint> SERVICES_ENDPOINTS_IPS = Arrays.asList(endpointFor("192.168.1.205", 234));
+    public static List<ServiceEndpoint> SERVICES_ENDPOINTS_IPS = List.of(endpointFor("192.168.1.205", 234));
     private static List<X509Certificate> gossipCertificates;
 
     @BeforeAll
-    static void beforeAll(@NonNull final TestLifecycle testLifecycle) {
+    static void beforeAll() {
         gossipCertificates = generateX509Certificates(2);
     }
 
@@ -120,8 +108,9 @@ public class NodeCreateTest {
     @EmbeddedHapiTest(MUST_SKIP_INGEST)
     final Stream<DynamicTest> adminKeyIsMissingEmbedded()
             throws CertificateEncodingException { // skipping ingest but purecheck still throw the same
+
         return hapiTest(nodeCreate("nodeCreate")
-                .setNode("0.0.4") // exclude 0.0.3
+                .setNode(asEntityString(4)) // exclude 1.2.3
                 .adminKey(NONSENSE_KEY)
                 .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
                 .hasKnownStatus(KEY_REQUIRED));
@@ -302,7 +291,7 @@ public class NodeCreateTest {
                         .description("hello")
                         .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
                         .grpcCertificateHash("hash".getBytes())
-                        .accountId(asAccount("0.0.100"))
+                        .accountId(asAccount(asEntityString(100)))
                         .gossipEndpoint(GOSSIP_ENDPOINTS_IPS)
                         .serviceEndpoint(SERVICES_ENDPOINTS_IPS)
                         .adminKey(ED_25519_KEY)
@@ -343,9 +332,10 @@ public class NodeCreateTest {
                 .description("hello")
                 .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
                 .grpcCertificateHash("hash".getBytes())
-                .accountId(asAccount("0.0.100"))
+                .accountId(asAccount(asEntityString(100)))
                 .gossipEndpoint(GOSSIP_ENDPOINTS)
                 .serviceEndpoint(SERVICES_ENDPOINTS)
+                .grpcWebProxyEndpoint(GRPC_PROXY_ENDPOINT)
                 .adminKey(ED_25519_KEY)
                 .hasPrecheck(OK)
                 .hasKnownStatus(SUCCESS);
@@ -371,6 +361,8 @@ public class NodeCreateTest {
                     assertEquals(100, node.accountId().accountNum(), "Account ID invalid");
                     assertEqualServiceEndpoints(GOSSIP_ENDPOINTS, node.gossipEndpoint());
                     assertEqualServiceEndpoints(SERVICES_ENDPOINTS, node.serviceEndpoint());
+                    assertEqualServiceEndpoints(List.of(GRPC_PROXY_ENDPOINT), List.of(node.grpcProxyEndpoint()));
+                    assertNotNull(nodeCreate.getAdminKey(), " Admin key invalid");
                     assertEquals(toPbj(nodeCreate.getAdminKey()), node.adminKey(), "Admin key invalid");
                 }));
     }
@@ -395,49 +387,43 @@ public class NodeCreateTest {
      */
     @EmbeddedHapiTest(MUST_SKIP_INGEST)
     final Stream<DynamicTest> validateFees() throws CertificateEncodingException {
-        return defaultHapiSpec("validateFees")
-                .given(
-                        newKeyNamed(ED_25519_KEY).shape(KeyShape.ED25519),
-                        newKeyNamed("testKey"),
-                        newKeyNamed("randomAccount"),
-                        cryptoCreate("payer").balance(10_000_000_000L),
-                        // Submit to a different node so ingest check is skipped
-                        nodeCreate("ntb")
-                                .adminKey(ED_25519_KEY)
-                                .payingWith("payer")
-                                .signedBy("payer")
-                                .setNode("0.0.4")
-                                .gossipCaCertificate(
-                                        gossipCertificates.getFirst().getEncoded())
-                                .hasKnownStatus(UNAUTHORIZED)
-                                .via("nodeCreationFailed"))
-                .when()
-                .then(
-                        getTxnRecord("nodeCreationFailed").logged(),
-                        // Validate that the failed transaction charges the correct fees.
-                        validateChargedUsdWithin("nodeCreationFailed", 0.001, 3),
-                        nodeCreate("ntb")
-                                .adminKey(ED_25519_KEY)
-                                .fee(ONE_HBAR)
-                                .gossipCaCertificate(
-                                        gossipCertificates.getFirst().getEncoded())
-                                .via("nodeCreation"),
-                        getTxnRecord("nodeCreation").logged(),
-                        // But, note that the fee will not be charged for privileged payer
-                        // The fee is charged here because the payer is not privileged
-                        validateChargedUsdWithin("nodeCreation", 0.0, 0.0),
+        return hapiTest(
+                newKeyNamed(ED_25519_KEY).shape(KeyShape.ED25519),
+                newKeyNamed("testKey"),
+                newKeyNamed("randomAccount"),
+                cryptoCreate("payer").balance(10_000_000_000L),
+                // Submit to a different node so ingest check is skipped
+                nodeCreate("ntb")
+                        .adminKey(ED_25519_KEY)
+                        .payingWith("payer")
+                        .signedBy("payer")
+                        .setNode(asEntityString(4))
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .hasKnownStatus(UNAUTHORIZED)
+                        .via("nodeCreationFailed"),
+                getTxnRecord("nodeCreationFailed").logged(),
+                // Validate that the failed transaction charges the correct fees.
+                validateChargedUsdWithin("nodeCreationFailed", 0.001, 3),
+                nodeCreate("ntb")
+                        .adminKey(ED_25519_KEY)
+                        .fee(ONE_HBAR)
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .via("nodeCreation"),
+                getTxnRecord("nodeCreation").logged(),
+                // But, note that the fee will not be charged for privileged payer
+                // The fee is charged here because the payer is not privileged
+                validateChargedUsdWithin("nodeCreation", 0.0, 0.0),
 
-                        // Submit with several signatures and the price should increase
-                        nodeCreate("ntb")
-                                .adminKey(ED_25519_KEY)
-                                .payingWith("payer")
-                                .signedBy("payer", "randomAccount", "testKey")
-                                .setNode("0.0.4")
-                                .gossipCaCertificate(
-                                        gossipCertificates.getLast().getEncoded())
-                                .hasKnownStatus(UNAUTHORIZED)
-                                .via("multipleSigsCreation"),
-                        validateChargedUsdWithin("multipleSigsCreation", 0.0011276316, 3.0));
+                // Submit with several signatures and the price should increase
+                nodeCreate("ntb")
+                        .adminKey(ED_25519_KEY)
+                        .payingWith("payer")
+                        .signedBy("payer", "randomAccount", "testKey")
+                        .setNode(asEntityString(4))
+                        .gossipCaCertificate(gossipCertificates.getLast().getEncoded())
+                        .hasKnownStatus(UNAUTHORIZED)
+                        .via("multipleSigsCreation"),
+                validateChargedUsdWithin("multipleSigsCreation", 0.0011276316, 3.0));
     }
 
     /**
@@ -447,50 +433,44 @@ public class NodeCreateTest {
     @EmbeddedHapiTest(MUST_SKIP_INGEST)
     final Stream<DynamicTest> validateFeesInsufficientAmount() throws CertificateEncodingException {
         final String description = "His vorpal blade went snicker-snack!";
-        return defaultHapiSpec("validateFees")
-                .given(
-                        newKeyNamed(ED_25519_KEY).shape(KeyShape.ED25519),
-                        newKeyNamed("testKey"),
-                        newKeyNamed("randomAccount"),
-                        cryptoCreate("payer").balance(10_000_000_000L),
-                        // Submit to a different node so ingest check is skipped
-                        nodeCreate("ntb")
-                                .adminKey(ED_25519_KEY)
-                                .payingWith("payer")
-                                .signedBy("payer")
-                                .description(description)
-                                .setNode("0.0.4")
-                                .gossipCaCertificate(
-                                        gossipCertificates.getFirst().getEncoded())
-                                .fee(1)
-                                .hasKnownStatus(INSUFFICIENT_TX_FEE)
-                                .via("nodeCreationFailed"))
-                .when()
-                .then(
-                        getTxnRecord("nodeCreationFailed").logged(),
-                        nodeCreate("ntb")
-                                .adminKey(ED_25519_KEY)
-                                .description(description)
-                                .gossipCaCertificate(
-                                        gossipCertificates.getFirst().getEncoded())
-                                .via("nodeCreation"),
-                        getTxnRecord("nodeCreation").logged(),
-                        // But, note that the fee will not be charged for privileged payer
-                        // The fee is charged here because the payer is not privileged
-                        validateChargedUsdWithin("nodeCreation", 0.0, 0.0),
+        return hapiTest(
+                newKeyNamed(ED_25519_KEY).shape(KeyShape.ED25519),
+                newKeyNamed("testKey"),
+                newKeyNamed("randomAccount"),
+                cryptoCreate("payer").balance(10_000_000_000L),
+                // Submit to a different node so ingest check is skipped
+                nodeCreate("ntb")
+                        .adminKey(ED_25519_KEY)
+                        .payingWith("payer")
+                        .signedBy("payer")
+                        .description(description)
+                        .setNode(asEntityString(4))
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .fee(1)
+                        .hasKnownStatus(INSUFFICIENT_TX_FEE)
+                        .via("nodeCreationFailed"),
+                getTxnRecord("nodeCreationFailed").logged(),
+                nodeCreate("ntb")
+                        .adminKey(ED_25519_KEY)
+                        .description(description)
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .via("nodeCreation"),
+                getTxnRecord("nodeCreation").logged(),
+                // But, note that the fee will not be charged for privileged payer
+                // The fee is charged here because the payer is not privileged
+                validateChargedUsdWithin("nodeCreation", 0.0, 0.0),
 
-                        // Submit with several signatures and the price should increase
-                        nodeCreate("ntb")
-                                .adminKey(ED_25519_KEY)
-                                .payingWith("payer")
-                                .signedBy("payer", "randomAccount", "testKey")
-                                .description(description)
-                                .setNode("0.0.4")
-                                .gossipCaCertificate(
-                                        gossipCertificates.getLast().getEncoded())
-                                .fee(1)
-                                .hasKnownStatus(INSUFFICIENT_TX_FEE)
-                                .via("multipleSigsCreation"));
+                // Submit with several signatures and the price should increase
+                nodeCreate("ntb")
+                        .adminKey(ED_25519_KEY)
+                        .payingWith("payer")
+                        .signedBy("payer", "randomAccount", "testKey")
+                        .description(description)
+                        .setNode(asEntityString(4))
+                        .gossipCaCertificate(gossipCertificates.getLast().getEncoded())
+                        .fee(1)
+                        .hasKnownStatus(INSUFFICIENT_TX_FEE)
+                        .via("multipleSigsCreation"));
     }
 
     @HapiTest
@@ -555,6 +535,67 @@ public class NodeCreateTest {
                         .description("toolarge")
                         .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
                         .hasPrecheck(NOT_SUPPORTED));
+    }
+
+    @EmbeddedHapiTest(NEEDS_STATE_ACCESS)
+    final Stream<DynamicTest> createNodeWorkWithTreasuryPayer() throws CertificateEncodingException {
+        return hapiTest(
+                newKeyNamed("adminKey"),
+                nodeCreate("testNode")
+                        .adminKey("adminKey")
+                        .payingWith(DEFAULT_PAYER)
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .description("newNode"),
+                viewNode("testNode", node -> assertEquals("newNode", node.description(), "Description invalid")));
+    }
+
+    @EmbeddedHapiTest(NEEDS_STATE_ACCESS)
+    final Stream<DynamicTest> createNodeWorkWithAddressBookAdminPayer() throws CertificateEncodingException {
+        return hapiTest(
+                newKeyNamed("adminKey"),
+                nodeCreate("testNode")
+                        .adminKey("adminKey")
+                        .payingWith(ADDRESS_BOOK_CONTROL)
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .description("newNode"),
+                viewNode("testNode", node -> assertEquals("newNode", node.description(), "Description invalid")));
+    }
+
+    @EmbeddedHapiTest(NEEDS_STATE_ACCESS)
+    final Stream<DynamicTest> createNodeWorkWithSysAdminPayer() throws CertificateEncodingException {
+        return hapiTest(
+                newKeyNamed("adminKey"),
+                nodeCreate("testNode")
+                        .adminKey("adminKey")
+                        .payingWith(SYSTEM_ADMIN)
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .description("newNode"),
+                viewNode("testNode", node -> assertEquals("newNode", node.description(), "Description invalid")));
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> createNodeFailsWithRegPayer() throws CertificateEncodingException {
+        return hapiTest(
+                cryptoCreate("payer").balance(ONE_HUNDRED_HBARS),
+                newKeyNamed("adminKey"),
+                nodeCreate("testNode")
+                        .adminKey("adminKey")
+                        .payingWith("payer")
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .description("newNode")
+                        .hasKnownStatus(UNAUTHORIZED));
+    }
+
+    @HapiTest
+    final Stream<DynamicTest> createNodeWithDefaultGrpcProxyFails() throws CertificateEncodingException {
+        return hapiTest(
+                newKeyNamed("adminKey"),
+                nodeCreate("testNode")
+                        .adminKey("adminKey")
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .grpcWebProxyEndpoint(ServiceEndpoint.getDefaultInstance())
+                        .description("newNode")
+                        .hasKnownStatus(INVALID_ENDPOINT));
     }
 
     private static void assertEqualServiceEndpoints(

@@ -1,28 +1,14 @@
-/*
- * Copyright (C) 2020-2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.token.impl;
 
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.service.token.TokenService;
-import com.hedera.node.app.service.token.impl.schemas.SyntheticAccountCreator;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
-import com.hedera.node.app.service.token.impl.schemas.V0500TokenSchema;
 import com.hedera.node.app.service.token.impl.schemas.V0530TokenSchema;
+import com.hedera.node.app.service.token.impl.schemas.V0610TokenSchema;
+import com.hedera.node.app.spi.AppContext;
+import com.swirlds.state.lifecycle.EntityIdFactory;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.ZoneId;
@@ -34,15 +20,18 @@ public class TokenServiceImpl implements TokenService {
     public static final long HBARS_TO_TINYBARS = 100_000_000L;
     public static final ZoneId ZONE_UTC = ZoneId.of("UTC");
 
-    public TokenServiceImpl() {
-        // No-op
+    private final EntityIdFactory idFactory;
+
+    public TokenServiceImpl(@NonNull final AppContext appContext) {
+        requireNonNull(appContext);
+        this.idFactory = appContext.idFactory();
     }
 
     @Override
     public void registerSchemas(@NonNull final SchemaRegistry registry) {
         requireNonNull(registry);
-        registry.register(new V0490TokenSchema(new SyntheticAccountCreator()));
-        registry.register(new V0500TokenSchema());
+        registry.register(new V0490TokenSchema());
         registry.register(new V0530TokenSchema());
+        registry.register(new V0610TokenSchema());
     }
 }

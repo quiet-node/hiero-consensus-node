@@ -1,19 +1,4 @@
-/*
- * Copyright (C) 2024 Hedera Hashgraph, LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.addressbook.impl;
 
 import static com.hedera.node.app.service.addressbook.impl.schemas.V053AddressBookSchema.NODES_KEY;
@@ -23,15 +8,17 @@ import com.hedera.hapi.node.state.addressbook.Node;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
+import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.service.addressbook.ReadableNodeStore;
+import com.hedera.node.app.spi.ids.ReadableEntityCounters;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
+import java.util.List;
+import java.util.function.Function;
 
 /**
  * Provides read-only methods for interacting with the underlying data storage mechanisms for
@@ -40,23 +27,28 @@ import java.util.Iterator;
  * <p>This class is not exported from the module. It is an internal implementation detail.
  */
 public class ReadableNodeStoreImpl implements ReadableNodeStore {
-    /** The underlying data storage class that holds the node data. */
+    /**
+     * The underlying data storage class that holds the node data.
+     */
     private final ReadableKVState<EntityNumber, Node> nodesState;
+
+    private final ReadableEntityCounters entityCounters;
 
     /**
      * Create a new {@link ReadableNodeStoreImpl} instance.
      *
      * @param states The state to use.
      */
-    public ReadableNodeStoreImpl(@NonNull final ReadableStates states) {
+    public ReadableNodeStoreImpl(
+            @NonNull final ReadableStates states, @NonNull final ReadableEntityCounters entityCounters) {
         requireNonNull(states);
-
+        this.entityCounters = requireNonNull(entityCounters);
         this.nodesState = states.get(NODES_KEY);
     }
 
     @Override
-    public Roster snapshotOfFutureRoster() {
-        return constructFromNodesState(nodesState());
+    public Roster snapshotOfFutureRoster(Function<Long, Long> weightFunction) {
+        return constructFromNodesStateWithStakingInfoWeight(this, weightFunction);
     }
 
     /**
@@ -73,10 +65,11 @@ public class ReadableNodeStoreImpl implements ReadableNodeStore {
 
     /**
      * Returns the number of topics in the state.
+     *
      * @return the number of topics in the state
      */
     public long sizeOfState() {
-        return nodesState.size();
+        return entityCounters.getCounterFor(EntityType.NODE);
     }
 
     protected <T extends ReadableKVState<EntityNumber, Node>> T nodesState() {
@@ -84,25 +77,34 @@ public class ReadableNodeStoreImpl implements ReadableNodeStore {
     }
 
     @NonNull
-    public Iterator<EntityNumber> keys() {
-        return nodesState().keys();
+    public List<EntityNumber> keys() {
+        final var size = sizeOfState();
+        final var keys = new ArrayList<EntityNumber>();
+        for (int i = 0; i < size; i++) {
+            final var key = new EntityNumber(i);
+            final var node = nodesState.get(key);
+            if (node != null) {
+                keys.add(key);
+            }
+        }
+        return keys;
     }
 
-    private Roster constructFromNodesState(@NonNull final ReadableKVState<EntityNumber, Node> nodesState) {
+    private Roster constructFromNodesStateWithStakingInfoWeight(
+            @NonNull final ReadableNodeStoreImpl nodeStore, @NonNull final Function<Long, Long> weightProvider) {
         final var rosterEntries = new ArrayList<RosterEntry>();
-        for (final var it = nodesState.keys(); it.hasNext(); ) {
-            final var nodeNumber = it.next();
-            final var node = requireNonNull(nodesState.get(nodeNumber));
-            final var nodeEndpoints = node.gossipEndpoint();
+        for (final var nodeNumber : nodeStore.keys()) {
+            final var node = requireNonNull(nodeStore.get(nodeNumber.number()));
+            var nodeEndpoints = node.gossipEndpoint();
             // we want to swap the internal and external node endpoints
             // so that the external one is at index 0
             if (nodeEndpoints.size() > 1) {
-                Collections.swap(nodeEndpoints, 0, 1);
+                nodeEndpoints = List.of(nodeEndpoints.getLast(), nodeEndpoints.getFirst());
             }
             if (!node.deleted()) {
                 final var entry = RosterEntry.newBuilder()
                         .nodeId(node.nodeId())
-                        .weight(node.weight())
+                        .weight(weightProvider.apply(node.nodeId()))
                         .gossipCaCertificate(node.gossipCaCertificate())
                         .gossipEndpoint(nodeEndpoints)
                         .build();
