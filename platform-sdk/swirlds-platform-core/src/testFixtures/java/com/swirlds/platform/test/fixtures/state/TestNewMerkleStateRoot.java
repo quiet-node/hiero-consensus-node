@@ -2,6 +2,7 @@
 package com.swirlds.platform.test.fixtures.state;
 
 import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.merkle.NewStateRoot;
@@ -10,8 +11,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 
 public class TestNewMerkleStateRoot extends NewStateRoot<TestNewMerkleStateRoot> implements MerkleNodeState {
 
-    public TestNewMerkleStateRoot(@NonNull final Configuration configuration) {
-        super(configuration);
+    public TestNewMerkleStateRoot(@NonNull final Configuration configuration, Metrics metrics) {
+        super(configuration, metrics);
     }
 
     public TestNewMerkleStateRoot(@NonNull final VirtualMap virtualMap) {

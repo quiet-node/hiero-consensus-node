@@ -204,7 +204,8 @@ public class ReconnectLearner {
                 platformContext.getMetrics());
         synchronizer.synchronize();
 
-        final MerkleNodeState merkleNodeState = initializeMerkleNodeState(stateRootFunction, synchronizer.getRoot());
+        final MerkleNodeState merkleNodeState =
+                initializeMerkleNodeState(stateRootFunction, synchronizer.getRoot(), platformContext.getMetrics());
 
         final SignedState newSignedState = new SignedState(
                 platformContext.getConfiguration(),

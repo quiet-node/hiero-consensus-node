@@ -5,6 +5,7 @@ import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHa
 import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
 
 import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.*;
 import com.swirlds.state.merkle.NewStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
@@ -22,8 +23,8 @@ public class TurtleTestingToolState extends NewStateRoot<TurtleTestingToolState>
 
     long state;
 
-    public TurtleTestingToolState(@NonNull final Configuration configuration) {
-        super(configuration);
+    public TurtleTestingToolState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
+        super(configuration, metrics);
     }
 
     public TurtleTestingToolState(@NonNull final VirtualMap virtualMap) {
@@ -65,8 +66,8 @@ public class TurtleTestingToolState extends NewStateRoot<TurtleTestingToolState>
      * @return merkle tree root
      */
     @NonNull
-    public static MerkleNodeState getStateRootNode() {
-        final MerkleNodeState state = new TurtleTestingToolState(CONFIGURATION);
+    public static MerkleNodeState getStateRootNode(@NonNull final Metrics metrics) {
+        final MerkleNodeState state = new TurtleTestingToolState(CONFIGURATION, metrics);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initRosterState(state);
 

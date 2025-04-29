@@ -9,6 +9,7 @@ import static org.hiero.base.concurrent.interrupt.Uninterruptable.abortAndThrowI
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -107,12 +108,15 @@ public final class StateInitializer {
      *
      * @param stateRootFunction a function to instantiate the state root object from a Virtual Map
      * @param stateRoot         the root of the state to initialize
+     * @param metrics           the metrics
      * @return the initialized {@code MerkleNodeState}
      */
     public static MerkleNodeState initializeMerkleNodeState(
             @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
-            @NonNull final MerkleNode stateRoot) {
+            @NonNull final MerkleNode stateRoot,
+            @NonNull final Metrics metrics) {
         if (stateRoot instanceof VirtualMap virtualMap) {
+            virtualMap.registerMetrics(metrics);
             return stateRootFunction.apply(virtualMap);
         } else {
             return (MerkleNodeState) stateRoot;

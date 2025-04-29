@@ -73,7 +73,8 @@ public final class SignedStateFileReader {
                     return in.readSerializable();
                 });
 
-        final MerkleNodeState merkleNodeState = initializeMerkleNodeState(stateRootFunction, data.stateRoot());
+        final MerkleNodeState merkleNodeState =
+                initializeMerkleNodeState(stateRootFunction, data.stateRoot(), platformContext.getMetrics());
 
         final SignedState newSignedState = new SignedState(
                 conf,

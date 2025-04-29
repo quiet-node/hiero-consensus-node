@@ -3,6 +3,7 @@ package com.hedera.node.app;
 
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.State;
 import com.swirlds.state.merkle.NewStateRoot;
@@ -18,10 +19,15 @@ import org.hiero.base.constructable.ConstructableIgnored;
 @ConstructableIgnored
 public class HederaNewStateRoot extends NewStateRoot<HederaNewStateRoot> implements MerkleNodeState {
 
-    public HederaNewStateRoot(@NonNull final Configuration configuration) {
-        super(configuration);
+    public HederaNewStateRoot(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
+        super(configuration, metrics);
     }
 
+    /**
+     * Constructs a {@link HederaNewStateRoot} using the specified {@link VirtualMap}.
+     *
+     * @param virtualMap the virtual map whose metrics must already be registered
+     */
     public HederaNewStateRoot(@NonNull final VirtualMap virtualMap) {
         super(virtualMap);
     }
@@ -37,6 +43,12 @@ public class HederaNewStateRoot extends NewStateRoot<HederaNewStateRoot> impleme
         return new HederaNewStateRoot(this);
     }
 
+    /**
+     * Creates a new instance of {@link HederaNewStateRoot} with the specified {@link VirtualMap}.
+     *
+     * @param virtualMap the virtual map whose metrics must already be registered
+     * @return a new instance of {@link HederaNewStateRoot}
+     */
     @Override
     protected HederaNewStateRoot newInstance(@NonNull final VirtualMap virtualMap) {
         return new HederaNewStateRoot(virtualMap);

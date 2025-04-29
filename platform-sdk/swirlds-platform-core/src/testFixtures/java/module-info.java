@@ -8,6 +8,7 @@ module com.swirlds.platform.core.test.fixtures {
     requires transitive com.swirlds.config.api;
     requires transitive com.swirlds.config.extensions.test.fixtures;
     requires transitive com.swirlds.merkle;
+    requires transitive com.swirlds.metrics.api;
     requires transitive com.swirlds.platform.core;
     requires transitive com.swirlds.state.api;
     requires transitive com.swirlds.state.impl.test.fixtures;

@@ -442,7 +442,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
     public static Hedera newHedera(
             @NonNull final Metrics metrics,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull Configuration platformConfig) {
+            @NonNull final Configuration platformConfig) {
         requireNonNull(metrics);
         return new Hedera(
                 ConstructableRegistry.getInstance(),

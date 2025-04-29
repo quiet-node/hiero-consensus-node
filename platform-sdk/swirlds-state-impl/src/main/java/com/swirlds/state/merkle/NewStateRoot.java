@@ -106,7 +106,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     private VirtualMap virtualMap;
 
-    public NewStateRoot(@NonNull final Configuration configuration) {
+    public NewStateRoot(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
         this.configuration = requireNonNull(configuration);
         final String virtualMapLabel;
         final MerkleDbDataSourceBuilder dsBuilder;
@@ -131,8 +131,14 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         }
 
         this.virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
+        this.virtualMap.registerMetrics(metrics);
     }
 
+    /**
+     * Initializes a {@link NewStateRoot} with the specified {@link VirtualMap}.
+     *
+     * @param virtualMap the virtual map with pre-registered metrics
+     */
     public NewStateRoot(VirtualMap virtualMap) {
         this.virtualMap = virtualMap;
     }
@@ -182,8 +188,6 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         this.merkleCryptography = merkleCryptography;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
         this.roundSupplier = roundSupplier;
-
-        this.virtualMap.registerMetrics(metrics);
     }
 
     // State interface impl
@@ -238,6 +242,10 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     protected abstract T copyingConstructor();
 
+    /**
+     *
+     * @param virtualMap should have already registered metrics
+     */
     protected abstract T newInstance(@NonNull final VirtualMap virtualMap);
 
     @Override
@@ -322,6 +330,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
         final var mutableCopy = readVirtualMap.copy();
         if (metrics != null) {
+            assert metrics != null;
             mutableCopy.registerMetrics(metrics);
         }
         readVirtualMap.release();

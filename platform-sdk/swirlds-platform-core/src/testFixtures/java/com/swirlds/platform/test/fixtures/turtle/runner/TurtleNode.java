@@ -146,7 +146,7 @@ public class TurtleNode {
         final var reservedState = getInitialState(
                 recycleBin,
                 version,
-                TurtleTestingToolState::getStateRootNode,
+                () -> TurtleTestingToolState.getStateRootNode(metrics),
                 TurtleTestingToolState::new,
                 "foo",
                 "bar",
