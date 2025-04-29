@@ -24,7 +24,8 @@ public interface NativeLibrary {
             add(new Library("secp256r1", () -> new SECP256R1().isNative()));
             add(new Library("besu blake2bf", Blake2bfMessageDigest.Blake2bfDigest::isNative));
             add(new Library("besu gnark", AbstractBLS12PrecompiledContract::isAvailable));
-            add(new Library("besu lib arithmetic", BigIntegerModularExponentiationPrecompiledContract::isNative));
+            add(new Library(
+                    "besu lib arithmetic", BigIntegerModularExponentiationPrecompiledContract::maybeEnableNative));
         }
     };
 }
