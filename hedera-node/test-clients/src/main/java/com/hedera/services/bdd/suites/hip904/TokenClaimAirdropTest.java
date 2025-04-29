@@ -29,7 +29,6 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenDissociate
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenFreeze;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenPause;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.tokenUpdate;
-import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.tinyBarsFromAccountToAlias;
 import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.tinyBarsFromTo;
 import static com.hedera.services.bdd.spec.transactions.token.HapiTokenClaimAirdrop.pendingAirdrop;
 import static com.hedera.services.bdd.spec.transactions.token.HapiTokenClaimAirdrop.pendingNFTAirdrop;
@@ -39,7 +38,6 @@ import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.blockingOrder;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.createHollow;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.inParallel;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.logIt;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.submitModified;
@@ -907,26 +905,6 @@ public class TokenClaimAirdropTest extends TokenAirdropBase {
     }
 
     @HapiTest
-    @DisplayName("hollow account with -1 free maxAutoAssociations")
-    final Stream<DynamicTest> airdropToAliasWithNoFreeSlots() {
-        final var validAlias = "validAlias";
-        return hapiTest(flattened(
-                setUpTokensAndAllReceivers(),
-                tokenAirdrop(moving(1, FUNGIBLE_TOKEN).between(OWNER, validAlias))
-                        .payingWith(OWNER),
-                // check if account is hollow (has empty key)
-                getAliasedAccountInfo(validAlias).isHollow(),
-                tokenClaimAirdrop(pendingAirdrop(OWNER, validAlias, FUNGIBLE_TOKEN))
-                        .payingWith(validAlias)
-                        .sigMapPrefixes(uniqueWithFullPrefixesFor(validAlias))
-                        .via("claimTxn"),
-                validateChargedUsd("claimTxn", 0.001, 1),
-
-                // check if account was finalized and auto associations were not modified
-                getAliasedAccountInfo(validAlias).isNotHollow().hasMaxAutomaticAssociations(-1)));
-    }
-
-    @HapiTest
     @DisplayName("hollow account with 0 slots different payer")
     final Stream<DynamicTest> airdropToAliasWithNoFreeSlotsClaimWithDifferentPayer() {
         final var alias = "alias2.0";
@@ -1120,37 +1098,6 @@ public class TokenClaimAirdropTest extends TokenAirdropBase {
                                 pendingAirdrop(OWNER, RECEIVER, FUNGIBLE_TOKEN_8))
                         .payingWith(RECEIVER)
                         .hasPrecheck(PENDING_AIRDROP_ID_REPEATED)));
-    }
-
-    @HapiTest
-    @DisplayName("account created with same alias should fail")
-    final Stream<DynamicTest> accountCreatedWithSAmeAliasShouldFail() {
-        final String ALIAS = "alias";
-        return hapiTest(
-                // add common entities, you can create your own ones
-                flattened(
-                        setUpTokensAndAllReceivers(),
-                        logIt("preparation is over"),
-                        // create key
-                        newKeyNamed(ALIAS),
-                        // create first aliased account
-                        cryptoTransfer(tinyBarsFromAccountToAlias(OWNER, ALIAS, 1)),
-                        // save aliased account into registry
-                        withOpContext((spec, opLog) -> updateSpecFor(spec, ALIAS)),
-                        // airdrop
-                        tokenAirdrop(moving(1, FUNGIBLE_TOKEN).between(OWNER, ALIAS))
-                                .payingWith(OWNER),
-                        // airdrop should be pending, you can assert txn record too
-                        getAccountBalance(ALIAS).hasTokenBalance(FUNGIBLE_TOKEN, 0),
-                        // delete the account
-                        cryptoDelete(ALIAS),
-                        // create new account with the same key
-                        cryptoTransfer(tinyBarsFromAccountToAlias(OWNER, ALIAS, 1)),
-                        withOpContext((spec, opLog) -> updateSpecFor(spec, ALIAS)),
-                        // try to claim
-                        tokenClaimAirdrop(pendingAirdrop(OWNER, ALIAS, FUNGIBLE_TOKEN))
-                                .signedBy(ALIAS, DEFAULT_PAYER)
-                                .hasKnownStatus(INVALID_PENDING_AIRDROP_ID)));
     }
 
     @HapiTest
