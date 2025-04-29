@@ -167,12 +167,15 @@ public final class SignedStateFileReader {
                     final var md = new StateMetadata<>(name, schema, def);
                     if (def.singleton() || def.onDisk()) {
                         try {
-                            // Works, if state is NewStateRoot
+                            // Production case
+                            // Attempt to initialize the state if it is a NewStateRoot
                             state.initializeState(md);
                         } catch (UnsupportedOperationException e) {
-                            // Otherwise assume it is a MerkleStateRoot (which is not used in prod)
-                            // Should be removed once the MerkleStateRoot is removed along with putServiceStateIfAbsent
-                            // in MerkleNodeState interface
+                            // Non production case (testing tools)
+                            // Otherwise assume it is a MerkleStateRoot
+
+                            // This branch should be removed once the MerkleStateRoot is removed along with
+                            // putServiceStateIfAbsent method in the MerkleNodeState interface
                             state.putServiceStateIfAbsent(md, () -> {
                                 throw new IllegalStateException(
                                         "State nodes " + md.stateDefinition().stateKey() + " for service " + name

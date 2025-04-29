@@ -49,5 +49,5 @@ public interface MerkleMigratable {
      * @return this node if no migration is needed, a new node if this node should be replaced, or null if this
      * node should be deleted and not replaced
      */
-    MerkleNode migrate(@NonNull Configuration configuration, final int version);
+    MerkleNode migrate(@NonNull final Configuration configuration, final int version);
 }

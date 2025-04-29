@@ -72,7 +72,8 @@ public final class MerkleInitialize {
         final int deserializationVersion = Objects.requireNonNull(
                 deserializationVersions.get(root.getClassId()), "class not discovered during deserialization");
 
-        // Pass the configuration to the root on its migration -- it is needed to create Virtual Map
+        // The configuration should be passed to the root during its migration,
+        // as it is required for creating the Virtual Map (Mega Map).
         final MerkleNode migratedRoot = root.migrate(configuration, deserializationVersion);
         if (migratedRoot != root) {
             root.release();

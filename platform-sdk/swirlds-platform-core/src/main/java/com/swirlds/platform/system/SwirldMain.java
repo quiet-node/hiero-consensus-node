@@ -57,7 +57,7 @@ public interface SwirldMain<T extends MerkleNodeState> extends Runnable {
      * Instantiate and return a state root object for this SwirldMain object.
      * The returned state root object could be one of the following:
      * <ul>
-     *     <li>Actual root node of the merkle state tree
+     *     <li>(Deprecated) Actual root node of the merkle state tree
      *         - an instance of {@code HederaStateRoot}.
      *     </li>
      *     <li>A wrapper around the root node
