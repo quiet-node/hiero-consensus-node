@@ -10,11 +10,6 @@ import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.contractIdFromHexedMirrorAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.explicitBytesOf;
 import static com.hedera.services.bdd.spec.HapiPropertySource.literalIdFromHexedMirrorAddress;
-import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
-import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD_AND_REALM;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
 import static com.hedera.services.bdd.spec.assertions.AssertUtils.inOrder;
@@ -172,10 +167,12 @@ public class Create2OperationSuite {
                 uploadInitCode(contract),
                 contractCreate(contract).payingWith(GENESIS).via(CREATION).exposingNumTo(outerCreatorNum::set),
                 contractCall(contract, "startChain", msg).gas(4_000_000).via(noisyTxn),
-                sourcing(() -> {
-                    final var idOfFirstThreeLogs = SHARD_AND_REALM + (outerCreatorNum.get() + 1);
-                    final var idOfLastTwoLogs = SHARD_AND_REALM + (outerCreatorNum.get() + 2);
-                    return getTxnRecord(noisyTxn)
+                withOpContext((spec, logger) -> {
+                    final var idOfFirstThreeLogs =
+                            String.format("%d.%d.%d", spec.shard(), spec.realm(), (outerCreatorNum.get() + 1));
+                    final var idOfLastTwoLogs =
+                            String.format("%d.%d.%d", spec.shard(), spec.realm(), (outerCreatorNum.get() + 2));
+                    final var recordOp = getTxnRecord(noisyTxn)
                             .andAllChildRecords()
                             .hasPriority(recordWith()
                                     .contractCallResult(resultWith()
@@ -185,6 +182,7 @@ public class Create2OperationSuite {
                                                     logWith().contract(idOfFirstThreeLogs),
                                                     logWith().contract(idOfLastTwoLogs),
                                                     logWith().contract(idOfLastTwoLogs)))));
+                    allRunFor(spec, recordOp);
                 }));
     }
 
@@ -331,14 +329,17 @@ public class Create2OperationSuite {
                 newKeyNamed(replAdminKey),
                 uploadInitCode(contract),
                 cryptoCreate(autoRenewAccountID).balance(ONE_HUNDRED_HBARS),
-                contractCreate(contract)
-                        .payingWith(GENESIS)
-                        .adminKey(adminKey)
-                        .entityMemo(ENTITY_MEMO)
-                        .autoRenewSecs(customAutoRenew)
-                        .autoRenewAccountId(autoRenewAccountID)
-                        .via(CREATE_2_TXN)
-                        .exposingNumTo(num -> factoryEvmAddress.set(asHexedSolidityAddress(SHARD, REALM, num))),
+                withOpContext((spec, log) -> allRunFor(
+                        spec,
+                        contractCreate(contract)
+                                .payingWith(GENESIS)
+                                .adminKey(adminKey)
+                                .entityMemo(ENTITY_MEMO)
+                                .autoRenewSecs(customAutoRenew)
+                                .autoRenewAccountId(autoRenewAccountID)
+                                .via(CREATE_2_TXN)
+                                .exposingNumTo(num -> factoryEvmAddress.set(
+                                        asHexedSolidityAddress((int) spec.shard(), spec.realm(), num))))),
                 getContractInfo(contract)
                         .has(contractWith().autoRenewAccountId(autoRenewAccountID))
                         .logged(),
@@ -382,11 +383,12 @@ public class Create2OperationSuite {
                 withOpContext((spec, opLog) -> {
                     final var parentId = spec.registry().getContractId(contract);
                     final var childId = ContractID.newBuilder()
-                            .setShardNum(SHARD)
-                            .setRealmNum(REALM)
+                            .setShardNum(spec.shard())
+                            .setRealmNum(spec.realm())
                             .setContractNum(parentId.getContractNum() + 2L)
                             .build();
-                    mirrorLiteralId.set(SHARD_AND_REALM + childId.getContractNum());
+                    mirrorLiteralId.set(
+                            String.format("%d.%d.%d", spec.shard(), spec.realm(), childId.getContractNum()));
                     expectedMirrorAddress.set(hex(asSolidityAddress(childId)));
                 }),
                 sourcing(() -> getContractBytecode(mirrorLiteralId.get()).exposingBytecodeTo(bytecodeFromMirror::set)),
@@ -413,6 +415,7 @@ public class Create2OperationSuite {
                 sourcing(() -> contractCallLocalWithFunctionAbi(
                                 expectedCreate2Address.get(), getABIFor(FUNCTION, "getBalance", testContract))
                         .payingWith(GENESIS)
+                        .logged()
                         .has(resultWith()
                                 .resultThruAbi(
                                         getABIFor(FUNCTION, "getBalance", testContract),
@@ -465,8 +468,14 @@ public class Create2OperationSuite {
                         .exposingContractId(childId::set)
                         .has(contractWith().balance(2 * ONE_HBAR))),
                 sourcing(() -> contractCallWithFunctionAbi(asLiteralHexed(childAddress.get()), vacateAddressAbi)),
-                sourcing(() -> getContractInfo(SHARD_AND_REALM + childId.get().getContractNum())
-                        .has(contractWith().isDeleted())));
+                withOpContext((spec, log) -> allRunFor(
+                        spec,
+                        getContractInfo(String.format(
+                                        "%d.%d.%d",
+                                        spec.shard(),
+                                        spec.realm(),
+                                        childId.get().getContractNum()))
+                                .has(contractWith().isDeleted()))));
     }
 
     @SuppressWarnings("java:S5669")
@@ -550,8 +559,13 @@ public class Create2OperationSuite {
         final AtomicReference<String> hexedNftType = new AtomicReference<>();
 
         final var salt = unhex(SALT);
-
+        final var shard = new AtomicLong();
+        final var realm = new AtomicLong();
         return hapiTest(
+                withOpContext((spec, opLog) -> {
+                    shard.set(spec.shard());
+                    realm.set(spec.realm());
+                }),
                 newKeyNamed(multiKey),
                 cryptoCreate(TOKEN_TREASURY),
                 uploadInitCode(contract),
@@ -575,7 +589,7 @@ public class Create2OperationSuite {
                         .supplyKey(multiKey),
                 mintToken(nft, List.of(ByteString.copyFromUtf8("PRICELESS"))),
                 tokenUpdate(nft)
-                        .supplyKey(() -> aliasContractIdKey(userAliasAddr.get()))
+                        .supplyKey(() -> aliasContractIdKey(shard.get(), realm.get(), userAliasAddr.get()))
                         .signedByPayerAnd(multiKey),
                 withOpContext((spec, opLog) -> {
                     final var registry = spec.registry();
@@ -678,7 +692,7 @@ public class Create2OperationSuite {
                 // https://github.com/hashgraph/hedera-services/issues/2876 (mint via
                 // delegatable_contract_id)
                 tokenUpdate(nft)
-                        .supplyKey(() -> aliasDelegateContractKey(userAliasAddr.get()))
+                        .supplyKey(() -> aliasDelegateContractKey(shard.get(), realm.get(), userAliasAddr.get()))
                         .signedByPayerAnd(multiKey),
                 sourcing(() -> contractCallWithFunctionAbi(
                                 userAliasAddr.get(),
@@ -696,18 +710,18 @@ public class Create2OperationSuite {
                             final var nftId = registry.getTokenID(nft);
                             b.setTransfers(TransferList.newBuilder()
                                     .addAccountAmounts(aaWith(tt, -666))
-                                    .addAccountAmounts(aaWith(userMirrorAddr.get(), +666)));
+                                    .addAccountAmounts(aaWith(shard.get(), realm.get(), userMirrorAddr.get(), +666)));
                             b.addTokenTransfers(TokenTransferList.newBuilder()
                                             .setToken(ftId)
                                             .addTransfers(aaWith(tt, -6))
-                                            .addTransfers(aaWith(userMirrorAddr.get(), +6)))
+                                            .addTransfers(aaWith(shard.get(), realm.get(), userMirrorAddr.get(), +6)))
                                     .addTokenTransfers(TokenTransferList.newBuilder()
                                             .setToken(nftId)
                                             .addNftTransfers(NftTransfer.newBuilder()
                                                     .setSerialNumber(2L)
                                                     .setSenderAccountID(tt)
-                                                    .setReceiverAccountID(
-                                                            accountId(shard, realm, userMirrorAddr.get()))));
+                                                    .setReceiverAccountID(accountId(
+                                                            spec.shard(), spec.realm(), userMirrorAddr.get()))));
                         })
                         .signedBy(DEFAULT_PAYER, TOKEN_TREASURY),
                 sourcing(() -> getContractInfo(userLiteralId.get()).logged()));

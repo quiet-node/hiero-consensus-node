@@ -3,7 +3,6 @@ package com.hedera.services.bdd.suites.contract.opcodes;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.NO_CONCURRENT_CREATIONS;
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD_AND_REALM;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.contractWith;
@@ -45,6 +44,7 @@ import com.hedera.services.bdd.spec.dsl.entities.SpecAccount;
 import com.hedera.services.bdd.spec.dsl.entities.SpecContract;
 import com.hedera.services.bdd.spec.queries.contract.HapiGetContractInfo;
 import com.hedera.services.bdd.suites.HapiSuite;
+import com.hederahashgraph.api.proto.java.ContractID;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
@@ -433,13 +433,13 @@ public class SelfDestructSuite {
         return opsArray;
     }
 
-    private @NonNull String getNthNextEntityFrom(final long nth, final long from) {
-        return SHARD_AND_REALM + (from + nth);
+    private @NonNull String getNthNextEntityFrom(final long nth, final ContractID fromId) {
+        return String.format("%d.%d.%d", fromId.getShardNum(), fromId.getRealmNum(), fromId.getContractNum() + nth);
     }
 
     private @NonNull HapiGetContractInfo getNthNextContractInfoFrom(
             @NonNull final HapiSpec spec, @NonNull final String contract, final long nth) {
-        final var fromNum = spec.registry().getContractId(contract).getContractNum();
-        return getContractInfo(getNthNextEntityFrom(nth, fromNum));
+        final var fromId = spec.registry().getContractId(contract);
+        return getContractInfo(getNthNextEntityFrom(nth, fromId));
     }
 }

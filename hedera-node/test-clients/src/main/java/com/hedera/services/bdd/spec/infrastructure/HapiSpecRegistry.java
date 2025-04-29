@@ -63,7 +63,7 @@ public class HapiSpecRegistry {
         this.setup = setup;
         this.shard = shard;
         this.realm = realm;
-
+        // TODO: for remote network we need to use shard and realm form here!!!
         final var key = TypedKey.from(setup.payerKey());
         final var genesisKey = asPublicKey(key.pubKey(), key.type());
 

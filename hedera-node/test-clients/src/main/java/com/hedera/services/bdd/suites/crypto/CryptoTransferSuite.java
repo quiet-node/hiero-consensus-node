@@ -8,8 +8,6 @@ import static com.hedera.services.bdd.spec.HapiPropertySource.accountIdFromHexed
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccountString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asTopicString;
-import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
-import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.changeFromSnapshot;
@@ -140,6 +138,7 @@ import com.hederahashgraph.api.proto.java.TransferList;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.OptionalLong;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -493,7 +492,13 @@ public class CryptoTransferSuite {
         final byte[] salt = unhex("aabbccddeeff0011aabbccddeeff0011aabbccddeeff0011aabbccddeeff0011");
         final byte[] otherSalt = unhex("aabbccddee880011aabbccddee880011aabbccddee880011aabbccddee880011");
 
+        final var shard = new AtomicLong();
+        final var realm = new AtomicLong();
         return hapiTest(
+                withOpContext((spec, opLog) -> {
+                    shard.set(spec.shard());
+                    realm.set(spec.realm());
+                }),
                 newKeyNamed(MULTI_KEY),
                 cryptoCreate(TOKEN_TREASURY),
                 uploadInitCode(contract),
@@ -536,47 +541,49 @@ public class CryptoTransferSuite {
                                 movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(TOKEN_TREASURY, partyLiteral.get()))
                         .signedBy(DEFAULT_PAYER, TOKEN_TREASURY)),
                 cryptoTransfer((spec, b) -> b.setTransfers(TransferList.newBuilder()
-                                .addAccountAmounts(aaWith(partyAliasAddr.get(), -1))
+                                .addAccountAmounts(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -1))
                                 .addAccountAmounts(aaWith(partyId.get(), -1))
                                 .addAccountAmounts(aaWith(counterId.get(), +2))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .hasKnownStatus(ACCOUNT_REPEATED_IN_ACCOUNT_AMOUNTS),
                 // Check signing requirements aren't distorted by aliases
                 cryptoTransfer((spec, b) -> b.setTransfers(TransferList.newBuilder()
-                                .addAccountAmounts(aaWith(partyAliasAddr.get(), -2))
-                                .addAccountAmounts(aaWith(counterAliasAddr.get(), +2))))
+                                .addAccountAmounts(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -2))
+                                .addAccountAmounts(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +2))))
                         .signedBy(DEFAULT_PAYER)
                         .hasKnownStatus(INVALID_SIGNATURE),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(nftId.get())
-                                .addNftTransfers(
-                                        ocWith(accountId(shard, realm, partyAliasAddr.get()), counterId.get(), 1L))))
+                                .addNftTransfers(ocWith(
+                                        accountId(shard.get(), realm.get(), partyAliasAddr.get()),
+                                        counterId.get(),
+                                        1L))))
                         .signedBy(DEFAULT_PAYER)
                         .hasKnownStatus(INVALID_SIGNATURE),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(ftId.get())
-                                .addTransfers(aaWith(partyAliasAddr.get(), -500))
-                                .addTransfers(aaWith(counterAliasAddr.get(), +500))))
+                                .addTransfers(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -500))
+                                .addTransfers(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +500))))
                         .signedBy(DEFAULT_PAYER)
                         .hasKnownStatus(INVALID_SIGNATURE),
                 // Now do the actual transfers
                 cryptoTransfer((spec, b) -> b.setTransfers(TransferList.newBuilder()
-                                .addAccountAmounts(aaWith(partyAliasAddr.get(), -2))
-                                .addAccountAmounts(aaWith(counterAliasAddr.get(), +2))))
+                                .addAccountAmounts(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -2))
+                                .addAccountAmounts(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +2))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .via(HBAR_XFER),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(nftId.get())
                                 .addNftTransfers(ocWith(
-                                        accountId(shard, realm, partyAliasAddr.get()),
-                                        accountId(shard, realm, counterAliasAddr.get()),
+                                        accountId(shard.get(), realm.get(), partyAliasAddr.get()),
+                                        accountId(shard.get(), realm.get(), counterAliasAddr.get()),
                                         1L))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .via(NFT_XFER),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(ftId.get())
-                                .addTransfers(aaWith(partyAliasAddr.get(), -500))
-                                .addTransfers(aaWith(counterAliasAddr.get(), +500))))
+                                .addTransfers(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -500))
+                                .addTransfers(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +500))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .via(FT_XFER),
                 sourcing(() -> getTxnRecord(HBAR_XFER)
@@ -704,15 +711,15 @@ public class CryptoTransferSuite {
                                             .setAmount(-2 * ONE_HBAR))
                                     .addAccountAmounts(AccountAmount.newBuilder()
                                             .setAccountID(AccountID.newBuilder()
-                                                    .setShardNum(shard)
-                                                    .setRealmNum(realm)
+                                                    .setShardNum(spec.shard())
+                                                    .setRealmNum(spec.realm())
                                                     .setAlias(evmAddress)
                                                     .build())
                                             .setAmount(+ONE_HBAR))
                                     .addAccountAmounts(AccountAmount.newBuilder()
                                             .setAccountID(AccountID.newBuilder()
-                                                    .setShardNum(shard)
-                                                    .setRealmNum(realm)
+                                                    .setShardNum(spec.shard())
+                                                    .setRealmNum(spec.realm())
                                                     .setAlias(keyAlias)
                                                     .build())
                                             .setAmount(+ONE_HBAR))
@@ -1240,8 +1247,11 @@ public class CryptoTransferSuite {
     @HapiTest
     final Stream<DynamicTest> specialAccountsBalanceCheck() {
         return hapiTest(IntStream.concat(IntStream.range(1, 101), IntStream.range(900, 1001))
-                .mapToObj(i -> getAccountBalance(String.format("%s.%s.%s", shard, realm, i))
-                        .logged())
+                .mapToObj(i -> withOpContext((spec, log) -> {
+                    final var balanceOp = getAccountBalance(String.format("%s.%s.%s", spec.shard(), spec.realm(), i))
+                            .logged();
+                    allRunFor(spec, balanceOp);
+                }))
                 .toArray(HapiSpecOperation[]::new));
     }
 
