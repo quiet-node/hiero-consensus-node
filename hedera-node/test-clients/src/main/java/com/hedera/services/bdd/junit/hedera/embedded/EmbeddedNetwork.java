@@ -2,8 +2,6 @@
 package com.hedera.services.bdd.junit.hedera.embedded;
 
 import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.CLASSIC_HAPI_TEST_NETWORK_SIZE;
-import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.CONFIG_REALM;
-import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.CONFIG_SHARD;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.APPLICATION_PROPERTIES;
 import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.REPEATABLE;
 import static com.hedera.services.bdd.junit.hedera.subprocess.ConditionStatus.PENDING;
@@ -13,6 +11,8 @@ import static com.hedera.services.bdd.junit.hedera.utils.AddressBookUtils.classi
 import static com.hedera.services.bdd.junit.hedera.utils.AddressBookUtils.configTxtForLocal;
 import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.updateBootstrapProperties;
 import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.workingDirFor;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.TargetNetworkType.EMBEDDED_NETWORK;
 import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
@@ -36,6 +36,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -90,11 +91,11 @@ public class EmbeddedNetwork extends AbstractNetwork {
                                         0,
                                         0,
                                         workingDirFor(0, workingDir),
-                                        CONFIG_SHARD,
-                                        CONFIG_REALM)))
+                                        getConfigShard(),
+                                        getConfigRealm())))
                         .toList());
-        this.shard = CONFIG_SHARD;
-        this.realm = CONFIG_REALM;
+        this.shard = getConfigShard();
+        this.realm = getConfigRealm();
         this.mode = requireNonNull(mode);
         this.embeddedNode = (EmbeddedNode) nodes().getFirst();
         // Even though we are only embedding node0, we generate an address book
@@ -227,5 +228,17 @@ public class EmbeddedNetwork extends AbstractNetwork {
     @Override
     public long realm() {
         return realm;
+    }
+
+    private static long getConfigShard() {
+        return Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
+                .map(Long::parseLong)
+                .orElse((long) SHARD);
+    }
+
+    private static long getConfigRealm() {
+        return Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
+                .map(Long::parseLong)
+                .orElse(REALM);
     }
 }
