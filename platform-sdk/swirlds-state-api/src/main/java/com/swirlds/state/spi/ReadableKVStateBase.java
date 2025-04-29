@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.spi;
 
-import static java.util.Objects.requireNonNull;
-
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.*;
@@ -31,6 +29,7 @@ public abstract class ReadableKVStateBase<K, V> implements ReadableKVState<K, V>
 
     private static final Object marker = new Object();
 
+    /** The service name, which cannot be null */
     protected final String serviceName;
 
     /** The state key, which cannot be null */
@@ -42,7 +41,7 @@ public abstract class ReadableKVStateBase<K, V> implements ReadableKVState<K, V>
      * @param serviceName The name of the service that owns the state. Cannot be null.
      * @param stateKey The state key. Cannot be null.
      */
-    protected ReadableKVStateBase(@NonNull final String serviceName, @NonNull String stateKey) {
+    protected ReadableKVStateBase(@NonNull final String serviceName, @NonNull final String stateKey) {
         this(serviceName, stateKey, new ConcurrentHashMap<>());
     }
 
@@ -56,7 +55,7 @@ public abstract class ReadableKVStateBase<K, V> implements ReadableKVState<K, V>
     // This constructor is used by some consumers of the API that are outside of this repository.
     protected ReadableKVStateBase(
             @NonNull final String serviceName, @NonNull String stateKey, @NonNull ConcurrentMap<K, V> readCache) {
-        this.serviceName = requireNonNull(serviceName);
+        this.serviceName = Objects.requireNonNull(serviceName);
         this.stateKey = Objects.requireNonNull(stateKey);
         this.readCache = Objects.requireNonNull(readCache);
         this.unmodifiableReadKeys = Collections.unmodifiableSet(readCache.keySet());
@@ -65,14 +64,15 @@ public abstract class ReadableKVStateBase<K, V> implements ReadableKVState<K, V>
     /** {@inheritDoc} */
     @Override
     @NonNull
-    public final String getStateKey() {
-        return stateKey;
-    }
-
-    @Override
-    @NonNull
     public final String getServiceName() {
         return serviceName;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    @NonNull
+    public final String getStateKey() {
+        return stateKey;
     }
 
     /** {@inheritDoc} */

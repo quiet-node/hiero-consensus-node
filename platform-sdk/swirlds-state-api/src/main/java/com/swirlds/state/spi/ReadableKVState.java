@@ -62,6 +62,7 @@ public interface ReadableKVState<K, V> extends ReadableState {
 
     /**
      * Gets the number of keys in the {@link ReadableKVState}.
+     *
      * @return number of keys in the {@link ReadableKVState}.
      * @deprecated This method is deprecated and will be removed in a future release when MegaMap is enabled.
      * Please use {@code EntityIdService.entityCounts} to get the size of the state.

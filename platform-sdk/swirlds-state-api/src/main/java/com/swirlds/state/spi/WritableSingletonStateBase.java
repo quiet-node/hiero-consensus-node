@@ -83,7 +83,7 @@ public abstract class WritableSingletonStateBase<T> extends ReadableSingletonSta
             listeners.forEach(SingletonChangeListener::commitDeferred);
             return;
         }
-        if (isModified()) { // update data source
+        if (isModified()) {
             if (currentValue() != null) {
                 putIntoDataSource(currentValue());
                 //noinspection DataFlowIssue
