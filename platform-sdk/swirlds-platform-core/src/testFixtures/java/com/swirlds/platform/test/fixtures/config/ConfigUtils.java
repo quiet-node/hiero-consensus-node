@@ -7,6 +7,7 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.merkledb.config.MerkleDbConfig;
+import com.swirlds.merkledb.config.MerkleDbConfig_;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 
 public final class ConfigUtils {
@@ -14,7 +15,7 @@ public final class ConfigUtils {
 
     public static final Configuration CONFIGURATION = ConfigurationBuilder.create()
             .withConfigDataType(MerkleDbConfig.class)
-            .withSource(new SimpleConfigSource("merkleDb.maxNumOfKeys", 100_000))
+            .withSource(new SimpleConfigSource().withValue(MerkleDbConfig_.MAX_NUM_OF_KEYS, 10000 + ""))
             .withConfigDataType(VirtualMapConfig.class)
             .withConfigDataType(TemporaryFileConfig.class)
             .withConfigDataType(StateCommonConfig.class)
