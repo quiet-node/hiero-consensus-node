@@ -7,7 +7,7 @@ import com.hedera.hapi.block.PublishStreamResponseCode;
 import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.LongGauge;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
+import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.EnumMap;
 import java.util.Map;
@@ -26,7 +26,7 @@ public class BlockStreamMetrics {
     private static final String APP_CATEGORY = "app";
 
     private final Metrics metrics;
-    private final NetworkInfo networkInfo;
+    private final NodeInfo selfNodeInfo;
 
     // Map: EndOfStream Code -> Counter
     private final Map<PublishStreamResponseCode, Counter> endOfStreamCounters =
@@ -45,9 +45,9 @@ public class BlockStreamMetrics {
     private LongGauge latestAcknowledgedBlockNumberGauge;
 
     @Inject
-    public BlockStreamMetrics(@NonNull final Metrics metrics, @NonNull final NetworkInfo networkInfo) {
+    public BlockStreamMetrics(@NonNull final Metrics metrics, @NonNull final NodeInfo selfNodeInfo) {
         this.metrics = requireNonNull(metrics);
-        this.networkInfo = requireNonNull(networkInfo);
+        this.selfNodeInfo = requireNonNull(selfNodeInfo);
         registerMetrics();
     }
 
@@ -56,7 +56,7 @@ public class BlockStreamMetrics {
      * This should be called once during initialization after NetworkInfo is available.
      */
     public void registerMetrics() {
-        final long localNodeId = networkInfo.selfNodeInfo().nodeId();
+        final long localNodeId = selfNodeInfo.nodeId();
         final String nodeLabel = "_node" + localNodeId;
         logger.info("Registering BlockStreamMetrics for node {}", localNodeId);
 
