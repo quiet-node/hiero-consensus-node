@@ -123,8 +123,6 @@ public class EnsureAliasesStep implements TransferStep {
                 if (aa.amount() > 0) {
                     if (account == null) {
                         transferContext.createFromAlias(accountId.alias());
-                    } else {
-                        validateTrue(account != null, INVALID_ACCOUNT_ID);
                     }
                 } else {
                     validateTrue(account != null, INVALID_ACCOUNT_ID);
