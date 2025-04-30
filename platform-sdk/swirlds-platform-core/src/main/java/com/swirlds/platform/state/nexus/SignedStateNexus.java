@@ -45,6 +45,4 @@ public interface SignedStateNexus extends Clearable {
     default void clear() {
         setState(null);
     }
-
-    void stop();
 }

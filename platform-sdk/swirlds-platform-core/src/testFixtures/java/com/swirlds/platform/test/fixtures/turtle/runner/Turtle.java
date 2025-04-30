@@ -270,22 +270,4 @@ public class Turtle {
             }
         }
     }
-
-    public void stopAllNodes() {
-        network.clear();
-        //        final List<Future<Void>> futures = new ArrayList<>();
-
-        // Iteration order over nodes does not need to be deterministic -- nodes are not permitted to communicate with
-        // each other during the tick phase, and they run on separate threads to boot.
-
-        //        threadPool.shutdownNow();
-
-        for (final Future future : futures) {
-            future.cancel(true);
-        }
-
-        stop();
-
-        threadPool.shutdownNow();
-    }
 }

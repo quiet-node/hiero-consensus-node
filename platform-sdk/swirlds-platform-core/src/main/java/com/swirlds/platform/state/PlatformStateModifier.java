@@ -98,6 +98,4 @@ public interface PlatformStateModifier extends PlatformStateAccessor {
      * @param updater a consumer that updates the platform state
      */
     void bulkUpdate(@NonNull Consumer<PlatformStateModifier> updater);
-
-    default void clean() {}
 }

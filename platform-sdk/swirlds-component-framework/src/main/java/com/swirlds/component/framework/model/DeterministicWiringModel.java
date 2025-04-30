@@ -136,10 +136,5 @@ public class DeterministicWiringModel extends TraceableWiringModel {
     public void stop() {
         throwIfNotStarted();
         heartbeatScheduler.stop();
-
-        currentCycleWork.clear();
-        nextCycleWork.clear();
-
-        metrics.resetAll();
     }
 }

@@ -8,9 +8,7 @@ import com.hedera.node.app.state.merkle.SchemaApplications;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.lifecycle.Service;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -38,8 +36,6 @@ public final class ServicesRegistryImpl implements ServicesRegistry {
      * affordance that we have no example of needing.
      */
     private final Configuration bootstrapConfig;
-
-    private List<MerkleSchemaRegistry> schemaRegistries = new ArrayList<>();
 
     /**
      * Creates a new registry.
@@ -80,7 +76,6 @@ public final class ServicesRegistryImpl implements ServicesRegistry {
         final var registry =
                 new MerkleSchemaRegistry(constructableRegistry, serviceName, bootstrapConfig, new SchemaApplications());
         service.registerSchemas(registry);
-        schemaRegistries.add(registry);
 
         entries.add(new Registration(service, registry));
         logger.info("Registered service {} with implementation {}", service.getServiceName(), service.getClass());

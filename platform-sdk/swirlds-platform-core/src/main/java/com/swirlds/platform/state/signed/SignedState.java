@@ -730,9 +730,4 @@ public class SignedState implements SignedStateInfo {
     public SignedStateHistory getHistory() {
         return history;
     }
-
-    public void stop() {
-        state.release();
-        state = null;
-    }
 }

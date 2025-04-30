@@ -100,16 +100,4 @@ public class DefaultLatestCompleteStateNexus implements LatestCompleteStateNexus
         }
         return currentState.get().getRound();
     }
-
-    @Override
-    public void delete() {
-        //        currentState.close();
-        currentState.delete();
-    }
-
-    @Override
-    public void stop() {
-        //        currentState.close();
-        currentState.delete();
-    }
 }

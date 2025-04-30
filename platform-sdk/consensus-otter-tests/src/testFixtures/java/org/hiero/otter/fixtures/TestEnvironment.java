@@ -55,5 +55,5 @@ public interface TestEnvironment {
 
     void start();
 
-    void stop() throws InterruptedException;
+    void stop();
 }

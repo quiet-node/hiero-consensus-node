@@ -176,10 +176,4 @@ public class SimulatedNetwork {
             events.clear();
         }
     }
-
-    public void clear() {
-        //        newlySubmittedEvents.clear();
-        //        eventsInTransit.clear();
-        //        gossipInstances.clear();
-    }
 }

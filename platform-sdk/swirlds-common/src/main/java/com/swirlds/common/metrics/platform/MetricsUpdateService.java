@@ -112,7 +112,6 @@ class MetricsUpdateService implements Startable {
                 // ignore, this is expected behavior
             }
         }
-
         return true;
     }
 

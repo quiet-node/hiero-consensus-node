@@ -164,7 +164,7 @@ public class TurtleTestEnvironment implements TestEnvironment {
     }
 
     @Override
-    public void stop() throws InterruptedException {
+    public void stop() {
         generator.stop();
         InMemoryAppender.clearLogs();
         inMemoryAppender.stop();

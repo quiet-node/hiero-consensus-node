@@ -370,7 +370,5 @@ public final class StartupStateUtils {
         });
 
         RosterUtils.setActiveRoster(state, RosterRetriever.buildRoster(addressBook), round);
-
-        //        return platformStateModifier;
     }
 }

@@ -196,10 +196,4 @@ public class WritablePlatformStateStore extends ReadablePlatformStateStore imple
             committableWritableStates.commit();
         }
     }
-
-    @Override
-    public void clean() {
-        writableStates = null;
-        state = null;
-    }
 }

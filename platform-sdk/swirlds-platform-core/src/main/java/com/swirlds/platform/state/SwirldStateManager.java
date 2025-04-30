@@ -235,10 +235,4 @@ public class SwirldStateManager implements FreezePeriodChecker {
         fastCopyAndUpdateRefs(stateRef.get());
         return latestImmutableState.get();
     }
-
-    public void stop() {
-        stateRef.get().release();
-        //        stateRef.get().
-        latestImmutableState.get().release();
-    }
 }
