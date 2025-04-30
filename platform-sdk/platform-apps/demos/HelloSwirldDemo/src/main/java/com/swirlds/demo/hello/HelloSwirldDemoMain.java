@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.hello;
 
-
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 public class HelloSwirldDemoMain extends Application {
@@ -29,9 +34,12 @@ public class HelloSwirldDemoMain extends Application {
             }
         });
 
-        StackPane root = new StackPane();
-        root.getChildren().add(btn);
-        primaryStage.setScene(new Scene(root, 300, 250));
+        GraphPane graphPane = new GraphPane();
+        var canvas = graphPane.setup();
+        VBox vBox = new VBox();
+        vBox.getChildren().add(canvas);
+        vBox.getChildren().add(btn);
+        primaryStage.setScene(new Scene(vBox, 1500, 1000));
         primaryStage.show();
     }
 
