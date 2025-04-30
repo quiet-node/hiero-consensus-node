@@ -17,6 +17,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
 import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
 import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
+import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrParamFunction;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrWith;
 import static com.hedera.services.bdd.suites.contract.evm.Evm46ValidationSuite.systemAccounts;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
@@ -25,7 +26,6 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
-import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
@@ -94,9 +94,10 @@ public class ExtCodeCopyOperationSuite {
         for (int i = 0; i < systemAccounts.size(); i++) {
             // add contract call for all accounts in the list
             final var index = i;
-            opsArray[i] = contractCall(contract, getABIFor(FUNCTION, codeCopyOf, contract), spec -> List.of(
-                                    mirrorAddrWith(spec, systemAccounts.get(index)))
-                            .toArray())
+            opsArray[i] = contractCall(
+                            contract,
+                            getABIFor(FUNCTION, codeCopyOf, contract),
+                            mirrorAddrParamFunction(systemAccounts.get(index)))
                     .hasKnownStatus(SUCCESS);
 
             // add contract call local for all accounts in the list

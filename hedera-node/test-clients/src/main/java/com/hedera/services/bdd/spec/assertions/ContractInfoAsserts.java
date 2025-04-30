@@ -213,7 +213,7 @@ public class ContractInfoAsserts extends BaseErroringAssertsProvider<ContractInf
             assertTrue(actualKey.hasContractID(), "Expected a contract admin key, got " + actualKey);
             if (TxnUtils.isNumericLiteral(name)) {
                 assertEquals(
-                        HapiPropertySource.asContract(String.valueOf(spec.shard()), String.valueOf(spec.realm()), name),
+                        HapiPropertySource.asContract(spec.shard(), spec.realm(), Long.parseLong(name)),
                         actualKey.getContractID(),
                         "Wrong immutable contract key");
             } else if (TxnUtils.isIdLiteral(name)) {

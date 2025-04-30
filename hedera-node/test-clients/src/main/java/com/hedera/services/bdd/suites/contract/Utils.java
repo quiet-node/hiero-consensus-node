@@ -53,7 +53,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import org.apache.commons.io.FileUtils;
@@ -421,6 +423,10 @@ public class Utils {
     public static Address mirrorAddrWith(HapiSpec spec, final long num) {
         return Address.wrap(toChecksumAddress(
                 new BigInteger(1, HapiPropertySource.asSolidityAddress((int) spec.shard(), spec.realm(), num))));
+    }
+
+    public static Function<HapiSpec, Object[]> mirrorAddrParamFunction(final long contractNum) {
+        return spec -> List.of(mirrorAddrWith(spec, contractNum)).toArray();
     }
 
     public static Address nonMirrorAddrWith(final long num) {

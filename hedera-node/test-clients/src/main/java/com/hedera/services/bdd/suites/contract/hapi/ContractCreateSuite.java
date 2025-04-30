@@ -395,20 +395,19 @@ public class ContractCreateSuite {
                 }),
                 sourcing(() -> getContractInfo(String.valueOf(firstStickId.get()))
                         .has(contractWith().immutableContractKey(String.valueOf(firstStickId.get())))
-                        .logged())
-                //                sourcing(() -> getContractInfo(String.valueOf(secondStickId.get()))
-                //                        .has(contractWith().immutableContractKey(String.valueOf(secondStickId.get())))
-                //                        .logged()),
-                //                sourcing(() ->
-                //                        getContractInfo(String.valueOf(thirdStickId.get())).logged()),
-                //                contractCall(contract, "light").via("lightTxn"),
-                //                sourcing(() -> getContractInfo(String.valueOf(firstStickId.get()))
-                //                        .has(contractWith().isDeleted())),
-                //                sourcing(() -> getContractInfo(String.valueOf(secondStickId.get()))
-                //                        .has(contractWith().isDeleted())),
-                //                sourcing(() -> getContractInfo(String.valueOf(thirdStickId.get()))
-                //                        .has(contractWith().isDeleted()))
-                );
+                        .logged()),
+                sourcing(() -> getContractInfo(String.valueOf(secondStickId.get()))
+                        .has(contractWith().immutableContractKey(String.valueOf(secondStickId.get())))
+                        .logged()),
+                sourcing(() ->
+                        getContractInfo(String.valueOf(thirdStickId.get())).logged()),
+                contractCall(contract, "light").via("lightTxn"),
+                sourcing(() -> getContractInfo(String.valueOf(firstStickId.get()))
+                        .has(contractWith().isDeleted())),
+                sourcing(() -> getContractInfo(String.valueOf(secondStickId.get()))
+                        .has(contractWith().isDeleted())),
+                sourcing(() -> getContractInfo(String.valueOf(thirdStickId.get()))
+                        .has(contractWith().isDeleted())));
     }
 
     @HapiTest

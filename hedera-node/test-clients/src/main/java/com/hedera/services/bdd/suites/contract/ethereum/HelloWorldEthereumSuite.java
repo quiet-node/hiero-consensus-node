@@ -77,7 +77,6 @@ import com.google.protobuf.ByteString;
 import com.hedera.node.app.hapi.utils.ethereum.EthTxData;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.spec.queries.meta.AccountCreationDetails;
-import com.hedera.services.bdd.suites.contract.Utils;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import java.math.BigInteger;
 import java.util.List;
@@ -636,7 +635,7 @@ public class HelloWorldEthereumSuite {
                 cryptoCreate(RELAYER).balance(123 * ONE_HUNDRED_HBARS),
                 cryptoTransfer(tinyBarsFromAccountToAlias(GENESIS, SECP_256K1_SOURCE_KEY, ONE_HUNDRED_HBARS)),
                 withOpContext((spec, opLog) -> ethereumCryptoTransferToExplicit(
-                                Utils.asSolidityAddress((int) spec.shard(), spec.realm(), 666_666), 123)
+                                asSolidityAddress((int) spec.shard(), spec.realm(), 666_666), 123)
                         .type(EthTxData.EthTransactionType.EIP1559)
                         .signingWith(SECP_256K1_SOURCE_KEY)
                         .payingWith(RELAYER)
