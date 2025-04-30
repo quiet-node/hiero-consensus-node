@@ -1,3 +1,6 @@
+import org.apache.tools.ant.taskdefs.Java
+import org.gradle.internal.declarativedsl.parsing.main
+
 // SPDX-License-Identifier: Apache-2.0
 plugins {
     id("org.hiero.gradle.module.library")
@@ -5,17 +8,21 @@ plugins {
     id("org.hiero.gradle.feature.benchmark")
     id("org.hiero.gradle.feature.test-fixtures")
     id("org.hiero.gradle.feature.test-timing-sensitive")
-    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
-javafx {
-    modules("javafx.controls")
-    configurations = arrayOf("implementation", "testImplementation")
-}
 // Remove the following line to enable all 'javac' lint checks that we have turned on by default
 // and then fix the reported issues.
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:-exports,-overloads,-text-blocks,-dep-ann,-varargs")
+}
+
+java {
+    modularity.inferModulePath.set(true)
+}
+
+tasks.register<JavaExec>("testRun") {
+    this.modularity.inferModulePath.set(true)
+    this.mainClass = "com.swirlds.platform.cli.TestRun"
 }
 
 mainModuleInfo {

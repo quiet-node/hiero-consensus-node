@@ -13,4 +13,6 @@ module com.swirlds.demo.hello {
     requires java.desktop;
     requires org.apache.logging.log4j;
     requires static com.github.spotbugs.annotations;
+    requires javafx.graphics;
+    requires javafx.controls;
 }
