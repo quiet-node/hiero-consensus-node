@@ -1,0 +1,368 @@
+/*
+ * Copyright (C) 2024 Hedera Hashgraph, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.hedera.statevalidation.parameterresolver;
+
+import com.hedera.hapi.node.base.AccountID;
+import com.hedera.hapi.node.base.ContractID;
+import com.hedera.hapi.node.base.FileID;
+import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.transaction.ThrottleDefinitions;
+import com.hedera.node.app.blocks.BlockStreamService;
+import com.hedera.node.app.config.BootstrapConfigProviderImpl;
+import com.hedera.node.app.config.ConfigProviderImpl;
+import com.hedera.node.app.fees.FeeService;
+import com.hedera.node.app.fixtures.state.FakeStartupNetworks;
+import com.hedera.node.app.hapi.utils.sysfiles.domain.KnownBlockValues;
+import com.hedera.node.app.hapi.utils.sysfiles.domain.throttling.ScaleFactor;
+import com.hedera.node.app.ids.AppEntityIdFactory;
+import com.hedera.node.app.ids.EntityIdService;
+import com.hedera.node.app.info.UnavailableNetworkInfo;
+import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
+import com.hedera.node.app.records.BlockRecordService;
+import com.hedera.node.app.roster.RosterService;
+import com.hedera.node.app.service.addressbook.impl.AddressBookServiceImpl;
+import com.hedera.node.app.service.consensus.impl.ConsensusServiceImpl;
+import com.hedera.node.app.service.contract.impl.ContractServiceImpl;
+import com.hedera.node.app.service.file.impl.FileServiceImpl;
+import com.hedera.node.app.service.networkadmin.impl.FreezeServiceImpl;
+import com.hedera.node.app.service.networkadmin.impl.NetworkServiceImpl;
+import com.hedera.node.app.service.schedule.impl.ScheduleServiceImpl;
+import com.hedera.node.app.service.token.impl.TokenServiceImpl;
+import com.hedera.node.app.service.util.impl.UtilServiceImpl;
+import com.hedera.node.app.services.AppContextImpl;
+import com.hedera.node.app.services.OrderedServiceMigrator;
+import com.hedera.node.app.services.ServicesRegistry;
+import com.hedera.node.app.services.ServicesRegistryImpl;
+import com.hedera.node.app.signature.AppSignatureVerifier;
+import com.hedera.node.app.signature.impl.SignatureExpanderImpl;
+import com.hedera.node.app.signature.impl.SignatureVerifierImpl;
+import com.hedera.node.app.spi.AppContext;
+import com.hedera.node.app.spi.fixtures.info.FakeNetworkInfo;
+import com.hedera.node.app.state.merkle.MerkleSchemaRegistry;
+import com.hedera.node.app.state.merkle.SchemaApplications;
+import com.hedera.node.app.state.recordcache.RecordCacheService;
+import com.hedera.node.app.throttle.AppThrottleFactory;
+import com.hedera.node.app.throttle.CongestionThrottleService;
+import com.hedera.node.app.throttle.ThrottleAccumulator;
+import com.hedera.node.app.tss.TssBaseServiceImpl;
+import com.hedera.node.app.version.ServicesSoftwareVersion;
+import com.hedera.node.config.converter.AccountIDConverter;
+import com.hedera.node.config.converter.BytesConverter;
+import com.hedera.node.config.converter.CongestionMultipliersConverter;
+import com.hedera.node.config.converter.ContractIDConverter;
+import com.hedera.node.config.converter.EntityScaleFactorsConverter;
+import com.hedera.node.config.converter.FileIDConverter;
+import com.hedera.node.config.converter.FunctionalitySetConverter;
+import com.hedera.node.config.converter.KeyValuePairConverter;
+import com.hedera.node.config.converter.KnownBlockValuesConverter;
+import com.hedera.node.config.converter.LongPairConverter;
+import com.hedera.node.config.converter.PermissionedAccountsRangeConverter;
+import com.hedera.node.config.converter.ScaleFactorConverter;
+import com.hedera.node.config.converter.SemanticVersionConverter;
+import com.hedera.node.config.data.AccountsConfig;
+import com.hedera.node.config.data.ApiPermissionConfig;
+import com.hedera.node.config.data.BlockStreamConfig;
+import com.hedera.node.config.data.BootstrapConfig;
+import com.hedera.node.config.data.FilesConfig;
+import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.config.data.LedgerConfig;
+import com.hedera.node.config.data.TokensConfig;
+import com.hedera.node.config.data.TssConfig;
+import com.hedera.node.config.data.VersionConfig;
+import com.hedera.node.config.types.CongestionMultipliers;
+import com.hedera.node.config.types.EntityScaleFactors;
+import com.hedera.node.config.types.HederaFunctionalitySet;
+import com.hedera.node.config.types.KeyValuePair;
+import com.hedera.node.config.types.LongPair;
+import com.hedera.node.config.types.PermissionedAccountsRange;
+import com.hedera.node.internal.network.Network;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.common.config.StateCommonConfig;
+import com.swirlds.common.constructable.ConstructableRegistry;
+import com.swirlds.common.crypto.CryptographyHolder;
+import com.swirlds.common.crypto.config.CryptoConfig;
+import com.swirlds.common.io.config.TemporaryFileConfig;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
+import com.swirlds.config.api.Configuration;
+import com.swirlds.config.api.ConfigurationBuilder;
+import com.swirlds.config.extensions.sources.SimpleConfigSource;
+import com.swirlds.merkledb.MerkleDb;
+import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.merkledb.MerkleDbTableConfig;
+import com.swirlds.merkledb.config.MerkleDbConfig;
+import com.swirlds.platform.config.AddressBookConfig;
+import com.swirlds.platform.config.StateConfig;
+import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.platform.state.service.PlatformStateService;
+import com.swirlds.state.State;
+import com.swirlds.state.lifecycle.Schema;
+import com.swirlds.state.lifecycle.SchemaRegistry;
+import com.swirlds.state.merkle.StateMetadata;
+import com.swirlds.state.merkle.StateUtils;
+import com.swirlds.state.merkle.disk.OnDiskKeySerializer;
+import com.swirlds.state.merkle.disk.OnDiskValueSerializer;
+import com.swirlds.virtualmap.VirtualMap;
+import com.swirlds.virtualmap.config.VirtualMapConfig;
+import lombok.extern.log4j.Log4j2;
+import org.hiero.event.creator.impl.EventCreationConfig;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.InstantSource;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.function.Supplier;
+
+import static com.hedera.node.app.spi.fees.NoopFeeCharging.NOOP_FEE_CHARGING;
+import static com.hedera.statevalidation.parameterresolver.StateResolver.readVersion;
+import static com.hedera.statevalidation.validators.Constants.FILE_CHANNELS;
+import static com.hedera.statevalidation.validators.Constants.STATE_DIR;
+import static com.swirlds.platform.state.service.PlatformStateService.PLATFORM_STATE_SERVICE;
+import static com.swirlds.virtualmap.VirtualMapW.wrap;
+import static java.util.Objects.requireNonNull;
+
+@Log4j2
+public class InitUtils {
+
+    /**
+     * The excluded tables were renamed (see https://github.com/hashgraph/hedera-services/pull/16775). However, their metadata
+     * still remains till the next version. This confuses the validator as it expects these tables to exist while they don't.
+     * Hence, we exclude them manually.
+     */
+    private static final Set<String> TABLES_TO_EXCLUDE = Set.of("ScheduleService.SCHEDULES_BY_EQUALITY", "ScheduleService.SCHEDULES_BY_EXPIRY_SEC");
+
+    private static Configuration CONFIGURATION;
+
+    /**
+     * This method initializes the configuration of the Merkle tree
+     */
+    static void initConfiguration() {
+        CONFIGURATION = ConfigurationBuilder.create()
+                .withConfigDataType(HederaConfig.class)
+                .withConfigDataType(VirtualMapConfig.class)
+                .withConfigDataType(MerkleDbConfig.class)
+                .withConfigDataType(CryptoConfig.class)
+                .withConfigDataType(StateCommonConfig.class)
+                .withConfigDataType(StateConfig.class)
+                .withConfigDataType(TemporaryFileConfig.class)
+                .withConfigDataType(FilesConfig.class)
+                .withConfigDataType(ApiPermissionConfig.class)
+                .withConfigDataType(BootstrapConfig.class)
+                .withConfigDataType(VersionConfig.class)
+                .withConfigDataType(LedgerConfig.class)
+                .withConfigDataType(TokensConfig.class)
+                .withConfigDataType(EventCreationConfig.class)
+                .withConfigDataType(AddressBookConfig.class)
+                .withConfigDataType(BlockStreamConfig.class)
+                .withConfigDataType(AccountsConfig.class)
+                .withConfigDataType(TssConfig.class)
+                .withSource(new SimpleConfigSource().withValue("merkleDb.usePbj", false))
+                .withSource(new SimpleConfigSource().withValue("merkleDb.minNumberOfFilesInCompaction", 2))
+                .withSource(new SimpleConfigSource().withValue("merkleDb.maxFileChannelsPerFileReader", FILE_CHANNELS))
+                .withSource(new SimpleConfigSource().withValue("merkleDb.maxThreadsPerFileChannel", 1))
+                .withConverter(CongestionMultipliers.class, new CongestionMultipliersConverter())
+                .withConverter(EntityScaleFactors.class, new EntityScaleFactorsConverter())
+                .withConverter(KnownBlockValues.class, new KnownBlockValuesConverter())
+                .withConverter(ScaleFactor.class, new ScaleFactorConverter())
+                .withConverter(AccountID.class, new AccountIDConverter())
+                .withConverter(ContractID.class, new ContractIDConverter())
+                .withConverter(FileID.class, new FileIDConverter())
+                .withConverter(PermissionedAccountsRange.class, new PermissionedAccountsRangeConverter())
+                .withConverter(SemanticVersion.class, new SemanticVersionConverter())
+                .withConverter(LongPair.class, new LongPairConverter())
+                .withConverter(KeyValuePair.class, new KeyValuePairConverter())
+                .withConverter(HederaFunctionalitySet.class, new FunctionalitySetConverter())
+                .withConverter(Bytes.class, new BytesConverter())
+                .build();
+    }
+
+    public static Configuration getConfiguration() {
+        return CONFIGURATION;
+    }
+
+    /**
+     * This method initializes all the virtual maps and their data sources
+     *
+     * @param servicesRegistry the services registry required to build VMs
+     * @return the list of virtual maps and their data sources
+     */
+    static List<VirtualMapAndDataSourceRecord<?, ?>> initVirtualMapRecords(ServicesRegistryImpl servicesRegistry) {
+        final Path stateDirPath = Paths.get(STATE_DIR);
+
+        Map<String, MerkleDbTableConfig> tableConfigByNames = createTableConfigByNames();
+        final var virtualMaps = new ArrayList<VirtualMapAndDataSourceRecord<?, ?>>();
+
+        servicesRegistry.registrations().forEach((registration) -> {
+            try {
+                var service = registration.service();
+                var serviceName = service.getServiceName();
+                log.debug("Registering schemas for service {}", serviceName);
+                var registry =
+                        new MerkleSchemaRegistry(
+                                ConstructableRegistry.getInstance(),
+                                serviceName,
+                                CONFIGURATION,
+                                new SchemaApplications()) {
+                            @SuppressWarnings({"rawtypes", "unchecked"})
+                            @Override
+                            public SchemaRegistry register(Schema schema) {
+                                schema.statesToCreate().forEach((def) -> {
+                                    if (!def.onDisk()) {
+                                        return;
+                                    }
+                                    final var md = new StateMetadata<>(serviceName, schema, def);
+                                    final var label = StateUtils.computeLabel(serviceName, def.stateKey());
+                                    if (TABLES_TO_EXCLUDE.contains(label)) {
+                                        return;
+                                    }
+                                    MerkleDbTableConfig tableConfig = tableConfigByNames.get(label);
+                                    final var keySerializer = new OnDiskKeySerializer<>(
+                                            md.onDiskKeySerializerClassId(),
+                                            md.onDiskKeyClassId(),
+                                            md.stateDefinition().keyCodec());
+                                    final var valueSerializer = new OnDiskValueSerializer<>(
+                                            md.onDiskValueSerializerClassId(),
+                                            md.onDiskValueClassId(),
+                                            md.stateDefinition().valueCodec());
+                                    var vm = wrap(new VirtualMap(
+                                                    label, keySerializer, valueSerializer,
+                                                    new RestoringMerkleDbDataSourceBuilder<>(stateDirPath, tableConfig),
+                                                    CONFIGURATION),
+                                            keySerializer,
+                                            valueSerializer);
+                                    virtualMaps.add(new VirtualMapAndDataSourceRecord<>(
+                                            label, (MerkleDbDataSource) vm.getDataSource(), vm));
+                                });
+                                return null;
+                            }
+                        };
+
+                service.registerSchemas(registry);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        return virtualMaps;
+    }
+
+    /**
+     * This method initializes all the services in the registry and by proxy it initilizes all the underlying deserializers
+     * to read the state files
+     *
+     * @return the initialized services registry
+     */
+    static ServicesRegistryImpl initServiceRegistry() {
+        final Configuration bootstrapConfig = new BootstrapConfigProviderImpl().getConfiguration();
+        final Configuration config = getConfiguration();
+        final Supplier<Configuration> configSupplier = () -> config;
+        final ServicesRegistryImpl servicesRegistry = new ServicesRegistryImpl(
+                ConstructableRegistry.getInstance(),
+                config);
+        final FakeNetworkInfo fakeNetworkInfo = new FakeNetworkInfo();
+        final AppContextImpl appContext = new AppContextImpl(
+                InstantSource.system(),
+                new AppSignatureVerifier(
+                        bootstrapConfig.getConfigData(HederaConfig.class),
+                        new SignatureExpanderImpl(),
+                        new SignatureVerifierImpl(CryptographyHolder.get())),
+                AppContext.Gossip.UNAVAILABLE_GOSSIP,
+                configSupplier,
+                fakeNetworkInfo::selfNodeInfo,
+                NoOpMetrics::new,
+                new AppThrottleFactory(configSupplier, () -> null, () -> ThrottleDefinitions.DEFAULT, ThrottleAccumulator::new, ServicesSoftwareVersion::new),
+                () -> NOOP_FEE_CHARGING,
+                new AppEntityIdFactory(config));
+        PlatformStateService.PLATFORM_STATE_SERVICE.setAppVersionFn(InitUtils::getNodeStartupVersion);
+
+        Set.of(
+                        new EntityIdService(),
+                        new ConsensusServiceImpl(),
+                        new ContractServiceImpl(appContext, new NoOpMetrics()),
+                        new FileServiceImpl(),
+                        new FreezeServiceImpl(),
+                        new ScheduleServiceImpl(appContext),
+                        new TokenServiceImpl(),
+                        new UtilServiceImpl(),
+                        new RecordCacheService(),
+                        new BlockRecordService(),
+                        new BlockStreamService(),
+                        new FeeService(),
+                        new CongestionThrottleService(),
+                        new NetworkServiceImpl(),
+                        new AddressBookServiceImpl(),
+                        new RosterService(roster -> true, () -> {
+                        },
+                                () -> StateResolver.deserializedSignedState.reservedSignedState().get().getState(),
+                                new PlatformStateFacade(ServicesSoftwareVersion::new)),
+                        PLATFORM_STATE_SERVICE)
+                .forEach(servicesRegistry::register);
+        return servicesRegistry;
+    }
+
+    /**
+     * This method initializes the State API
+     */
+    static void initServiceMigrator(State state, Configuration configuration, ServicesRegistry servicesRegistry) {
+        final var bootstrapConfigProvider = new BootstrapConfigProviderImpl();
+        final var serviceMigrator = new OrderedServiceMigrator();
+        final var platformFacade = new PlatformStateFacade(ServicesSoftwareVersion::new);
+        final var deserializedVersion = platformFacade.creationSoftwareVersionOf(state);
+        final var version = getNodeStartupVersion(bootstrapConfigProvider.getConfiguration());
+        serviceMigrator.doMigrations(
+                state,
+                servicesRegistry,
+                deserializedVersion == null ? null : new ServicesSoftwareVersion(deserializedVersion.getPbjSemanticVersion()),
+                version,
+                configuration,
+                configuration,
+                UnavailableNetworkInfo.UNAVAILABLE_NETWORK_INFO,
+                new NoOpMetrics(),
+                new FakeStartupNetworks(Network.newBuilder().build()),
+                new StoreMetricsServiceImpl(new NoOpMetrics()),
+                new ConfigProviderImpl(),
+                platformFacade);
+    }
+
+    /**
+     * @return a map of table configurations by their names
+     */
+    static Map<String, MerkleDbTableConfig> createTableConfigByNames() {
+        final Path stateDirPath = Paths.get(STATE_DIR);
+
+        Map<String, MerkleDbTableConfig> tableConfigByNames = new HashMap<>();
+        final AtomicReferenceArray<MerkleDb.TableMetadata> tableMetadataAtomicReferenceArray =
+                MerkleDb.loadMetadata(stateDirPath);
+        for (int i = 0; i < tableMetadataAtomicReferenceArray.length(); i++) {
+            MerkleDb.TableMetadata tableMetadata = tableMetadataAtomicReferenceArray.get(i);
+            if (tableMetadata != null) {
+                tableConfigByNames.put(tableMetadata.getTableName(), tableMetadata.getTableConfig());
+            }
+        }
+        return tableConfigByNames;
+    }
+
+    private static ServicesSoftwareVersion getNodeStartupVersion(final Configuration config) {
+        return new ServicesSoftwareVersion(
+                readVersion(),
+                config.getConfigData(HederaConfig.class).configVersion());
+    }
+}
