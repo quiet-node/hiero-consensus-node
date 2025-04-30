@@ -64,12 +64,15 @@ public class FileLayout {
             ".*emergencyRecovery.yaml",
             ".*FileService.FILES.vmap",
             ".*hashInfo.txt",
+            ".*HintsService.CRS_PUBLICATIONS.vmap",
+            ".*HintsService.HINTS_KEY_SETS.vmap",
+            ".*HintsService.PREPROCESSING_VOTES.vmap",
             ".*RosterService.ROSTERS.vmap",
+            ".*ScheduleService.SCHEDULE_ID_BY_EQUALITY.vmap",
             ".*ScheduleService.SCHEDULED_COUNTS.vmap",
             ".*ScheduleService.SCHEDULED_ORDERS.vmap",
             ".*ScheduleService.SCHEDULED_USAGES.vmap",
             ".*ScheduleService.SCHEDULES_BY_ID.vmap",
-            ".*ScheduleService.SCHEDULE_ID_BY_EQUALITY.vmap",
             ".*settingsUsed.txt",
             ".*signatureSet.bin",
             ".*SignedState.swh",
@@ -79,8 +82,8 @@ public class FileLayout {
             ".*TokenService.NFTS.vmap",
             ".*TokenService.PENDING_AIRDROPS.vmap",
             ".*TokenService.STAKING_INFOS.vmap",
-            ".*TokenService.TOKENS.vmap",
             ".*TokenService.TOKEN_RELS.vmap",
+            ".*TokenService.TOKENS.vmap",
             ".*VERSION"
     );
 

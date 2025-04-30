@@ -40,6 +40,8 @@ public class Constants {
     public static String ROUND = System.getProperty("round", "");
     public static String NET_NAME = System.getProperty("net.name");
     public static Set<String> VALIDATE_STALE_KEYS_EXCLUSIONS = Arrays.stream(System.getProperty("validate.stale.keys.exclusions", "").split(",")).collect(Collectors.toSet());
+    public static Set<String> VALIDATE_INCORRECT_BUCKET_INDEX_EXCLUSIONS = Arrays.stream(System.getProperty("validate.incorrect.bucket.index.exclusions", "TokenService.PENDING_AIRDROPS").split(",")).collect(Collectors.toSet());
+
 
     public static String SLACK_TAGS = System.getProperty("slack.tags", "@ivan");
     public static String JOB_URL = System.getProperty("job.url");

@@ -26,6 +26,8 @@ import com.hedera.statevalidation.parameterresolver.StateResolver;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.common.crypto.Hash;
+import com.swirlds.common.merkle.crypto.MerkleCryptography;
+import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import io.github.artsok.RepeatedIfExceptionsTest;
@@ -36,6 +38,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.hedera.statevalidation.parameterresolver.InitUtils.CONFIGURATION;
 import static com.swirlds.common.merkle.utility.MerkleUtils.rehashTree;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -54,9 +57,10 @@ public class Rehash {
     @RepeatedIfExceptionsTest
     void reHash(DeserializedSignedState deserializedSignedState, Report report) {
 
+        MerkleCryptography merkleCryptography = MerkleCryptographyFactory.create(CONFIGURATION);
         final Hash originalHash = deserializedSignedState.originalHash();
         final Hash calculatedHash =
-                rehashTree(deserializedSignedState.reservedSignedState().get().getState().getRoot());
+                rehashTree(merkleCryptography, deserializedSignedState.reservedSignedState().get().getState().getRoot());
 
         // Add data to the report, adding it before the assertion so that the report is written even if the test fails
         var stateReport = report.getStateReport();

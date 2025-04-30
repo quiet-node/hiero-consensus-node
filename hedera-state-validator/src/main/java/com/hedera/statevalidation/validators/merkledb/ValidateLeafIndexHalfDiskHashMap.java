@@ -17,6 +17,7 @@
 package com.hedera.statevalidation.validators.merkledb;
 
 import static com.hedera.statevalidation.validators.Constants.COLLECTED_INFO_THRESHOLD;
+import static com.hedera.statevalidation.validators.Constants.VALIDATE_INCORRECT_BUCKET_INDEX_EXCLUSIONS;
 import static com.hedera.statevalidation.validators.Constants.VALIDATE_STALE_KEYS_EXCLUSIONS;
 import static com.hedera.statevalidation.validators.ParallelProcessingUtil.processRange;
 import static com.hedera.statevalidation.validators.Utils.printFileDataLocationError;
@@ -65,6 +66,7 @@ public class ValidateLeafIndexHalfDiskHashMap {
 
         VirtualMapW<VirtualKey, VirtualValue> map = vmAndSource.map();
         boolean skipStaleKeysValidation = VALIDATE_STALE_KEYS_EXCLUSIONS.contains(vmAndSource.name());
+        boolean skipIncorrectBucketIndexValidation = VALIDATE_INCORRECT_BUCKET_INDEX_EXCLUSIONS.contains(vmAndSource.name());
         MerkleDbDataSourceW vds = new MerkleDbDataSourceW(vmAndSource.dataSource());
 
         log.debug(vds.getPathToHashDisk().getFilesSizeStatistics());
@@ -157,10 +159,10 @@ public class ValidateLeafIndexHalfDiskHashMap {
                 nullLeafsInfo.isEmpty() &&
                 unexpectedKeyInfos.isEmpty() &&
                 pathMismatchInfos.isEmpty() &&
-                incorrectBucketIndexList.isEmpty(),
+                incorrectBucketIndexList.isEmpty() || skipIncorrectBucketIndexValidation,
                 "One of the test condition hasn't been met. " +
                         "Conditions: " +
-                        "(stalePathsInfos.isEmpty() || skipStaleKeysValidation) = %s, nullLeafsInfo.isEmpty() = %s,  unexpectedKeyInfos.isEmpty() = %s, pathMismatchInfos.isEmpty() = %s, incorrectBucketIndexList.isEmpty() = %s. IncorrectBucketIndexInfos: %s"
+                        "(stalePathsInfos.isEmpty() || skipStaleKeysValidation) = %s, nullLeafsInfo.isEmpty() = %s,  unexpectedKeyInfos.isEmpty() = %s, pathMismatchInfos.isEmpty() = %s, incorrectBucketIndexList.isEmpty() = %s || skipIncorrectBucketIndexValidation. IncorrectBucketIndexInfos: %s"
                                 .formatted(
                                 (stalePathsInfos.isEmpty() || skipStaleKeysValidation),
                                 nullLeafsInfo.isEmpty() ,
