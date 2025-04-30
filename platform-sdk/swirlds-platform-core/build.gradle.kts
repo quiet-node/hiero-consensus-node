@@ -5,8 +5,13 @@ plugins {
     id("org.hiero.gradle.feature.benchmark")
     id("org.hiero.gradle.feature.test-fixtures")
     id("org.hiero.gradle.feature.test-timing-sensitive")
+    id("org.openjfx.javafxplugin") version "0.1.0"
 }
 
+javafx {
+    modules("javafx.controls")
+    configurations = arrayOf("implementation", "testImplementation")
+}
 // Remove the following line to enable all 'javac' lint checks that we have turned on by default
 // and then fix the reported issues.
 tasks.withType<JavaCompile>().configureEach {
