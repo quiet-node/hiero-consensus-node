@@ -64,6 +64,12 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
         return k;
     }
 
+    /**
+     * Checks if the state ID extracted from the provided {@link Bytes} key matches the current iterator's state ID.
+     *
+     * @param key the {@link Bytes} object from which the state ID will be extracted
+     * @return {@code true} if the extracted state ID matches the iterator's state ID, {@code false} otherwise
+     */
     private boolean checkKey(final Bytes key) {
         final Bytes stateIdFromKey = key.getBytes(0, 2);
         return stateIdFromKey.equals(this.stateId);

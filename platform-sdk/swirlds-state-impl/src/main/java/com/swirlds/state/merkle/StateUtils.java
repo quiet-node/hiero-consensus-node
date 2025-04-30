@@ -395,8 +395,6 @@ public final class StateUtils {
 
     private static final Bytes[] VIRTUAL_MAP_KEY_CACHE = new Bytes[65536];
 
-    // TODO: add tests for methods below
-
     /**
      * Generates a 2 bytes key with the state ID (big‑endian) for a Virtual Map.
      * The result is cached to avoid repeated allocations.
@@ -480,8 +478,8 @@ public final class StateUtils {
         writeUnsignedShort(writer, stateId);
         try {
             keyCodec.write(key, writer);
-        } catch (IOException e) { // TODO: double check exception handling
-            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException("Error occurred while writing a key", e);
         }
         return Bytes.wrap(bytes);
     }
@@ -493,7 +491,7 @@ public final class StateUtils {
      * @param value  the unsigned 2‑byte value to write (must be in [0..65535])
      */
     private static void writeUnsignedShort(@NonNull final BufferedData writer, final int value) {
-        writer.writeByte((byte) (value >>> 8));
-        writer.writeByte((byte) value);
+        writer.writeByte((byte) (value >>> 8)); // extract high-order 8 bits
+        writer.writeByte((byte) value); // extract low-order 8 bits
     }
 }

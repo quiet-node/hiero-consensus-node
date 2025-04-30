@@ -78,6 +78,11 @@ public class QueueStateCodec implements Codec<QueueState> {
         return item.equals(parse(input));
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@link QueueState} with default head and tail indices.
+     */
     @Override
     public QueueState getDefaultInstance() {
         return new QueueState();

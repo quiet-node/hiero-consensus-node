@@ -36,11 +36,11 @@ public final class BackedReadableKVState<K, V> extends ReadableKVStateBase<K, V>
     /**
      * Create a new instance
      *
-     * @param serviceName
-     * @param stateKey
-     * @param keyCodec
-     * @param valueCodec
-     * @param virtualMap the backing merkle structure to use
+     * @param serviceName  the service name
+     * @param stateKey     the state key
+     * @param keyCodec     the codec for the key
+     * @param valueCodec   the codec for the value
+     * @param virtualMap   the backing merkle data structure to use
      */
     public BackedReadableKVState(
             @NonNull final String serviceName,

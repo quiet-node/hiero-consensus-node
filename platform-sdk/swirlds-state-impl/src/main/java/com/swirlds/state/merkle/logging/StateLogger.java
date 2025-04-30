@@ -40,7 +40,7 @@ public class StateLogger {
     /**
      * Log the read of a singleton.
      * <p>
-     * This is only used in {@link com.swirlds.state.merkle.singleton.SingletonNode}
+     * @deprecated This method is only used in {@link com.swirlds.state.merkle.singleton.SingletonNode}
      * and can be removed if that class is deleted.
      *
      * @param label The label of the singleton
@@ -48,6 +48,7 @@ public class StateLogger {
      * @param <T> The type of the singleton
      */
     @SuppressWarnings("LoggingSimilarMessage")
+    @Deprecated
     public static <T> void logSingletonRead(@NonNull final String label, @Nullable final ValueLeaf<T> value) {
         if (logger.isDebugEnabled() && Thread.currentThread().getName().equals(TRANSACTION_HANDLING_THREAD_NAME)) {
             logger.debug("      READ singleton {} value {}", label, value == null ? "null" : value.getValue());
@@ -135,13 +136,14 @@ public class StateLogger {
     /**
      * Log the iteration over a queue.
      * <p>
-     * This is only used in {@link com.swirlds.state.merkle.queue.QueueNode}
+     * @deprecated This method is only used in {@link com.swirlds.state.merkle.queue.QueueNode}
      * and can be removed if that class is deleted.
      *
      * @param label The label of the queue
      * @param queue The queue that was iterated
      * @param <K> The type of the queue values
      */
+    @Deprecated
     public static <K> void logQueueIterate(@NonNull final String label, @NonNull final FCQueue<ValueLeaf<K>> queue) {
         if (logger.isDebugEnabled() && Thread.currentThread().getName().equals(TRANSACTION_HANDLING_THREAD_NAME)) {
             if (queue.isEmpty()) {

@@ -12,13 +12,14 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
 
 /**
- * An implementation of {@link WritableKVStateBase} backed by a {@link VirtualMap}, resulting in a state
+ * An implementation of {@link WritableKVState} backed by a {@link VirtualMap}, resulting in a state
  * that is stored on disk.
  *
  * @param <K> The type of key for the state
@@ -80,9 +81,6 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
     protected void putIntoDataSource(@NonNull K key, @NonNull V value) {
         final Bytes kb = keyCodec.toBytes(key);
         assert kb != null;
-        // If we expect a lot of empty values, Bytes.EMPTY optimization below may be helpful, but
-        // for now it just adds a call to measureRecord(), but benefits are unclear
-        // final Bytes v = valueCodec.measureRecord(value) == 0 ? Bytes.EMPTY : valueCodec.toBytes(value);
         virtualMap.put(getVirtualMapKey(serviceName, stateKey, key, keyCodec), value, valueCodec);
         // Log to transaction state log, what was put
         logMapPut(computeLabel(serviceName, stateKey), key, value);
