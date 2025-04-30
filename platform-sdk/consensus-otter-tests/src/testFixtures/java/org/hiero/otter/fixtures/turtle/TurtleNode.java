@@ -29,7 +29,6 @@ import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.listeners.PlatformStatusChangeListener;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -97,8 +96,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
-    private ReservedSignedState initialState;
-    private MerkleNodeState merkleNodeState;
 
     public TurtleNode(
             @NonNull final Randotron randotron,
@@ -236,8 +233,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * Start the node
      */
     public void start() {
-        System.out.println("Starting node: " + selfId);
-
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
@@ -285,8 +280,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     }
 
     private void doShutdownNode() throws InterruptedException {
-        System.out.println("Shutting down node: " + selfId);
-
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
@@ -324,18 +317,17 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final RecycleBin recycleBin = RecycleBin.create(
                 metrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
 
-        merkleNodeState = TurtleTestingToolState.getStateRootNode();
         final HashedReservedSignedState reservedState = getInitialState(
                 recycleBin,
                 version,
-                () -> merkleNodeState,
+                TurtleTestingToolState::getStateRootNode,
                 APP_NAME,
                 SWIRLD_NAME,
                 selfId,
                 addressBook,
                 platformStateFacade,
                 platformContext);
-        initialState = reservedState.state();
+        final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
         final long round = platformStateFacade.roundOf(state);
