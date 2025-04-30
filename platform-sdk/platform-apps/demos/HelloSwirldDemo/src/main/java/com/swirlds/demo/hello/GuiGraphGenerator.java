@@ -1,5 +1,6 @@
 package com.swirlds.demo.hello;
 
+import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
@@ -31,6 +32,13 @@ public class GuiGraphGenerator {
                 graphGenerator.getRoster()
         );
         graphGenerator.reset();
+    }
+
+    /**
+     * Get the roster that represents the collection of nodes that are generating the events.
+     */
+    public Roster getRoster(){
+        return graphGenerator.getRoster();
     }
 
     public List<GuiEvent> generateEvents(final int numEvents) {

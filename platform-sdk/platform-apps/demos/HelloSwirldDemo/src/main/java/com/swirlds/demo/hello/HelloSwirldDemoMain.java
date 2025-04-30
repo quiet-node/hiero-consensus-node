@@ -23,6 +23,8 @@ public class HelloSwirldDemoMain extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        final GuiGraphGenerator graphGenerator = new GuiGraphGenerator(1, 4);
+
         primaryStage.setTitle("Hello World!");
         Button btn = new Button();
         btn.setText("Say 'Hello World'");
