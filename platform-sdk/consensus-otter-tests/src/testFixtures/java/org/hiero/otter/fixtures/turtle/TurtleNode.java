@@ -29,6 +29,7 @@ import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.listeners.PlatformStatusChangeListener;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -96,6 +97,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
+    private ReservedSignedState initialState;
+    private MerkleNodeState merkleNodeState;
 
     public TurtleNode(
             @NonNull final Randotron randotron,
@@ -160,12 +163,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @Override
     public void shutdownGracefully(@NonNull final Duration timeout) throws InterruptedException {
         try {
-
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
-
-            //            platformWiring.flushIntakePipeline();
             doShutdownNode();
-
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
@@ -325,17 +324,18 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final RecycleBin recycleBin = RecycleBin.create(
                 metrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
 
+        merkleNodeState = TurtleTestingToolState.getStateRootNode();
         final HashedReservedSignedState reservedState = getInitialState(
                 recycleBin,
                 version,
-                TurtleTestingToolState::getStateRootNode,
+                () -> merkleNodeState,
                 APP_NAME,
                 SWIRLD_NAME,
                 selfId,
                 addressBook,
                 platformStateFacade,
                 platformContext);
-        final ReservedSignedState initialState = reservedState.state();
+        initialState = reservedState.state();
 
         final State state = initialState.get().getState();
         final long round = platformStateFacade.roundOf(state);
@@ -373,10 +373,5 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         platform.start();
 
         lifeCycle = LifeCycle.STARTED;
-    }
-
-    @Override
-    public void stop() throws InterruptedException {
-        doShutdownNode();
     }
 }

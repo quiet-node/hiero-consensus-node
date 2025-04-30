@@ -1756,4 +1756,12 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
     public long getFastCopyVersion() {
         return fastCopyVersion;
     }
+
+    public void stop() {
+        destroyNode();
+        pipeline.terminate();
+        hasher.shutdown();
+        hasher.terminate();
+        cache.release();
+    }
 }

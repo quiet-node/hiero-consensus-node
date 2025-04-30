@@ -234,8 +234,7 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
     }
 
     public void close() {
+        virtualMaps.forEach(v -> v.stop());
         virtualMaps = new ArrayList<>();
     }
-
-    public void unregister() {}
 }

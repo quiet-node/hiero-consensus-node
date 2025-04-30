@@ -94,10 +94,4 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     public static void closeState() {
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.close();
     }
-
-    public void destroy() {
-        this.destroyNode();
-        this.unregisterService("PlatformStateService");
-        this.unregisterService("RosterService");
-    }
 }

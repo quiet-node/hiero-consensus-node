@@ -522,10 +522,10 @@ public final class PlatformBuilder {
         return buildComponentBuilder().build();
     }
 
-    public void clear() {
-        if (!initialState.isClosed()) {
-            initialState.close();
-        }
-        initialState.delete();
-    }
+    //    public void clear() {
+    //        if (!initialState.isClosed()) {
+    //            initialState.close();
+    //        }
+    //        initialState.delete();
+    //    }
 }

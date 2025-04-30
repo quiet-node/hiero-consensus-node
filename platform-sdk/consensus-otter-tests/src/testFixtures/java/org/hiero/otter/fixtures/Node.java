@@ -64,6 +64,4 @@ public interface Node {
      */
     @NonNull
     NodeId getSelfId();
-
-    void stop() throws InterruptedException;
 }

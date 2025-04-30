@@ -909,4 +909,14 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     public T loadSnapshot(@NonNull Path targetPath) throws IOException {
         return (T) MerkleTreeSnapshotReader.readStateFileData(targetPath).stateRoot();
     }
+
+    public void clean() {
+        for (final var node : merkleNodes) {
+            if (node instanceof SingletonNode<?>) {
+                ((SingletonNode) node).clean();
+            } else if (node instanceof VirtualMap<?, ?>) {
+                ((VirtualMap) node).stop();
+            }
+        }
+    }
 }
