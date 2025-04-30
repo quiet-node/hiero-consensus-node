@@ -172,7 +172,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 if (blockState == null && currentBlock != -1) {
                     long lowestAvailableBlock = blockStreamStateManager.getBlockNumber();
                     if (lowestAvailableBlock > currentBlock) {
-                        logger.trace(
+                        logger.debug(
                                 "[{}] Block {} state not found and lowest available block is {}, ending stream for node {}",
                                 Thread.currentThread().getName(),
                                 currentBlock,
@@ -769,5 +769,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     public ConnectionState getState() {
         return connectionState;
+    }
+
+    /**
+     * For testing only: returns the request worker thread so the test can wait for it to finish.
+     */
+    @VisibleForTesting
+    protected Thread getRequestWorkerThreadForTest() {
+        return requestWorker;
     }
 }
