@@ -122,8 +122,4 @@ public final class StaticPlatformBuilder {
         }
         return globalMetrics;
     }
-
-    public static void stop() {
-        //        metricsProvider.stop();
-    }
 }

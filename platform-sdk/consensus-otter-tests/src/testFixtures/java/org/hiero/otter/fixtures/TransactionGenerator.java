@@ -21,5 +21,5 @@ public interface TransactionGenerator {
     /**
      * Stop the transaction generation.
      */
-    void stop() throws InterruptedException;
+    void stop();
 }

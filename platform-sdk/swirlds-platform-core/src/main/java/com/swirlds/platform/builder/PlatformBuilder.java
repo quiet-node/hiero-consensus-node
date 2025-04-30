@@ -521,11 +521,4 @@ public final class PlatformBuilder {
     public Platform build() {
         return buildComponentBuilder().build();
     }
-
-    //    public void clear() {
-    //        if (!initialState.isClosed()) {
-    //            initialState.close();
-    //        }
-    //        initialState.delete();
-    //    }
 }
