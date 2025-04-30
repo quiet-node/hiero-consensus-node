@@ -160,8 +160,10 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @Override
     public void shutdownGracefully(@NonNull final Duration timeout) throws InterruptedException {
         try {
+
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
             doShutdownNode();
+
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
@@ -264,8 +266,10 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     public void destroy() throws InterruptedException {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
+
             doShutdownNode();
             lifeCycle = LifeCycle.DESTROYED;
+
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
@@ -297,6 +301,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             platform = null;
             platformWiring = null;
             model = null;
+            lifeCycle = LifeCycle.SHUTDOWN;
         }
     }
 

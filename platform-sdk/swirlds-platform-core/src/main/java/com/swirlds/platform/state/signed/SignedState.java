@@ -406,7 +406,7 @@ public class SignedState implements SignedStateInfo {
      * that, this method must be synchronized.
      * </p>
      */
-    public synchronized void delete() {
+    synchronized void delete() {
         if (reservations.isDestroyed()) {
             if (!deleted) {
                 try {

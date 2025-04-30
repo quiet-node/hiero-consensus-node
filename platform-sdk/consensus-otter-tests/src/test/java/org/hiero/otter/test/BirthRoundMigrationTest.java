@@ -22,7 +22,6 @@ class BirthRoundMigrationTest {
     @OtterTest
     //    @Disabled
     void testBirthRoundMigration(TestEnvironment env) throws InterruptedException {
-        //        env.start();
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
 

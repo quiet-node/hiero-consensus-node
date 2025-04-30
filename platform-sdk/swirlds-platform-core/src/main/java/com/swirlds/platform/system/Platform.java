@@ -101,5 +101,5 @@ public interface Platform {
      */
     void start();
 
-    void stop();
+    default void stop() {}
 }

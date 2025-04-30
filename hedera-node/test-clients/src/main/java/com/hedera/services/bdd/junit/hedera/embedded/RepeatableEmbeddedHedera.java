@@ -200,9 +200,6 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
             // No-op
         }
 
-        @Override
-        public void stop() {}
-
         /**
          * Creates a new round with the given transaction.
          * @param serializedTxn the serialized transaction

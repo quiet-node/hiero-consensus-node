@@ -197,11 +197,6 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         }
     }
 
-    @Override
-    public void setState() {
-        this.state = State.INIT;
-    }
-
     /**
      * {@inheritDoc}
      */

@@ -39,7 +39,6 @@ public class HappyPathTest {
             env.validator().validateRemaining(Profile.DEFAULT);
             //            env.destroy();
             env.stop();
-            network.setState();
         }
     }
 }
