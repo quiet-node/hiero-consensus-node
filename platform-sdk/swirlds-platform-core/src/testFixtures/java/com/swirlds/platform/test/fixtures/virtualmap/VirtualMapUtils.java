@@ -13,7 +13,7 @@ import org.hiero.base.crypto.DigestType;
 public final class VirtualMapUtils {
 
     public static VirtualMap createVirtualMap(@NonNull final String label) {
-        final long MAX_NUM_OF_KEYS = 10000L; // fixed small number to avoid OOO
+        final long MAX_NUM_OF_KEYS = 1_000L; // fixed small number to avoid OOO
         return createVirtualMap(label, MAX_NUM_OF_KEYS);
     }
 

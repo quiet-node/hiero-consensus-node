@@ -12,14 +12,13 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
 
 /**
- * An implementation of {@link WritableKVState} backed by a {@link VirtualMap}, resulting in a state
+ * An implementation of {@link WritableKVStateBase} backed by a {@link VirtualMap}, resulting in a state
  * that is stored on disk.
  *
  * @param <K> The type of key for the state
@@ -28,6 +27,7 @@ import java.util.Iterator;
 public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V> {
 
     /** The backing merkle data structure */
+    @NonNull
     private final VirtualMap virtualMap;
 
     @NonNull
@@ -52,8 +52,8 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
             @NonNull final Codec<V> valueCodec,
             @NonNull final VirtualMap virtualMap) {
         super(serviceName, stateKey);
-        this.keyCodec = keyCodec;
-        this.valueCodec = valueCodec;
+        this.keyCodec = requireNonNull(keyCodec);
+        this.valueCodec = requireNonNull(valueCodec);
         this.virtualMap = requireNonNull(virtualMap);
     }
 
@@ -103,11 +103,5 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
         // Log to transaction state log, size of map
         logMapGetSize(computeLabel(serviceName, stateKey), size);
         return size;
-    }
-
-    // TODO: remove ?
-    @Override
-    public void commit() {
-        super.commit();
     }
 }

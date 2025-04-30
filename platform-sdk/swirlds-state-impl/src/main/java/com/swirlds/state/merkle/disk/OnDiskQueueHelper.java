@@ -19,7 +19,7 @@ import java.util.NoSuchElementException;
  * A helper class for managing an on-disk queue using a {@link VirtualMap} as the core storage mechanism.
  *
  * <p>This class was created to extract repetitive code from
- * {@code OnDiskWritableQueueState} and {@code OnDiskReadableQueueState}.
+ * {@link OnDiskWritableQueueState} and {@link OnDiskReadableQueueState}.
  *
  * <p><b>Why is it needed?</b></p>
  * To avoid duplication and simplify how Queue State classes interact with the underlying
@@ -36,7 +36,7 @@ import java.util.NoSuchElementException;
  * </ul>
  *
  * <p><b>Where is it used?</b></p>
- * It is used in {@code OnDiskWritableQueueState} and {@code OnDiskReadableQueueState} to perform
+ * It is used in {@link OnDiskWritableQueueState} and {@link OnDiskReadableQueueState} to perform
  * operations like adding, removing, or reading queue elements while ensuring persistence and
  * consistency across multiple layers of the queue implementation.
  *
@@ -69,6 +69,11 @@ public final class OnDiskQueueHelper<E> {
     private final Codec<E> valueCodec;
 
     /**
+     * An empty iterator used as a placeholder when no elements are available.
+     */
+    private final QueueIterator EMPTY_ITERATOR = new QueueIterator(0, 0);
+
+    /**
      * Creates an instance of the on-disk queue helper.
      *
      * @param serviceName The name of the service that owns the queue's state.
@@ -96,8 +101,7 @@ public final class OnDiskQueueHelper<E> {
     public Iterator<E> iterateOnDataSource() {
         final QueueState state = getState();
         if (state == null) {
-            // TODO: create const for empty iterator
-            return new QueueIterator(0, 0);
+            return EMPTY_ITERATOR;
         } else {
             final QueueIterator it = new QueueIterator(state.getHead(), state.getTail());
             // Log to transaction state log, what was iterated
@@ -133,7 +137,7 @@ public final class OnDiskQueueHelper<E> {
         if (state == null) {
             return null;
         }
-        // FUTURE WORK: performance
+        // FUTURE WORK: optimize performance here
         return new QueueState(state.getHead(), state.getTail());
     }
 

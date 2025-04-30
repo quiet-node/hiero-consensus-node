@@ -7,7 +7,9 @@ import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.pbj.runtime.Codec;
 import com.swirlds.base.time.Time;
+import com.swirlds.common.Reservable;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
@@ -52,7 +54,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -64,6 +65,9 @@ import org.apache.logging.log4j.Logger;
 import org.hiero.base.crypto.DigestType;
 import org.hiero.base.crypto.Hash;
 
+/**
+ * An implementation of {@code MerkleNodeState} backed by a single Virtual Map.
+ */
 public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     private static final Logger logger = LogManager.getLogger(NewStateRoot.class);
@@ -93,10 +97,10 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     /**
      * Cache of used {@link WritableStates}.
      */
-    private final Map<String, NewStateRoot.MerkleWritableStates> writableStatesMap = new HashMap<>();
+    private final Map<String, MerkleWritableStates> writableStatesMap = new HashMap<>();
 
     /**
-     * Listeners to be notified of state changes on {@link NewStateRoot.MerkleWritableStates#commit()} calls for any service.
+     * Listeners to be notified of state changes on {@link MerkleWritableStates#commit()} calls for any service.
      */
     private final List<StateChangeListener> listeners = new ArrayList<>();
 
@@ -107,28 +111,16 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     private VirtualMap virtualMap;
 
     public NewStateRoot(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
-        this.configuration = requireNonNull(configuration);
-        final String virtualMapLabel;
+        final String virtualMapLabel = "VirtualMap"; // TODO: discuss how it should be renamed
         final MerkleDbDataSourceBuilder dsBuilder;
-
-        try {
-            // Config constant (TODO: move to config)
-            final long MEGA_MAP_MAX_KEYS_HINT =
-                    1_000_000_000; // if fetched from config, figure out consistency with tests
-
-            final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
-            final var tableConfig = new MerkleDbTableConfig(
-                    (short) 1,
-                    DigestType.SHA_384,
-                    // Future work: drop StateDefinition.maxKeysHint and load VM size
-                    // from VirtualMapConfig.size instead
-                    MEGA_MAP_MAX_KEYS_HINT,
-                    merkleDbConfig.hashesRamToDiskThreshold());
-            virtualMapLabel = "VirtualMap";
-            dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
+        final var tableConfig = new MerkleDbTableConfig(
+                (short) 1,
+                DigestType.SHA_384,
+                // FUTURE WORK: drop StateDefinition.maxKeysHint and load VM size from VirtualMapConfig.size instead
+                merkleDbConfig.maxNumOfKeys(),
+                merkleDbConfig.hashesRamToDiskThreshold());
+        dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
 
         this.virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
         this.virtualMap.registerMetrics(metrics);
@@ -150,9 +142,8 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
      */
     protected NewStateRoot(@NonNull final NewStateRoot<T> from) {
         this.virtualMap = from.virtualMap.copy();
-
+        this.configuration = from.configuration;
         this.roundSupplier = from.roundSupplier;
-
         this.listeners.addAll(from.listeners);
 
         // Copy over the metadata
@@ -182,15 +173,33 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         }
     }
 
-    public void init(Time time, Metrics metrics, MerkleCryptography merkleCryptography, LongSupplier roundSupplier) {
+    public void init(
+            Time time,
+            Configuration configuration,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier) {
         this.time = time;
+        this.configuration = configuration;
         this.metrics = metrics;
         this.merkleCryptography = merkleCryptography;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
         this.roundSupplier = roundSupplier;
     }
 
-    // State interface impl
+    /**
+     * Creates a copy of the instance.
+     * @return a copy of the instance
+     */
+    protected abstract T copyingConstructor();
+
+    /**
+     * Creates a new instance.
+     * @param virtualMap should have already registered metrics
+     */
+    protected abstract T newInstance(@NonNull final VirtualMap virtualMap);
+
+    // State interface implementation
 
     /**
      * {@inheritDoc}
@@ -200,9 +209,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     public ReadableStates getReadableStates(@NonNull String serviceName) {
         return readableStatesMap.computeIfAbsent(serviceName, s -> {
             final var stateMetadata = services.get(s);
-            return stateMetadata == null
-                    ? EmptyReadableStates.INSTANCE
-                    : new NewStateRoot.MerkleReadableStates(stateMetadata);
+            return stateMetadata == null ? EmptyReadableStates.INSTANCE : new MerkleReadableStates(stateMetadata);
         });
     }
 
@@ -214,8 +221,8 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     public WritableStates getWritableStates(@NonNull final String serviceName) {
         virtualMap.throwIfImmutable();
         return writableStatesMap.computeIfAbsent(serviceName, s -> {
-            final var stateMetadata = services.getOrDefault(s, new HashMap<>());
-            return new NewStateRoot.MerkleWritableStates(serviceName, stateMetadata);
+            final var stateMetadata = services.getOrDefault(s, Map.of());
+            return new MerkleWritableStates(serviceName, stateMetadata);
         });
     }
 
@@ -238,45 +245,6 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     @Override
     public T copy() {
         return copyingConstructor();
-    }
-
-    protected abstract T copyingConstructor();
-
-    /**
-     *
-     * @param virtualMap should have already registered metrics
-     */
-    protected abstract T newInstance(@NonNull final VirtualMap virtualMap);
-
-    @Override
-    @Nullable
-    public Hash getHash() {
-        return virtualMap.getHash();
-    }
-
-    @Override
-    public void setHash(Hash hash) {
-        virtualMap.setHash(hash);
-    }
-
-    @Override
-    public boolean isMutable() {
-        return virtualMap.isMutable();
-    }
-
-    @Override
-    public boolean isImmutable() {
-        return virtualMap.isImmutable();
-    }
-
-    @Override
-    public boolean isDestroyed() {
-        return virtualMap.isDestroyed();
-    }
-
-    public boolean release() {
-        virtualMap.release();
-        return true;
     }
 
     /**
@@ -334,49 +302,16 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
             mutableCopy.registerMetrics(metrics);
         }
         readVirtualMap.release();
-
         readVirtualMap = mutableCopy;
 
         return newInstance(readVirtualMap);
     }
 
-    // Getters and setters
-
-    public MerkleNode getRoot() {
-        return virtualMap;
-    }
+    // MerkleNodeState interface implementation
 
     /**
-     * Sets the time for this state.
-     *
-     * @param time the time to set
+     * @deprecated Should be removed once the MerkleStateRoot is removed along with {@code MerkleNodeState#putServiceStateIfAbsent()}
      */
-    public void setTime(final Time time) {
-        this.time = time;
-    }
-
-    public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
-        return services;
-    }
-
-    // Clean up
-
-    /**
-     * To be called ONLY at node shutdown -- attempts to gracefully close the Virtual Map.
-     */
-    public void close() {
-        logger.info("Closing NewStateRoot"); // TODO: update class name
-        try {
-            virtualMap.getDataSource().close();
-        } catch (IOException e) {
-            logger.warn("Unable to close data source for the Virtual Map", e);
-        }
-    }
-
-    // State API related ops
-
-    // Should be removed once the MerkleStateRoot is removed along with putServiceStateIfAbsent in
-    // MerkleNodeState interface
     @Deprecated
     public <T extends MerkleNode> void putServiceStateIfAbsent(
             @NonNull final StateMetadata<?, ?> md,
@@ -410,7 +345,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     /**
      * Unregister a service without removing its nodes from the state.
-     *
+     * <p>
      * Services such as the PlatformStateService and RosterService may be registered
      * on a newly loaded (or received via Reconnect) SignedState object in order
      * to access the PlatformState and RosterState/RosterMap objects so that the code
@@ -422,11 +357,11 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
      * {@code state.getReadableStates(PlatformStateService.NAME).isEmpty()} check.
      * So if this service has previously been initialized, then the States API
      * won't be initialized in full.
-     *
+     * <p>
      * To prevent this and to allow the system to initialize all the services,
      * we unregister the PlatformStateService and RosterService after the validation is performed.
-     *
-     * Note that unlike the NewStateRoot.removeServiceState() method below in this class,
+     * <p>
+     * Note that unlike the {@link #removeServiceState(String, String)} method in this class,
      * the unregisterService() method will NOT remove the merkle nodes that store the states of
      * the services being unregistered. This is by design because these nodes will be used
      * by the actual service states once the app initializes the States API in full.
@@ -461,6 +396,93 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         final var writableStates = writableStatesMap.get(serviceName);
         if (writableStates != null) {
             writableStates.remove(stateKey);
+        }
+    }
+
+    // Getters and setters
+
+    public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
+        return services;
+    }
+
+    /**
+     * Get the virtual map behind {@link NewStateRoot}.
+     * For more detailed docs, see {@code MerkleNodeState#getRoot()}.
+     */
+    public MerkleNode getRoot() {
+        return virtualMap;
+    }
+
+    /**
+     * Sets the time for this state.
+     *
+     * @param time the time to set
+     */
+    public void setTime(final Time time) {
+        this.time = time;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @Nullable
+    public Hash getHash() {
+        return virtualMap.getHash();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setHash(Hash hash) {
+        virtualMap.setHash(hash);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isMutable() {
+        return virtualMap.isMutable();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isImmutable() {
+        return virtualMap.isImmutable();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isDestroyed() {
+        return virtualMap.isDestroyed();
+    }
+
+    /**
+     * Release a reservation on a Virtual Map.
+     * For more detailed docs, see {@link Reservable#release()}.
+     * @return true if this call to release() caused the Virtual Map to become destroyed
+     */
+    public boolean release() {
+        return virtualMap.release();
+    }
+
+    // Clean up
+
+    /**
+     * To be called ONLY at node shutdown. Attempts to gracefully close the Virtual Map.
+     */
+    public void close() {
+        logger.info("Closing NewStateRoot");
+        try {
+            virtualMap.getDataSource().close();
+        } catch (IOException e) {
+            logger.warn("Unable to close data source for the Virtual Map", e);
         }
     }
 
@@ -566,6 +588,16 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         static String extractStateKey(@NonNull final StateMetadata<?, ?> md) {
             return md.stateDefinition().stateKey();
         }
+
+        @NonNull
+        static Codec<?> extractKeyCodec(@NonNull final StateMetadata<?, ?> md) {
+            return md.stateDefinition().keyCodec();
+        }
+
+        @NonNull
+        static Codec<?> extractValueCodec(@NonNull final StateMetadata<?, ?> md) {
+            return md.stateDefinition().valueCodec();
+        }
     }
 
     /**
@@ -587,25 +619,21 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         @NonNull
         protected ReadableKVState<?, ?> createReadableKVState(@NonNull final StateMetadata md) {
             return new OnDiskReadableKVState<>(
-                    md.serviceName(),
-                    extractStateKey(md),
-                    Objects.requireNonNull(md.stateDefinition().keyCodec()),
-                    md.stateDefinition().valueCodec(),
-                    virtualMap);
+                    md.serviceName(), extractStateKey(md), extractKeyCodec(md), extractValueCodec(md), virtualMap);
         }
 
         @Override
         @NonNull
         protected ReadableSingletonState<?> createReadableSingletonState(@NonNull final StateMetadata md) {
             return new OnDiskReadableSingletonState<>(
-                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
+                    md.serviceName(), extractStateKey(md), extractValueCodec(md), virtualMap);
         }
 
         @NonNull
         @Override
         protected ReadableQueueState createReadableQueueState(@NonNull StateMetadata md) {
             return new OnDiskReadableQueueState(
-                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
+                    md.serviceName(), extractStateKey(md), extractValueCodec(md), virtualMap);
         }
     }
 
@@ -669,11 +697,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         @NonNull
         protected WritableKVState<?, ?> createReadableKVState(@NonNull final StateMetadata md) {
             final var state = new OnDiskWritableKVState<>(
-                    md.serviceName(),
-                    extractStateKey(md),
-                    Objects.requireNonNull(md.stateDefinition().keyCodec()),
-                    md.stateDefinition().valueCodec(),
-                    virtualMap);
+                    md.serviceName(), extractStateKey(md), extractKeyCodec(md), extractValueCodec(md), virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(MAP)) {
                     registerKVListener(serviceName, state, listener);
@@ -686,7 +710,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         @NonNull
         protected WritableSingletonState<?> createReadableSingletonState(@NonNull final StateMetadata md) {
             final var state = new OnDiskWritableSingletonState<>(
-                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
+                    md.serviceName(), extractStateKey(md), extractValueCodec(md), virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(SINGLETON)) {
                     registerSingletonListener(serviceName, state, listener);
@@ -699,7 +723,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         @Override
         protected WritableQueueState<?> createReadableQueueState(@NonNull final StateMetadata md) {
             final var state = new OnDiskWritableQueueState<>(
-                    md.serviceName(), extractStateKey(md), md.stateDefinition().valueCodec(), virtualMap);
+                    md.serviceName(), extractStateKey(md), extractValueCodec(md), virtualMap);
             listeners.forEach(listener -> {
                 if (listener.stateTypes().contains(QUEUE)) {
                     registerQueueListener(serviceName, state, listener);

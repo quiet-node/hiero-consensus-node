@@ -3,7 +3,7 @@ package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
-import static com.swirlds.state.merkle.MerkleStateRoot.CURRENT_VERSION;
+import static com.swirlds.state.merkle.MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.hedera.node.app.services.MigrationStateChanges;
@@ -205,6 +205,7 @@ class SerializationTest extends MerkleTestBase {
 
         originalTree.init(
                 context.getTime(),
+                context.getConfiguration(),
                 context.getMetrics(),
                 context.getMerkleCryptography(),
                 () -> TEST_PLATFORM_STATE_FACADE
@@ -283,7 +284,7 @@ class SerializationTest extends MerkleTestBase {
                 migrationStateChanges,
                 startupNetworks,
                 TEST_PLATFORM_STATE_FACADE);
-        loadedTree.getRoot().migrate(CONFIGURATION, CURRENT_VERSION);
+        loadedTree.getRoot().migrate(CONFIGURATION, MINIMUM_SUPPORTED_VERSION);
     }
 
     private MerkleNodeState createMerkleHederaState(Schema schemaV1) {

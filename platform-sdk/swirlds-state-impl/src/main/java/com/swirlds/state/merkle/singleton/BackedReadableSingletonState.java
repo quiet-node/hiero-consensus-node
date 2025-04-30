@@ -4,9 +4,14 @@ package com.swirlds.state.merkle.singleton;
 import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRead;
 
+import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.ReadableSingletonStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
+/**
+ * @deprecated This class should be removed together with {@link MerkleStateRoot}.
+ */
+@Deprecated
 public class BackedReadableSingletonState<T> extends ReadableSingletonStateBase<T> {
 
     private final SingletonNode<T> backingStore;

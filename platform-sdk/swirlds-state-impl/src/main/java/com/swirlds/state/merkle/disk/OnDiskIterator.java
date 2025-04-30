@@ -20,7 +20,6 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
     private final MerkleIterator<MerkleNode> itr;
     private K next = null;
 
-    // add state prefix
     public OnDiskIterator(
             @NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec, @NonNull final Bytes stateId) {
         super(virtualMap, keyCodec);

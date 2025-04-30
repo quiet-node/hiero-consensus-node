@@ -9,14 +9,13 @@ import static com.swirlds.state.merkle.logging.StateLogger.logMapIterate;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
-import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.state.spi.ReadableKVStateBase;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
 
 /**
- * An implementation of {@link ReadableKVState} backed by a {@link VirtualMap}, resulting in a state
+ * An implementation of {@link ReadableKVStateBase} backed by a {@link VirtualMap}, resulting in a state
  * that is stored on disk.
  *
  * @param <K> The type of key for the state
@@ -37,11 +36,11 @@ public final class OnDiskReadableKVState<K, V> extends ReadableKVStateBase<K, V>
     /**
      * Create a new instance
      *
-     * @param serviceName
-     * @param stateKey
-     * @param keyCodec
-     * @param valueCodec
-     * @param virtualMap the backing merkle structure to use
+     * @param serviceName  the service name
+     * @param stateKey     the state key
+     * @param keyCodec     the codec for the key
+     * @param valueCodec   the codec for the value
+     * @param virtualMap   the backing merkle data structure to use
      */
     public OnDiskReadableKVState(
             @NonNull final String serviceName,

@@ -35,7 +35,7 @@ public class BlockingState extends TestMerkleStateRoot {
     /**
      * In this version, serialization was performed by serialize/deserialize.
      */
-    private static final int VERSION_MIGRATE_TO_SERIALIZABLE = MerkleStateRoot.CURRENT_VERSION;
+    private static final int VERSION_MIGRATE_TO_SERIALIZABLE = MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 
     private static final int CLASS_VERSION = VERSION_MIGRATE_TO_SERIALIZABLE;
 

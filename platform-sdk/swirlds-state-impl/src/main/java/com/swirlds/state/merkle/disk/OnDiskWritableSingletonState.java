@@ -9,41 +9,48 @@ import static com.swirlds.state.merkle.logging.StateLogger.logSingletonWrite;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
+import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.Objects;
 
+/**
+ * An implementation of {@link WritableSingletonState} backed by a {@link VirtualMap}, resulting in a state
+ * that is stored on disk.
+ *
+ * @param <T> The type of the value
+ */
 public class OnDiskWritableSingletonState<T> extends WritableSingletonStateBase<T> {
 
+    /** The backing merkle data structure to use */
     @NonNull
     private final VirtualMap virtualMap;
 
     @NonNull
     private final Codec<T> valueCodec;
 
+    /**
+     * Create a new instance
+     *
+     * @param serviceName  the service name
+     * @param stateKey     the state key
+     * @param valueCodec   the codec for the value
+     * @param virtualMap   the backing merkle data structure to use
+     */
     public OnDiskWritableSingletonState(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final Codec<T> valueCodec,
             @NonNull final VirtualMap virtualMap) {
         super(serviceName, stateKey);
-
         this.valueCodec = requireNonNull(valueCodec);
-        this.virtualMap = Objects.requireNonNull(virtualMap);
+        this.virtualMap = requireNonNull(virtualMap);
     }
 
     /** {@inheritDoc} */
     @Override
     protected T readFromDataSource() {
-        // TODO: duplicated code from `OnDiskReadableSingletonState`
-        final var key = getVirtualMapKey(serviceName, stateKey);
-        var value = virtualMap.get(key, valueCodec);
-
-        if (value == null && virtualMap.containsKey(key)) {
-            value = valueCodec.getDefaultInstance();
-        }
-
+        final var value = OnDiskSingletonHelper.getFromStore(serviceName, stateKey, virtualMap, valueCodec);
         // Log to transaction state log, what was read
         logSingletonRead(computeLabel(serviceName, stateKey), value);
         return value;

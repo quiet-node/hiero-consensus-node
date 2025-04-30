@@ -5,6 +5,7 @@ import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static com.swirlds.state.merkle.logging.StateLogger.logQueuePeek;
 import static java.util.Objects.requireNonNull;
 
+import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.ReadableQueueState;
 import com.swirlds.state.spi.ReadableQueueStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -13,8 +14,10 @@ import java.util.Iterator;
 
 /**
  * An implementation of {@link ReadableQueueState} that uses a merkle {@link QueueNode} as the backing store.
+ * @deprecated This class should be removed together with {@link MerkleStateRoot}.
  * @param <E> The type of elements in the queue.
  */
+@Deprecated
 public class BackedReadableQueueState<E> extends ReadableQueueStateBase<E> {
 
     private final QueueNode<E> dataSource;

@@ -6,7 +6,7 @@ import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
-import static com.swirlds.state.merkle.MerkleStateRoot.CURRENT_VERSION;
+import static com.swirlds.state.merkle.MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -79,7 +79,8 @@ class MerkleStateRootTest extends MerkleTestBase {
         FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
         setupFruitMerkleMap();
         stateRoot = new TestMerkleStateRoot();
-        stateRoot.init(new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
+        stateRoot.init(
+                new FakeTime(), CONFIGURATION, new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
     }
 
     /** Looks for a merkle node with the given label */
@@ -793,14 +794,14 @@ class MerkleStateRootTest extends MerkleTestBase {
     @DisplayName("Migrate test")
     class MigrateTest {
         @Test
-        @DisplayName("If the version is current, migration happens")
-        void migrate_currentVersion() {
+        @DisplayName("If the version is previous, migration happens")
+        void migrate_previousVersion() {
             var node1 = mock(MerkleNode.class);
             stateRoot.setChild(0, node1);
             var node2 = mock(MerkleNode.class);
             stateRoot.setChild(1, node2);
             reset(node1, node2);
-            var migratedState = stateRoot.migrate(CONFIGURATION, CURRENT_VERSION);
+            var migratedState = stateRoot.migrate(CONFIGURATION, MINIMUM_SUPPORTED_VERSION);
             assertNotSame(stateRoot, migratedState);
             assertInstanceOf(VirtualMap.class, migratedState);
             verifyNoMoreInteractions(node1, node2);
@@ -809,7 +810,7 @@ class MerkleStateRootTest extends MerkleTestBase {
         @Test
         @DisplayName("Migration from previous versions is supported")
         void migration_supported() {
-            assertDoesNotThrow(() -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1));
+            assertDoesNotThrow(() -> stateRoot.migrate(CONFIGURATION, MINIMUM_SUPPORTED_VERSION - 1));
         }
     }
 
@@ -842,7 +843,7 @@ class MerkleStateRootTest extends MerkleTestBase {
             merkleCryptography = MerkleCryptographyFactory.create(ConfigurationBuilder.create()
                     .withConfigDataType(CryptoConfig.class)
                     .build());
-            stateRoot.init(new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
+            stateRoot.init(new FakeTime(), CONFIGURATION, new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
         }
 
         @Test

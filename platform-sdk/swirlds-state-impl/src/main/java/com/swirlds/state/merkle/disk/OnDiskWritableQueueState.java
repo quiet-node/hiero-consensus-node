@@ -8,20 +8,21 @@ import static com.swirlds.state.merkle.logging.StateLogger.logQueueRemove;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
-import com.swirlds.state.merkle.queue.QueueNode;
 import com.swirlds.state.merkle.queue.QueueState;
 import com.swirlds.state.spi.WritableQueueStateBase;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
-import java.util.Objects;
 
 /**
- * An implementation of {@link com.swirlds.state.spi.WritableQueueState} based on {@link QueueNode}.
+ * An implementation of {@link com.swirlds.state.spi.WritableQueueState} backed by a {@link VirtualMap}, resulting in a state
+ * that is stored on disk.
+ *
  * @param <E> The type of element in the queue
  */
 public class OnDiskWritableQueueState<E> extends WritableQueueStateBase<E> {
 
+    /** The backing merkle data structure to use */
     @NonNull
     private final VirtualMap virtualMap;
 
@@ -29,52 +30,61 @@ public class OnDiskWritableQueueState<E> extends WritableQueueStateBase<E> {
     private final Codec<E> valueCodec;
 
     @NonNull
-    private final OnDiskQueueHelper<E> queueHelper;
+    private final OnDiskQueueHelper<E> onDiskQueueHelper;
 
+    /**
+     * Create a new instance
+     *
+     * @param serviceName  the service name
+     * @param stateKey     the state key
+     * @param valueCodec   the codec for the value
+     * @param virtualMap   the backing merkle data structure to use
+     */
     public OnDiskWritableQueueState(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final Codec<E> valueCodec,
             @NonNull final VirtualMap virtualMap) {
         super(serviceName, stateKey);
-
-        this.virtualMap = Objects.requireNonNull(virtualMap);
+        this.virtualMap = requireNonNull(virtualMap);
         this.valueCodec = requireNonNull(valueCodec);
-        this.queueHelper = new OnDiskQueueHelper<>(serviceName, stateKey, virtualMap, valueCodec);
+        this.onDiskQueueHelper = new OnDiskQueueHelper<>(serviceName, stateKey, virtualMap, valueCodec);
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void addToDataSource(@NonNull E element) {
-        QueueState state = queueHelper.getState();
+        QueueState state = onDiskQueueHelper.getState();
         if (state == null) {
-            // adding 1st time, initialize QueueState
+            // Adding to this Queue State first time - initialize QueueState.
             state = new QueueState();
         }
         virtualMap.put(getVirtualMapKey(serviceName, stateKey, state.getTailAndIncrement()), element, valueCodec);
-        queueHelper.updateState(state);
+        onDiskQueueHelper.updateState(state);
         // Log to transaction state log, what was added
         logQueueAdd(computeLabel(serviceName, stateKey), element);
     }
 
+    /** {@inheritDoc} */
     @Override
     protected void removeFromDataSource() {
-        final QueueState state = requireNonNull(queueHelper.getState());
+        final QueueState state = requireNonNull(onDiskQueueHelper.getState());
         if (!state.isEmpty()) {
             final var removedValue =
                     virtualMap.remove(getVirtualMapKey(serviceName, stateKey, state.getHeadAndIncrement()), valueCodec);
-            queueHelper.updateState(state);
-            // Log to transaction state log, what was added
+            onDiskQueueHelper.updateState(state);
+            // Log to transaction state log, what was removed
             logQueueRemove(computeLabel(serviceName, stateKey), removedValue);
         } else {
-            // TODO: double check, this is according to the logic in `15090-D-fcqueue-to-virtualmap`
-            // Log to transaction state log, what was added
+            // Log to transaction state log, what was removed
             logQueueRemove(computeLabel(serviceName, stateKey), null);
         }
     }
 
+    /** {@inheritDoc} */
     @NonNull
     @Override
     protected Iterator<E> iterateOnDataSource() {
-        return queueHelper.iterateOnDataSource();
+        return onDiskQueueHelper.iterateOnDataSource();
     }
 }

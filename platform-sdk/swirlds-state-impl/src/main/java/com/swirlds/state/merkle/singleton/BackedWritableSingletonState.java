@@ -6,9 +6,14 @@ import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRead;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRemove;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonWrite;
 
+import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
+/**
+ * @deprecated This class should be removed together with {@link MerkleStateRoot}.
+ */
+@Deprecated
 public class BackedWritableSingletonState<T> extends WritableSingletonStateBase<T> {
 
     private final SingletonNode<T> backingStore;

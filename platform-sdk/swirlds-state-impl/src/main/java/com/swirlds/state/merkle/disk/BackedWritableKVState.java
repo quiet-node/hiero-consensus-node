@@ -10,6 +10,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableKVStateBase;
 import com.swirlds.virtualmap.VirtualMap;
@@ -19,10 +20,11 @@ import java.util.Iterator;
 /**
  * An implementation of {@link WritableKVState} backed by a {@link VirtualMap}, resulting in a state
  * that is stored on disk.
- *
+ * @deprecated This class should be removed together with {@link MerkleStateRoot}.
  * @param <K> The type of key for the state
  * @param <V> The type of value for the state
  */
+@Deprecated
 public final class BackedWritableKVState<K, V> extends WritableKVStateBase<K, V> {
 
     /** The backing merkle data structure */
