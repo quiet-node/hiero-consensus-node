@@ -31,7 +31,7 @@ public final class NativeLibVerifier {
      */
     public void verifyNativeLibs() throws IllegalStateException {
         final var nodeHaltEnabled = contractsConfigSupplier.get().nativeLibVerificationHaltEnabled();
-        NativeLibrary.DEFAULT_NATIVE_LIBS.stream()
+        NativeLibrary.getDefaultNativeLibs().stream()
                 .filter(lib -> !lib.isNative().get())
                 .peek(lib -> LOGGER.warn("Native library {} is not present", lib.name()))
                 .findAny()

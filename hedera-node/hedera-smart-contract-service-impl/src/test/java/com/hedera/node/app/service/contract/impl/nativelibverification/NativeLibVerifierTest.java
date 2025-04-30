@@ -4,8 +4,11 @@ package com.hedera.node.app.service.contract.impl.nativelibverification;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
 import com.hedera.node.config.data.ContractsConfig;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,8 +37,13 @@ class NativeLibVerifierTest {
     @Test
     void verifyNativeLibsInHaltMode() {
         given(contractsConfig.nativeLibVerificationHaltEnabled()).willReturn(true);
-        assertThatExceptionOfType(IllegalStateException.class)
-                .isThrownBy(() -> verifier.verifyNativeLibs())
-                .withMessageContaining("Native libraries");
+        try (var mockedStatic = mockStatic(NativeLibrary.class)) {
+            final var lib = mock(NativeLibrary.Library.class);
+            given(lib.isNative()).willReturn(() -> false);
+            mockedStatic.when(NativeLibrary::getDefaultNativeLibs).thenReturn(List.of(lib));
+            assertThatExceptionOfType(IllegalStateException.class)
+                    .isThrownBy(() -> verifier.verifyNativeLibs())
+                    .withMessageContaining("Native libraries");
+        }
     }
 }

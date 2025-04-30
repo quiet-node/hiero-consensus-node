@@ -18,14 +18,16 @@ public interface NativeLibrary {
     // We use a record to hold the name and the native verification method of the library
     record Library(String name, Supplier<Boolean> isNative) {}
 
-    List<Library> DEFAULT_NATIVE_LIBS = new ArrayList<>() {
-        {
-            add(new Library("secp256k1", () -> new SECP256K1().isNative()));
-            add(new Library("secp256r1", () -> new SECP256R1().isNative()));
-            add(new Library("besu blake2bf", Blake2bfMessageDigest.Blake2bfDigest::isNative));
-            add(new Library("besu gnark", AbstractBLS12PrecompiledContract::isAvailable));
-            add(new Library(
-                    "besu lib arithmetic", BigIntegerModularExponentiationPrecompiledContract::maybeEnableNative));
-        }
-    };
+    static List<Library> getDefaultNativeLibs() {
+        return new ArrayList<>() {
+            {
+                add(new Library("secp256k1", () -> new SECP256K1().isNative()));
+                add(new Library("secp256r1", () -> new SECP256R1().isNative()));
+                add(new Library("besu blake2bf", Blake2bfMessageDigest.Blake2bfDigest::isNative));
+                add(new Library("besu gnark", AbstractBLS12PrecompiledContract::isAvailable));
+                add(new Library(
+                        "besu lib arithmetic", BigIntegerModularExponentiationPrecompiledContract::maybeEnableNative));
+            }
+        };
+    }
 }
