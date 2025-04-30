@@ -91,8 +91,4 @@ public final class ServicesRegistryImpl implements ServicesRegistry {
     public SortedSet<Registration> registrations() {
         return Collections.unmodifiableSortedSet(entries);
     }
-
-    public void stop() {
-        schemaRegistries.forEach(r -> r.stop());
-    }
 }

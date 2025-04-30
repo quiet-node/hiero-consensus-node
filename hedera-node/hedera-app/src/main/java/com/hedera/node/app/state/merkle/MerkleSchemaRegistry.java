@@ -92,8 +92,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
      */
     private final SchemaApplications schemaApplications;
 
-    private List<VirtualMap> virtualMaps = new ArrayList<>();
-
     /**
      * Create a new instance with the default {@link SchemaApplications}.
      *
@@ -338,7 +336,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                                             new MerkleDbDataSourceBuilder(tableConfig, platformConfiguration);
                                     final var virtualMap = new VirtualMap<>(
                                             label, keySerializer, valueSerializer, dsBuilder, platformConfiguration);
-                                    virtualMaps.add(virtualMap);
                                     return virtualMap;
                                 },
                                 // Register the metrics for the virtual map if they are available.
@@ -362,11 +359,5 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
         logger.info("  Removing states {} from service {}", statesToRemove, serviceName);
         final var newStates = new FilteredWritableStates(writableStates, remainingStates);
         return new RedefinedWritableStates(writableStates, newStates);
-    }
-
-    public void stop() {
-        for (final var virtualMap : virtualMaps) {
-            virtualMap.stop();
-        }
     }
 }
