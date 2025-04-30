@@ -4,8 +4,6 @@ package com.hedera.services.bdd.suites.contract.precompile;
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asTokenString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.numberOfLongZero;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.changeFromSnapshot;
 import static com.hedera.services.bdd.spec.keys.KeyShape.CONTRACT;
@@ -200,8 +198,8 @@ public class CreatePrecompileSuite {
                         sourcing(() ->
                                 getAccountInfo(ACCOUNT_TO_ASSOCIATE).logged().hasTokenRelationShipCount(1)),
                         sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
-                                        .setShardNum(SHARD)
-                                        .setRealmNum(REALM)
+                                        .setShardNum(spec.shard())
+                                        .setRealmNum(spec.realm())
                                         .setTokenNum(createTokenNum.get())
                                         .build()))
                                 .logged()
@@ -288,8 +286,8 @@ public class CreatePrecompileSuite {
                                     TransactionRecordAsserts.recordWith().status(SUCCESS)));
 
                     final var nftInfo = getTokenInfo(asTokenString(TokenID.newBuilder()
-                                    .setShardNum(SHARD)
-                                    .setRealmNum(REALM)
+                                    .setShardNum(spec.shard())
+                                    .setRealmNum(spec.realm())
                                     .setTokenNum(createdNftTokenNum.get())
                                     .build()))
                             .hasAutoRenewAccount(ACCOUNT)
@@ -360,15 +358,15 @@ public class CreatePrecompileSuite {
                                     createTokenNum.set(numberOfLongZero(HexFormat.of()
                                             .parseHex(res.toString().substring(2))));
                                 })
-                                .hasKnownStatus(SUCCESS))),
-                sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
-                                .setShardNum(SHARD)
-                                .setRealmNum(REALM)
-                                .setTokenNum(createTokenNum.get())
-                                .build()))
-                        .logged()
-                        .hasAutoRenewAccount(ACCOUNT)
-                        .hasPauseStatus(TokenPauseStatus.Unpaused)));
+                                .hasKnownStatus(SUCCESS),
+                        sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
+                                        .setShardNum(spec.shard())
+                                        .setRealmNum(spec.realm())
+                                        .setTokenNum(createTokenNum.get())
+                                        .build()))
+                                .logged()
+                                .hasAutoRenewAccount(ACCOUNT)
+                                .hasPauseStatus(TokenPauseStatus.Unpaused)))));
     }
 
     // TEST-003
@@ -434,8 +432,8 @@ public class CreatePrecompileSuite {
                                             .build()),
                                     0);
                     final var tokenInfo = getTokenInfo(asTokenString(TokenID.newBuilder()
-                                    .setShardNum(SHARD)
-                                    .setRealmNum(REALM)
+                                    .setShardNum(spec.shard())
+                                    .setRealmNum(spec.realm())
                                     .setTokenNum(createdTokenNum.get())
                                     .build()))
                             .hasTokenType(TokenType.NON_FUNGIBLE_UNIQUE)
@@ -531,22 +529,22 @@ public class CreatePrecompileSuite {
                         sourcing(() -> getAccountBalance(ACCOUNT)
                                 .hasTokenBalance(
                                         asTokenString(TokenID.newBuilder()
-                                                .setShardNum(SHARD)
-                                                .setRealmNum(REALM)
+                                                .setShardNum(spec.shard())
+                                                .setRealmNum(spec.realm())
                                                 .setTokenNum(createdTokenNum.get())
                                                 .build()),
                                         20)),
                         sourcing(() -> getAccountBalance(TOKEN_CREATE_CONTRACT)
                                 .hasTokenBalance(
                                         asTokenString(TokenID.newBuilder()
-                                                .setShardNum(SHARD)
-                                                .setRealmNum(REALM)
+                                                .setShardNum(spec.shard())
+                                                .setRealmNum(spec.realm())
                                                 .setTokenNum(createdTokenNum.get())
                                                 .build()),
                                         10)),
                         sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
-                                        .setShardNum(SHARD)
-                                        .setRealmNum(REALM)
+                                        .setShardNum(spec.shard())
+                                        .setRealmNum(spec.realm())
                                         .setTokenNum(createdTokenNum.get())
                                         .build()))
                                 .hasTokenType(TokenType.FUNGIBLE_COMMON)
@@ -612,34 +610,36 @@ public class CreatePrecompileSuite {
                         TransactionRecordAsserts.recordWith().status(SUCCESS),
                         TransactionRecordAsserts.recordWith().status(SUCCESS),
                         TransactionRecordAsserts.recordWith().status(SUCCESS)),
-                sourcing(() -> getAccountBalance(TOKEN_CREATE_CONTRACT)
-                        .hasTokenBalance(
-                                asTokenString(TokenID.newBuilder()
-                                        .setShardNum(SHARD)
-                                        .setRealmNum(REALM)
+                withOpContext((spec, log) -> allRunFor(
+                        spec,
+                        getAccountBalance(TOKEN_CREATE_CONTRACT)
+                                .hasTokenBalance(
+                                        asTokenString(TokenID.newBuilder()
+                                                .setShardNum(spec.shard())
+                                                .setRealmNum(spec.realm())
+                                                .setTokenNum(createdTokenNum.get())
+                                                .build()),
+                                        0),
+                        getTokenInfo(asTokenString(TokenID.newBuilder()
+                                        .setShardNum(spec.shard())
+                                        .setRealmNum(spec.realm())
                                         .setTokenNum(createdTokenNum.get())
-                                        .build()),
-                                0)),
-                sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
-                                .setShardNum(SHARD)
-                                .setRealmNum(REALM)
-                                .setTokenNum(createdTokenNum.get())
-                                .build()))
-                        .hasTokenType(TokenType.NON_FUNGIBLE_UNIQUE)
-                        .hasSymbol(TOKEN_SYMBOL)
-                        .hasName(TOKEN_NAME)
-                        .hasDecimals(0)
-                        .hasTotalSupply(0)
-                        .hasEntityMemo(MEMO)
-                        .hasTreasury(TOKEN_CREATE_CONTRACT)
-                        .hasAutoRenewAccount(ACCOUNT)
-                        .hasAutoRenewPeriod(AUTO_RENEW_PERIOD)
-                        .hasSupplyType(TokenSupplyType.INFINITE)
-                        .searchKeysGlobally()
-                        .hasAdminKey(TOKEN_CREATE_CONTRACT_AS_KEY)
-                        .hasSupplyKey(TOKEN_CREATE_CONTRACT_AS_KEY)
-                        .hasPauseStatus(TokenPauseStatus.PauseNotApplicable)
-                        .logged()));
+                                        .build()))
+                                .hasTokenType(TokenType.NON_FUNGIBLE_UNIQUE)
+                                .hasSymbol(TOKEN_SYMBOL)
+                                .hasName(TOKEN_NAME)
+                                .hasDecimals(0)
+                                .hasTotalSupply(0)
+                                .hasEntityMemo(MEMO)
+                                .hasTreasury(TOKEN_CREATE_CONTRACT)
+                                .hasAutoRenewAccount(ACCOUNT)
+                                .hasAutoRenewPeriod(AUTO_RENEW_PERIOD)
+                                .hasSupplyType(TokenSupplyType.INFINITE)
+                                .searchKeysGlobally()
+                                .hasAdminKey(TOKEN_CREATE_CONTRACT_AS_KEY)
+                                .hasSupplyKey(TOKEN_CREATE_CONTRACT_AS_KEY)
+                                .hasPauseStatus(TokenPauseStatus.PauseNotApplicable)
+                                .logged())));
     }
 
     @HapiTest
@@ -665,36 +665,36 @@ public class CreatePrecompileSuite {
                                     createdTokenNum.set(numberOfLongZero(HexFormat.of()
                                             .parseHex(res.toString().substring(2))));
                                 })
-                                .hasKnownStatus(SUCCESS))),
-                getTxnRecord(FIRST_CREATE_TXN).andAllChildRecords().logged(),
-                getAccountBalance(ACCOUNT).logged(),
-                getAccountBalance(TOKEN_CREATE_CONTRACT).logged(),
-                getContractInfo(TOKEN_CREATE_CONTRACT).logged(),
-                childRecordsCheck(
-                        FIRST_CREATE_TXN,
-                        ResponseCodeEnum.SUCCESS,
-                        TransactionRecordAsserts.recordWith().status(SUCCESS)),
-                sourcing(() -> getAccountBalance(TOKEN_CREATE_CONTRACT)
-                        .hasTokenBalance(
-                                asTokenString(TokenID.newBuilder()
-                                        .setShardNum(SHARD)
-                                        .setRealmNum(REALM)
+                                .hasKnownStatus(SUCCESS),
+                        getTxnRecord(FIRST_CREATE_TXN).andAllChildRecords().logged(),
+                        getAccountBalance(ACCOUNT).logged(),
+                        getAccountBalance(TOKEN_CREATE_CONTRACT).logged(),
+                        getContractInfo(TOKEN_CREATE_CONTRACT).logged(),
+                        childRecordsCheck(
+                                FIRST_CREATE_TXN,
+                                ResponseCodeEnum.SUCCESS,
+                                TransactionRecordAsserts.recordWith().status(SUCCESS)),
+                        sourcing(() -> getAccountBalance(TOKEN_CREATE_CONTRACT)
+                                .hasTokenBalance(
+                                        asTokenString(TokenID.newBuilder()
+                                                .setShardNum(spec.shard())
+                                                .setRealmNum(spec.realm())
+                                                .setTokenNum(createdTokenNum.get())
+                                                .build()),
+                                        200)),
+                        sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
+                                        .setShardNum(spec.shard())
+                                        .setRealmNum(spec.realm())
                                         .setTokenNum(createdTokenNum.get())
-                                        .build()),
-                                200)),
-                sourcing(() -> getTokenInfo(asTokenString(TokenID.newBuilder()
-                                .setShardNum(SHARD)
-                                .setRealmNum(REALM)
-                                .setTokenNum(createdTokenNum.get())
-                                .build()))
-                        .hasTokenType(TokenType.FUNGIBLE_COMMON)
-                        .hasDecimals(8)
-                        .hasTotalSupply(200)
-                        .hasTreasury(TOKEN_CREATE_CONTRACT)
-                        .hasAutoRenewPeriod(0L)
-                        .searchKeysGlobally()
-                        .hasPauseStatus(TokenPauseStatus.PauseNotApplicable)
-                        .logged()));
+                                        .build()))
+                                .hasTokenType(TokenType.FUNGIBLE_COMMON)
+                                .hasDecimals(8)
+                                .hasTotalSupply(200)
+                                .hasTreasury(TOKEN_CREATE_CONTRACT)
+                                .hasAutoRenewPeriod(0L)
+                                .searchKeysGlobally()
+                                .hasPauseStatus(TokenPauseStatus.PauseNotApplicable)
+                                .logged()))));
     }
 
     // TEST-007 & TEST-016
@@ -897,7 +897,8 @@ public class CreatePrecompileSuite {
                                         TOKEN_CREATE_CONTRACT,
                                         CREATE_NFT_WITH_KEYS_AND_EXPIRY_FUNCTION,
                                         HapiParserUtil.asHeadlongAddress((byte[]) ArrayUtils.toPrimitive(
-                                                Utils.asSolidityAddress(SHARD, REALM, 999_999_999L))),
+                                                Utils.asSolidityAddress(
+                                                        (int) spec.shard(), spec.realm(), 999_999_999L))),
                                         spec.registry()
                                                 .getKey(ED25519KEY)
                                                 .getEd25519()
@@ -1066,24 +1067,24 @@ public class CreatePrecompileSuite {
                         getAccountBalance(RECIPIENT)
                                 .hasTokenBalance(
                                         asTokenString(TokenID.newBuilder()
-                                                .setShardNum(SHARD)
-                                                .setRealmNum(REALM)
+                                                .setShardNum(spec.shard())
+                                                .setRealmNum(spec.realm())
                                                 .setTokenNum(createTokenNum.get())
                                                 .build()),
                                         0L),
                         getAccountBalance(SECOND_RECIPIENT)
                                 .hasTokenBalance(
                                         asTokenString(TokenID.newBuilder()
-                                                .setShardNum(SHARD)
-                                                .setRealmNum(REALM)
+                                                .setShardNum(spec.shard())
+                                                .setRealmNum(spec.realm())
                                                 .setTokenNum(createTokenNum.get())
                                                 .build()),
                                         1L),
                         getAccountBalance(ACCOUNT)
                                 .hasTokenBalance(
                                         asTokenString(TokenID.newBuilder()
-                                                .setShardNum(SHARD)
-                                                .setRealmNum(REALM)
+                                                .setShardNum(spec.shard())
+                                                .setRealmNum(spec.realm())
                                                 .setTokenNum(createTokenNum.get())
                                                 .build()),
                                         199L),
