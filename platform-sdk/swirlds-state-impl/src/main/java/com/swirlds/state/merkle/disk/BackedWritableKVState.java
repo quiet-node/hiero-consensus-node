@@ -103,9 +103,4 @@ public final class BackedWritableKVState<K, V> extends WritableKVStateBase<K, V>
         logMapGetSize(getStateKey(), size);
         return size;
     }
-
-    @Override
-    public void commit() {
-        super.commit();
-    }
 }
