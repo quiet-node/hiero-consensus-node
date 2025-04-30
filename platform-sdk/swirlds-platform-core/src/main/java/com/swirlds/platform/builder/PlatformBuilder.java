@@ -526,6 +526,6 @@ public final class PlatformBuilder {
         if (!initialState.isClosed()) {
             initialState.close();
         }
-        //        initialState.delete();
+        initialState.delete();
     }
 }

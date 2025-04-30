@@ -406,7 +406,7 @@ public class SignedState implements SignedStateInfo {
      * that, this method must be synchronized.
      * </p>
      */
-    public synchronized void delete() {
+    synchronized void delete() {
         if (reservations.isDestroyed()) {
             if (!deleted) {
                 try {
@@ -729,11 +729,5 @@ public class SignedState implements SignedStateInfo {
     @Nullable
     public SignedStateHistory getHistory() {
         return history;
-    }
-
-    public void stop() {
-        state.release();
-        //        registryRecord.release();
-        state = null;
     }
 }

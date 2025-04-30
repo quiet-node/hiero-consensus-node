@@ -347,7 +347,7 @@ public final class StartupStateUtils {
      * @param addressBook the current address book
      * @param appVersion the software version of the app
      */
-    public static void initGenesisState(
+    private static void initGenesisState(
             final Configuration configuration,
             final State state,
             final PlatformStateFacade platformStateFacade,

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform;
 
+import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.platform.system.InitTrigger.GENESIS;
 import static com.swirlds.platform.system.InitTrigger.RESTART;
 import static org.hiero.base.concurrent.interrupt.Uninterruptable.abortAndThrowIfInterrupted;
@@ -85,11 +86,11 @@ public final class StateInitializer {
         signedState.pruneInvalidSignatures();
 
         final StateConfig stateConfig = platformContext.getConfiguration().getConfigData(StateConfig.class);
-        //        logger.info(
-        //                STARTUP.getMarker(),
-        //                """
-        //                        The platform is using the following initial state:
-        //                        {}""",
-        //                platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
+        logger.info(
+                STARTUP.getMarker(),
+                """
+                                The platform is using the following initial state:
+                                {}""",
+                platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
     }
 }

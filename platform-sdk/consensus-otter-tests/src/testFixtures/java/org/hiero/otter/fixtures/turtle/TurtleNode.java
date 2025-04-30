@@ -5,7 +5,6 @@ import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticT
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.getMetricsProvider;
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.setupGlobalMetrics;
 import static com.swirlds.platform.state.signed.StartupStateUtils.getInitialState;
-import static com.swirlds.platform.state.signed.StartupStateUtils.initGenesisState;
 import static java.util.Objects.requireNonNull;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.APP_NAME;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.SWIRLD_NAME;
@@ -28,15 +27,11 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
-import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.listeners.PlatformStatusChangeListener;
-import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
-import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
@@ -101,17 +96,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
-    private HashedReservedSignedState reservedState;
-    private ReservedSignedState initialState;
-    private State state;
-    private MerkleNodeState rootNode;
-    private PlatformComponentBuilder platformComponentBuilder;
-    private PlatformStateModifier platformStateModifier;
-    private PlatformBuilder platformBuilder;
-    private PlatformStateFacade platformStateFacade;
-    private TurtleTestingToolState turtleTestingToolState;
-
-    private PlatformBuildingBlocks platformBuildingBlocks;
 
     public TurtleNode(
             @NonNull final Randotron randotron,
@@ -307,9 +291,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-            //            platformWiring.stop();
             platform.stop();
-            //            platform.getNotificationEngine().unregisterAll();
             platformStatus = null;
             platform = null;
             platformWiring = null;
@@ -396,26 +378,5 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @Override
     public void stop() throws InterruptedException {
         doShutdownNode();
-    }
-
-    private ReservedSignedState buildGenesisState(
-            @NonNull final AddressBook addressBook,
-            @NonNull final SemanticVersion appVersion,
-            @NonNull final MerkleNodeState stateRoot,
-            @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final PlatformContext platformContext) {
-        initGenesisState(platformContext.getConfiguration(), stateRoot, platformStateFacade, addressBook, appVersion);
-
-        final SignedState signedState = new SignedState(
-                platformContext.getConfiguration(),
-                CryptoStatic::verifySignature,
-                stateRoot,
-                "genesis state",
-                false,
-                false,
-                false,
-                platformStateFacade);
-        signedState.init(platformContext);
-        return signedState.reserve("initial reservation on genesis state");
     }
 }

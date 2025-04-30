@@ -85,11 +85,4 @@ public class SingletonNode<T> extends PartialBinaryMerkleInternal implements Lab
         // Log to transaction state log, what was written
         logSingletonWrite(getLabel(), value);
     }
-
-    public void clean() {
-        var left = getLeft();
-        left = null;
-        var right = getRight();
-        right = null;
-    }
 }

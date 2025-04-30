@@ -96,7 +96,6 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     }
 
     public void destroy() {
-        this.clean();
         this.destroyNode();
         this.unregisterService("PlatformStateService");
         this.unregisterService("RosterService");

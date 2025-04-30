@@ -489,11 +489,4 @@ public final class VirtualMap<K extends VirtualKey, V extends VirtualValue> exte
     public void warm(final K key) {
         root.warm(key);
     }
-
-    public void stop() {
-        final var child = getChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX);
-        if (child instanceof VirtualRootNode) {
-            ((VirtualRootNode<K, V>) child).stop();
-        }
-    }
 }

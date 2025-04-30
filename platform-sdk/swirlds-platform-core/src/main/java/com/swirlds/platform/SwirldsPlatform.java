@@ -428,7 +428,6 @@ public class SwirldsPlatform implements Platform {
         platformWiring.stop();
         //        platformWiring.stopGossip();
 
-
         notificationEngine.unregisterAll();
         notificationEngine.shutdown();
 
@@ -436,7 +435,6 @@ public class SwirldsPlatform implements Platform {
         latestImmutableStateNexus.clear();
         swirldStateManager.stop();
 
-        initialState.stop();
         initialState = null;
 
         final Metrics metrics = platformContext.getMetrics();
