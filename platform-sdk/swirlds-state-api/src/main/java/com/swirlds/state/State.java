@@ -28,6 +28,7 @@ public interface State extends FastCopyable, Hashable {
     /**
      * Initializes the state with the given parameters.
      * @param time The time provider.
+     * @param configuration The platform configuration.
      * @param metrics The metrics provider.
      * @param merkleCryptography The merkle cryptography provider.
      * @param roundSupplier The round supplier.
