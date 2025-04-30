@@ -20,19 +20,22 @@ import org.hiero.consensus.model.roster.AddressBook;
 import org.hiero.consensus.roster.RosterRetriever;
 
 public class GuiEventProvider {
+    private final GraphVisualizer graphVisualizer;
     private final Consensus consensus;
     private final SimpleLinker linker;
     private final Configuration configuration;
 
     /**
-     * Creates an empty instance
-     *
      * @param configuration this node's configuration
      * @param addressBook   the network's address book
      */
-    public GuiEventProvider(@NonNull final Configuration configuration, @NonNull final AddressBook addressBook) {
+    public GuiEventProvider(
+            @NonNull final Configuration configuration,
+            @NonNull final AddressBook addressBook,
+            @NonNull final GraphVisualizer graphVisualizer) {
 
         this.configuration = Objects.requireNonNull(configuration);
+        this.graphVisualizer = Objects.requireNonNull(graphVisualizer);
         final PlatformContext platformContext = PlatformContext.create(configuration);
 
         this.consensus = new ConsensusImpl(
@@ -41,24 +44,25 @@ public class GuiEventProvider {
                 new SimpleLinker(configuration.getConfigData(EventConfig.class).getAncientMode());
     }
 
-    /**
-     * Handle a preconsensus event. Called after events are released from the orphan buffer.
-     *
-     * @param event the event to handle
-     */
-    public void handlePreconsensusEvent(@NonNull final PlatformEvent event) {
+    public void visualizeConsensus(@NonNull final PlatformEvent event) {
         // since the gui will modify the event, we need to copy it
         final EventImpl eventImpl = linker.linkEvent(event.copyGossipedData());
         if (eventImpl == null) {
-            return;
+            throw new IllegalArgumentException("Event is not linkable");
         }
         eventImpl.getBaseEvent().setNGen(event.getNGen());
 
         final List<ConsensusRound> rounds = consensus.addEvent(eventImpl);
 
+        graphVisualizer.displayEvent(
+                GuiEvent.fromEventImpl(eventImpl)
+        );
+
         if (rounds.isEmpty()) {
             return;
         }
+
+        graphVisualizer.displayEvents(linker.getNonAncientEvents().stream().map(GuiEvent::fromEventImpl).toList());
 
         linker.setNonAncientThreshold(rounds.getLast().getEventWindow().getAncientThreshold());
     }
