@@ -1,4 +1,4 @@
-package com.swirlds.platform.test.fixtures.fxui;
+package com.swirlds.demo.hello;
 
 import com.hedera.hapi.platform.event.EventDescriptor;
 import com.hedera.pbj.runtime.io.buffer.Bytes;

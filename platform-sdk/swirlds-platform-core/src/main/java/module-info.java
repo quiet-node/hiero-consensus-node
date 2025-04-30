@@ -61,7 +61,7 @@ module com.swirlds.platform.core {
             com.swirlds.platform.core.test.fixtures,
             com.fasterxml.jackson.core,
             com.fasterxml.jackson.databind,
-            com.swirlds.platform.test.gui;
+            com.swirlds.platform.test.gui, com.swirlds.demo.hello;
     exports com.swirlds.platform.swirldapp to
             com.swirlds.platform.test;
     exports com.swirlds.platform.consensus to
@@ -79,7 +79,7 @@ module com.swirlds.platform.core {
     exports com.swirlds.platform.event.linking to
             com.swirlds.common,
             com.swirlds.platform.test,
-            com.swirlds.platform.core.test.fixtures;
+            com.swirlds.platform.core.test.fixtures, com.swirlds.demo.hello;
     exports com.swirlds.platform.state.notifications to
             com.swirlds.platform.test;
     exports com.swirlds.platform.state.iss to
