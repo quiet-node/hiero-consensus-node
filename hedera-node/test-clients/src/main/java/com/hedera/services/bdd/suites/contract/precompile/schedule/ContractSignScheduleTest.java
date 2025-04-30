@@ -2,7 +2,6 @@
 package com.hedera.services.bdd.suites.contract.precompile.schedule;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
-import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.keys.KeyShape.ED25519;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getScheduleInfo;
@@ -207,10 +206,11 @@ public class ContractSignScheduleTest {
         @HapiTest
         @DisplayName("Signature executes schedule transaction")
         final Stream<DynamicTest> authorizeScheduleWithContract() {
-            var scheduleAddress = asEntityString(scheduleID_E.get().getScheduleNum());
             return hapiTest(
                     getScheduleInfo(SCHEDULE_E).isNotExecuted(),
-                    contractCallWithFunctionAbi(scheduleAddress, getABIFor(FUNCTION, SIGN_SCHEDULE, IHRC755))
+                    contractCallWithFunctionAbi(
+                                    String.valueOf(scheduleID_E.get().getScheduleNum()),
+                                    getABIFor(FUNCTION, SIGN_SCHEDULE, IHRC755))
                             .payingWith(SENDER)
                             .gas(1_000_000),
                     getScheduleInfo(SCHEDULE_E).isExecuted());
@@ -219,10 +219,11 @@ public class ContractSignScheduleTest {
         @HapiTest
         @DisplayName("Signature does not executes schedule transaction")
         final Stream<DynamicTest> authorizeScheduleWithContractNoExec() {
-            var scheduleAddress = "0.0." + scheduleID_F.get().getScheduleNum();
             return hapiTest(
                     getScheduleInfo(SCHEDULE_F).isNotExecuted(),
-                    contractCallWithFunctionAbi(scheduleAddress, getABIFor(FUNCTION, SIGN_SCHEDULE, IHRC755))
+                    contractCallWithFunctionAbi(
+                                    String.valueOf(scheduleID_F.get().getScheduleNum()),
+                                    getABIFor(FUNCTION, SIGN_SCHEDULE, IHRC755))
                             .payingWith(SENDER)
                             .gas(1_000_000),
                     getScheduleInfo(SCHEDULE_F).isNotExecuted());
