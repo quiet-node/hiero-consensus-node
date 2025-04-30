@@ -538,7 +538,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
             final var md = stateMetadata.get(stateKey);
             if (md == null || !md.stateDefinition().singleton()) {
-//                throw new IllegalArgumentException("Unknown singleton state key '" + stateKey + "'");
+                //                throw new IllegalArgumentException("Unknown singleton state key '" + stateKey + "'");
             }
 
             final var node = findNode(md);

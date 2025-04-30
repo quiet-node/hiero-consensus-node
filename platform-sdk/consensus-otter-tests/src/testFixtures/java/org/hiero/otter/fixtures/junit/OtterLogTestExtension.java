@@ -124,7 +124,7 @@ public class OtterLogTestExtension implements InvocationInterceptor, ParameterRe
                 (TestEnvironment) extensionContext.getStore(EXTENSION_NAMESPACE).remove(ENVIRONMENT_KEY);
         if (testEnvironment != null) {
             try {
-//                testEnvironment.destroy();
+                //                testEnvironment.destroy();
                 testEnvironment.stop();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);

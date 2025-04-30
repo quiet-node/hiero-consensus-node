@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.wiring.components;
 
-import com.swirlds.component.framework.model.DeterministicWiringModel;
 import com.swirlds.component.framework.model.WiringModel;
-import com.swirlds.component.framework.model.internal.deterministic.DeterministicTaskScheduler;
 import com.swirlds.component.framework.schedulers.TaskScheduler;
 import com.swirlds.component.framework.schedulers.builders.TaskSchedulerType;
 import com.swirlds.component.framework.wires.input.BindableInputWire;

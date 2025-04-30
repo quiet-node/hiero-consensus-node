@@ -10,7 +10,6 @@ import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.OtterTest;
 import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
-import org.junit.jupiter.api.Disabled;
 
 class BirthRoundMigrationTest {
 
@@ -21,8 +20,9 @@ class BirthRoundMigrationTest {
     private static final String NEW_VERSION = "1.0.1";
 
     @OtterTest
-    @Disabled
+    //    @Disabled
     void testBirthRoundMigration(TestEnvironment env) throws InterruptedException {
+        //        env.start();
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
 

@@ -141,9 +141,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
         }
 
         @Override
-        public void stop() {
-
-        }
+        public void stop() {}
 
         @Override
         public boolean createTransaction(@NonNull byte[] transaction) {

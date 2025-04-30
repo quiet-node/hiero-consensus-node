@@ -103,13 +103,13 @@ public class DefaultLatestCompleteStateNexus implements LatestCompleteStateNexus
 
     @Override
     public void delete() {
-//        currentState.close();
+        //        currentState.close();
         currentState.delete();
     }
 
     @Override
     public void stop() {
-//        currentState.close();
+        //        currentState.close();
         currentState.delete();
     }
 }

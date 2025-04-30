@@ -238,7 +238,7 @@ public class SwirldStateManager implements FreezePeriodChecker {
 
     public void stop() {
         stateRef.get().release();
-//        stateRef.get().
+        //        stateRef.get().
         latestImmutableState.get().release();
     }
 }

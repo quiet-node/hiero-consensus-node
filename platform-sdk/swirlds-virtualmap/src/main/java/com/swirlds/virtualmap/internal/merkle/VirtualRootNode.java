@@ -1428,14 +1428,14 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
     @Override
     public TeacherTreeView<Long> buildTeacherView(final ReconnectConfig reconnectConfig) {
         return switch (virtualMapConfig.reconnectMode()) {
-            case VirtualMapReconnectMode.PUSH -> new TeacherPushVirtualTreeView<>(
-                    getStaticThreadManager(), reconnectConfig, this, state, pipeline);
-            case VirtualMapReconnectMode.PULL_TOP_TO_BOTTOM -> new TeacherPullVirtualTreeView<>(
-                    getStaticThreadManager(), reconnectConfig, this, state, pipeline);
-            case VirtualMapReconnectMode.PULL_TWO_PHASE_PESSIMISTIC -> new TeacherPullVirtualTreeView<>(
-                    getStaticThreadManager(), reconnectConfig, this, state, pipeline);
-            default -> throw new UnsupportedOperationException(
-                    "Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
+            case VirtualMapReconnectMode.PUSH ->
+                new TeacherPushVirtualTreeView<>(getStaticThreadManager(), reconnectConfig, this, state, pipeline);
+            case VirtualMapReconnectMode.PULL_TOP_TO_BOTTOM ->
+                new TeacherPullVirtualTreeView<>(getStaticThreadManager(), reconnectConfig, this, state, pipeline);
+            case VirtualMapReconnectMode.PULL_TWO_PHASE_PESSIMISTIC ->
+                new TeacherPullVirtualTreeView<>(getStaticThreadManager(), reconnectConfig, this, state, pipeline);
+            default ->
+                throw new UnsupportedOperationException("Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
         };
     }
 
@@ -1522,8 +1522,15 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
                 originalState.getLastLeafPath(),
                 reconnectFlusher);
         return switch (virtualMapConfig.reconnectMode()) {
-            case VirtualMapReconnectMode.PUSH -> new LearnerPushVirtualTreeView<>(
-                    reconnectConfig, this, originalMap.records, originalState, reconnectState, nodeRemover, mapStats);
+            case VirtualMapReconnectMode.PUSH ->
+                new LearnerPushVirtualTreeView<>(
+                        reconnectConfig,
+                        this,
+                        originalMap.records,
+                        originalState,
+                        reconnectState,
+                        nodeRemover,
+                        mapStats);
             case VirtualMapReconnectMode.PULL_TOP_TO_BOTTOM -> {
                 final NodeTraversalOrder topToBottom = new TopToBottomTraversalOrder();
                 yield new LearnerPullVirtualTreeView<>(
@@ -1548,8 +1555,8 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
                         twoPhasePessimistic,
                         mapStats);
             }
-            default -> throw new UnsupportedOperationException(
-                    "Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
+            default ->
+                throw new UnsupportedOperationException("Unknown reconnect mode: " + virtualMapConfig.reconnectMode());
         };
     }
 
@@ -1751,22 +1758,22 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
     }
 
     public void stop() {
-//        destroyNode();
-        pipeline.terminate();
-//        try {
-//            dataSource.close();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//        cache.deletedLeaves();
+        //        destroyNode();
+        //        pipeline.terminate();
+        //        try {
+        //            dataSource.close();
+        //        } catch (IOException e) {
+        //            throw new RuntimeException(e);
+        //        }
+        //        cache.deletedLeaves();
 
-        hasher.shutdown();
-//        hasher.terminate();
-//        cache.release();
+        //        hasher.shutdown();
+        //        hasher.terminate();
+        //        cache.release();
 
-//        flush();
+        //        flush();
 
-//        flushLatch.countDown();
+        //        flushLatch.countDown();
 
     }
 }

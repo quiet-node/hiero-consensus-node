@@ -3,7 +3,6 @@ package com.swirlds.component.framework.model;
 
 import com.swirlds.base.time.Time;
 import com.swirlds.component.framework.model.internal.deterministic.DeterministicHeartbeatScheduler;
-import com.swirlds.component.framework.model.internal.deterministic.DeterministicTaskScheduler;
 import com.swirlds.component.framework.model.internal.deterministic.DeterministicTaskSchedulerBuilder;
 import com.swirlds.component.framework.schedulers.builders.TaskSchedulerBuilder;
 import com.swirlds.component.framework.wires.output.NoOpOutputWire;
@@ -137,7 +136,6 @@ public class DeterministicWiringModel extends TraceableWiringModel {
     public void stop() {
         throwIfNotStarted();
         heartbeatScheduler.stop();
-
 
         currentCycleWork.clear();
         nextCycleWork.clear();

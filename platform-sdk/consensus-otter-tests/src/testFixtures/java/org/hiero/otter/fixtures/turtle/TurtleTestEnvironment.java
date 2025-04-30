@@ -47,11 +47,9 @@ public class TurtleTestEnvironment implements TestEnvironment {
     static final Duration AVERAGE_NETWORK_DELAY = Duration.ofMillis(200);
     static final Duration STANDARD_DEVIATION_NETWORK_DELAY = Duration.ofMillis(10);
 
-    private TurtleNetwork network;
-    private TurtleTransactionGenerator generator;
+    private final TurtleNetwork network;
+    private final TurtleTransactionGenerator generator;
     private final TurtleTimeManager timeManager;
-    private final Randotron randotron;
-    private final Path rootOutputDirectory;
     private InMemoryAppender inMemoryAppender;
 
     /**
@@ -81,19 +79,20 @@ public class TurtleTestEnvironment implements TestEnvironment {
             loggerContext.updateLoggers();
         }
 
-        randotron = Randotron.create();
+        final Randotron randotron = Randotron.create();
 
         try {
             final ConstructableRegistry registry = ConstructableRegistry.getInstance();
             registry.registerConstructables("org.hiero");
             registry.registerConstructables("com.swirlds");
+            registerMerkleStateRootClassIds();
         } catch (final ConstructableRegistryException e) {
             throw new RuntimeException(e);
         }
 
         final FakeTime time = new FakeTime(randotron.nextInstant(), Duration.ZERO);
 
-        rootOutputDirectory = Path.of("build", "turtle");
+        final Path rootOutputDirectory = Path.of("build", "turtle");
         try {
             if (Files.exists(rootOutputDirectory)) {
                 FileUtils.deleteDirectory(rootOutputDirectory);

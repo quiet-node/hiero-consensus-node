@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.turtle.runner;
 
-import static org.junit.jupiter.api.io.CleanupMode.NEVER;
-
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusRoundValidator;
 import com.swirlds.platform.test.fixtures.turtle.runner.Turtle;
 import com.swirlds.platform.test.fixtures.turtle.runner.TurtleBuilder;
 import java.nio.file.Path;
 import java.time.Duration;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

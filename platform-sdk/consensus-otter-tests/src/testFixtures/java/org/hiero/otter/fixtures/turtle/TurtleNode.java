@@ -4,9 +4,7 @@ package org.hiero.otter.fixtures.turtle;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.getMetricsProvider;
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.setupGlobalMetrics;
-import static com.swirlds.platform.state.signed.ReservedSignedState.createNullReservation;
 import static com.swirlds.platform.state.signed.StartupStateUtils.getInitialState;
-import static com.swirlds.platform.state.signed.StartupStateUtils.initGenesisState;
 import static java.util.Objects.requireNonNull;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.APP_NAME;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.SWIRLD_NAME;
@@ -29,16 +27,11 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
-import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.listeners.PlatformStatusChangeListener;
-import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
-import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.state.signed.StartupStateUtils;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
@@ -53,7 +46,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -100,6 +92,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     private DeterministicWiringModel model;
     private Platform platform;
+    private PlatformWiring platformWiring;
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
@@ -287,11 +280,24 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private void doShutdownNode() throws InterruptedException {
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
-            getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-            platform.stop();
-            TurtleTestingToolState.closeState();
+            //            getMetricsProvider().removePlatformMetrics(platform.getSelfId());
+            //            platform.stop();
+            //            platformWiring.stop();
+            //            platform.getNotificationEngine().unregisterAll();
+            //            platformStatus = null;
+            //            platform = null;
+            //            platformWiring = null;
+            //            model = null;
+            //            TurtleTestingToolState.closeState();
+            //            lifeCycle = LifeCycle.SHUTDOWN;
+
+            platformWiring.stop();
+            platform.getNotificationEngine().unregisterAll();
+            platformStatus = null;
+            platform = null;
+            platformWiring = null;
+            model = null;
         }
-        lifeCycle = LifeCycle.SHUTDOWN;
     }
 
     private void doStartNode() {
@@ -314,7 +320,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         MerkleDb.resetDefaultInstancePath();
         final Metrics metrics = getMetricsProvider().createPlatformMetrics(selfId);
         final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
-
         final RecycleBin recycleBin = RecycleBin.create(
                 metrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
 
@@ -331,7 +336,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
-
         final long round = platformStateFacade.roundOf(state);
         final PlatformBuilder platformBuilder = PlatformBuilder.create(
                         APP_NAME,
@@ -358,6 +362,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         gossip.provideIntakeEventCounter(platformBuildingBlocks.intakeEventCounter());
 
         platformComponentBuilder.withMetricsDocumentationEnabled(false).withGossip(network.getGossipInstance(selfId));
+
+        platformWiring = platformBuildingBlocks.platformWiring();
 
         platform = platformComponentBuilder.build();
         platformStatus = PlatformStatus.STARTING_UP;

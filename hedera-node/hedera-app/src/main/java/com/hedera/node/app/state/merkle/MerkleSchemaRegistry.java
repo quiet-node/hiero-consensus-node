@@ -365,7 +365,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
     }
 
     public void stop() {
-        for(final var virtualMap: virtualMaps) {
+        for (final var virtualMap : virtualMaps) {
             virtualMap.stop();
         }
     }

@@ -121,7 +121,8 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
     @Override
     public void start(@NonNull final Duration timeout) {
         if (state != State.SHUTDOWN && state != State.INIT) {
-            throw new IllegalStateException("Cannot start the network more than once or if it was not previously shut down.");
+            throw new IllegalStateException(
+                    "Cannot start the network more than once or if it was not previously shut down.");
         }
 
         log.info("Starting network...");

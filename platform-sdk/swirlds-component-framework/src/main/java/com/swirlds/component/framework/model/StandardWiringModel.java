@@ -232,7 +232,7 @@ public class StandardWiringModel extends TraceableWiringModel {
             anchor.stop();
         }
 
-        defaultPool.shutdownNow();
+        //        defaultPool.shutdownNow();
     }
 
     /**

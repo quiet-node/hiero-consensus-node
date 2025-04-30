@@ -38,6 +38,7 @@ public final class ServicesRegistryImpl implements ServicesRegistry {
      * affordance that we have no example of needing.
      */
     private final Configuration bootstrapConfig;
+
     private List<MerkleSchemaRegistry> schemaRegistries = new ArrayList<>();
 
     /**

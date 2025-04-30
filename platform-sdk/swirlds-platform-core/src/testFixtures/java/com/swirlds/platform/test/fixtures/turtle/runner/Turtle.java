@@ -17,7 +17,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -138,9 +137,9 @@ public class Turtle {
             node.stop();
         }
 
-//        ForkJoinPool.commonPool().shutdownNow();
+        //        ForkJoinPool.commonPool().shutdownNow();
         TurtleTestingToolState.closeState();
-//        StaticPlatformBuilder.stop();
+        //        StaticPlatformBuilder.stop();
     }
 
     /**
@@ -248,7 +247,7 @@ public class Turtle {
      * is safe to run them in parallel.
      */
     private void tickAllNodes() {
-//        final List<Future<Void>> futures = new ArrayList<>();
+        //        final List<Future<Void>> futures = new ArrayList<>();
 
         // Iteration order over nodes does not need to be deterministic -- nodes are not permitted to communicate with
         // each other during the tick phase, and they run on separate threads to boot.
@@ -274,12 +273,12 @@ public class Turtle {
 
     public void stopAllNodes() {
         network.clear();
-//        final List<Future<Void>> futures = new ArrayList<>();
+        //        final List<Future<Void>> futures = new ArrayList<>();
 
         // Iteration order over nodes does not need to be deterministic -- nodes are not permitted to communicate with
         // each other during the tick phase, and they run on separate threads to boot.
 
-//        threadPool.shutdownNow();
+        //        threadPool.shutdownNow();
 
         for (final Future future : futures) {
             future.cancel(true);

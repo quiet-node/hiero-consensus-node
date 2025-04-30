@@ -124,6 +124,6 @@ public final class StaticPlatformBuilder {
     }
 
     public static void stop() {
-//        metricsProvider.stop();
+        //        metricsProvider.stop();
     }
 }

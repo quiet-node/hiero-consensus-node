@@ -176,7 +176,5 @@ public class RecoveryPlatform implements Platform, AutoCloseableNonThrowing {
     }
 
     @Override
-    public void stop() {
-
-    }
+    public void stop() {}
 }

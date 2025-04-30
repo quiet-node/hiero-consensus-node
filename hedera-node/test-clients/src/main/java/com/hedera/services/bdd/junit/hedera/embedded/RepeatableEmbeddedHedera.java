@@ -201,9 +201,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
         }
 
         @Override
-        public void stop() {
-
-        }
+        public void stop() {}
 
         /**
          * Creates a new round with the given transaction.

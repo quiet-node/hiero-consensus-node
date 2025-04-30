@@ -30,7 +30,6 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
-import com.swirlds.platform.builder.internal.StaticPlatformBuilder;
 import com.swirlds.platform.config.BasicConfig_;
 import com.swirlds.platform.crypto.KeysAndCerts;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -49,8 +48,6 @@ import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.roster.AddressBook;
@@ -153,8 +150,7 @@ public class TurtleNode {
         recycleBin =
                 RecycleBin.create(metrics, configuration, getStaticThreadManager(), time, fileSystemManager, nodeId);
 
-        final var turtleTestingToolState =
-                new TurtleTestingToolState();
+        final var turtleTestingToolState = new TurtleTestingToolState();
         reservedState = getInitialState(
                 recycleBin,
                 version,

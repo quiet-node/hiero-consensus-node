@@ -327,7 +327,7 @@ public class SwirldsPlatform implements Platform {
         } else {
             initialAncientThreshold = platformStateFacade.ancientThresholdOf(initialState.getState());
             startingRound = initialState.getRound();
-//
+            //
             platformWiring.sendStateToHashLogger(initialState);
             platformWiring
                     .getSignatureCollectorStateInput()
@@ -337,10 +337,11 @@ public class SwirldsPlatform implements Platform {
 
             platformWiring.consensusSnapshotOverride(
                     Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(initialState.getState())));
-//
-//            // We only load non-ancient events during start up, so the initial expired threshold will be
-//            // equal to the ancient threshold when the system first starts. Over time as we get more events,
-//            // the expired threshold will continue to expand until it reaches its full size.
+            //
+            //            // We only load non-ancient events during start up, so the initial expired threshold will be
+            //            // equal to the ancient threshold when the system first starts. Over time as we get more
+            // events,
+            //            // the expired threshold will continue to expand until it reaches its full size.
             platformWiring.updateEventWindow(new EventWindow(
                     initialState.getRound(), initialAncientThreshold, initialAncientThreshold, ancientMode));
             platformWiring.overrideIssDetectorState(initialState.reserve("initialize issDetector"));
@@ -425,8 +426,7 @@ public class SwirldsPlatform implements Platform {
 
         platformWiring.flushIntakePipeline();
         platformWiring.stop();
-        platformWiring.stopGossip();
-
+        //        platformWiring.stopGossip();
 
         notificationEngine.unregisterAll();
         notificationEngine.shutdown();
@@ -445,7 +445,7 @@ public class SwirldsPlatform implements Platform {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-        } else if (metrics instanceof NoOpMetrics noOpMetrics){
+        } else if (metrics instanceof NoOpMetrics noOpMetrics) {
             noOpMetrics.clear();
         }
     }

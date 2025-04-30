@@ -106,9 +106,9 @@ public class DefaultMetricsProvider implements PlatformMetricsProvider, Lifecycl
                 new DefaultPlatformMetrics(nodeId, metricKeyRegistry, executor, factory, metricsConfig);
 
         final DefaultPlatformMetrics oldMetrics = platformMetrics.putIfAbsent(nodeId, newMetrics);
-//        if (oldMetrics != null) {
-//            throw new IllegalStateException(String.format("PlatformMetrics for %s already exists", nodeId));
-//        }
+        if (oldMetrics != null) {
+            throw new IllegalStateException(String.format("PlatformMetrics for %s already exists", nodeId));
+        }
 
         final Runnable unsubscribeGlobalMetrics = globalMetrics.subscribe(newMetrics::handleGlobalMetrics);
         unsubscribers.put(nodeId, List.of(unsubscribeGlobalMetrics));

@@ -733,7 +733,7 @@ public class SignedState implements SignedStateInfo {
 
     public void stop() {
         state.release();
-//        registryRecord.release();
+        //        registryRecord.release();
         state = null;
     }
 }

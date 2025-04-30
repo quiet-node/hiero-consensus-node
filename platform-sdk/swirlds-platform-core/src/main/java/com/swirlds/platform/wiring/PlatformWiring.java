@@ -748,7 +748,7 @@ public class PlatformWiring {
     }
 
     public void stopGossip() {
-        gossipWiring.getStopInput().inject(NoInput.getInstance());
+        //        gossipWiring.getStopInput().inject(NoInput.getInstance());
     }
 
     /**

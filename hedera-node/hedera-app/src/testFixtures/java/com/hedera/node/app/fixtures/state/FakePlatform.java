@@ -131,7 +131,5 @@ public final class FakePlatform implements Platform {
     public void start() {}
 
     @Override
-    public void stop() {
-
-    }
+    public void stop() {}
 }
