@@ -66,7 +66,7 @@ public interface ReadableKVState<K, V> extends ReadableState {
      *
      * @deprecated DO NOT USE IT in production code as it returns size of all states, instead use {@code EntityIdService.entityCounts} to get the size of the state.
      *
-     * @return size of all states
+     * @return number of keys in the {@link ReadableKVState}.
      */
     @Deprecated
     long size();

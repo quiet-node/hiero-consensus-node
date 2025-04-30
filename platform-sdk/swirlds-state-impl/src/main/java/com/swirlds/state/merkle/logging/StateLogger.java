@@ -39,7 +39,7 @@ public class StateLogger {
 
     /**
      * Log the read of a singleton.
-     * <p>
+     *
      * @deprecated This method is only used in {@link com.swirlds.state.merkle.singleton.SingletonNode}
      * and can be removed if that class is deleted.
      *
@@ -135,7 +135,7 @@ public class StateLogger {
 
     /**
      * Log the iteration over a queue.
-     * <p>
+     *
      * @deprecated This method is only used in {@link com.swirlds.state.merkle.queue.QueueNode}
      * and can be removed if that class is deleted.
      *

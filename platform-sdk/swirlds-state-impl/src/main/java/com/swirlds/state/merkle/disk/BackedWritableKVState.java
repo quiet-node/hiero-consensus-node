@@ -52,8 +52,8 @@ public final class BackedWritableKVState<K, V> extends WritableKVStateBase<K, V>
             @NonNull final Codec<V> valueCodec,
             @NonNull final VirtualMap virtualMap) {
         super(serviceName, stateKey);
-        this.keyCodec = keyCodec;
-        this.valueCodec = valueCodec;
+        this.keyCodec = requireNonNull(keyCodec);
+        this.valueCodec = requireNonNull(valueCodec);
         this.virtualMap = requireNonNull(virtualMap);
     }
 
