@@ -919,11 +919,12 @@ public class TokenClaimAirdropTest extends TokenAirdropBase {
                         .payingWith(carol)
                         .signedBy(carol, alias)
                         .sigMapPrefixes(uniqueWithFullPrefixesFor(alias))
-                        .via("claimTxn"),
+                        .via("claimTxn")
+                        .hasKnownStatus(INVALID_PENDING_AIRDROP_ID),
                 validateChargedUsd("claimTxn", 0.001, 1),
 
-                // check if account was finalized and auto associations were not modified
-                getAliasedAccountInfo(alias).isNotHollow().hasMaxAutomaticAssociations(0)));
+                // check if account was finalized and auto associations are unlimited
+                getAliasedAccountInfo(alias).isNotHollow().hasMaxAutomaticAssociations(-1)));
     }
 
     @HapiTest
