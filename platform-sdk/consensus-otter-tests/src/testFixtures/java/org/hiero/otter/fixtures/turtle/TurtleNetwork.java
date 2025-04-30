@@ -79,8 +79,9 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
     @Override
     @NonNull
     public List<Node> addNodes(final int count) {
-        if (state != State.INIT) {
-            throw new IllegalStateException("Cannot add nodes after the network has been started.");
+        if (state != State.INIT && state != State.SHUTDOWN) {
+            throw new IllegalStateException(
+                    "Cannot add nodes after the network has been started or it hasn't been shut down.");
         }
         if (!nodes.isEmpty()) {
             throw new UnsupportedOperationException("Adding nodes incrementally is not supported yet.");

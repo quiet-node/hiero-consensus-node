@@ -88,7 +88,7 @@ public class TurtleTestEnvironment implements TestEnvironment {
             registry = ConstructableRegistry.getInstance();
             registry.registerConstructables("org.hiero");
             registry.registerConstructables("com.swirlds");
-            registry2 =  registerMerkleStateRootClassIds();
+            registry2 = registerMerkleStateRootClassIds();
         } catch (final ConstructableRegistryException e) {
             throw new RuntimeException(e);
         }

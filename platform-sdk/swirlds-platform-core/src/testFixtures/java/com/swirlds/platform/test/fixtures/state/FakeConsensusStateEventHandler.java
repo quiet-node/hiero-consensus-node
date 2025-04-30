@@ -238,7 +238,5 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
         virtualMaps = new ArrayList<>();
     }
 
-    public void unregister() {
-
-    }
+    public void unregister() {}
 }

@@ -4,7 +4,6 @@ package org.hiero.otter.fixtures.turtle;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.getMetricsProvider;
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.setupGlobalMetrics;
-import static com.swirlds.platform.state.signed.ReservedSignedState.createNullReservation;
 import static com.swirlds.platform.state.signed.StartupStateUtils.getInitialState;
 import static com.swirlds.platform.state.signed.StartupStateUtils.initGenesisState;
 import static java.util.Objects.requireNonNull;
@@ -38,7 +37,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.state.signed.StartupStateUtils;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
@@ -53,7 +51,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -182,7 +179,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
-//            platformWiring.flushIntakePipeline();
+            //            platformWiring.flushIntakePipeline();
             doShutdownNode();
 
         } finally {
@@ -310,9 +307,9 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-//            platformWiring.stop();
+            //            platformWiring.stop();
             platform.stop();
-//            platform.getNotificationEngine().unregisterAll();
+            //            platform.getNotificationEngine().unregisterAll();
             platformStatus = null;
             platform = null;
             platformWiring = null;
@@ -321,7 +318,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             TurtleTestingToolState.closeState();
             lifeCycle = LifeCycle.SHUTDOWN;
         }
-
     }
 
     private void doStartNode() {
@@ -340,39 +336,28 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                 .build();
         final SemanticVersion version = currentConfiguration.getValue(
                 TurtleNodeConfiguration.SOFTWARE_VERSION, SemanticVersion.class, DEFAULT_VERSION);
-        platformStateFacade = new PlatformStateFacade();
+        final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
         MerkleDb.resetDefaultInstancePath();
         final Metrics metrics = getMetricsProvider().createPlatformMetrics(selfId);
         final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
         final RecycleBin recycleBin = RecycleBin.create(
                 metrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
 
-        turtleTestingToolState =
-                new TurtleTestingToolState();
-//        rootNode = TurtleTestingToolState::getStateRootNode;
-        rootNode = turtleTestingToolState.getStateRootNode();
-//        reservedState = getInitialState(
-//                recycleBin,
-//                version,
-//                rootNode,
-//                APP_NAME,
-//                SWIRLD_NAME,
-//                selfId,
-//                addressBook,
-//                platformStateFacade,
-//                platformContext);
-//        initialState = reservedState.state();
-
-        initialState = buildGenesisState(
-                addressBook,
+        final HashedReservedSignedState reservedState = getInitialState(
+                recycleBin,
                 version,
-                rootNode,
+                TurtleTestingToolState::getStateRootNode,
+                APP_NAME,
+                SWIRLD_NAME,
+                selfId,
+                addressBook,
                 platformStateFacade,
                 platformContext);
+        final ReservedSignedState initialState = reservedState.state();
 
-        state = initialState.get().getState();
+        final State state = initialState.get().getState();
         final long round = platformStateFacade.roundOf(state);
-        platformBuilder = PlatformBuilder.create(
+        final PlatformBuilder platformBuilder = PlatformBuilder.create(
                         APP_NAME,
                         SWIRLD_NAME,
                         version,
@@ -390,8 +375,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                 .withSystemTransactionEncoderCallback(txn -> Bytes.wrap(
                         TransactionFactory.createStateSignatureTransaction(txn).toByteArray()));
 
-        platformComponentBuilder = platformBuilder.buildComponentBuilder();
-        platformBuildingBlocks = platformComponentBuilder.getBuildingBlocks();
+        final PlatformComponentBuilder platformComponentBuilder = platformBuilder.buildComponentBuilder();
+        final PlatformBuildingBlocks platformBuildingBlocks = platformComponentBuilder.getBuildingBlocks();
 
         final SimulatedGossip gossip = network.getGossipInstance(selfId);
         gossip.provideIntakeEventCounter(platformBuildingBlocks.intakeEventCounter());
@@ -419,7 +404,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             @NonNull final MerkleNodeState stateRoot,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final PlatformContext platformContext) {
-        platformStateModifier = initGenesisState(platformContext.getConfiguration(), stateRoot, platformStateFacade, addressBook, appVersion);
+        initGenesisState(platformContext.getConfiguration(), stateRoot, platformStateFacade, addressBook, appVersion);
 
         final SignedState signedState = new SignedState(
                 platformContext.getConfiguration(),
