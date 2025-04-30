@@ -6,6 +6,7 @@ import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
+import static com.swirlds.state.merkle.MerkleStateRoot.CURRENT_VERSION;
 import static com.swirlds.state.merkle.MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -810,7 +811,7 @@ class MerkleStateRootTest extends MerkleTestBase {
         @Test
         @DisplayName("Migration from previous versions is supported")
         void migration_supported() {
-            assertDoesNotThrow(() -> stateRoot.migrate(CONFIGURATION, MINIMUM_SUPPORTED_VERSION - 1));
+            assertDoesNotThrow(() -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1));
         }
     }
 
