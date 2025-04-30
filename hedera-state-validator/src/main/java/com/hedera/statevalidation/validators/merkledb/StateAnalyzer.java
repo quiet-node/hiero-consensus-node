@@ -16,6 +16,7 @@
 
 package com.hedera.statevalidation.validators.merkledb;
 
+import static com.hedera.statevalidation.parameterresolver.InitUtils.CONFIGURATION;
 import static com.hedera.statevalidation.validators.ParallelProcessingUtil.processObjects;
 import static com.swirlds.base.units.UnitConstants.BYTES_TO_MEBIBYTES;
 import static java.math.RoundingMode.HALF_UP;
@@ -117,7 +118,7 @@ public class StateAnalyzer {
     @SuppressWarnings({"rawtypes", "unchecked"})
     @NotNull
     private static StorageReport createStoreReport(DataFileCollection dfc, Function<ReadableSequentialData, ?> deser) {
-        LongList itemCountByPath = new LongListHeap();
+        LongList itemCountByPath = new LongListHeap(50_000_000, CONFIGURATION);
         List<DataFileReader> readers = dfc.getAllCompletedFiles();
         AtomicLong totalDataItemCount = new AtomicLong();
 

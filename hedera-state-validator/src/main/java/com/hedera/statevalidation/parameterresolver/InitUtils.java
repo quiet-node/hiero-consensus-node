@@ -28,9 +28,10 @@ import com.hedera.node.app.fees.FeeService;
 import com.hedera.node.app.fixtures.state.FakeStartupNetworks;
 import com.hedera.node.app.hapi.utils.sysfiles.domain.KnownBlockValues;
 import com.hedera.node.app.hapi.utils.sysfiles.domain.throttling.ScaleFactor;
+import com.hedera.node.app.hints.impl.HintsLibraryImpl;
+import com.hedera.node.app.hints.impl.HintsServiceImpl;
 import com.hedera.node.app.ids.AppEntityIdFactory;
 import com.hedera.node.app.ids.EntityIdService;
-import com.hedera.node.app.info.UnavailableNetworkInfo;
 import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
 import com.hedera.node.app.records.BlockRecordService;
 import com.hedera.node.app.roster.RosterService;
@@ -60,6 +61,7 @@ import com.hedera.node.app.throttle.CongestionThrottleService;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
 import com.hedera.node.app.tss.TssBaseServiceImpl;
 import com.hedera.node.app.version.ServicesSoftwareVersion;
+import com.hedera.node.app.workflows.standalone.ExecutorComponent;
 import com.hedera.node.config.converter.AccountIDConverter;
 import com.hedera.node.config.converter.BytesConverter;
 import com.hedera.node.config.converter.CongestionMultipliersConverter;
@@ -93,7 +95,7 @@ import com.hedera.node.internal.network.Network;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.crypto.CryptographyHolder;
+import com.swirlds.common.crypto.CryptographyProvider;
 import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
@@ -106,12 +108,13 @@ import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.config.AddressBookConfig;
 import com.swirlds.platform.config.StateConfig;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
-import com.swirlds.state.merkle.StateMetadata;
+import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.disk.OnDiskKeySerializer;
 import com.swirlds.state.merkle.disk.OnDiskValueSerializer;
@@ -128,6 +131,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Supplier;
 
@@ -149,7 +154,7 @@ public class InitUtils {
      */
     private static final Set<String> TABLES_TO_EXCLUDE = Set.of("ScheduleService.SCHEDULES_BY_EQUALITY", "ScheduleService.SCHEDULES_BY_EXPIRY_SEC");
 
-    private static Configuration CONFIGURATION;
+    public static Configuration CONFIGURATION;
 
     /**
      * This method initializes the configuration of the Merkle tree
@@ -229,7 +234,7 @@ public class InitUtils {
                                         return;
                                     }
                                     final var md = new StateMetadata<>(serviceName, schema, def);
-                                    final var label = StateUtils.computeLabel(serviceName, def.stateKey());
+                                    final var label = StateMetadata.computeLabel(serviceName, def.stateKey());
                                     if (TABLES_TO_EXCLUDE.contains(label)) {
                                         return;
                                     }
@@ -283,7 +288,7 @@ public class InitUtils {
                 new AppSignatureVerifier(
                         bootstrapConfig.getConfigData(HederaConfig.class),
                         new SignatureExpanderImpl(),
-                        new SignatureVerifierImpl(CryptographyHolder.get())),
+                        new SignatureVerifierImpl()),
                 AppContext.Gossip.UNAVAILABLE_GOSSIP,
                 configSupplier,
                 fakeNetworkInfo::selfNodeInfo,
@@ -293,6 +298,7 @@ public class InitUtils {
                 new AppEntityIdFactory(config));
         PlatformStateService.PLATFORM_STATE_SERVICE.setAppVersionFn(InitUtils::getNodeStartupVersion);
 
+        final AtomicReference<ExecutorComponent> componentRef = new AtomicReference<>();
         Set.of(
                         new EntityIdService(),
                         new ConsensusServiceImpl(),
@@ -300,8 +306,13 @@ public class InitUtils {
                         new FileServiceImpl(),
                         new FreezeServiceImpl(),
                         new ScheduleServiceImpl(appContext),
-                        new TokenServiceImpl(),
-                        new UtilServiceImpl(),
+                        new TokenServiceImpl(appContext),
+                        new UtilServiceImpl(appContext, (signedTxn, conf) -> componentRef
+                                .get()
+                                .transactionChecker()
+                                .parseSignedAndCheck(
+                                        signedTxn, config.getConfigData(HederaConfig.class).nodeTransactionMaxBytes())
+                                .txBody()),
                         new RecordCacheService(),
                         new BlockRecordService(),
                         new BlockStreamService(),
@@ -309,8 +320,14 @@ public class InitUtils {
                         new CongestionThrottleService(),
                         new NetworkServiceImpl(),
                         new AddressBookServiceImpl(),
-                        new RosterService(roster -> true, () -> {
-                        },
+                        new HintsServiceImpl(
+                            new NoOpMetrics(),
+                            ForkJoinPool.commonPool(),
+                            appContext,
+                            new HintsLibraryImpl(),
+                            bootstrapConfig.getConfigData(BlockStreamConfig.class).blockPeriod()
+                        ),
+                        new RosterService(roster -> true, () -> {},
                                 () -> StateResolver.deserializedSignedState.reservedSignedState().get().getState(),
                                 new PlatformStateFacade(ServicesSoftwareVersion::new)),
                         PLATFORM_STATE_SERVICE)
@@ -328,13 +345,12 @@ public class InitUtils {
         final var deserializedVersion = platformFacade.creationSoftwareVersionOf(state);
         final var version = getNodeStartupVersion(bootstrapConfigProvider.getConfiguration());
         serviceMigrator.doMigrations(
-                state,
+                (MerkleNodeState) state,
                 servicesRegistry,
-                deserializedVersion == null ? null : new ServicesSoftwareVersion(deserializedVersion.getPbjSemanticVersion()),
+                deserializedVersion == null ? null : new ServicesSoftwareVersion(deserializedVersion),
                 version,
                 configuration,
                 configuration,
-                UnavailableNetworkInfo.UNAVAILABLE_NETWORK_INFO,
                 new NoOpMetrics(),
                 new FakeStartupNetworks(Network.newBuilder().build()),
                 new StoreMetricsServiceImpl(new NoOpMetrics()),
@@ -361,8 +377,14 @@ public class InitUtils {
     }
 
     private static ServicesSoftwareVersion getNodeStartupVersion(final Configuration config) {
-        return new ServicesSoftwareVersion(
-                readVersion(),
-                config.getConfigData(HederaConfig.class).configVersion());
+        SemanticVersion stateSemVer = readVersion();
+        if (stateSemVer.build().isEmpty()) {
+            return new ServicesSoftwareVersion(
+                    readVersion(),
+                    config.getConfigData(HederaConfig.class).configVersion());
+        } else {
+            return new ServicesSoftwareVersion(stateSemVer);
+        }
+
     }
 }

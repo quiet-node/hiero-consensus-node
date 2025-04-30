@@ -30,8 +30,8 @@ import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.constructable.ConstructableRegistryException;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.crypto.Cryptography;
-import com.swirlds.common.crypto.CryptographyHolder;
 import com.swirlds.common.crypto.config.CryptoConfig;
+import com.swirlds.common.crypto.engine.CryptoEngine;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.NoOpRecycleBin;
 import com.swirlds.common.io.utility.RecycleBin;
@@ -76,7 +76,7 @@ import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStat
 @Log4j2
 public class StateResolver implements ParameterResolver {
 
-    private static final Pattern VERSION_PATTERN = Pattern.compile("^((\\d+)\\.(\\d+)\\.(\\d+))$");
+    private static final Pattern VERSION_PATTERN = Pattern.compile("^((\\d+)\\.(\\d+)\\.(\\d+))\\s*(\\d+)*$");
 
     static DeserializedSignedState deserializedSignedState;
 
@@ -104,13 +104,8 @@ public class StateResolver implements ParameterResolver {
         serviceRegistry.register(new RosterService(roster -> true, () -> {}, StateResolver::getState, platformStateFacade));
         final PlatformContext platformContext = createPlatformContext();
         deserializedSignedState = readStateFile(
-                platformContext.getConfiguration(),
-                Path.of(Constants.STATE_DIR, "SignedState.swh").toAbsolutePath(), platformStateFacade);
+                Path.of(Constants.STATE_DIR, "SignedState.swh").toAbsolutePath(), platformStateFacade, platformContext);
         final MerkleStateRoot servicesState = (MerkleStateRoot) deserializedSignedState.reservedSignedState().get().getState();
-
-        final AddressBook addressBook =
-                platformStateFacade.addressBookOf(deserializedSignedState.reservedSignedState().get().getState());
-        final FakePlatform platform = new FakePlatform(1, addressBook);
 
         initServiceMigrator(servicesState, platformContext.getConfiguration(), serviceRegistry);
 
@@ -136,7 +131,7 @@ public class StateResolver implements ParameterResolver {
                     Integer.parseInt(matcher.group(3)),
                     Integer.parseInt(matcher.group(4)),
                     null,
-                    null);
+                    matcher.group(5));
         }
 
         throw new IllegalArgumentException("Invalid version string: " + versionStr);
@@ -170,7 +165,7 @@ public class StateResolver implements ParameterResolver {
 
             @Override
             public MerkleCryptography getMerkleCryptography() {
-                return MerkleCryptographyFactory.create(platformConfig, getCryptography());
+                return MerkleCryptographyFactory.create(platformConfig);
             }
 
             public Configuration getConfiguration() {
@@ -178,7 +173,7 @@ public class StateResolver implements ParameterResolver {
             }
 
             public Cryptography getCryptography() {
-                return CryptographyHolder.get();
+                return new CryptoEngine();
             }
 
             public Metrics getMetrics() {
