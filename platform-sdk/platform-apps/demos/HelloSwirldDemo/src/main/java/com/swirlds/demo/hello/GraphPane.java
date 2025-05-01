@@ -3,7 +3,6 @@ package com.swirlds.demo.hello;
 import com.hedera.hapi.node.state.roster.Roster;
 import javafx.animation.ScaleTransition;
 import javafx.geometry.Point2D;
-import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
