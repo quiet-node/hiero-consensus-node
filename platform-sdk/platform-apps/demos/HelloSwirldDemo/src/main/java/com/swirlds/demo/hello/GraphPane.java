@@ -1,6 +1,8 @@
 package com.swirlds.demo.hello;
 
 import com.hedera.hapi.node.state.roster.Roster;
+import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -40,24 +42,32 @@ public class GraphPane extends Pane {
         this.getChildren().add(nodeGroup);
     }
 
+    private Point2D getEventPosition(GuiEvent event) {
+        // get the position of the event based on its generation and node id
+        var nodePos = nodePositions.get(event.creator());
+        var generationOffset = paneHeight-(event.generation() * circleRadius * 2) - (circleRadius * 2);
+        return new Point2D(nodePos, generationOffset);
+    }
+
     public void addEventNode(GuiEvent event) {
-        final long nodePos = nodePositions.get(event.creator());
-        final long generationOffset = paneHeight-(event.generation() * circleRadius * 2) - (circleRadius * 2);
+        final Point2D eventPosition = getEventPosition(event);
 
         Sphere circle = new Sphere(circleRadius);
         var material = new PhongMaterial(event.color());
         material.setSpecularColor(Color.WHITE);
         circle.setMaterial(material);
 
-        circle.relocate(nodePos, generationOffset);
+        circle.relocate(eventPosition.getX(), eventPosition.getY());
         Text text = new Text(event.generation() + " - " + event.creator());
-        text.relocate(nodePos - 40, generationOffset + 10);
+        text.relocate(eventPosition.getX() - 40, eventPosition.getY() + 10);
         nodeGroup.getChildren().addAll(circle, text);
         nodeViews.put(event.id(), event);
 
+        addParentEdge(event);
+
         // update max height when events exceed original window height
-        if (generationOffset < maxEventHeight) {
-            maxEventHeight = (int) generationOffset;
+        if (eventPosition.getY() < maxEventHeight) {
+            maxEventHeight = (int) eventPosition.getY();
             nodeGroup.getTransforms().add(groupTranslation);
         }
     }
@@ -87,6 +97,24 @@ public class GraphPane extends Pane {
             Text text = new Text(Long.toString(nodeId));
             text.relocate(xPos - 10, yPos + 10);
             this.getChildren().add(text);
+        }
+    }
+
+    private void addParentEdge(GuiEvent event) {
+        // add a line from event to its ancestor parent
+        for (var parent : event.parents()) {
+            var parentEvent = nodeViews.get(parent);
+            if (parentEvent != null) {
+                final Point2D parentEventPosition = getEventPosition(parentEvent);
+                final Point2D eventPosition = getEventPosition(event);
+                var line = new Line(
+                        eventPosition.getX() + circleRadius,
+                        eventPosition.getY() + circleRadius,
+                        parentEventPosition.getX() + circleRadius,
+                        parentEventPosition.getY() + circleRadius);
+                line.setStroke(Color.BLUE); // should we use a different colour for self parent?
+                this.getChildren().add(line);
+            }
         }
     }
 }
