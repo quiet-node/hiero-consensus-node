@@ -5,11 +5,11 @@ import javafx.scene.Group;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Circle;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Sphere;
 import javafx.scene.text.Text;
+import javafx.scene.transform.Translate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,7 +21,8 @@ public class GraphPane extends Pane {
     private final int paneHeight = 900;
     private final int circleRadius = 20;
     private Group nodeGroup;
-    public int maxEventHeight = 0; // note this is a negative value but visual the top
+    public int maxEventHeight = 0;
+    private Translate groupTranslation;
 
     public void setup(Roster roster) {
         this.setStyle("-fx-background-color: grey;");
@@ -31,12 +32,17 @@ public class GraphPane extends Pane {
         setupTimeLines(roster);
 
         nodeGroup = new Group();
+
+        // setup translation logic to move a diameter at a time
+        groupTranslation = new Translate();
+        groupTranslation.setY(circleRadius * 2);
+
         this.getChildren().add(nodeGroup);
     }
 
     public void addEventNode(GuiEvent event) {
         final long nodePos = nodePositions.get(event.creator());
-        final long generationOffset = -(event.generation() * circleRadius * 2) - (circleRadius * 2);
+        final long generationOffset = paneHeight-(event.generation() * circleRadius * 2) - (circleRadius * 2);
 
         Sphere circle = new Sphere(circleRadius);
         var material = new PhongMaterial(event.color());
@@ -49,11 +55,10 @@ public class GraphPane extends Pane {
         nodeGroup.getChildren().addAll(circle, text);
         nodeViews.put(event.id(), event);
 
-        System.out.println("eventId: " + event.id().toString() + ", gen: " + event.generation() + ", nodePos: " + nodePos + ", generationOffset: " + generationOffset);
-
+        // update max height when events exceed original window height
         if (generationOffset < maxEventHeight) {
-            System.out.println("maxEventHeight: " + maxEventHeight + ", prefHeight: " + maxEventHeight + paneHeight);
             maxEventHeight = (int) generationOffset;
+            nodeGroup.getTransforms().add(groupTranslation);
         }
     }
 
