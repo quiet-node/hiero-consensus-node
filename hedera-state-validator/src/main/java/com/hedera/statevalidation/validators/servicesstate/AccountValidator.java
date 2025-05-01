@@ -22,16 +22,18 @@ import com.hedera.node.app.service.token.impl.TokenServiceImpl;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
+import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.state.spi.ReadableKVState;
-// todo hackathon import io.github.artsok.RepeatedIfExceptionsTest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -49,7 +51,8 @@ public class AccountValidator {
     // https://help.hedera.com/hc/en-us/articles/360000665518-What-is-the-total-supply-of-HBAR-
     final long TOTAL_tHBAR_SUPPLY = 5_000_000_000_000_000_000L;
 
-    // todo hackathon @RepeatedIfExceptionsTest
+    @ParameterizedTest
+    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     void validate(DeserializedSignedState deserializedState, Report report) throws IOException {
         final MerkleNodeState servicesState = deserializedState.reservedSignedState().get().getState();
 

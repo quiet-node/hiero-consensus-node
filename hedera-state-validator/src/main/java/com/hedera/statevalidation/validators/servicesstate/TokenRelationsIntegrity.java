@@ -10,9 +10,11 @@ import com.hedera.node.app.service.token.impl.TokenServiceImpl;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
+import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.base.utility.Pair;
+import com.swirlds.common.threading.interrupt.InterruptableConsumer;
 import com.swirlds.common.threading.manager.AdHocThreadManager;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.state.merkle.MerkleStateRoot;
@@ -21,12 +23,12 @@ import com.swirlds.state.merkle.disk.OnDiskValue;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
-// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.base.concurrent.interrupt.InterruptableConsumer;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -39,7 +41,8 @@ public class TokenRelationsIntegrity {
 
     private static final Logger log = LogManager.getLogger(TokenRelationsIntegrity.class);
 
-    // todo hackathon @RepeatedIfExceptionsTest
+    @ParameterizedTest
+    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     void validate(DeserializedSignedState deserializedState, Report report) throws InterruptedException {
         final MerkleStateRoot servicesState = (MerkleStateRoot) deserializedState.reservedSignedState().get().getState();
 

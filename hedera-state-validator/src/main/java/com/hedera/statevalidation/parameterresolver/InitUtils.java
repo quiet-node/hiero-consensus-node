@@ -59,6 +59,7 @@ import com.hedera.node.app.state.recordcache.RecordCacheService;
 import com.hedera.node.app.throttle.AppThrottleFactory;
 import com.hedera.node.app.throttle.CongestionThrottleService;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
+import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.app.workflows.standalone.ExecutorComponent;
 import com.hedera.node.config.converter.AccountIDConverter;
 import com.hedera.node.config.converter.BytesConverter;
@@ -93,6 +94,8 @@ import com.hedera.node.internal.network.Network;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.statevalidation.listener.ReportingListener;
 import com.swirlds.common.config.StateCommonConfig;
+import com.swirlds.common.constructable.ConstructableRegistry;
+import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
@@ -117,7 +120,6 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.event.creator.impl.config.EventCreationConfig;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -158,7 +160,7 @@ public class InitUtils {
                 .withConfigDataType(HederaConfig.class)
                 .withConfigDataType(VirtualMapConfig.class)
                 .withConfigDataType(MerkleDbConfig.class)
-                .withConfigDataType(org.hiero.base.crypto.config.CryptoConfig.class)
+                .withConfigDataType(CryptoConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
                 .withConfigDataType(StateConfig.class)
                 .withConfigDataType(TemporaryFileConfig.class)
@@ -168,7 +170,6 @@ public class InitUtils {
                 .withConfigDataType(VersionConfig.class)
                 .withConfigDataType(LedgerConfig.class)
                 .withConfigDataType(TokensConfig.class)
-                .withConfigDataType(EventCreationConfig.class)
                 .withConfigDataType(AddressBookConfig.class)
                 .withConfigDataType(BlockStreamConfig.class)
                 .withConfigDataType(AccountsConfig.class)
@@ -217,7 +218,7 @@ public class InitUtils {
                 log.debug("Registering schemas for service {}", serviceName);
                 var registry =
                         new MerkleSchemaRegistry(
-                                org.hiero.base.constructable.ConstructableRegistry.getInstance(),
+                                ConstructableRegistry.getInstance(),
                                 serviceName,
                                 CONFIGURATION,
                                 new SchemaApplications()) {
@@ -271,7 +272,7 @@ public class InitUtils {
         final Configuration config = getConfiguration();
         final Supplier<Configuration> configSupplier = () -> config;
         final ServicesRegistryImpl servicesRegistry = new ServicesRegistryImpl(
-                org.hiero.base.constructable.ConstructableRegistry.getInstance(),
+                ConstructableRegistry.getInstance(),
                 config);
         final FakeNetworkInfo fakeNetworkInfo = new FakeNetworkInfo();
         final AppContextImpl appContext = new AppContextImpl(
@@ -284,10 +285,12 @@ public class InitUtils {
                 configSupplier,
                 fakeNetworkInfo::selfNodeInfo,
                 NoOpMetrics::new,
-                new AppThrottleFactory(configSupplier, () -> null, () -> ThrottleDefinitions.DEFAULT, ThrottleAccumulator::new),
+                new AppThrottleFactory(configSupplier, () -> null, () -> ThrottleDefinitions.DEFAULT,
+                        ThrottleAccumulator::new, ServicesSoftwareVersion::new),
                 () -> NOOP_FEE_CHARGING,
                 new AppEntityIdFactory(config));
-        PlatformStateService.PLATFORM_STATE_SERVICE.setAppVersionFn(InitUtils::getNodeStartupVersion);
+        PlatformStateService.PLATFORM_STATE_SERVICE.setAppVersionFn(v ->
+               new ServicesSoftwareVersion(readVersion()));
 
         final AtomicReference<ExecutorComponent> componentRef = new AtomicReference<>();
         Set.of(
@@ -318,9 +321,9 @@ public class InitUtils {
                             new HintsLibraryImpl(),
                             bootstrapConfig.getConfigData(BlockStreamConfig.class).blockPeriod()
                         ),
-                        new RosterService(roster -> true, (r, b) -> {},
+                        new RosterService(roster -> true, () -> {},
                                 () -> StateResolver.deserializedSignedState.reservedSignedState().get().getState(),
-                                new PlatformStateFacade()),
+                                new PlatformStateFacade(ServicesSoftwareVersion::new)),
                         PLATFORM_STATE_SERVICE)
                 .forEach(servicesRegistry::register);
         return servicesRegistry;
@@ -332,14 +335,14 @@ public class InitUtils {
     static void initServiceMigrator(State state, Configuration configuration, ServicesRegistry servicesRegistry) {
         final var bootstrapConfigProvider = new BootstrapConfigProviderImpl();
         final var serviceMigrator = new OrderedServiceMigrator();
-        final var platformFacade = new PlatformStateFacade();
+        final var platformFacade = new PlatformStateFacade(v -> new ServicesSoftwareVersion(readVersion()));
         final var deserializedVersion = platformFacade.creationSoftwareVersionOf(state);
         final var version = getNodeStartupVersion(bootstrapConfigProvider.getConfiguration());
         serviceMigrator.doMigrations(
                 (MerkleNodeState) state,
                 servicesRegistry,
-                deserializedVersion,
-                version,
+                new ServicesSoftwareVersion(deserializedVersion),
+                new ServicesSoftwareVersion(version),
                 configuration,
                 configuration,
                 new NoOpMetrics(),

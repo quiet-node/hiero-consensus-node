@@ -18,20 +18,23 @@ package com.hedera.statevalidation.validators.state;
 //todo hackathon
 //import com.github.difflib.DiffUtils;
 //import com.github.difflib.patch.Patch;
+import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.statevalidation.parameterresolver.HashInfo;
 import com.hedera.statevalidation.parameterresolver.HashInfoResolver;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
+import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
+import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
-// todo hackathon import io.github.artsok.RepeatedIfExceptionsTest;
-import org.hiero.base.crypto.Hash;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.util.Arrays;
 import java.util.List;
@@ -50,7 +53,8 @@ public class Rehash {
      */
     public static final int HASH_DEPTH = 5;
 
-    // todo hackathon @RepeatedIfExceptionsTest
+    @ParameterizedTest
+    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     void reHash(DeserializedSignedState deserializedSignedState, Report report) {
 
         MerkleCryptography merkleCryptography = MerkleCryptographyFactory.create(CONFIGURATION);
@@ -74,10 +78,11 @@ public class Rehash {
      * @param report                  The report object, propagated by the ReportResolver.
      * @param hashInfo                The hash info object, propagated by the HashInfoResolver.
      */
-    // todo hackathon @RepeatedIfExceptionsTest
+    @ParameterizedTest
+    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     void validateMerkleTree(DeserializedSignedState deserializedSignedState, Report report, HashInfo hashInfo) {
 
-        var platformStateFacade = new PlatformStateFacade();
+        var platformStateFacade = new PlatformStateFacade(ServicesSoftwareVersion::new);
         var infoStringFromState = platformStateFacade.getInfoString(deserializedSignedState.reservedSignedState().get().getState(), HASH_DEPTH);
 
         final var originalLines = Arrays.asList(hashInfo.content().split("\n"));

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.hedera.statevalidation.merkledb.reflect.MemoryIndexDiskKeyValueStoreW;
+import com.swirlds.common.crypto.Hash;
 import com.swirlds.merkledb.MerkleDbDataSourceW;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
@@ -39,7 +40,6 @@ import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.base.crypto.Hash;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
