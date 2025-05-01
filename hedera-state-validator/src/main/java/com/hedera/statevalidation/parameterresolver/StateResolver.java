@@ -41,7 +41,7 @@ import com.swirlds.platform.util.BootstrapUtils;
 import com.swirlds.state.State;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.constructable.ConstructableUtils;
-import lombok.SneakyThrows;
+import javax.management.RuntimeErrorException;
 import lombok.extern.log4j.Log4j2;
 import org.hiero.base.concurrent.ExecutorFactory;
 import org.hiero.base.constructable.ClassConstructorPair;
@@ -84,13 +84,17 @@ public class StateResolver implements ParameterResolver {
         return parameterContext.getParameter().getType() == DeserializedSignedState.class;
     }
 
-    @SneakyThrows
     @Override
     public DeserializedSignedState resolveParameter(
             ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
 
         if (deserializedSignedState == null) {
+            try {
+
             initState();
+            }catch (IOException e){
+                throw new RuntimeException(e);
+            }
         }
         return deserializedSignedState;
     }

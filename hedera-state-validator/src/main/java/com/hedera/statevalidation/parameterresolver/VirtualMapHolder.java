@@ -26,7 +26,6 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
@@ -36,9 +35,7 @@ import java.util.Map;
 @Log4j2
 public class VirtualMapHolder {
     private static VirtualMapHolder instance;
-    @Getter
     private final List<VirtualMapAndDataSourceRecord<?, ?>> records;
-    @Getter
     private final Map<String, MerkleDbTableConfig> tableConfigByNames;
 
     private VirtualMapHolder() {
@@ -66,4 +63,11 @@ public class VirtualMapHolder {
         return new ArrayList<>(tableConfigByNames.keySet());
     }
 
+    public List<VirtualMapAndDataSourceRecord<?, ?>> getRecords() {
+        return records;
+    }
+
+    public Map<String, MerkleDbTableConfig> getTableConfigByNames() {
+        return tableConfigByNames;
+    }
 }
