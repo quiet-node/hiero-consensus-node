@@ -21,7 +21,6 @@ import static com.hedera.statevalidation.validators.Constants.NODE_NAME;
 import java.util.HashMap;
 import java.util.Map;
 
-import lombok.Data;
 
 public class Report {
     private String nodeName = NODE_NAME;
@@ -33,7 +32,7 @@ public class Report {
     private StateReport stateReport = new StateReport();
     private Map<String, VirtualMapReport> vmapReportByName = new HashMap<>();
 
-    public String nodeName() {
+    public String getNodeName() {
         return nodeName;
     }
 
@@ -41,7 +40,7 @@ public class Report {
         this.nodeName = nodeName;
     }
 
-    public long roundNumber() {
+    public long getRoundNumber() {
         return roundNumber;
     }
 
@@ -49,7 +48,7 @@ public class Report {
         this.roundNumber = roundNumber;
     }
 
-    public long numberOfAccounts() {
+    public long getNumberOfAccounts() {
         return numberOfAccounts;
     }
 
@@ -57,7 +56,7 @@ public class Report {
         this.numberOfAccounts = numberOfAccounts;
     }
 
-    public StateReport stateReport() {
+    public StateReport getStateReport() {
         return stateReport;
     }
 
@@ -65,7 +64,7 @@ public class Report {
         this.stateReport = stateReport;
     }
 
-    public Map<String, VirtualMapReport> vmapReportByName() {
+    public Map<String, VirtualMapReport> getVmapReportByName() {
         return vmapReportByName;
     }
 
