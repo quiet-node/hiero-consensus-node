@@ -62,9 +62,13 @@ public class GraphPane extends Pane {
         material.setSpecularPower(4);
         circle.setMaterial(material);
 
+        // can remove if not needed
+        circle.setUserData(event);
+
         circle.relocate(eventPosition.getX(), eventPosition.getY());
         Text text = new Text(event.generation() + " - " + event.creator());
         text.relocate(eventPosition.getX() - 40, eventPosition.getY() + 10);
+
         nodeGroup.getChildren().addAll(circle, text);
         nodeViews.put(event.id(), event);
 
@@ -73,10 +77,8 @@ public class GraphPane extends Pane {
         // update max height when events exceed original window height
         if (eventPosition.getY() < maxEventHeight) {
             maxEventHeight = (int) eventPosition.getY();
-            totalHeight += paneHeight + circleDiameter;
+            totalHeight += circleDiameter;
             cumulativeYTranslation += circleDiameter;
-            int translateY = -maxEventHeight + (circleDiameter * 2);
-            System.out.println("totalHeight: " + totalHeight + ", maxEventHeight: " + maxEventHeight + ", cumulativeYTranslation: " + cumulativeYTranslation + ", translateY: " + translateY);
 
             setGroupYTranslation(cumulativeYTranslation);
         }
