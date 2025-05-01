@@ -40,13 +40,13 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
-// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import com.swirlds.virtualmap.serialize.KeySerializer;
 import com.swirlds.virtualmap.serialize.ValueSerializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -60,7 +60,7 @@ public class ValidateLeafIndexHalfDiskHashMap {
 
     private static final Logger log = LogManager.getLogger(ValidateLeafIndexHalfDiskHashMap.class);
 
-    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
+    @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void validateIndex(VirtualMapAndDataSourceRecord<VirtualKey, VirtualValue> vmAndSource, Report report) {
         if(vmAndSource.dataSource().getFirstLeafPath() == -1) {
