@@ -34,10 +34,9 @@ public class GraphPane extends Pane {
     public void addEventNode(GuiEvent event) {
         final long nodePos = nodePositions.get(event.creator());
         final long generationOffset = paneHeight - (event.generation() * circleRadius * 2) - (circleRadius * 2);
-        System.out.println("eventId: " + event.id().toString() + ", gen: " + event.generation() + ", nodePos: " + nodePos + ", generationOffset: " + generationOffset);
 
         Sphere circle = new Sphere(circleRadius);
-        var material = new PhongMaterial(Color.BLUE);
+        var material = new PhongMaterial(event.color());
         material.setSpecularColor(Color.WHITE);
         circle.setMaterial(material);
 
