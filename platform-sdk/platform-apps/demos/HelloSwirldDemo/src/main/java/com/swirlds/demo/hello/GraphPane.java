@@ -65,11 +65,8 @@ public class GraphPane extends Pane {
         circle = isNewEvent ? new Sphere(Constants.CIRCLE_RADIUS) : (Sphere) nodeGroup.getChildren().get(nodeViews.get(event.id()).groupPosition());
         circle.setMaterial(material);
 
-        // can remove if not needed
-        circle.setUserData(event);
-        circle.setOnMouseClicked(new SelectedEvent(event, circle, selectedEventManager));
-
         if (isNewEvent) {
+            circle.setOnMouseClicked(new SelectedEvent(event, circle, selectedEventManager));
             circle.relocate(eventPosition.getX(), eventPosition.getY());
 
             nodeGroup.getChildren().add(circle);
