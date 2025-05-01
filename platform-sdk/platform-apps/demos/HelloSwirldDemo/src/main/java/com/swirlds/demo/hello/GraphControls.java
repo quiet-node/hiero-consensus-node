@@ -121,7 +121,7 @@ public class GraphControls {
         var events = graphGenerator.generateEvents(1);
         Platform.runLater(() -> {
             for (GuiEvent guiEvent : events) {
-                graphPane.addEventNode(guiEvent, (int) (Math.random() * 500), (int) (Math.random() * 500));
+                graphPane.addEventNode(guiEvent);
             }
         });
     }
