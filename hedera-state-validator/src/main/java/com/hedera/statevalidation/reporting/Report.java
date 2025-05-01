@@ -23,7 +23,6 @@ import java.util.Map;
 
 import lombok.Data;
 
-@Data
 public class Report {
     private String nodeName = NODE_NAME;
 
@@ -34,4 +33,44 @@ public class Report {
     private StateReport stateReport = new StateReport();
     private Map<String, VirtualMapReport> vmapReportByName = new HashMap<>();
 
+    public String nodeName() {
+        return nodeName;
+    }
+
+    public void setNodeName(final String nodeName) {
+        this.nodeName = nodeName;
+    }
+
+    public long roundNumber() {
+        return roundNumber;
+    }
+
+    public void setRoundNumber(final long roundNumber) {
+        this.roundNumber = roundNumber;
+    }
+
+    public long numberOfAccounts() {
+        return numberOfAccounts;
+    }
+
+    public void setNumberOfAccounts(final long numberOfAccounts) {
+        this.numberOfAccounts = numberOfAccounts;
+    }
+
+    public StateReport stateReport() {
+        return stateReport;
+    }
+
+    public void setStateReport(final StateReport stateReport) {
+        this.stateReport = stateReport;
+    }
+
+    public Map<String, VirtualMapReport> vmapReportByName() {
+        return vmapReportByName;
+    }
+
+    public void setVmapReportByName(
+            final Map<String, VirtualMapReport> vmapReportByName) {
+        this.vmapReportByName = vmapReportByName;
+    }
 }

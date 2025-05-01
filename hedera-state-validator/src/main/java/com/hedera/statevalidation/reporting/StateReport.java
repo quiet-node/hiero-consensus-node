@@ -16,9 +16,7 @@
 
 package com.hedera.statevalidation.reporting;
 
-import lombok.Data;
 
-@Data
 public class StateReport {
 
     @InvariantProperty
@@ -26,4 +24,20 @@ public class StateReport {
 
     @InvariantProperty
     private String calculatedHash;
+
+    public String rootHash() {
+        return rootHash;
+    }
+
+    public void setRootHash(final String rootHash) {
+        this.rootHash = rootHash;
+    }
+
+    public String calculatedHash() {
+        return calculatedHash;
+    }
+
+    public void setCalculatedHash(final String calculatedHash) {
+        this.calculatedHash = calculatedHash;
+    }
 }
