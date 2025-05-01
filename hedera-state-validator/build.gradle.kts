@@ -11,7 +11,6 @@ dependencies{
 mainModuleInfo {
     annotationProcessor("com.swirlds.config.processor")
     annotationProcessor("com.google.auto.service.processor")
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
 
     runtimeOnly("org.hyperledger.besu:besu-datatypes:24.3.3")
     runtimeOnly("org.bouncycastle:bcprov-jdk18on:1.77")
@@ -88,11 +87,6 @@ mainModuleInfo {
     requires( "org.mockito:mockito-core:4.7.0")
     requires( "org.mockito:mockito-junit-jupiter:3.23.1")
 
-    // Utils Bundle
-    requires( "org.assertj:assertj-core:3.23.1")
-
-    // lombok
-    requires("org.projectlombok:lombok:1.18.30")
     requires("com.swirlds.virtualmap")
     requires("info.picocli")
     requires("com.google.code.gson:gson:2.10")
