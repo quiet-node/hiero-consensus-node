@@ -25,17 +25,19 @@ public class StateReport {
     @InvariantProperty
     private String calculatedHash;
 
-    public String rootHash() {
+
+    public String getRootHash() {
         return rootHash;
+    }
+
+    public String getCalculatedHash() {
+        return calculatedHash;
     }
 
     public void setRootHash(final String rootHash) {
         this.rootHash = rootHash;
     }
 
-    public String calculatedHash() {
-        return calculatedHash;
-    }
 
     public void setCalculatedHash(final String calculatedHash) {
         this.calculatedHash = calculatedHash;

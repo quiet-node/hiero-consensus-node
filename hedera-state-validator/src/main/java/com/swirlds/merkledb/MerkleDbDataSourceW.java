@@ -117,4 +117,7 @@ public class MerkleDbDataSourceW {
         return dataSource.getHashesRamToDiskThreshold();
     }
 
+    public MerkleDbCompactionCoordinatorW getCompactionCoordinator() {
+        return compactionCoordinator;
+    }
 }
