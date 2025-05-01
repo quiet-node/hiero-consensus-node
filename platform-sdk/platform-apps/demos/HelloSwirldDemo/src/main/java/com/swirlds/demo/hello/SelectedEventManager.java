@@ -15,8 +15,10 @@ public class SelectedEventManager {
         System.out.println("Selected event: " + selectedEvent.event());
         if(currentEvent != null){
             currentEvent.circle().setRadius(Constants.CIRCLE_RADIUS);
+            currentEvent.parents().forEach(parent -> {parent.setRadius(Constants.CIRCLE_RADIUS);});
         }
         selectedEvent.circle().setRadius(Constants.SELECTED_CIRCLE_RADIUS);
+        selectedEvent.parents().forEach(parent -> {parent.setRadius(Constants.SELECTED_PARENT_RADIUS);});
         currentEvent = selectedEvent;
         selectedLabel.setText(selectedEvent.event().toString());
     }
