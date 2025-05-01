@@ -20,6 +20,8 @@ public record GuiEvent(
         boolean witness,
         boolean famous,
         boolean judge,
+        boolean decided,
+        boolean consensus,
         List<Bytes> stronglySeen
 ) {
 
@@ -39,6 +41,8 @@ public record GuiEvent(
                 eventImpl.isWitness(),
                 eventImpl.isFamous(),
                 eventImpl.isJudge(),
+                eventImpl.isFameDecided(),
+                eventImpl.isConsensus(),
                 Optional.of(eventImpl.getStronglySeeP())
                         .stream()
                         .flatMap(Arrays::stream)
