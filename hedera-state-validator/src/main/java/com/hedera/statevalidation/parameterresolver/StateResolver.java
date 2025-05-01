@@ -95,7 +95,7 @@ public class StateResolver implements ParameterResolver {
         return deserializedSignedState;
     }
 
-    private DeserializedSignedState initState() throws IOException {
+    public static DeserializedSignedState initState() throws IOException {
         initConfiguration();
         final ServicesRegistryImpl serviceRegistry = initServiceRegistry();
         PlatformStateFacade platformStateFacade = new PlatformStateFacade();
@@ -135,7 +135,7 @@ public class StateResolver implements ParameterResolver {
         throw new IllegalArgumentException("Invalid version string: " + versionStr);
     }
 
-    private PlatformContext createPlatformContext() {
+    private static PlatformContext createPlatformContext() {
         try {
             ConstructableRegistry.getInstance().registerConstructables("com.hedera.services");
             ConstructableRegistry.getInstance().registerConstructables("com.hedera.node.app");
