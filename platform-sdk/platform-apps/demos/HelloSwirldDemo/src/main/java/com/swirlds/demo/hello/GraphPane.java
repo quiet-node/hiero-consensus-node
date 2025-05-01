@@ -72,7 +72,8 @@ public class GraphPane extends Pane {
 
         // update max height when events exceed original window height
         if (eventPosition.getY() < maxEventHeight) {
-            maxEventHeight = (int) eventPosition.getY();totalHeight = paneHeight + circleDiameter;
+            maxEventHeight = (int) eventPosition.getY();
+            totalHeight += paneHeight + circleDiameter;
             cumulativeYTranslation += circleDiameter;
             int translateY = -maxEventHeight + (circleDiameter * 2);
             System.out.println("totalHeight: " + totalHeight + ", maxEventHeight: " + maxEventHeight + ", cumulativeYTranslation: " + cumulativeYTranslation + ", translateY: " + translateY);
