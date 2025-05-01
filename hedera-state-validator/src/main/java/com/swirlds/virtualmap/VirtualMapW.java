@@ -23,10 +23,6 @@ public class VirtualMapW<K extends VirtualKey, V extends VirtualValue> {
         return virtualMap.get(key);
     }
 
-    public void pausePipelineAndExecute(CheckedSupplier checkedSupplier) {
-        virtualMap.getRoot().getPipeline().pausePipelineAndExecute("validator", checkedSupplier);
-    }
-
     public VirtualDataSource getDataSource() {
         return virtualMap.getDataSource();
     }

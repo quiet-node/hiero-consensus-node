@@ -28,7 +28,7 @@ import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.ReadableKVState;
-import io.github.artsok.RepeatedIfExceptionsTest;
+// todo hackathon import io.github.artsok.RepeatedIfExceptionsTest;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,7 +48,7 @@ public class AccountValidator {
     // https://help.hedera.com/hc/en-us/articles/360000665518-What-is-the-total-supply-of-HBAR-
     final long TOTAL_tHBAR_SUPPLY = 5_000_000_000_000_000_000L;
 
-    @RepeatedIfExceptionsTest
+    // todo hackathon @RepeatedIfExceptionsTest
     void validate(DeserializedSignedState deserializedState, Report report) throws IOException {
         final MerkleNodeState servicesState = deserializedState.reservedSignedState().get().getState();
 

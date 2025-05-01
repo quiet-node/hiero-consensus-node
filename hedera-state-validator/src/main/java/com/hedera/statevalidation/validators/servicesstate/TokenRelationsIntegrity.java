@@ -13,7 +13,6 @@ import com.hedera.statevalidation.parameterresolver.StateResolver;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.base.utility.Pair;
-import com.swirlds.common.threading.interrupt.InterruptableConsumer;
 import com.swirlds.common.threading.manager.AdHocThreadManager;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.state.merkle.MerkleStateRoot;
@@ -23,9 +22,9 @@ import com.swirlds.state.merkle.disk.OnDiskValue;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
-import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
-import io.github.artsok.RepeatedIfExceptionsTest;
+// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import lombok.extern.log4j.Log4j2;
+import org.hiero.base.concurrent.interrupt.InterruptableConsumer;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Log4j2
 public class TokenRelationsIntegrity {
 
-    @RepeatedIfExceptionsTest
+    // todo hackathon @RepeatedIfExceptionsTest
     void validate(DeserializedSignedState deserializedState, Report report) throws InterruptedException {
         final MerkleStateRoot servicesState = (MerkleStateRoot) deserializedState.reservedSignedState().get().getState();
 
