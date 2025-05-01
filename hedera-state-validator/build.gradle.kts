@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies{
+    compileOnly("org.projectlombok:lombok:1.18.30")
     implementation("com.google.code.gson:gson:2.10")
 }
 
@@ -40,7 +41,6 @@ mainModuleInfo {
     requires("io.github.artsok:rerunner-jupiter:2.1.6")
     requires("com.hedera.cryptography:hedera-cryptography-pairings-api:0.2.0-SNAPSHOT")
     requires("com.hedera.cryptography:hedera-cryptography-tss:0.2.0-SNAPSHOT")
-    requires("io.github.java-diff-utils:java-diff-utils:4.12")
     requires ("com.hedera.node.app.hapi.fees")
     requires ("com.hedera.node.app.hapi.utils")
     requires ("com.hedera.node.app.service.addressbook.impl")
@@ -95,6 +95,7 @@ mainModuleInfo {
     requires("org.projectlombok:lombok:1.18.30")
     requires("com.swirlds.virtualmap")
     requires("info.picocli")
+    requires("com.google.code.gson:gson:2.10")
 
 }
 
