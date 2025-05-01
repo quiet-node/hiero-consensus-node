@@ -6,9 +6,9 @@ public class SelectedEventManager {
 
     public void eventSelected(final SelectedEvent selectedEvent){
         if(currentEvent != null){
-            currentEvent.circle().setRadius(20);
+            currentEvent.circle().setRadius(Constants.CIRCLE_RADIUS);
         }
-        selectedEvent.circle().setRadius(25);
+        selectedEvent.circle().setRadius(Constants.SELECTED_CIRCLE_RADIUS);
         currentEvent = selectedEvent;
     }
 }

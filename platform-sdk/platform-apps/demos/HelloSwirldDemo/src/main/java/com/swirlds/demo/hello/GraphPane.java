@@ -22,10 +22,9 @@ public class GraphPane extends Pane {
     private Map<Long, Integer> nodePositions = new HashMap<Long, Integer>();
     private final int paneWidth = 900;
     private final int paneHeight = 1000;
-    private final int circleRadius = 20;
-    private final int circleDiameter = circleRadius * 2;
+    private final int circleDiameter = Constants.CIRCLE_RADIUS * 2;
     private Group nodeGroup;
-    public int maxEventHeight = circleRadius * 4;
+    public int maxEventHeight = Constants.CIRCLE_RADIUS * 4;
     private int totalHeight = paneHeight;
     private Translate groupTranslation;
     private int cumulativeYTranslation = 0;
@@ -63,7 +62,7 @@ public class GraphPane extends Pane {
 
         Sphere circle;
         boolean isNewEvent = !nodeViews.containsKey(event.id());
-        circle = isNewEvent ? new Sphere(circleRadius) : (Sphere) nodeGroup.getChildren().get(nodeViews.get(event.id()).groupPosition());
+        circle = isNewEvent ? new Sphere(Constants.CIRCLE_RADIUS) : (Sphere) nodeGroup.getChildren().get(nodeViews.get(event.id()).groupPosition());
         circle.setMaterial(material);
 
         // can remove if not needed
@@ -126,7 +125,7 @@ public class GraphPane extends Pane {
             var node = roster.rosterEntries().get(i);
             var nodeId = node.nodeId();
             var xPos = (i + 1) * xOffset;
-            nodePositions.put(nodeId, xPos - circleRadius);
+            nodePositions.put(nodeId, xPos - Constants.CIRCLE_RADIUS);
             var yPos = 0;
             var line = new Line(xPos, yPos, xPos, paneHeight);
             line.setStroke(Color.RED);
@@ -146,10 +145,10 @@ public class GraphPane extends Pane {
                 final Point2D parentEventPosition = getEventPosition(parentEvent);
                 final Point2D eventPosition = getEventPosition(event);
                 var line = new Line(
-                        eventPosition.getX() + circleRadius,
-                        eventPosition.getY() + circleRadius,
-                        parentEventPosition.getX() + circleRadius,
-                        parentEventPosition.getY() + circleRadius);
+                        eventPosition.getX() + Constants.CIRCLE_RADIUS,
+                        eventPosition.getY() + Constants.CIRCLE_RADIUS,
+                        parentEventPosition.getX() + Constants.CIRCLE_RADIUS,
+                        parentEventPosition.getY() + Constants.CIRCLE_RADIUS);
                 line.setStroke(Color.BLUE); // should we use a different colour for self parent?
                 nodeGroup.getChildren().add(line);
             }
