@@ -3,9 +3,11 @@ package com.swirlds.demo.hello;
 import com.hedera.hapi.node.state.roster.Roster;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Circle;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Sphere;
 import javafx.scene.text.Text;
 
 import java.util.HashMap;
@@ -16,7 +18,7 @@ public class GraphPane extends Pane {
     private Map<Long, Integer> nodePositions = new HashMap<Long, Integer>();
     private final int paneWidth = 900;
     private final int paneHeight = 900;
-    private final int circleRadius = 50;
+    private final int circleRadius = 20;
 
     public void setup(Roster roster) {
         this.setStyle("-fx-background-color: grey;");
@@ -29,12 +31,19 @@ public class GraphPane extends Pane {
         // can use creator id and generation to determine horizontal position
     }
 
-    public void addEventNode(GuiEvent event, int xOffset, int yOffset) {
-        Circle circle = new Circle(circleRadius, Color.BLUE);
-        final long generationOffset = paneHeight - (event.generation() * circleRadius) - (circleRadius * 2);
-        circle.relocate(nodePositions.get(event.creator()), generationOffset);
+    public void addEventNode(GuiEvent event) {
+        final long nodePos = nodePositions.get(event.creator());
+        final long generationOffset = paneHeight - (event.generation() * circleRadius * 2) - (circleRadius * 2);
+        System.out.println("eventId: " + event.id().toString() + ", gen: " + event.generation() + ", nodePos: " + nodePos + ", generationOffset: " + generationOffset);
+
+        Sphere circle = new Sphere(circleRadius);
+        var material = new PhongMaterial(Color.BLUE);
+        material.setSpecularColor(Color.WHITE);
+        circle.setMaterial(material);
+
+        circle.relocate(nodePos, generationOffset);
         Text text = new Text(event.generation() + " - " + event.creator());
-        text.relocate(nodePositions.get(event.creator()), generationOffset);
+        text.relocate(nodePos - 40, generationOffset + 10);
         this.getChildren().addAll(circle, text);
         nodeViews.put(event.id(), event);
     }
