@@ -6,13 +6,12 @@ import static com.hedera.statevalidation.validators.Constants.VALIDATE_FILE_LAYO
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
 import com.hedera.statevalidation.parameterresolver.VirtualMapHolder;
-import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.hedera.statevalidation.validators.Constants;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,8 +32,9 @@ import java.util.stream.Stream;
  */
 @ExtendWith({StateResolver.class})
 @Tag("files")
-@Log4j2
 public class FileLayout {
+
+    private static final Logger log = LogManager.getLogger(FileLayout.class);
 
     // Index paths
 

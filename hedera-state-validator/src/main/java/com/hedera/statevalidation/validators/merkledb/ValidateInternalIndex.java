@@ -38,7 +38,8 @@ import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 // todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hiero.base.crypto.Hash;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,8 +57,10 @@ import java.util.function.LongConsumer;
 @SuppressWarnings("NewClassNamingConvention")
 @ExtendWith({ReportResolver.class, SlackReportGenerator.class})
 @Tag("internal")
-@Log4j2
 public class ValidateInternalIndex {
+
+    private static final Logger log = LogManager.getLogger(ValidateInternalIndex.class);
+
     // todo hackathon @ParameterizedRepeatedIfExceptionsTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void validateIndex(VirtualMapAndDataSourceRecord<VirtualKey, VirtualValue> record, Report report) {

@@ -29,7 +29,6 @@ import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 // todo hackathon import io.github.artsok.RepeatedIfExceptionsTest;
-import lombok.extern.log4j.Log4j2;
 import org.hiero.base.crypto.Hash;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,9 +39,7 @@ import java.util.List;
 import static com.hedera.statevalidation.parameterresolver.InitUtils.CONFIGURATION;
 import static com.swirlds.common.merkle.utility.MerkleUtils.rehashTree;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
-@Log4j2
 @ExtendWith({StateResolver.class, ReportResolver.class, SlackReportGenerator.class, HashInfoResolver.class})
 @Tag("rehash")
 public class Rehash {

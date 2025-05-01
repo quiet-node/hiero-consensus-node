@@ -43,7 +43,8 @@ import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
 // todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import com.swirlds.virtualmap.serialize.KeySerializer;
 import com.swirlds.virtualmap.serialize.ValueSerializer;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.provider.ArgumentsSource;
@@ -55,8 +56,9 @@ import java.util.function.LongConsumer;
 @SuppressWarnings("NewClassNamingConvention")
 @ExtendWith({ReportResolver.class, SlackReportGenerator.class})
 @Tag("hdhm")
-@Log4j2
 public class ValidateLeafIndexHalfDiskHashMap {
+
+    private static final Logger log = LogManager.getLogger(ValidateLeafIndexHalfDiskHashMap.class);
 
     // todo hackathon @ParameterizedRepeatedIfExceptionsTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)

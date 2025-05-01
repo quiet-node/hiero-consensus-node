@@ -91,6 +91,7 @@ import com.hedera.node.config.types.LongPair;
 import com.hedera.node.config.types.PermissionedAccountsRange;
 import com.hedera.node.internal.network.Network;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.hedera.statevalidation.listener.ReportingListener;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
@@ -110,27 +111,23 @@ import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import com.swirlds.state.lifecycle.StateMetadata;
-import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.disk.OnDiskKeySerializer;
 import com.swirlds.state.merkle.disk.OnDiskValueSerializer;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
-import lombok.extern.log4j.Log4j2;
-import org.hiero.base.constructable.ConstructableRegistry;
-import org.hiero.base.crypto.config.CryptoConfig;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.event.creator.impl.config.EventCreationConfig;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.InstantSource;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Supplier;
 
 import static com.hedera.node.app.spi.fees.NoopFeeCharging.NOOP_FEE_CHARGING;
@@ -139,8 +136,10 @@ import static com.hedera.statevalidation.validators.Constants.FILE_CHANNELS;
 import static com.hedera.statevalidation.validators.Constants.STATE_DIR;
 import static com.swirlds.platform.state.service.PlatformStateService.PLATFORM_STATE_SERVICE;
 
-@Log4j2
 public class InitUtils {
+
+    private static final Logger log = LogManager.getLogger(InitUtils.class);
+
 
     /**
      * The excluded tables were renamed (see https://github.com/hashgraph/hedera-services/pull/16775). However, their metadata

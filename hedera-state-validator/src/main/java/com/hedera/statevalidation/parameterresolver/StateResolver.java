@@ -18,7 +18,6 @@ package com.hedera.statevalidation.parameterresolver;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.node.app.HederaStateRoot;
-import com.hedera.node.app.fixtures.state.FakePlatform;
 import com.hedera.node.app.roster.RosterService;
 import com.hedera.node.app.services.ServicesRegistryImpl;
 import com.hedera.statevalidation.validators.Constants;
@@ -42,7 +41,6 @@ import com.swirlds.state.State;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.constructable.ConstructableUtils;
 import javax.management.RuntimeErrorException;
-import lombok.extern.log4j.Log4j2;
 import org.hiero.base.concurrent.ExecutorFactory;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
@@ -70,8 +68,6 @@ import static com.hedera.statevalidation.parameterresolver.InitUtils.initService
 import static com.hedera.statevalidation.parameterresolver.InitUtils.initServiceRegistry;
 import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStateFile;
 
-
-@Log4j2
 public class StateResolver implements ParameterResolver {
 
     private static final Pattern VERSION_PATTERN = Pattern.compile("^((\\d+)\\.(\\d+)\\.(\\d+))\\s*(\\d+)*$");
