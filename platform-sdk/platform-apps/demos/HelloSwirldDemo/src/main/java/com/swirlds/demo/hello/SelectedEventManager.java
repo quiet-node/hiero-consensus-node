@@ -5,6 +5,7 @@ public class SelectedEventManager {
     private SelectedEvent currentEvent;
 
     public void eventSelected(final SelectedEvent selectedEvent){
+        System.out.println("Selected event: " + selectedEvent.event());
         if(currentEvent != null){
             currentEvent.circle().setRadius(Constants.CIRCLE_RADIUS);
         }
