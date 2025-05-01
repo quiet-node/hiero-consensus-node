@@ -18,6 +18,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Sphere;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 
 public class GraphControls {
 
@@ -74,7 +76,8 @@ public class GraphControls {
         spacer.minHeight(500);
         leftPane.getChildren().add(spacer);
         leftPane.getChildren().add(createPlayerPane());
-        this.selectedLabel = new Label("Firstline\nSecond line");
+        this.selectedLabel = new Label("");
+        selectedLabel.setFont(Font.font("Monospaced", FontWeight.BOLD, 12));
         leftPane.getChildren().add(selectedLabel);
     }
 

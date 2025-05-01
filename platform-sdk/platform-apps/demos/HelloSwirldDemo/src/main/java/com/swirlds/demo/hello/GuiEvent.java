@@ -61,17 +61,25 @@ public record GuiEvent(
 
     @Override
     public String toString() {
-        return
-                "id=" + id.toHex().substring(0, 6) +
-                "\ncreator=" + creator +
-                "\nbirthRound=" + birthRound +
-                "\ngeneration=" + generation +
-                "\nparents=" + parents.stream().map(Bytes::toHex).map(s->s.substring(0, 6)).collect(Collectors.joining(",")) +
-                "\nvotingRound=" + votingRound +
-                "\nwitness=" + witness +
-                "\nfamous=" + famous +
-                "\njudge=" + judge +
-                "\ndecided=" + decided +
-                "\nconsensus=" + consensus;
+        final StringBuilder sb = new StringBuilder();
+        addProperty(sb, "hash", id.toHex().substring(0, 6));
+        addProperty(sb, "creator", creator);
+        addProperty(sb, "birthRound", birthRound);
+        addProperty(sb, "generation", generation);
+        addProperty(sb, "parents", parents.stream().map(Bytes::toHex).map(s->s.substring(0, 6)).collect(Collectors.joining(",")));
+        addProperty(sb, "votingRound", votingRound);
+        addProperty(sb, "witness", witness);
+        addProperty(sb, "famous", famous);
+        addProperty(sb, "judge", judge);
+        addProperty(sb, "decided", decided);
+        addProperty(sb, "consensus", consensus);
+        return sb.toString();
+    }
+
+    private void addProperty(final StringBuilder sb, final String name, final Object value) {
+        sb.append("%-15s".formatted(name))
+                .append(" ")
+                .append(value)
+                .append("\n");
     }
 }
