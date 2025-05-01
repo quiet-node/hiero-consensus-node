@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.hedera.statevalidation.validators;
+package com.hedera.statevalidation;
 
 import com.hedera.statevalidation.listener.LoggingTestExecutionListener;
 import com.hedera.statevalidation.listener.ReportingListener;
@@ -30,6 +30,7 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ParentCommand;
 
 import java.io.File;
 import java.util.concurrent.Callable;
@@ -43,20 +44,19 @@ import static org.junit.platform.engine.discovery.DiscoverySelectors.selectPacka
  * 1. State directory - the directory where the state is stored<br>
  * 2. Tag to run - the tag of the test to run (optional) If no tags are provided, all tests are run.<br>
  */
-@Command(name = "validate", mixinStandardHelpOptions = true, version = "0.39",
+@Command(name = "validate", mixinStandardHelpOptions = true,
         description = "Validates the state of a Mainnet Hedera node")
-public class Validator implements Callable<Integer> {
+public class ValidateCommand implements Callable<Integer> {
 
-    private static final Logger log = LogManager.getLogger(Validator.class);
+    @ParentCommand
+    private StateOperatorCommand parent;
 
-    @CommandLine.Parameters(index = "0", description = "State directory")
-    private File stateDir;
-    @CommandLine.Parameters(arity = "1..*", index = "1", description = "Tag to run: [stateAnalyzer, internal, leaf, hdhm, account, tokenRelations, rehash, files, compaction]")
+    @CommandLine.Parameters(arity = "1..*", description = "Tag to run: [stateAnalyzer, internal, leaf, hdhm, account, tokenRelations, rehash, files, compaction]")
     private String[] tags = {"stateAnalyzer", "internal", "leaf", "hdhm", "account", "tokenRelations", "rehash", "files", "compaction"};
 
     @Override
     public Integer call() {
-        System.setProperty("state.dir", stateDir.getAbsolutePath());
+        System.setProperty("state.dir", parent.getStateDir().getAbsolutePath());
 
         LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
                 .selectors(selectPackage("com.hedera.statevalidation.validators"))
@@ -73,13 +73,6 @@ public class Validator implements Callable<Integer> {
         }
 
         return summaryGeneratingListener.isFailed() ? 1 : 0;
-    }
-
-    public static void main(String[] args) {
-        long startTime = System.currentTimeMillis();
-        int exitCode = new CommandLine(new Validator()).execute(args);
-        log.info("Execution time: {}ms", System.currentTimeMillis() - startTime);
-        System.exit(exitCode);
     }
 
 }
