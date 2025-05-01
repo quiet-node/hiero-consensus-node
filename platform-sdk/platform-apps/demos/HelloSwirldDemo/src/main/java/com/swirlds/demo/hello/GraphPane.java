@@ -1,6 +1,7 @@
 package com.swirlds.demo.hello;
 
 import com.hedera.hapi.node.state.roster.Roster;
+import java.util.List;
 import javafx.animation.ScaleTransition;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
@@ -67,7 +68,10 @@ public class GraphPane extends Pane {
         circle.setMaterial(material);
 
         if (isNewEvent) {
-            circle.setOnMouseClicked(new SelectedEvent(event, circle, selectedEventManager));
+            circle.setOnMouseClicked(new SelectedEvent(event,
+                    //event.parents().stream().map(p -> (Sphere) nodeGroup.getChildren().get(nodeViews.get(event.id()).groupPosition())).toList(),
+                    List.of(),
+                    circle, selectedEventManager));
             circle.relocate(eventPosition.getX(), eventPosition.getY());
 
             nodeGroup.getChildren().add(circle);
@@ -79,6 +83,13 @@ public class GraphPane extends Pane {
 //            nodeGroup.getChildren().add(text);
 
             addParentEdge(event);
+            ScaleTransition st = new ScaleTransition(Duration.millis(250), circle);
+            st.setByX(1.5f);
+            st.setByY(1.5f);
+            st.setCycleCount(2);
+            st.setAutoReverse(true);
+
+            st.play();
         }
 
         // add gen label
@@ -98,13 +109,7 @@ public class GraphPane extends Pane {
             //setGroupYTranslation(cumulativeYTranslation);
         }
 
-        ScaleTransition st = new ScaleTransition(Duration.millis(250), circle);
-        st.setByX(1.5f);
-        st.setByY(1.5f);
-        st.setCycleCount(2);
-        st.setAutoReverse(true);
 
-        st.play();
     }
 
     @Deprecated

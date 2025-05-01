@@ -69,9 +69,11 @@ public class GraphControls {
     }
 
     private void fillLeftPane(VBox leftPane) {
-
-        addBubbleEvent(leftPane, Color.LIGHTBLUE,Color.DARKBLUE, "Something");
-        addBubbleEvent(leftPane, Color.LIGHTGREEN, Color.DARKGREEN, "Something else");
+        addBubbleEvent(leftPane, EventColor.LIGHT_RED, EventColor.DARK_RED, EventColor.getGroupStatus(EventColor.LIGHT_RED));
+        addBubbleEvent(leftPane, EventColor.LIGHT_GREEN, EventColor.DARK_GREEN, EventColor.getGroupStatus(EventColor.LIGHT_GREEN));
+        addBubbleEvent(leftPane, EventColor.LIGHT_YELLOW, EventColor.DARK_YELLOW, EventColor.getGroupStatus(EventColor.LIGHT_YELLOW));
+        addBubbleEvent(leftPane, EventColor.LIGHT_BLUE, EventColor.DARK_BLUE, EventColor.getGroupStatus(EventColor.LIGHT_BLUE));
+        addBubbleEvent(leftPane, EventColor.LIGHT_GRAY, EventColor.DARK_GRAY, EventColor.getGroupStatus(EventColor.LIGHT_GRAY));
         Rectangle spacer = new Rectangle();
         spacer.minHeight(500);
         leftPane.getChildren().add(spacer);

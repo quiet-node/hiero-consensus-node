@@ -14,8 +14,10 @@ public class SelectedEventManager {
     public void eventSelected(final SelectedEvent selectedEvent){
         if(currentEvent != null){
             currentEvent.circle().setRadius(Constants.CIRCLE_RADIUS);
+            currentEvent.parents().forEach(parent -> {parent.setRadius(Constants.CIRCLE_RADIUS);});
         }
         selectedEvent.circle().setRadius(Constants.SELECTED_CIRCLE_RADIUS);
+        selectedEvent.parents().forEach(parent -> {parent.setRadius(Constants.SELECTED_PARENT_RADIUS);});
         currentEvent = selectedEvent;
         selectedLabel.setText(
                 "Selected event:\n" +

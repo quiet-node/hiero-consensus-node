@@ -59,4 +59,56 @@ public class EventColor {
         // if we reached here, it means the event is a witness, fame is decided, but it is not famous
         return event.consensus() ? DARK_YELLOW : LIGHT_YELLOW;
     }
+
+    public static String getGroupStatus(final Color color) {
+        if (color.equals(LIGHT_RED) || color.equals(DARK_RED)) {
+            return "unknown-fame witness";
+        } else if (color.equals(LIGHT_GREEN) || color.equals(DARK_GREEN)) {
+            return "famous witness";
+        }
+        if (color.equals(LIGHT_YELLOW) || color.equals(DARK_YELLOW)) {
+            return "non-famous witness";
+        }
+        if (color.equals(LIGHT_BLUE) || color.equals(DARK_BLUE)) {
+            return "judge";
+        }
+        if (color.equals(LIGHT_GRAY) || color.equals(DARK_GRAY)) {
+            return "non-witness";
+        }
+        return "unknown";
+    }
+
+    public static String getFullStatus(final Color color) {
+        if (color.equals(LIGHT_RED)) {
+            return "unknown-fame witness, non-consensus";
+        }
+        if (color.equals(DARK_RED)) {
+            return "unknown-fame witness, consensus";
+        }
+        if (color.equals(LIGHT_GREEN)) {
+            return "famous witness, non-consensus";
+        }
+        if (color.equals(DARK_GREEN)) {
+            return "famous witness, consensus";
+        }
+        if (color.equals(LIGHT_YELLOW)) {
+            return "non-famous witness, non-consensus";
+        }
+        if (color.equals(DARK_YELLOW)) {
+            return "non-famous witness, consensus";
+        }
+        if (color.equals(LIGHT_BLUE)) {
+            return "judge, non-consensus";
+        }
+        if (color.equals(DARK_BLUE)) {
+            return "judge, consensus";
+        }
+        if (color.equals(LIGHT_GRAY)) {
+            return "non-witness, non-consensus";
+        }
+        if (color.equals(DARK_GRAY)) {
+            return "non-witness, consensus";
+        }
+        return "unknown";
+    }
 }
