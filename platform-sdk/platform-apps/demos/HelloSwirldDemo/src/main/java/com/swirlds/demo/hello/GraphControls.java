@@ -1,6 +1,7 @@
 package com.swirlds.demo.hello;
 
 import com.hedera.hapi.node.state.roster.RosterEntry;
+import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -12,9 +13,13 @@ import javafx.scene.layout.VBox;
 
 public class GraphControls {
 
+    private GuiGraphGenerator graphGenerator;
+    private GraphPane graphPane;
+
     public Pane setup(GuiGraphGenerator graphGenerator) {
+        this.graphGenerator = graphGenerator;
         var roster = graphGenerator.getRoster();
-        GraphPane graphPane = new GraphPane();
+        this.graphPane = new GraphPane();
         graphPane.setup(roster);
         VBox vBox = new VBox();
         ScrollPane scrollPane = new ScrollPane(graphPane);
@@ -32,13 +37,22 @@ public class GraphControls {
     }
 
     private Node createBottomPane() {
-
         var hBox = new HBox();
-        var button = new Button();
-        button.setGraphic(new ImageView("/left.png"));
-        button.maxHeight(200);
-        hBox.getChildren().add(button);
-        hBox.minHeight(300);
+        var nextEvent = new Button();
+        nextEvent.setGraphic(new ImageView("/right.png"));
+        hBox.getChildren().add(nextEvent);
+
+        nextEvent.setOnAction(event -> {
+           var events = graphGenerator.generateEvents(1);
+           Platform.runLater(() -> {
+               for (GuiEvent guiEvent : events) {
+                   graphPane.addEventNode(guiEvent, (int) (Math.random()*500), (int) (Math.random()*500));
+               }
+           });
+
+        });
+
+
         return hBox;
 
     }
