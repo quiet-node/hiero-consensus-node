@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javafx.scene.paint.Color;
 import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
@@ -56,5 +57,21 @@ public record GuiEvent(
                         .map(Hash::getBytes)
                         .toList()
         );
+    }
+
+    @Override
+    public String toString() {
+        return
+                "id=" + id.toHex().substring(0, 6) +
+                "\ncreator=" + creator +
+                "\nbirthRound=" + birthRound +
+                "\ngeneration=" + generation +
+                "\nparents=" + parents.stream().map(Bytes::toHex).map(s->s.substring(0, 6)).collect(Collectors.joining(",")) +
+                "\nvotingRound=" + votingRound +
+                "\nwitness=" + witness +
+                "\nfamous=" + famous +
+                "\njudge=" + judge +
+                "\ndecided=" + decided +
+                "\nconsensus=" + consensus;
     }
 }

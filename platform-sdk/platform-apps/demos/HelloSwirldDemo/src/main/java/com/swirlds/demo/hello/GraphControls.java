@@ -27,16 +27,23 @@ public class GraphControls {
     private TimerTask producer;
     private ScrollBar scrollBar;
     private Label selectedLabel;
+    private SelectedEventManager selectedEventManager;
 
     public Pane setup(GuiGraphGenerator graphGenerator) {
         this.graphGenerator = graphGenerator;
         var roster = graphGenerator.getRoster();
-        this.graphPane = new GraphPane();
-        graphPane.setup(roster);
 
+        // left pane
         HBox hBox = new HBox();
         var leftPane = new VBox(15);
         fillLeftPane(leftPane);
+
+        selectedEventManager = new SelectedEventManager(selectedLabel);
+
+        // middle pane
+        this.graphPane = new GraphPane();
+        graphPane.setup(roster, selectedEventManager);
+
         this.scrollBar = new ScrollBar();
         scrollBar.setOrientation(Orientation.VERTICAL);
 

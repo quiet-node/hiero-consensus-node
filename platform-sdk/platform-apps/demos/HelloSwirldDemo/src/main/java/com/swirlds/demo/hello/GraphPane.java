@@ -28,9 +28,10 @@ public class GraphPane extends Pane {
     private int totalHeight = paneHeight;
     private Translate groupTranslation;
     private int cumulativeYTranslation = 0;
-    private final SelectedEventManager selectedEventManager = new SelectedEventManager();
+    private SelectedEventManager selectedEventManager;
 
-    public void setup(Roster roster) {
+    public void setup(final Roster roster, final SelectedEventManager selectedEventManager) {
+        this.selectedEventManager = selectedEventManager;
         this.setStyle("-fx-background-color: grey;");
         this.setPrefSize(paneWidth,paneHeight);
 
