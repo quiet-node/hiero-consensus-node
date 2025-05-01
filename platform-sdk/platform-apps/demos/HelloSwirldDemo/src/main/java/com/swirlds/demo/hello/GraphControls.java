@@ -40,15 +40,19 @@ public class GraphControls {
         this.scrollBar = new ScrollBar();
         scrollBar.setOrientation(Orientation.VERTICAL);
 
-
         hBox.getChildren().add(leftPane);
         hBox.getChildren().add(graphPane);
         hBox.getChildren().add(scrollBar);
 
-        scrollBar.setMax(2000);
+        scrollBar.setMax(1000);
+        scrollBar.setValue(1000);
 
         scrollBar.valueProperty().addListener((observable, oldValue, newValue) -> {
-            System.out.println("ScrollBar value: " + newValue);
+            double val = (1000-newValue.intValue())/1000.0;
+
+            int distance = Math.max(1, graphPane.getTotalHeight()-1000);
+
+            graphPane.setGroupYTranslation((int) (distance*val));
         });
 
 
@@ -151,10 +155,6 @@ public class GraphControls {
             for (GuiEvent guiEvent : events) {
                 graphPane.addEventNode(guiEvent);
             }
-            //scrollBar.setMax(500);
-            System.out.println(
-                    graphPane.getTotalHeight()
-            );
         });
     }
 
