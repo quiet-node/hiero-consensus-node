@@ -27,13 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.hedera.statevalidation.merkledb.reflect.MemoryIndexDiskKeyValueStoreW;
 import com.swirlds.common.crypto.Hash;
-import com.swirlds.merkledb.MerkleDbDataSourceW;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceRecord;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
-import com.swirlds.merkledb.files.DataFileCollectionW;
 import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
@@ -64,7 +62,7 @@ public class ValidateInternalIndex {
     @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void validateIndex(VirtualMapAndDataSourceRecord<VirtualKey, VirtualValue> record, Report report) {
-        var dataSourceW = new MerkleDbDataSourceW(record.dataSource());
+        var dataSource = record.dataSource();
         if(record.dataSource().getFirstLeafPath() == -1) {
             log.info("Skipping the validation for {} as the map is empty", record.name());
             return;
@@ -72,15 +70,15 @@ public class ValidateInternalIndex {
 
         final long inMemoryHashThreshold;
         var lastLeafPath = record.dataSource().getLastLeafPath();
-        var internalNodesIndex = dataSourceW.getHashPathToDiskLocation();
-        var internalStore = new MemoryIndexDiskKeyValueStoreW<>(dataSourceW.getPathToHashDisk());
-        var dfc = new DataFileCollectionW<>(internalStore.getFileCollection(), VirtualHashRecord::parseFrom);
-        var pathToHashRam = dataSourceW.getPathToHashRam();
+        var internalNodesIndex = record.dataSource().getPathToDiskLocationInternalNodes();
+        var internalStore = new MemoryIndexDiskKeyValueStoreW<>(dataSource.getHashStoreDisk());
+        var dfc = internalStore.getFileCollection();
+        var pathToHashRam = dataSource.getHashStoreRam();
         var inMemoryExceptionCount = new AtomicInteger();
 
         final ForkJoinTask<?> inMemoryTask;
         if (pathToHashRam != null) {
-            inMemoryHashThreshold = dataSourceW.getHashesRamToDiskThreshold();
+            inMemoryHashThreshold = dataSource.getTableConfig().getHashesRamToDiskThreshold();
             assertTrue(
                     pathToHashRam.size() <= inMemoryHashThreshold,
                     "The size of the pathToHashRam should be less than or equal to the in memory hash threshold");
@@ -131,8 +129,9 @@ public class ValidateInternalIndex {
                     printFileDataLocationError(log, "Missing entry on disk!", dfc, dataLocation);
                     nullErrorCount.incrementAndGet();
                 } else {
-                    assertEquals(data.path(), path);
-                    assertNotNull(data.hash());
+                    var hashRecord = VirtualHashRecord.parseFrom(data);
+                    assertEquals(hashRecord.path(), path);
+                    assertNotNull(hashRecord.hash());
                     successCount.incrementAndGet();
                 }
             } catch (Exception e) {

@@ -28,8 +28,6 @@ import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceRecor
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.merkledb.MerkleDbDataSource;
-import com.swirlds.merkledb.MerkleDbDataSourceW;
-import com.swirlds.merkledb.files.DataFileCollectionW;
 import com.swirlds.state.merkle.disk.OnDiskKey;
 import com.swirlds.state.merkle.disk.OnDiskValue;
 import com.swirlds.virtualmap.VirtualKey;
@@ -66,22 +64,21 @@ public class ValidateLeafIndex {
             log.info("Skipping the validation for {} as the map is empty", dsRecord.name());
             return;
         }
-        MerkleDbDataSourceW vds = dsRecord.createMerkleDSWrapper();
-        MerkleDbDataSource merkleDb;
+        final MerkleDbDataSource vds = dsRecord.dataSource();
+        final MerkleDbDataSource merkleDb = dsRecord.dataSource();
         final VirtualMap<VirtualKey, VirtualValue> map = (VirtualMap<VirtualKey, VirtualValue>) dsRecord.map();
         final KeySerializer keySerializer = dsRecord.keySerializer();
         final ValueSerializer valueSerializer = dsRecord.valueSerializer();
 
-        merkleDb = dsRecord.dataSource();
-        log.debug(vds.getPathToHashDisk().getFilesSizeStatistics());
+        log.debug(vds.getHashStoreDisk().getFilesSizeStatistics());
 
         long firstLeafPath = merkleDb.getFirstLeafPath();
         long lastLeafPath = merkleDb.getLastLeafPath();
 
-        var leafNodeIndex = vds.getLeafPathToDiskLocation();
+        var leafNodeIndex = vds.getPathToDiskLocationLeafNodes();
         var objectKeyToPath = vds.getKeyToPath();
         var leafStore = new MemoryIndexDiskKeyValueStoreW<>(vds.getPathToKeyValue());
-        var leafDfc = new DataFileCollectionW<>(leafStore.getFileCollection(), VirtualLeafBytes::parseFrom);
+        var leafDfc = leafStore.getFileCollection();
 
         assertEquals(lastLeafPath, leafNodeIndex.size() - 1);
 
@@ -97,16 +94,16 @@ public class ValidateLeafIndex {
             long dataLocation = leafNodeIndex.get(path, -1);
             assertNotEquals(-1, dataLocation);
             // read from dataLocation using datasource
-            VirtualLeafBytes data;
             try {
-                data = leafDfc.readDataItem(dataLocation);
+                var data = leafDfc.readDataItem(dataLocation);
                 if (data != null) {
-                    assertEquals(data.path(), path);
-                    OnDiskKey key = (OnDiskKey) keySerializer.deserialize(data.keyBytes().toReadableSequentialData());
-                    long actual = objectKeyToPath.get(data.keyBytes(), key.hashCode(), -1);
+                    final VirtualLeafBytes leafRecord = VirtualLeafBytes.parseFrom(data);
+                    assertEquals(leafRecord.path(), path);
+                    OnDiskKey key = (OnDiskKey) keySerializer.deserialize(leafRecord.keyBytes().toReadableSequentialData());
+                    long actual = objectKeyToPath.get(leafRecord.keyBytes(), key.hashCode(), -1);
                     assertEquals(path, actual);
 
-                    OnDiskValue value = (OnDiskValue) valueSerializer.deserialize(data.valueBytes().toReadableSequentialData());
+                    OnDiskValue value = (OnDiskValue) valueSerializer.deserialize(leafRecord.valueBytes().toReadableSequentialData());
                     assertEquals(value.getValue(), ((OnDiskValue) map.get(key)).getValue());
                     successCount.incrementAndGet();
                 } else {

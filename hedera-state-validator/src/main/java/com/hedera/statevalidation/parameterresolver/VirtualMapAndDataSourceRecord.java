@@ -16,7 +16,6 @@
 
 package com.hedera.statevalidation.parameterresolver;
 
-import com.swirlds.merkledb.MerkleDbDataSourceW;
 import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualMap;
@@ -30,9 +29,5 @@ public record VirtualMapAndDataSourceRecord<K extends VirtualKey, V extends Virt
     @Override
     public String toString() {
         return name;
-    }
-
-    public MerkleDbDataSourceW createMerkleDSWrapper() {
-        return new MerkleDbDataSourceW(dataSource);
     }
 }

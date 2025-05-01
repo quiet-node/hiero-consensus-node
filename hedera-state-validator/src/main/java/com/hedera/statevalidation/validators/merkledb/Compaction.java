@@ -1,6 +1,7 @@
 package com.hedera.statevalidation.validators.merkledb;
 
-import com.swirlds.merkledb.MerkleDbDataSourceW;
+import com.swirlds.merkledb.MerkleDbCompactionCoordinator;
+import com.swirlds.merkledb.MerkleDbDataSource;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceRecord;
@@ -15,9 +16,13 @@ public class Compaction {
 
     @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
-    void compaction(VirtualMapAndDataSourceRecord labelAndDs) {
-        MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();
-        vds.getCompactionCoordinator().runCompaction();
+    void compaction(VirtualMapAndDataSourceRecord labelAndDs) throws Exception {
+        MerkleDbDataSource vds = labelAndDs.dataSource();
+        final MerkleDbCompactionCoordinator coordinator = vds.getCompactionCoordinator();
+        coordinator.compactDiskStoreForHashesAsync();
+        coordinator.compactPathToKeyValueAsync();
+        coordinator.compactDiskStoreForKeyToPathAsync();
+        coordinator.waitForCurrrentCompactionToComplete();
     }
 
 }

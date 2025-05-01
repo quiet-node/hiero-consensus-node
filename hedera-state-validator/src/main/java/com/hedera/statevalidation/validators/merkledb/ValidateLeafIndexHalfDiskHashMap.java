@@ -23,17 +23,16 @@ import static com.hedera.statevalidation.validators.ParallelProcessingUtil.proce
 import static com.hedera.statevalidation.validators.Utils.printFileDataLocationError;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.hedera.pbj.runtime.io.ReadableSequentialData;
+import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.hedera.statevalidation.merkledb.reflect.BucketIterator;
 import com.hedera.statevalidation.merkledb.reflect.HalfDiskHashMapW;
 import com.hedera.statevalidation.merkledb.reflect.MemoryIndexDiskKeyValueStoreW;
-import com.swirlds.merkledb.MerkleDbDataSourceW;
+import com.swirlds.merkledb.MerkleDbDataSource;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceRecord;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
-import com.swirlds.merkledb.files.DataFileCollectionW;
 import com.swirlds.merkledb.files.hashmap.ParsedBucket;
 import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualMap;
@@ -50,7 +49,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Function;
 import java.util.function.LongConsumer;
 
 @SuppressWarnings("NewClassNamingConvention")
@@ -73,21 +71,15 @@ public class ValidateLeafIndexHalfDiskHashMap {
         final ValueSerializer valueSerializer = vmAndSource.valueSerializer();
         boolean skipStaleKeysValidation = VALIDATE_STALE_KEYS_EXCLUSIONS.contains(vmAndSource.name());
         boolean skipIncorrectBucketIndexValidation = VALIDATE_INCORRECT_BUCKET_INDEX_EXCLUSIONS.contains(vmAndSource.name());
-        MerkleDbDataSourceW vds = new MerkleDbDataSourceW(vmAndSource.dataSource());
+        MerkleDbDataSource vds = vmAndSource.dataSource();
 
-        log.debug(vds.getPathToHashDisk().getFilesSizeStatistics());
+        log.debug(vds.getHashStoreDisk().getFilesSizeStatistics());
 
         final var hdhm = new HalfDiskHashMapW(vds.getKeyToPath());
         final var leafStore = new MemoryIndexDiskKeyValueStoreW<>(vds.getPathToKeyValue());
-        final var pathToDiskLocationLeafNodes = vds.getLeafPathToDiskLocation();
-        Function<ReadableSequentialData, ParsedBucket> bucketDeser = v -> {
-            ParsedBucket bucket = new ParsedBucket();
-            bucket.readFrom(v);
-            return bucket;
-        };
-        Function<ReadableSequentialData, VirtualLeafBytes> leafDeser = VirtualLeafBytes::parseFrom;
-        final var dfc = new DataFileCollectionW(hdhm.getFileCollection(), bucketDeser);
-        final var leafStoreDFC = new DataFileCollectionW(leafStore.getFileCollection(), leafDeser);
+        final var pathToDiskLocationLeafNodes = vds.getPathToDiskLocationLeafNodes();
+        final var dfc = hdhm.getFileCollection();
+        final var leafStoreDFC = leafStore.getFileCollection();
         final var stalePathsInfos = new CopyOnWriteArrayList<StalePathInfo>();
         final var nullLeafsInfo = new CopyOnWriteArrayList<NullLeafInfo>();
         final var unexpectedKeyInfos = new CopyOnWriteArrayList<UnexpectedKeyInfo>();
@@ -100,8 +92,14 @@ public class ValidateLeafIndexHalfDiskHashMap {
                 if (bucketLocation == 0) {
                     return;
                 }
-                ParsedBucket bucket = (ParsedBucket) dfc.readDataItem(bucketLocation);
-                if(bucket.getBucketIndex() != i) {
+                final BufferedData bucketData = dfc.readDataItem(bucketLocation);
+                if (bucketData == null) {
+                    // FUTURE WORK: report
+                    return;
+                }
+                ParsedBucket bucket = new ParsedBucket();
+                bucket.readFrom(bucketData);
+                if (bucket.getBucketIndex() != i) {
                     incorrectBucketIndexList.add(bucket.getBucketIndex());
                 }
                 var bucketIterator = new BucketIterator(bucket);
@@ -116,12 +114,14 @@ public class ValidateLeafIndexHalfDiskHashMap {
                         collectInfo(new StalePathInfo(path, key), stalePathsInfos);
                         continue;
                     }
-                    VirtualLeafRecord<?, ?> leaf = ((VirtualLeafBytes) leafStoreDFC.readDataItem(dataLocation)).toRecord(keySerializer, valueSerializer);
-                    if (leaf == null) {
+                    final BufferedData leafData = leafStoreDFC.readDataItem(dataLocation);
+                    if (leafData == null) {
                         printFileDataLocationError(log, "Record with null leafs!", dfc, bucketLocation);
                         collectInfo(new NullLeafInfo(path, key), nullLeafsInfo);
                         continue;
                     }
+                    final VirtualLeafBytes leafBytes = VirtualLeafBytes.parseFrom(leafData);
+                    final VirtualLeafRecord<?, ?> leaf = leafBytes.toRecord(keySerializer, valueSerializer);
                     if (!key.equals(leaf.getKey())) {
                         printFileDataLocationError(log, "Record with unexpected key!", dfc, bucketLocation);
                         collectInfo(new UnexpectedKeyInfo(path, key, leaf.getKey()), unexpectedKeyInfos);
@@ -135,7 +135,7 @@ public class ValidateLeafIndexHalfDiskHashMap {
                 if (bucketLocation != 0) {
                    printFileDataLocationError(log, e.getMessage(), dfc, bucketLocation);
                 }
-                throw e;
+                throw new RuntimeException(e);
             }
         };
         // iterate over all the buckets

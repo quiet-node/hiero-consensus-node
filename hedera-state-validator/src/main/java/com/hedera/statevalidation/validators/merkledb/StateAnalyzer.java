@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.hedera.pbj.runtime.io.ReadableSequentialData;
 import com.hedera.statevalidation.merkledb.reflect.MemoryIndexDiskKeyValueStoreW;
 import com.swirlds.common.io.streams.SerializableDataOutputStream;
-import com.swirlds.merkledb.MerkleDbDataSourceW;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceRecord;
@@ -34,6 +33,7 @@ import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.hedera.statevalidation.reporting.StorageReport;
 import com.hedera.statevalidation.reporting.VirtualMapReport;
 import com.swirlds.merkledb.KeyRange;
+import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.merkledb.collections.LongList;
 import com.swirlds.merkledb.collections.LongListHeap;
 import com.swirlds.merkledb.files.DataFileCollection;
@@ -69,7 +69,7 @@ public class StateAnalyzer {
     @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForPathToKeyValueStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
-        MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();
+        MerkleDbDataSource vds = labelAndDs.dataSource();
         final var keySerializer = labelAndDs.keySerializer();
         final var valueSerializer = labelAndDs.valueSerializer();
         updateReport(
@@ -86,11 +86,11 @@ public class StateAnalyzer {
     @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForPathToHashStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
-        MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();
+        MerkleDbDataSource vds = labelAndDs.dataSource();
         updateReport(
                 labelAndDs,
                 report,
-                new MemoryIndexDiskKeyValueStoreW<>(vds.getPathToHashDisk()).getFileCollection(),
+                new MemoryIndexDiskKeyValueStoreW<>(vds.getHashStoreDisk()).getFileCollection(),
                 VirtualMapReport::setPathToHashReport,
                 VirtualHashRecord::parseFrom);
     }
@@ -98,7 +98,7 @@ public class StateAnalyzer {
     @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForObjectKeyToPathStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
-//          MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();
+//          MerkleDbDataSource vds = labelAndDs.dataSource();
 //          updateReport(labelAndDs, report, new HalfDiskHashMapW(vds.getKeyToPath()).getFileCollection(), VirtualMapReport::setObjectKeyToPathReport);
     }
 
