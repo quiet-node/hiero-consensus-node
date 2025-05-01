@@ -3,26 +3,33 @@ package com.swirlds.demo.hello;
 import javafx.scene.paint.Color;
 
 public class EventColor {
+    private static final double C5 = 1.00;
+    private static final double C4 = 0.80;
+    private static final double C3 = 0.50;
+    private static final double C2 = 0.20;
+    private static final double C1 = 0.00;
+
+
     /** unknown-fame witness, non-consensus */
-    public static final Color LIGHT_RED = Color.color(0.6, 0, 0);
+    public static final Color LIGHT_RED = Color.color(C4, C1, C1);
     /** unknown-fame witness, consensus (which can't happen) */
-    public static final Color DARK_RED = Color.color(0.25, 0, 0);
+    public static final Color DARK_RED = Color.color(C2, C1, C1);
     /** famous witness, non-consensus */
-    public static final Color LIGHT_GREEN = Color.color(0, 0.6, 0);
+    public static final Color LIGHT_GREEN = Color.color(C1, C4, C1);
     /** famous witness, consensus */
-    public static final Color DARK_GREEN = Color.color(0, 0.25, 0);
+    public static final Color DARK_GREEN = Color.color(C1, C2, C1);
     /** non-famous witness, non-consensus */
-    public static final Color LIGHT_YELLOW = Color.color(0.5, 0.5, 0);
+    public static final Color LIGHT_YELLOW = Color.color(C4, C4, C1);
     /** non-famous witness, consensus */
-    public static final Color DARK_YELLOW = Color.color(0.2, 0.2, 0);
+    public static final Color DARK_YELLOW = Color.color(C2, C2, C1);
     /** judge, consensus */
-    public static final Color LIGHT_BLUE = Color.color(0, 0, 0.6);
+    public static final Color LIGHT_BLUE = Color.color(C1, C1, C4);
     /** judge, non-consensus */
-    public static final Color DARK_BLUE = Color.color(0, 0, 0.25);
+    public static final Color DARK_BLUE = Color.color(C1, C1, C2);
     /** non-witness, consensus */
-    public static final Color LIGHT_GRAY = Color.color(0.3, 0.3, 0.3);
+    public static final Color LIGHT_GRAY = Color.color(C4, C4, C4);
     /** non-witness, non-consensus */
-    public static final Color DARK_GRAY = Color.color(0, 0, 0);
+    public static final Color DARK_GRAY = Color.color(C1, C1, C1);
 
     /**
      * Return the color for an event based on calculations in the consensus algorithm A non-witness is gray,
