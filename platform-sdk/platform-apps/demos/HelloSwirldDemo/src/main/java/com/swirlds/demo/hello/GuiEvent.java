@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import javafx.scene.paint.Color;
 import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 
@@ -24,6 +25,10 @@ public record GuiEvent(
         boolean consensus,
         List<Bytes> stronglySeen
 ) {
+
+    public Color color(){
+        return EventColor.eventColor(this);
+    }
 
     public static GuiEvent fromEventImpl(final EventImpl eventImpl) {
         return new GuiEvent(
