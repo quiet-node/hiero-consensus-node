@@ -1,6 +1,7 @@
 package com.swirlds.demo.hello;
 
 import com.hedera.hapi.node.state.roster.Roster;
+import javafx.animation.ScaleTransition;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
@@ -15,6 +16,7 @@ import javafx.scene.transform.Translate;
 
 import java.util.HashMap;
 import java.util.Map;
+import javafx.util.Duration;
 
 public class GraphPane extends Pane {
     private Map<Bytes, GuiEvent> nodeViews = new HashMap<>();
@@ -71,6 +73,14 @@ public class GraphPane extends Pane {
             maxEventHeight = (int) eventPosition.getY();
             nodeGroup.getTransforms().add(groupTranslation);
         }
+
+        ScaleTransition st = new ScaleTransition(Duration.millis(250), circle);
+        st.setByX(1.5f);
+        st.setByY(1.5f);
+        st.setCycleCount(2);
+        st.setAutoReverse(true);
+
+        st.play();
     }
 
     public int getMaxEventHeight() {

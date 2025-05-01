@@ -4,13 +4,19 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import java.util.Timer;
 import java.util.TimerTask;
 import javafx.application.Platform;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.Border;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.BorderStroke;
+import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -27,20 +33,30 @@ public class GraphControls {
     private GraphPane graphPane;
     private Timer timer;
     private TimerTask producer;
+    private ScrollBar scrollBar;
 
     public Pane setup(GuiGraphGenerator graphGenerator) {
         this.graphGenerator = graphGenerator;
         var roster = graphGenerator.getRoster();
         this.graphPane = new GraphPane();
         graphPane.setup(roster);
-        VBox vBox = new VBox();
-        vBox.getChildren().add(graphPane);
 
         HBox hBox = new HBox();
-        var leftPane = new VBox();
+        var leftPane = new VBox(15);
         fillLeftPane(leftPane);
+        this.scrollBar = new ScrollBar();
+        scrollBar.setOrientation(Orientation.VERTICAL);
+
+
         hBox.getChildren().add(leftPane);
-        hBox.getChildren().add(vBox);
+        hBox.getChildren().add(graphPane);
+        hBox.getChildren().add(scrollBar);
+
+        scrollBar.valueProperty().addListener((observable, oldValue, newValue) -> {
+            System.out.println("ScrollBar value: " + newValue);
+        });
+
+
         this.timer = new Timer(true);
         return hBox;
 
@@ -48,23 +64,35 @@ public class GraphControls {
 
     private void fillLeftPane(VBox leftPane) {
 
-        addBubbleEvent(leftPane, Color.RED, "Something");
-        addBubbleEvent(leftPane, Color.GREEN, "Something else");
+        addBubbleEvent(leftPane, Color.LIGHTBLUE,Color.DARKBLUE, "Something");
+        addBubbleEvent(leftPane, Color.LIGHTGREEN, Color.DARKGREEN, "Something else");
         Rectangle spacer = new Rectangle();
         spacer.minHeight(500);
         leftPane.getChildren().add(spacer);
         leftPane.getChildren().add(createBottomPane());
     }
 
-    private void addBubbleEvent(VBox leftPane, Color color, String text) {
-        HBox hBox = new HBox();
-        Sphere circle = new Sphere(20);
-        var material = new PhongMaterial(color);
-        material.setSpecularColor(Color.WHITE);
-        material.setSpecularPower(4);
-        circle.setMaterial(material);
+    private void addBubbleEvent(VBox leftPane, Color color, Color secondColor, String text) {
+        HBox hBox = new HBox(5);
+        {
+            Sphere circle = new Sphere(20);
+            var material = new PhongMaterial(color);
+            material.setSpecularColor(Color.WHITE);
+            material.setSpecularPower(4);
+            circle.setMaterial(material);
 
-        hBox.getChildren().add(circle);
+            hBox.getChildren().add(circle);
+        }
+
+        {
+            Sphere circle = new Sphere(20);
+            var material = new PhongMaterial(secondColor);
+            material.setSpecularColor(Color.WHITE);
+            material.setSpecularPower(4);
+            circle.setMaterial(material);
+
+            hBox.getChildren().add(circle);
+        }
         var label = new Label(text);
         hBox.setAlignment(Pos.CENTER_LEFT);
         hBox.getChildren().add(label);
