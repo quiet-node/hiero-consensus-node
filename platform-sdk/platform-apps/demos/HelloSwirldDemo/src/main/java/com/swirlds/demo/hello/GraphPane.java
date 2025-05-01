@@ -29,6 +29,7 @@ public class GraphPane extends Pane {
     private int totalHeight = paneHeight;
     private Translate groupTranslation;
     private int cumulativeYTranslation = 0;
+    private final SelectedEventManager selectedEventManager = new SelectedEventManager();
 
     public void setup(Roster roster) {
         this.setStyle("-fx-background-color: grey;");
@@ -57,6 +58,7 @@ public class GraphPane extends Pane {
         final Point2D eventPosition = getEventPosition(event);
 
         Sphere circle = new Sphere(circleRadius);
+        circle.setOnMouseClicked(new SelectedEvent(event, circle, selectedEventManager));
         var material = new PhongMaterial(event.color());
         material.setSpecularColor(Color.WHITE);
         material.setSpecularPower(4);
