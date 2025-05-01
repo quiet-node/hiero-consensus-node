@@ -18,7 +18,7 @@ import java.util.Map;
 import javafx.util.Duration;
 
 public class GraphPane extends Pane {
-    private Map<Bytes, GuiEvent> nodeViews = new HashMap<>();
+    private Map<Bytes, GuiEVentGroupMember> nodeViews = new HashMap<>();
     private Map<Long, Integer> nodePositions = new HashMap<Long, Integer>();
     private final int paneWidth = 900;
     private final int paneHeight = 1000;
@@ -56,28 +56,38 @@ public class GraphPane extends Pane {
 
     public void addEventNode(GuiEvent event) {
         final Point2D eventPosition = getEventPosition(event);
-
-        Sphere circle = new Sphere(circleRadius);
-        circle.setOnMouseClicked(new SelectedEvent(event, circle, selectedEventManager));
+        
         var material = new PhongMaterial(event.color());
         material.setSpecularColor(Color.WHITE);
         material.setSpecularPower(4);
+
+        Sphere circle;
+        boolean isNewEvent = !nodeViews.containsKey(event.id());
+        circle = isNewEvent ? new Sphere(circleRadius) : (Sphere) nodeGroup.getChildren().get(nodeViews.get(event.id()).groupPosition());
         circle.setMaterial(material);
 
-        circle.relocate(eventPosition.getX(), eventPosition.getY());
-        Text text = new Text(event.generation() + " - " + event.creator());
-        text.relocate(eventPosition.getX() - 40, eventPosition.getY() + 10);
-        nodeGroup.getChildren().addAll(circle, text);
-        nodeViews.put(event.id(), event);
+        // can remove if not needed
+        circle.setUserData(event);
+        circle.setOnMouseClicked(new SelectedEvent(event, circle, selectedEventManager));
 
-        addParentEdge(event);
+        if (isNewEvent) {
+            circle.relocate(eventPosition.getX(), eventPosition.getY());
+            Text text = new Text(event.generation() + " - " + event.creator());
+            text.relocate(eventPosition.getX() - 40, eventPosition.getY() + 10);
+
+            nodeGroup.getChildren().add(circle);
+            nodeViews.put(event.id(), new GuiEVentGroupMember(event, nodeGroup.getChildren().size() - 1));
+
+            nodeGroup.getChildren().add(text);
+
+            addParentEdge(event);
+        }
 
         // update max height when events exceed original window height
         if (eventPosition.getY() < maxEventHeight) {
-            maxEventHeight = (int) eventPosition.getY();totalHeight = paneHeight + circleDiameter;
+            maxEventHeight = (int) eventPosition.getY();
+            totalHeight += circleDiameter;
             cumulativeYTranslation += circleDiameter;
-            int translateY = -maxEventHeight + (circleDiameter * 2);
-            System.out.println("totalHeight: " + totalHeight + ", maxEventHeight: " + maxEventHeight + ", cumulativeYTranslation: " + cumulativeYTranslation + ", translateY: " + translateY);
 
             setGroupYTranslation(cumulativeYTranslation);
         }
@@ -131,7 +141,7 @@ public class GraphPane extends Pane {
     private void addParentEdge(GuiEvent event) {
         // add a line from event to its ancestor parent
         for (var parent : event.parents()) {
-            var parentEvent = nodeViews.get(parent);
+            var parentEvent = nodeViews.get(parent).event();
             if (parentEvent != null) {
                 final Point2D parentEventPosition = getEventPosition(parentEvent);
                 final Point2D eventPosition = getEventPosition(event);
@@ -146,3 +156,8 @@ public class GraphPane extends Pane {
         }
     }
 }
+
+record GuiEVentGroupMember(
+        GuiEvent event,
+        int groupPosition
+) {}

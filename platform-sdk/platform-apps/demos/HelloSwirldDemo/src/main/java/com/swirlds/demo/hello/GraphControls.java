@@ -1,6 +1,5 @@
 package com.swirlds.demo.hello;
 
-import com.hedera.hapi.node.state.roster.RosterEntry;
 import java.util.Timer;
 import java.util.TimerTask;
 import javafx.application.Platform;
@@ -10,20 +9,13 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.Slider;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Border;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.BorderStroke;
-import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
-import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Sphere;
 
@@ -34,6 +26,7 @@ public class GraphControls {
     private Timer timer;
     private TimerTask producer;
     private ScrollBar scrollBar;
+    private Label selectedLabel;
 
     public Pane setup(GuiGraphGenerator graphGenerator) {
         this.graphGenerator = graphGenerator;
@@ -47,13 +40,19 @@ public class GraphControls {
         this.scrollBar = new ScrollBar();
         scrollBar.setOrientation(Orientation.VERTICAL);
 
-
         hBox.getChildren().add(leftPane);
         hBox.getChildren().add(graphPane);
         hBox.getChildren().add(scrollBar);
 
+        scrollBar.setMax(1000);
+        scrollBar.setValue(1000);
+
         scrollBar.valueProperty().addListener((observable, oldValue, newValue) -> {
-            System.out.println("ScrollBar value: " + newValue);
+            double val = (1000-newValue.intValue())/1000.0;
+
+            int distance = Math.max(1, graphPane.getTotalHeight()-1000);
+
+            graphPane.setGroupYTranslation((int) (distance*val));
         });
 
 
@@ -69,7 +68,9 @@ public class GraphControls {
         Rectangle spacer = new Rectangle();
         spacer.minHeight(500);
         leftPane.getChildren().add(spacer);
-        leftPane.getChildren().add(createBottomPane());
+        leftPane.getChildren().add(createPlayerPane());
+        this.selectedLabel = new Label("Firstline\nSecond line");
+        leftPane.getChildren().add(selectedLabel);
     }
 
     private void addBubbleEvent(VBox leftPane, Color color, Color secondColor, String text) {
@@ -99,7 +100,7 @@ public class GraphControls {
         leftPane.getChildren().add(hBox);
     }
 
-    private Node createBottomPane() {
+    private Node createPlayerPane() {
         var hBox = new HBox();
         var nextEvent = new Button();
         nextEvent.setGraphic(new ImageView("/play.png"));
@@ -154,9 +155,6 @@ public class GraphControls {
             for (GuiEvent guiEvent : events) {
                 graphPane.addEventNode(guiEvent);
             }
-            System.out.println(
-                    graphPane.getMaxEventHeight()
-            );
         });
     }
 
