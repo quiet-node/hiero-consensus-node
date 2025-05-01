@@ -209,7 +209,8 @@ public class InitUtils {
     static List<VirtualMapAndDataSourceRecord<?, ?>> initVirtualMapRecords(ServicesRegistryImpl servicesRegistry) {
         final Path stateDirPath = Paths.get(STATE_DIR);
 
-        Map<String, MerkleDbTableConfig> tableConfigByNames = createTableConfigByNames();
+        final MerkleDb merkleDb = MerkleDb.getInstance(stateDirPath, CONFIGURATION);
+        Map<String, MerkleDbTableConfig> tableConfigByNames = merkleDb.getTableConfigs();
         final var virtualMaps = new ArrayList<VirtualMapAndDataSourceRecord<?, ?>>();
 
         servicesRegistry.registrations().forEach((registration) -> {
@@ -353,24 +354,6 @@ public class InitUtils {
                 new StoreMetricsServiceImpl(new NoOpMetrics()),
                 new ConfigProviderImpl(),
                 platformFacade);
-    }
-
-    /**
-     * @return a map of table configurations by their names
-     */
-    static Map<String, MerkleDbTableConfig> createTableConfigByNames() {
-        final Path stateDirPath = Paths.get(STATE_DIR);
-
-        Map<String, MerkleDbTableConfig> tableConfigByNames = new HashMap<>();
-        final AtomicReferenceArray<MerkleDb.TableMetadata> tableMetadataAtomicReferenceArray =
-                MerkleDb.loadMetadata(stateDirPath);
-        for (int i = 0; i < tableMetadataAtomicReferenceArray.length(); i++) {
-            MerkleDb.TableMetadata tableMetadata = tableMetadataAtomicReferenceArray.get(i);
-            if (tableMetadata != null) {
-                tableConfigByNames.put(tableMetadata.getTableName(), tableMetadata.getTableConfig());
-            }
-        }
-        return tableConfigByNames;
     }
 
     private static SemanticVersion getNodeStartupVersion(final Configuration config) {
