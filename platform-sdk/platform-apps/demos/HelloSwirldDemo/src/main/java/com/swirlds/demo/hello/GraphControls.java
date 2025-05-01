@@ -44,15 +44,13 @@ public class GraphControls {
         hBox.getChildren().add(graphPane);
         hBox.getChildren().add(scrollBar);
 
+        scrollBar.setMin(999);
         scrollBar.setMax(1000);
-        scrollBar.setValue(1000);
+        scrollBar.setValue(999);
 
         scrollBar.valueProperty().addListener((observable, oldValue, newValue) -> {
-            double val = (1000-newValue.intValue())/1000.0;
-
-            int distance = Math.max(1, graphPane.getTotalHeight()-1000);
-
-            graphPane.setGroupYTranslation((int) (distance*val));
+            double val = scrollBar.getMax()- newValue.intValue();
+            graphPane.setGroupYTranslation((int)val);
         });
 
 
@@ -154,6 +152,14 @@ public class GraphControls {
         Platform.runLater(() -> {
             for (GuiEvent guiEvent : events) {
                 graphPane.addEventNode(guiEvent);
+            }
+            double distance = scrollBar.getMax()-scrollBar.getValue();
+            scrollBar.setMax(graphPane.getTotalHeight());
+            if ( scrollBar.getValue() != scrollBar.getMin() )  {
+                //graphPane.setGroupYTranslation((int) (scrollBar.getMax()- distance));
+                scrollBar.setValue(scrollBar.getMax()- distance);
+            } else {
+                graphPane.setGroupYTranslation(graphPane.getTotalHeight()-999);
             }
         });
     }

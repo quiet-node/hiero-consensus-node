@@ -89,7 +89,7 @@ public class GraphPane extends Pane {
             totalHeight += circleDiameter;
             cumulativeYTranslation += circleDiameter;
 
-            setGroupYTranslation(cumulativeYTranslation);
+            //setGroupYTranslation(cumulativeYTranslation);
         }
 
         ScaleTransition st = new ScaleTransition(Duration.millis(250), circle);
