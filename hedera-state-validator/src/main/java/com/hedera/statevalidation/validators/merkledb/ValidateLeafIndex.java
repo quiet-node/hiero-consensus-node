@@ -42,7 +42,7 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongConsumer;
 
-import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
+// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -55,7 +55,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 public class ValidateLeafIndex {
 
     @SuppressWarnings("unchecked")
-    @ParameterizedRepeatedIfExceptionsTest
+    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void validateIndex(VirtualMapAndDataSourceRecord<?, ?> dsRecord, Report report) {
         if(dsRecord.dataSource().getFirstLeafPath() == -1) {

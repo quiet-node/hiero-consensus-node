@@ -32,14 +32,14 @@ import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvi
 import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceRecord;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.merkledb.files.DataFileCollectionW;
 import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
-import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
+// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import lombok.extern.log4j.Log4j2;
+import org.hiero.base.crypto.Hash;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.provider.ArgumentsSource;
@@ -58,8 +58,7 @@ import java.util.function.LongConsumer;
 @Tag("internal")
 @Log4j2
 public class ValidateInternalIndex {
-
-    @ParameterizedRepeatedIfExceptionsTest
+    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void validateIndex(VirtualMapAndDataSourceRecord<VirtualKey, VirtualValue> record, Report report) {
         var dataSourceW = new MerkleDbDataSourceW(record.dataSource());

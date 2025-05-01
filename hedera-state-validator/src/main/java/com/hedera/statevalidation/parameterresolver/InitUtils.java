@@ -59,8 +59,6 @@ import com.hedera.node.app.state.recordcache.RecordCacheService;
 import com.hedera.node.app.throttle.AppThrottleFactory;
 import com.hedera.node.app.throttle.CongestionThrottleService;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
-import com.hedera.node.app.tss.TssBaseServiceImpl;
-import com.hedera.node.app.version.ServicesSoftwareVersion;
 import com.hedera.node.app.workflows.standalone.ExecutorComponent;
 import com.hedera.node.config.converter.AccountIDConverter;
 import com.hedera.node.config.converter.BytesConverter;
@@ -94,9 +92,6 @@ import com.hedera.node.config.types.PermissionedAccountsRange;
 import com.hedera.node.internal.network.Network;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.constructable.ConstructableRegistry;
-import com.swirlds.common.crypto.CryptographyProvider;
-import com.swirlds.common.crypto.config.CryptoConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
@@ -121,7 +116,9 @@ import com.swirlds.state.merkle.disk.OnDiskValueSerializer;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import lombok.extern.log4j.Log4j2;
-import org.hiero.event.creator.impl.EventCreationConfig;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.crypto.config.CryptoConfig;
+import org.hiero.consensus.event.creator.impl.config.EventCreationConfig;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -164,7 +161,7 @@ public class InitUtils {
                 .withConfigDataType(HederaConfig.class)
                 .withConfigDataType(VirtualMapConfig.class)
                 .withConfigDataType(MerkleDbConfig.class)
-                .withConfigDataType(CryptoConfig.class)
+                .withConfigDataType(org.hiero.base.crypto.config.CryptoConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
                 .withConfigDataType(StateConfig.class)
                 .withConfigDataType(TemporaryFileConfig.class)
@@ -222,7 +219,7 @@ public class InitUtils {
                 log.debug("Registering schemas for service {}", serviceName);
                 var registry =
                         new MerkleSchemaRegistry(
-                                ConstructableRegistry.getInstance(),
+                                org.hiero.base.constructable.ConstructableRegistry.getInstance(),
                                 serviceName,
                                 CONFIGURATION,
                                 new SchemaApplications()) {
@@ -280,7 +277,7 @@ public class InitUtils {
         final Configuration config = getConfiguration();
         final Supplier<Configuration> configSupplier = () -> config;
         final ServicesRegistryImpl servicesRegistry = new ServicesRegistryImpl(
-                ConstructableRegistry.getInstance(),
+                org.hiero.base.constructable.ConstructableRegistry.getInstance(),
                 config);
         final FakeNetworkInfo fakeNetworkInfo = new FakeNetworkInfo();
         final AppContextImpl appContext = new AppContextImpl(
@@ -293,7 +290,7 @@ public class InitUtils {
                 configSupplier,
                 fakeNetworkInfo::selfNodeInfo,
                 NoOpMetrics::new,
-                new AppThrottleFactory(configSupplier, () -> null, () -> ThrottleDefinitions.DEFAULT, ThrottleAccumulator::new, ServicesSoftwareVersion::new),
+                new AppThrottleFactory(configSupplier, () -> null, () -> ThrottleDefinitions.DEFAULT, ThrottleAccumulator::new),
                 () -> NOOP_FEE_CHARGING,
                 new AppEntityIdFactory(config));
         PlatformStateService.PLATFORM_STATE_SERVICE.setAppVersionFn(InitUtils::getNodeStartupVersion);
@@ -327,9 +324,9 @@ public class InitUtils {
                             new HintsLibraryImpl(),
                             bootstrapConfig.getConfigData(BlockStreamConfig.class).blockPeriod()
                         ),
-                        new RosterService(roster -> true, () -> {},
+                        new RosterService(roster -> true, (r, b) -> {},
                                 () -> StateResolver.deserializedSignedState.reservedSignedState().get().getState(),
-                                new PlatformStateFacade(ServicesSoftwareVersion::new)),
+                                new PlatformStateFacade()),
                         PLATFORM_STATE_SERVICE)
                 .forEach(servicesRegistry::register);
         return servicesRegistry;
@@ -341,13 +338,13 @@ public class InitUtils {
     static void initServiceMigrator(State state, Configuration configuration, ServicesRegistry servicesRegistry) {
         final var bootstrapConfigProvider = new BootstrapConfigProviderImpl();
         final var serviceMigrator = new OrderedServiceMigrator();
-        final var platformFacade = new PlatformStateFacade(ServicesSoftwareVersion::new);
+        final var platformFacade = new PlatformStateFacade();
         final var deserializedVersion = platformFacade.creationSoftwareVersionOf(state);
         final var version = getNodeStartupVersion(bootstrapConfigProvider.getConfiguration());
         serviceMigrator.doMigrations(
                 (MerkleNodeState) state,
                 servicesRegistry,
-                deserializedVersion == null ? null : new ServicesSoftwareVersion(deserializedVersion),
+                deserializedVersion,
                 version,
                 configuration,
                 configuration,
@@ -376,15 +373,7 @@ public class InitUtils {
         return tableConfigByNames;
     }
 
-    private static ServicesSoftwareVersion getNodeStartupVersion(final Configuration config) {
-        SemanticVersion stateSemVer = readVersion();
-        if (stateSemVer.build().isEmpty()) {
-            return new ServicesSoftwareVersion(
-                    readVersion(),
-                    config.getConfigData(HederaConfig.class).configVersion());
-        } else {
-            return new ServicesSoftwareVersion(stateSemVer);
-        }
-
+    private static SemanticVersion getNodeStartupVersion(final Configuration config) {
+            return   readVersion();
     }
 }

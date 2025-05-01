@@ -40,7 +40,7 @@ import com.swirlds.virtualmap.VirtualMapW;
 import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
-import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
+// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,7 +56,7 @@ import java.util.function.LongConsumer;
 @Log4j2
 public class ValidateLeafIndexHalfDiskHashMap {
 
-    @ParameterizedRepeatedIfExceptionsTest
+    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void validateIndex(VirtualMapAndDataSourceRecord<VirtualKey, VirtualValue> vmAndSource, Report report) {
         if(vmAndSource.dataSource().getFirstLeafPath() == -1) {
