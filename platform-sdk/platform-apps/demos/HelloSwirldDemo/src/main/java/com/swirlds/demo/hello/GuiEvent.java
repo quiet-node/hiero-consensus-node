@@ -5,6 +5,8 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.platform.internal.EventImpl;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 
@@ -37,7 +39,10 @@ public record GuiEvent(
                 eventImpl.isWitness(),
                 eventImpl.isFamous(),
                 eventImpl.isJudge(),
-                Arrays.stream(eventImpl.getStronglySeeP())
+                Optional.of(eventImpl.getStronglySeeP())
+                        .stream()
+                        .flatMap(Arrays::stream)
+                        .filter(Objects::nonNull)
                         .map(EventImpl::getBaseHash)
                         .map(Hash::getBytes)
                         .toList()
