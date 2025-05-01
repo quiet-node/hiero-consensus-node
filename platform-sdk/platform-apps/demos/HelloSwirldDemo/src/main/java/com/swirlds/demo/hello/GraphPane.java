@@ -23,7 +23,7 @@ public class GraphPane extends Pane {
     private final int paneHeight = 900;
     private final int circleRadius = 20;
     private Group nodeGroup;
-    public int maxEventHeight = 0;
+    public int maxEventHeight = circleRadius * 4;
     private Translate groupTranslation;
 
     public void setup(Roster roster) {
