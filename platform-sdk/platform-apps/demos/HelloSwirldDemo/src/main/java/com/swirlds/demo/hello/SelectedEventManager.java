@@ -15,7 +15,14 @@ public class SelectedEventManager {
         if(currentEvent != null){
             currentEvent.circle().setRadius(Constants.CIRCLE_RADIUS);
             currentEvent.parents().forEach(parent -> {parent.setRadius(Constants.CIRCLE_RADIUS);});
+            if(currentEvent.event().id().equals(selectedEvent.event().id())){
+                // deselect the event
+                selectedLabel.setText("No event selected");
+                currentEvent =null;
+                return;
+            }
         }
+
         selectedEvent.circle().setRadius(Constants.SELECTED_CIRCLE_RADIUS);
         selectedEvent.parents().forEach(parent -> {parent.setRadius(Constants.SELECTED_PARENT_RADIUS);});
         currentEvent = selectedEvent;
