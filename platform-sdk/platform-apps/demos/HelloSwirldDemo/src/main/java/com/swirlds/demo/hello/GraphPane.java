@@ -69,9 +69,9 @@ public class GraphPane extends Pane {
 
         if (isNewEvent) {
             circle.setOnMouseClicked(new SelectedEvent(event,
-                    //event.parents().stream().map(p -> (Sphere) nodeGroup.getChildren().get(nodeViews.get(event.id()).groupPosition())).toList(),
-                    List.of(),
-                    circle, selectedEventManager));
+                    event.parents().stream().map(p -> (Sphere) nodeGroup.getChildren().get(nodeViews.get(p).groupPosition())).toList(),
+                    circle,
+                    selectedEventManager));
             circle.relocate(eventPosition.getX(), eventPosition.getY());
 
             nodeGroup.getChildren().add(circle);

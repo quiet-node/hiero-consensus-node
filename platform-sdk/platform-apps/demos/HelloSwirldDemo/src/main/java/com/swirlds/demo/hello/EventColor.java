@@ -22,13 +22,13 @@ public class EventColor {
     public static final Color LIGHT_YELLOW = Color.color(C4, C4, C1);
     /** non-famous witness, consensus */
     public static final Color DARK_YELLOW = Color.color(C2, C2, C1);
-    /** judge, consensus */
-    public static final Color LIGHT_BLUE = Color.color(C1, C1, C4);
     /** judge, non-consensus */
+    public static final Color LIGHT_BLUE = Color.color(C1, C1, C4);
+    /** judge, consensus */
     public static final Color DARK_BLUE = Color.color(C1, C1, C2);
-    /** non-witness, consensus */
-    public static final Color LIGHT_GRAY = Color.color(C4, C4, C4);
     /** non-witness, non-consensus */
+    public static final Color LIGHT_GRAY = Color.color(C4, C4, C4);
+    /** non-witness, consensus */
     public static final Color DARK_GRAY = Color.color(C1, C1, C1);
 
     /**
