@@ -4,6 +4,7 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import java.util.Timer;
 import java.util.TimerTask;
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -13,6 +14,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.PhongMaterial;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Sphere;
 
 public class GraphControls {
 
@@ -32,9 +37,8 @@ public class GraphControls {
         vBox.getChildren().add(createBottomPane());
 
         HBox hBox = new HBox();
-        var leftPane = new Label("Left pane\n" + String.join(",",
-                roster.rosterEntries().stream().map(e -> Long.toString(e.nodeId())).toList()));
-        leftPane.setMinWidth(200);
+        var leftPane = new VBox();
+        fillLeftPane(leftPane);
         hBox.getChildren().add(leftPane);
         hBox.getChildren().add(vBox);
 
@@ -43,10 +47,31 @@ public class GraphControls {
 
     }
 
+    private void fillLeftPane(VBox leftPane) {
+
+        addBubbleEvent(leftPane,Color.RED, "Something");
+        addBubbleEvent(leftPane,Color.GREEN, "Something else");
+
+    }
+
+    private void addBubbleEvent(VBox leftPane, Color color, String text) {
+        HBox hBox = new HBox();
+        Sphere circle = new Sphere(20);
+        var material = new PhongMaterial(color);
+        material.setSpecularColor(Color.WHITE);
+        circle.setMaterial(material);
+
+        hBox.getChildren().add(circle);
+        var label = new Label(text);
+        hBox.setAlignment(Pos.CENTER_LEFT);
+        hBox.getChildren().add(label);
+        leftPane.getChildren().add(hBox);
+    }
+
     private Node createBottomPane() {
         var hBox = new HBox();
         var nextEvent = new Button();
-        nextEvent.setGraphic(new ImageView("/right.png"));
+        nextEvent.setGraphic(new ImageView("/play.png"));
         hBox.getChildren().add(nextEvent);
 
         nextEvent.setOnAction(event -> {
@@ -71,7 +96,7 @@ public class GraphControls {
         pauseGenerator.setDisable(true);
         hBox.getChildren().add(pauseGenerator);
 
-        runGenerator.setGraphic(new ImageView("/play.png"));
+        runGenerator.setGraphic(new ImageView("/right.png"));
         runGenerator.setOnAction(event -> {
             if (producer != null) {
                 return;
