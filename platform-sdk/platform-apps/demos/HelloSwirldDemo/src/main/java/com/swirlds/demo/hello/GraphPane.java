@@ -72,15 +72,24 @@ public class GraphPane extends Pane {
 
         if (isNewEvent) {
             circle.relocate(eventPosition.getX(), eventPosition.getY());
-            Text text = new Text(event.generation() + " - " + event.creator());
-            text.relocate(eventPosition.getX() - 40, eventPosition.getY() + 10);
 
             nodeGroup.getChildren().add(circle);
             nodeViews.put(event.id(), new GuiEVentGroupMember(event, nodeGroup.getChildren().size() - 1));
 
-            nodeGroup.getChildren().add(text);
+            // add metadata text to the event
+//            Text text = new Text(event.generation() + " - " + event.creator() + " - " + event.birthRound() + " - " + event.votingRound());
+//            text.relocate(eventPosition.getX() - 40, eventPosition.getY() + 10);
+//            nodeGroup.getChildren().add(text);
 
             addParentEdge(event);
+        }
+
+        // add gen label
+        Text genText = new Text("Gen " + event.generation() + ":");
+        // add gen label if note present
+        if (!nodeGroup.getChildren().contains(genText)) {
+            genText.relocate(0, eventPosition.getY() + 10);
+            nodeGroup.getChildren().add(genText);
         }
 
         // update max height when events exceed original window height
@@ -132,8 +141,8 @@ public class GraphPane extends Pane {
             line.setStroke(Color.RED);
             this.getChildren().add(line);
 
-            Text text = new Text(Long.toString(nodeId));
-            text.relocate(xPos - 10, yPos + 10);
+            Text text = new Text("Node " + Long.toString(nodeId) + ":");
+            text.relocate(xPos - 45, yPos + 10);
             this.getChildren().add(text);
         }
     }
