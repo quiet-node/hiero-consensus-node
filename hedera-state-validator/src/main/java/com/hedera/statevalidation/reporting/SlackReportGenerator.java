@@ -28,10 +28,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.SneakyThrows;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -55,8 +55,10 @@ public class SlackReportGenerator implements AfterTestExecutionCallback {
         }
     }
 
-    @SneakyThrows
     public static void generateReport() {
+        try {
+
+
         ArrayNode blocksArray = mapper.createArrayNode();
         addHeader(blocksArray);
         addTestResults(blocksArray);
@@ -74,6 +76,9 @@ public class SlackReportGenerator implements AfterTestExecutionCallback {
         }
         try (FileWriter fileWriter = new FileWriter(REPORT_FILE_PATH)) {
             mapper.writerWithDefaultPrettyPrinter().writeValue(fileWriter, reportNode);
+        }
+        }catch (IOException e){
+            throw new RuntimeException(e);
         }
     }
 

@@ -20,7 +20,6 @@ import com.swirlds.merkledb.collections.HashList;
 import com.swirlds.merkledb.collections.LongList;
 import com.swirlds.merkledb.files.MemoryIndexDiskKeyValueStore;
 import com.swirlds.merkledb.files.hashmap.HalfDiskHashMap;
-import lombok.Getter;
 
 import java.lang.reflect.Field;
 
@@ -43,7 +42,6 @@ public class MerkleDbDataSourceW {
     // leaf node store
     Field pathToKeyValue; // MemoryIndexDiskKeyValueStore<VirtualLeafRecord<K, V>>
 
-    @Getter
     MerkleDbCompactionCoordinatorW compactionCoordinator;
 
     public MerkleDbDataSourceW(MerkleDbDataSource dataSource) {
