@@ -38,7 +38,6 @@ import com.swirlds.merkledb.collections.LongListHeap;
 import com.swirlds.merkledb.files.DataFileCollection;
 import com.swirlds.merkledb.files.DataFileIterator;
 import com.swirlds.merkledb.files.DataFileReader;
-import com.swirlds.virtualmap.VirtualMapW;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
@@ -69,7 +68,8 @@ public class StateAnalyzer {
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForPathToKeyValueStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
         MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();
-        VirtualMapW map = labelAndDs.map();
+        final var keySerializer = labelAndDs.keySerializer();
+        final var valueSerializer = labelAndDs.valueSerializer();
         updateReport(
                 labelAndDs,
                 report,
@@ -77,7 +77,7 @@ public class StateAnalyzer {
                 VirtualMapReport::setPathToKeyValueReport,
                 v -> {
                     VirtualLeafBytes virtualLeafBytes = VirtualLeafBytes.parseFrom(v);
-                    return virtualLeafBytes.toRecord(map.getKeySerializer(), map.getValueSerializer());
+                    return virtualLeafBytes.toRecord(keySerializer, valueSerializer);
                 });
     }
 

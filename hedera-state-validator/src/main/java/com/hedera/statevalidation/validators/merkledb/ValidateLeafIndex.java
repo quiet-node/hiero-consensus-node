@@ -33,10 +33,12 @@ import com.swirlds.merkledb.files.DataFileCollectionW;
 import com.swirlds.state.merkle.disk.OnDiskKey;
 import com.swirlds.state.merkle.disk.OnDiskValue;
 import com.swirlds.virtualmap.VirtualKey;
-import com.swirlds.virtualmap.VirtualMapW;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 
+import com.swirlds.virtualmap.serialize.KeySerializer;
+import com.swirlds.virtualmap.serialize.ValueSerializer;
 import java.io.IOException;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -64,7 +66,9 @@ public class ValidateLeafIndex {
         }
         MerkleDbDataSourceW vds = dsRecord.createMerkleDSWrapper();
         MerkleDbDataSource merkleDb;
-        VirtualMapW<VirtualKey, VirtualValue> map = (VirtualMapW<VirtualKey, VirtualValue>) dsRecord.map();
+        final VirtualMap<VirtualKey, VirtualValue> map = (VirtualMap<VirtualKey, VirtualValue>) dsRecord.map();
+        final KeySerializer keySerializer = dsRecord.keySerializer();
+        final ValueSerializer valueSerializer = dsRecord.valueSerializer();
 
         merkleDb = dsRecord.dataSource();
         log.debug(vds.getPathToHashDisk().getFilesSizeStatistics());
@@ -96,12 +100,12 @@ public class ValidateLeafIndex {
                 data = leafDfc.readDataItem(dataLocation);
                 if (data != null) {
                     assertEquals(data.path(), path);
-                    OnDiskKey key = (OnDiskKey) map.getKeySerializer().deserialize(data.keyBytes().toReadableSequentialData());
+                    OnDiskKey key = (OnDiskKey) keySerializer.deserialize(data.keyBytes().toReadableSequentialData());
                     long actual = objectKeyToPath.get(data.keyBytes(), key.hashCode(), -1);
                     assertEquals(path, actual);
 
-                    OnDiskValue value = (OnDiskValue) map.getValueSerializer().deserialize(data.valueBytes().toReadableSequentialData());
-                    assertEquals(value.getValue(), ((OnDiskValue)map.get(key)).getValue());
+                    OnDiskValue value = (OnDiskValue) valueSerializer.deserialize(data.valueBytes().toReadableSequentialData());
+                    assertEquals(value.getValue(), ((OnDiskValue) map.get(key)).getValue());
                     successCount.incrementAndGet();
                 } else {
                     nullErrorCount.incrementAndGet();

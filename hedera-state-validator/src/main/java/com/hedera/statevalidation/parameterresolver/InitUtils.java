@@ -138,8 +138,6 @@ import static com.hedera.statevalidation.parameterresolver.StateResolver.readVer
 import static com.hedera.statevalidation.validators.Constants.FILE_CHANNELS;
 import static com.hedera.statevalidation.validators.Constants.STATE_DIR;
 import static com.swirlds.platform.state.service.PlatformStateService.PLATFORM_STATE_SERVICE;
-import static com.swirlds.virtualmap.VirtualMapW.wrap;
-import static java.util.Objects.requireNonNull;
 
 @Log4j2
 public class InitUtils {
@@ -245,14 +243,10 @@ public class InitUtils {
                                             md.onDiskValueSerializerClassId(),
                                             md.onDiskValueClassId(),
                                             md.stateDefinition().valueCodec());
-                                    var vm = wrap(new VirtualMap(
-                                                    label, keySerializer, valueSerializer,
-                                                    new RestoringMerkleDbDataSourceBuilder<>(stateDirPath, tableConfig),
-                                                    CONFIGURATION),
-                                            keySerializer,
-                                            valueSerializer);
+                                    final var ds = new RestoringMerkleDbDataSourceBuilder<>(stateDirPath, tableConfig);
+                                    final var vm = new VirtualMap(label, keySerializer, valueSerializer, ds, CONFIGURATION);
                                     virtualMaps.add(new VirtualMapAndDataSourceRecord<>(
-                                            label, (MerkleDbDataSource) vm.getDataSource(), vm));
+                                            label, (MerkleDbDataSource) vm.getDataSource(), vm, keySerializer, valueSerializer));
                                 });
                                 return null;
                             }
