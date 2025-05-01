@@ -24,9 +24,12 @@ public class GraphPane extends Pane {
     private final int paneWidth = 900;
     private final int paneHeight = 1000;
     private final int circleRadius = 20;
+    private final int circleDiameter = circleRadius * 2;
     private Group nodeGroup;
     public int maxEventHeight = circleRadius * 4;
+    private int totalHeight = paneHeight;
     private Translate groupTranslation;
+    private int cumulativeYTranslation = 0;
 
     public void setup(Roster roster) {
         this.setStyle("-fx-background-color: grey;");
@@ -39,7 +42,7 @@ public class GraphPane extends Pane {
 
         // setup translation logic to move a diameter at a time
         groupTranslation = new Translate();
-        groupTranslation.setY(circleRadius * 2);
+        groupTranslation.setY(circleDiameter);
 
         this.getChildren().add(nodeGroup);
     }
@@ -47,7 +50,7 @@ public class GraphPane extends Pane {
     private Point2D getEventPosition(GuiEvent event) {
         // get the position of the event based on its generation and node id
         var nodePos = nodePositions.get(event.creator());
-        var generationOffset = paneHeight-(event.generation() * circleRadius * 2) - (circleRadius * 2);
+        var generationOffset = paneHeight - (event.generation() * circleDiameter) - (circleDiameter * 2);
         return new Point2D(nodePos, generationOffset);
     }
 
@@ -70,8 +73,12 @@ public class GraphPane extends Pane {
 
         // update max height when events exceed original window height
         if (eventPosition.getY() < maxEventHeight) {
-            maxEventHeight = (int) eventPosition.getY();
-            nodeGroup.getTransforms().add(groupTranslation);
+            maxEventHeight = (int) eventPosition.getY();totalHeight = paneHeight + circleDiameter;
+            cumulativeYTranslation += circleDiameter;
+            int translateY = -maxEventHeight + (circleDiameter * 2);
+            System.out.println("totalHeight: " + totalHeight + ", maxEventHeight: " + maxEventHeight + ", cumulativeYTranslation: " + cumulativeYTranslation + ", translateY: " + translateY);
+
+            setGroupYTranslation(cumulativeYTranslation);
         }
 
         ScaleTransition st = new ScaleTransition(Duration.millis(250), circle);
@@ -83,12 +90,21 @@ public class GraphPane extends Pane {
         st.play();
     }
 
+    @Deprecated
     public int getMaxEventHeight() {
         return maxEventHeight;
     }
 
+    public int getTotalHeight() {
+        return totalHeight;
+    }
+
     public void setGroupYTranslation(int yTranslation) {
-        nodeGroup.setTranslateY(yTranslation);
+        // cycle transform - temp solution need to come back
+        nodeGroup.getTransforms().remove(groupTranslation);
+
+        groupTranslation.setY(yTranslation);
+        nodeGroup.getTransforms().add(groupTranslation);
     }
 
     private void setupTimeLines(Roster roster) {
