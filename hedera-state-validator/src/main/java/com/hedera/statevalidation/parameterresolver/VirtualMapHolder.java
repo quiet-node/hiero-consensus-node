@@ -16,13 +16,16 @@
 
 package com.hedera.statevalidation.parameterresolver;
 
-import static com.hedera.statevalidation.parameterresolver.InitUtils.createTableConfigByNames;
 import static com.hedera.statevalidation.parameterresolver.InitUtils.initConfiguration;
 import static com.hedera.statevalidation.parameterresolver.InitUtils.initServiceRegistry;
 import static com.hedera.statevalidation.parameterresolver.InitUtils.initVirtualMapRecords;
+import static com.hedera.statevalidation.validators.Constants.STATE_DIR;
 
 import com.hedera.node.app.services.ServicesRegistryImpl;
+import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.MerkleDbTableConfig;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
@@ -42,7 +45,11 @@ public class VirtualMapHolder {
         initConfiguration();
 
         final ServicesRegistryImpl servicesRegistry = initServiceRegistry();
-        tableConfigByNames = createTableConfigByNames();
+
+        final Path stateDirPath = Paths.get(STATE_DIR);
+        final MerkleDb merkleDb = MerkleDb.getInstance(stateDirPath, InitUtils.CONFIGURATION);
+        tableConfigByNames = merkleDb.getTableConfigs();
+
         try {
             records = initVirtualMapRecords(servicesRegistry);
         } catch (Exception e) {
