@@ -41,13 +41,13 @@ import com.swirlds.merkledb.files.DataFileReader;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
-// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import java.io.ByteArrayOutputStream;
@@ -66,7 +66,7 @@ public class StateAnalyzer {
 
     private static final Logger log = LogManager.getLogger(StateAnalyzer.class);
 
-    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
+    @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForPathToKeyValueStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
         MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();
@@ -83,7 +83,7 @@ public class StateAnalyzer {
                 });
     }
 
-    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
+    @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForPathToHashStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
         MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();
@@ -95,7 +95,7 @@ public class StateAnalyzer {
                 VirtualHashRecord::parseFrom);
     }
 
-    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
+    @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForObjectKeyToPathStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
 //          MerkleDbDataSourceW vds = labelAndDs.createMerkleDSWrapper();

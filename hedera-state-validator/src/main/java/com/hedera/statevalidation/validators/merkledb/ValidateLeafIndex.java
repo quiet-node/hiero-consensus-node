@@ -44,11 +44,11 @@ import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongConsumer;
 
-// todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 @SuppressWarnings("NewClassNamingConvention")
@@ -59,7 +59,7 @@ public class ValidateLeafIndex {
     private static final Logger log = LogManager.getLogger(ValidateLeafIndex.class);
 
     @SuppressWarnings("unchecked")
-    // todo hackathon @ParameterizedRepeatedIfExceptionsTest
+    @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void validateIndex(VirtualMapAndDataSourceRecord<?, ?> dsRecord, Report report) {
         if(dsRecord.dataSource().getFirstLeafPath() == -1) {
