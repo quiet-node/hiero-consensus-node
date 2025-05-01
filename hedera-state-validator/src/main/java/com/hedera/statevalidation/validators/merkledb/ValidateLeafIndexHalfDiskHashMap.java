@@ -36,11 +36,13 @@ import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.merkledb.files.DataFileCollectionW;
 import com.swirlds.merkledb.files.hashmap.ParsedBucket;
 import com.swirlds.virtualmap.VirtualKey;
-import com.swirlds.virtualmap.VirtualMapW;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
 // todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
+import com.swirlds.virtualmap.serialize.KeySerializer;
+import com.swirlds.virtualmap.serialize.ValueSerializer;
 import lombok.extern.log4j.Log4j2;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,7 +66,9 @@ public class ValidateLeafIndexHalfDiskHashMap {
             return;
         }
 
-        VirtualMapW<VirtualKey, VirtualValue> map = vmAndSource.map();
+        final VirtualMap<VirtualKey, VirtualValue> map = vmAndSource.map();
+        final KeySerializer keySerializer = vmAndSource.keySerializer();
+        final ValueSerializer valueSerializer = vmAndSource.valueSerializer();
         boolean skipStaleKeysValidation = VALIDATE_STALE_KEYS_EXCLUSIONS.contains(vmAndSource.name());
         boolean skipIncorrectBucketIndexValidation = VALIDATE_INCORRECT_BUCKET_INDEX_EXCLUSIONS.contains(vmAndSource.name());
         MerkleDbDataSourceW vds = new MerkleDbDataSourceW(vmAndSource.dataSource());
@@ -102,7 +106,7 @@ public class ValidateLeafIndexHalfDiskHashMap {
                 long path;
                 while (bucketIterator.hasNext()) {
                     ParsedBucket.BucketEntry entry = bucketIterator.next();
-                    var key = map.getKeySerializer().fromBytes(entry.getKeyBytes());
+                    VirtualKey key = (VirtualKey) keySerializer.fromBytes(entry.getKeyBytes());
                     path = entry.getValue();
                     // get path -> dataLocation
                     var dataLocation = pathToDiskLocationLeafNodes.get(path);
@@ -110,7 +114,7 @@ public class ValidateLeafIndexHalfDiskHashMap {
                         collectInfo(new StalePathInfo(path, key), stalePathsInfos);
                         continue;
                     }
-                    VirtualLeafRecord<?, ?> leaf = ((VirtualLeafBytes) leafStoreDFC.readDataItem(dataLocation)).toRecord(map.getKeySerializer(), map.getValueSerializer());
+                    VirtualLeafRecord<?, ?> leaf = ((VirtualLeafBytes) leafStoreDFC.readDataItem(dataLocation)).toRecord(keySerializer, valueSerializer);
                     if (leaf == null) {
                         printFileDataLocationError(log, "Record with null leafs!", dfc, bucketLocation);
                         collectInfo(new NullLeafInfo(path, key), nullLeafsInfo);
