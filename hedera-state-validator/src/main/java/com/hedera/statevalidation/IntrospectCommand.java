@@ -3,11 +3,8 @@ package com.hedera.statevalidation;
 import com.hedera.statevalidation.introspectors.KvIntrospector;
 import com.hedera.statevalidation.introspectors.SingletonIntrospector;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.state.State;
-import com.swirlds.state.spi.ReadableKVState;
-import picocli.CommandLine;
 import picocli.CommandLine.ParentCommand;
 
 import java.io.IOException;
@@ -26,8 +23,8 @@ public class IntrospectCommand implements Runnable{
     @Parameters(index = "1", description = "State name")
     private String stateName;
 
-    @Parameters(index = "2", arity = "0..1", description = "Key as JSON")
-    private String keyAsJson;
+    @Parameters(index = "2", arity = "0..1", description = "Key info - KeyType:<Payload as JSON>")
+    private String keyInfo;
 
     @Override
     public void run() {
@@ -41,12 +38,12 @@ public class IntrospectCommand implements Runnable{
             throw new RuntimeException(e);
         }
 
-        if(keyAsJson == null) {
+        if(keyInfo == null) {
             // we assume it's a singleton
             final SingletonIntrospector introspector = new SingletonIntrospector(state, serviceName, stateName);
             introspector.introspect();
         } else {
-            final KvIntrospector introspector = new KvIntrospector(state, serviceName, stateName, keyAsJson);
+            final KvIntrospector introspector = new KvIntrospector(state, serviceName, stateName, keyInfo);
             introspector.introspect();
         }
 
