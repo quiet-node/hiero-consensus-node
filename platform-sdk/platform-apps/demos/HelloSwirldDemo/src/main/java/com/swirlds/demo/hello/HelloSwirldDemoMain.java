@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.hello;
 
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+
+import java.util.List;
 
 public class HelloSwirldDemoMain extends Application {
 
@@ -37,14 +34,17 @@ public class HelloSwirldDemoMain extends Application {
         });
 
         GraphPane graphPane = new GraphPane();
-        var canvas = graphPane.setup();
+        graphPane.setup();
+
+        graphPane.addEventNode(new GuiEvent(Bytes.wrap("1"), 1, 1, 1, List.of(), 1, true, true, true, List.of()), 100, 0);
+        graphPane.addEventNode(new GuiEvent(Bytes.wrap("2"), 2, 2, 2, List.of(), 1, true, true, true, List.of()), 200, 0);
+        graphPane.addEventNode(new GuiEvent(Bytes.wrap("3"), 3, 3, 3, List.of(), 1, true, true, true, List.of()), 300, 0);
+
         VBox vBox = new VBox();
-        vBox.getChildren().add(canvas);
+        vBox.getChildren().add(graphPane);
         vBox.getChildren().add(btn);
         primaryStage.setScene(new Scene(vBox, 1500, 1000));
         primaryStage.show();
     }
-
-
 }
 
