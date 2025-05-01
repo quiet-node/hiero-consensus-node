@@ -20,7 +20,7 @@ public class GraphPane extends Pane {
     private Map<Bytes, GuiEvent> nodeViews = new HashMap<>();
     private Map<Long, Integer> nodePositions = new HashMap<Long, Integer>();
     private final int paneWidth = 900;
-    private final int paneHeight = 900;
+    private final int paneHeight = 1000;
     private final int circleRadius = 20;
     private Group nodeGroup;
     public int maxEventHeight = circleRadius * 4;
@@ -55,6 +55,7 @@ public class GraphPane extends Pane {
         Sphere circle = new Sphere(circleRadius);
         var material = new PhongMaterial(event.color());
         material.setSpecularColor(Color.WHITE);
+        material.setSpecularPower(4);
         circle.setMaterial(material);
 
         circle.relocate(eventPosition.getX(), eventPosition.getY());
@@ -113,7 +114,7 @@ public class GraphPane extends Pane {
                         parentEventPosition.getX() + circleRadius,
                         parentEventPosition.getY() + circleRadius);
                 line.setStroke(Color.BLUE); // should we use a different colour for self parent?
-                this.getChildren().add(line);
+                nodeGroup.getChildren().add(line);
             }
         }
     }

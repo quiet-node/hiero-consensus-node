@@ -9,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Slider;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -17,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Sphere;
 
 public class GraphControls {
@@ -32,16 +34,13 @@ public class GraphControls {
         this.graphPane = new GraphPane();
         graphPane.setup(roster);
         VBox vBox = new VBox();
-        ScrollPane scrollPane = new ScrollPane(graphPane);
-        vBox.getChildren().add(scrollPane);
-        vBox.getChildren().add(createBottomPane());
+        vBox.getChildren().add(graphPane);
 
         HBox hBox = new HBox();
         var leftPane = new VBox();
         fillLeftPane(leftPane);
         hBox.getChildren().add(leftPane);
         hBox.getChildren().add(vBox);
-
         this.timer = new Timer(true);
         return hBox;
 
@@ -49,9 +48,12 @@ public class GraphControls {
 
     private void fillLeftPane(VBox leftPane) {
 
-        addBubbleEvent(leftPane,Color.RED, "Something");
-        addBubbleEvent(leftPane,Color.GREEN, "Something else");
-
+        addBubbleEvent(leftPane, Color.RED, "Something");
+        addBubbleEvent(leftPane, Color.GREEN, "Something else");
+        Rectangle spacer = new Rectangle();
+        spacer.minHeight(500);
+        leftPane.getChildren().add(spacer);
+        leftPane.getChildren().add(createBottomPane());
     }
 
     private void addBubbleEvent(VBox leftPane, Color color, String text) {
@@ -59,6 +61,7 @@ public class GraphControls {
         Sphere circle = new Sphere(20);
         var material = new PhongMaterial(color);
         material.setSpecularColor(Color.WHITE);
+        material.setSpecularPower(4);
         circle.setMaterial(material);
 
         hBox.getChildren().add(circle);
@@ -86,7 +89,7 @@ public class GraphControls {
 
         pauseGenerator.setGraphic(new ImageView("/pause.png"));
         pauseGenerator.setOnAction(event -> {
-            if ( producer != null ) {
+            if (producer != null) {
                 producer.cancel();
                 producer = null;
                 runGenerator.setDisable(false);
@@ -123,6 +126,9 @@ public class GraphControls {
             for (GuiEvent guiEvent : events) {
                 graphPane.addEventNode(guiEvent);
             }
+            System.out.println(
+                    graphPane.getMaxEventHeight()
+            );
         });
     }
 

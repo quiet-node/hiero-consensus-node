@@ -48,7 +48,7 @@ public record GuiEvent(
                 eventImpl.isJudge(),
                 eventImpl.isFameDecided(),
                 eventImpl.isConsensus(),
-                Optional.of(eventImpl.getStronglySeeP())
+                Optional.ofNullable(eventImpl.getStronglySeeP())
                         .stream()
                         .flatMap(Arrays::stream)
                         .filter(Objects::nonNull)
