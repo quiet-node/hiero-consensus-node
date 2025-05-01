@@ -1,13 +1,9 @@
 package com.swirlds.demo.hello;
 
-import javafx.scene.Node;
-import javafx.scene.Parent;
+import com.hedera.hapi.node.state.roster.Roster;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import javafx.scene.text.Text;
 
@@ -17,7 +13,7 @@ import java.util.Map;
 public class GraphPane extends Pane {
     private Map<Bytes, GuiEvent> nodeViews = new HashMap<>();
 
-    public void setup() {
+    public void setup(Roster roster) {
         this.setStyle("-fx-background-color: black;");
         this.setPrefSize(900,900);
 
