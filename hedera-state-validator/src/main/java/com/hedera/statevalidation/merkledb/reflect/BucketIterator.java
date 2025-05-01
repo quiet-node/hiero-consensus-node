@@ -17,7 +17,6 @@
 package com.hedera.statevalidation.merkledb.reflect;
 
 import com.swirlds.merkledb.files.hashmap.ParsedBucket;
-import lombok.SneakyThrows;
 
 import java.lang.reflect.Field;
 import java.util.Iterator;
@@ -41,9 +40,13 @@ public class BucketIterator {
         return iterator.hasNext();
     }
 
-    @SneakyThrows
     public ParsedBucket.BucketEntry next() {
-        return iterator.next();
+        try {
+            return iterator.next();
+
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
     }
 
 }
