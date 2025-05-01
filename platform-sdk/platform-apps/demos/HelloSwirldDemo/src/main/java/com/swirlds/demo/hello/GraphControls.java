@@ -63,6 +63,12 @@ public class GraphControls {
         });
 
 
+        graphPane.setOnScroll(event -> {
+            scrollBar.setValue(
+                    Math.max(scrollBar.getMin(), Math.min(scrollBar.getMax(),
+                    scrollBar.getValue() + event.getDeltaY())));
+        });
+
         this.timer = new Timer(true);
         return hBox;
 
