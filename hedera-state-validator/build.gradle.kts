@@ -4,17 +4,17 @@ plugins {
 }
 
 dependencies{
-    compileOnly("org.projectlombok:lombok:1.18.30")
-    implementation("info.picocli:picocli:4.7.0")
     implementation("com.google.code.gson:gson:2.10")
-    implementation("io.github.artsok:rerunner-jupiter:2.1.6")
-
 }
 
 mainModuleInfo {
     annotationProcessor("com.swirlds.config.processor")
     annotationProcessor("com.google.auto.service.processor")
+    annotationProcessor("org.projectlombok:lombok:1.18.30")
 
+    runtimeOnly("org.hyperledger.besu:besu-datatypes:24.3.3")
+    runtimeOnly("org.bouncycastle:bcprov-jdk18on:1.77")
+    runtimeOnly("org.bouncycastle:bcpkix-jdk18on:1.77")
     runtimeOnly("com.swirlds.config.impl")
     /*
      Traditional libraries that provide no module information at allfor example commons-cli:commons-cli:1.4.
@@ -24,9 +24,6 @@ mainModuleInfo {
     // https://mvnrepository.com/artifact/org.javassist/javassist
 
     requires("info.picocli:picocli:4.7.0")
-    runtimeOnly("org.hyperledger.besu:besu-datatypes:24.3.3")
-    runtimeOnly("org.bouncycastle:bcprov-jdk18on:1.77")
-    runtimeOnly("org.bouncycastle:bcpkix-jdk18on:1.77")
     requires("com.goterl:lazysodium-java:5.1.1")
     requires("org.eclipse.collections:eclipse-collections:10.4.0")
     requires("io.github.classgraph:classgraph:4.8.65")
@@ -94,13 +91,11 @@ mainModuleInfo {
     // Utils Bundle
     requires( "org.assertj:assertj-core:3.23.1")
 
-
     // lombok
     requires("org.projectlombok:lombok:1.18.30")
     requires("com.swirlds.virtualmap")
     requires("info.picocli")
 
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
 }
 
 application.mainClass = "com.hedera.statevalidation.validators.Validator"
