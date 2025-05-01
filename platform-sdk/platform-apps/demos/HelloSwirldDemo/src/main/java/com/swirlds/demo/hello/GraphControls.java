@@ -75,6 +75,8 @@ public class GraphControls {
     }
 
     private void fillLeftPane(VBox leftPane) {
+        var consensusLabel = new Label("Legend:\nLight : Non-Consensus\nDark: Consensus");
+        leftPane.getChildren().add(consensusLabel);
         addBubbleEvent(leftPane, EventColor.LIGHT_RED, EventColor.DARK_RED, EventColor.getGroupStatus(EventColor.LIGHT_RED));
         addBubbleEvent(leftPane, EventColor.LIGHT_GREEN, EventColor.DARK_GREEN, EventColor.getGroupStatus(EventColor.LIGHT_GREEN));
         addBubbleEvent(leftPane, EventColor.LIGHT_YELLOW, EventColor.DARK_YELLOW, EventColor.getGroupStatus(EventColor.LIGHT_YELLOW));

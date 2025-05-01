@@ -1,7 +1,6 @@
 package com.swirlds.demo.hello;
 
 import com.hedera.hapi.node.state.roster.Roster;
-import java.util.List;
 import javafx.animation.ScaleTransition;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
@@ -25,10 +24,11 @@ public class GraphPane extends Pane {
     private final int paneHeight = 1000;
     private final int circleDiameter = Constants.CIRCLE_RADIUS * 2;
     private Group nodeGroup;
+    private Group circleGroup;
+    private Group lineGroup;
     public int maxEventHeight = Constants.CIRCLE_RADIUS * 4;
     private int totalHeight = paneHeight;
     private Translate groupTranslation;
-    private int cumulativeYTranslation = 0;
     private SelectedEventManager selectedEventManager;
 
     public void setup(final Roster roster, final SelectedEventManager selectedEventManager) {
@@ -40,12 +40,15 @@ public class GraphPane extends Pane {
         setupTimeLines(roster);
 
         nodeGroup = new Group();
+        circleGroup = new Group();
+        lineGroup = new Group();
+        nodeGroup.getChildren().add(circleGroup);
+        nodeGroup.getChildren().add(lineGroup);
+        this.getChildren().add(nodeGroup);
 
         // setup translation logic to move a diameter at a time
         groupTranslation = new Translate();
         groupTranslation.setY(circleDiameter);
-
-        this.getChildren().add(nodeGroup);
     }
 
     private Point2D getEventPosition(GuiEvent event) {
@@ -64,18 +67,20 @@ public class GraphPane extends Pane {
 
         Sphere circle;
         boolean isNewEvent = !nodeViews.containsKey(event.id());
-        circle = isNewEvent ? new Sphere(Constants.CIRCLE_RADIUS) : (Sphere) nodeGroup.getChildren().get(nodeViews.get(event.id()).groupPosition());
+        circle = isNewEvent ? new Sphere(Constants.CIRCLE_RADIUS) : (Sphere) circleGroup.getChildren().get(nodeViews.get(event.id()).groupPosition());
         circle.setMaterial(material);
 
         if (isNewEvent) {
             circle.setOnMouseClicked(new SelectedEvent(event,
-                    event.parents().stream().map(p -> (Sphere) nodeGroup.getChildren().get(nodeViews.get(p).groupPosition())).toList(),
+                    event.parents().stream().map(p -> (Sphere) circleGroup.getChildren().get(nodeViews.get(p).groupPosition())).toList(),
                     circle,
-                    selectedEventManager));
+                    selectedEventManager,
+                    circleGroup,
+                    lineGroup));
             circle.relocate(eventPosition.getX(), eventPosition.getY());
 
-            nodeGroup.getChildren().add(circle);
-            nodeViews.put(event.id(), new GuiEVentGroupMember(event, nodeGroup.getChildren().size() - 1));
+            circleGroup.getChildren().add(circle);
+            nodeViews.put(event.id(), new GuiEVentGroupMember(event, circleGroup.getChildren().size() - 1));
 
             // add metadata text to the event
 //            Text text = new Text(event.generation() + " - " + event.creator() + " - " + event.birthRound() + " - " + event.votingRound());
@@ -90,6 +95,9 @@ public class GraphPane extends Pane {
             st.setAutoReverse(true);
 
             st.play();
+
+            circleGroup.toFront();
+            lineGroup.toBack();
         }
 
         // add gen label
@@ -104,9 +112,6 @@ public class GraphPane extends Pane {
         if (eventPosition.getY() < maxEventHeight) {
             maxEventHeight = (int) eventPosition.getY();
             totalHeight += circleDiameter;
-            cumulativeYTranslation += circleDiameter;
-
-            //setGroupYTranslation(cumulativeYTranslation);
         }
 
 
@@ -162,7 +167,7 @@ public class GraphPane extends Pane {
                         parentEventPosition.getX() + Constants.CIRCLE_RADIUS,
                         parentEventPosition.getY() + Constants.CIRCLE_RADIUS);
                 line.setStroke(Color.BLUE); // should we use a different colour for self parent?
-                nodeGroup.getChildren().add(line);
+                lineGroup.getChildren().add(line);
             }
         }
     }
