@@ -4,25 +4,25 @@ import javafx.scene.paint.Color;
 
 public class EventColor {
     /** unknown-fame witness, non-consensus */
-    public static final Color LIGHT_RED = Color.color(192f, 0f, 0f);
+    public static final Color LIGHT_RED = Color.color(0.6, 0, 0);
     /** unknown-fame witness, consensus (which can't happen) */
-    public static final Color DARK_RED = Color.color(128f, 0f, 0f);
+    public static final Color DARK_RED = Color.color(0.25, 0, 0);
     /** famous witness, non-consensus */
-    public static final Color LIGHT_GREEN = Color.color(0f, 192f, 0f);
+    public static final Color LIGHT_GREEN = Color.color(0, 0.6, 0);
     /** famous witness, consensus */
-    public static final Color DARK_GREEN = Color.color(0f, 128f, 0f);
+    public static final Color DARK_GREEN = Color.color(0, 0.25, 0);
     /** non-famous witness, non-consensus */
-    public static final Color LIGHT_YELLOW = Color.color(160f, 160f, 0f);
+    public static final Color LIGHT_YELLOW = Color.color(0.5, 0.5, 0);
     /** non-famous witness, consensus */
-    public static final Color DARK_YELLOW = Color.color(100f, 100f, 0f);
+    public static final Color DARK_YELLOW = Color.color(0.2, 0.2, 0);
     /** judge, consensus */
-    public static final Color LIGHT_BLUE = Color.color(0f, 0f, 192f);
+    public static final Color LIGHT_BLUE = Color.color(0, 0, 0.6);
     /** judge, non-consensus */
-    public static final Color DARK_BLUE = Color.color(0f, 0f, 128f);
+    public static final Color DARK_BLUE = Color.color(0, 0, 0.25);
     /** non-witness, consensus */
-    public static final Color LIGHT_GRAY = Color.color(160f, 160f, 160f);
+    public static final Color LIGHT_GRAY = Color.color(0.3, 0.3, 0.3);
     /** non-witness, non-consensus */
-    public static final Color DARK_GRAY = Color.color(0f, 0f, 0f);
+    public static final Color DARK_GRAY = Color.color(0, 0, 0);
 
     /**
      * Return the color for an event based on calculations in the consensus algorithm A non-witness is gray,
