@@ -148,7 +148,12 @@ public class InitUtils {
      * still remains till the next version. This confuses the validator as it expects these tables to exist while they don't.
      * Hence, we exclude them manually.
      */
-    private static final Set<String> TABLES_TO_EXCLUDE = Set.of("ScheduleService.SCHEDULES_BY_EQUALITY", "ScheduleService.SCHEDULES_BY_EXPIRY_SEC");
+    private static final Set<String> TABLES_TO_EXCLUDE = Set.of(
+            "ScheduleService.SCHEDULES_BY_EQUALITY",
+            "ScheduleService.SCHEDULES_BY_EXPIRY_SEC",
+            "HintsService.PREPROCESSING_VOTES",
+            "HintsService.HINTS_KEY_SETS",
+            "HintsService.CRS_PUBLICATIONS");
 
     public static Configuration CONFIGURATION;
 
