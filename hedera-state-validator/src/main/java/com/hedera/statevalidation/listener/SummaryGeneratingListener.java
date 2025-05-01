@@ -2,7 +2,8 @@ package com.hedera.statevalidation.listener;
 
 import static com.hedera.statevalidation.listener.ListenerUtils.extractTestFullName;
 
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.platform.commons.PreconditionViolationException;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.launcher.TestExecutionListener;
@@ -11,8 +12,9 @@ import org.junit.platform.launcher.TestIdentifier;
 /**
  * Prints a summary of the test execution to the console.
  */
-@Log4j2
 public class SummaryGeneratingListener implements TestExecutionListener {
+
+    private static final Logger log = LogManager.getLogger(SummaryGeneratingListener.class);
 
     public static final String ANSI_RESET = "\u001B[0m";
     public static final String ANSI_RED = "\u001B[31m";

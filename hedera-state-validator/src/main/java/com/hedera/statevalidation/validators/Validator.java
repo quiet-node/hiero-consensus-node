@@ -17,14 +17,16 @@
 package com.hedera.statevalidation.validators;
 
 import com.hedera.statevalidation.validator.ValidatorBase;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
-@Log4j2
 @Command(name = "validate", mixinStandardHelpOptions = true, version = "0.39",
         description = "Validates the state of a Mainnet Hedera node")
 public class Validator extends ValidatorBase {
+
+    private static final Logger log = LogManager.getLogger(Validator.class);
 
     public static void main(String[] args) {
         long startTime = System.currentTimeMillis();

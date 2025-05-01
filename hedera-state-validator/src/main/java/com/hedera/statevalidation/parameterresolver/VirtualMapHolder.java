@@ -26,13 +26,11 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import lombok.extern.log4j.Log4j2;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Log4j2
 public class VirtualMapHolder {
     private static VirtualMapHolder instance;
     private final List<VirtualMapAndDataSourceRecord<?, ?>> records;

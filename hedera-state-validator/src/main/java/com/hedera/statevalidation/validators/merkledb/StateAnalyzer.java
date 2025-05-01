@@ -42,7 +42,8 @@ import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
 // todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Tag;
@@ -61,8 +62,9 @@ import java.util.function.Function;
 
 @ExtendWith({ReportResolver.class, SlackReportGenerator.class})
 @Tag("stateAnalyzer")
-@Log4j2
 public class StateAnalyzer {
+
+    private static final Logger log = LogManager.getLogger(StateAnalyzer.class);
 
     // todo hackathon @ParameterizedRepeatedIfExceptionsTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)

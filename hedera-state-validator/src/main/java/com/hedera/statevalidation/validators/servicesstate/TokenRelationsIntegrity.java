@@ -16,17 +16,16 @@ import com.swirlds.base.utility.Pair;
 import com.swirlds.common.threading.manager.AdHocThreadManager;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.disk.OnDiskKey;
 import com.swirlds.state.merkle.disk.OnDiskValue;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
 // todo hackathon import io.github.artsok.ParameterizedRepeatedIfExceptionsTest;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hiero.base.concurrent.interrupt.InterruptableConsumer;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,8 +35,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith({StateResolver.class, ReportResolver.class, SlackReportGenerator.class})
 @Tag("tokenRelations")
-@Log4j2
 public class TokenRelationsIntegrity {
+
+    private static final Logger log = LogManager.getLogger(TokenRelationsIntegrity.class);
 
     // todo hackathon @RepeatedIfExceptionsTest
     void validate(DeserializedSignedState deserializedState, Report report) throws InterruptedException {

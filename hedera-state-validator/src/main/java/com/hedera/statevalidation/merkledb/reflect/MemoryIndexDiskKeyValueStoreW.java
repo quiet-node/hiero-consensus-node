@@ -18,9 +18,7 @@ package com.hedera.statevalidation.merkledb.reflect;
 
 import com.swirlds.merkledb.files.DataFileCollection;
 import com.swirlds.merkledb.files.MemoryIndexDiskKeyValueStore;
-import lombok.extern.log4j.Log4j2;
 
-@Log4j2
 public class MemoryIndexDiskKeyValueStoreW<T> {
     MemoryIndexDiskKeyValueStore memoryIndexDiskKeyValue;
     Class<?> clazz = MemoryIndexDiskKeyValueStore.class;

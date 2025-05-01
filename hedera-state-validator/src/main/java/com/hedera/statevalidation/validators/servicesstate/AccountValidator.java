@@ -26,10 +26,10 @@ import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
-import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.state.spi.ReadableKVState;
 // todo hackathon import io.github.artsok.RepeatedIfExceptionsTest;
-import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -40,8 +40,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith({StateResolver.class, ReportResolver.class, SlackReportGenerator.class})
 @Tag("account")
-@Log4j2
 public class AccountValidator {
+
+    private static final Logger log = LogManager.getLogger(AccountValidator.class);
 
     // 1_000_000_000 tiny bar  = 1 h
     // https://help.hedera.com/hc/en-us/articles/360000674317-What-are-the-official-HBAR-cryptocurrency-denominations-
