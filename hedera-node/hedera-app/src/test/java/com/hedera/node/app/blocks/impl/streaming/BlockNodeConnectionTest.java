@@ -61,6 +61,7 @@ class BlockNodeConnectionTest {
     private static final String HOST_ADDRESS = "127.0.0.1";
     private static final int PORT = 50211;
     private static final String CONNECTION_DESCRIPTOR = HOST_ADDRESS + ":" + PORT;
+    private static final int RECONNECT_SECS = 1;
     private static final int MAX_END_OF_STREAM_RESTARTS_VALUE = 3;
     private static final int MAX_END_OF_STREAM_EXP_RETRIES_VALUE = 10;
     private static final Duration VERIFY_TIMEOUT = Duration.ofSeconds(1);
@@ -1368,6 +1369,7 @@ class BlockNodeConnectionTest {
         // Verify failure outcome
         assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getState());
         verify(blockNodeConnectionManager).handleConnectionError(connection);
+        verify(blockStreamMetrics).incrementOnErrorCount();
         assertThat(logCaptor.errorLogs())
                 .anyMatch(log -> log.contains("Error on stream from block node " + CONNECTION_DESCRIPTOR));
     }
