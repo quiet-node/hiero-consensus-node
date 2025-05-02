@@ -168,10 +168,6 @@ public class SwirldsPlatform implements Platform {
      */
     private final AncientMode ancientMode;
 
-    SignedState initialState;
-
-    SwirldStateManager swirldStateManager;
-
     /**
      * Constructor.
      *
@@ -189,7 +185,7 @@ public class SwirldsPlatform implements Platform {
                 .getAncientMode();
 
         // The reservation on this state is held by the caller of this constructor.
-        initialState = blocks.initialState().get();
+        final SignedState initialState = blocks.initialState().get();
 
         // This method is a no-op if we are not in birth round mode, or if we have already migrated.
         final SemanticVersion appVersion = blocks.appVersion();
@@ -264,7 +260,7 @@ public class SwirldsPlatform implements Platform {
         /**
          * Handles all interaction with {@link ConsensusStateEventHandler}
          */
-        swirldStateManager = blocks.swirldStateManager();
+        final SwirldStateManager swirldStateManager = blocks.swirldStateManager();
         swirldStateManager.setInitialState(initialState.getState());
 
         final EventWindowManager eventWindowManager = new DefaultEventWindowManager();
@@ -327,7 +323,7 @@ public class SwirldsPlatform implements Platform {
         } else {
             initialAncientThreshold = platformStateFacade.ancientThresholdOf(initialState.getState());
             startingRound = initialState.getRound();
-            //
+
             platformWiring.sendStateToHashLogger(initialState);
             platformWiring
                     .getSignatureCollectorStateInput()
@@ -430,7 +426,7 @@ public class SwirldsPlatform implements Platform {
         notificationEngine.unregisterAll();
         notificationEngine.shutdown();
 
-        initialState = null;
+        //        initialState = null;
 
         final Metrics metrics = platformContext.getMetrics();
         if (metrics instanceof DefaultPlatformMetrics defaultPlatformMetrics) {

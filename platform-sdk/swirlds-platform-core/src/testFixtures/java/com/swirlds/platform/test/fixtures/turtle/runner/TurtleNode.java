@@ -72,10 +72,6 @@ public class TurtleNode {
 
     private final DeterministicWiringModel model;
     private final Platform platform;
-    private final Metrics metrics;
-    private final RecycleBin recycleBin;
-    private final HashedReservedSignedState reservedState;
-    private final ReservedSignedState initialState;
     private final ConsensusRoundsHolder consensusRoundsHolder;
 
     @NonNull
@@ -143,14 +139,14 @@ public class TurtleNode {
         final SemanticVersion softwareVersion =
                 SemanticVersion.newBuilder().major(1).build();
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
-        final var version = SemanticVersion.newBuilder().major(1).build();
+        final SemanticVersion version = SemanticVersion.newBuilder().major(1).build();
         MerkleDb.resetDefaultInstancePath();
-        metrics = getMetricsProvider().createPlatformMetrics(nodeId);
-        final var fileSystemManager = FileSystemManager.create(configuration);
-        recycleBin =
+        final Metrics metrics = getMetricsProvider().createPlatformMetrics(nodeId);
+        final FileSystemManager fileSystemManager = FileSystemManager.create(configuration);
+        final RecycleBin recycleBin =
                 RecycleBin.create(metrics, configuration, getStaticThreadManager(), time, fileSystemManager, nodeId);
 
-        reservedState = getInitialState(
+        final HashedReservedSignedState reservedState = getInitialState(
                 recycleBin,
                 version,
                 TurtleTestingToolState::getStateRootNode,
@@ -160,7 +156,7 @@ public class TurtleNode {
                 addressBook,
                 platformStateFacade,
                 platformContext);
-        initialState = reservedState.state();
+        final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
         final long round = platformStateFacade.roundOf(state);

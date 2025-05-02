@@ -79,7 +79,6 @@ public class Turtle {
     private Instant previousRealTime;
     private Instant previousSimulatedTime;
     private final ConsensusRoundValidator consensusRoundValidator;
-    final List<Future<Void>> futures = new ArrayList<>();
 
     /**
      * Constructor.
@@ -137,9 +136,7 @@ public class Turtle {
             node.stop();
         }
 
-        //        ForkJoinPool.commonPool().shutdownNow();
         TurtleTestingToolState.closeState();
-        //        StaticPlatformBuilder.stop();
     }
 
     /**
@@ -247,7 +244,7 @@ public class Turtle {
      * is safe to run them in parallel.
      */
     private void tickAllNodes() {
-        //        final List<Future<Void>> futures = new ArrayList<>();
+        final List<Future<Void>> futures = new ArrayList<>();
 
         // Iteration order over nodes does not need to be deterministic -- nodes are not permitted to communicate with
         // each other during the tick phase, and they run on separate threads to boot.

@@ -235,7 +235,7 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
             node.shutdownGracefully(Duration.ZERO);
         }
         nodes.clear();
-        executorService.shutdownNow();
+        executorService.close();
         this.state = State.SHUTDOWN;
     }
 

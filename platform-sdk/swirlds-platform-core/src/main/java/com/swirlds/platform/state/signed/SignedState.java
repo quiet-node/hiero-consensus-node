@@ -92,7 +92,7 @@ public class SignedState implements SignedStateInfo {
     /**
      * The root of the merkle state.
      */
-    private MerkleNodeState state;
+    private final MerkleNodeState state;
 
     /**
      * The timestamp of when this object was created.

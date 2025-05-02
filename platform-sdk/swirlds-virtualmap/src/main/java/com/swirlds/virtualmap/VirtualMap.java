@@ -490,10 +490,14 @@ public final class VirtualMap<K extends VirtualKey, V extends VirtualValue> exte
         root.warm(key);
     }
 
+    /**
+     * Clearing resources and stopping threads on the Merkle node that
+     * has a type of {@link VirtualRootNode}
+     */
     public void stop() {
         final var child = getChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX);
-        if (child instanceof VirtualRootNode) {
-            ((VirtualRootNode<K, V>) child).stop();
+        if (child instanceof VirtualRootNode<?, ?> virtualRootNode) {
+            virtualRootNode.stop();
         }
     }
 }

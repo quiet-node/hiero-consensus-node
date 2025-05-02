@@ -24,8 +24,8 @@ import org.hiero.base.crypto.Hash;
  * Extends the read-only platform state store to provide write access to the platform state.
  */
 public class WritablePlatformStateStore extends ReadablePlatformStateStore implements PlatformStateModifier {
-    private WritableStates writableStates;
-    private WritableSingletonState<PlatformState> state;
+    private final WritableStates writableStates;
+    private final WritableSingletonState<PlatformState> state;
 
     /**
      * Constructor that can be used to change and access any part of state.

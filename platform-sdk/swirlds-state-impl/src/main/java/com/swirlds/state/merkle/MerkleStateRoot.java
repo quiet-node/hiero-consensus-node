@@ -109,8 +109,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
     private Metrics metrics;
 
-    private List<MerkleNode> merkleNodes = new ArrayList<>();
-
     /**
      * Metrics for the snapshot creation process
      */
@@ -181,7 +179,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             final var childToCopy = from.getChild(childIndex);
             if (childToCopy != null) {
                 setChild(childIndex, childToCopy.copy());
-                merkleNodes.add(childToCopy);
             }
         }
     }
@@ -908,13 +905,5 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @Override
     public T loadSnapshot(@NonNull Path targetPath) throws IOException {
         return (T) MerkleTreeSnapshotReader.readStateFileData(targetPath).stateRoot();
-    }
-
-    public void clean() {
-        for (final var node : merkleNodes) {
-             if (node instanceof VirtualMap<?, ?>) {
-                ((VirtualMap) node).stop();
-            }
-        }
     }
 }
