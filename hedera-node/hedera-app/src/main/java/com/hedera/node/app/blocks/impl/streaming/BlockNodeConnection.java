@@ -132,7 +132,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @return the current state of the connection
      */
     @VisibleForTesting
-    ConnectionState getConnectionState() {
+    ConnectionState getState() {
         return connectionState;
     }
 
@@ -590,7 +590,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @return true if the connection is active, false otherwise
      */
     public boolean isActive() {
-        return getConnectionState() == ConnectionState.ACTIVE;
+        return getState() == ConnectionState.ACTIVE;
     }
 
     /**
@@ -766,10 +766,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     connectionDescriptor);
             streamCompletionInProgress.set(false);
         }
-    }
-
-    public ConnectionState getState() {
-        return connectionState;
     }
 
     /**

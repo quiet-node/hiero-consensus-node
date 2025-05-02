@@ -8,10 +8,10 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.hedera.hapi.block.BlockItemSet;
-import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.PublishStreamResponseCode;
+import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.CreateAccountOutput;
 import com.hedera.hapi.block.stream.output.TransactionOutput;
 import com.hedera.hapi.node.base.AccountID;
@@ -39,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -211,20 +210,17 @@ class BlockNodeConnectionTest {
     @Test
     @DisplayName("Create request observer handles gRPC client exception")
     void createRequestObserverException() {
-        doThrow(new RuntimeException("gRPC error"))
-                .when(grpcServiceClient)
-                .bidi(any(), eq(connection));
+        doThrow(new RuntimeException("gRPC error")).when(grpcServiceClient).bidi(any(), eq(connection));
         assertThrows(RuntimeException.class, () -> connection.createRequestObserver());
     }
 
     @Test
     @DisplayName("Update and get connection state")
     void updateAndGetConnectionState() {
-        assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getConnectionState());
+        assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getState());
         connection.updateConnectionState(BlockNodeConnection.ConnectionState.PENDING);
-        assertEquals(BlockNodeConnection.ConnectionState.PENDING, connection.getConnectionState());
+        assertEquals(BlockNodeConnection.ConnectionState.PENDING, connection.getState());
         connection.updateConnectionState(BlockNodeConnection.ConnectionState.ACTIVE);
-        assertEquals(BlockNodeConnection.ConnectionState.ACTIVE, connection.getConnectionState());
         assertEquals(BlockNodeConnection.ConnectionState.ACTIVE, connection.getState());
     }
 
@@ -330,8 +326,7 @@ class BlockNodeConnectionTest {
         assertThat(logCaptor.debugLogs())
                 .anyMatch(log -> log.contains(
                         "Block 10 state not found and lowest available block is 11, ending stream for node "
-                                + CONNECTION_DESCRIPTOR
-                ));
+                                + CONNECTION_DESCRIPTOR));
     }
 
     @Test
@@ -358,7 +353,8 @@ class BlockNodeConnectionTest {
 
         BlockState blockState = buildBlockState(BLOCK_NUMBER, false, request1);
         when(blockStreamStateManager.getBlockState(BLOCK_NUMBER)).thenReturn(blockState);
-        TestUtils.setInternalState(connection, "currentRequestIndex", new AtomicInteger(1)); // Already processed request 0
+        TestUtils.setInternalState(
+                connection, "currentRequestIndex", new AtomicInteger(1)); // Already processed request 0
 
         connection.startRequestWorker();
 
@@ -540,8 +536,7 @@ class BlockNodeConnectionTest {
         StatusRuntimeException thrown = assertThrows(
                 StatusRuntimeException.class,
                 () -> connection.sendRequest(request),
-                "Expected sendRequest to throw, but it didn't"
-        );
+                "Expected sendRequest to throw, but it didn't");
 
         // Verify UNAVAILABLE status
         assertEquals(Status.UNAVAILABLE.getCode(), thrown.getStatus().getCode());
@@ -722,10 +717,8 @@ class BlockNodeConnectionTest {
 
         verify(blockNodeConnectionManager).scheduleRetry(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
 
-        assertThat(logCaptor.debugLogs())
-                .anyMatch(log -> log.contains("Restarting stream at block " + targetBlock));
-        assertThat(logCaptor.debugLogs())
-                .anyMatch(log -> log.contains("Stream restarted at block " + targetBlock));
+        assertThat(logCaptor.debugLogs()).anyMatch(log -> log.contains("Restarting stream at block " + targetBlock));
+        assertThat(logCaptor.debugLogs()).anyMatch(log -> log.contains("Stream restarted at block " + targetBlock));
     }
 
     @Test
@@ -755,7 +748,8 @@ class BlockNodeConnectionTest {
         // Verify target is set and monitor was notified
         assertEquals(
                 targetBlock,
-                TestUtils.getInternalState(connection, "jumpTargetBlock", AtomicLong.class).get());
+                TestUtils.getInternalState(connection, "jumpTargetBlock", AtomicLong.class)
+                        .get());
         assertTrue(notifyLatch.await(1, TimeUnit.SECONDS), "Worker should have been notified");
         waiter.join();
     }
@@ -787,14 +781,12 @@ class BlockNodeConnectionTest {
 
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Block " + BLOCK_NUMBER) &&
-                                log.contains("acknowledgement received from block node"));
+                .anyMatch(log -> log.contains("Block " + BLOCK_NUMBER)
+                        && log.contains("acknowledgement received from block node"));
 
-        //Verify logs
+        // Verify logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
+                .anyMatch(log -> log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
     }
 
     @Test
@@ -821,16 +813,14 @@ class BlockNodeConnectionTest {
 
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Block " + BLOCK_NUMBER) &&
-                                log.contains("acknowledgement received from block node"));
+                .anyMatch(log -> log.contains("Block " + BLOCK_NUMBER)
+                        && log.contains("acknowledgement received from block node"));
 
-        //Verify logs
+        // Verify logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Currently streaming Block " + BLOCK_NUMBER + " to Block Node") &&
-                        log.contains("acknowledged Block " + BLOCK_NUMBER) &&
-                        log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
+                .anyMatch(log -> log.contains("Currently streaming Block " + BLOCK_NUMBER + " to Block Node")
+                        && log.contains("acknowledged Block " + BLOCK_NUMBER)
+                        && log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
     }
 
     @Test
@@ -854,9 +844,8 @@ class BlockNodeConnectionTest {
 
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Block " + BLOCK_NUMBER) &&
-                                log.contains("acknowledgement received from block node"));
+                .anyMatch(log -> log.contains("Block " + BLOCK_NUMBER)
+                        && log.contains("acknowledgement received from block node"));
     }
 
     @Test
@@ -883,16 +872,14 @@ class BlockNodeConnectionTest {
 
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Block " + (BLOCK_NUMBER + 1)) &&
-                                log.contains("acknowledgement received from block node"));
+                .anyMatch(log -> log.contains("Block " + (BLOCK_NUMBER + 1))
+                        && log.contains("acknowledgement received from block node"));
 
-        //Verify logs
+        // Verify logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Currently producing Block " + BLOCK_NUMBER + " to Block Node") &&
-                                log.contains("acknowledged Block " + (BLOCK_NUMBER + 1)) &&
-                                log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 2)));
+                .anyMatch(log -> log.contains("Currently producing Block " + BLOCK_NUMBER + " to Block Node")
+                        && log.contains("acknowledged Block " + (BLOCK_NUMBER + 1))
+                        && log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 2)));
     }
 
     @Test
@@ -922,14 +909,12 @@ class BlockNodeConnectionTest {
 
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Block " + BLOCK_NUMBER) &&
-                                log.contains("already exists on block node "));
+                .anyMatch(
+                        log -> log.contains("Block " + BLOCK_NUMBER) && log.contains("already exists on block node "));
 
-        //Verify logs
+        // Verify logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
+                .anyMatch(log -> log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
     }
 
     @Test
@@ -956,16 +941,14 @@ class BlockNodeConnectionTest {
 
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Block " + BLOCK_NUMBER) &&
-                                log.contains("already exists on block node "));
+                .anyMatch(
+                        log -> log.contains("Block " + BLOCK_NUMBER) && log.contains("already exists on block node "));
 
-        //Verify logs
+        // Verify logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Currently streaming Block " + BLOCK_NUMBER + " to Block Node") &&
-                                log.contains("acknowledged Block " + BLOCK_NUMBER) &&
-                                log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
+                .anyMatch(log -> log.contains("Currently streaming Block " + BLOCK_NUMBER + " to Block Node")
+                        && log.contains("acknowledged Block " + BLOCK_NUMBER)
+                        && log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 1)));
     }
 
     @Test
@@ -989,9 +972,8 @@ class BlockNodeConnectionTest {
 
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Block " + BLOCK_NUMBER) &&
-                                log.contains("already exists on block node "));
+                .anyMatch(
+                        log -> log.contains("Block " + BLOCK_NUMBER) && log.contains("already exists on block node "));
     }
 
     @Test
@@ -1019,15 +1001,13 @@ class BlockNodeConnectionTest {
         // Verify block acknowledgement logs
         assertThat(logCaptor.debugLogs())
                 .anyMatch(log ->
-                        log.contains("Block " + (BLOCK_NUMBER + 1)) &&
-                                log.contains("already exists on block node "));
+                        log.contains("Block " + (BLOCK_NUMBER + 1)) && log.contains("already exists on block node "));
 
-        //Verify logs
+        // Verify logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Currently producing Block " + BLOCK_NUMBER + " to Block Node") &&
-                                log.contains("acknowledged Block " + (BLOCK_NUMBER + 1)) &&
-                                log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 2)));
+                .anyMatch(log -> log.contains("Currently producing Block " + BLOCK_NUMBER + " to Block Node")
+                        && log.contains("acknowledged Block " + (BLOCK_NUMBER + 1))
+                        && log.contains("moving streaming ahead to Block " + (BLOCK_NUMBER + 2)));
     }
 
     @Test
@@ -1076,20 +1056,15 @@ class BlockNodeConnectionTest {
         // Verify no interactions with the metrics
         verifyNoInteractions(blockStreamMetrics);
 
-        //Verify logs
-        assertThat(logCaptor.warnLogs())
-                .anyMatch(log ->
-                        log.contains("Unknown acknowledgement received: "));
+        // Verify logs
+        assertThat(logCaptor.warnLogs()).anyMatch(log -> log.contains("Unknown acknowledgement received: "));
     }
 
     @ParameterizedTest(name = "{index}: code={0}, retryCount={1}, expectRetry={2}")
     @MethodSource("internalErrorRetryCodes")
     @DisplayName("onNext handles EndOfStream with internal error code respecting retry limits cases")
     void onNextEndOfStreamInternalErrorWithRetryLimits(
-            PublishStreamResponseCode code,
-            int retryCount,
-            boolean expectedRetry
-    ) {
+            PublishStreamResponseCode code, int retryCount, boolean expectedRetry) {
         connection.setCurrentBlockNumber(BLOCK_NUMBER);
         TestUtils.setInternalState(connection, "endOfStreamExpBackoffs", new AtomicInteger(retryCount));
         PublishStreamResponse response = createEndOfStreamResponse(code, BLOCK_NUMBER);
@@ -1101,16 +1076,14 @@ class BlockNodeConnectionTest {
 
         // Verify common logs
         assertThat(logCaptor.debugLogs())
-                .anyMatch(log ->
-                        log.contains("Received EndOfStream from block node " + CONNECTION_DESCRIPTOR) &&
-                                log.contains("at block " + BLOCK_NUMBER));
+                .anyMatch(log -> log.contains("Received EndOfStream from block node " + CONNECTION_DESCRIPTOR)
+                        && log.contains("at block " + BLOCK_NUMBER));
 
         // Verify internal error common logs
         assertThat(logCaptor.warnLogs())
-                .anyMatch(log ->
-                        log.contains("Block node " + CONNECTION_DESCRIPTOR) &&
-                        log.contains("reported an error at block " + BLOCK_NUMBER) &&
-                        log.contains("Will attempt to reestablish the stream later"));
+                .anyMatch(log -> log.contains("Block node " + CONNECTION_DESCRIPTOR)
+                        && log.contains("reported an error at block " + BLOCK_NUMBER)
+                        && log.contains("Will attempt to reestablish the stream later"));
 
         if (expectedRetry) {
             // Verify scheduler is used to schedule the retry
@@ -1122,8 +1095,8 @@ class BlockNodeConnectionTest {
             runnableCaptor.getValue().run();
             assertThat(logCaptor.debugLogs())
                     .anyMatch(log ->
-                            log.contains("Attempting retry after internal error for node " + CONNECTION_DESCRIPTOR) &&
-                                    log.contains("at block -1"));
+                            log.contains("Attempting retry after internal error for node " + CONNECTION_DESCRIPTOR)
+                                    && log.contains("at block -1"));
 
             // Verify connection error handling is triggered
             verify(blockNodeConnectionManager).handleConnectionError(connection);
@@ -1134,8 +1107,8 @@ class BlockNodeConnectionTest {
             // Verify no retry log is generated
             assertThat(logCaptor.debugLogs())
                     .noneMatch(log ->
-                            log.contains("Attempting retry after internal error for node " + CONNECTION_DESCRIPTOR) &&
-                                    log.contains("at block -1"));
+                            log.contains("Attempting retry after internal error for node " + CONNECTION_DESCRIPTOR)
+                                    && log.contains("at block -1"));
 
             // Verify connection error handling is NOT triggered
             verify(blockNodeConnectionManager, never()).handleConnectionError(connection);
@@ -1146,10 +1119,7 @@ class BlockNodeConnectionTest {
     @MethodSource("immediateRestartCodes")
     @DisplayName("onNext handles EndOfStream with immediate restart codes respecting retry limits cases")
     void onNextEndOfStreamImmediateRestartWithRetryLimits(
-            PublishStreamResponseCode code,
-            int retryCount,
-            boolean expectedRestart
-    ) {
+            PublishStreamResponseCode code, int retryCount, boolean expectedRestart) {
         connection.setCurrentBlockNumber(BLOCK_NUMBER);
         TestUtils.setInternalState(connection, "endOfStreamImmediateRestarts", new AtomicInteger(retryCount));
         PublishStreamResponse response = createEndOfStreamResponse(code, BLOCK_NUMBER);
@@ -1162,15 +1132,15 @@ class BlockNodeConnectionTest {
         if (expectedRestart) {
             // Verify restart logs
             assertThat(logCaptor.warnLogs())
-                    .anyMatch(log ->
-                            log.contains("Will restart stream at block " + (BLOCK_NUMBER + 1)));
+                    .anyMatch(log -> log.contains("Will restart stream at block " + (BLOCK_NUMBER + 1)));
 
             assertThat(logCaptor.debugLogs())
-                    .anyMatch(log ->
-                            log.contains("Restarting stream at block " + (BLOCK_NUMBER + 1) + " for node " + CONNECTION_DESCRIPTOR));
+                    .anyMatch(log -> log.contains(
+                            "Restarting stream at block " + (BLOCK_NUMBER + 1) + " for node " + CONNECTION_DESCRIPTOR));
 
             // Verify connection error handling is triggered
-            verify(blockNodeConnectionManager).scheduleRetry(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
+            verify(blockNodeConnectionManager)
+                    .scheduleRetry(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         } else {
             verify(connection, never()).restartStreamAtBlock((anyLong()));
 
@@ -1183,24 +1153,21 @@ class BlockNodeConnectionTest {
             runnableCaptor.getValue().run();
             assertThat(logCaptor.debugLogs())
                     .anyMatch(log ->
-                            log.contains("Attempting retry after internal error for node " + CONNECTION_DESCRIPTOR) &&
-                                    log.contains("at block -1"));
+                            log.contains("Attempting retry after internal error for node " + CONNECTION_DESCRIPTOR)
+                                    && log.contains("at block -1"));
 
             // Verify connection error handling is triggered
             verify(blockNodeConnectionManager).handleConnectionError(connection);
         }
-
     }
 
-    @ParameterizedTest(name = "{index}: blockStateAvailable={0}, retryCount={1}, expectRestart={2}, expectHandleEndOfStreamError={3}")
+    @ParameterizedTest(
+            name =
+                    "{index}: blockStateAvailable={0}, retryCount={1}, expectRestart={2}, expectHandleEndOfStreamError={3}")
     @MethodSource("streamItemsBehindCases")
     @DisplayName("onNext handles EndOfStream with STREAM_ITEMS_BEHIND response respecting retry limits cases")
     void OnNextHandlesStreamItemsBehind(
-            boolean blockStateAvailable,
-            int retryCount,
-            boolean expectRestart,
-            boolean expectHandleEndOfStreamError
-    ) {
+            boolean blockStateAvailable, int retryCount, boolean expectRestart, boolean expectHandleEndOfStreamError) {
         connection.setCurrentBlockNumber(BLOCK_NUMBER);
         long restartBlock = BLOCK_NUMBER + 1;
         PublishStreamResponse response = createEndOfStreamResponse(STREAM_ITEMS_BEHIND, BLOCK_NUMBER);
@@ -1220,23 +1187,22 @@ class BlockNodeConnectionTest {
 
         if (blockStateAvailable) {
             // Verify block state is available
-            assertThat(logCaptor.warnLogs()).anyMatch(log ->
-                    log.contains("Block node " + CONNECTION_DESCRIPTOR +" reported it is behind") &&
-                    log.contains("restart stream at block " + restartBlock));
+            assertThat(logCaptor.warnLogs())
+                    .anyMatch(log -> log.contains("Block node " + CONNECTION_DESCRIPTOR + " reported it is behind")
+                            && log.contains("restart stream at block " + restartBlock));
 
             if (expectRestart) {
                 verify(connection).restartStreamAtBlock(restartBlock);
                 assertThat(logCaptor.warnLogs())
-                        .anyMatch(log ->
-                                log.contains("Will restart stream at block " + restartBlock));
+                        .anyMatch(log -> log.contains("Will restart stream at block " + restartBlock));
             } else {
                 verify(connection, never()).restartStreamAtBlock(anyLong());
             }
         } else {
             // When there is no block state available
-            assertThat(logCaptor.warnLogs()).anyMatch(log ->
-                    log.contains("Block node " + CONNECTION_DESCRIPTOR + " is behind and block state is not available." +
-                            " Closing connection and retrying"));
+            assertThat(logCaptor.warnLogs())
+                    .anyMatch(log -> log.contains("Block node " + CONNECTION_DESCRIPTOR
+                            + " is behind and block state is not available." + " Closing connection and retrying"));
 
             if (expectHandleEndOfStreamError) {
                 verify(blockNodeConnectionManager).handleConnectionError(connection);
@@ -1259,10 +1225,9 @@ class BlockNodeConnectionTest {
 
         // Verify restart logs
         assertThat(logCaptor.errorLogs())
-                .anyMatch(log ->
-                        log.contains("Block node " + CONNECTION_DESCRIPTOR) &&
-                        log.contains(" reported an unknown error at block " + BLOCK_NUMBER) &&
-                        log.contains("Closing connection"));
+                .anyMatch(log -> log.contains("Block node " + CONNECTION_DESCRIPTOR)
+                        && log.contains(" reported an unknown error at block " + BLOCK_NUMBER)
+                        && log.contains("Closing connection"));
     }
 
     @Test
@@ -1284,16 +1249,13 @@ class BlockNodeConnectionTest {
         verify(connection).jumpToBlock(nextBlock);
 
         // Verify skipBlock logs
-        assertThat(logCaptor.debugLogs()).anyMatch(log ->
-                log.contains("Received SkipBlock from block node") &&
-                        log.contains(Long.toString(nextBlock))
-        );
+        assertThat(logCaptor.debugLogs())
+                .anyMatch(log ->
+                        log.contains("Received SkipBlock from block node") && log.contains(Long.toString(nextBlock)));
 
         // Verify logs
-        assertThat(logCaptor.debugLogs()).anyMatch(log ->
-                log.contains("Skipping ahead to Block ") &&
-                        log.contains(Long.toString(nextBlock))
-        );
+        assertThat(logCaptor.debugLogs())
+                .anyMatch(log -> log.contains("Skipping ahead to Block ") && log.contains(Long.toString(nextBlock)));
     }
 
     @Test
@@ -1312,16 +1274,13 @@ class BlockNodeConnectionTest {
         verify(blockStreamMetrics).incrementSkipBlockCount();
 
         // Verify skipBlock logs
-        assertThat(logCaptor.debugLogs()).anyMatch(log ->
-                log.contains("Received SkipBlock from block node") &&
-                        log.contains(Long.toString(targetBlock))
-        );
+        assertThat(logCaptor.debugLogs())
+                .anyMatch(log ->
+                        log.contains("Received SkipBlock from block node") && log.contains(Long.toString(targetBlock)));
 
         // Verify logs
-        assertThat(logCaptor.warnLogs()).anyMatch(log ->
-                log.contains("Received SkipBlock for") &&
-                        log.contains(Long.toString(targetBlock))
-        );
+        assertThat(logCaptor.warnLogs())
+                .anyMatch(log -> log.contains("Received SkipBlock for") && log.contains(Long.toString(targetBlock)));
     }
 
     @Test
@@ -1340,11 +1299,9 @@ class BlockNodeConnectionTest {
         verify(connection).restartStreamAtBlock(targetBlock);
 
         // Verify logs
-        assertThat(logCaptor.debugLogs()).anyMatch(log ->
-                log.contains("Restarting stream at the next block") &&
-                        log.contains(Long.toString(targetBlock))
-        );
-
+        assertThat(logCaptor.debugLogs())
+                .anyMatch(log -> log.contains("Restarting stream at the next block")
+                        && log.contains(Long.toString(targetBlock)));
     }
 
     @Test
@@ -1393,25 +1350,43 @@ class BlockNodeConnectionTest {
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT, 0, true),
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT, MAX_END_OF_STREAM_RESTARTS_VALUE, false),
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER, 0, true),
-                Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER, MAX_END_OF_STREAM_RESTARTS_VALUE, false),
+                Arguments.of(
+                        PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER, MAX_END_OF_STREAM_RESTARTS_VALUE, false),
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_BAD_STATE_PROOF, 0, true),
-                Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_BAD_STATE_PROOF, MAX_END_OF_STREAM_RESTARTS_VALUE, false));
+                Arguments.of(
+                        PublishStreamResponseCode.STREAM_ITEMS_BAD_STATE_PROOF,
+                        MAX_END_OF_STREAM_RESTARTS_VALUE,
+                        false));
     }
 
     static Stream<Arguments> internalErrorRetryCodes() {
         return Stream.of(
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR, 0, true),
-                Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR, MAX_END_OF_STREAM_EXP_RETRIES_VALUE, false),
+                Arguments.of(
+                        PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR,
+                        MAX_END_OF_STREAM_EXP_RETRIES_VALUE,
+                        false),
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_PERSISTENCE_FAILED, 0, true),
-                Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_PERSISTENCE_FAILED, MAX_END_OF_STREAM_EXP_RETRIES_VALUE, false));
+                Arguments.of(
+                        PublishStreamResponseCode.STREAM_ITEMS_PERSISTENCE_FAILED,
+                        MAX_END_OF_STREAM_EXP_RETRIES_VALUE,
+                        false));
     }
 
     static Stream<Arguments> streamItemsBehindCases() {
         return Stream.of(
                 Arguments.of(true, 0, true, false), // Case with restart
-                Arguments.of(true, MAX_END_OF_STREAM_RESTARTS_VALUE, false, false), // Case with restart limit hit results in error
+                Arguments.of(
+                        true,
+                        MAX_END_OF_STREAM_RESTARTS_VALUE,
+                        false,
+                        false), // Case with restart limit hit results in error
                 Arguments.of(false, 0, false, true), // Case with no block state - retry scheduled
-                Arguments.of(false, MAX_END_OF_STREAM_EXP_RETRIES_VALUE, false, false)); // Case with no block state and retry limit hit results in no action
+                Arguments.of(
+                        false,
+                        MAX_END_OF_STREAM_EXP_RETRIES_VALUE,
+                        false,
+                        false)); // Case with no block state and retry limit hit results in no action
     }
 
     private void setupWorkerTest() {
@@ -1420,14 +1395,11 @@ class BlockNodeConnectionTest {
     }
 
     private BlockState buildBlockState(
-            final long blockNumber,
-            final boolean isComplete,
-            final PublishStreamRequest... requests) {
+            final long blockNumber, final boolean isComplete, final PublishStreamRequest... requests) {
 
         // extract the block items from each request
-        List<BlockItem> items = Arrays.stream(requests)
-                .map(this::getBlockItemFromRequest)
-                .toList();
+        List<BlockItem> items =
+                Arrays.stream(requests).map(this::getBlockItemFromRequest).toList();
 
         // build the block state with the extracted items
         BlockState blockState = new BlockState(blockNumber, items);
@@ -1453,16 +1425,14 @@ class BlockNodeConnectionTest {
     private PublishStreamRequest createMockRequestWithOneBlockItem() {
         BlockItem blockItem = BlockItem.newBuilder()
                 .transactionOutput(TransactionOutput.newBuilder()
-                        .accountCreate(CreateAccountOutput.newBuilder().createdAccountId(generateRandomAccountId())).build())
+                        .accountCreate(CreateAccountOutput.newBuilder().createdAccountId(generateRandomAccountId()))
+                        .build())
                 .build();
 
-        BlockItemSet blockItemSet = BlockItemSet.newBuilder()
-                .blockItems(blockItem)
-                .build();
+        BlockItemSet blockItemSet =
+                BlockItemSet.newBuilder().blockItems(blockItem).build();
 
-        return PublishStreamRequest.newBuilder()
-                .blockItems(blockItemSet)
-                .build();
+        return PublishStreamRequest.newBuilder().blockItems(blockItemSet).build();
     }
 
     private BlockItem getBlockItemFromRequest(PublishStreamRequest request) {
@@ -1475,8 +1445,7 @@ class BlockNodeConnectionTest {
         }
     }
 
-    private PublishStreamResponse createAcknowledgementResponse(
-            long blockNumber, boolean blockAlreadyExists) {
+    private PublishStreamResponse createAcknowledgementResponse(long blockNumber, boolean blockAlreadyExists) {
         return PublishStreamResponse.newBuilder()
                 .acknowledgement(PublishStreamResponse.Acknowledgement.newBuilder()
                         .blockAck(PublishStreamResponse.BlockAcknowledgement.newBuilder()
@@ -1489,8 +1458,8 @@ class BlockNodeConnectionTest {
 
     private PublishStreamResponse createUnknownAcknowledgementResponse() {
         return PublishStreamResponse.newBuilder()
-                .acknowledgement(PublishStreamResponse.Acknowledgement.newBuilder()
-                        .build())
+                .acknowledgement(
+                        PublishStreamResponse.Acknowledgement.newBuilder().build())
                 .build();
     }
 
