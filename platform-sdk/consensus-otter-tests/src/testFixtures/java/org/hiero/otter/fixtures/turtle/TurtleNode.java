@@ -161,10 +161,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     public void shutdownGracefully(@NonNull final Duration timeout) throws InterruptedException {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
-
-            platformWiring.flushIntakePipeline();
             doShutdownNode();
-
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
@@ -284,14 +281,14 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     private void doShutdownNode() throws InterruptedException {
         if (lifeCycle == LifeCycle.STARTED) {
-            // TODO: Release all resources
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-            platformWiring.stop();
-            platform.getNotificationEngine().unregisterAll();
+            platform.stop();
             platformStatus = null;
             platform = null;
             platformWiring = null;
             model = null;
+
+            TurtleTestingToolState.closeState();
         }
         lifeCycle = LifeCycle.SHUTDOWN;
     }

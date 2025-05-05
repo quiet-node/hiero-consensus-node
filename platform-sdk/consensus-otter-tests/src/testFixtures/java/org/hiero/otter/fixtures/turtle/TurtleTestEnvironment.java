@@ -50,6 +50,7 @@ public class TurtleTestEnvironment implements TestEnvironment {
     private final TurtleNetwork network;
     private final TurtleTransactionGenerator generator;
     private final TurtleTimeManager timeManager;
+    private InMemoryAppender inMemoryAppender;
 
     /**
      * Constructor for the {@link TurtleTestEnvironment} class.
@@ -59,7 +60,7 @@ public class TurtleTestEnvironment implements TestEnvironment {
         final Configuration loggerContextConfig = loggerContext.getConfiguration();
 
         if (loggerContextConfig.getAppender("InMemory") == null) {
-            final InMemoryAppender inMemoryAppender = InMemoryAppender.createAppender("InMemory");
+            inMemoryAppender = InMemoryAppender.createAppender("InMemory");
             inMemoryAppender.start();
             loggerContextConfig.addAppender(inMemoryAppender);
 
@@ -154,5 +155,18 @@ public class TurtleTestEnvironment implements TestEnvironment {
     public void destroy() throws InterruptedException {
         generator.stop();
         network.destroy();
+    }
+
+    @Override
+    public void start() {
+        generator.start();
+        inMemoryAppender.start();
+    }
+
+    @Override
+    public void stop() {
+        generator.stop();
+        InMemoryAppender.clearLogs();
+        inMemoryAppender.stop();
     }
 }

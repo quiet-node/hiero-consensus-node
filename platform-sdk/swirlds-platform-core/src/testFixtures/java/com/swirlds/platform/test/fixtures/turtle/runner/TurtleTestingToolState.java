@@ -90,4 +90,11 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     public int getMinimumSupportedVersion() {
         return ClassVersion.ORIGINAL;
     }
+
+    /**
+     * Closing the state, so that Turtle nodes can be started and stopped without leaking resources
+     */
+    public static void closeState() {
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.close();
+    }
 }

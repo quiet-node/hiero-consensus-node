@@ -15,9 +15,12 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.IOIterator;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
+import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.common.utility.AutoCloseableWrapper;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
 import com.swirlds.platform.components.AppNotifier;
@@ -257,7 +260,7 @@ public class SwirldsPlatform implements Platform {
         /**
          * Handles all interaction with {@link ConsensusStateEventHandler}
          */
-        SwirldStateManager swirldStateManager = blocks.swirldStateManager();
+        final SwirldStateManager swirldStateManager = blocks.swirldStateManager();
         swirldStateManager.setInitialState(initialState.getState());
 
         final EventWindowManager eventWindowManager = new DefaultEventWindowManager();
@@ -410,6 +413,33 @@ public class SwirldsPlatform implements Platform {
 
         replayPreconsensusEvents();
         platformWiring.startGossip();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void stop() {
+        platformContext.getRecycleBin().stop();
+
+        platformWiring.flushIntakePipeline();
+        platformWiring.stop();
+
+        notificationEngine.unregisterAll();
+        notificationEngine.shutdown();
+
+        //        initialState = null;
+
+        final Metrics metrics = platformContext.getMetrics();
+        if (metrics instanceof DefaultPlatformMetrics defaultPlatformMetrics) {
+            try {
+                defaultPlatformMetrics.shutdown();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } else if (metrics instanceof NoOpMetrics noOpMetrics) {
+            noOpMetrics.clear();
+        }
     }
 
     /**

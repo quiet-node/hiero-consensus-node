@@ -100,4 +100,12 @@ public interface Platform {
      * Start this platform.
      */
     void start();
+
+    /**
+     * Stop a platform instance.
+     * <p>
+     * This method is called when the node is shutting down. It should be overridden by subclasses to perform any
+     * necessary cleanup operations.
+     */
+    default void stop() {}
 }

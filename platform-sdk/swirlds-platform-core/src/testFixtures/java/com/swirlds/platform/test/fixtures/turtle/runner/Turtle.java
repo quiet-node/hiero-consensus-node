@@ -132,6 +132,17 @@ public class Turtle {
     }
 
     /**
+     * Stop the network, so that it can be restarted and used for other test scenarios.
+     */
+    public void stop() {
+        for (final TurtleNode node : nodes) {
+            node.stop();
+        }
+
+        TurtleTestingToolState.closeState();
+    }
+
+    /**
      * Simulate the network for a period of time. Validate the correctness of collected items after each tick.
      *
      * @param duration the duration to simulate

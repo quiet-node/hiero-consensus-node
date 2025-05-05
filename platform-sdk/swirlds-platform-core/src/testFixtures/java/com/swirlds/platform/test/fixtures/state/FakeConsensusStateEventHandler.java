@@ -69,13 +69,15 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
             .withConfigDataType(FileSystemManagerConfig.class)
             .build();
 
+    public List<VirtualMap> virtualMaps = new ArrayList<>();
+
     /**
      * Register the class IDs for the {@link MerkleStateRoot} and its required children, specifically those
      * used by the {@link PlatformStateService} and {@code RosterService}.
      */
     public static void registerMerkleStateRootClassIds() {
         try {
-            ConstructableRegistry registry = ConstructableRegistry.getInstance();
+            final ConstructableRegistry registry = ConstructableRegistry.getInstance();
             registry.registerConstructable(
                     new ClassConstructorPair(TestMerkleStateRoot.class, TestMerkleStateRoot::new));
             registry.registerConstructable(new ClassConstructorPair(SingletonNode.class, SingletonNode::new));
@@ -170,6 +172,7 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
                             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
                             final var virtualMap =
                                     new VirtualMap<>(label, keySerializer, valueSerializer, dsBuilder, CONFIGURATION);
+                            virtualMaps.add(virtualMap);
                             return virtualMap;
                         });
                     } else {
@@ -226,5 +229,14 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
     @Override
     public void onNewRecoveredState(@NonNull MerkleNodeState recoveredState) {
         // no-op
+    }
+
+    /**
+     * Stopping the virtual maps instances and clearing resources, so that this event handler can be reused,
+     * without leaking
+     */
+    public void close() {
+        virtualMaps.forEach(VirtualMap::stop);
+        virtualMaps = new ArrayList<>();
     }
 }

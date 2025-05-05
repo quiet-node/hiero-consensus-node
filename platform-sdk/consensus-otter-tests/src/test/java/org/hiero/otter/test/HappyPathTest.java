@@ -10,6 +10,7 @@ import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
 import org.hiero.otter.fixtures.Validator.LogFilter;
 import org.hiero.otter.fixtures.Validator.Profile;
+import org.hiero.otter.fixtures.turtle.TurtleNetwork;
 import org.junit.jupiter.api.Disabled;
 
 public class HappyPathTest {
@@ -17,13 +18,13 @@ public class HappyPathTest {
     @Disabled
     @OtterTest
     void testHappyPath(TestEnvironment env) throws InterruptedException {
+        env.start();
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
 
         // Setup simulation
         network.addNodes(4);
         network.start(Duration.ofMinutes(1L));
-        env.generator().start();
 
         // Wait for two minutes
         timeManager.waitFor(Duration.ofMinutes(2L));
@@ -35,5 +36,11 @@ public class HappyPathTest {
                         LogFilter.ignoreMarkers(LogMarker.STARTUP),
                         LogFilter.ignoreNodes(network.getNodes().getFirst()))
                 .validateRemaining(Profile.DEFAULT);
+
+        // Validations
+        env.validator().validateRemaining(Profile.DEFAULT);
+
+        ((TurtleNetwork) network).shutdown();
+        env.stop();
     }
 }
