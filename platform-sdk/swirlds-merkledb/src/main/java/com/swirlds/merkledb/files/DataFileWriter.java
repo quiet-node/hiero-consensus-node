@@ -35,6 +35,11 @@ import java.util.function.Consumer;
 public final class DataFileWriter {
 
     /**
+     * Default buffer size for writing into the file is 268 Mb
+     */
+    private static final int DEFAULT_BUF_SIZE = PAGE_SIZE * KIBIBYTES_TO_BYTES * 64;
+
+    /**
      * The current mapped byte buffer used for writing. When overflowed, it is released, and another
      * buffer is mapped from the file channel.
      */
@@ -72,8 +77,7 @@ public final class DataFileWriter {
             final Instant creationTime,
             final int compactionLevel)
             throws IOException {
-        // TODO maybe we can use 128Mb buffer size (see DataFileWriterBenchmark)
-        this(filePrefix, dataFileDir, index, creationTime, compactionLevel, PAGE_SIZE * KIBIBYTES_TO_BYTES * 64);
+        this(filePrefix, dataFileDir, index, creationTime, compactionLevel, DEFAULT_BUF_SIZE);
     }
 
     /**
@@ -97,8 +101,7 @@ public final class DataFileWriter {
             final long dataBufferSize)
             throws IOException {
         this.dataBufferSize = dataBufferSize;
-        path = createDataFilePath(filePrefix, dataFileDir, index, creationTime, DataFileCommon.FILE_EXTENSION);
-
+        this.path = createDataFilePath(filePrefix, dataFileDir, index, creationTime, DataFileCommon.FILE_EXTENSION);
         metadata = new DataFileMetadata(
                 0, // data item count will be updated later in finishWriting()
                 index,
