@@ -314,7 +314,7 @@ public class BlockNodeConnectionManager {
                             || !connections
                                     .get(node)
                                     .getState()
-                                    .equals(ConnectionState.UNINITIALIZED)) // Check if node is marked for retry
+                                    .equals(ConnectionState.PENDING)) // Check if node is marked for retry
                     .toList();
 
             if (!nextPriorityGroup.isEmpty()) {
@@ -583,7 +583,11 @@ public class BlockNodeConnectionManager {
             // Ensure initial delay is non-negative for backoff calculation
             this.currentBackoffDelay = initialDelay.isNegative() ? Duration.ZERO : initialDelay;
 
-            connection.updateConnectionState(ConnectionState.UNINITIALIZED);
+            // if the connection is scheduled for retry, we need to set the state to PENDING
+            // and filter out those connection in getNextPriorityBlockNode()
+            if (!initialDelay.isZero()) {
+                connection.updateConnectionState(ConnectionState.PENDING);
+            }
         }
 
         @Override
