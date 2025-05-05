@@ -18,7 +18,6 @@ import com.hedera.hapi.platform.event.GossipEvent;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.RosterStateId;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.crypto.internal.MerkleCryptoEngine;
 import com.swirlds.common.metrics.RunningAverageMetric;
@@ -55,7 +54,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
-import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
@@ -66,6 +65,7 @@ import org.hiero.consensus.model.transaction.ConsensusTransaction;
 import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
 import org.hiero.consensus.model.transaction.Transaction;
 import org.hiero.consensus.model.transaction.TransactionWrapper;
+import org.hiero.consensus.roster.RosterStateId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -227,8 +227,10 @@ class PlatformTestingToolStateTest {
         final TestTransactionWrapper testTransactionWrapper = getTransactionWithRandomType(300);
 
         final EventCore eventCore = mock(EventCore.class);
-        final GossipEvent gossipEvent =
-                new GossipEvent(eventCore, null, List.of(Bytes.wrap(testTransactionWrapper.toByteArray())));
+        final GossipEvent gossipEvent = GossipEvent.newBuilder()
+                .eventCore(eventCore)
+                .transactions(Bytes.wrap(testTransactionWrapper.toByteArray()))
+                .build();
         when(eventCore.timeCreated()).thenReturn(Timestamp.DEFAULT);
         platformEvent = new PlatformEvent(gossipEvent);
 
@@ -247,7 +249,10 @@ class PlatformTestingToolStateTest {
 
         final Bytes stateSignatureTransactionBytes = main.encodeSystemTransaction(stateSignatureTransaction);
         final EventCore eventCore = mock(EventCore.class);
-        final GossipEvent gossipEvent = new GossipEvent(eventCore, null, List.of(stateSignatureTransactionBytes));
+        final GossipEvent gossipEvent = GossipEvent.newBuilder()
+                .eventCore(eventCore)
+                .transactions(stateSignatureTransactionBytes)
+                .build();
         when(eventCore.timeCreated()).thenReturn(Timestamp.DEFAULT);
         platformEvent = new PlatformEvent(gossipEvent);
 
@@ -266,13 +271,11 @@ class PlatformTestingToolStateTest {
         final Bytes stateSignatureTransactionBytes = main.encodeSystemTransaction(stateSignatureTransaction);
 
         final EventCore eventCore = mock(EventCore.class);
-        final GossipEvent gossipEvent = new GossipEvent(
-                eventCore,
-                null,
-                List.of(
-                        stateSignatureTransactionBytes,
-                        stateSignatureTransactionBytes,
-                        stateSignatureTransactionBytes));
+        final GossipEvent gossipEvent = GossipEvent.newBuilder()
+                .eventCore(eventCore)
+                .transactions(List.of(
+                        stateSignatureTransactionBytes, stateSignatureTransactionBytes, stateSignatureTransactionBytes))
+                .build();
         when(eventCore.timeCreated()).thenReturn(Timestamp.DEFAULT);
         platformEvent = new PlatformEvent(gossipEvent);
 

@@ -10,8 +10,6 @@ import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension
 import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension.SHARED_NETWORK;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.RECORD_STREAMS_DIR;
 import static com.hedera.services.bdd.junit.support.StreamFileAccess.STREAM_FILE_ACCESS;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static com.hedera.services.bdd.spec.HapiSpec.SpecStatus.ERROR;
 import static com.hedera.services.bdd.spec.HapiSpec.SpecStatus.FAILED;
 import static com.hedera.services.bdd.spec.HapiSpec.SpecStatus.FAILED_AS_EXPECTED;
@@ -74,6 +72,7 @@ import com.hedera.services.bdd.spec.keys.KeyFactory;
 import com.hedera.services.bdd.spec.keys.KeyGenerator;
 import com.hedera.services.bdd.spec.props.MapPropertySource;
 import com.hedera.services.bdd.spec.props.NodeConnectInfo;
+import com.hedera.services.bdd.spec.remote.RemoteNetworkFactory;
 import com.hedera.services.bdd.spec.transactions.TxnFactory;
 import com.hedera.services.bdd.spec.transactions.TxnUtils;
 import com.hedera.services.bdd.spec.utilops.SysFileOverrideOp;
@@ -318,6 +317,14 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     public static ThreadPoolExecutor getCommonThreadPool() {
         return THREAD_POOL;
+    }
+
+    public long shard() {
+        return requireNonNull(targetNetwork).shard();
+    }
+
+    public long realm() {
+        return requireNonNull(targetNetwork).realm();
     }
 
     public void adhocIncrement() {
@@ -598,8 +605,10 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     @Override
     public void execute() throws Throwable {
-        // Only JUnit will use execute(), and in that case the target network must be set
-        requireNonNull(targetNetwork).awaitReady(NETWORK_ACTIVE_TIMEOUT);
+        if (targetNetwork == null) {
+            buildRemoteNetwork();
+        }
+        targetNetwork.awaitReady(NETWORK_ACTIVE_TIMEOUT);
         run();
         if (failure != null) {
             throw failure.cause;
@@ -732,7 +741,7 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     private boolean init() {
         if (targetNetwork == null) {
-            targetNetwork = RemoteNetwork.newRemoteNetwork(hapiSetup.nodes(), clientsFor(hapiSetup));
+            buildRemoteNetwork();
         }
         if (!propertiesToPreserve.isEmpty()) {
             final var missingProperties = propertiesToPreserve.stream()
@@ -772,6 +781,18 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
             return false;
         }
         return true;
+    }
+
+    private void buildRemoteNetwork() {
+        try {
+            targetNetwork = RemoteNetworkFactory.newWithTargetFrom(hapiSetup.remoteNodesYmlLoc());
+            hapiSetup.addOverrides(Map.of(
+                    "default.shard", "" + targetNetwork.shard(),
+                    "default.realm", "" + targetNetwork.realm()));
+        } catch (Exception ignore) {
+            targetNetwork = RemoteNetwork.newRemoteNetwork(
+                    hapiSetup.nodes(), clientsFor(hapiSetup), HapiPropertySource.shard, HapiPropertySource.realm);
+        }
     }
 
     private void tearDown() {
@@ -1068,8 +1089,12 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
             dynamicNodes = Arrays.stream(dynamicNodes.split(","))
                     .map(NodeConnectInfo::new)
-                    .map(info -> info.uri() + ":" + SHARD + "." + REALM + "."
-                            + info.getAccount().getAccountNum())
+                    .map(info -> {
+                        final var acct = info.getAccount();
+                        return info.uri() + ":"
+                                + String.format(
+                                        "%d.%d.%d", acct.getShardNum(), acct.getRealmNum(), acct.getAccountNum());
+                    })
                     .collect(Collectors.joining(","));
 
             ciPropsSource.put("nodes", dynamicNodes);
@@ -1174,6 +1199,8 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
                 name,
                 targeted(new HapiSpec(
                         name,
+                        // Defined with only the default property source initially, but subsequent methods may add
+                        // overrides
                         HapiSpecSetup.setupFrom(HapiSpecSetup.getDefaultPropertySource()),
                         new SpecOperation[0],
                         new SpecOperation[0],
@@ -1207,22 +1234,35 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
         // (FUTURE) Remove this override by initializing the HapiClients for a remote network
         // directly from the network's HederaNode instances instead of this "nodes" property
         final var specNodes = targetNetwork.nodes().stream()
-                .map(n -> n.hapiSpecInfo(
-                        spec.setup().defaultShard().getShardNum(),
-                        spec.setup().defaultRealm().getRealmNum()))
+                .map(n -> n.hapiSpecInfo(targetNetwork.shard(), targetNetwork.realm()))
                 .collect(joining(","));
-        spec.addOverrideProperties(Map.of("nodes", specNodes, "memo.useSpecName", "true"));
+        final var overrides = new HashMap<String, String>() {
+            {
+                put("nodes", specNodes);
+                put("memo.useSpecName", "true");
+            }
+        };
+
+        // We only need to set shard/realm if they aren't the default values (zero)
+        final var shardRealm = determineShardRealm(targetNetwork);
+        if (shardRealm.shard() > 0) {
+            overrides.put("hapi.spec.default.shard", Long.toString(shardRealm.shard()));
+        }
+        if (shardRealm.realm() > 0) {
+            overrides.put("hapi.spec.default.realm", Long.toString(shardRealm.realm()));
+        }
+        spec.addOverrideProperties(overrides);
 
         if (targetNetwork instanceof EmbeddedNetwork embeddedNetwork) {
-            final Map<String, String> overrides;
+            final Map<String, String> embeddedOverrides;
             if (embeddedNetwork.inRepeatableMode()) {
                 // Statuses are immediately available in repeatable mode because ingest is synchronous;
                 // ECDSA signatures are inherently random, so use only ED25519 in repeatable mode
-                overrides = Map.of("status.wait.sleep.ms", "0", "default.keyAlgorithm", "ED25519");
+                embeddedOverrides = Map.of("status.wait.sleep.ms", "0", "default.keyAlgorithm", "ED25519");
             } else {
-                overrides = Map.of("status.wait.sleep.ms", "" + CONCURRENT_EMBEDDED_STATUS_WAIT_SLEEP_MS);
+                embeddedOverrides = Map.of("status.wait.sleep.ms", "" + CONCURRENT_EMBEDDED_STATUS_WAIT_SLEEP_MS);
             }
-            spec.addOverrideProperties(overrides);
+            spec.addOverrideProperties(embeddedOverrides);
             final var embeddedHedera = embeddedNetwork.embeddedHederaOrThrow();
             spec.setNextValidStart(embeddedHedera::nextValidStart);
             if (embeddedNetwork.inRepeatableMode()) {
@@ -1342,5 +1382,20 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
                 throw new IllegalArgumentException();
             }
         }
+    }
+
+    private record ShardRealm(long shard, long realm) {}
+
+    // (FUTURE) Refactor to a more intuitive location
+    private static ShardRealm determineShardRealm(@NonNull final HederaNetwork targetNetwork) {
+        final var shard = targetNetwork.shard();
+        if (shard < 0) {
+            throw new IllegalArgumentException("Shard must be >= 0");
+        }
+        final var realm = targetNetwork.realm();
+        if (realm < 0) {
+            throw new IllegalArgumentException("Realm must be >= 0");
+        }
+        return new ShardRealm(shard, realm);
     }
 }

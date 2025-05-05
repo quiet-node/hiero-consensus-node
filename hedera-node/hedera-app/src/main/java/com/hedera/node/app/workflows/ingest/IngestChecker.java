@@ -53,10 +53,8 @@ import com.hedera.node.app.workflows.dispatcher.TransactionDispatcher;
 import com.hedera.node.app.workflows.purechecks.PureChecksContextImpl;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.JumboTransactionsConfig;
-import com.hedera.node.config.data.LazyCreationConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -66,7 +64,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Function;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
@@ -97,7 +94,7 @@ public final class IngestChecker {
     private final SynchronizedThrottleAccumulator synchronizedThrottleAccumulator;
     private final InstantSource instantSource;
     private final OpWorkflowMetrics workflowMetrics;
-    private final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory;
+    private final SemanticVersion softwareVersionFactory;
 
     @Nullable
     private final AtomicBoolean systemEntitiesCreatedFlag;
@@ -134,11 +131,11 @@ public final class IngestChecker {
             @NonNull final SynchronizedThrottleAccumulator synchronizedThrottleAccumulator,
             @NonNull final InstantSource instantSource,
             @NonNull final OpWorkflowMetrics workflowMetrics,
-            @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory,
+            @NonNull final SemanticVersion softwareVersionFactory,
             @Nullable final AtomicBoolean systemEntitiesCreatedFlag) {
         this.nodeAccount = requireNonNull(nodeAccount, "nodeAccount must not be null");
         this.currentPlatformStatus = requireNonNull(currentPlatformStatus, "currentPlatformStatus must not be null");
-        this.blockStreamManager = requireNonNull(blockStreamManager);
+        this.blockStreamManager = requireNonNull(blockStreamManager, "blockStreamManager must not be null");
         this.transactionChecker = requireNonNull(transactionChecker, "transactionChecker must not be null");
         this.solvencyPreCheck = requireNonNull(solvencyPreCheck, "solvencyPreCheck must not be null");
         this.signatureVerifier = requireNonNull(signatureVerifier, "signatureVerifier must not be null");
@@ -147,9 +144,10 @@ public final class IngestChecker {
         this.dispatcher = requireNonNull(dispatcher, "dispatcher must not be null");
         this.feeManager = requireNonNull(feeManager, "feeManager must not be null");
         this.authorizer = requireNonNull(authorizer, "authorizer must not be null");
-        this.synchronizedThrottleAccumulator = requireNonNull(synchronizedThrottleAccumulator);
-        this.instantSource = requireNonNull(instantSource);
-        this.workflowMetrics = requireNonNull(workflowMetrics);
+        this.synchronizedThrottleAccumulator =
+                requireNonNull(synchronizedThrottleAccumulator, "synchronizedThrottleAccumulator must not be null");
+        this.instantSource = requireNonNull(instantSource, "instantSource must not be null");
+        this.workflowMetrics = requireNonNull(workflowMetrics, "workflowMetrics must not be null");
         this.softwareVersionFactory = requireNonNull(softwareVersionFactory);
         this.systemEntitiesCreatedFlag = systemEntitiesCreatedFlag;
     }
@@ -184,7 +182,7 @@ public final class IngestChecker {
      * Runs all the ingest checks on a {@link Transaction}
      *
      * @param state the {@link State} to use
-     * @param serializedTransaction the {@link Bytes} of the {@link Transaction} to check
+     * @param serializedTransaction the {@link Transaction} to check
      * @param configuration the {@link Configuration} to use
      * @return the {@link TransactionInfo} with the extracted information
      * @throws PreCheckException if a check fails
@@ -234,7 +232,7 @@ public final class IngestChecker {
         dispatcher.dispatchPureChecks(pureChecksContext);
 
         // 5. Get payer account
-        final var storeFactory = new ReadableStoreFactory(state, softwareVersionFactory);
+        final var storeFactory = new ReadableStoreFactory(state);
         final var payer = solvencyPreCheck.getPayerAccount(storeFactory, txInfo.payerID());
         final var payerKey = payer.key();
         // There should, absolutely, be a key for this account. If there isn't, then something is wrong in
@@ -322,8 +320,6 @@ public final class IngestChecker {
                             .equals(payer.alias()))
                     .findFirst();
             validateTruePreCheck(originals.isPresent(), INVALID_SIGNATURE);
-            validateTruePreCheck(
-                    configuration.getConfigData(LazyCreationConfig.class).enabled(), INVALID_SIGNATURE);
             signatureExpander.expand(List.of(originals.get()), expandedSigs);
         }
 
