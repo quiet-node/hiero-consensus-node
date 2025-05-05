@@ -4,8 +4,9 @@ package com.swirlds.platform.test.fixtures.event.source;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.EventDescriptor;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.crypto.SignatureType;
-import com.swirlds.common.test.fixtures.RandomUtils;
+import org.hiero.base.crypto.SignatureType;
+import org.hiero.base.crypto.test.fixtures.CryptoRandomUtils;
+import org.hiero.base.utility.test.fixtures.RandomUtils;
 import static com.swirlds.platform.test.fixtures.event.EventUtils.integerPowerDistribution;
 import static com.swirlds.platform.test.fixtures.event.EventUtils.staticDynamicValue;
 
@@ -297,7 +298,7 @@ public abstract class AbstractEventSource implements EventSource {
     }
 
     /**
-     * Outdated, should be replaced by {@link com.swirlds.platform.test.fixtures.event.TestingEventBuilder}
+     * Outdated, should be replaced by {@link org.hiero.consensus.model.test.fixtures.event.TestingEventBuilder}
      */
     private EventImpl randomEventWithTimestamp(
             final Random random,
@@ -338,7 +339,7 @@ public abstract class AbstractEventSource implements EventSource {
                 convertedTransactions);
 
         if (this.useFakeHashes) {
-            unsignedEvent.setHash(RandomUtils.randomHash(random));
+            unsignedEvent.setHash(CryptoRandomUtils.randomHash(random));
         } else {
             new PbjStreamHasher().hashUnsignedEvent(unsignedEvent);
         }

@@ -6,6 +6,7 @@ import com.swirlds.platform.internal.EventImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -164,6 +165,10 @@ public class SimpleLinker {
     @NonNull
     public List<EventImpl> getNonAncientEvents() {
         return parentHashMap.values().stream().toList();
+    }
+
+    public List<EventImpl> getSortedNonAncientEvents(){
+        return parentHashMap.values().stream().sorted(Comparator.comparingLong(e -> e.getBaseEvent().getNGen())).toList();
     }
 
     /**

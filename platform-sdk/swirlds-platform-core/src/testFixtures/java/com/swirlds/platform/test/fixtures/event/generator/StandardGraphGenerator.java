@@ -451,7 +451,7 @@ public class StandardGraphGenerator extends AbstractGraphGenerator {
         copyEventUpdateConsensus(next);
         return next;
     }
-    
+
     private void copyEventUpdateConsensus(@NonNull final EventImpl e) {
         /* The event given to the internal consensus needs its own EventImpl & PlatformEvent for
         metadata to be kept separate from the event that is returned to the caller.  The orphan
@@ -493,8 +493,7 @@ public class StandardGraphGenerator extends AbstractGraphGenerator {
 
         buildDefaultOtherParentAffinityMatrix();
         // save all non-ancient events
-        final List<EventImpl> nonAncientEvents = new ArrayList<>(linker.getNonAncientEvents());
-        nonAncientEvents.sort(Comparator.comparingLong(e -> e.getBaseEvent().getNGen()));
+        final List<EventImpl> nonAncientEvents = linker.getSortedNonAncientEvents();
         // reinitialize the internal consensus with the last snapshot
         initializeInternalConsensus();
         consensus.loadSnapshot(consensusSnapshot);
