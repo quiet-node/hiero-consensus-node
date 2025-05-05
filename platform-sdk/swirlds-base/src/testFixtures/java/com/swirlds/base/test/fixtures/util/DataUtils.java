@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.swirlds.base.test.fixtures.util;
 
 import java.util.Random;
