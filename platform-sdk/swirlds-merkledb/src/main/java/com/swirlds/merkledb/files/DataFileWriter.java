@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.merkledb.files;
 
+import static com.swirlds.base.units.UnitConstants.KIBIBYTES_TO_BYTES;
 import static com.swirlds.merkledb.files.DataFileCommon.FIELD_DATAFILE_ITEMS;
 import static com.swirlds.merkledb.files.DataFileCommon.PAGE_SIZE;
 import static com.swirlds.merkledb.files.DataFileCommon.createDataFilePath;
@@ -33,9 +34,6 @@ import java.util.function.Consumer;
  */
 public final class DataFileWriter {
 
-    /** Mapped buffer size */
-    private static final int MMAP_BUF_SIZE = PAGE_SIZE * 1024 * 64;
-
     /**
      * The current mapped byte buffer used for writing. When overflowed, it is released, and another
      * buffer is mapped from the file channel.
@@ -62,6 +60,22 @@ public final class DataFileWriter {
      */
     private long dataItemCount = 0;
 
+    private final long dataBufferSize;
+
+    /**
+     * Create a new data file with moving mapped byte buffer of 256Mb size.
+     */
+    public DataFileWriter(
+            final String filePrefix,
+            final Path dataFileDir,
+            final int index,
+            final Instant creationTime,
+            final int compactionLevel)
+            throws IOException {
+        // TODO maybe we can use 128Mb buffer size (see DataFileWriterBenchmark)
+        this(filePrefix, dataFileDir, index, creationTime, compactionLevel, PAGE_SIZE * KIBIBYTES_TO_BYTES * 64);
+    }
+
     /**
      * Create a new data file in the given directory, in append mode. Puts the object into "writing"
      * mode (i.e. creates a lock file. So you'd better start writing data and be sure to finish it
@@ -71,15 +85,20 @@ public final class DataFileWriter {
      * @param dataFileDir the path to directory to create the data file in
      * @param index the index number for this file
      * @param creationTime the time stamp for the creation time for this file
+     * @param compactionLevel the compaction level for this file
+     * @param dataBufferSize the size of the memory mapped data buffer to use for writing data items
      */
     public DataFileWriter(
             final String filePrefix,
             final Path dataFileDir,
             final int index,
             final Instant creationTime,
-            final int compactionLevel)
+            final int compactionLevel,
+            final long dataBufferSize)
             throws IOException {
-        this.path = createDataFilePath(filePrefix, dataFileDir, index, creationTime, DataFileCommon.FILE_EXTENSION);
+        this.dataBufferSize = dataBufferSize;
+        path = createDataFilePath(filePrefix, dataFileDir, index, creationTime, DataFileCommon.FILE_EXTENSION);
+
         metadata = new DataFileMetadata(
                 0, // data item count will be updated later in finishWriting()
                 index,
@@ -91,14 +110,14 @@ public final class DataFileWriter {
 
     /**
      * Maps the writing byte buffer to the given position in the file. Byte buffer size is always
-     * {@link #MMAP_BUF_SIZE}. Previous mapped byte buffer, if not null, is released.
+     * {@link #dataBufferSize}. Previous mapped byte buffer, if not null, is released.
      *
      * @param newMmapPos new mapped byte buffer position in the file, in bytes
      * @throws IOException if I/O error(s) occurred
      */
     private void moveWritingBuffer(final long newMmapPos) throws IOException {
         try (final FileChannel channel = FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
-            final MappedByteBuffer newMmap = channel.map(MapMode.READ_WRITE, newMmapPos, MMAP_BUF_SIZE);
+            final MappedByteBuffer newMmap = channel.map(MapMode.READ_WRITE, newMmapPos, dataBufferSize);
             if (newMmap == null) {
                 throw new IOException("Failed to map file channel to memory");
             }
