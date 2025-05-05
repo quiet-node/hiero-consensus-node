@@ -7,7 +7,6 @@ import static com.swirlds.platform.consensus.ConsensusTestArgs.RANDOM_WEIGHT_DES
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.ConsensusImpl;
 import com.swirlds.platform.test.fixtures.PlatformTest;
-import com.swirlds.platform.test.fixtures.consensus.ConsensusTestConfig;
 import com.swirlds.platform.test.fixtures.consensus.ConsensusTestParams;
 import com.swirlds.platform.test.fixtures.consensus.ConsensusTestRunner;
 import java.util.List;
@@ -52,25 +51,15 @@ class ConsensusTests extends PlatformTest {
      * @return a list of platform contexts
      */
     private List<PlatformContext> contexts() {
-        return List.of(generationAncientContext(), birthRoundAncientContext());
-    }
-
-    private PlatformContext generationAncientContext() {
-        return createPlatformContext(null, configBuilder -> {
-            configBuilder.withValue(EventConfig_.USE_BIRTH_ROUND_ANCIENT_THRESHOLD, false);
-            configBuilder.withConfigDataType(ConsensusTestConfig.class);
-            configBuilder.withValue("consensusTest.firstVersionInBirthRoundMode", "1.0.0");
-            return configBuilder;
-        });
-    }
-
-    private PlatformContext birthRoundAncientContext() {
-        return createPlatformContext(null, configBuilder -> {
-            configBuilder.withValue(EventConfig_.USE_BIRTH_ROUND_ANCIENT_THRESHOLD, true);
-            configBuilder.withConfigDataType(ConsensusTestConfig.class);
-            configBuilder.withValue("consensusTest.firstVersionInBirthRoundMode", "2.0.0");
-            return configBuilder;
-        });
+        return List.of(
+                createPlatformContext(
+                        null,
+                        configBuilder ->
+                                configBuilder.withValue(EventConfig_.USE_BIRTH_ROUND_ANCIENT_THRESHOLD, false)),
+                createPlatformContext(
+                        null,
+                        configBuilder ->
+                                configBuilder.withValue(EventConfig_.USE_BIRTH_ROUND_ANCIENT_THRESHOLD, true)));
     }
 
     @ParameterizedTest
