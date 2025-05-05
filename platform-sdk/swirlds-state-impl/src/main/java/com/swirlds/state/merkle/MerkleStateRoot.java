@@ -854,7 +854,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 @NonNull final StateChangeListener listener) {
             final var stateKey = singletonState.getStateKey();
             final var stateId = listener.stateIdFor(serviceName, stateKey);
-            singletonState.registerListener(new SingletonChangeListener<V>() {
+            singletonState.registerListener(new SingletonChangeListener<>() {
                 @Override
                 public void singletonUpdateChange(@NonNull V value) {
                     listener.singletonUpdateChange(stateId, serviceName, stateKey, value);
@@ -868,6 +868,11 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 @Override
                 public void commitDeferred() {
                     listener.commitDeferredFor(serviceName);
+                }
+
+                @Override
+                public Set<StateChangeListener.StateType> stateTypes() {
+                    return listener.stateTypes();
                 }
             });
         }
@@ -897,6 +902,11 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 @Override
                 public void commitDeferred() {
                     listener.commitDeferredFor(serviceName);
+                }
+
+                @Override
+                public Set<StateChangeListener.StateType> stateTypes() {
+                    return listener.stateTypes();
                 }
             });
         }

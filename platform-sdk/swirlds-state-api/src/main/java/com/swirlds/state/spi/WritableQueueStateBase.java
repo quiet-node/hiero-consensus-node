@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.spi;
 
+import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.spi.DeferringListener.agreedDeferCommitOrThrow;
 import static java.util.Objects.requireNonNull;
 
@@ -92,7 +93,7 @@ public abstract class WritableQueueStateBase<E> implements WritableQueueState<E>
      * cast and commit unless you own the instance!
      */
     public final void commit() {
-        if (agreedDeferCommitOrThrow(listeners)) {
+        if (agreedDeferCommitOrThrow(listeners, QUEUE)) {
             listeners.forEach(QueueChangeListener::commitDeferred);
             return;
         }

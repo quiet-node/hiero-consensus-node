@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.spi;
 
+import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.spi.DeferringListener.agreedDeferCommitOrThrow;
 import static java.util.Objects.requireNonNull;
 
@@ -79,7 +80,7 @@ public abstract class WritableSingletonStateBase<T> extends ReadableSingletonSta
      * {@link WritableSingletonStateBase} instance or owns it. Don't cast and commit unless you own the instance!
      */
     public void commit() {
-        if (agreedDeferCommitOrThrow(listeners)) {
+        if (agreedDeferCommitOrThrow(listeners, SINGLETON)) {
             listeners.forEach(SingletonChangeListener::commitDeferred);
             return;
         }

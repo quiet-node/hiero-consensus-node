@@ -782,6 +782,11 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
                 public void commitDeferred() {
                     listener.commitDeferredFor(serviceName);
                 }
+
+                @Override
+                public Set<StateChangeListener.StateType> stateTypes() {
+                    return listener.stateTypes();
+                }
             });
         }
 
@@ -810,6 +815,11 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
                 @Override
                 public void commitDeferred() {
                     listener.commitDeferredFor(serviceName);
+                }
+
+                @Override
+                public Set<StateChangeListener.StateType> stateTypes() {
+                    return listener.stateTypes();
                 }
             });
         }

@@ -39,6 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -238,6 +239,11 @@ public class FakeState implements MerkleNodeState {
             public void commitDeferred() {
                 listener.commitDeferredFor(serviceName);
             }
+
+            @Override
+            public Set<StateChangeListener.StateType> stateTypes() {
+                return listener.stateTypes();
+            }
         });
     }
 
@@ -266,6 +272,11 @@ public class FakeState implements MerkleNodeState {
             @Override
             public void commitDeferred() {
                 listener.commitDeferredFor(serviceName);
+            }
+
+            @Override
+            public Set<StateChangeListener.StateType> stateTypes() {
+                return listener.stateTypes();
             }
         });
     }
