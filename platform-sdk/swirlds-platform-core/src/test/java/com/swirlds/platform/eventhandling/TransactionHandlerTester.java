@@ -7,11 +7,10 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
-import com.swirlds.platform.roster.RosterRetriever;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateModifier;
@@ -29,6 +28,10 @@ import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import java.util.ArrayList;
 import java.util.List;
+import org.hiero.consensus.model.hashgraph.Round;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.AddressBook;
+import org.hiero.consensus.roster.RosterRetriever;
 
 /**
  * A helper class for testing the {@link DefaultTransactionHandler}.
@@ -73,7 +76,7 @@ public class TransactionHandlerTester {
         defaultTransactionHandler = new DefaultTransactionHandler(
                 platformContext,
                 statusActionSubmitter,
-                mock(SoftwareVersion.class),
+                mock(SemanticVersion.class),
                 platformStateFacade,
                 stateLifecycleManager,
                 consensusStateEventHandler,

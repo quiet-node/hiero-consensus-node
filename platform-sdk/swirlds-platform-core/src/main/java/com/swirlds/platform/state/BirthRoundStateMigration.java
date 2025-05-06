@@ -3,17 +3,19 @@ package com.swirlds.platform.state;
 
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
-import com.swirlds.platform.event.AncientMode;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.SoftwareVersion;
+import com.swirlds.platform.state.signed.SignedState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.consensus.model.event.AncientMode;
 
 /**
  * A utility for migrating the state when birth round mode is first enabled.
@@ -35,7 +37,7 @@ public final class BirthRoundStateMigration {
     public static void modifyStateForBirthRoundMigration(
             @NonNull final MerkleNodeState initialState,
             @NonNull final AncientMode ancientMode,
-            @NonNull final SoftwareVersion appVersion,
+            @NonNull final SemanticVersion appVersion,
             @NonNull final PlatformStateFacade platformStateFacade) {
 
         if (ancientMode == AncientMode.GENERATION_THRESHOLD) {
@@ -46,6 +48,13 @@ public final class BirthRoundStateMigration {
 
             logger.info(
                     STARTUP.getMarker(), "Birth round state migration is not yet needed, still in generation mode.");
+            return;
+        }
+
+        final boolean isGenesis = platformStateFacade.isGenesisStateOf(state);
+        if (isGenesis) {
+            // Genesis state, no action needed.
+            logger.info(STARTUP.getMarker(), "Birth round state migration is not needed for genesis state.");
             return;
         }
 
@@ -82,12 +91,14 @@ public final class BirthRoundStateMigration {
         for (final MinimumJudgeInfo judgeInfo : judgeInfoList) {
             modifiedJudgeInfoList.add(new MinimumJudgeInfo(judgeInfo.round(), lastRoundBeforeMigration));
         }
-        final ConsensusSnapshot modifiedConsensusSnapshot = new ConsensusSnapshot(
-                consensusSnapshot.round(),
-                consensusSnapshot.judgeHashes(),
-                modifiedJudgeInfoList,
-                consensusSnapshot.nextConsensusNumber(),
-                consensusSnapshot.consensusTimestamp());
+        final ConsensusSnapshot modifiedConsensusSnapshot = ConsensusSnapshot.newBuilder()
+                .round(consensusSnapshot.round())
+                .consensusTimestamp(consensusSnapshot.consensusTimestamp())
+                .judgeIds(consensusSnapshot.judgeIds())
+                .judgeHashes(consensusSnapshot.judgeHashes())
+                .nextConsensusNumber(consensusSnapshot.nextConsensusNumber())
+                .minimumJudgeInfoList(modifiedJudgeInfoList)
+                .build();
         platformStateFacade.setSnapshotTo(initialState, modifiedConsensusSnapshot);
 
         initialState.invalidateHash();

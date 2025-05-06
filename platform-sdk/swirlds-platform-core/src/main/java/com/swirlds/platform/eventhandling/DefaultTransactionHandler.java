@@ -14,6 +14,7 @@ import static com.swirlds.platform.eventhandling.TransactionHandlerPhase.UPDATIN
 import static com.swirlds.platform.eventhandling.TransactionHandlerPhase.WAITING_FOR_PREHANDLE;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.swirlds.common.context.PlatformContext;
@@ -22,11 +23,8 @@ import com.swirlds.common.crypto.Hash;
 import com.swirlds.common.platform.NodeId;
 import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.component.framework.schedulers.builders.TaskSchedulerType;
-import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
 import com.swirlds.platform.consensus.ConsensusConfig;
 import com.swirlds.platform.crypto.CryptoStatic;
-import com.swirlds.platform.event.PlatformEvent;
-import com.swirlds.platform.internal.ConsensusRound;
 import com.swirlds.platform.metrics.RoundHandlingMetrics;
 import com.swirlds.platform.metrics.StateMetrics;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -35,12 +33,10 @@ import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.system.status.actions.FreezePeriodEnteredAction;
 import com.swirlds.platform.uptime.UptimeTracker;
 import com.swirlds.platform.wiring.PlatformSchedulersConfig;
-import com.swirlds.platform.wiring.components.StateAndRound;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -52,6 +48,11 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.crypto.Cryptography;
+import org.hiero.base.crypto.Hash;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.ConsensusRound;
+import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
 
 /**
  * A standard implementation of {@link TransactionHandler}.
@@ -87,7 +88,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
      */
     private final StatusActionSubmitter statusActionSubmitter;
 
-    private final SoftwareVersion softwareVersion;
+    private final SemanticVersion softwareVersion;
 
     /**
      * The number of non-ancient rounds.
@@ -127,17 +128,24 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
     private final NodeId selfId;
 
     /**
+     * An estimation of the hash complexity of the next state to be sent for hashing. The number of transactions is used
+     * to estimate this value, which is ultimately used by the health monitor. Some states may not be hashed, so this
+     * value is an accumulation.
+     */
+    private long accumulatedHashComplexity = 0;
+
+    /**
      * Constructor
      *
      * @param platformContext       contains various platform utilities
      * @param statusActionSubmitter enables submitting of platform status actions
      * @param softwareVersion       the current version of the software
-     * @param platformStateFacade    enables access to the platform state
+     * @param platformStateFacade   enables access to the platform state
      */
     public DefaultTransactionHandler(
             @NonNull final PlatformContext platformContext,
             @NonNull final StatusActionSubmitter statusActionSubmitter,
-            @NonNull final SoftwareVersion softwareVersion,
+            @NonNull final SemanticVersion softwareVersion,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final StateLifecycleManager<T> stateLifecycleManager,
             @NonNull final ConsensusStateEventHandler<T> consensusStateEventHandler,
@@ -188,7 +196,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
      */
     @Override
     @Nullable
-    public StateAndRound handleConsensusRound(@NonNull final ConsensusRound consensusRound) {
+    public TransactionHandlerResult handleConsensusRound(@NonNull final ConsensusRound consensusRound) {
         // consensus rounds with no events are ignored
         if (consensusRound.isEmpty()) {
             // Future work: the long term goal is for empty rounds to not be ignored here. For now, the way that the
@@ -343,7 +351,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
      * @throws InterruptedException if this thread is interrupted
      */
     @NonNull
-    private StateAndRound createSignedState(
+    private TransactionHandlerResult createSignedState(
             @NonNull final ConsensusRound consensusRound,
             @NonNull final Queue<ScopedSystemTransaction<StateSignatureTransaction>> systemTransactions)
             throws InterruptedException {
@@ -373,10 +381,19 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
             signedState.init(platformContext);
 
             reservedSignedState = signedState.reserve("transaction handler output");
-        } else {
-            reservedSignedState = null;
-        }
 
-        return new StateAndRound(reservedSignedState, consensusRound, systemTransactions);
+            // Estimate the amount of work it will be to calculate the hash of this state. The primary modifier
+            // of the state is transactions, so that's our best bet.
+            final long hashComplexity = Math.max(accumulatedHashComplexity, 1);
+            final TransactionHandlerResult result = new TransactionHandlerResult(
+                    new StateWithHashComplexity(reservedSignedState, hashComplexity), systemTransactions);
+            accumulatedHashComplexity = 0;
+
+            return result;
+        } else {
+            // Only include non-system transactions, because system transactions do not modify the state
+            accumulatedHashComplexity += consensusRound.getNumAppTransactions() - systemTransactions.size();
+            return new TransactionHandlerResult(null, systemTransactions);
+        }
     }
 }

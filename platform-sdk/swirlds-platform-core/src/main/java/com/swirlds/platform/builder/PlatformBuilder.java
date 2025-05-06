@@ -10,36 +10,26 @@ import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.doStat
 import static com.swirlds.platform.config.internal.PlatformConfigUtils.checkConfiguration;
 import static com.swirlds.platform.event.preconsensus.PcesUtilities.getDatabaseDirectory;
 
+import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.base.time.Time;
-import com.swirlds.common.concurrent.ExecutorFactory;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.crypto.Signature;
-import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.notification.NotificationEngine;
-import com.swirlds.common.platform.NodeId;
 import com.swirlds.component.framework.WiringConfig;
 import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.model.WiringModelBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.SwirldsPlatform;
 import com.swirlds.platform.crypto.CryptoStatic;
-import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.crypto.PlatformSigner;
-import com.swirlds.platform.event.PlatformEvent;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileReader;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.gossip.DefaultIntakeEventCounter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.NoOpIntakeEventCounter;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
-import com.swirlds.platform.pool.TransactionPoolNexus;
-import com.swirlds.platform.roster.RosterHistory;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -47,7 +37,6 @@ import com.swirlds.platform.state.iss.IssScratchpad;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
@@ -64,6 +53,16 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.concurrent.ExecutorFactory;
+import org.hiero.base.crypto.CryptoUtils;
+import org.hiero.base.crypto.Signature;
+import org.hiero.consensus.config.EventConfig;
+import org.hiero.consensus.crypto.PlatformSigner;
+import org.hiero.consensus.event.creator.impl.pool.TransactionPoolNexus;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.node.KeysAndCerts;
+import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.roster.RosterHistory;
 
 /**
  * Builds a {@link SwirldsPlatform} instance.
@@ -73,7 +72,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
     private static final Logger logger = LogManager.getLogger(PlatformBuilder.class);
 
     private final String appName;
-    private final SoftwareVersion softwareVersion;
+    private final SemanticVersion softwareVersion;
     private final ReservedSignedState<T> initialState;
 
     private final ConsensusStateEventHandler<T> consensusStateEventHandler;
@@ -158,7 +157,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
     public static <T extends MerkleNodeState> PlatformBuilder<T> create(
             @NonNull final String appName,
             @NonNull final String swirldName,
-            @NonNull final SoftwareVersion softwareVersion,
+            @NonNull final SemanticVersion softwareVersion,
             @NonNull final ReservedSignedState<T> initialState,
             @NonNull final ConsensusStateEventHandler<T> consensusStateEventHandler,
             @NonNull final NodeId selfId,
@@ -197,7 +196,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
     private PlatformBuilder(
             @NonNull final String appName,
             @NonNull final String swirldName,
-            @NonNull final SoftwareVersion softwareVersion,
+            @NonNull final SemanticVersion softwareVersion,
             @NonNull final ReservedSignedState<T> initialState,
             @NonNull final ConsensusStateEventHandler<T> consensusStateEventHandler,
             @NonNull final NodeId selfId,
@@ -327,7 +326,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
         this.keysAndCerts = Objects.requireNonNull(keysAndCerts);
         // Ensure that the platform has a valid signing cert that matches the signing private key.
         // https://github.com/hashgraph/hedera-services/issues/16648
-        if (!CryptoStatic.checkCertificate(keysAndCerts.sigCert())) {
+        if (!CryptoUtils.checkCertificate(keysAndCerts.sigCert())) {
             throw new IllegalStateException("Starting the platform requires a signing cert.");
         }
         final PlatformSigner platformSigner = new PlatformSigner(keysAndCerts);
@@ -457,7 +456,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
                     platformContext.getExecutorFactory().createForkJoinPool(parallelism);
             logger.info(STARTUP.getMarker(), "Default platform pool parallelism: {}", parallelism);
 
-            model = WiringModelBuilder.create(new NoOpMetrics(), Time.getCurrent())
+            model = WiringModelBuilder.create(platformContext.getMetrics(), platformContext.getTime())
                     .withJvmAnchorEnabled(true)
                     .withDefaultPool(defaultPool)
                     .withHealthMonitorEnabled(wiringConfig.healthMonitorEnabled())
@@ -466,6 +465,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
                     .withHealthMonitorPeriod(wiringConfig.healthMonitorHeartbeatPeriod())
                     .withHealthLogThreshold(wiringConfig.healthLogThreshold())
                     .withHealthLogPeriod(wiringConfig.healthLogPeriod())
+                    .withHealthyReportThreshold(wiringConfig.healthyReportThreshold())
                     .build();
         }
 
@@ -473,7 +473,8 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
             randomBuilder = new RandomBuilder();
         }
 
-        final PlatformWiring platformWiring = new PlatformWiring(platformContext, model, callbacks);
+        final PlatformWiring platformWiring = new PlatformWiring(
+                platformContext, model, callbacks, initialState.get().isGenesisState());
 
         final PlatformBuildingBlocks<T> buildingBlocks = new PlatformBuildingBlocks<T>(
                 platformWiring,

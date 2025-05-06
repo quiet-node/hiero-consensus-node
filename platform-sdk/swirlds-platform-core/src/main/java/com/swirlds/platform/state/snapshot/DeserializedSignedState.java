@@ -4,6 +4,7 @@ package com.swirlds.platform.state.snapshot;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
+import org.hiero.base.crypto.Hash;
 
 /**
  * This record encapsulates the data read from a new signed state.

@@ -6,6 +6,7 @@ import static java.util.Objects.requireNonNull;
 import com.swirlds.common.crypto.Hash;
 import com.swirlds.platform.state.MerkleNodeState;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.hiero.base.crypto.Hash;
 
 /**
  * A record that wraps a reserved signed state and its hash.
