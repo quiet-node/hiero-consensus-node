@@ -10,8 +10,6 @@ import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.node.app.Hedera;
 import com.hedera.node.app.HederaStateRoot;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;

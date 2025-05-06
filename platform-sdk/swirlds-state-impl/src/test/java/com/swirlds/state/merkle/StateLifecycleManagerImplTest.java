@@ -4,10 +4,10 @@ package com.swirlds.state.merkle;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.swirlds.base.time.Time;
-import com.swirlds.common.exceptions.ReferenceCountException;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import java.util.function.LongSupplier;
+import org.hiero.base.exceptions.ReferenceCountException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

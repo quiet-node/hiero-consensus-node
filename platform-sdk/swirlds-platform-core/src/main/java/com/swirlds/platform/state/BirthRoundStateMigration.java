@@ -7,8 +7,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.swirlds.platform.state.service.PlatformStateFacade;
-import com.swirlds.platform.system.SoftwareVersion;
-import com.swirlds.platform.state.signed.SignedState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,7 +49,7 @@ public final class BirthRoundStateMigration {
             return;
         }
 
-        final boolean isGenesis = platformStateFacade.isGenesisStateOf(state);
+        final boolean isGenesis = platformStateFacade.isGenesisStateOf(initialState);
         if (isGenesis) {
             // Genesis state, no action needed.
             logger.info(STARTUP.getMarker(), "Birth round state migration is not needed for genesis state.");

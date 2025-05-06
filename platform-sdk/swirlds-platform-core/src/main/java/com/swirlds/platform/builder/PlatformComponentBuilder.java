@@ -46,13 +46,8 @@ import com.swirlds.platform.eventhandling.DefaultTransactionHandler;
 import com.swirlds.platform.eventhandling.DefaultTransactionPrehandler;
 import com.swirlds.platform.eventhandling.TransactionHandler;
 import com.swirlds.platform.eventhandling.TransactionPrehandler;
-import com.swirlds.platform.gossip.SyncGossip;
-import com.swirlds.platform.gossip.config.GossipConfig;
-import com.swirlds.platform.gossip.modular.SyncGossipModular;
-import com.swirlds.platform.pool.DefaultTransactionPool;
-import com.swirlds.platform.pool.TransactionPool;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.gossip.SyncGossipModular;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.hasher.DefaultStateHasher;
 import com.swirlds.platform.state.hasher.StateHasher;
 import com.swirlds.platform.state.hashlogger.DefaultHashLogger;
@@ -955,7 +950,6 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
                     blocks.rosterHistory().getCurrentRoster(),
                     blocks.selfId(),
                     blocks.appVersion(),
-                    blocks.swirldStateManager(),
                     () -> blocks.getLatestCompleteStateReference().get().get(),
                     x -> blocks.statusActionSubmitterReference().get().submitStatusAction(x),
                     state -> blocks.loadReconnectStateReference().get().accept(state),

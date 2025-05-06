@@ -4,8 +4,6 @@ package com.swirlds.platform.state.signed;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 
 import com.swirlds.base.utility.AutoCloseableNonThrowing;
-import com.swirlds.common.AutoCloseableNonThrowing;
-import com.swirlds.common.exceptions.ReferenceCountException;
 import com.swirlds.platform.state.MerkleNodeState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;

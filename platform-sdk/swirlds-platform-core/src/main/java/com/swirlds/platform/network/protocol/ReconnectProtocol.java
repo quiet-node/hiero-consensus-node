@@ -46,7 +46,6 @@ public class ReconnectProtocol implements Protocol {
             @NonNull final ReconnectMetrics reconnectMetrics,
             @NonNull final ReconnectSyncHelper reconnectSyncHelper,
             @NonNull final FallenBehindManager fallenBehindManager,
-            @NonNull final Supplier<PlatformStatus> platformStatusSupplier,
             @NonNull final PlatformStateFacade platformStateFacade) {
 
         this.platformContext = Objects.requireNonNull(platformContext);

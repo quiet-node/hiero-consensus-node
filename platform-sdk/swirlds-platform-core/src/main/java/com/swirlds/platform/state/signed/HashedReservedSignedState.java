@@ -3,7 +3,6 @@ package com.swirlds.platform.state.signed;
 
 import static java.util.Objects.requireNonNull;
 
-import com.swirlds.common.crypto.Hash;
 import com.swirlds.platform.state.MerkleNodeState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hiero.base.crypto.Hash;
