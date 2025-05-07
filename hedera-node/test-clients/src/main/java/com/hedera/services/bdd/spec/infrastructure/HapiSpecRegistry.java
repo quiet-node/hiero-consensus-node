@@ -9,6 +9,7 @@ import static com.hedera.services.bdd.suites.HapiSuite.DEFAULT_CONTRACT_SENDER;
 
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.spec.HapiPropertySource;
+import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
 import com.hedera.services.bdd.spec.HapiSpecSetup;
 import com.hedera.services.bdd.spec.infrastructure.listeners.TokenAccountRegistryRel;
@@ -56,14 +57,8 @@ public class HapiSpecRegistry {
 
     private static final Integer ZERO = 0;
 
-    private final long shard;
-    private final long realm;
-
-    public HapiSpecRegistry(HapiSpecSetup setup, long shard, long realm) throws Exception {
+    public HapiSpecRegistry(HapiSpecSetup setup) throws Exception {
         this.setup = setup;
-        this.shard = shard;
-        this.realm = realm;
-        // TODO: for remote network we need to use shard and realm form here!!!
         final var key = TypedKey.from(setup.payerKey());
         final var genesisKey = asPublicKey(key.pubKey(), key.type());
 
@@ -531,11 +526,11 @@ public class HapiSpecRegistry {
         return get(name, AccountID.class);
     }
 
-    public AccountID keyAliasIdFor(String keyName) {
+    public AccountID keyAliasIdFor(HapiSpec spec, String keyName) {
         final var key = get(keyName, Key.class);
         return AccountID.newBuilder()
-                .setShardNum(setup.shard())
-                .setRealmNum(setup.realm())
+                .setShardNum(spec.shard())
+                .setRealmNum(spec.realm())
                 .setAlias(key.toByteString())
                 .build();
     }

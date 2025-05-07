@@ -255,7 +255,7 @@ public class EthereumSuite {
                                                 .logs(inOrder())
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8())))
                                         .ethereumHash(ByteString.copyFrom(
@@ -576,7 +576,7 @@ public class EthereumSuite {
                                                 .logs(inOrder())
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8())))
                                         .ethereumHash(ByteString.copyFrom(
@@ -666,7 +666,7 @@ public class EthereumSuite {
                                                                 List.of(eventSignatureOf("Info(address,address)")))))
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8())))
                                         .ethereumHash(ByteString.copyFrom(
@@ -860,7 +860,7 @@ public class EthereumSuite {
                                                 .logs(inOrder())
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8())))
                                         .ethereumHash(ByteString.copyFrom(

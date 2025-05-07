@@ -329,7 +329,7 @@ public class HelloWorldEthereumSuite {
                                                 .logs(inOrder())
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8())))
                                         .ethereumHash(ByteString.copyFrom(
@@ -363,7 +363,7 @@ public class HelloWorldEthereumSuite {
                                                         .withTopicsInOrder(List.of(eventSignatureOf("Info(uint256)")))))
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8())))
                                         .ethereumHash(ByteString.copyFrom(
@@ -463,7 +463,7 @@ public class HelloWorldEthereumSuite {
                                                 .logs(inOrder())
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8()))
                                                 .create1EvmAddress(
@@ -546,7 +546,7 @@ public class HelloWorldEthereumSuite {
                                                 .logs(inOrder())
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8()))
                                                 .create1EvmAddress(
@@ -594,7 +594,7 @@ public class HelloWorldEthereumSuite {
                                                 .logs(inOrder())
                                                 .senderId(spec.registry()
                                                         .getAccountID(spec.registry()
-                                                                .keyAliasIdFor(SECP_256K1_SOURCE_KEY)
+                                                                .keyAliasIdFor(spec, SECP_256K1_SOURCE_KEY)
                                                                 .getAlias()
                                                                 .toStringUtf8()))
                                                 .create1EvmAddress(
