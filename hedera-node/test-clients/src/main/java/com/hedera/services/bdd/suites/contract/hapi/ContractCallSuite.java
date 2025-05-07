@@ -129,7 +129,6 @@ import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.TokenID;
 import java.math.BigInteger;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
@@ -684,13 +683,7 @@ public class ContractCallSuite {
         final AtomicReference<byte[]> defaultPayerMirror = new AtomicReference<>();
         final AtomicReference<String> addressBookMirror = new AtomicReference<>();
         final AtomicReference<String> jurisdictionMirror = new AtomicReference<>();
-        final var shard = new AtomicInteger();
-        final var realm = new AtomicInteger();
         return hapiTest(
-                withOpContext((spec, opLog) -> {
-                    shard.set((int) spec.shard());
-                    realm.set((int) spec.realm());
-                }),
                 getAccountInfo(DEFAULT_CONTRACT_SENDER).savingSnapshot(DEFAULT_CONTRACT_SENDER),
                 withOpContext((spec, opLog) -> defaultPayerMirror.set((unhex(
                         spec.registry().getAccountInfo(DEFAULT_CONTRACT_SENDER).getContractAccountID())))),
@@ -700,14 +693,14 @@ public class ContractCallSuite {
                 // support
                 contractCreate(addressBook)
                         .gas(1_000_000L)
-                        .exposingNumTo(
-                                num -> addressBookMirror.set(asHexedSolidityAddress(shard.get(), realm.get(), num)))
+                        .exposingContractIdTo(id -> addressBookMirror.set(
+                                asHexedSolidityAddress((int) id.getShardNum(), id.getRealmNum(), id.getContractNum())))
                         .payingWith(DEFAULT_CONTRACT_SENDER)
                         .refusingEthConversion(),
                 contractCreate(jurisdictions)
                         .gas(4_000_000L)
-                        .exposingNumTo(
-                                num -> jurisdictionMirror.set(asHexedSolidityAddress(shard.get(), realm.get(), num)))
+                        .exposingContractIdTo(id -> jurisdictionMirror.set(
+                                asHexedSolidityAddress((int) id.getShardNum(), id.getRealmNum(), id.getContractNum())))
                         .withExplicitParams(() -> EXPLICIT_JURISDICTION_CONS_PARAMS)
                         .payingWith(DEFAULT_CONTRACT_SENDER)
                         .refusingEthConversion(),
