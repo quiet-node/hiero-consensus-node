@@ -5,6 +5,8 @@ import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension
 import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension.SHARED_BLOCK_NODE_NETWORK;
 import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension.SHARED_NETWORK;
 import static com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork.SHARED_NETWORK_NAME;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
+import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.services.bdd.HapiBlockNode;
@@ -44,8 +46,8 @@ import org.junit.platform.launcher.TestPlan;
  * plan execution finishes.
  */
 public class SharedNetworkLauncherSessionListener implements LauncherSessionListener {
-    public static final int CLASSIC_HAPI_TEST_NETWORK_SIZE = 4;
     private static final Logger log = LogManager.getLogger(SharedNetworkLauncherSessionListener.class);
+    public static final int CLASSIC_HAPI_TEST_NETWORK_SIZE = 4;
 
     @Override
     public void launcherSessionOpened(@NonNull final LauncherSession session) {
@@ -81,16 +83,16 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
             embedding = embeddingMode();
             final HederaNetwork network =
                     switch (embedding) {
-                            // Embedding is not applicable for a subprocess network
+                        // Embedding is not applicable for a subprocess network
                         case NA -> {
                             final boolean isRemote = Optional.ofNullable(System.getProperty("hapi.spec.remote"))
                                     .map(Boolean::parseBoolean)
                                     .orElse(false);
                             yield isRemote ? sharedRemoteNetworkIfRequested() : sharedSubProcessNetwork(null, null);
                         }
-                            // For the default Test task, we need to run some tests in concurrent embedded mode and
-                            // some in repeatable embedded mode, depending on the value of their @TargetEmbeddedMode
-                            // annotation; this PER_CLASS value supports that requirement
+                        // For the default Test task, we need to run some tests in concurrent embedded mode and
+                        // some in repeatable embedded mode, depending on the value of their @TargetEmbeddedMode
+                        // annotation; this PER_CLASS value supports that requirement
                         case PER_CLASS -> null;
                         case CONCURRENT -> EmbeddedNetwork.newSharedNetwork(EmbeddedMode.CONCURRENT);
                         case REPEATABLE -> EmbeddedNetwork.newSharedNetwork(EmbeddedMode.REPEATABLE);
@@ -152,6 +154,7 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                 final var initialPort = Integer.parseInt(initialPortProperty);
                 SubProcessNetwork.initializeNextPortsForNetwork(networkSize, initialPort);
             }
+
             final var prepareUpgradeOffsetsProperty = System.getProperty("hapi.spec.prepareUpgradeOffsets");
             if (prepareUpgradeOffsetsProperty != null) {
                 final List<Duration> offsets = Arrays.stream(prepareUpgradeOffsetsProperty.split(","))
@@ -163,8 +166,15 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                     HapiSpec.doDelayedPrepareUpgrades(offsets);
                 }
             }
+            final long configShard = Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
+                    .map(Long::parseLong)
+                    .orElse((long) SHARD);
+            final long configRealm = Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
+                    .map(Long::parseLong)
+                    .orElse(REALM);
+
             return SubProcessNetwork.newSharedNetwork(
-                    networkName != null ? networkName : SHARED_NETWORK_NAME, networkSize);
+                    networkName != null ? networkName : SHARED_NETWORK_NAME, networkSize, configShard, configRealm);
         }
 
         private static void startSharedEmbedded(@NonNull final EmbeddedMode mode) {
