@@ -15,8 +15,6 @@ import static com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil.
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
-import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
-import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrParamFunction;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrWith;
 import static com.hedera.services.bdd.suites.contract.evm.Evm46ValidationSuite.systemAccounts;
@@ -94,10 +92,7 @@ public class ExtCodeCopyOperationSuite {
         for (int i = 0; i < systemAccounts.size(); i++) {
             // add contract call for all accounts in the list
             final var index = i;
-            opsArray[i] = contractCall(
-                            contract,
-                            getABIFor(FUNCTION, codeCopyOf, contract),
-                            mirrorAddrParamFunction(systemAccounts.get(index)))
+            opsArray[i] = contractCall(contract, codeCopyOf, mirrorAddrParamFunction(systemAccounts.get(index)))
                     .hasKnownStatus(SUCCESS);
 
             // add contract call local for all accounts in the list

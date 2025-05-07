@@ -440,17 +440,15 @@ public class Evm46ValidationSuite {
         return hapiTest(
                 uploadInitCode(INTERNAL_CALLER_CONTRACT),
                 contractCreate(INTERNAL_CALLER_CONTRACT).balance(ONE_HBAR),
-                withOpContext((spec, log) -> allRunFor(
-                        spec,
-                        contractCall(
-                                        INTERNAL_CALLER_CONTRACT,
-                                        CALL_NON_EXISTING_FUNCTION,
-                                        mirrorAddrWith(spec, FIRST_NONEXISTENT_CONTRACT_NUM + 1))
-                                .gas(GAS_LIMIT_FOR_CALL)
-                                .via(INNER_TXN)
-                                .exposingGasTo((status, gas) ->
-                                        assertTrue(gas == 24996 || gas == 24972, "Gas is not correct!")),
-                        getTxnRecord(INNER_TXN).hasPriority(recordWith().status(SUCCESS)))));
+                contractCall(
+                                INTERNAL_CALLER_CONTRACT,
+                                CALL_NON_EXISTING_FUNCTION,
+                                mirrorAddrParamFunction(FIRST_NONEXISTENT_CONTRACT_NUM + 1))
+                        .gas(GAS_LIMIT_FOR_CALL)
+                        .via(INNER_TXN)
+                        .exposingGasTo(
+                                (status, gas) -> assertTrue(gas == 24996 || gas == 24972, "Gas is not correct!")),
+                getTxnRecord(INNER_TXN).hasPriority(recordWith().status(SUCCESS)));
     }
 
     @HapiTest
@@ -532,7 +530,7 @@ public class Evm46ValidationSuite {
                 contractCreate(INTERNAL_CALLER_CONTRACT).balance(ONE_HBAR),
                 contractCall(
                                 INTERNAL_CALLER_CONTRACT,
-                                abi(TRANSFER_TO_FUNCTION),
+                                TRANSFER_TO_FUNCTION,
                                 mirrorAddrParamFunction(FIRST_NONEXISTENT_CONTRACT_NUM + 3))
                         .gas(GAS_LIMIT_FOR_CALL * 4)
                         .hasKnownStatus(CONTRACT_REVERT_EXECUTED),
@@ -618,7 +616,7 @@ public class Evm46ValidationSuite {
                 contractCreate(INTERNAL_CALLER_CONTRACT).balance(ONE_HBAR),
                 contractCall(
                                 INTERNAL_CALLER_CONTRACT,
-                                abi(SEND_TO_FUNCTION),
+                                SEND_TO_FUNCTION,
                                 mirrorAddrParamFunction(FIRST_NONEXISTENT_CONTRACT_NUM + 5))
                         .gas(GAS_LIMIT_FOR_CALL * 4)
                         .via(INNER_TXN),
@@ -717,7 +715,7 @@ public class Evm46ValidationSuite {
                 contractCreate(INTERNAL_CALLER_CONTRACT).balance(ONE_HBAR),
                 contractCall(
                                 INTERNAL_CALLER_CONTRACT,
-                                abi(CALL_WITH_VALUE_TO_FUNCTION),
+                                CALL_WITH_VALUE_TO_FUNCTION,
                                 mirrorAddrParamFunction(FIRST_NONEXISTENT_CONTRACT_NUM + 6))
                         .gas(ENOUGH_GAS_LIMIT_FOR_CREATION),
                 getAccountBalance(String.valueOf(FIRST_NONEXISTENT_CONTRACT_NUM + 6))
@@ -889,7 +887,7 @@ public class Evm46ValidationSuite {
                 contractCreate(INTERNAL_CALLER_CONTRACT).balance(ONE_HBAR),
                 contractCall(
                                 INTERNAL_CALLER_CONTRACT,
-                                abi(STATIC_CALL_EXTERNAL_FUNCTION),
+                                STATIC_CALL_EXTERNAL_FUNCTION,
                                 mirrorAddrParamFunction(FIRST_NONEXISTENT_CONTRACT_NUM + 9))
                         .gas(GAS_LIMIT_FOR_CALL)
                         .via(INNER_TXN)
@@ -989,7 +987,7 @@ public class Evm46ValidationSuite {
                 contractCreate(INTERNAL_CALLER_CONTRACT).balance(ONE_HBAR),
                 contractCall(
                                 INTERNAL_CALLER_CONTRACT,
-                                abi(DELEGATE_CALL_EXTERNAL_FUNCTION),
+                                DELEGATE_CALL_EXTERNAL_FUNCTION,
                                 mirrorAddrParamFunction(FIRST_NONEXISTENT_CONTRACT_NUM + 10))
                         .gas(GAS_LIMIT_FOR_CALL)
                         .via(INNER_TXN)
@@ -1331,20 +1329,17 @@ public class Evm46ValidationSuite {
         for (int i = 0; i < existingSystemAccounts.size(); i++) {
             final var index = i;
             // add contract call for all accounts in the list
-            opsArray[i] = withOpContext((spec, log) -> allRunFor(
-                    spec,
-                    contractCall(contract, BALANCE_OF, mirrorAddrWith(spec, existingSystemAccounts.get(index)))
-                            .hasKnownStatus(SUCCESS)));
+            opsArray[i] = contractCall(contract, BALANCE_OF, mirrorAddrParamFunction(existingSystemAccounts.get(index)))
+                    .hasKnownStatus(SUCCESS);
 
             // add contract call local for all accounts in the list
-            opsArray[existingSystemAccounts.size() + i] = withOpContext((spec, log) -> allRunFor(
-                    spec,
-                    contractCallLocal(contract, BALANCE_OF, mirrorAddrWith(spec, existingSystemAccounts.get(index)))
-                            .has(ContractFnResultAsserts.resultWith()
-                                    .resultThruAbi(
-                                            getABIFor(FUNCTION, BALANCE_OF, contract),
-                                            ContractFnResultAsserts.isEqualOrGreaterThan(
-                                                    BigInteger.valueOf(systemAccountBalance))))));
+            opsArray[existingSystemAccounts.size() + i] = contractCallLocal(
+                            contract, BALANCE_OF, mirrorAddrParamFunction(existingSystemAccounts.get(index)))
+                    .has(ContractFnResultAsserts.resultWith()
+                            .resultThruAbi(
+                                    getABIFor(FUNCTION, BALANCE_OF, contract),
+                                    ContractFnResultAsserts.isEqualOrGreaterThan(
+                                            BigInteger.valueOf(systemAccountBalance))));
         }
         return hapiTest(flattened(
                 cryptoCreate("testAccount").balance(balance),
@@ -1363,20 +1358,18 @@ public class Evm46ValidationSuite {
         for (int i = 0; i < nonExistingSystemAccounts.size(); i++) {
             final var index = i;
             // add contract call for all accounts in the list
-            opsArray[i] = withOpContext((spec, log) -> allRunFor(
-                    spec,
-                    contractCall(contract, BALANCE_OF, mirrorAddrWith(spec, nonExistingSystemAccounts.get(index)))
-                            .hasKnownStatus(SUCCESS)));
+            opsArray[i] = contractCall(
+                            contract, BALANCE_OF, mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
+                    .hasKnownStatus(SUCCESS);
 
             // add contract call local for all accounts in the list
-            opsArray[nonExistingSystemAccounts.size() + i] = withOpContext((spec, log) -> allRunFor(
-                    spec,
-                    contractCallLocal(contract, BALANCE_OF, mirrorAddrWith(spec, nonExistingSystemAccounts.get(index)))
-                            .has(ContractFnResultAsserts.resultWith()
-                                    .resultThruAbi(
-                                            getABIFor(FUNCTION, BALANCE_OF, contract),
-                                            ContractFnResultAsserts.isLiteralResult(
-                                                    new Object[] {BigInteger.valueOf(systemAccountBalance)})))));
+            opsArray[nonExistingSystemAccounts.size() + i] = contractCallLocal(
+                            contract, BALANCE_OF, mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
+                    .has(ContractFnResultAsserts.resultWith()
+                            .resultThruAbi(
+                                    getABIFor(FUNCTION, BALANCE_OF, contract),
+                                    ContractFnResultAsserts.isLiteralResult(
+                                            new Object[] {BigInteger.valueOf(systemAccountBalance)})));
         }
         return hapiTest(flattened(
                 cryptoCreate("testAccount").balance(balance),
@@ -1450,9 +1443,5 @@ public class Evm46ValidationSuite {
                             .hasKnownStatus(SUCCESS)));
         }
         return opsArray;
-    }
-
-    private String abi(String function) {
-        return getABIFor(FUNCTION, function, INTERNAL_CALLER_CONTRACT);
     }
 }

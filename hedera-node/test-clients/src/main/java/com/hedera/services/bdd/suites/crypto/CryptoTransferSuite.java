@@ -86,11 +86,9 @@ import static com.hedera.services.bdd.suites.HapiSuite.SECP_256K1_SHAPE;
 import static com.hedera.services.bdd.suites.HapiSuite.STAKING_REWARD;
 import static com.hedera.services.bdd.suites.HapiSuite.TOKEN_TREASURY;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
-import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
 import static com.hedera.services.bdd.suites.contract.Utils.aaWith;
 import static com.hedera.services.bdd.suites.contract.Utils.accountId;
 import static com.hedera.services.bdd.suites.contract.Utils.captureOneChildCreate2MetaFor;
-import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrParamFunction;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrWith;
 import static com.hedera.services.bdd.suites.contract.Utils.ocWith;
@@ -1607,9 +1605,7 @@ public class CryptoTransferSuite {
         for (int i = 0; i < nonExistingSystemAccounts.size(); i++) {
             final var index = i;
             opsArray[i] = contractCall(
-                            contract,
-                            getABIFor(FUNCTION, "sendViaTransfer", contract),
-                            mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
+                            contract, "sendViaTransfer", mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
                     .payingWith("sender")
                     .sending(ONE_HBAR * 10)
                     .via("sendViaTransfer" + i)
@@ -1617,9 +1613,7 @@ public class CryptoTransferSuite {
                     .hasKnownStatus(INVALID_CONTRACT_ID);
 
             opsArray[nonExistingSystemAccounts.size() + i] = contractCall(
-                            contract,
-                            getABIFor(FUNCTION, "sendViaSend", contract),
-                            mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
+                            contract, "sendViaSend", mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
                     .payingWith("sender")
                     .sending(ONE_HBAR * 10)
                     .via("sendViaSend" + i)
@@ -1627,9 +1621,7 @@ public class CryptoTransferSuite {
                     .hasKnownStatus(INVALID_CONTRACT_ID);
 
             opsArray[nonExistingSystemAccounts.size() * 2 + i] = contractCall(
-                            contract,
-                            getABIFor(FUNCTION, "sendViaCall", contract),
-                            mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
+                            contract, "sendViaCall", mirrorAddrParamFunction(nonExistingSystemAccounts.get(index)))
                     .payingWith("sender")
                     .sending(ONE_HBAR * 10)
                     .via("sendViaCall" + i)
@@ -1654,11 +1646,9 @@ public class CryptoTransferSuite {
                 contractCreate(transferContract).balance(ONE_HBAR),
                 uploadInitCode(balanceContract),
                 contractCreate(balanceContract),
-                contractCall(
-                                transferContract,
-                                getABIFor(FUNCTION, "sendViaTransferWithAmount", transferContract),
-                                spec -> List.of(mirrorAddrWith(spec, 359L), BigInteger.valueOf(15L))
-                                        .toArray())
+                contractCall(transferContract, "sendViaTransferWithAmount", spec -> List.of(
+                                        mirrorAddrWith(spec, 359L), BigInteger.valueOf(15L))
+                                .toArray())
                         .payingWith(senderAccount)
                         .hasKnownStatus(INVALID_CONTRACT_ID),
                 getAccountBalance(transferContract, true).hasTinyBars(ONE_HBAR));
