@@ -169,6 +169,18 @@ public interface HapiPropertySource {
                 .orElse((long) shard);
     }
 
+    static long getConfigShard() {
+        return Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
+                .map(Long::parseLong)
+                .orElse((long) SHARD);
+    }
+
+    static long getConfigRealm() {
+        return Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
+                .map(Long::parseLong)
+                .orElse(REALM);
+    }
+
     default TimeUnit getTimeUnit(String property) {
         return TimeUnit.valueOf(get(property));
     }
@@ -278,6 +290,10 @@ public interface HapiPropertySource {
                 .build();
     }
 
+	static ContractID asContract(String shard, String realm, String num) {
+		return asContract(Long.parseLong(shard), Long.parseLong(realm), Long.parseLong(num));
+	}
+
     static ContractID asContract(long shard, long realm, long num) {
         return ContractID.newBuilder()
                 .setShardNum(shard)
@@ -306,13 +322,17 @@ public interface HapiPropertySource {
                 .build();
     }
 
-    static TokenID asToken(long shard, long realm, long num) {
-        return TokenID.newBuilder()
-                .setShardNum(shard)
-                .setRealmNum(realm)
-                .setTokenNum(num)
-                .build();
+    static TokenID asToken(String shard, String realm, String num) {
+		return asToken(Long.parseLong(shard), Long.parseLong(realm), Long.parseLong(num));
     }
+
+	static TokenID asToken(long shard, long realm, long num) {
+		return TokenID.newBuilder()
+				.setShardNum(shard)
+				.setRealmNum(realm)
+				.setTokenNum(num)
+				.build();
+	}
 
     static TopicID asTopic(String shard, String realm, String num) {
         return TopicID.newBuilder()
@@ -459,11 +479,7 @@ public interface HapiPropertySource {
 
     static FileID asFile(String v) {
         long[] nativeParts = asDotDelimitedLongArray(v);
-        return FileID.newBuilder()
-                .setShardNum(nativeParts[0])
-                .setRealmNum(nativeParts[1])
-                .setFileNum(nativeParts[2])
-                .build();
+        return asFile(nativeParts[0], nativeParts[1], nativeParts[2]);
     }
 
     static EntityNumber asEntityNumber(String v) {
