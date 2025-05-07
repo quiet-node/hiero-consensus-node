@@ -118,8 +118,6 @@ public class ProcessUtils {
                         .map(override -> override.split("="))
                         .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1])))
                 .orElse(Map.of()));
-        overrides.put("hedera.shard", String.valueOf(shard));
-        overrides.put("hedera.realm", String.valueOf(realm));
         return overrides;
     }
 
