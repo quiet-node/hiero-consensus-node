@@ -5,15 +5,11 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
-import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.platform.internal.EventImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.LongStream;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.EventConstants;
 import org.hiero.consensus.model.event.NonDeterministicGeneration;
@@ -26,13 +22,8 @@ import org.hiero.consensus.roster.RosterUtils;
  * <p>It keeps track of what rounds are stored and creates elections when needed.
  */
 public class ConsensusRounds {
-    private static final Logger logger = LogManager.getLogger(ConsensusRounds.class);
-    /** consensus configuration */
-    private final ConsensusConfig config;
     /** the calculator used to calculate the ancient threshold */
     private final ListAncientCalculator ancientCalculator;
-    /** the ancient mode currently in use */
-    private final AncientMode ancientMode;
     /** a derivative of the only roster currently in use, until roster changes are implemented */
     private final Map<Long, RosterEntry> rosterEntryMap;
     /** The maximum round created of all the known witnesses */
@@ -52,8 +43,6 @@ public class ConsensusRounds {
             @NonNull final ConsensusConfig config,
             @NonNull final AncientMode ancientMode,
             @NonNull final Roster roster) {
-        this.config = Objects.requireNonNull(config);
-        this.ancientMode = Objects.requireNonNull(ancientMode);
         this.ancientCalculator = new ListAncientCalculator(
                 config,
                 ancientMode
@@ -135,13 +124,6 @@ public class ConsensusRounds {
     }
 
     /**
-     * @return true if we have decided fame for at least one round, this is false only at genesis
-     */
-    private boolean isAnyRoundDecided() {
-        return roundElections.getRound() > ConsensusConstants.ROUND_FIRST;
-    }
-
-    /**
      * Notifies the instance that the current elections have been decided. This will start the next election.
      */
     public void currentElectionDecided(final List<EventImpl> judges) {
@@ -195,7 +177,7 @@ public class ConsensusRounds {
      *
      * @param snapshot
      */
-    public void loadFromMinimumJudge(@NonNull final ConsensusSnapshot snapshot) {
+    public void loadSnapshot(@NonNull final ConsensusSnapshot snapshot) {
         ancientCalculator.loadSnapshot(snapshot);
         roundElections.setRound(snapshot.round() + 1);
     }

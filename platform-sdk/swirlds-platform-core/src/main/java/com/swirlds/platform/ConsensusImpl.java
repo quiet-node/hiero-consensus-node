@@ -9,7 +9,6 @@ import static org.hiero.consensus.model.hashgraph.ConsensusConstants.FIRST_CONSE
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.event.EventConsensusData;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
-import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.util.HapiUtils;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
@@ -252,7 +251,7 @@ public class ConsensusImpl implements Consensus {
                         .collect(toSet());
 
         initJudges = new InitJudges(snapshot.round(), judgeHashes);
-        rounds.loadFromMinimumJudge(snapshot);
+        rounds.loadSnapshot(snapshot);
         numConsensus = snapshot.nextConsensusNumber();
         lastConsensusTime = CommonUtils.fromPbjTimestamp(snapshot.consensusTimestamp());
     }
