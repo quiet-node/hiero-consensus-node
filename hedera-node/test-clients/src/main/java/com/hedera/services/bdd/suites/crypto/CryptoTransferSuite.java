@@ -1511,37 +1511,25 @@ public class CryptoTransferSuite {
 
         for (int i = 0; i < systemAccounts.size(); i++) {
             final var index = i;
+            opsArray[i] = contractCall(contract, "sendViaTransfer", mirrorAddrParamFunction(systemAccounts.get(index)))
+                    .payingWith(SENDER)
+                    .sending(ONE_HBAR * 10)
+                    .gas(100000)
+                    .hasKnownStatus(INVALID_CONTRACT_ID);
 
-            opsArray[i] = withOpContext((spec, log) -> {
-                final var callOp = contractCall(
-                                contract, "sendViaTransfer", mirrorAddrWith(spec, systemAccounts.get(index)))
-                        .payingWith(SENDER)
-                        .sending(ONE_HBAR * 10)
-                        .gas(100000)
-                        .hasKnownStatus(INVALID_CONTRACT_ID);
-                allRunFor(spec, callOp);
-            });
+            opsArray[systemAccounts.size() + i] = contractCall(
+                            contract, "sendViaSend", mirrorAddrParamFunction(systemAccounts.get(index)))
+                    .payingWith(SENDER)
+                    .sending(ONE_HBAR * 10)
+                    .gas(100000)
+                    .hasKnownStatus(INVALID_CONTRACT_ID);
 
-            opsArray[systemAccounts.size() + i] = withOpContext((spec, log) -> {
-                final var callOp = contractCall(
-                                contract, "sendViaSend", mirrorAddrWith(spec, systemAccounts.get(index)))
-                        .payingWith(SENDER)
-                        .sending(ONE_HBAR * 10)
-                        .gas(100000)
-                        .hasKnownStatus(INVALID_CONTRACT_ID);
-
-                allRunFor(spec, callOp);
-            });
-
-            opsArray[systemAccounts.size() * 2 + i] = withOpContext((spec, log) -> {
-                final var callOp = contractCall(
-                                contract, "sendViaCall", mirrorAddrWith(spec, systemAccounts.get(index)))
-                        .payingWith(SENDER)
-                        .sending(ONE_HBAR * 10)
-                        .gas(100000)
-                        .hasKnownStatus(INVALID_CONTRACT_ID);
-                allRunFor(spec, callOp);
-            });
+            opsArray[systemAccounts.size() * 2 + i] = contractCall(
+                            contract, "sendViaCall", mirrorAddrParamFunction(systemAccounts.get(index)))
+                    .payingWith(SENDER)
+                    .sending(ONE_HBAR * 10)
+                    .gas(100000)
+                    .hasKnownStatus(INVALID_CONTRACT_ID);
         }
 
         return hapiTest(flattened(
@@ -1559,35 +1547,26 @@ public class CryptoTransferSuite {
         for (int i = 0; i < existingSystemAccounts.size(); i++) {
             final var index = i;
 
-            opsArray[i] = withOpContext((spec, log) -> {
-                final var callOp = contractCall(
-                                contract, "sendViaTransfer", mirrorAddrWith(spec, existingSystemAccounts.get(index)))
-                        .payingWith(SENDER)
-                        .sending(ONE_HBAR * 10)
-                        .gas(100000)
-                        .hasKnownStatus(SUCCESS);
-                allRunFor(spec, callOp);
-            });
+            opsArray[i] = contractCall(
+                            contract, "sendViaTransfer", mirrorAddrParamFunction(existingSystemAccounts.get(index)))
+                    .payingWith(SENDER)
+                    .sending(ONE_HBAR * 10)
+                    .gas(100000)
+                    .hasKnownStatus(SUCCESS);
 
-            opsArray[existingSystemAccounts.size() + i] = withOpContext((spec, log) -> {
-                final var callOp = contractCall(
-                                contract, "sendViaSend", mirrorAddrWith(spec, existingSystemAccounts.get(index)))
-                        .payingWith(SENDER)
-                        .sending(ONE_HBAR * 10)
-                        .gas(100000)
-                        .hasKnownStatus(SUCCESS);
-                allRunFor(spec, callOp);
-            });
+            opsArray[existingSystemAccounts.size() + i] = contractCall(
+                            contract, "sendViaSend", mirrorAddrParamFunction(existingSystemAccounts.get(index)))
+                    .payingWith(SENDER)
+                    .sending(ONE_HBAR * 10)
+                    .gas(100000)
+                    .hasKnownStatus(SUCCESS);
 
-            opsArray[existingSystemAccounts.size() * 2 + i] = withOpContext((spec, log) -> {
-                final var callOp = contractCall(
-                                contract, "sendViaCall", mirrorAddrWith(spec, existingSystemAccounts.get(index)))
-                        .payingWith(SENDER)
-                        .sending(ONE_HBAR * 10)
-                        .gas(100000)
-                        .hasKnownStatus(SUCCESS);
-                allRunFor(spec, callOp);
-            });
+            opsArray[existingSystemAccounts.size() * 2 + i] = contractCall(
+                            contract, "sendViaCall", mirrorAddrParamFunction(existingSystemAccounts.get(index)))
+                    .payingWith(SENDER)
+                    .sending(ONE_HBAR * 10)
+                    .gas(100000)
+                    .hasKnownStatus(SUCCESS);
         }
 
         return hapiTest(flattened(

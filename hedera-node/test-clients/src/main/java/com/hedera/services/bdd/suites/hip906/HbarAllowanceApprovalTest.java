@@ -95,7 +95,7 @@ public class HbarAllowanceApprovalTest {
     @HapiTest
     final Stream<DynamicTest> hrc632ApproveFromEOA() {
         final AtomicReference<AccountID> accountNum = new AtomicReference<>();
-        final var spenderNum = new AtomicReference<>();
+        final AtomicReference<Address> spenderNum = new AtomicReference<>();
         return hapiTest(
                 cryptoCreate(ACCOUNT).balance(100 * ONE_HUNDRED_HBARS).exposingCreatedIdTo(accountNum::set),
                 cryptoCreate(SPENDER).exposingCreatedIdTo(id -> spenderNum.set(idAsHeadlongAddress(id))),

@@ -2,6 +2,7 @@
 package com.hedera.services.bdd.suites.contract.precompile;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountDetailsAsserts.accountDetailsWith;
 import static com.hedera.services.bdd.spec.assertions.AssertUtils.inOrder;
@@ -1725,12 +1726,7 @@ public class CryptoTransferHTSSuite {
             opsArray[i] = withOpContext((spec, opLog) -> {
                 final var token = spec.registry().getTokenID(FUNGIBLE_TOKEN);
                 final var sender = spec.registry().getAccountID(SENDER);
-                final var receiver = AccountID.newBuilder()
-                        .setShardNum(spec.shard())
-                        .setRealmNum(spec.realm())
-                        .setAccountNum(existingSystemAccounts.get(finalI))
-                        .build();
-
+                final var receiver = asAccount(spec.shard(), spec.realm(), existingSystemAccounts.get(finalI));
                 allRunFor(
                         spec,
                         newKeyNamed(DELEGATE_KEY).shape(DELEGATE_CONTRACT_KEY_SHAPE.signedWith(sigs(ON, contract))),
