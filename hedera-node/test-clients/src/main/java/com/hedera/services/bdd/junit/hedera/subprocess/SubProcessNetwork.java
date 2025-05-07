@@ -94,6 +94,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private long maxNodeId;
     private String configTxt;
     private final String genesisConfigTxt;
+    private final long shard;
+    private final long realm;
 
     private List<Consumer<HederaNode>> postInitWorkingDirActions = new ArrayList<>();
 
@@ -152,8 +154,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         }
     }
 
-    private SubProcessNetwork(@NonNull final String networkName, @NonNull final List<SubProcessNode> nodes) {
+    private SubProcessNetwork(
+            @NonNull final String networkName, @NonNull final List<SubProcessNode> nodes, long shard, long realm) {
         super(networkName, nodes.stream().map(node -> (HederaNode) node).toList());
+        this.shard = shard;
+        this.realm = realm;
         this.maxNodeId =
                 Collections.max(nodes.stream().map(SubProcessNode::getNodeId).toList());
         this.configTxt = configTxtForLocal(name(), nodes(), nextInternalGossipPort, nextExternalGossipPort);
@@ -166,11 +171,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      * @param size the number of nodes in the network
      * @return the shared network
      */
-    public static synchronized HederaNetwork newSharedNetwork(String networkName, final int size) {
+    public static synchronized HederaNetwork newSharedNetwork(String networkName, final int size, final long shard, final long realm) {
         if (NetworkTargetingExtension.SHARED_NETWORK.get() != null) {
             throw new UnsupportedOperationException("Only one shared network allowed per launcher session");
         }
-        final var sharedNetwork = liveNetwork(networkName, size);
+        final var sharedNetwork = liveNetwork(networkName, size, shard, realm);
         NetworkTargetingExtension.SHARED_NETWORK.set(sharedNetwork);
         return sharedNetwork;
     }
@@ -336,10 +341,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                         SHARED_NETWORK_NAME.equals(name()) ? null : name(),
                         nextGrpcPort + (int) nodeId * 2,
                         nextNodeOperatorPort + (int) nodeId,
-                        true,
                         nextInternalGossipPort + (int) nodeId * 2,
                         nextExternalGossipPort + (int) nodeId * 2,
-                        nextPrometheusPort + (int) nodeId),
+                        nextPrometheusPort + (int) nodeId,
+                        shard,
+                        realm),
                 GRPC_PINGER,
                 PROMETHEUS_CLIENT);
         final var accountId = pendingNodeAccounts.remove(nodeId);
@@ -390,7 +396,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      * @param size the number of nodes in the network
      * @return the network
      */
-    private static synchronized HederaNetwork liveNetwork(@NonNull final String name, final int size) {
+    private static synchronized HederaNetwork liveNetwork(
+            @NonNull final String name, final int size, final long shard, final long realm) {
         if (!nextPortsInitialized) {
             initializeNextPortsForNetwork(size);
         }
@@ -405,13 +412,16 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                                         SHARED_NETWORK_NAME.equals(name) ? null : name,
                                         nextGrpcPort,
                                         nextNodeOperatorPort,
-                                        true,
                                         nextInternalGossipPort,
                                         nextExternalGossipPort,
-                                        nextPrometheusPort),
+                                        nextPrometheusPort,
+                                        shard,
+                                        realm),
                                 GRPC_PINGER,
                                 PROMETHEUS_CLIENT))
-                        .toList());
+                        .toList(),
+                shard,
+                realm);
         Runtime.getRuntime().addShutdownHook(new Thread(network::terminate));
         return network;
     }
@@ -570,5 +580,15 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
 
     public List<Consumer<HederaNode>> getPostInitWorkingDirActions() {
         return postInitWorkingDirActions;
+    }
+
+    @Override
+    public long shard() {
+        return shard;
+    }
+
+    @Override
+    public long realm() {
+        return realm;
     }
 }
