@@ -602,39 +602,37 @@ public class CreatePrecompileSuite {
                 newKeyNamed(THRESHOLD_KEY)
                         .shape(THRESHOLD_KEY_SHAPE.signedWith(sigs(ED25519_ON, TOKEN_CREATE_CONTRACT))),
                 cryptoCreate(ACCOUNT).balance(ONE_MILLION_HBARS).key(THRESHOLD_KEY),
-                withOpContext((spec, opLog) -> allRunFor(
-                        spec,
-                        contractCall(TOKEN_CREATE_CONTRACT, tokenCreateContractAsKeyDelegate)
-                                .via(FIRST_CREATE_TXN)
-                                .gas(GAS_TO_OFFER)
-                                .sending(DEFAULT_AMOUNT_TO_SEND)
-                                .payingWith(ACCOUNT)
-                                .exposingResultTo(result -> {
-                                    log.info(EXPLICIT_CREATE_RESULT, result[0]);
-                                    final var res = (Address) result[0];
-                                    createdTokenNum.set(numberOfLongZero(HexFormat.of()
-                                            .parseHex(res.toString().substring(2))));
-                                })
-                                .hasKnownStatus(SUCCESS),
-                        getTxnRecord(FIRST_CREATE_TXN).andAllChildRecords().logged(),
-                        getAccountBalance(ACCOUNT).logged(),
-                        getAccountBalance(TOKEN_CREATE_CONTRACT).logged(),
-                        getContractInfo(TOKEN_CREATE_CONTRACT).logged(),
-                        childRecordsCheck(
-                                FIRST_CREATE_TXN,
-                                ResponseCodeEnum.SUCCESS,
-                                TransactionRecordAsserts.recordWith().status(SUCCESS)),
-                        sourcing(() -> getAccountBalance(TOKEN_CREATE_CONTRACT)
-                                .hasTokenBalance(String.valueOf(createdTokenNum.get()), 200)),
-                        sourcing(() -> getTokenInfo(String.valueOf(createdTokenNum.get()))
-                                .hasTokenType(TokenType.FUNGIBLE_COMMON)
-                                .hasDecimals(8)
-                                .hasTotalSupply(200)
-                                .hasTreasury(TOKEN_CREATE_CONTRACT)
-                                .hasAutoRenewPeriod(0L)
-                                .searchKeysGlobally()
-                                .hasPauseStatus(TokenPauseStatus.PauseNotApplicable)
-                                .logged()))));
+                contractCall(TOKEN_CREATE_CONTRACT, tokenCreateContractAsKeyDelegate)
+                        .via(FIRST_CREATE_TXN)
+                        .gas(GAS_TO_OFFER)
+                        .sending(DEFAULT_AMOUNT_TO_SEND)
+                        .payingWith(ACCOUNT)
+                        .exposingResultTo(result -> {
+                            log.info(EXPLICIT_CREATE_RESULT, result[0]);
+                            final var res = (Address) result[0];
+                            createdTokenNum.set(numberOfLongZero(
+                                    HexFormat.of().parseHex(res.toString().substring(2))));
+                        })
+                        .hasKnownStatus(SUCCESS),
+                getTxnRecord(FIRST_CREATE_TXN).andAllChildRecords().logged(),
+                getAccountBalance(ACCOUNT).logged(),
+                getAccountBalance(TOKEN_CREATE_CONTRACT).logged(),
+                getContractInfo(TOKEN_CREATE_CONTRACT).logged(),
+                childRecordsCheck(
+                        FIRST_CREATE_TXN,
+                        ResponseCodeEnum.SUCCESS,
+                        TransactionRecordAsserts.recordWith().status(SUCCESS)),
+                sourcing(() -> getAccountBalance(TOKEN_CREATE_CONTRACT)
+                        .hasTokenBalance(String.valueOf(createdTokenNum.get()), 200)),
+                sourcing(() -> getTokenInfo(String.valueOf(createdTokenNum.get()))
+                        .hasTokenType(TokenType.FUNGIBLE_COMMON)
+                        .hasDecimals(8)
+                        .hasTotalSupply(200)
+                        .hasTreasury(TOKEN_CREATE_CONTRACT)
+                        .hasAutoRenewPeriod(0L)
+                        .searchKeysGlobally()
+                        .hasPauseStatus(TokenPauseStatus.PauseNotApplicable)
+                        .logged()));
     }
 
     // TEST-007 & TEST-016
