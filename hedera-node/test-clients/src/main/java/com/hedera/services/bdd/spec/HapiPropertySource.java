@@ -306,11 +306,11 @@ public interface HapiPropertySource {
                 .build();
     }
 
-    static TokenID asToken(String shard, String realm, String num) {
+    static TokenID asToken(long shard, long realm, long num) {
         return TokenID.newBuilder()
-                .setShardNum(Long.parseLong(shard))
-                .setRealmNum(Long.parseLong(realm))
-                .setTokenNum(Long.parseLong(num))
+                .setShardNum(shard)
+                .setRealmNum(realm)
+                .setTokenNum(num)
                 .build();
     }
 

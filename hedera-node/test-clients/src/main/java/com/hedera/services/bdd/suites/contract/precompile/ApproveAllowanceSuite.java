@@ -180,10 +180,7 @@ public class ApproveAllowanceSuite {
                 withOpContext((spec, opLog) -> {
                     final var sender = spec.registry().getContractId(HTS_APPROVE_ALLOWANCE_CONTRACT);
                     final var receiver = spec.registry().getContractId(nestedContract);
-                    final var idOfToken = String.format(
-                            "%d.%d.%d",
-                            spec.shard(),
-                            spec.realm(),
+                    final var idOfToken = String.valueOf(
                             spec.registry().getTokenID(FUNGIBLE_TOKEN).getTokenNum());
                     var txnRecord = getTxnRecord(approveTxn)
                             .hasPriority(recordWith()
@@ -338,10 +335,7 @@ public class ApproveAllowanceSuite {
                 withOpContext((spec, opLog) -> {
                     final var sender = spec.registry().getContractId(HTS_APPROVE_ALLOWANCE_CONTRACT);
                     final var receiver = spec.registry().getAccountID(theSpender);
-                    final var idOfToken = String.format(
-                            "%d.%d.%d",
-                            spec.shard(),
-                            spec.realm(),
+                    final var idOfToken = String.valueOf(
                             spec.registry().getTokenID(FUNGIBLE_TOKEN).getTokenNum());
                     var txnRecord = getTxnRecord(approveTxn)
                             .hasPriority(recordWith()
@@ -553,10 +547,7 @@ public class ApproveAllowanceSuite {
                 withOpContext((spec, opLog) -> {
                     final var sender = spec.registry().getContractId(HTS_APPROVE_ALLOWANCE_CONTRACT);
                     final var receiver = spec.registry().getAccountID(theSpender);
-                    final var idOfToken = String.format(
-                            "%d.%d.%d",
-                            spec.shard(),
-                            spec.realm(),
+                    final var idOfToken = String.valueOf(
                             spec.registry().getTokenID(NON_FUNGIBLE_TOKEN).getTokenNum());
                     var txnRecord = getTxnRecord(allowanceTxn)
                             .hasPriority(recordWith()
@@ -605,7 +596,7 @@ public class ApproveAllowanceSuite {
 
         final AtomicReference<TokenID> tokenID = new AtomicReference<>();
         final AtomicReference<String> attackerMirrorAddr = new AtomicReference<>();
-        final AtomicReference<String> calleeMirrorAddr = new AtomicReference<>();
+        final AtomicReference<byte[]> calleeMirrorAddr = new AtomicReference<>();
         return hapiTest(
                 cryptoCreate(TOKEN_TREASURY),
                 cryptoCreate(PRETEND_ATTACKER)
@@ -623,8 +614,7 @@ public class ApproveAllowanceSuite {
                 contractCreate(callee)
                         .refusingEthConversion()
                         .adminKey(DEFAULT_PAYER)
-                        .exposingContractIdTo(id -> calleeMirrorAddr.set(
-                                asHexedSolidityAddress((int) id.getShardNum(), id.getRealmNum(), id.getContractNum()))),
+                        .exposingContractIdTo(id -> calleeMirrorAddr.set(asSolidityAddress(id))),
                 tokenAssociate(PRETEND_PAIR, FUNGIBLE_TOKEN),
                 tokenAssociate(callee, FUNGIBLE_TOKEN),
                 sourcing(() -> contractCall(

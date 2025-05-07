@@ -279,6 +279,9 @@ public class TxnUtils {
     }
 
     public static TokenID asTokenId(final String s, final HapiSpec lookupSpec) {
+        if (isNumericLiteral(s)) {
+            return asToken(lookupSpec.shard(), lookupSpec.realm(), Long.parseLong(s));
+        }
         return isIdLiteral(s) ? asToken(s) : lookupSpec.registry().getTokenID(s);
     }
 
