@@ -12,7 +12,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.PROXY_ACCOUNT_ID_FIELD_
 import static com.hedera.hapi.node.base.ResponseCodeEnum.REQUESTED_NUM_AUTOMATIC_ASSOCIATIONS_EXCEEDS_ASSOCIATION_LIMIT;
 import static com.hedera.node.app.hapi.fees.pricing.BaseOperationUsage.THREE_MONTHS_IN_SECONDS;
 import static com.hedera.node.app.hapi.fees.usage.SingletonEstimatorUtils.ESTIMATOR_UTILS;
-import static com.hedera.node.app.hapi.fees.usage.crypto.CryptoOpsUsage.UPDATE_SLOT_MULTIPLIER;
 import static com.hedera.node.app.hapi.fees.usage.crypto.entities.CryptoEntitySizes.CRYPTO_ENTITY_SIZES;
 import static com.hedera.node.app.hapi.utils.fee.FeeBuilder.BASIC_ENTITY_ID_SIZE;
 import static com.hedera.node.app.hapi.utils.fee.FeeBuilder.INT_SIZE;
@@ -414,7 +413,6 @@ public class CryptoUpdateHandler extends BaseCryptoHandler implements Transactio
         final long rbsDelta = ESTIMATOR_UTILS.changeInBsUsage(
                 cryptoAutoRenewRb(account), oldLifetime, sharedFixedBytes + newVariableBytes, newLifetime);
 
-        final var oldSlotsUsage = (account == null ? 0 : account.maxAutoAssociations()) * UPDATE_SLOT_MULTIPLIER;
         // If given an explicit auto-assoc slot lifetime, we use it as a lower bound for both old and new lifetimes
         return feeCalculator
                 .addBytesPerTransaction(baseSize)

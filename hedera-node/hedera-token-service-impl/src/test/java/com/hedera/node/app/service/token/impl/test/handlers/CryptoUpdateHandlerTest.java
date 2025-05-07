@@ -780,7 +780,7 @@ class CryptoUpdateHandlerTest extends CryptoHandlerTestBase {
 
         InOrder inOrder = inOrder(feeCalculator);
         inOrder.verify(feeCalculator, times(1)).addBytesPerTransaction(212L);
-        inOrder.verify(feeCalculator, times(1)).addRamByteSeconds(0L);
+        inOrder.verify(feeCalculator, times(1)).addRamByteSeconds(64197484L);
         inOrder.verify(feeCalculator, times(1)).calculate();
     }
 
@@ -866,8 +866,6 @@ class CryptoUpdateHandlerTest extends CryptoHandlerTestBase {
         InOrder inOrder = inOrder(feeCalculator);
         inOrder.verify(feeCalculator, times(1)).addBytesPerTransaction(212L);
         inOrder.verify(feeCalculator, times(1)).addRamByteSeconds(0L);
-        // slots increases, so we have a new fee
-        inOrder.verify(feeCalculator, times(1)).addRamByteSeconds(3732480000000L);
         inOrder.verify(feeCalculator, times(1)).calculate();
     }
 
