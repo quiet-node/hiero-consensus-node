@@ -177,8 +177,8 @@ public class AutoAccountCreationUnlimitedAssociationsSuite {
 
                     // create hollow account with the deleted account alias
                     var hollowAccount = cryptoTransfer((s, b) -> b.setTransfers(TransferList.newBuilder()
-                                    .addAccountAmounts(aaWith(partyAlias.get(), -2 * ONE_HBAR))
-                                    .addAccountAmounts(aaWith(counterAlias.get(), +2 * ONE_HBAR))))
+                                    .addAccountAmounts(aaWith(s, partyAlias.get(), -2 * ONE_HBAR))
+                                    .addAccountAmounts(aaWith(s, counterAlias.get(), +2 * ONE_HBAR))))
                             .signedBy(DEFAULT_PAYER, PARTY)
                             .via(HBAR_XFER);
 
@@ -293,8 +293,8 @@ public class AutoAccountCreationUnlimitedAssociationsSuite {
                     final var hollowAccount = cryptoTransfer(
                                     (s, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                             .setToken(ftId.get())
-                                            .addTransfers(aaWith(partyAlias.get(), -500))
-                                            .addTransfers(aaWith(counterAlias.get(), +500))))
+                                            .addTransfers(aaWith(s, partyAlias.get(), -500))
+                                            .addTransfers(aaWith(s, counterAlias.get(), +500))))
                             .signedBy(DEFAULT_PAYER, PARTY)
                             .via(FT_XFER);
 
@@ -323,8 +323,8 @@ public class AutoAccountCreationUnlimitedAssociationsSuite {
 
                     // transfer some hbars to the hollow account so that we can pay with it later
                     var hollowAccountTransfer = cryptoTransfer((s, b) -> b.setTransfers(TransferList.newBuilder()
-                                    .addAccountAmounts(aaWith(partyAlias.get(), -2 * ONE_HBAR))
-                                    .addAccountAmounts(aaWith(counterAlias.get(), +2 * ONE_HBAR))))
+                                    .addAccountAmounts(aaWith(s, partyAlias.get(), -2 * ONE_HBAR))
+                                    .addAccountAmounts(aaWith(s, counterAlias.get(), +2 * ONE_HBAR))))
                             .signedBy(DEFAULT_PAYER, PARTY)
                             .via(HBAR_XFER);
 
@@ -430,8 +430,8 @@ public class AutoAccountCreationUnlimitedAssociationsSuite {
 
                     // transfer some hbars to the hollow account so that we can pay with it later
                     var hollowAccountTransfer = cryptoTransfer((s, b) -> b.setTransfers(TransferList.newBuilder()
-                                    .addAccountAmounts(aaWith(partyAlias.get(), -2 * ONE_HBAR))
-                                    .addAccountAmounts(aaWith(counterAlias.get(), +2 * ONE_HBAR))))
+                                    .addAccountAmounts(aaWith(s, partyAlias.get(), -2 * ONE_HBAR))
+                                    .addAccountAmounts(aaWith(s, counterAlias.get(), +2 * ONE_HBAR))))
                             .signedBy(DEFAULT_PAYER, PARTY)
                             .via(HBAR_XFER);
 
