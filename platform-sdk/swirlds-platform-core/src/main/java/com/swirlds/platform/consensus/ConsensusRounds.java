@@ -3,6 +3,7 @@ package com.swirlds.platform.consensus;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.platform.internal.EventImpl;
@@ -28,18 +29,17 @@ public class ConsensusRounds {
     private static final Logger logger = LogManager.getLogger(ConsensusRounds.class);
     /** consensus configuration */
     private final ConsensusConfig config;
+    /** the calculator used to calculate the ancient threshold */
+    private final ListAncientCalculator ancientCalculator;
     /** the ancient mode currently in use */
     private final AncientMode ancientMode;
-    /** stores the minimum judge ancient identifier for all decided and non-expired rounds */
-    private final SequentialRingBuffer<MinimumJudgeInfo> minimumJudgeStorage;
     /** a derivative of the only roster currently in use, until roster changes are implemented */
     private final Map<Long, RosterEntry> rosterEntryMap;
     /** The maximum round created of all the known witnesses */
     private long maxRoundCreated = ConsensusConstants.ROUND_UNDEFINED;
     /** The round we are currently voting on */
     private final RoundElections roundElections = new RoundElections();
-    /** the current threshold below which all events are ancient */
-    private long ancientThreshold = EventConstants.ANCIENT_THRESHOLD_UNDEFINED;
+
     /**
      * The minimum non-deterministic generation of all the judges in the latest decided round. events with a lower
      * non-deterministic generation than this do not affect any consensus calculations and do not have their metadata
@@ -54,18 +54,19 @@ public class ConsensusRounds {
             @NonNull final Roster roster) {
         this.config = Objects.requireNonNull(config);
         this.ancientMode = Objects.requireNonNull(ancientMode);
-        this.minimumJudgeStorage =
-                new SequentialRingBuffer<>(ConsensusConstants.ROUND_FIRST, config.roundsExpired() * 2);
+        this.ancientCalculator = new ListAncientCalculator(
+                config,
+                ancientMode
+        );
         this.rosterEntryMap = RosterUtils.toMap(Objects.requireNonNull(roster));
         reset();
     }
 
     /** Reset this instance to its initial state, equivalent to creating a new instance */
     public void reset() {
-        minimumJudgeStorage.reset(ConsensusConstants.ROUND_FIRST);
+        ancientCalculator.reset();
         maxRoundCreated = ConsensusConstants.ROUND_UNDEFINED;
         roundElections.reset();
-        updateAncientThreshold();
         consensusRelevantNGen = NonDeterministicGeneration.GENERATION_UNDEFINED;
     }
 
@@ -143,13 +144,10 @@ public class ConsensusRounds {
     /**
      * Notifies the instance that the current elections have been decided. This will start the next election.
      */
-    public void currentElectionDecided() {
-        minimumJudgeStorage.add(roundElections.getRound(), roundElections.createMinimumJudgeInfo(ancientMode));
+    public void currentElectionDecided(final List<EventImpl> judges) {
+        ancientCalculator.currentElectionDecided(judges);
         consensusRelevantNGen = roundElections.getMinNGen();
         roundElections.startNextElection();
-        // Delete the oldest rounds with round number which is expired
-        minimumJudgeStorage.removeOlderThan(getFameDecidedBelow() - config.roundsExpired());
-        updateAncientThreshold();
     }
 
     /**
@@ -195,41 +193,18 @@ public class ConsensusRounds {
      * indicator numbers, but we won't know about the witnesses in these rounds. We also don't care about any other
      * information except for minimum ancient indicator since these rounds have already been decided beforehand.
      *
-     * @param minimumJudgeInfos a list of round numbers and round ancient indicator pairs, in ascending round numbers
+     * @param snapshot
      */
-    public void loadFromMinimumJudge(@NonNull final List<MinimumJudgeInfo> minimumJudgeInfos) {
-        minimumJudgeStorage.reset(minimumJudgeInfos.getFirst().round());
-        for (final MinimumJudgeInfo minimumJudgeInfo : minimumJudgeInfos) {
-            minimumJudgeStorage.add(minimumJudgeInfo.round(), minimumJudgeInfo);
-        }
-        roundElections.setRound(minimumJudgeStorage.getLatest().round() + 1);
-        updateAncientThreshold();
+    public void loadFromMinimumJudge(@NonNull final ConsensusSnapshot snapshot) {
+        ancientCalculator.loadSnapshot(snapshot);
+        roundElections.setRound(snapshot.round() + 1);
     }
 
     /**
      * @return A list of {@link MinimumJudgeInfo} for all decided and non-ancient rounds
      */
     public @NonNull List<MinimumJudgeInfo> getMinimumJudgeInfoList() {
-        final long oldestNonAncientRound =
-                RoundCalculationUtils.getOldestNonAncientRound(config.roundsNonAncient(), getLastRoundDecided());
-        return LongStream.range(oldestNonAncientRound, getFameDecidedBelow())
-                .mapToObj(this::getMinimumJudgeIndicator)
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    private MinimumJudgeInfo getMinimumJudgeIndicator(final long round) {
-        final MinimumJudgeInfo minimumJudgeInfo = minimumJudgeStorage.get(round);
-        if (minimumJudgeInfo == null) {
-            logger.error(
-                    LogMarker.EXCEPTION.getMarker(),
-                    "Missing round {}. Fame decided below {}, oldest non-ancient round {}",
-                    round,
-                    getFameDecidedBelow(),
-                    RoundCalculationUtils.getOldestNonAncientRound(config.roundsNonAncient(), getLastRoundDecided()));
-            return null;
-        }
-        return minimumJudgeInfo;
+        return ancientCalculator.getMinimumJudgeInfoList();
     }
 
     /**
@@ -239,30 +214,6 @@ public class ConsensusRounds {
         return maxRoundCreated;
     }
 
-    /**
-     * Similar to {@link #getAncientThreshold()} but for expired rounds.
-     *
-     * @return the threshold for expired rounds
-     */
-    public long getExpiredThreshold() {
-        final MinimumJudgeInfo info = minimumJudgeStorage.get(minimumJudgeStorage.minIndex());
-        return info == null ? EventConstants.ANCIENT_THRESHOLD_UNDEFINED : info.minimumJudgeAncientThreshold();
-    }
-
-    /**
-     * Update the current ancient threshold based on the latest round decided.
-     */
-    private void updateAncientThreshold() {
-        if (!isAnyRoundDecided()) {
-            // if no round has been decided, no events are ancient yet
-            ancientThreshold = EventConstants.ANCIENT_THRESHOLD_UNDEFINED;
-            return;
-        }
-        final long nonAncientRound =
-                RoundCalculationUtils.getOldestNonAncientRound(config.roundsNonAncient(), getLastRoundDecided());
-        final MinimumJudgeInfo info = minimumJudgeStorage.get(nonAncientRound);
-        ancientThreshold = info.minimumJudgeAncientThreshold();
-    }
 
     /**
      * Returns the threshold of all the judges that are not in ancient rounds. This is either a generation value or a
@@ -272,6 +223,15 @@ public class ConsensusRounds {
      * @return the threshold
      */
     public long getAncientThreshold() {
-        return ancientThreshold;
+        return ancientCalculator.getAncientThreshold();
+    }
+
+    /**
+     * Similar to {@link #getAncientThreshold()} but for expired rounds.
+     *
+     * @return the threshold for expired rounds
+     */
+    public long getExpiredThreshold() {
+        return ancientCalculator.getExpiredThreshold();
     }
 }

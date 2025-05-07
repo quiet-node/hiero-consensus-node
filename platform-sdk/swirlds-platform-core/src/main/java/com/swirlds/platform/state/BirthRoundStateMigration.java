@@ -95,7 +95,6 @@ public final class BirthRoundStateMigration {
                 .round(consensusSnapshot.round())
                 .consensusTimestamp(consensusSnapshot.consensusTimestamp())
                 .judgeIds(consensusSnapshot.judgeIds())
-                .judgeHashes(consensusSnapshot.judgeHashes())
                 .nextConsensusNumber(consensusSnapshot.nextConsensusNumber())
                 .minimumJudgeInfoList(modifiedJudgeInfoList)
                 .build();

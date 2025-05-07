@@ -15,8 +15,6 @@ public final class EventConstants {
      * in case it is used as a parent generation, it means there is no parent event
      */
     public static final long GENERATION_UNDEFINED = -1;
-    /** the ID number used to represent that the ID is undefined */
-    public static final NodeId CREATOR_ID_UNDEFINED = NodeId.UNDEFINED_NODE_ID;
     /** the smallest round an event can belong to */
     public static final long MINIMUM_ROUND_CREATED = 1;
     /** the round number to represent that the birth round is undefined */

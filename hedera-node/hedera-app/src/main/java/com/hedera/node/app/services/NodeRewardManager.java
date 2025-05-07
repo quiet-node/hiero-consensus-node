@@ -15,6 +15,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.node.state.token.NodeActivity;
 import com.hedera.hapi.node.state.token.NodeRewards;
+import com.hedera.hapi.platform.event.EventDescriptor;
 import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.fees.ExchangeRateManager;
@@ -317,8 +318,8 @@ public class NodeRewardManager {
         final var readablePlatformState =
                 state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
         final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
-        final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judgeIds().stream()
-                .map(JudgeId::creatorId)
+        final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judges().stream()
+                .map(EventDescriptor::creatorNodeId)
                 .collect(toCollection(HashSet::new));
         return requireNonNull(rosterStore.getActiveRoster()).rosterEntries().stream()
                 .map(RosterEntry::nodeId)

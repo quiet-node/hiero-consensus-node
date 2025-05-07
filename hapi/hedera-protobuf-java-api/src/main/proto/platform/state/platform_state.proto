@@ -18,6 +18,7 @@ option java_multiple_files = true;
 
 import "services/basic_types.proto";
 import "services/timestamp.proto";
+import "platform/event/event_descriptor.proto";
 
 /**
  * The current state of platform consensus.<br/>
@@ -126,13 +127,12 @@ message ConsensusSnapshot {
      */
     uint64 round = 1;
     /**
-     * A list of SHA-384 hash values.<br/>
-     * The hashes of all judges for this round.
+     * The descriptors of all judges for this round.
      * <p>
      * This list SHALL be ordered by creator ID.<br/>
      * This list MUST be deterministically ordered.
      */
-    repeated bytes judge_hashes = 2 [deprecated = true];
+    repeated com.hedera.hapi.platform.event.EventDescriptor judges = 2;
 
     /**
      * A list of minimum judge information entries.<br/>
@@ -166,7 +166,7 @@ message ConsensusSnapshot {
     /*
      * A list of judge creator ids and its hashes in a round.<br/>
      */
-    repeated JudgeId judge_ids = 6;
+    repeated JudgeId judge_ids = 6 [deprecated = true];
 }
 
 /**
