@@ -141,7 +141,7 @@ public class UpgradeSuite extends HapiSuite {
                         .payingWith(FREEZE_ADMIN),
                 cryptoTransfer(tinyBarsFromTo(GENESIS, FREEZE_ADMIN, ONE_HUNDRED_HBARS)),
                 prepareUpgrade()
-                        .withUpdateFile("0.0.149")
+                        .withUpdateFile("149")
                         .havingHash(poeticUpgradeHash)
                         .hasPrecheck(FREEZE_UPDATE_FILE_DOES_NOT_EXIST),
                 prepareUpgrade()
@@ -200,7 +200,7 @@ public class UpgradeSuite extends HapiSuite {
                         .minutes()
                         .hasPrecheck(FREEZE_START_TIME_MUST_BE_FUTURE),
                 telemetryUpgrade()
-                        .withUpdateFile("0.0.149")
+                        .withUpdateFile("149")
                         .havingHash(poeticUpgradeHash)
                         .startingIn(3)
                         .minutes()
