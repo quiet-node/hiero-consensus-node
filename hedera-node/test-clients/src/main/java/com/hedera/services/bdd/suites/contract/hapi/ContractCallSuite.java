@@ -3,6 +3,7 @@ package com.hedera.services.bdd.suites.contract.hapi;
 
 import static com.hedera.node.app.hapi.utils.EthSigsUtils.recoverAddressFromPubKey;
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asContract;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asContractIdWithEvmAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asContractString;
@@ -286,23 +287,15 @@ public class ContractCallSuite {
         final var TEST_CONTRACT = "TestContract";
         final var somebody = "somebody";
         final var account = "1";
-        final var shard = new AtomicLong();
-        final var realm = new AtomicLong();
         return hapiTest(
-                withOpContext((spec, opLog) -> {
-                    shard.set(spec.shard());
-                    realm.set(spec.realm());
-                }),
                 uploadInitCode(TEST_CONTRACT),
-                contractCreate(
-                                TEST_CONTRACT,
-                                idAsHeadlongAddress(AccountID.newBuilder()
-                                        .setShardNum(shard.get())
-                                        .setRealmNum(realm.get())
-                                        .setAccountNum(2)
-                                        .build()),
-                                BigInteger.ONE)
-                        .balance(ONE_HBAR),
+                withOpContext((spec, log) -> allRunFor(
+                        spec,
+                        contractCreate(
+                                        TEST_CONTRACT,
+                                        idAsHeadlongAddress(asAccount(spec.shard(), spec.realm(), 2)),
+                                        BigInteger.ONE)
+                                .balance(ONE_HBAR))),
                 cryptoCreate(somebody),
                 balanceSnapshot("start", account),
                 cryptoUpdate(account).receiverSigRequired(true).signedBy(GENESIS),

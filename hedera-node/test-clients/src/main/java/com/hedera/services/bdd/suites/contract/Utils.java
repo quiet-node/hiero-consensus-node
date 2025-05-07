@@ -302,6 +302,10 @@ public class Utils {
                 .build();
     }
 
+    public static AccountAmount aaWith(HapiSpec spec, final String hexedEvmAddress, final long amount) {
+        return aaWith(spec.shard(), spec.realm(), hexedEvmAddress, amount);
+    }
+
     public static AccountAmount aaWith(long shard, long realm, final String hexedEvmAddress, final long amount) {
         return AccountAmount.newBuilder()
                 .setAccountID(accountId(shard, realm, hexedEvmAddress))
@@ -315,6 +319,10 @@ public class Utils {
                 .setReceiverAccountID(to)
                 .setSerialNumber(serialNo)
                 .build();
+    }
+
+    public static AccountID accountId(HapiSpec spec, final String hexedEvmAddress) {
+        return accountId(spec.shard(), spec.realm(), hexedEvmAddress);
     }
 
     public static AccountID accountId(final long shard, final long realm, final String hexedEvmAddress) {

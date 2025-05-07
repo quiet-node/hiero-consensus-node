@@ -559,13 +559,7 @@ public class Create2OperationSuite {
         final AtomicReference<String> hexedNftType = new AtomicReference<>();
 
         final var salt = unhex(SALT);
-        final var shard = new AtomicLong();
-        final var realm = new AtomicLong();
         return hapiTest(
-                withOpContext((spec, opLog) -> {
-                    shard.set(spec.shard());
-                    realm.set(spec.realm());
-                }),
                 newKeyNamed(multiKey),
                 cryptoCreate(TOKEN_TREASURY),
                 uploadInitCode(contract),
@@ -589,7 +583,7 @@ public class Create2OperationSuite {
                         .supplyKey(multiKey),
                 mintToken(nft, List.of(ByteString.copyFromUtf8("PRICELESS"))),
                 tokenUpdate(nft)
-                        .supplyKey(() -> aliasContractIdKey(shard.get(), realm.get(), userAliasAddr.get()))
+                        .supplyKey(spec -> aliasContractIdKey(spec.shard(), spec.realm(), userAliasAddr.get()))
                         .signedByPayerAnd(multiKey),
                 withOpContext((spec, opLog) -> {
                     final var registry = spec.registry();
@@ -692,7 +686,7 @@ public class Create2OperationSuite {
                 // https://github.com/hashgraph/hedera-services/issues/2876 (mint via
                 // delegatable_contract_id)
                 tokenUpdate(nft)
-                        .supplyKey(() -> aliasDelegateContractKey(shard.get(), realm.get(), userAliasAddr.get()))
+                        .supplyKey(spec -> aliasDelegateContractKey(spec.shard(), spec.realm(), userAliasAddr.get()))
                         .signedByPayerAnd(multiKey),
                 sourcing(() -> contractCallWithFunctionAbi(
                                 userAliasAddr.get(),
@@ -710,11 +704,11 @@ public class Create2OperationSuite {
                             final var nftId = registry.getTokenID(nft);
                             b.setTransfers(TransferList.newBuilder()
                                     .addAccountAmounts(aaWith(tt, -666))
-                                    .addAccountAmounts(aaWith(shard.get(), realm.get(), userMirrorAddr.get(), +666)));
+                                    .addAccountAmounts(aaWith(spec, userMirrorAddr.get(), +666)));
                             b.addTokenTransfers(TokenTransferList.newBuilder()
                                             .setToken(ftId)
                                             .addTransfers(aaWith(tt, -6))
-                                            .addTransfers(aaWith(shard.get(), realm.get(), userMirrorAddr.get(), +6)))
+                                            .addTransfers(aaWith(spec, userMirrorAddr.get(), +6)))
                                     .addTokenTransfers(TokenTransferList.newBuilder()
                                             .setToken(nftId)
                                             .addNftTransfers(NftTransfer.newBuilder()

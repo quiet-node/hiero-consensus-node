@@ -139,7 +139,6 @@ import com.hederahashgraph.api.proto.java.TransferList;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.OptionalLong;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -493,13 +492,7 @@ public class CryptoTransferSuite {
         final byte[] salt = unhex("aabbccddeeff0011aabbccddeeff0011aabbccddeeff0011aabbccddeeff0011");
         final byte[] otherSalt = unhex("aabbccddee880011aabbccddee880011aabbccddee880011aabbccddee880011");
 
-        final var shard = new AtomicLong();
-        final var realm = new AtomicLong();
         return hapiTest(
-                withOpContext((spec, opLog) -> {
-                    shard.set(spec.shard());
-                    realm.set(spec.realm());
-                }),
                 newKeyNamed(MULTI_KEY),
                 cryptoCreate(TOKEN_TREASURY),
                 uploadInitCode(contract),
@@ -542,49 +535,49 @@ public class CryptoTransferSuite {
                                 movingUnique(NON_FUNGIBLE_TOKEN, 1L).between(TOKEN_TREASURY, partyLiteral.get()))
                         .signedBy(DEFAULT_PAYER, TOKEN_TREASURY)),
                 cryptoTransfer((spec, b) -> b.setTransfers(TransferList.newBuilder()
-                                .addAccountAmounts(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -1))
+                                .addAccountAmounts(aaWith(spec, partyAliasAddr.get(), -1))
                                 .addAccountAmounts(aaWith(partyId.get(), -1))
                                 .addAccountAmounts(aaWith(counterId.get(), +2))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .hasKnownStatus(ACCOUNT_REPEATED_IN_ACCOUNT_AMOUNTS),
                 // Check signing requirements aren't distorted by aliases
                 cryptoTransfer((spec, b) -> b.setTransfers(TransferList.newBuilder()
-                                .addAccountAmounts(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -2))
-                                .addAccountAmounts(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +2))))
+                                .addAccountAmounts(aaWith(spec, partyAliasAddr.get(), -2))
+                                .addAccountAmounts(aaWith(spec, counterAliasAddr.get(), +2))))
                         .signedBy(DEFAULT_PAYER)
                         .hasKnownStatus(INVALID_SIGNATURE),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(nftId.get())
                                 .addNftTransfers(ocWith(
-                                        accountId(shard.get(), realm.get(), partyAliasAddr.get()),
+                                        accountId(spec.shard(), spec.realm(), partyAliasAddr.get()),
                                         counterId.get(),
                                         1L))))
                         .signedBy(DEFAULT_PAYER)
                         .hasKnownStatus(INVALID_SIGNATURE),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(ftId.get())
-                                .addTransfers(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -500))
-                                .addTransfers(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +500))))
+                                .addTransfers(aaWith(spec, partyAliasAddr.get(), -500))
+                                .addTransfers(aaWith(spec, counterAliasAddr.get(), +500))))
                         .signedBy(DEFAULT_PAYER)
                         .hasKnownStatus(INVALID_SIGNATURE),
                 // Now do the actual transfers
                 cryptoTransfer((spec, b) -> b.setTransfers(TransferList.newBuilder()
-                                .addAccountAmounts(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -2))
-                                .addAccountAmounts(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +2))))
+                                .addAccountAmounts(aaWith(spec, partyAliasAddr.get(), -2))
+                                .addAccountAmounts(aaWith(spec, counterAliasAddr.get(), +2))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .via(HBAR_XFER),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(nftId.get())
                                 .addNftTransfers(ocWith(
-                                        accountId(shard.get(), realm.get(), partyAliasAddr.get()),
-                                        accountId(shard.get(), realm.get(), counterAliasAddr.get()),
+                                        accountId(spec, partyAliasAddr.get()),
+                                        accountId(spec, counterAliasAddr.get()),
                                         1L))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .via(NFT_XFER),
                 cryptoTransfer((spec, b) -> b.addTokenTransfers(TokenTransferList.newBuilder()
                                 .setToken(ftId.get())
-                                .addTransfers(aaWith(shard.get(), realm.get(), partyAliasAddr.get(), -500))
-                                .addTransfers(aaWith(shard.get(), realm.get(), counterAliasAddr.get(), +500))))
+                                .addTransfers(aaWith(spec, partyAliasAddr.get(), -500))
+                                .addTransfers(aaWith(spec, counterAliasAddr.get(), +500))))
                         .signedBy(DEFAULT_PAYER, MULTI_KEY)
                         .via(FT_XFER),
                 sourcing(() -> getTxnRecord(HBAR_XFER)
