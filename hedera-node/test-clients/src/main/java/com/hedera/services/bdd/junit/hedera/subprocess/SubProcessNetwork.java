@@ -171,7 +171,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      * @param size the number of nodes in the network
      * @return the shared network
      */
-    public static synchronized HederaNetwork newSharedNetwork(String networkName, final int size, final long shard, final long realm) {
+    public static synchronized HederaNetwork newSharedNetwork(
+            String networkName, final int size, final long shard, final long realm) {
         if (NetworkTargetingExtension.SHARED_NETWORK.get() != null) {
             throw new UnsupportedOperationException("Only one shared network allowed per launcher session");
         }
