@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.spi;
 
-import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
-import static com.swirlds.state.spi.DeferringListener.agreedDeferCommitOrThrow;
 import static java.util.Objects.requireNonNull;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -53,13 +51,16 @@ public abstract class WritableSingletonStateBase<T> extends ReadableSingletonSta
 
     @Override
     public T get() {
-        // If there is a modification, then we've already done a "put" or "remove"
-        // and should return based on the modification
-        if (isModified()) {
-            return currentValue();
-        } else {
-            return super.get();
+        // Possible pattern: "put" and then "get". In this case, "read" should be false!! Otherwise,
+        // we invalidate tx when we don't need to
+        final var currentValue = currentValue();
+        if (currentValue != null) {
+            // C.f. https://github.com/hashgraph/hedera-services/issues/14582; in principle we should
+            // also return null here if value is NULL_VALUE, but in production with the SingletonNode
+            // backing store, null values are never actually set so this doesn't matter
+            return currentValue;
         }
+        return super.get();
     }
 
     @Override
@@ -73,17 +74,11 @@ public abstract class WritableSingletonStateBase<T> extends ReadableSingletonSta
     }
 
     /**
-     * Flushes the change into the underlying data store unless the registered listeners agree to defer
-     * the commit.
-     * <p>
-     * This method should <strong>ONLY</strong> be called by the code that created the
-     * {@link WritableSingletonStateBase} instance or owns it. Don't cast and commit unless you own the instance!
+     * Flushes all changes into the underlying data store. This method should <strong>ONLY</strong>
+     * be called by the code that created the {@link WritableSingletonStateBase} instance or owns
+     * it. Don't cast and commit unless you own the instance!
      */
     public void commit() {
-        if (agreedDeferCommitOrThrow(listeners, SINGLETON)) {
-            listeners.forEach(SingletonChangeListener::commitDeferred);
-            return;
-        }
         if (isModified()) {
             if (currentValue() != null) {
                 putIntoDataSource(currentValue());
