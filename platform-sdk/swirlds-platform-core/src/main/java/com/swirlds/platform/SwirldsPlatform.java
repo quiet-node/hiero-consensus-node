@@ -419,7 +419,7 @@ public class SwirldsPlatform implements Platform {
      * {@inheritDoc}
      */
     @Override
-    public void stop() {
+    public void stop() throws InterruptedException {
         platformContext.getRecycleBin().stop();
 
         platformWiring.flushIntakePipeline();
@@ -428,18 +428,8 @@ public class SwirldsPlatform implements Platform {
         notificationEngine.unregisterAll();
         notificationEngine.shutdown();
 
-        //        initialState = null;
-
         final Metrics metrics = platformContext.getMetrics();
-        if (metrics instanceof DefaultPlatformMetrics defaultPlatformMetrics) {
-            try {
-                defaultPlatformMetrics.shutdown();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        } else if (metrics instanceof NoOpMetrics noOpMetrics) {
-            noOpMetrics.clear();
-        }
+        metrics.shutdown();
     }
 
     /**

@@ -94,10 +94,6 @@ public class TurtleTimeManager implements TimeManager {
         timeTickReceivers.add(receiver);
     }
 
-    public void clear() {
-        timeTickReceivers.clear();
-    }
-
     /**
      * A receiver of time ticks.
      *

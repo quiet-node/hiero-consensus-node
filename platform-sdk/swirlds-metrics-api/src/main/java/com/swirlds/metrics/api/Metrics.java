@@ -171,4 +171,12 @@ public interface Metrics extends Startable {
      * 		if {@code updater} is {@code null}
      */
     void removeUpdater(final @NonNull Runnable updater);
+
+    /**
+     * Shuts down the service
+     *
+     * @return {@code true} if the shutdown finished on time, {@code false} if the call ran into a timeout
+     * @throws InterruptedException if the current thread was interrupted while waiting
+     */
+    boolean shutdown() throws InterruptedException;
 }

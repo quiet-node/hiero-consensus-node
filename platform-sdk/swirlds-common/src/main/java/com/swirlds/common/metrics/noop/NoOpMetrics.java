@@ -162,8 +162,14 @@ public class NoOpMetrics implements PlatformMetrics {
         // Intentional no-op
     }
 
-    public void clear() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean shutdown() {
         metrics.clear();
         resetAll();
+
+        return true;
     }
 }
