@@ -37,7 +37,6 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -63,7 +62,6 @@ public class HapiTokenUpdate extends HapiTxnOp<HapiTokenUpdate> {
     private Optional<String> newName = Optional.empty();
     private Optional<String> newTreasury = Optional.empty();
     private Optional<String> autoRenewAccount = Optional.empty();
-    private Optional<Supplier<Key>> newSupplyKeySupplier = Optional.empty();
     private Optional<Function<HapiSpec, Key>> newSupplyKeyFunction = Optional.empty();
     private Optional<Function<HapiSpec, String>> newSymbolFn = Optional.empty();
     private Optional<Function<HapiSpec, String>> newNameFn = Optional.empty();
@@ -113,11 +111,6 @@ public class HapiTokenUpdate extends HapiTxnOp<HapiTokenUpdate> {
 
     public HapiTokenUpdate supplyKey(String name) {
         newSupplyKey = Optional.of(name);
-        return this;
-    }
-
-    public HapiTokenUpdate supplyKey(Supplier<Key> supplyKeySupplier) {
-        newSupplyKeySupplier = Optional.of(supplyKeySupplier);
         return this;
     }
 
@@ -350,7 +343,6 @@ public class HapiTokenUpdate extends HapiTxnOp<HapiTokenUpdate> {
                                 newSupplyKey.ifPresent(
                                         k -> b.setSupplyKey(spec.registry().getKey(k)));
                             }
-                            newSupplyKeySupplier.ifPresent(s -> b.setSupplyKey(s.get()));
                             newSupplyKeyFunction.ifPresent(fn -> b.setSupplyKey(fn.apply(spec)));
                             if (useInvalidWipeKey) {
                                 b.setWipeKey(TxnUtils.WRONG_LENGTH_EDDSA_KEY);
