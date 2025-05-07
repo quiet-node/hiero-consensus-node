@@ -117,8 +117,7 @@ public class ProcessUtils {
                 .map(testOverrides -> Arrays.stream(testOverrides.split(","))
                         .map(override -> override.split("="))
                         .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1])))
-                .orElse(Map.of()));
-        return overrides;
+                .orElse(Map.of());
     }
 
     /**
