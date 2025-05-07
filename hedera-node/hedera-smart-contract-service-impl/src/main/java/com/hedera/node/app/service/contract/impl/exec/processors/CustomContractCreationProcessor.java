@@ -133,7 +133,7 @@ public class CustomContractCreationProcessor extends ContractCreationProcessor {
     }
 
     private boolean alreadyCreated(final MutableAccount account) {
-        return account.getNonce() > 0 || account.getCode().size() > 0;
+        return account.getNonce() > 0 || !account.getCode().isEmpty() || !account.isStorageEmpty();
     }
 
     private boolean isHollow(@NonNull final MutableAccount account) {
