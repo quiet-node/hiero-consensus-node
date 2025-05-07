@@ -5,7 +5,10 @@ import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHa
 
 import com.swirlds.platform.state.*;
 import com.swirlds.state.merkle.MerkleStateRoot;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A simple testing application intended for use with TURTLE.
@@ -25,6 +28,8 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     }
 
     long state;
+
+    private static final List<VirtualMap<?, ?>> virtualMapsCollector = new ArrayList<>();
 
     public TurtleTestingToolState() {
         // empty
@@ -81,7 +86,7 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     public static MerkleNodeState getStateRootNode() {
         final MerkleNodeState state = new TurtleTestingToolState();
         FAKE_CONSENSUS_STATE_EVENT_HANDLER.initPlatformState(state);
-        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initRosterState(state);
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initRosterState(state, virtualMapsCollector);
 
         return state;
     }
@@ -92,9 +97,10 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     }
 
     /**
-     * Closing the state, so that Turtle nodes can be started and stopped without leaking resources
+     * Destroying the virtual maps instances and clearing resources, so that there are no leaks.
      */
-    public static void closeState() {
-        FAKE_CONSENSUS_STATE_EVENT_HANDLER.close();
+    public static void destroyVirtualMaps() {
+        virtualMapsCollector.forEach(VirtualMap::stop);
+        virtualMapsCollector.clear();
     }
 }

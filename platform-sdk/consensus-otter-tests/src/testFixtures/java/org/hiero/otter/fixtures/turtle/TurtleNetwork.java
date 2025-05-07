@@ -239,17 +239,10 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         for (final TurtleNode node : nodes) {
             node.destroy();
         }
-        executorService.shutdownNow();
-    }
-
-    public void shutdown() throws InterruptedException {
-        log.info("Shutting down network...");
-        for (final TurtleNode node : nodes) {
-            node.shutdownGracefully(Duration.ZERO);
-        }
         nodes.clear();
         executorService.shutdownNow();
-        this.state = State.SHUTDOWN;
+
+        state = State.SHUTDOWN;
     }
 
     /**

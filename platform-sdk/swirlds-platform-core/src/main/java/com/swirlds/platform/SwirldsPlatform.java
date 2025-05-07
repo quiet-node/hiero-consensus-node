@@ -15,8 +15,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.IOIterator;
-import com.swirlds.common.metrics.noop.NoOpMetrics;
-import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.common.utility.AutoCloseableWrapper;
@@ -419,7 +417,7 @@ public class SwirldsPlatform implements Platform {
      * {@inheritDoc}
      */
     @Override
-    public void stop() throws InterruptedException {
+    public void destroy() throws InterruptedException {
         platformContext.getRecycleBin().stop();
 
         platformWiring.flushIntakePipeline();

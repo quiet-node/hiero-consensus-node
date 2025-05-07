@@ -69,8 +69,6 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
             .withConfigDataType(FileSystemManagerConfig.class)
             .build();
 
-    public List<VirtualMap> virtualMaps = new ArrayList<>();
-
     /**
      * Register the class IDs for the {@link MerkleStateRoot} and its required children, specifically those
      * used by the {@link PlatformStateService} and {@code RosterService}.
@@ -106,7 +104,7 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
     public List<StateChanges.Builder> initStates(@NonNull final MerkleNodeState state) {
         List<StateChanges.Builder> list = new ArrayList<>();
         list.addAll(initPlatformState(state));
-        list.addAll(initRosterState(state));
+        list.addAll(initRosterState(state, new ArrayList<>()));
         return list;
     }
 
@@ -138,7 +136,17 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
         return Collections.emptyList();
     }
 
-    public List<StateChanges.Builder> initRosterState(@NonNull final MerkleNodeState state) {
+    /**
+     * Initialize roster state using latest state schema. As a side effect this method will fill a list of virtual maps
+     * that will occur during state initialization.
+     *
+     * @param state the state to be initialized
+     * @param virtualMapsCollector list collecting virtual map instances, which later will be used to free resources
+     *
+     * @return list of builders for state changes
+     */
+    public List<StateChanges.Builder> initRosterState(
+            @NonNull final MerkleNodeState state, @NonNull final List<VirtualMap<?, ?>> virtualMapsCollector) {
         if (!(state instanceof MerkleStateRoot<?> merkleStateRoot)) {
             throw new IllegalArgumentException("Can only be used with MerkleStateRoot instances");
         }
@@ -172,7 +180,7 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
                             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
                             final var virtualMap =
                                     new VirtualMap<>(label, keySerializer, valueSerializer, dsBuilder, CONFIGURATION);
-                            virtualMaps.add(virtualMap);
+                            virtualMapsCollector.add(virtualMap);
                             return virtualMap;
                         });
                     } else {
@@ -229,14 +237,5 @@ public enum FakeConsensusStateEventHandler implements ConsensusStateEventHandler
     @Override
     public void onNewRecoveredState(@NonNull MerkleNodeState recoveredState) {
         // no-op
-    }
-
-    /**
-     * Stopping the virtual maps instances and clearing resources, so that this event handler can be reused,
-     * without leaking
-     */
-    public void close() {
-        virtualMaps.forEach(VirtualMap::stop);
-        virtualMaps = new ArrayList<>();
     }
 }

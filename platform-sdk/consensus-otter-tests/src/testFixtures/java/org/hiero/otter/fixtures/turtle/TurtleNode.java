@@ -292,13 +292,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private void doShutdownNode() throws InterruptedException {
         if (lifeCycle == LifeCycle.STARTED) {
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-            platform.stop();
+            platform.destroy();
             platformStatus = null;
             platform = null;
             platformWiring = null;
             model = null;
 
-            TurtleTestingToolState.closeState();
+            TurtleTestingToolState.destroyVirtualMaps();
         }
         lifeCycle = LifeCycle.SHUTDOWN;
     }

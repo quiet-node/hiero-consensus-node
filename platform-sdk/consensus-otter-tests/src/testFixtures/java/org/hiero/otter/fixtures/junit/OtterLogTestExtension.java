@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.turtle.TurtleTestEnvironment;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
@@ -123,7 +124,11 @@ public class OtterLogTestExtension implements InvocationInterceptor, ParameterRe
         final TestEnvironment testEnvironment =
                 (TestEnvironment) extensionContext.getStore(EXTENSION_NAMESPACE).remove(ENVIRONMENT_KEY);
         if (testEnvironment != null) {
-            testEnvironment.stop();
+            try {
+                testEnvironment.destroy();
+            } catch (final InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

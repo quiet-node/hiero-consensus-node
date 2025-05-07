@@ -215,7 +215,7 @@ public class RandomSignedStateGenerator {
             v.setConsensusTimestamp(consensusTimestampInstance);
         });
 
-        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initRosterState(stateInstance);
+        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initRosterState(stateInstance, new ArrayList<>());
         RosterUtils.setActiveRoster(stateInstance, rosterInstance, roundInstance);
 
         if (signatureVerifier == null) {

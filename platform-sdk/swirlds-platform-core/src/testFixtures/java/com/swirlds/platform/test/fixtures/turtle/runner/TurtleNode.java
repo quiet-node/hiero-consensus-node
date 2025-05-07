@@ -221,13 +221,6 @@ public class TurtleNode {
     }
 
     /**
-     * Stop this node by stopping the platform it has initialized.
-     */
-    public void stop() {
-        platform.stop();
-    }
-
-    /**
      * Simulate the next time step for this node.
      */
     public void tick() {
@@ -255,5 +248,6 @@ public class TurtleNode {
      */
     public void destroy() throws InterruptedException {
         getMetricsProvider().removePlatformMetrics(platform.getSelfId());
+        platform.destroy();
     }
 }

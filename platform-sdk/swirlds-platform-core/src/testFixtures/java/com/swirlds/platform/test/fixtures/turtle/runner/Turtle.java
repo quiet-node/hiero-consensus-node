@@ -136,10 +136,14 @@ public class Turtle {
      */
     public void stop() {
         for (final TurtleNode node : nodes) {
-            node.stop();
+            try {
+                node.destroy();
+            } catch (final InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
-        TurtleTestingToolState.closeState();
+        TurtleTestingToolState.destroyVirtualMaps();
     }
 
     /**

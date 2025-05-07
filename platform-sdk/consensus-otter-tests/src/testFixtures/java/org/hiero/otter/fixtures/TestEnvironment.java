@@ -52,8 +52,4 @@ public interface TestEnvironment {
      * process to complete causing the test to fail.
      */
     void destroy() throws InterruptedException;
-
-    void start();
-
-    void stop();
 }
