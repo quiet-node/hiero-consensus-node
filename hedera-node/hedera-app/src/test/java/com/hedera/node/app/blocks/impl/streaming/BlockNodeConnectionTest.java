@@ -1386,7 +1386,7 @@ class BlockNodeConnectionTest {
                         false,
                         MAX_END_OF_STREAM_EXP_RETRIES_VALUE,
                         false,
-                        false)); // Case with no block state and retry limit hit results in no action
+                        false)); // Case with no block state and retry limit reached results in no action
     }
 
     private void setupWorkerTest() {
