@@ -298,7 +298,6 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
         final var mutableCopy = readVirtualMap.copy();
         if (metrics != null) {
-            assert metrics != null;
             mutableCopy.registerMetrics(metrics);
         }
         readVirtualMap.release();
