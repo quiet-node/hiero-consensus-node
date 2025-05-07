@@ -504,9 +504,9 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
 
     /**
      * This method is called when the hasher is no longer needed. It should be called when the
-     * virtual node is stopped.
+     * virtual node is being destroyed.
      */
-    public void stop() {
+    public void destroy() {
         HASH_BUILDER_THREAD_LOCAL.remove();
     }
 }

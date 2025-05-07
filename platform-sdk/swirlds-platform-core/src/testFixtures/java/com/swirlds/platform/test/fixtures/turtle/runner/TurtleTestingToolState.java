@@ -100,7 +100,7 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
      * Destroying the virtual maps instances and clearing resources, so that there are no leaks.
      */
     public static void destroyVirtualMaps() {
-        virtualMapsCollector.forEach(VirtualMap::stop);
+        virtualMapsCollector.forEach(VirtualMap::destroyVirtualRoots);
         virtualMapsCollector.clear();
     }
 }

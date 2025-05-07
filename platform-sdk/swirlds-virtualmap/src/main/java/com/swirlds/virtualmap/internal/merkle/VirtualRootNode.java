@@ -1751,13 +1751,13 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
     }
 
     /**
-     * Freeing resources and stopping threads, so that the node can be restarted without leaking.
+     * Free resources and stop threads, so that the node can be destroyed, without leaking.
      */
-    public void stop() {
+    public void destroy() {
         destroyNode();
         pipeline.terminate();
         hasher.shutdown();
-        hasher.stop();
+        hasher.destroy();
         cache.release();
     }
 }

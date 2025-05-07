@@ -491,13 +491,10 @@ public final class VirtualMap<K extends VirtualKey, V extends VirtualValue> exte
     }
 
     /**
-     * Clearing resources and stopping threads on the Merkle node that
-     * has a type of {@link VirtualRootNode}
+     * Destroy instances of {@link VirtualRootNode}, so that thread and memory resources are freed.
      */
-    public void stop() {
-        final var child = getChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX);
-        if (child instanceof VirtualRootNode<?, ?> virtualRootNode) {
-            virtualRootNode.stop();
-        }
+    public void destroyVirtualRoots() {
+        final VirtualRootNode<?, ?> child = getChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX);
+        child.destroy();
     }
 }

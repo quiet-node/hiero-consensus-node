@@ -102,10 +102,11 @@ public interface Platform {
     void start();
 
     /**
-     * Stop a platform instance.
+     * Destroy a platform instance.
      * <p>
-     * This method is called when the node is shutting down. It should be overridden by subclasses to perform any
-     * necessary cleanup operations.
+     * This method is called when the platform should be destroyed. It should be overridden by subclasses to perform any
+     * necessary cleanup operations. Once the platform is destroyed, it cannot be used but all its resources are freed.
+     * This method is idempotent, meaning that it is safe to call it multiple times.
      */
     default void destroy() throws InterruptedException {}
 }
