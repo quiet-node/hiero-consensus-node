@@ -23,6 +23,7 @@ import com.swirlds.platform.gui.hashgraph.HashgraphGuiSource;
 import com.swirlds.platform.gui.hashgraph.internal.StandardGuiSource;
 import com.swirlds.platform.internal.EventImpl;
 import com.swirlds.platform.metrics.NoOpConsensusMetrics;
+import org.hiero.consensus.model.hashgraph.ConsensusConstants;
 import org.hiero.consensus.roster.RosterUtils;
 import org.hiero.consensus.model.roster.AddressBook;
 import com.swirlds.platform.system.events.BirthRoundMigrationShim;
@@ -438,7 +439,9 @@ public class StandardGraphGenerator extends AbstractGraphGenerator {
         final EventSource source = getNextEventSource(eventIndex);
         final EventSource otherParentSource = getNextOtherParentSource(eventIndex, source);
 
-        final long birthRound = consensus.getLastRoundDecided() + 1;
+        final long birthRound = platformContext.getConfiguration().getConfigData(EventConfig.class).useBirthRoundAncientThreshold()
+                ? consensus.getLastRoundDecided() + 1
+                : ConsensusConstants.ROUND_FIRST;
 
         final EventImpl next = source.generateEvent(
                 getRandom(),

@@ -646,10 +646,4 @@ public final class ConsensusTestDefinitions {
                                 .setMinimumConsensusRatio(0.9 - (0.05 * input.numberOfNodes()))));
         orchestrator.generateAllEvents().validateAndClear(consensusOutputValidatorWithEventRatioType2);
     }
-
-    public static void birthRoundMigrationTest(
-            @NonNull final PlatformContext preMigrationContext,
-            @NonNull final PlatformContext postMigrationContext,
-            @NonNull final WeightGenerator weightGenerator,
-            final long seed) {}
 }

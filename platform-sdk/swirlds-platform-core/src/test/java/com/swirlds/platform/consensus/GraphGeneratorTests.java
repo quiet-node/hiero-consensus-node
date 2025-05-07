@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
+import org.hiero.consensus.model.hashgraph.ConsensusConstants;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.roster.RosterUtils;
 import org.junit.jupiter.api.Disabled;
@@ -773,12 +774,12 @@ public class GraphGeneratorTests {
     }
 
     /**
-     * Tests if the node removal functionality works as expected.
+     * Tests the birth round migration functionality.
      */
     @Test
     @Tag(TestComponentTags.PLATFORM)
     @Tag(TestComponentTags.CONSENSUS)
-    @DisplayName("Node Remove Test")
+    @DisplayName("Birth Round Migration Test")
     void birthRoundMigrationTest() {
         final int numberOfEvents = 10_000;
         final StandardGraphGenerator generator = new StandardGraphGenerator(
@@ -788,14 +789,19 @@ public class GraphGeneratorTests {
                 new StandardEventSource(),
                 new StandardEventSource(),
                 new StandardEventSource());
-        generator.generateEvents(numberOfEvents / 2);
+        final List<EventImpl> preMigration = generator.generateEvents(numberOfEvents / 2);
+        // pre-migration, all events should have birth round 1
+        for (final EventImpl event : preMigration) {
+            assertEquals(ConsensusConstants.ROUND_FIRST, event.getBirthRound());
+        }
 
-        final NodeId removalNode = RosterUtils.getNodeId(generator.getRoster(), 0);
+        // migrate
         generator.birthRoundMigration(BIRTH_ROUND_PLATFORM_CONTEXT);
 
-        final List<EventImpl> postRemovalEvents = generator.generateEvents(numberOfEvents / 2);
-        for (final EventImpl removalEvent : postRemovalEvents) {
-            assertNotEquals(removalNode, removalEvent.getCreatorId());
+        // post-migration, all events should have birth round bigger than 1
+        final List<EventImpl> postMigration = generator.generateEvents(numberOfEvents / 2);
+        for (final EventImpl event : postMigration) {
+            assertNotEquals(ConsensusConstants.ROUND_FIRST, event.getBirthRound());
         }
     }
 }
