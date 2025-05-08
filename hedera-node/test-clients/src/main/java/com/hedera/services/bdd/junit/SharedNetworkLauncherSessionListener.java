@@ -168,7 +168,10 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
             }
 
             return SubProcessNetwork.newSharedNetwork(
-                    networkName != null ? networkName : SHARED_NETWORK_NAME, networkSize, getConfigShard(), getConfigRealm());
+                    networkName != null ? networkName : SHARED_NETWORK_NAME,
+                    networkSize,
+                    getConfigShard(),
+                    getConfigRealm());
         }
 
         private static void startSharedEmbedded(@NonNull final EmbeddedMode mode) {
