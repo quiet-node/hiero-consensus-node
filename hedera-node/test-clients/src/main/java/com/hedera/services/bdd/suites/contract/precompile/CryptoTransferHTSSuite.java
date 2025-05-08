@@ -3,6 +3,7 @@ package com.hedera.services.bdd.suites.contract.precompile;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountDetailsAsserts.accountDetailsWith;
 import static com.hedera.services.bdd.spec.assertions.AssertUtils.inOrder;
@@ -1767,6 +1768,6 @@ public class CryptoTransferHTSSuite {
     }
 
     private String toTokenIdString(TokenID tokenId) {
-        return String.format("%d.%d.%d", tokenId.getShardNum(), tokenId.getRealmNum(), tokenId.getTokenNum());
+        return asEntityString(tokenId.getShardNum(), tokenId.getRealmNum(), tokenId.getTokenNum());
     }
 }

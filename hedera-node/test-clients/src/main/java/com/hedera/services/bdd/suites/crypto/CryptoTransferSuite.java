@@ -6,6 +6,7 @@ import static com.hedera.node.app.hapi.utils.EthSigsUtils.recoverAddressFromPubK
 import static com.hedera.services.bdd.junit.TestTags.CRYPTO;
 import static com.hedera.services.bdd.spec.HapiPropertySource.accountIdFromHexedMirrorAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccountString;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asTopicString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
@@ -1240,7 +1241,7 @@ public class CryptoTransferSuite {
     final Stream<DynamicTest> specialAccountsBalanceCheck() {
         return hapiTest(IntStream.concat(IntStream.range(1, 101), IntStream.range(900, 1001))
                 .mapToObj(i -> withOpContext((spec, log) -> {
-                    final var balanceOp = getAccountBalance(String.format("%s.%s.%s", spec.shard(), spec.realm(), i))
+                    final var balanceOp = getAccountBalance(asEntityString(spec.shard(), spec.realm(), i))
                             .logged();
                     allRunFor(spec, balanceOp);
                 }))
