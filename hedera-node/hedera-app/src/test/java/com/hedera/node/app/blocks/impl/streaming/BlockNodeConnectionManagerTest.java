@@ -301,7 +301,7 @@ class BlockNodeConnectionManagerTest {
         // Then
         assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
                 .isEqualTo(newBlockNumber);
-        verify(blockStreamMetrics).setLatestAcknowledgedBlockNumber(newBlockNumber);
+        verify(mockStateManager).setLatestAcknowledgedBlock(newBlockNumber);
     }
 
     @Test
@@ -320,7 +320,7 @@ class BlockNodeConnectionManagerTest {
         // Then
         assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
                 .isEqualTo(initialBlockNumber);
-        verify(blockStreamMetrics, never()).setLatestAcknowledgedBlockNumber(newBlockNumber);
+        verify(mockStateManager).setLatestAcknowledgedBlock(newBlockNumber);
     }
 
     @Test
@@ -332,9 +332,6 @@ class BlockNodeConnectionManagerTest {
         // Set initial block number
         blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, blockNumber);
 
-        // Reset mock to verify it's not called again
-        verify(blockStreamMetrics).setLatestAcknowledgedBlockNumber(blockNumber);
-
         // When
         blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, blockNumber);
 
@@ -342,7 +339,7 @@ class BlockNodeConnectionManagerTest {
         assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
                 .isEqualTo(blockNumber);
         // Verify it was called only once (from the initial setup)
-        verify(blockStreamMetrics, times(1)).setLatestAcknowledgedBlockNumber(blockNumber);
+        verify(mockStateManager, times(2)).setLatestAcknowledgedBlock(blockNumber);
     }
 
     @Test
@@ -360,6 +357,6 @@ class BlockNodeConnectionManagerTest {
         // Then
         assertThat(blockNodeConnectionManager.getLastVerifiedBlock(blockNodeConfig))
                 .isEqualTo(initialBlockNumber);
-        verify(blockStreamMetrics, times(1)).setLatestAcknowledgedBlockNumber(initialBlockNumber);
+        verify(mockStateManager, times(1)).setLatestAcknowledgedBlock(initialBlockNumber);
     }
 }
