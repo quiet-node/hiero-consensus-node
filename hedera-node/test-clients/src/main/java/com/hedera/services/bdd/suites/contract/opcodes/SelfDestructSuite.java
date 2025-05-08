@@ -3,6 +3,7 @@ package com.hedera.services.bdd.suites.contract.opcodes;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.NO_CONCURRENT_CREATIONS;
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
+import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.contractWith;
@@ -424,7 +425,7 @@ public class SelfDestructSuite {
     }
 
     private @NonNull String getNthNextEntityFrom(final long nth, final ContractID fromId) {
-        return String.format("%d.%d.%d", fromId.getShardNum(), fromId.getRealmNum(), fromId.getContractNum() + nth);
+        return asEntityString(fromId.getShardNum(), fromId.getRealmNum(), fromId.getContractNum() + nth);
     }
 
     private @NonNull HapiGetContractInfo getNthNextContractInfoFrom(

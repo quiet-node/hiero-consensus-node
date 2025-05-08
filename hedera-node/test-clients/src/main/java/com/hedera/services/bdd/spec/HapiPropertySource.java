@@ -290,9 +290,9 @@ public interface HapiPropertySource {
                 .build();
     }
 
-	static ContractID asContract(String shard, String realm, String num) {
-		return asContract(Long.parseLong(shard), Long.parseLong(realm), Long.parseLong(num));
-	}
+    static ContractID asContract(String shard, String realm, String num) {
+        return asContract(Long.parseLong(shard), Long.parseLong(realm), Long.parseLong(num));
+    }
 
     static ContractID asContract(long shard, long realm, long num) {
         return ContractID.newBuilder()
@@ -323,16 +323,16 @@ public interface HapiPropertySource {
     }
 
     static TokenID asToken(String shard, String realm, String num) {
-		return asToken(Long.parseLong(shard), Long.parseLong(realm), Long.parseLong(num));
+        return asToken(Long.parseLong(shard), Long.parseLong(realm), Long.parseLong(num));
     }
 
-	static TokenID asToken(long shard, long realm, long num) {
-		return TokenID.newBuilder()
-				.setShardNum(shard)
-				.setRealmNum(realm)
-				.setTokenNum(num)
-				.build();
-	}
+    static TokenID asToken(long shard, long realm, long num) {
+        return TokenID.newBuilder()
+                .setShardNum(shard)
+                .setRealmNum(realm)
+                .setTokenNum(num)
+                .build();
+    }
 
     static TopicID asTopic(String shard, String realm, String num) {
         return TopicID.newBuilder()
