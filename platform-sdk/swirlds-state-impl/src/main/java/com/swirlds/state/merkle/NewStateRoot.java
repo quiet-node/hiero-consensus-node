@@ -713,9 +713,9 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
             for (final ReadableKVState kv : kvInstances.values()) {
                 ((WritableKVStateBase) kv).commit();
             }
-            for (final ReadableSingletonState s : singletonInstances.values()) {
-                ((WritableSingletonStateBase) s).commit();
-            }
+            //            for (final ReadableSingletonState s : singletonInstances.values()) {
+            //                ((WritableSingletonStateBase) s).commit();
+            //            }
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
             }
