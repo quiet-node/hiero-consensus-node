@@ -91,11 +91,7 @@ public final class BirthRoundStateMigration {
         for (final MinimumJudgeInfo judgeInfo : judgeInfoList) {
             modifiedJudgeInfoList.add(new MinimumJudgeInfo(judgeInfo.round(), lastRoundBeforeMigration));
         }
-        final ConsensusSnapshot modifiedConsensusSnapshot = ConsensusSnapshot.newBuilder()
-                .round(consensusSnapshot.round())
-                .consensusTimestamp(consensusSnapshot.consensusTimestamp())
-                .judgeIds(consensusSnapshot.judgeIds())
-                .nextConsensusNumber(consensusSnapshot.nextConsensusNumber())
+        final ConsensusSnapshot modifiedConsensusSnapshot = consensusSnapshot.copyBuilder()
                 .minimumJudgeInfoList(modifiedJudgeInfoList)
                 .build();
         platformStateFacade.setSnapshotTo(state, modifiedConsensusSnapshot);
