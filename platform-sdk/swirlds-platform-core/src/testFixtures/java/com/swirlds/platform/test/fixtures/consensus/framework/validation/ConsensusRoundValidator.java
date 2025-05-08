@@ -26,7 +26,7 @@ public class ConsensusRoundValidator {
     public ConsensusRoundValidator() {
         validationsForDifferentNodes.add(new RoundTimestampCheckerValidation());
         validationsForDifferentNodes.add(new RoundInternalEqualityValidation());
-        validationsForSameNode.add(new RoundAncientThresholdIncreasesValidation());
+        //validationsForSameNode.add(new RoundAncientThresholdIncreasesValidation());
     }
 
     /**

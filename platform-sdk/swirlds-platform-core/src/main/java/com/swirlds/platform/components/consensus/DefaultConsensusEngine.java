@@ -9,6 +9,7 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.Consensus;
 import com.swirlds.platform.ConsensusImpl;
 import com.swirlds.platform.consensus.ConsensusConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.consensus.RoundCalculationUtils;
 import com.swirlds.platform.event.linking.ConsensusLinker;
 import com.swirlds.platform.event.linking.InOrderLinker;
@@ -43,7 +44,7 @@ public class DefaultConsensusEngine implements ConsensusEngine {
     private final Consensus consensus;
 
     private final AncientMode ancientMode;
-    private final int roundsNonAncient;
+    private final ConsensusConfig config;
 
     private final AddedEventMetrics eventAddedMetrics;
 
@@ -67,10 +68,9 @@ public class DefaultConsensusEngine implements ConsensusEngine {
                 .getConfiguration()
                 .getConfigData(EventConfig.class)
                 .getAncientMode();
-        roundsNonAncient = platformContext
+        config = platformContext
                 .getConfiguration()
-                .getConfigData(ConsensusConfig.class)
-                .roundsNonAncient();
+                .getConfigData(ConsensusConfig.class);
 
         eventAddedMetrics = new AddedEventMetrics(selfId, platformContext.getMetrics());
     }
@@ -114,9 +114,11 @@ public class DefaultConsensusEngine implements ConsensusEngine {
      */
     @Override
     public void outOfBandSnapshotUpdate(@NonNull final ConsensusSnapshot snapshot) {
-        final long ancientThreshold = RoundCalculationUtils.getAncientThreshold(roundsNonAncient, snapshot);
-        final EventWindow eventWindow =
-                new EventWindow(snapshot.round(), ancientThreshold, ancientThreshold, ancientMode);
+        final EventWindow eventWindow = EventWindowFactory.create(
+                config,
+                ancientMode,
+                snapshot
+        );
 
         linker.clear();
         linker.setEventWindow(eventWindow);

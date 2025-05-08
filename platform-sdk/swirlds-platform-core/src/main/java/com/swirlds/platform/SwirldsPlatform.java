@@ -27,6 +27,8 @@ import com.swirlds.platform.components.DefaultSavedStateController;
 import com.swirlds.platform.components.EventWindowManager;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.config.StateConfig;
+import com.swirlds.platform.consensus.ConsensusConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.event.EventCounter;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileReader;
@@ -318,7 +320,6 @@ public class SwirldsPlatform implements Platform {
             startingRound = 0;
             platformWiring.updateEventWindow(EventWindow.getGenesisEventWindow(ancientMode));
         } else {
-            initialAncientThreshold = platformStateFacade.ancientThresholdOf(initialState.getState());
             startingRound = initialState.getRound();
 
             platformWiring.sendStateToHashLogger(initialState);
@@ -334,8 +335,15 @@ public class SwirldsPlatform implements Platform {
             // We only load non-ancient events during start up, so the initial expired threshold will be
             // equal to the ancient threshold when the system first starts. Over time as we get more events,
             // the expired threshold will continue to expand until it reaches its full size.
-            platformWiring.updateEventWindow(new EventWindow(
-                    initialState.getRound(), initialAncientThreshold, initialAncientThreshold, ancientMode));
+            final EventWindow eventWindow = EventWindowFactory.create(
+                    platformContext
+                            .getConfiguration()
+                            .getConfigData(ConsensusConfig.class),
+                    ancientMode,
+                    platformStateFacade.consensusSnapshotOf(initialState.getState())
+            );
+            platformWiring.updateEventWindow(eventWindow);
+            initialAncientThreshold = eventWindow.getAncientThreshold();
             platformWiring.overrideIssDetectorState(initialState.reserve("initialize issDetector"));
         }
 

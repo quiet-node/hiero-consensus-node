@@ -31,10 +31,14 @@ public class BirthRoundAncientCalculator implements AncientCalculator {
 
     @Override
     public void currentElectionDecided(@NonNull final List<EventImpl> judges) {
-        minJudgeBirthRound = judges.stream()
+        final long nextThreshold = judges.stream()
                 .mapToLong(EventImpl::getBirthRound)
                 .min()
                 .orElseThrow(() -> new IllegalArgumentException("At least one judge should be supplied"));
+        if(nextThreshold < minJudgeBirthRound) {
+            //TODO log warning
+        }
+        minJudgeBirthRound = nextThreshold;
     }
 
     @NonNull

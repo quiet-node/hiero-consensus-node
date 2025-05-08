@@ -151,6 +151,7 @@ public class PlatformStateFacade {
      * @param state the state to extract the ancient threshold from
      * @return the ancient threshold, or zero if the state is a genesis state
      */
+    //TODO remove
     public long ancientThresholdOf(@NonNull final State state) {
         return readablePlatformStateStore(state).getAncientThreshold();
     }

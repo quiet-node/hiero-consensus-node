@@ -3,8 +3,10 @@ package com.swirlds.platform.test.fixtures.consensus.framework.validation;
 
 import static org.assertj.core.api.Assertions.fail;
 
+import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.consensus.ConsensusConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.consensus.RoundCalculationUtils;
 import com.swirlds.platform.test.fixtures.consensus.framework.ConsensusOutput;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -12,15 +14,17 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.Hashable;
+import org.hiero.consensus.config.EventConfig;
 import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.EventWindow;
 
 @SuppressWarnings("unused") // issue tracked #6998
 /**
  * Validator that checks if the consensus mechanism does not return events more than once, either as stale or consensus.
  */
 public final class OutputNoEventsLostValidation implements ConsensusOutputValidation {
-    private static final ConsensusConfig CONFIG =
-            new TestConfigBuilder().getOrCreateConfig().getConfigData(ConsensusConfig.class);
+    private static final Configuration CONFIG =
+            new TestConfigBuilder().getOrCreateConfig();
 
     private OutputNoEventsLostValidation() {}
 
@@ -38,19 +42,22 @@ public final class OutputNoEventsLostValidation implements ConsensusOutputValida
             // no consensus reached, nothing to check
             return;
         }
-        final long nonAncientGen = RoundCalculationUtils.getAncientThreshold(
-                CONFIG.roundsNonAncient(), output.getConsensusRounds().getLast().getSnapshot());
+        final EventWindow eventWindow = EventWindowFactory.create(
+                CONFIG.getConfigData(ConsensusConfig.class),
+                CONFIG.getConfigData(EventConfig.class).getAncientMode(),
+                output.getConsensusRounds().getLast().getSnapshot()
+        );
 
         for (final PlatformEvent event : output.getAddedEvents()) {
-            if (event.getGeneration() >= nonAncientGen) {
+            if (!eventWindow.isAncient(event)) {
                 // non-ancient events are not checked
                 continue;
             }
             if (stale.containsKey(event.getHash()) == cons.containsKey(event.getHash())) {
                 fail(String.format(
                         "An ancient event should be either stale or consensus, but not both!\n"
-                                + "nonAncientGen=%d, Event %s, stale=%s, consensus=%s",
-                        nonAncientGen,
+                                + "AncientThreshold=%d, Event %s, stale=%s, consensus=%s",
+                        eventWindow.getAncientThreshold(),
                         event.getDescriptor(),
                         stale.containsKey(event.getHash()),
                         cons.containsKey(event.getHash())));

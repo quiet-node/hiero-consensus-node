@@ -12,6 +12,7 @@ import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.ConsensusImpl;
 import com.swirlds.platform.consensus.ConsensusConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.consensus.RoundCalculationUtils;
 import com.swirlds.platform.event.linking.SimpleLinker;
 import com.swirlds.platform.event.orphan.DefaultOrphanBuffer;
@@ -37,6 +38,7 @@ import org.hiero.consensus.config.EventConfig;
 import org.hiero.consensus.crypto.DefaultEventHasher;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
+import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.roster.AddressBook;
 import org.hiero.consensus.roster.RosterUtils;
@@ -485,12 +487,14 @@ public class StandardGraphGenerator extends AbstractGraphGenerator {
         // reinitialize the internal consensus with the last snapshot
         initializeInternalConsensus();
         consensus.loadSnapshot(consensusSnapshot);
-        linker.setNonAncientThreshold(RoundCalculationUtils.getAncientThreshold(
+        final EventWindow eventWindow = EventWindowFactory.create(
                 platformContext
-                        .getConfiguration()
-                        .getConfigData(ConsensusConfig.class)
-                        .roundsNonAncient(),
-                consensusSnapshot));
+                        .getConfiguration().getConfigData(ConsensusConfig.class),
+                platformContext
+                        .getConfiguration().getConfigData(EventConfig.class).getAncientMode(),
+                consensusSnapshot
+        );
+        linker.setNonAncientThreshold(eventWindow.getAncientThreshold());
         // re-add all non-ancient events
         for (final EventImpl event : nonAncientEvents) {
             updateConsensus(event);

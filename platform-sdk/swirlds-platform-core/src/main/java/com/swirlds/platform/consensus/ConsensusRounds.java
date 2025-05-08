@@ -23,7 +23,7 @@ import org.hiero.consensus.roster.RosterUtils;
  */
 public class ConsensusRounds {
     /** the calculator used to calculate the ancient threshold */
-    private final ListAncientCalculator ancientCalculator;
+    private final AncientCalculator ancientCalculator;
     /** a derivative of the only roster currently in use, until roster changes are implemented */
     private final Map<Long, RosterEntry> rosterEntryMap;
     /** The maximum round created of all the known witnesses */
@@ -43,10 +43,12 @@ public class ConsensusRounds {
             @NonNull final ConsensusConfig config,
             @NonNull final AncientMode ancientMode,
             @NonNull final Roster roster) {
-        this.ancientCalculator = new ListAncientCalculator(
-                config,
-                ancientMode
-        );
+        this.ancientCalculator = ancientMode == AncientMode.BIRTH_ROUND_THRESHOLD && !config.useListBirthRoundAncient()
+                ? new BirthRoundAncientCalculator(config)
+                : new ListAncientCalculator(
+                        config,
+                        ancientMode
+                );
         this.rosterEntryMap = RosterUtils.toMap(Objects.requireNonNull(roster));
         reset();
     }

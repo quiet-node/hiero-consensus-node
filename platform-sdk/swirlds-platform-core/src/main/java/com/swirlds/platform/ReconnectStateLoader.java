@@ -10,6 +10,8 @@ import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.platform.components.AppNotifier;
 import com.swirlds.platform.components.SavedStateController;
+import com.swirlds.platform.consensus.ConsensusConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.event.validation.RosterUpdate;
 import com.swirlds.platform.listeners.ReconnectCompleteNotification;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -148,11 +150,13 @@ public class ReconnectStateLoader {
                     .getConfigData(EventConfig.class)
                     .getAncientMode();
 
-            platformWiring.updateEventWindow(new EventWindow(
-                    signedState.getRound(),
-                    platformStateFacade.ancientThresholdOf(state),
-                    platformStateFacade.ancientThresholdOf(state),
-                    ancientMode));
+            platformWiring.updateEventWindow(EventWindowFactory.create(
+                    platformContext
+                            .getConfiguration()
+                            .getConfigData(ConsensusConfig.class),
+                    ancientMode,
+                    platformStateFacade.consensusSnapshotOf(state)
+            ));
 
             final RunningEventHashOverride runningEventHashOverride =
                     new RunningEventHashOverride(platformStateFacade.legacyRunningEventHashOf(state), true);

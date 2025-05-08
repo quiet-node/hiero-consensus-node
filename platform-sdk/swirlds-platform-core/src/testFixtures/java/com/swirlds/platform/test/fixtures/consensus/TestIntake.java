@@ -19,6 +19,7 @@ import com.swirlds.platform.components.EventWindowManager;
 import com.swirlds.platform.components.consensus.ConsensusEngine;
 import com.swirlds.platform.components.consensus.DefaultConsensusEngine;
 import com.swirlds.platform.consensus.ConsensusConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.consensus.RoundCalculationUtils;
 import com.swirlds.platform.consensus.SyntheticSnapshot;
 import com.swirlds.platform.event.orphan.DefaultOrphanBuffer;
@@ -50,7 +51,7 @@ public class TestIntake {
     private final ComponentWiring<OrphanBuffer, List<PlatformEvent>> orphanBufferWiring;
     private final ComponentWiring<ConsensusEngine, List<ConsensusRound>> consensusEngineWiring;
     private final WiringModel model;
-    private final int roundsNonAncient;
+    private final ConsensusConfig config;
     private final AncientMode ancientMode;
 
     /**
@@ -59,10 +60,9 @@ public class TestIntake {
      */
     public TestIntake(@NonNull final PlatformContext platformContext, @NonNull final Roster roster) {
         final NodeId selfId = NodeId.of(0);
-        roundsNonAncient = platformContext
+        config = platformContext
                 .getConfiguration()
-                .getConfigData(ConsensusConfig.class)
-                .roundsNonAncient();
+                .getConfigData(ConsensusConfig.class);
         ancientMode = platformContext
                 .getConfiguration()
                 .getConfigData(EventConfig.class)
@@ -138,11 +138,11 @@ public class TestIntake {
     }
 
     public void loadSnapshot(@NonNull final ConsensusSnapshot snapshot) {
-        final EventWindow eventWindow = new EventWindow(
-                snapshot.round(),
-                RoundCalculationUtils.getAncientThreshold(roundsNonAncient, snapshot),
-                RoundCalculationUtils.getAncientThreshold(roundsNonAncient, snapshot),
-                ancientMode);
+        final EventWindow eventWindow = EventWindowFactory.create(
+                config,
+                ancientMode,
+                snapshot
+        );
 
         orphanBufferWiring.getInputWire(OrphanBuffer::setEventWindow).put(eventWindow);
         consensusEngineWiring

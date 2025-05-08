@@ -62,6 +62,7 @@ public interface PlatformStateAccessor {
      * @return the ancient threshold after this round has reached consensus
      * @throws IllegalStateException if no minimum judge info is found in the state
      */
+    //TODO remove
     long getAncientThreshold();
 
     /**

@@ -35,6 +35,7 @@ public final class RoundCalculationUtils {
      * @param roundsNonAncient the number of non-ancient rounds
      * @return minimum non-ancient generation
      */
+    //TODO remove
     public static long getAncientThreshold(final int roundsNonAncient, @NonNull final ConsensusSnapshot snapshot) {
         final long oldestNonAncientRound =
                 RoundCalculationUtils.getOldestNonAncientRound(roundsNonAncient, snapshot.round());
@@ -50,6 +51,7 @@ public final class RoundCalculationUtils {
      * @throws NoSuchElementException if the minimum judge info information for this round is not contained withing this
      *                                state
      */
+    //TODO remove
     public static long getMinimumJudgeAncientThreshold(final long round, @NonNull final ConsensusSnapshot snapshot) {
         for (final MinimumJudgeInfo info : snapshot.minimumJudgeInfoList()) {
             if (info.round() == round) {

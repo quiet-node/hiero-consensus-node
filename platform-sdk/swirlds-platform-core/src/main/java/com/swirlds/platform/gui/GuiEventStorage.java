@@ -10,6 +10,7 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.Consensus;
 import com.swirlds.platform.ConsensusImpl;
 import com.swirlds.platform.consensus.ConsensusConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.consensus.RoundCalculationUtils;
 import com.swirlds.platform.event.linking.SimpleLinker;
 import com.swirlds.platform.internal.EventImpl;
@@ -23,6 +24,7 @@ import java.util.Objects;
 import org.hiero.consensus.config.EventConfig;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
+import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.roster.AddressBook;
 import org.hiero.consensus.roster.RosterRetriever;
 
@@ -120,8 +122,12 @@ public class GuiEventStorage {
     public synchronized void handleSnapshotOverride(@NonNull final ConsensusSnapshot snapshot) {
         consensus.loadSnapshot(snapshot);
         linker.clear();
-        linker.setNonAncientThreshold(RoundCalculationUtils.getAncientThreshold(
-                configuration.getConfigData(ConsensusConfig.class).roundsNonAncient(), snapshot));
+        final EventWindow eventWindow = EventWindowFactory.create(
+                configuration.getConfigData(ConsensusConfig.class),
+                configuration.getConfigData(EventConfig.class).getAncientMode(),
+                snapshot
+        );
+        linker.setNonAncientThreshold(eventWindow.getAncientThreshold());
         lastConsensusRound = null;
     }
 
