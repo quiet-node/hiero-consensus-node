@@ -5,8 +5,8 @@ import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension
 import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension.SHARED_BLOCK_NODE_NETWORK;
 import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension.SHARED_NETWORK;
 import static com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork.SHARED_NETWORK_NAME;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.REALM;
-import static com.hedera.services.bdd.spec.HapiPropertySourceStaticInitializer.SHARD;
+import static com.hedera.services.bdd.spec.HapiPropertySource.getConfigRealm;
+import static com.hedera.services.bdd.spec.HapiPropertySource.getConfigShard;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.services.bdd.HapiBlockNode;
@@ -166,15 +166,9 @@ public class SharedNetworkLauncherSessionListener implements LauncherSessionList
                     HapiSpec.doDelayedPrepareUpgrades(offsets);
                 }
             }
-            final long configShard = Optional.ofNullable(System.getProperty("hapi.spec.default.shard"))
-                    .map(Long::parseLong)
-                    .orElse((long) SHARD);
-            final long configRealm = Optional.ofNullable(System.getProperty("hapi.spec.default.realm"))
-                    .map(Long::parseLong)
-                    .orElse(REALM);
 
             return SubProcessNetwork.newSharedNetwork(
-                    networkName != null ? networkName : SHARED_NETWORK_NAME, networkSize, configShard, configRealm);
+                    networkName != null ? networkName : SHARED_NETWORK_NAME, networkSize, getConfigShard(), getConfigRealm());
         }
 
         private static void startSharedEmbedded(@NonNull final EmbeddedMode mode) {
