@@ -722,6 +722,12 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
             readableStatesMap.remove(serviceName);
         }
 
+        public void commitAllSingletons() {
+            for (final ReadableSingletonState s : singletonInstances.values()) {
+                ((WritableSingletonStateBase) s).commit();
+            }
+        }
+
         /**
          * This method is called when a state is removed from the state merkle tree. It is used to
          * remove the cached instances of the state.
