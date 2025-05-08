@@ -26,7 +26,9 @@ import static org.mockito.Mockito.when;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
+import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.Mnemonics;
+import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.signed.SigSet;
@@ -212,7 +214,7 @@ class SavedStateMetadataTests {
                 .thenReturn(new ArrayList<>(List.of(NodeId.of(3L), NodeId.of(1L), NodeId.of(2L))));
 
         final SavedStateMetadata metadata =
-                SavedStateMetadata.create(signedState, NodeId.of(1234), Instant.now(), platformStateFacade);
+                SavedStateMetadata.create(PlatformContext.create(new TestConfigBuilder().getOrCreateConfig()), signedState, NodeId.of(1234), Instant.now(), platformStateFacade);
 
         assertEquals(List.of(NodeId.of(1L), NodeId.of(2L), NodeId.of(3L)), metadata.signingNodes());
     }

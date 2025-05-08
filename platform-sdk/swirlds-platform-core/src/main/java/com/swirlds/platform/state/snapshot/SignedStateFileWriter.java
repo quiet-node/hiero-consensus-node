@@ -18,6 +18,7 @@ import com.swirlds.common.io.streams.MerkleDataOutputStream;
 import com.swirlds.common.merkle.utility.MerkleTreeVisualizer;
 import com.swirlds.logging.legacy.payload.StateSavedToDiskPayload;
 import com.swirlds.platform.config.StateConfig;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.recovery.emergencyfile.EmergencyRecoveryFile;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -88,6 +89,7 @@ public final class SignedStateFileWriter {
      * @param signedState the signed state being written
      */
     public static void writeMetadataFile(
+            @NonNull final PlatformContext platformContext,
             @Nullable final NodeId selfId,
             @NonNull final Path directory,
             @NonNull final SignedState signedState,
@@ -98,7 +100,7 @@ public final class SignedStateFileWriter {
 
         final Path metadataFile = directory.resolve(SavedStateMetadata.FILE_NAME);
 
-        SavedStateMetadata.create(signedState, selfId, Instant.now(), platformStateFacade)
+        SavedStateMetadata.create(platformContext, signedState, selfId, Instant.now(), platformStateFacade)
                 .write(metadataFile);
     }
 
@@ -149,7 +151,7 @@ public final class SignedStateFileWriter {
         state.createSnapshot(directory);
         writeSignatureSetFile(directory, signedState);
         writeHashInfoFile(platformContext, directory, signedState.getState(), platformStateFacade);
-        writeMetadataFile(selfId, directory, signedState, platformStateFacade);
+        writeMetadataFile(platformContext, selfId, directory, signedState, platformStateFacade);
         writeEmergencyRecoveryFile(directory, signedState);
         final Roster currentRoster = signedState.getRoster();
         if (currentRoster != null) {
@@ -162,7 +164,10 @@ public final class SignedStateFileWriter {
                     platformContext,
                     selfId,
                     directory,
-                    platformStateFacade.ancientThresholdOf(signedState.getState()),
+                    EventWindowFactory.create(
+                            platformContext.getConfiguration(),
+                            platformStateFacade.consensusSnapshotOf(signedState.getState())
+                    ).getAncientThreshold(),
                     signedState.getRound());
         }
     }

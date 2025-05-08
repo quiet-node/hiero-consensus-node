@@ -20,8 +20,10 @@ import static com.swirlds.platform.state.snapshot.SavedStateMetadataField.WALL_C
 import static org.hiero.base.utility.CommonUtils.unhex;
 
 import com.hedera.hapi.node.state.roster.Roster;
+import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.formatting.TextTable;
 import com.swirlds.common.utility.Mnemonics;
+import com.swirlds.platform.consensus.EventWindowFactory;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.state.State;
@@ -153,6 +155,7 @@ public record SavedStateMetadata(
      * @return the signed state metadata
      */
     public static SavedStateMetadata create(
+            @NonNull final PlatformContext platformContext,
             @NonNull final SignedState signedState,
             @NonNull final NodeId selfId,
             @NonNull final Instant now,
@@ -176,7 +179,10 @@ public record SavedStateMetadata(
                 signedState.getConsensusTimestamp(),
                 platformStateFacade.legacyRunningEventHashOf(state),
                 Mnemonics.generateMnemonic(platformStateFacade.legacyRunningEventHashOf(state)),
-                platformStateFacade.ancientThresholdOf(state),
+                EventWindowFactory.create(
+                        platformContext.getConfiguration(),
+                        platformStateFacade.consensusSnapshotOf(state)
+                ).getAncientThreshold(),
                 convertToString(platformStateFacade.creationSoftwareVersionOf(state)),
                 now,
                 selfId,

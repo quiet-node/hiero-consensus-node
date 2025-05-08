@@ -115,11 +115,6 @@ class PlatformStateFacadeTest {
     }
 
     @Test
-    void testAncientThresholdOf() {
-        assertEquals(platformStateModifier.getAncientThreshold(), platformStateFacade.ancientThresholdOf(state));
-    }
-
-    @Test
     void testConsensusSnapshotOf() {
         assertEquals(platformStateModifier.getSnapshot(), platformStateFacade.consensusSnapshotOf(state));
     }
