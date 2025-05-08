@@ -6,7 +6,6 @@ import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -27,8 +26,6 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     }
 
     long state;
-
-    private static final List<VirtualMap<?, ?>> virtualMapsCollector = new ArrayList<>();
 
     public TurtleTestingToolState() {
         // empty
@@ -79,13 +76,14 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     /**
      * Creates a merkle node to act as a state tree root.
      *
+     * @param virtualMapsCollector list that collects virtual maps that are created during initialization
      * @return merkle tree root
      */
     @NonNull
-    public static MerkleNodeState getStateRootNode() {
+    public static MerkleNodeState getStateRootNode(final @NonNull List<VirtualMap<?, ?>> virtualMapsCollector) {
         final MerkleNodeState state = new TurtleTestingToolState();
         TestingAppStateInitializer.DEFAULT.initPlatformState(state);
-        TestingAppStateInitializer.DEFAULT.initRosterState(state);
+        TestingAppStateInitializer.DEFAULT.initRosterState(state, virtualMapsCollector);
 
         return state;
     }
@@ -93,13 +91,5 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     @Override
     public int getMinimumSupportedVersion() {
         return ClassVersion.ORIGINAL;
-    }
-
-    /**
-     * Destroying the virtual maps instances and clearing resources, so that there are no leaks.
-     */
-    public static void destroyVirtualMaps() {
-        virtualMapsCollector.forEach(VirtualMap::destroyVirtualRoots);
-        virtualMapsCollector.clear();
     }
 }

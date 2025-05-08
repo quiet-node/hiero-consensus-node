@@ -44,8 +44,10 @@ import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformSchedulersConfig_;
 import com.swirlds.platform.wiring.PlatformWiring;
 import com.swirlds.state.State;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.node.KeysAndCerts;
@@ -73,6 +75,7 @@ public class TurtleNode {
     private final DeterministicWiringModel model;
     private final Platform platform;
     private final ConsensusRoundsHolder consensusRoundsHolder;
+    private final List<VirtualMap<?, ?>> virtualMapsCollector = new ArrayList<>();
 
     @NonNull
     private static Configuration createBasicConfiguration(final @NonNull Path outputDirectory) {
@@ -149,7 +152,7 @@ public class TurtleNode {
         final HashedReservedSignedState reservedState = getInitialState(
                 recycleBin,
                 version,
-                TurtleTestingToolState::getStateRootNode,
+                () -> TurtleTestingToolState.getStateRootNode(virtualMapsCollector),
                 "foo",
                 "bar",
                 nodeId,
@@ -249,5 +252,7 @@ public class TurtleNode {
     public void destroy() throws InterruptedException {
         getMetricsProvider().removePlatformMetrics(platform.getSelfId());
         platform.destroy();
+        virtualMapsCollector.forEach(VirtualMap::destroyVirtualRoot);
+        virtualMapsCollector.clear();
     }
 }

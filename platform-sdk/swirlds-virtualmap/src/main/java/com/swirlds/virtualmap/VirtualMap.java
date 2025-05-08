@@ -491,10 +491,10 @@ public final class VirtualMap<K extends VirtualKey, V extends VirtualValue> exte
     }
 
     /**
-     * Destroy instances of {@link VirtualRootNode}, so that thread and memory resources are freed.
+     * Terminate the pipeline of the virtual root node, so that resources are released.
      */
-    public void destroyVirtualRoots() {
+    public void destroyVirtualRoot() {
         final VirtualRootNode<?, ?> child = getChild(ChildIndices.VIRTUAL_ROOT_CHILD_INDEX);
-        child.destroy();
+        child.getPipeline().terminate();
     }
 }

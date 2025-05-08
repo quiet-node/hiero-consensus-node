@@ -18,7 +18,6 @@ import com.swirlds.common.io.IOIterator;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.common.utility.AutoCloseableWrapper;
-import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
 import com.swirlds.platform.components.AppNotifier;
@@ -420,14 +419,12 @@ public class SwirldsPlatform implements Platform {
     public void destroy() throws InterruptedException {
         platformContext.getRecycleBin().stop();
 
-        platformWiring.flushIntakePipeline();
         platformWiring.stop();
 
         notificationEngine.unregisterAll();
         notificationEngine.shutdown();
 
-        final Metrics metrics = platformContext.getMetrics();
-        metrics.shutdown();
+        platformContext.getMetrics().shutdown();
     }
 
     /**

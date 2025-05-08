@@ -1749,15 +1749,4 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
     public long getFastCopyVersion() {
         return fastCopyVersion;
     }
-
-    /**
-     * Free resources and stop threads, so that the node can be destroyed, without leaking.
-     */
-    public void destroy() {
-        destroyNode();
-        pipeline.terminate();
-        hasher.shutdown();
-        hasher.destroy();
-        cache.release();
-    }
 }

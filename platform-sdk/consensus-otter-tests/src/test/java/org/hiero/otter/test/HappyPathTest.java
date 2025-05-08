@@ -30,7 +30,7 @@ public class HappyPathTest {
         // Validations
         env.validator()
                 .assertLogs(
-                        LogFilter.maxLogLevel(Level.INFO),
+                        LogFilter.maxLogLevel(Level.WARN),
                         LogFilter.ignoreMarkers(LogMarker.STARTUP),
                         LogFilter.ignoreNodes(network.getNodes().getFirst()))
                 .validateRemaining(Profile.DEFAULT);

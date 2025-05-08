@@ -105,8 +105,8 @@ public interface Platform {
      * Destroy a platform instance.
      * <p>
      * This method is called when the platform should be destroyed. It should be overridden by subclasses to perform any
-     * necessary cleanup operations. Once the platform is destroyed, it cannot be used but all its resources are freed.
-     * This method is idempotent, meaning that it is safe to call it multiple times.
+     * necessary cleanup operations. This method will not make an attempt to finish all ongoing processes and save
+     * the current state. It is idempotent, so it can be called multiple times.
      */
     default void destroy() throws InterruptedException {}
 }

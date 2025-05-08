@@ -142,8 +142,6 @@ public class Turtle {
                 throw new RuntimeException(e);
             }
         }
-
-        TurtleTestingToolState.destroyVirtualMaps();
     }
 
     /**
