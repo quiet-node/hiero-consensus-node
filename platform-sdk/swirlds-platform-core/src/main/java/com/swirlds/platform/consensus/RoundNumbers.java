@@ -12,12 +12,8 @@ public class RoundNumbers {
         this.electionRound = electionRound;
     }
 
-    public static RoundNumbers genesis(final ConsensusConfig config){
+    public static RoundNumbers genesis(final ConsensusConfig config) {
         return new RoundNumbers(config, ConsensusConstants.ROUND_FIRST);
-    }
-
-    public long getElectionRound() {
-        return electionRound;
     }
 
     public void incrementElectionRound() {
@@ -28,8 +24,16 @@ public class RoundNumbers {
         this.electionRound = electionRound;
     }
 
-    public void reset(){
+    public void setLastDecidedRound(final long lastDecidedRound) {
+        this.electionRound = lastDecidedRound + 1;
+    }
+
+    public void reset() {
         electionRound = ConsensusConstants.ROUND_FIRST;
+    }
+
+    public long getElectionRound() {
+        return electionRound;
     }
 
     /**
@@ -45,9 +49,10 @@ public class RoundNumbers {
 
     /**
      * Returns the oldest round that is non-ancient. If no round is ancient, then it will return the first round ever
+     *
      * @return oldest non-ancient number
      */
-    public long getOldestNonAncientRound(){
-        return  RoundCalculationUtils.getOldestNonAncientRound(config.roundsNonAncient(), getLastRoundDecided());
+    public long getOldestNonAncientRound() {
+        return RoundCalculationUtils.getOldestNonAncientRound(config.roundsNonAncient(), getLastRoundDecided());
     }
 }

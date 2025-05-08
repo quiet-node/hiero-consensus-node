@@ -14,7 +14,7 @@ import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.EventConstants;
 import org.hiero.consensus.model.hashgraph.ConsensusConstants;
 
-public class ListAncientCalculator {
+public class ListAncientCalculator implements AncientCalculator {
     private static final Logger logger = LogManager.getLogger(ListAncientCalculator.class);
     /** consensus configuration */
     private final ConsensusConfig config;
@@ -38,19 +38,14 @@ public class ListAncientCalculator {
         this.roundNumbers = RoundNumbers.genesis(config);
     }
 
+    @Override
     public void reset(){
         minimumJudgeStorage.reset(ConsensusConstants.ROUND_FIRST);
         roundNumbers.reset();
         updateAncientThreshold();
     }
 
-    /**
-     * Used when loading rounds from a starting point (a signed state). It will create rounds with their minimum ancient
-     * indicator numbers, but we won't know about the witnesses in these rounds. We also don't care about any other
-     * information except for minimum ancient indicator since these rounds have already been decided beforehand.
-     *
-     * @param snapshot contains a list of round numbers and round ancient indicator pairs, in ascending round numbers
-     */
+    @Override
     public void loadSnapshot(@NonNull final ConsensusSnapshot snapshot) {
         minimumJudgeStorage.reset(snapshot.minimumJudgeInfoList().getFirst().round());
         for (final MinimumJudgeInfo minimumJudgeInfo : snapshot.minimumJudgeInfoList()) {
@@ -60,9 +55,7 @@ public class ListAncientCalculator {
         updateAncientThreshold();
     }
 
-    /**
-     * Notifies the instance that the current elections have been decided
-     */
+    @Override
     public void currentElectionDecided(@NonNull final List<EventImpl> judges) {
         long minJudgeValue = Long.MAX_VALUE;
         for (final EventImpl judge : judges) {
@@ -79,7 +72,7 @@ public class ListAncientCalculator {
     /**
      * Update the current ancient threshold based on the latest round decided.
      */
-    public void updateAncientThreshold() {
+    private void updateAncientThreshold() {
         if (!roundNumbers.isAnyRoundDecided()) {
             // if no round has been decided, no events are ancient yet
             ancientThreshold = EventConstants.ANCIENT_THRESHOLD_UNDEFINED;
@@ -91,10 +84,9 @@ public class ListAncientCalculator {
         ancientThreshold = info.minimumJudgeAncientThreshold();
     }
 
-    /**
-     * @return A list of {@link MinimumJudgeInfo} for all decided and non-ancient rounds
-     */
-    public @NonNull List<MinimumJudgeInfo> getMinimumJudgeInfoList() {
+    @NonNull
+    @Override
+    public List<MinimumJudgeInfo> getMinimumJudgeInfoList() {
         return LongStream.range(roundNumbers.getOldestNonAncientRound(), roundNumbers.getElectionRound())
                 .mapToObj(this::getMinimumJudgeIndicator)
                 .filter(Objects::nonNull)
@@ -115,22 +107,12 @@ public class ListAncientCalculator {
         return minimumJudgeInfo;
     }
 
-    /**
-     * Returns the threshold of all the judges that are not in ancient rounds. This is either a generation value or a
-     * birth round value, depending on the ancient mode configured. If no judges are ancient, returns
-     * {@link EventConstants#FIRST_GENERATION} or {@link ConsensusConstants#ROUND_FIRST} depending on the ancient mode.
-     *
-     * @return the threshold
-     */
+    @Override
     public long getAncientThreshold() {
         return ancientThreshold;
     }
 
-    /**
-     * Similar to {@link #getAncientThreshold()} but for expired rounds.
-     *
-     * @return the threshold for expired rounds
-     */
+    @Override
     public long getExpiredThreshold() {
         final MinimumJudgeInfo info = minimumJudgeStorage.get(minimumJudgeStorage.minIndex());
         return info == null ? EventConstants.ANCIENT_THRESHOLD_UNDEFINED : info.minimumJudgeAncientThreshold();
