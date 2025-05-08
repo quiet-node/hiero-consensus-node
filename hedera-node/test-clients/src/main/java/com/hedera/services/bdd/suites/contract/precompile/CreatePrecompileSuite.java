@@ -266,6 +266,7 @@ public class CreatePrecompileSuite {
                                 log.info("Explicit create result is" + " {}", result[0]);
                                 final var res = (Address) result[0];
                                 createdNftTokenNum.set(numberOfLongZero(
+                                        // Remove the leading '0x'
                                         HexFormat.of().parseHex(res.toString().substring(2))));
                             })
                             .hasKnownStatus(SUCCESS);

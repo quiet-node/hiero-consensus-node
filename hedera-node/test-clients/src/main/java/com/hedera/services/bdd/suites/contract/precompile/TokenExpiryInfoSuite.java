@@ -146,13 +146,13 @@ public class TokenExpiryInfoSuite {
         @DisplayName("still cannot set an invalid auto-renew account")
         final Stream<DynamicTest> cannotSetInvalidAutoRenewAccount() {
             return hapiTest(withOpContext((spec, log) -> {
-                final var MISSING_LONG_ZERO_ADDRESS = asHeadlongAddress(toAddressStringWithShardAndRealm(
+                final var missingLongZeroAddress = asHeadlongAddress(toAddressStringWithShardAndRealm(
                         (int) spec.shard(), spec.realm(), Long.toHexString(Integer.MAX_VALUE)));
                 // This function takes four arguments---a token address, an expiry second, an auto-renew account
                 // address, and an auto-renew period---and tries to update the token at that address with the given
                 // metadata; here we set an invalid auto-renew account address
                 final var callOp = tokenExpiryContract
-                        .call("updateExpiryInfoForToken", mutableToken, 0L, MISSING_LONG_ZERO_ADDRESS, MONTH_IN_SECONDS)
+                        .call("updateExpiryInfoForToken", mutableToken, 0L, missingLongZeroAddress, MONTH_IN_SECONDS)
                         .andAssert(txn -> txn.hasKnownStatuses(CONTRACT_REVERT_EXECUTED, INVALID_AUTORENEW_ACCOUNT));
                 allRunFor(spec, callOp);
             }));
