@@ -2,8 +2,7 @@
 package com.hedera.node.app.service.contract.impl.exec.operations;
 
 import static com.hedera.node.app.service.contract.impl.exec.operations.CustomizedOpcodes.CREATE2;
-import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
-import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
+import static org.hyperledger.besu.evm.code.CodeV0.EMPTY_CODE;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import com.hedera.node.app.service.contract.impl.exec.FeatureFlags;
@@ -19,6 +18,7 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.code.CodeFactory;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.evm.operation.Create2Operation;
 
 /**
  * A Hedera customization of the Besu {@link org.hyperledger.besu.evm.operation.Create2Operation}.
@@ -57,15 +57,7 @@ public class CustomCreate2Operation extends AbstractCustomCreateOperation {
      */
     @Override
     protected long cost(@NonNull final MessageFrame frame) {
-        final int inputOffset = clampedToInt(frame.getStackItem(1));
-        final int inputSize = clampedToInt(frame.getStackItem(2));
-        return clampedAdd(
-                clampedAdd(
-                        gasCalculator().txCreateCost(),
-                        gasCalculator().memoryExpansionGasCost(frame, inputOffset, inputSize)),
-                clampedAdd(
-                        gasCalculator().createKeccakCost(inputSize),
-                        gasCalculator().initcodeCost(inputSize)));
+        return new Create2Operation(gasCalculator()).cost(frame, () -> EMPTY_CODE);
     }
 
     @Override

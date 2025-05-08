@@ -3,8 +3,7 @@ package com.hedera.node.app.service.contract.impl.exec.operations;
 
 import static com.hedera.node.app.service.contract.impl.exec.operations.CustomizedOpcodes.CREATE;
 import static java.util.Objects.requireNonNull;
-import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
-import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
+import static org.hyperledger.besu.evm.code.CodeV0.EMPTY_CODE;
 
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -13,6 +12,7 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.code.CodeFactory;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
+import org.hyperledger.besu.evm.operation.CreateOperation;
 
 /**
  * A Hedera customization of the Besu {@link org.hyperledger.besu.evm.operation.CreateOperation}.
@@ -48,13 +48,7 @@ public class CustomCreateOperation extends AbstractCustomCreateOperation {
      */
     @Override
     protected long cost(@NonNull final MessageFrame frame) {
-        final int inputOffset = clampedToInt(frame.getStackItem(1));
-        final int inputSize = clampedToInt(frame.getStackItem(2));
-        return clampedAdd(
-                clampedAdd(
-                        gasCalculator().txCreateCost(),
-                        gasCalculator().memoryExpansionGasCost(frame, inputOffset, inputSize)),
-                gasCalculator().initcodeCost(inputSize));
+        return new CreateOperation(gasCalculator()).cost(frame, () -> EMPTY_CODE);
     }
 
     @Override
