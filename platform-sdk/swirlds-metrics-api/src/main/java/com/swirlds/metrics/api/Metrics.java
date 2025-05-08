@@ -178,5 +178,7 @@ public interface Metrics extends Startable {
      * @return {@code true} if the shutdown finished on time, {@code false} if the call ran into a timeout
      * @throws InterruptedException if the current thread was interrupted while waiting
      */
-    boolean shutdown() throws InterruptedException;
+    default boolean shutdown() throws InterruptedException {
+        return true;
+    }
 }
