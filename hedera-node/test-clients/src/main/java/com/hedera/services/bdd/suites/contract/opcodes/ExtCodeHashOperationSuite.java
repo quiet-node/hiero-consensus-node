@@ -17,7 +17,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
 import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
 import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
-import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrWith;
+import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrParamFunction;
 import static com.hedera.services.bdd.suites.contract.evm.Evm46ValidationSuite.systemAccounts;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.OK;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SUCCESS;
@@ -99,21 +99,16 @@ public class ExtCodeHashOperationSuite {
         for (int i = 0; i < systemAccounts.size(); i++) {
             final var index = i;
             // add contract call for all accounts in the list
-            opsArray[i] = withOpContext((spec, log) -> {
-                final var callOp = contractCall(contract, hashOf, mirrorAddrWith(spec, systemAccounts.get(index)))
-                        .hasKnownStatus(SUCCESS);
-                allRunFor(spec, callOp);
-            });
+            opsArray[i] = contractCall(contract, hashOf, mirrorAddrParamFunction(systemAccounts.get(index)))
+                    .hasKnownStatus(SUCCESS);
 
             // add contract call local for all accounts in the list
-            opsArray[systemAccounts.size() + i] = withOpContext((spec, log) -> {
-                final var callOp = contractCallLocal(contract, hashOf, mirrorAddrWith(spec, systemAccounts.get(index)))
-                        .has(ContractFnResultAsserts.resultWith()
-                                .resultThruAbi(
-                                        getABIFor(FUNCTION, hashOf, contract),
-                                        ContractFnResultAsserts.isLiteralResult(new Object[] {new byte[32]})));
-                allRunFor(spec, callOp);
-            });
+            opsArray[systemAccounts.size() + i] = contractCallLocal(
+                            contract, hashOf, mirrorAddrParamFunction(systemAccounts.get(index)))
+                    .has(ContractFnResultAsserts.resultWith()
+                            .resultThruAbi(
+                                    getABIFor(FUNCTION, hashOf, contract),
+                                    ContractFnResultAsserts.isLiteralResult(new Object[] {new byte[32]})));
         }
 
         return hapiTest(flattened(uploadInitCode(contract), contractCreate(contract), cryptoCreate(account), opsArray));

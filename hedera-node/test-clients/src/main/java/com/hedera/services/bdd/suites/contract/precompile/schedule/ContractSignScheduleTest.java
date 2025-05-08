@@ -66,7 +66,7 @@ import org.junit.jupiter.api.Tag;
 @HapiTestLifecycle
 public class ContractSignScheduleTest {
     private static final String CONTRACT = "HRC755Contract";
-    private static final String AUTHORIZE_SCHEDULE_CALL_ABI = getABIFor(FUNCTION, "authorizeScheduleCall", CONTRACT);
+    private static final String AUTHORIZE_SCHEDULE_CALL = "authorizeScheduleCall";
     private static final String SIGN_SCHEDULE_CALL = "signScheduleCall";
 
     @Nested
@@ -103,7 +103,7 @@ public class ContractSignScheduleTest {
                     getScheduleInfo(SCHEDULE_A).isNotExecuted(),
                     contractCall(
                                     CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL_ABI,
+                                    AUTHORIZE_SCHEDULE_CALL,
                                     mirrorAddrParamFunction(scheduleID_A.get().getScheduleNum()))
                             .gas(1_000_000L),
                     sleepFor(1_000),
@@ -117,7 +117,7 @@ public class ContractSignScheduleTest {
                     getScheduleInfo(SCHEDULE_B).isNotExecuted(),
                     contractCall(
                                     CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL_ABI,
+                                    AUTHORIZE_SCHEDULE_CALL,
                                     mirrorAddrParamFunction(scheduleID_B.get().getScheduleNum()))
                             .gas(1_000_000L),
                     getScheduleInfo(SCHEDULE_B).isNotExecuted());
@@ -157,7 +157,7 @@ public class ContractSignScheduleTest {
                     getScheduleInfo(SCHEDULE_C).isNotExecuted(),
                     contractCall(
                                     CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL_ABI,
+                                    AUTHORIZE_SCHEDULE_CALL,
                                     mirrorAddrParamFunction(scheduleID_C.get().getScheduleNum()))
                             .gas(1_000_000L),
                     sleepFor(1000L),
@@ -171,7 +171,7 @@ public class ContractSignScheduleTest {
                     getScheduleInfo(SCHEDULE_D).isNotExecuted(),
                     contractCall(
                                     CONTRACT,
-                                    AUTHORIZE_SCHEDULE_CALL_ABI,
+                                    AUTHORIZE_SCHEDULE_CALL,
                                     mirrorAddrParamFunction(scheduleID_D.get().getScheduleNum()))
                             .gas(1_000_000L),
                     getScheduleInfo(SCHEDULE_D).isNotExecuted());

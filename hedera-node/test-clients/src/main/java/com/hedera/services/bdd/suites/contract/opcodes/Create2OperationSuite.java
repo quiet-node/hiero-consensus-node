@@ -167,12 +167,10 @@ public class Create2OperationSuite {
                 uploadInitCode(contract),
                 contractCreate(contract).payingWith(GENESIS).via(CREATION).exposingNumTo(outerCreatorNum::set),
                 contractCall(contract, "startChain", msg).gas(4_000_000).via(noisyTxn),
-                withOpContext((spec, logger) -> {
-                    final var idOfFirstThreeLogs =
-                            String.format("%d.%d.%d", spec.shard(), spec.realm(), (outerCreatorNum.get() + 1));
-                    final var idOfLastTwoLogs =
-                            String.format("%d.%d.%d", spec.shard(), spec.realm(), (outerCreatorNum.get() + 2));
-                    final var recordOp = getTxnRecord(noisyTxn)
+                sourcing(() -> {
+                    final var idOfFirstThreeLogs = String.valueOf(outerCreatorNum.get() + 1);
+                    final var idOfLastTwoLogs = String.valueOf(outerCreatorNum.get() + 2);
+                    return getTxnRecord(noisyTxn)
                             .andAllChildRecords()
                             .hasPriority(recordWith()
                                     .contractCallResult(resultWith()
@@ -182,7 +180,6 @@ public class Create2OperationSuite {
                                                     logWith().contract(idOfFirstThreeLogs),
                                                     logWith().contract(idOfLastTwoLogs),
                                                     logWith().contract(idOfLastTwoLogs)))));
-                    allRunFor(spec, recordOp);
                 }));
     }
 
@@ -315,7 +312,7 @@ public class Create2OperationSuite {
         final var replAdminKey = "replAdminKey";
         final var customAutoRenew = 7776001L;
         final var autoRenewAccountID = "autoRenewAccount";
-        final AtomicReference<String> factoryEvmAddress = new AtomicReference<>();
+        final AtomicReference<byte[]> factoryEvmAddress = new AtomicReference<>();
         final AtomicReference<String> expectedCreate2Address = new AtomicReference<>();
         final AtomicReference<String> expectedMirrorAddress = new AtomicReference<>();
         final AtomicReference<byte[]> testContractInitcode = new AtomicReference<>();
@@ -329,17 +326,14 @@ public class Create2OperationSuite {
                 newKeyNamed(replAdminKey),
                 uploadInitCode(contract),
                 cryptoCreate(autoRenewAccountID).balance(ONE_HUNDRED_HBARS),
-                withOpContext((spec, log) -> allRunFor(
-                        spec,
-                        contractCreate(contract)
-                                .payingWith(GENESIS)
-                                .adminKey(adminKey)
-                                .entityMemo(ENTITY_MEMO)
-                                .autoRenewSecs(customAutoRenew)
-                                .autoRenewAccountId(autoRenewAccountID)
-                                .via(CREATE_2_TXN)
-                                .exposingNumTo(num -> factoryEvmAddress.set(
-                                        asHexedSolidityAddress((int) spec.shard(), spec.realm(), num))))),
+                contractCreate(contract)
+                        .payingWith(GENESIS)
+                        .adminKey(adminKey)
+                        .entityMemo(ENTITY_MEMO)
+                        .autoRenewSecs(customAutoRenew)
+                        .autoRenewAccountId(autoRenewAccountID)
+                        .via(CREATE_2_TXN)
+                        .exposingContractIdTo(id -> factoryEvmAddress.set(asSolidityAddress(id))),
                 getContractInfo(contract)
                         .has(contractWith().autoRenewAccountId(autoRenewAccountID))
                         .logged(),
@@ -387,8 +381,7 @@ public class Create2OperationSuite {
                             .setRealmNum(spec.realm())
                             .setContractNum(parentId.getContractNum() + 2L)
                             .build();
-                    mirrorLiteralId.set(
-                            String.format("%d.%d.%d", spec.shard(), spec.realm(), childId.getContractNum()));
+                    mirrorLiteralId.set(String.valueOf(childId.getContractNum()));
                     expectedMirrorAddress.set(hex(asSolidityAddress(childId)));
                 }),
                 sourcing(() -> getContractBytecode(mirrorLiteralId.get()).exposingBytecodeTo(bytecodeFromMirror::set)),
@@ -415,7 +408,6 @@ public class Create2OperationSuite {
                 sourcing(() -> contractCallLocalWithFunctionAbi(
                                 expectedCreate2Address.get(), getABIFor(FUNCTION, "getBalance", testContract))
                         .payingWith(GENESIS)
-                        .logged()
                         .has(resultWith()
                                 .resultThruAbi(
                                         getABIFor(FUNCTION, "getBalance", testContract),
@@ -468,14 +460,8 @@ public class Create2OperationSuite {
                         .exposingContractId(childId::set)
                         .has(contractWith().balance(2 * ONE_HBAR))),
                 sourcing(() -> contractCallWithFunctionAbi(asLiteralHexed(childAddress.get()), vacateAddressAbi)),
-                withOpContext((spec, log) -> allRunFor(
-                        spec,
-                        getContractInfo(String.format(
-                                        "%d.%d.%d",
-                                        spec.shard(),
-                                        spec.realm(),
-                                        childId.get().getContractNum()))
-                                .has(contractWith().isDeleted()))));
+                sourcing(() -> getContractInfo(String.valueOf(childId.get().getContractNum()))
+                        .has(contractWith().isDeleted())));
     }
 
     @SuppressWarnings("java:S5669")
