@@ -741,8 +741,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
                 @NonNull final String serviceName,
                 @NonNull final WritableSingletonStateBase<V> singletonState,
                 @NonNull final StateChangeListener listener) {
-            final var stateKey = singletonState.getStateKey();
-            final var stateId = listener.stateIdFor(serviceName, stateKey);
+            final var stateId = listener.stateIdFor(serviceName, singletonState.getStateKey());
             singletonState.registerListener(value -> listener.singletonUpdateChange(stateId, value));
         }
 
@@ -750,8 +749,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
                 @NonNull final String serviceName,
                 @NonNull final WritableQueueStateBase<V> queueState,
                 @NonNull final StateChangeListener listener) {
-            final var stateKey = queueState.getStateKey();
-            final var stateId = listener.stateIdFor(serviceName, stateKey);
+            final var stateId = listener.stateIdFor(serviceName, queueState.getStateKey());
             queueState.registerListener(new QueueChangeListener<>() {
                 @Override
                 public void queuePushChange(@NonNull final V value) {

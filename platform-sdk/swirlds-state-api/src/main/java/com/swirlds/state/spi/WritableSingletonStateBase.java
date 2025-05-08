@@ -51,16 +51,13 @@ public abstract class WritableSingletonStateBase<T> extends ReadableSingletonSta
 
     @Override
     public T get() {
-        // Possible pattern: "put" and then "get". In this case, "read" should be false!! Otherwise,
-        // we invalidate tx when we don't need to
-        final var currentValue = currentValue();
-        if (currentValue != null) {
-            // C.f. https://github.com/hashgraph/hedera-services/issues/14582; in principle we should
-            // also return null here if value is NULL_VALUE, but in production with the SingletonNode
-            // backing store, null values are never actually set so this doesn't matter
-            return currentValue;
+        // If there is a modification, then we've already done a "put" or "remove"
+        // and should return based on the modification
+        if (isModified()) {
+            return currentValue();
+        } else {
+            return super.get();
         }
-        return super.get();
     }
 
     @Override

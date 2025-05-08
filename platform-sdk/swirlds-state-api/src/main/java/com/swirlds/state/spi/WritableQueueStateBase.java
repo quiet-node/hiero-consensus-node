@@ -75,17 +75,6 @@ public abstract class WritableQueueStateBase<E> implements WritableQueueState<E>
     }
 
     /**
-     * Recreates the state of this queue in the given {@link WritableQueueStateBase} instance.
-     * @param that the queue to recreate the state in
-     */
-    public void recreateIn(@NonNull final WritableQueueStateBase<E> that) {
-        addedElements.forEach(element -> that.add(element));
-        for (int i = 0, n = readElements.size(); i < n; i++) {
-            that.poll();
-        }
-    }
-
-    /**
      * Flushes all changes into the underlying data store. This method should <strong>ONLY</strong>
      * be called by the code that created the {@link WritableQueueStateBase} instance or owns it. Don't
      * cast and commit unless you own the instance!
@@ -176,15 +165,7 @@ public abstract class WritableQueueStateBase<E> implements WritableQueueState<E>
     @Override
     public Iterator<E> iterator() {
         final var iterator = iterateOnDataSource();
-        final int numReadFromAdded =
-                currentAddedElementIndex > 0 ? currentAddedElementIndex - (peekedElement == null ? 0 : 1) : 0;
-        for (int i = 0, n = readElements.size() - numReadFromAdded; i < n; i++) {
-            iterator.next();
-        }
         final var addedElementsIterator = addedElements.iterator();
-        for (int i = 0; i < numReadFromAdded; i++) {
-            addedElementsIterator.next();
-        }
         final var numAddedElements = addedElements.size();
         return new Iterator<>() {
             @Override
