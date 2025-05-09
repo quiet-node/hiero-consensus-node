@@ -24,7 +24,6 @@ import com.swirlds.common.test.fixtures.GaussianWeightGenerator;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.WeightGenerator;
 import com.swirlds.platform.consensus.ConsensusConfig;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.iss.DefaultIssDetector;
 import com.swirlds.platform.state.iss.IssDetector;
 import com.swirlds.platform.state.iss.internal.HashValidityStatus;
@@ -47,6 +46,7 @@ import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.notification.IssNotification;
 import org.hiero.consensus.model.notification.IssNotification.IssType;
 import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
+import org.hiero.consensus.roster.RosterUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
