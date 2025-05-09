@@ -2,7 +2,6 @@
 package com.hedera.services.bdd.suites.crypto;
 
 import static com.hedera.services.bdd.junit.TestTags.CRYPTO;
-import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.explicitBytesOf;
 import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
 import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
@@ -76,7 +75,7 @@ public class CryptoDeleteSuite {
 
     @LeakyHapiTest(requirement = ContextRequirement.SYSTEM_ACCOUNT_BALANCES)
     final Stream<DynamicTest> deletedAccountCannotBePayer() {
-        final var submittingNodeAccount = asEntityString(3);
+        final var submittingNodeAccount = "3";
         final var beneficiaryAccount = "beneficiaryAccountForDeletedAccount";
         final var submittingNodePreTransfer = "submittingNodePreTransfer";
         final var submittingNodeAfterBalanceLoad = "submittingNodeAfterBalanceLoad";

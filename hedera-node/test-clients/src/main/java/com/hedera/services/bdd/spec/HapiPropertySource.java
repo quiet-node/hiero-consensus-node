@@ -590,11 +590,6 @@ public interface HapiPropertySource {
         return String.format("%d.%d.%s", shard, realm, num);
     }
 
-    @Deprecated(forRemoval = true)
-    static String asEntityString(final long num) {
-        return asEntityString(shard, realm, num);
-    }
-
     static String asEntityString(final String shard, final String realm, final String num) {
         return String.format("%s.%s.%s", shard, realm, num);
     }
