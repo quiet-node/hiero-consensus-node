@@ -11,8 +11,8 @@ import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import org.hiero.consensus.roster.RosterUtils;
 import java.util.List;
+import org.hiero.consensus.roster.RosterUtils;
 
 public class TurtleAppState extends MerkleStateRoot<TurtleAppState> implements MerkleNodeState {
 
