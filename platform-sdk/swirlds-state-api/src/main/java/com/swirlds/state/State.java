@@ -122,6 +122,6 @@ public interface State extends FastCopyable, Hashable {
     }
 
     default boolean isStartUpMode() {
-        return false;
+        return true;
     }
 }
