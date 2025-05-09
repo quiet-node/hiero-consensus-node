@@ -108,6 +108,8 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     private VirtualMap virtualMap;
 
+    private boolean startupMode = true;
+
     public NewStateRoot(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
         final String virtualMapLabel = "VirtualMap"; // TODO: discuss how it should be renamed
         final MerkleDbDataSourceBuilder dsBuilder;
@@ -142,6 +144,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         this.virtualMap = from.virtualMap.copy();
         this.configuration = from.configuration;
         this.roundSupplier = from.roundSupplier;
+        this.startupMode = from.startupMode;
         this.listeners.addAll(from.listeners);
 
         // Copy over the metadata
@@ -379,6 +382,10 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
         return services;
+    }
+
+    public void disableStartupMode() {
+        //        startupMode = false;
     }
 
     /**
@@ -713,16 +720,17 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
             for (final ReadableKVState kv : kvInstances.values()) {
                 ((WritableKVStateBase) kv).commit();
             }
-            //            for (final ReadableSingletonState s : singletonInstances.values()) {
-            //                ((WritableSingletonStateBase) s).commit();
-            //            }
+            if (startupMode) {
+                commitSingletons();
+            }
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
             }
             readableStatesMap.remove(serviceName);
         }
 
-        public void commitAllSingletons() {
+        @Override
+        public void commitSingletons() {
             for (final ReadableSingletonState s : singletonInstances.values()) {
                 ((WritableSingletonStateBase) s).commit();
             }

@@ -801,13 +801,18 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             for (final ReadableKVState kv : kvInstances.values()) {
                 ((WritableKVStateBase) kv).commit();
             }
-            //            for (final ReadableSingletonState s : singletonInstances.values()) {
-            //                ((WritableSingletonStateBase) s).commit();
-            //            }
+
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
             }
             readableStatesMap.remove(serviceName);
+        }
+
+        @Override
+        public void commitSingletons() {
+            for (final ReadableSingletonState s : singletonInstances.values()) {
+                ((WritableSingletonStateBase) s).commit();
+            }
         }
 
         /**

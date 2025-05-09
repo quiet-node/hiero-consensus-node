@@ -240,7 +240,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
             // Now commit all the service-specific changes made during this service's update or migration
             if (writableStates instanceof MerkleWritableStates mws) {
                 mws.commit();
-                mws.commitAllSingletons();
                 migrationStateChanges.trackCommit();
             }
             // And finally we can remove any states we need to remove
