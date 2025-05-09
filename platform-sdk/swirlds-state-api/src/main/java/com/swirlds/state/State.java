@@ -120,4 +120,8 @@ public interface State extends FastCopyable, Hashable {
     default State loadSnapshot(final @NonNull Path targetPath) throws IOException {
         throw new UnsupportedOperationException();
     }
+
+    default boolean isStartUpMode() {
+        return false;
+    }
 }

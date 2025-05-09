@@ -167,6 +167,11 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         this.roundSupplier = roundSupplier;
     }
 
+    @Override
+    public boolean isStartUpMode() {
+        return startupMode;
+    }
+
     /**
      * Creates a copy of the instance.
      * @return a copy of the instance
@@ -385,7 +390,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     }
 
     public void disableStartupMode() {
-        //        startupMode = false;
+        startupMode = false;
     }
 
     /**
@@ -791,6 +796,20 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
                     listener.mapDeleteChange(stateId, key);
                 }
             });
+        }
+    }
+
+    public void commitAllSingletons() {
+        for (String serviceKey : services.keySet()) {
+            final var service = services.get(serviceKey);
+            for (String stateKey : service.keySet()) {
+                StateMetadata<?, ?> stateMetadata = service.get(stateKey);
+                if (stateMetadata.stateDefinition().singleton()) {
+                    WritableStates writableStates = getWritableStates(serviceKey);
+                    final var writableSingleton = (WritableSingletonStateBase<?>) writableStates.getSingleton(stateKey);
+                    writableSingleton.commit();
+                }
+            }
         }
     }
 }

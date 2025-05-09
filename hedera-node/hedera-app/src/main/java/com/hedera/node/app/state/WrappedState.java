@@ -97,7 +97,7 @@ public class WrappedState implements State, Hashable {
      */
     public void commit() {
         for (final var writableStates : writableStatesMap.values()) {
-            writableStates.commit();
+            writableStates.commit(delegate.isStartUpMode());
         }
     }
 

@@ -27,6 +27,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.platform.state.PlatformState;
+import com.hedera.node.app.HederaNewStateRoot;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
@@ -378,7 +379,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
         if (closesBlock) {
             lifecycle.onCloseBlock(state);
-            commitAllSingletons(state);
+            final HederaNewStateRoot hederaNewStateRoot = (HederaNewStateRoot) state;
+            hederaNewStateRoot.commitAllSingletons();
             // Flush all boundary state changes besides the BlockStreamInfo
             worker.addItem(boundaryStateChangeListener.flushChanges());
             worker.sync();
@@ -486,25 +488,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             requireNonNull(fatalShutdownFuture).complete(null);
         }
         return closesBlock;
-    }
-
-    private void commitAllSingletons(@NonNull final State state) {
-        // FUTURE WORK: this functionality may become a part of the State API
-        if (state instanceof NewStateRoot<?> newStateRoot) {
-            Map<String, Map<String, StateMetadata<?, ?>>> services = newStateRoot.getServices();
-            for (String serviceKey : services.keySet()) {
-                final var service = services.get(serviceKey);
-                for (String stateKey : service.keySet()) {
-                    StateMetadata<?, ?> stateMetadata = service.get(serviceKey);
-                    if (stateMetadata.stateDefinition().singleton()) {
-                        WritableStates writableStates = requireNonNull(state.getWritableStates(serviceKey));
-                        final var writableSingleton =
-                                (WritableSingletonStateBase<?>) writableStates.getSingleton(stateKey);
-                        writableSingleton.commit();
-                    }
-                }
-            }
-        }
     }
 
     @Override
