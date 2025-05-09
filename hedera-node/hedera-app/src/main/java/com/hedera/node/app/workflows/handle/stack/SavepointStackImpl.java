@@ -30,6 +30,7 @@ import com.hedera.node.app.blocks.impl.BlockStreamBuilder;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
 import com.hedera.node.app.blocks.impl.KVStateChangeListener;
 import com.hedera.node.app.blocks.impl.PairedStreamBuilder;
+import com.hedera.node.app.blocks.impl.QueueStateChangeListener;
 import com.hedera.node.app.spi.records.RecordSource;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory;
@@ -90,6 +91,9 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
     private final KVStateChangeListener kvStateChangeListener;
 
     @Nullable
+    private final QueueStateChangeListener queueStateChangeListener;
+
+    @Nullable
     private final BoundaryStateChangeListener boundaryStateChangeListener;
 
     private final StreamMode streamMode;
@@ -106,6 +110,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
      * @param maxBuildersAfterUser        the maximum number of following builders with available consensus times
      * @param boundaryStateChangeListener the listener for the round state changes
      * @param kvStateChangeListener       the listener for the key/value state changes
+     * @param queueStateChangeListener    the listener for the queue state changes
      * @param streamMode                  the stream mode
      * @return the root {@link SavepointStackImpl}
      */
@@ -115,6 +120,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             final int maxBuildersAfterUser,
             @NonNull final BoundaryStateChangeListener boundaryStateChangeListener,
             @NonNull final KVStateChangeListener kvStateChangeListener,
+            @NonNull final QueueStateChangeListener queueStateChangeListener,
             @NonNull final StreamMode streamMode) {
         return new SavepointStackImpl(
                 state,
@@ -122,6 +128,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                 maxBuildersAfterUser,
                 boundaryStateChangeListener,
                 kvStateChangeListener,
+                queueStateChangeListener,
                 streamMode);
     }
 
@@ -153,6 +160,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
      * @param maxBuildersAfterUser     the maximum number of following builders to create
      * @param boundaryStateChangeListener the listener for the round state changes
      * @param kvStateChangeListener    the listener for the key-value state changes
+     * @param queueStateChangeListener    the listener for the queue state changes
      * @param streamMode               the stream mode
      */
     private SavepointStackImpl(
@@ -161,9 +169,11 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             final int maxBuildersAfterUser,
             @NonNull final BoundaryStateChangeListener boundaryStateChangeListener,
             @NonNull final KVStateChangeListener kvStateChangeListener,
+            @NonNull final QueueStateChangeListener queueStateChangeListener,
             @NonNull final StreamMode streamMode) {
         this.state = requireNonNull(state);
         this.kvStateChangeListener = requireNonNull(kvStateChangeListener);
+        this.queueStateChangeListener = requireNonNull(queueStateChangeListener);
         this.boundaryStateChangeListener = requireNonNull(boundaryStateChangeListener);
         builderSink = new BuilderSinkImpl(maxBuildersBeforeUser, maxBuildersAfterUser + 1);
         presetIdsAllowed = true;
@@ -196,6 +206,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
         this.state = requireNonNull(parent);
         this.builderSink = null;
         this.kvStateChangeListener = null;
+        this.queueStateChangeListener = null;
         this.boundaryStateChangeListener = null;
         setupFirstSavepoint(category);
         baseBuilder = peek().createBuilder(reversingBehavior, category, customizer, streamMode, true);
@@ -256,8 +267,13 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
      */
     public void commitTransaction(@NonNull final StreamBuilder builder) {
         requireNonNull(builder);
-        if (streamMode != RECORDS && kvStateChangeListener != null) {
-            kvStateChangeListener.reset();
+        if (streamMode != RECORDS) {
+            if (kvStateChangeListener != null) {
+                kvStateChangeListener.reset();
+            }
+            if (queueStateChangeListener != null) {
+                queueStateChangeListener.reset();
+            }
         }
         while (!stack.isEmpty()) {
             final var savepoint = stack.pop();
@@ -267,8 +283,13 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             }
             savepoint.commit();
         }
-        if (streamMode != RECORDS && kvStateChangeListener != null) {
-            builder.stateChanges(kvStateChangeListener.getStateChanges());
+        if (streamMode != RECORDS) {
+            if (kvStateChangeListener != null) {
+                builder.stateChanges(kvStateChangeListener.getStateChanges());
+            }
+            if (queueStateChangeListener != null) {
+                builder.stateChanges(queueStateChangeListener.getStateChanges());
+            }
         }
         setupFirstSavepoint(baseBuilder.category());
     }
