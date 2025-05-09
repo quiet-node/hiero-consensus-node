@@ -108,4 +108,9 @@ public class WrappedState implements State, Hashable {
     public void setHash(Hash hash) {
         delegate.setHash(hash);
     }
+
+    @Override
+    public boolean isStartUpMode() {
+        return delegate.isStartUpMode();
+    }
 }
