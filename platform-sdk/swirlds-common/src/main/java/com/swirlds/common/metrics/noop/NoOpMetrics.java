@@ -168,7 +168,6 @@ public class NoOpMetrics implements PlatformMetrics {
     @Override
     public boolean shutdown() {
         metrics.clear();
-        resetAll();
 
         return true;
     }

@@ -195,7 +195,9 @@ public class TestingAppStateInitializer {
                                     new MerkleDbTableConfig((short) 1, DigestType.SHA_384, def.maxKeysHint(), 16);
                             final var label = StateMetadata.computeLabel(RosterStateId.NAME, def.stateKey());
                             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
-                            return new VirtualMap<>(label, keySerializer, valueSerializer, dsBuilder, configuration);
+                            final var virtualMap =
+                                    new VirtualMap<>(label, keySerializer, valueSerializer, dsBuilder, configuration);
+                            return virtualMap;
                         });
                     } else {
                         throw new IllegalStateException(
