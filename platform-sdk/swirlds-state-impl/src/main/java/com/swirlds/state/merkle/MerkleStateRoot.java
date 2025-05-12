@@ -70,9 +70,11 @@ import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -163,7 +165,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     /**
      * Listeners to be notified of state changes on {@link MerkleWritableStates#commit()} calls for any service.
      */
-    private final Set<StateChangeListener> listeners = new HashSet<>();
+    private final List<StateChangeListener> listeners = new ArrayList<>();
 
     /**
      * Used to track the lifespan of this state.

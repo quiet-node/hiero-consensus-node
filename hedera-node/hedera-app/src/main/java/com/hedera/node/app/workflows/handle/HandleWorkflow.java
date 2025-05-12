@@ -465,6 +465,15 @@ public class HandleWorkflow {
             blockRecordManager.endUserTransaction(records.stream(), state);
         }
         if (streamMode != RECORDS) {
+            final var queueChanges = queueStateChangeListener.getStateChanges();
+            if (!queueChanges.isEmpty()) {
+                final var stateChangesItem = BlockItem.newBuilder()
+                        .stateChanges(new StateChanges(asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()), new ArrayList<>(queueChanges)))
+                        .build();
+                blockStreamManager.writeItem(stateChangesItem);
+                queueStateChangeListener.reset();
+            }
+
             handleOutput.blockRecordSourceOrThrow().forEachItem(blockStreamManager::writeItem);
         }
 
@@ -560,7 +569,18 @@ public class HandleWorkflow {
                         blockRecordManager.startUserTransaction(nextTime, state);
                     }
                     final var handleOutput = executeScheduled(state, nextTime, creatorInfo, executableTxn);
+
+                    final var queueChanges = queueStateChangeListener.getStateChanges();
+                    if (!queueChanges.isEmpty()) {
+                        final var stateChangesItem = BlockItem.newBuilder()
+                                .stateChanges(new StateChanges(asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()), new ArrayList<>(queueChanges)))
+                                .build();
+                        blockStreamManager.writeItem(stateChangesItem);
+                        queueStateChangeListener.reset();
+                    }
+
                     handleOutput.blockRecordSourceOrThrow().forEachItem(blockStreamManager::writeItem);
+
                     if (streamMode == BOTH) {
                         final var records =
                                 ((LegacyListRecordSource) handleOutput.recordSourceOrThrow()).precomputedRecords();
@@ -802,6 +822,7 @@ public class HandleWorkflow {
             @NonNull final Runnable action) {
         if (streamMode != RECORDS) {
             kvStateChangeListener.reset();
+
         }
         action.run();
         ((CommittableWritableStates) writableStates).commit();
@@ -823,6 +844,7 @@ public class HandleWorkflow {
                         .stateChanges(new StateChanges(asTimestamp(now), new ArrayList<>(queueChanges)))
                         .build();
                 blockStreamManager.writeItem(stateChangesItem);
+                queueStateChangeListener.reset();
             }
         }
     }

@@ -23,8 +23,8 @@ import java.util.List;
  */
 public class MigrationStateChanges {
     private final List<List<StateChange>> stateChanges = new ArrayList<>();
-    private final QueueStateChangeListener queueStateChangeListener = new QueueStateChangeListener();
     private final KVStateChangeListener kvStateChangeListener = new KVStateChangeListener();
+    private final QueueStateChangeListener queueStateChangeListener = new QueueStateChangeListener();
     private final BoundaryStateChangeListener roundStateChangeListener;
     private final State state;
 
@@ -80,6 +80,7 @@ public class MigrationStateChanges {
             stateChanges.add(roundChanges);
         }
         state.unregisterCommitListener(kvStateChangeListener);
+        state.unregisterCommitListener(queueStateChangeListener);
         state.unregisterCommitListener(roundStateChangeListener);
 
         return stateChanges.stream()
