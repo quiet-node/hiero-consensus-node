@@ -40,6 +40,7 @@ import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
 import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
+import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
@@ -304,8 +305,14 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             final int childrenCount = savedTurtleAppState.getNumberOfChildren();
             for (int i = 0; i < childrenCount; i++) {
                 final MerkleNode child = savedTurtleAppState.getChild(i);
+                // Terminate the pipeline of the virtual root node, so that resources are released.
                 if (child instanceof VirtualMap<?, ?> virtualMapChild) {
-                    virtualMapChild.destroyVirtualRoot();
+                    final var virtualMapNestedChildrenCount = virtualMapChild.getNumberOfChildren();
+                    for (int j = 0; j < virtualMapNestedChildrenCount; j++) {
+                        if (virtualMapChild.getChild(j) instanceof VirtualRootNode<?, ?> virtualRootNode) {
+                            virtualRootNode.getPipeline().terminate();
+                        }
+                    }
                 }
             }
         }

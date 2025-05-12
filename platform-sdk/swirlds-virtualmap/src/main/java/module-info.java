@@ -18,7 +18,8 @@ open module com.swirlds.virtualmap {
             com.swirlds.virtualmap.test.fixtures;
     exports com.swirlds.virtualmap.internal.pipeline to
             com.swirlds.merkle,
-            com.swirlds.merkledb;
+            com.swirlds.merkledb,
+            org.hiero.otter.fixtures;
     exports com.swirlds.virtualmap.internal.cache to
             com.swirlds.merkledb,
             com.swirlds.virtualmap.test.fixtures,
