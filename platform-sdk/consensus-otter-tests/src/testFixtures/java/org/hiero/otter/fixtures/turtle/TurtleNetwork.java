@@ -83,7 +83,7 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
     @Override
     @NonNull
     public List<Node> addNodes(final int count) {
-        if (state != State.INIT && state != State.SHUTDOWN) {
+        if (state != State.INIT) {
             throw new IllegalStateException(
                     "Cannot add nodes after the network has been started or it hasn't been shut down.");
         }
@@ -123,7 +123,7 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
      */
     @Override
     public void start(@NonNull final Duration timeout) {
-        if (state != State.SHUTDOWN && state != State.INIT) {
+        if (state != State.INIT) {
             throw new IllegalStateException(
                     "Cannot start the network more than once or if it was not previously shut down.");
         }
@@ -237,7 +237,6 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         for (final TurtleNode node : nodes) {
             node.destroy();
         }
-        nodes.clear();
         executorService.shutdownNow();
 
         state = State.SHUTDOWN;
