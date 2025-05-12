@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class BlockState {
     private final long blockNumber;
     private final List<BlockItem> items;
-    private final List<PublishStreamRequest> requests;
+    private final List<PublishStreamRequest> requests = new ArrayList<>();
     private final AtomicBoolean isComplete = new AtomicBoolean(false);
     private Instant completionTimestamp = null;
 
@@ -27,7 +27,6 @@ public class BlockState {
     public BlockState(final long blockNumber, @NonNull final List<BlockItem> items) {
         this.blockNumber = blockNumber;
         this.items = items;
-        this.requests = new ArrayList<>();
     }
 
     /**
