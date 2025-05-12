@@ -85,6 +85,8 @@ public class BlockStreamStateManager {
 
     private final BlockStreamMetrics blockStreamMetrics;
 
+    private BlockNodeConnection activeConnection;
+
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
      *
@@ -258,16 +260,11 @@ public class BlockStreamStateManager {
         final PublishStreamRequest request =
                 PublishStreamRequest.newBuilder().blockItems(itemSet).build();
 
-        blockState.requests().add(request);
         logger.debug(
                 "Added request to block {} - request count now: {}",
                 blockState.blockNumber(),
                 blockState.requests().size());
-
-        // Notify the connection manager only if we're streaming to block nodes
-        if (streamToBlockNodesEnabled()) {
-            blockNodeConnectionManager.notifyConnectionsOfNewRequest();
-        }
+        blockState.requests().add(request);
 
         if ((!blockState.items().isEmpty() && force) || blockState.items().size() >= batchSize) {
             // another request can be created
@@ -287,8 +284,8 @@ public class BlockStreamStateManager {
         }
 
         // Mark the block as complete
-        blockState.setComplete();
         createRequestFromCurrentItems(blockState, true);
+        blockState.setComplete();
 
         logger.debug(
                 "Closed block in BlockStreamStateManager {} - request count: {}",
@@ -579,5 +576,13 @@ public class BlockStreamStateManager {
                 scheduleNextPruning();
             }
         }
+    }
+
+    public BlockNodeConnection getActiveConnection() {
+        return activeConnection;
+    }
+
+    public void setActiveConnection(BlockNodeConnection activeConnection) {
+        this.activeConnection = activeConnection;
     }
 }

@@ -39,6 +39,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final GrpcServiceClient grpcServiceClient;
     private final BlockNodeConnectionManager blockNodeConnectionManager;
     private final BlockStreamStateManager blockStreamStateManager;
+    private final BlockStreamProcessor blockStreamProcessor;
     private BlockStreamMetrics blockStreamMetrics = null;
     private final String connectionDescriptor;
 
@@ -53,6 +54,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     // Atomic state variables
     private final AtomicBoolean streamCompletionInProgress = new AtomicBoolean(false);
+<<<<<<< HEAD
     private final AtomicLong currentBlockNumber = new AtomicLong(-1);
     private final AtomicInteger currentRequestIndex = new AtomicInteger(0);
     private final AtomicLong jumpTargetBlock = new AtomicLong(-1);
@@ -60,6 +62,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     // Notification objects
     private final Object newBlockAvailable = new Object();
     private final Object newRequestAvailable = new Object();
+=======
+    private final AtomicInteger endOfStreamImmediateRestarts = new AtomicInteger(0);
+    private final AtomicInteger endOfStreamExpBackoffs = new AtomicInteger(0);
+>>>>>>> bf9428e8f5 (Block Stream processor busy-loop for streaming wip)
 
     // Volatile connection state
     private volatile StreamObserver<PublishStreamRequest> requestObserver;
@@ -86,6 +92,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     protected BlockNodeConnection() {
         // Default constructor for NoOpConnection
+        this.blockStreamProcessor = null;
         this.blockNodeConfig = null;
         this.grpcServiceClient = null;
         this.blockNodeConnectionManager = null;
@@ -111,6 +118,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockStreamStateManager blockStreamStateManager,
+            @NonNull final BlockStreamProcessor blockStreamProcessor,
             @NonNull final GrpcServiceClient grpcServiceClient,
             @NonNull final BlockStreamMetrics blockStreamMetrics) {
         requireNonNull(configProvider, "configProvider must not be null");
@@ -119,6 +127,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
+        this.blockStreamProcessor = requireNonNull(blockStreamProcessor, "blockStreamProcessor must not be null");
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
         this.connectionDescriptor = generateConnectionDescriptor(nodeConfig);
@@ -151,6 +160,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         return connectionState;
     }
 
+<<<<<<< HEAD
     public void startRequestWorker() {
         synchronized (workerLock) {
             if (requestWorker != null && requestWorker.isAlive()) {
@@ -319,11 +329,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
+=======
+>>>>>>> bf9428e8f5 (Block Stream processor busy-loop for streaming wip)
     private void handleStreamFailure() {
         close();
         blockNodeConnectionManager.handleConnectionError(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
     }
 
+<<<<<<< HEAD
     private void moveToNextBlock() {
         logger.trace(
                 "[{}] Completed sending all requests for block {} to node {}",
@@ -332,6 +345,20 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 connectionDescriptor);
         currentBlockNumber.incrementAndGet();
         currentRequestIndex.set(0);
+=======
+    private void handleEndOfStreamError() {
+        scheduler.schedule(
+                () -> {
+                    logger.debug(
+                            "[{}] Attempting retry after internal error for node {} at block {}",
+                            Thread.currentThread().getName(),
+                            connectionDescriptor,
+                            blockStreamProcessor.getBlockNumber());
+                    blockNodeConnectionManager.handleConnectionError(this);
+                },
+                5,
+                TimeUnit.SECONDS);
+>>>>>>> bf9428e8f5 (Block Stream processor busy-loop for streaming wip)
     }
 
     private void handleAcknowledgement(@NonNull final Acknowledgement acknowledgement) {
@@ -339,8 +366,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             final var blockAck = acknowledgement.blockAck();
             final var acknowledgedBlockNumber = blockAck.blockNumber();
             final var blockAlreadyExists = blockAck.blockAlreadyExists();
-            synchronized (currentBlockNumber) {
-                final var currentBlockStreaming = getCurrentBlockNumber();
+            synchronized (blockStreamProcessor.getBlockNumber()) {
+                final long currentBlockStreaming = blockStreamProcessor.getBlockNumber().get();
                 final var currentBlockProducing = blockStreamStateManager.getBlockNumber();
 
                 // Update the last verified block by the current connection
@@ -505,9 +532,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void handleSkipBlock(@NonNull final SkipBlock skipBlock) {
         final var skipBlockNumber = skipBlock.blockNumber();
+        final long streamingBlockNumber = blockStreamProcessor.getBlockNumber().get();
 
         // Only jump if the skip is for the block we are currently processing
-        if (skipBlockNumber == getCurrentBlockNumber()) {
+        if (skipBlockNumber == streamingBlockNumber) {
             final var nextBlock = skipBlockNumber + 1L;
             logger.debug("Skipping ahead to Block {} because of SkipBlock from {}", nextBlock, connectionDescriptor);
             jumpToBlock(nextBlock); // Now uses signaling instead of thread interruption
@@ -515,7 +543,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             logger.warn(
                     "Received SkipBlock for {} but currently processing block {}, ignoring. {}",
                     skipBlockNumber,
-                    getCurrentBlockNumber(),
+                    streamingBlockNumber,
                     connectionDescriptor);
         }
     }
@@ -582,7 +610,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 connectionDescriptor,
                 connectionState);
         closeObserver();
-        setCurrentBlockNumber(-1);
+        blockStreamProcessor.getJumpTargetBlock().set(-1L);
 
         logger.debug(
                 "[{}] Closed connection to block node {}",
@@ -626,64 +654,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * Gets the current block number being processed.
-     *
-     * @return the current block number
-     */
-    public long getCurrentBlockNumber() {
-        return currentBlockNumber.get();
-    }
-
-    /**
-     * Gets the current request index being processed.
-     *
-     * @return the current request index
-     */
-    public int getCurrentRequestIndex() {
-        return currentRequestIndex.get();
-    }
-
-    public void notifyNewRequestAvailable() {
-        final var currentBlock = getCurrentBlockNumber();
-        if (currentBlock > blockStreamStateManager.getBlockNumber()) {
-            return;
-        }
-        synchronized (newRequestAvailable) {
-            final BlockState blockState = blockStreamStateManager.getBlockState(currentBlock);
-            if (blockState != null) {
-                logger.trace(
-                        "Notifying of new request available for node {} - block: {}, requests: {}, isComplete: {}",
-                        connectionDescriptor,
-                        currentBlock,
-                        blockState.requests().size(),
-                        blockState.isComplete());
-            } else {
-                logger.trace(
-                        "Notifying of new request available for node {} - block: {} (state not found)",
-                        connectionDescriptor,
-                        currentBlock);
-            }
-            newRequestAvailable.notify();
-        }
-    }
-
-    public void notifyNewBlockAvailable() {
-        synchronized (newBlockAvailable) {
-            newBlockAvailable.notify();
-        }
-    }
-
-    public void setCurrentBlockNumber(final long blockNumber) {
-        currentBlockNumber.set(blockNumber);
-        currentRequestIndex.set(0); // Reset the request index when setting a new block
-        logger.debug(
-                "[{}] Set current block number to {} for node {}, reset request index to 0",
-                Thread.currentThread().getName(),
-                blockNumber,
-                connectionDescriptor);
-    }
-
-    /**
      * Restarts a new stream at a specific block number.
      * This method will establish a new stream and start processing from the specified block number.
      *
@@ -692,7 +662,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void restartStreamAtBlock(final long blockNumber) {
         logger.debug("Restarting stream at block {} for node {}", blockNumber, connectionDescriptor);
 
-        setCurrentBlockNumber(blockNumber);
+        blockStreamProcessor.getJumpTargetBlock().set(blockNumber);
         blockNodeConnectionManager.scheduleRetry(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
 
         logger.debug("Stream restarted at block {} for node {}", blockNumber, connectionDescriptor);
@@ -713,16 +683,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockNumber,
                 connectionDescriptor);
         // Set the target block for the worker loop to pick up
-        jumpTargetBlock.set(blockNumber);
 
-        // Ensure the worker thread wakes up if it's waiting for a new block
-        // It might be waiting on newBlockAvailable or newRequestAvailable
-        synchronized (newBlockAvailable) {
-            newBlockAvailable.notifyAll(); // Notify potentially waiting worker
-        }
-        synchronized (newRequestAvailable) {
-            newRequestAvailable.notifyAll(); // Notify potentially waiting worker
-        }
     }
 
     /**

@@ -4,6 +4,7 @@ package com.hedera.node.app.blocks;
 import com.hedera.node.app.blocks.impl.BlockStreamManagerImpl;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager;
+import com.hedera.node.app.blocks.impl.streaming.BlockStreamProcessor;
 import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager;
 import com.hedera.node.app.blocks.impl.streaming.FileAndGrpcBlockItemWriter;
 import com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter;
@@ -34,10 +35,18 @@ public interface BlockStreamModule {
 
     @Provides
     @Singleton
+    static BlockStreamProcessor provideBlockStreamProcessor(@NonNull final ConfigProvider configProvider,
+            @NonNull final BlockStreamStateManager blockStreamStateManager) {
+        return new BlockStreamProcessor(configProvider, blockStreamStateManager);
+    }
+
+    @Provides
+    @Singleton
     static BlockNodeConnectionManager provideBlockNodeConnectionManager(
             @NonNull final ConfigProvider configProvider,
             @NonNull final BlockStreamStateManager blockStreamStateManager,
-            @NonNull final BlockStreamMetrics blockStreamMetrics) {
+            @NonNull final BlockStreamMetrics blockStreamMetrics,
+            @NonNull final BlockStreamProcessor blockStreamProcessor) {
         final BlockNodeConnectionManager manager =
                 new BlockNodeConnectionManager(configProvider, blockStreamStateManager, blockStreamMetrics);
         blockStreamStateManager.setBlockNodeConnectionManager(manager);

@@ -72,6 +72,10 @@ class BlockNodeConnectionManagerTest {
     @Mock
     private static ConfigProvider configProvider;
 
+    @Mock
+    private BlockStreamProcessor blockStreamProcessor;
+
+    private static BlockNodeConfigExtractor mockBlockNodeConfigExtractor;
     private static BlockNodeConnectionManager mockBlockNodeConnectionManager;
 
     private static final List<Server> testServers = new ArrayList<>();
@@ -105,6 +109,7 @@ class BlockNodeConnectionManagerTest {
     @BeforeEach
     void setUp() {
         blockNodeConnectionManager =
+                new BlockNodeConnectionManager(mockBlockNodeConfigExtractor, mockStateManager, blockStreamMetrics, blockStreamProcessor);
                 new BlockNodeConnectionManager(createConfigProvider(), mockStateManager, blockStreamMetrics);
     }
 

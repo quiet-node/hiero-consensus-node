@@ -61,6 +61,7 @@ public class BlockNodeConnectionManager {
     private final Map<BlockNodeConfig, Long> lastVerifiedBlockPerConnection;
 
     private final BlockStreamStateManager blockStreamStateManager;
+    private final BlockStreamProcessor blockStreamProcessor;
     private final ScheduledExecutorService connectionExecutor = Executors.newScheduledThreadPool(4);
     private final BlockStreamMetrics blockStreamMetrics;
     private final ConfigProvider configProvider;
@@ -76,6 +77,8 @@ public class BlockNodeConnectionManager {
             @NonNull final BlockStreamStateManager blockStreamStateManager,
             @NonNull final BlockStreamMetrics blockStreamMetrics) {
         this.configProvider = requireNonNull(configProvider, "configProvider must not be null");
+            @NonNull final BlockStreamMetrics blockStreamMetrics,
+            @NonNull final BlockStreamProcessor blockStreamProcessor) {
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
 
@@ -116,6 +119,8 @@ public class BlockNodeConnectionManager {
             logger.error("Failed to read block node configuration from {}", configPath, e);
             throw new RuntimeException("Failed to read block node configuration from " + configPath, e);
         }
+        this.blockStreamMetrics = blockStreamMetrics;
+        this.blockStreamProcessor = blockStreamProcessor;
     }
 
     /**
@@ -289,21 +294,9 @@ public class BlockNodeConnectionManager {
         }
 
         if (connection.isActive()) {
-            if (connection.getCurrentBlockNumber() == -1) {
-                connection.setCurrentBlockNumber(blockNumber);
+            if (blockStreamProcessor.getBlockNumber().get() == -1) {
+                blockStreamProcessor.getJumpTargetBlock().set(blockNumber);
             }
-            connection.notifyNewBlockAvailable();
-        }
-    }
-
-    public void notifyConnectionsOfNewRequest() {
-        final BlockNodeConnection connection = getActiveConnection();
-        if (connection == null) {
-            return;
-        }
-
-        if (connection.isActive()) {
-            connection.notifyNewRequestAvailable();
         }
     }
 
@@ -490,7 +483,6 @@ public class BlockNodeConnectionManager {
             if (highestPri != null) {
                 // Found a higher priority pending connection,
                 highestPri.updateConnectionState(ConnectionState.ACTIVE);
-                highestPri.startRequestWorker();
                 // Log the transition of this higher priority connection to active
                 logger.debug(
                         "[{}] Transitioning higher priority pending connection: {} Priority: {} to ACTIVE",
@@ -559,26 +551,6 @@ public class BlockNodeConnectionManager {
 
         @Override
         public void updateConnectionState(ConnectionState newState) {
-            /* No-op */
-        }
-
-        @Override
-        public void setCurrentBlockNumber(long blockNumber) {
-            /* No-op */
-        }
-
-        @Override
-        public long getCurrentBlockNumber() {
-            return -1L;
-        }
-
-        @Override
-        public void notifyNewBlockAvailable() {
-            /* No-op */
-        }
-
-        @Override
-        public void notifyNewRequestAvailable() {
             /* No-op */
         }
 
@@ -728,7 +700,7 @@ public class BlockNodeConnectionManager {
             if (connections.values().stream()
                     .noneMatch(connection -> connection.getState().equals(ConnectionState.ACTIVE))) {
                 connection.updateConnectionState(ConnectionState.ACTIVE);
-                connection.startRequestWorker();
+                blockStreamStateManager.setActiveConnection(connection);
                 logger.debug(
                         "[{}] Connection task for block node {} ConnectionState: {}",
                         Thread.currentThread().getName(),
