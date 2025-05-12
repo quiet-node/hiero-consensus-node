@@ -320,12 +320,12 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                     hedera.initializeStatesApi(genesisState, GENESIS, platformConfig);
                     return genesisState;
                 },
-                hedera.stateRootFromVirtualMap(),
                 Hedera.APP_NAME,
                 Hedera.SWIRLD_NAME,
                 selfId,
                 platformStateFacade,
-                platformContext);
+                platformContext,
+                hedera.stateRootFromVirtualMap());
         final ReservedSignedState initialState = reservedState.state();
         final MerkleNodeState state = initialState.get().getState();
         if (genesisNetwork.get() == null) {

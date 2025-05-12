@@ -468,7 +468,9 @@ public class HandleWorkflow {
             final var queueChanges = queueStateChangeListener.getStateChanges();
             if (!queueChanges.isEmpty()) {
                 final var stateChangesItem = BlockItem.newBuilder()
-                        .stateChanges(new StateChanges(asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()), new ArrayList<>(queueChanges)))
+                        .stateChanges(new StateChanges(
+                                asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()),
+                                new ArrayList<>(queueChanges)))
                         .build();
                 blockStreamManager.writeItem(stateChangesItem);
                 queueStateChangeListener.reset();
@@ -573,7 +575,9 @@ public class HandleWorkflow {
                     final var queueChanges = queueStateChangeListener.getStateChanges();
                     if (!queueChanges.isEmpty()) {
                         final var stateChangesItem = BlockItem.newBuilder()
-                                .stateChanges(new StateChanges(asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()), new ArrayList<>(queueChanges)))
+                                .stateChanges(new StateChanges(
+                                        asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()),
+                                        new ArrayList<>(queueChanges)))
                                 .build();
                         blockStreamManager.writeItem(stateChangesItem);
                         queueStateChangeListener.reset();
@@ -822,7 +826,6 @@ public class HandleWorkflow {
             @NonNull final Runnable action) {
         if (streamMode != RECORDS) {
             kvStateChangeListener.reset();
-
         }
         action.run();
         ((CommittableWritableStates) writableStates).commit();

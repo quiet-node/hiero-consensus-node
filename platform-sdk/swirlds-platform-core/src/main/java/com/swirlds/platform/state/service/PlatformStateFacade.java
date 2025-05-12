@@ -296,7 +296,7 @@ public class PlatformStateFacade {
         final MerkleNodeState merkleNodeState = (MerkleNodeState) state;
 
         final VirtualMap vm = (VirtualMap) merkleNodeState.getRoot();
-        final RecordAccessor recordAccessor = vm.getRoot().getRecords();
+        final RecordAccessor recordAccessor = vm.getRecords();
 
         final StringBuilder sb = new StringBuilder();
         InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {

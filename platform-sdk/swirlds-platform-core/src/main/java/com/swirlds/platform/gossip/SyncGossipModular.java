@@ -34,7 +34,6 @@ import com.swirlds.platform.reconnect.ReconnectPlatformHelper;
 import com.swirlds.platform.reconnect.ReconnectPlatformHelperImpl;
 import com.swirlds.platform.reconnect.ReconnectSyncHelper;
 import com.swirlds.platform.reconnect.ReconnectThrottle;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.service.PlatformStateFacade;

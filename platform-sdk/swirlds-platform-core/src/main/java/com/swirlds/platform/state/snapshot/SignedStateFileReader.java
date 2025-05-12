@@ -32,8 +32,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
-import org.hiero.consensus.roster.RosterStateId;
 import java.util.function.Function;
+import org.hiero.consensus.roster.RosterStateId;
 
 /**
  * Utility methods for reading a signed state from disk.

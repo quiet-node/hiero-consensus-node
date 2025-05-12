@@ -422,9 +422,17 @@ public final class StartupStateUtils {
             @NonNull final String swirldName,
             @NonNull final NodeId selfId,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final PlatformContext platformContext) {
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
         final var loadedState = loadStateFile(
-                recycleBin, selfId, mainClassName, swirldName, softwareVersion, platformStateFacade, platformContext);
+                recycleBin,
+                selfId,
+                mainClassName,
+                swirldName,
+                stateRootFunction,
+                softwareVersion,
+                platformStateFacade,
+                platformContext);
         try (loadedState) {
             if (loadedState.isNotNull()) {
                 logger.info(
