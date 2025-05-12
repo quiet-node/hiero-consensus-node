@@ -152,7 +152,7 @@ public class TurtleNode {
         final HashedReservedSignedState reservedState = getInitialState(
                 recycleBin,
                 version,
-                () -> TurtleTestingToolState.getStateRootNode(virtualMapsCollector),
+                () -> TurtleTestingToolState.getStateRootNode(),
                 "foo",
                 "bar",
                 nodeId,

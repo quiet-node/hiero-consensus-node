@@ -18,6 +18,7 @@ import com.swirlds.common.io.config.FileSystemManagerConfig_;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
+import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.component.framework.model.DeterministicWiringModel;
@@ -45,8 +46,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
@@ -101,7 +100,9 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
-    private final List<VirtualMap<?, ?>> virtualMapsCollector = new ArrayList<>();
+    private TurtleAppState savedTurtleAppState;
+    private SemanticVersion version;
+    private Configuration currentConfiguration;
 
     public TurtleNode(
             @NonNull final Randotron randotron,
@@ -300,15 +301,20 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             platformWiring = null;
             model = null;
 
-            virtualMapsCollector.forEach(VirtualMap::destroyVirtualRoot);
-            virtualMapsCollector.clear();
+            final int childrenCount = savedTurtleAppState.getNumberOfChildren();
+            for (int i = 0; i < childrenCount; i++) {
+                final MerkleNode child = savedTurtleAppState.getChild(i);
+                if (child instanceof VirtualMap<?, ?> virtualMapChild) {
+                    virtualMapChild.destroyVirtualRoot();
+                }
+            }
         }
         lifeCycle = LifeCycle.SHUTDOWN;
     }
 
     private void doStartNode() {
 
-        final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
+        currentConfiguration = nodeConfiguration.createConfiguration();
 
         setupGlobalMetrics(currentConfiguration);
 
@@ -320,8 +326,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         model = WiringModelBuilder.create(platformContext.getMetrics(), time)
                 .withDeterministicModeEnabled(true)
                 .build();
-        final SemanticVersion version =
-                currentConfiguration.getValue(TurtleNodeConfiguration.SOFTWARE_VERSION, SemanticVersion.class);
+        version = currentConfiguration.getValue(TurtleNodeConfiguration.SOFTWARE_VERSION, SemanticVersion.class);
         assert version != null; // avoids a warning, not really needed as there is always a default
 
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
@@ -334,7 +339,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
-                () -> TurtleAppState.createGenesisState(currentConfiguration, roster, version, virtualMapsCollector),
+                this::createGenesisState,
                 APP_NAME,
                 SWIRLD_NAME,
                 selfId,
@@ -386,5 +391,17 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         platform.start();
 
         lifeCycle = LifeCycle.STARTED;
+    }
+
+    /***
+     * Create genesis state for the turtle app and save it, so that when the
+     * turtle node shuts down it frees resources from the state
+     *
+     * @return the created app state
+     */
+    private TurtleAppState createGenesisState() {
+        final TurtleAppState turtleAppState = TurtleAppState.createGenesisState(currentConfiguration, roster, version);
+        this.savedTurtleAppState = turtleAppState;
+        return turtleAppState;
     }
 }

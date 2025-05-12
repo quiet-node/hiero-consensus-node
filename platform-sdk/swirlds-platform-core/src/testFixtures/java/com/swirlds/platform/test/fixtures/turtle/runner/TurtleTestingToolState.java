@@ -4,9 +4,7 @@ package com.swirlds.platform.test.fixtures.turtle.runner;
 import com.swirlds.platform.state.*;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.merkle.MerkleStateRoot;
-import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.List;
 
 /**
  * A simple testing application intended for use with TURTLE.
@@ -76,14 +74,13 @@ public class TurtleTestingToolState extends MerkleStateRoot<TurtleTestingToolSta
     /**
      * Creates a merkle node to act as a state tree root.
      *
-     * @param virtualMapsCollector list that collects virtual maps that are created during initialization
      * @return merkle tree root
      */
     @NonNull
-    public static MerkleNodeState getStateRootNode(final @NonNull List<VirtualMap<?, ?>> virtualMapsCollector) {
+    public static MerkleNodeState getStateRootNode() {
         final MerkleNodeState state = new TurtleTestingToolState();
         TestingAppStateInitializer.DEFAULT.initPlatformState(state);
-        TestingAppStateInitializer.DEFAULT.initRosterState(state, virtualMapsCollector);
+        TestingAppStateInitializer.DEFAULT.initRosterState(state);
 
         return state;
     }
