@@ -320,7 +320,8 @@ class BlockNodeConnectionTest {
         connection.startRequestWorker();
 
         // Verify failure outcome: state becomes UNINITIALIZED, manager notified
-        verify(blockNodeConnectionManager, timeout(VERIFY_TIMEOUT.toMillis())).handleConnectionError(connection);
+        verify(blockNodeConnectionManager, timeout(VERIFY_TIMEOUT.toMillis()))
+                .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getState());
         assertThat(logCaptor.debugLogs())
                 .anyMatch(log -> log.contains(
@@ -494,7 +495,8 @@ class BlockNodeConnectionTest {
         connection.startRequestWorker();
 
         // Verify failure outcome
-        verify(blockNodeConnectionManager, timeout(VERIFY_TIMEOUT.toMillis())).handleConnectionError(connection);
+        verify(blockNodeConnectionManager, timeout(VERIFY_TIMEOUT.toMillis()))
+                .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getState());
         assertThat(logCaptor.errorLogs())
                 .anyMatch(log -> log.contains("Error in request worker thread for node " + CONNECTION_DESCRIPTOR));
@@ -1096,7 +1098,8 @@ class BlockNodeConnectionTest {
                                     && log.contains("at block -1"));
 
             // Verify connection error handling is triggered
-            verify(blockNodeConnectionManager).handleConnectionError(connection);
+            verify(blockNodeConnectionManager)
+                    .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         } else {
             // Verify handleEndOfStreamError is not triggered
             verify(scheduler, never()).schedule((Runnable) any(), anyLong(), any());
@@ -1108,7 +1111,8 @@ class BlockNodeConnectionTest {
                                     && log.contains("at block -1"));
 
             // Verify connection error handling is NOT triggered
-            verify(blockNodeConnectionManager, never()).handleConnectionError(connection);
+            verify(blockNodeConnectionManager, never())
+                    .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         }
     }
 
@@ -1154,7 +1158,8 @@ class BlockNodeConnectionTest {
                                     && log.contains("at block -1"));
 
             // Verify connection error handling is triggered
-            verify(blockNodeConnectionManager).handleConnectionError(connection);
+            verify(blockNodeConnectionManager)
+                    .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         }
     }
 
@@ -1202,11 +1207,39 @@ class BlockNodeConnectionTest {
                             + " is behind and block state is not available." + " Closing connection and retrying"));
 
             if (expectHandleEndOfStreamError) {
-                verify(blockNodeConnectionManager).handleConnectionError(connection);
+                verify(blockNodeConnectionManager)
+                        .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
             } else {
-                verify(blockNodeConnectionManager, never()).handleConnectionError(connection);
+                verify(blockNodeConnectionManager, never())
+                        .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
             }
         }
+    }
+
+    @Test
+    @DisplayName("onNext handles EndOfStream with STREAM_ITEMS_SUCCESS response code")
+    void onNextEndOfStreamStreamItemsSuccess() {
+        connection.setCurrentBlockNumber(BLOCK_NUMBER);
+        PublishStreamResponse response = createEndOfStreamResponse(STREAM_ITEMS_SUCCESS, BLOCK_NUMBER);
+
+        connection.onNext(response);
+
+        // Verify connection is closed
+        verify(connection).close();
+
+        // Verify connection state
+        assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getState());
+
+        // Verify connection error handling is triggered
+        verify(blockNodeConnectionManager).handleConnectionError(connection, BlockNodeConnection.LONGER_RETRY_DELAY);
+
+        // Verify there are no other calls
+        verify(connection, never()).jumpToBlock(anyInt());
+
+        // Verify logs
+        assertThat(logCaptor.warnLogs())
+                .anyMatch(log -> log.contains("Block node " + CONNECTION_DESCRIPTOR)
+                        && log.contains("orderly ended the stream at block " + BLOCK_NUMBER));
     }
 
     @Test
@@ -1322,7 +1355,8 @@ class BlockNodeConnectionTest {
 
         // Verify failure outcome
         assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getState());
-        verify(blockNodeConnectionManager).handleConnectionError(connection);
+        verify(blockNodeConnectionManager)
+                .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         verify(blockStreamMetrics).incrementOnErrorCount();
         assertThat(logCaptor.errorLogs())
                 .anyMatch(log -> log.contains("Error on stream from block node " + CONNECTION_DESCRIPTOR));
@@ -1335,15 +1369,14 @@ class BlockNodeConnectionTest {
 
         // Verify failure outcome
         assertEquals(BlockNodeConnection.ConnectionState.UNINITIALIZED, connection.getState());
-        verify(blockNodeConnectionManager).handleConnectionError(connection);
+        verify(blockNodeConnectionManager)
+                .handleConnectionError(connection, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
         assertThat(logCaptor.debugLogs())
                 .anyMatch(log -> log.contains("Stream completed for block node " + CONNECTION_DESCRIPTOR));
     }
 
     static Stream<Arguments> immediateRestartCodes() {
         return Stream.of(
-                Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS, 0, true),
-                Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS, MAX_END_OF_STREAM_RESTARTS_VALUE, false),
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT, 0, true),
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT, MAX_END_OF_STREAM_RESTARTS_VALUE, false),
                 Arguments.of(PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER, 0, true),
@@ -1383,7 +1416,7 @@ class BlockNodeConnectionTest {
                         false,
                         MAX_END_OF_STREAM_EXP_RETRIES_VALUE,
                         false,
-                        false)); // Case with no block state and retry limit hit results in no action
+                        false)); // Case with no block state and retry limit reached results in no action
     }
 
     private void setupWorkerTest() {
