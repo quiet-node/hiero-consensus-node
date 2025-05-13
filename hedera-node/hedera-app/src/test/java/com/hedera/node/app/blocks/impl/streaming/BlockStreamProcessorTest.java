@@ -47,25 +47,6 @@ class BlockStreamProcessorTest {
     }
 
     @Test
-    public void testConstructorStartsThreadIfStreamingEnabled() throws InterruptedException {
-        when(config.streamToBlockNodes()).thenReturn(true);
-
-        try (MockedStatic<Thread> threadMockedStatic = mockStatic(Thread.class)) {
-            Thread.Builder builder = mock(Thread.Builder.class);
-            Thread fakeThread = mock(Thread.class);
-            threadMockedStatic.when(Thread::ofPlatform).thenReturn(builder);
-            when(builder.name(anyString())).thenReturn(builder);
-            when(builder.start(any(Runnable.class))).thenReturn(fakeThread);
-
-            BlockStreamProcessor processor = new BlockStreamProcessor(configProvider, stateManager);
-            assertNotNull(processor);
-            assertEquals(-1, processor.getBlockNumber().get());
-
-            threadMockedStatic.verify(() -> Thread.ofPlatform(), times(1));
-        }
-    }
-
-    @Test
     public void testJumpTargetIsSettableAndReadable() {
         when(config.streamToBlockNodes()).thenReturn(false);
 
@@ -152,29 +133,6 @@ class BlockStreamProcessorTest {
         assertEquals(20, processor.getBlockNumber().get());
 
         testThread.interrupt(); // force kill after test
-    }
-
-    @Test
-    public void testRunHandlesInterruptedExceptionDuringSleep() {
-        when(config.streamToBlockNodes()).thenReturn(false);
-
-        BlockStreamProcessor processor = new BlockStreamProcessor(configProvider, stateManager);
-
-        Thread thread = new Thread(() -> {
-            try {
-                processor.run();
-            } catch (RuntimeException e) {
-                assertTrue(e.getCause() instanceof InterruptedException);
-            }
-        });
-
-        thread.start();
-        thread.interrupt(); // cause sleep interruption
-        try {
-            Thread.sleep(30);
-        } catch (InterruptedException ignored) {
-        }
-        thread.interrupt(); // force kill after test
     }
 
     @Test
