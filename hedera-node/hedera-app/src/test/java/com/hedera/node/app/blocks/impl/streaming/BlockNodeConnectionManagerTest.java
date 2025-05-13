@@ -108,9 +108,8 @@ class BlockNodeConnectionManagerTest {
 
     @BeforeEach
     void setUp() {
-        blockNodeConnectionManager =
-                new BlockNodeConnectionManager(mockBlockNodeConfigExtractor, mockStateManager, blockStreamMetrics, blockStreamProcessor);
-                new BlockNodeConnectionManager(createConfigProvider(), mockStateManager, blockStreamMetrics);
+        blockNodeConnectionManager = new BlockNodeConnectionManager(
+                mockBlockNodeConfigExtractor, mockStateManager, blockStreamMetrics, blockStreamProcessor);
     }
 
     @AfterAll
