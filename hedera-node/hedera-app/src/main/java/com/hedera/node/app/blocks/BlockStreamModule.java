@@ -52,7 +52,8 @@ public interface BlockStreamModule {
 
     @Provides
     @Singleton
-    static BlockStreamProcessor provideBlockStreamProcessor(@NonNull final ConfigProvider configProvider,
+    static BlockStreamProcessor provideBlockStreamProcessor(
+            @NonNull final ConfigProvider configProvider,
             @NonNull final BlockStreamStateManager blockStreamStateManager) {
         return new BlockStreamProcessor(configProvider, blockStreamStateManager);
     }
@@ -64,8 +65,8 @@ public interface BlockStreamModule {
             @NonNull final BlockStreamStateManager blockStreamStateManager,
             @NonNull final BlockStreamMetrics blockStreamMetrics,
             @NonNull final BlockStreamProcessor blockStreamProcessor) {
-        final BlockNodeConnectionManager manager =
-                new BlockNodeConnectionManager(blockNodeConfigExtractor, blockStreamStateManager, blockStreamMetrics, blockStreamProcessor);
+        final BlockNodeConnectionManager manager = new BlockNodeConnectionManager(
+                blockNodeConfigExtractor, blockStreamStateManager, blockStreamMetrics, blockStreamProcessor);
         blockStreamStateManager.setBlockNodeConnectionManager(manager);
         return manager;
     }

@@ -6,9 +6,11 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.block.BlockItemSet;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.ConnectionState;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
+import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,6 +19,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -85,6 +88,7 @@ public class BlockStreamStateManager {
 
     private final BlockStreamMetrics blockStreamMetrics;
 
+    private final Map<BlockNodeConfig, BlockNodeConnection> connections = new ConcurrentHashMap<>();
     private BlockNodeConnection activeConnection;
 
     /**
@@ -570,5 +574,50 @@ public class BlockStreamStateManager {
 
     public void setActiveConnection(BlockNodeConnection activeConnection) {
         this.activeConnection = activeConnection;
+    }
+
+    public Map<BlockNodeConfig, BlockNodeConnection> getConnections() {
+        return connections;
+    }
+
+    public boolean higherPriorityStarted(BlockNodeConnection blockNodeConnection) {
+        synchronized (connections) {
+            // Find a pending connection with the highest priority greater than the current connection
+            BlockNodeConnection highestPri = null;
+            for (BlockNodeConnection connection : connections.values()) {
+                if (connection.getConnectionState().equals(ConnectionState.PENDING)
+                        && connection.getNodeConfig().priority()
+                                < blockNodeConnection.getNodeConfig().priority()) {
+                    if (highestPri == null
+                            || connection.getNodeConfig().priority()
+                                    < highestPri.getNodeConfig().priority()) {
+                        // If no connection is found or the current one has a higher priority, update the reference
+                        highestPri = connection;
+                    }
+                }
+            }
+
+            if (highestPri != null) {
+                // Found a higher priority pending connection,
+                highestPri.updateConnectionState(ConnectionState.ACTIVE);
+                activeConnection = highestPri;
+                // Log the transition of this higher priority connection to active
+                logger.debug(
+                        "[{}] Transitioning higher priority pending connection: {} Priority: {} to ACTIVE",
+                        Thread.currentThread().getName(),
+                        blockNodeName(highestPri.getNodeConfig()),
+                        highestPri.getNodeConfig().priority());
+
+                // Close the current connection and remove it from the connections map
+                blockNodeConnection.close();
+                connections.remove(blockNodeConnection.getNodeConfig());
+                return true;
+            }
+            return false;
+        }
+    }
+
+    static String blockNodeName(@Nullable final BlockNodeConfig node) {
+        return node != null ? node.address() + ":" + node.port() : "null";
     }
 }

@@ -15,12 +15,10 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
-import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -158,7 +156,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             final var acknowledgedBlockNumber = blockAck.blockNumber();
             final var blockAlreadyExists = blockAck.blockAlreadyExists();
             synchronized (blockStreamProcessor.getBlockNumber()) {
-                final long currentBlockStreaming = blockStreamProcessor.getBlockNumber().get();
+                final long currentBlockStreaming =
+                        blockStreamProcessor.getBlockNumber().get();
                 final var currentBlockProducing = blockStreamStateManager.getBlockNumber();
 
                 // Update the last verified block by the current connection

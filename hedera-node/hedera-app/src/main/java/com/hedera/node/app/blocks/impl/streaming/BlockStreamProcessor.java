@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
 import com.hedera.hapi.block.PublishStreamRequest;
@@ -21,9 +22,13 @@ public class BlockStreamProcessor implements Runnable {
 
     private Thread thread;
 
-    public BlockStreamProcessor(@NonNull ConfigProvider configProvider, @NonNull BlockStreamStateManager blockStreamStateManager) {
+    public BlockStreamProcessor(
+            @NonNull ConfigProvider configProvider, @NonNull BlockStreamStateManager blockStreamStateManager) {
         this.blockStreamStateManager = blockStreamStateManager;
-        if (configProvider.getConfiguration().getConfigData(BlockStreamConfig.class).streamToBlockNodes()) {
+        if (configProvider
+                .getConfiguration()
+                .getConfigData(BlockStreamConfig.class)
+                .streamToBlockNodes()) {
             thread = Thread.ofPlatform().name("BlockStreamProcessor").start(this);
         }
     }
@@ -56,24 +61,46 @@ public class BlockStreamProcessor implements Runnable {
                                     Thread.currentThread().getName(),
                                     blockNumber,
                                     currentActiveConnection.getNodeConfig().address() + ":"
-                                            + currentActiveConnection.getNodeConfig().port(),
+                                            + currentActiveConnection
+                                                    .getNodeConfig()
+                                                    .port(),
                                     blockState.isComplete(),
                                     blockState.requests().size(),
                                     requestIndex);
-                            PublishStreamRequest publishStreamRequest = blockState.requests().get(requestIndex);
+                            PublishStreamRequest publishStreamRequest =
+                                    blockState.requests().get(requestIndex);
                             currentActiveConnection.sendRequest(publishStreamRequest);
                             requestIndex++;
                         }
 
-                        // If the requestIndex is greater than the blockState's requests list size and the blockState is complete then
+                        // If the requestIndex is greater than the blockState's requests list size and the blockState is
+                        // complete then
                         // blockNumber is incremented
                         if (requestIndex >= blockState.requests().size() && blockState.isComplete()) {
-                            logger.trace(
-                                    "[{}] BlockStreamProcessor incrementing blockNumber to {}",
-                                    Thread.currentThread().getName(),
-                                    blockNumber.get() + 1);
-                            blockNumber.getAndIncrement();
-                            requestIndex = 0; // Reset request index for the next block
+                            // Check if there is a higher priority ready connection
+                            if (blockStreamStateManager.higherPriorityStarted(currentActiveConnection)) {
+                                logger.trace(
+                                        "[{}] BlockStreamProcessor higher priority block node chosen {}",
+                                        Thread.currentThread().getName(),
+                                        blockStreamStateManager
+                                                        .getActiveConnection()
+                                                        .getNodeConfig()
+                                                        .address() + ":"
+                                                + blockStreamStateManager
+                                                        .getActiveConnection()
+                                                        .getNodeConfig()
+                                                        .port());
+                                blockNumber.set(blockStreamStateManager.getBlockNumber());
+                                requestIndex = 0; // Reset request index
+                                continue;
+                            } else {
+                                logger.trace(
+                                        "[{}] BlockStreamProcessor incrementing blockNumber to {}",
+                                        Thread.currentThread().getName(),
+                                        blockNumber.get() + 1);
+                                blockNumber.getAndIncrement();
+                                requestIndex = 0; // Reset request index for the next block
+                            }
                         }
 
                         if (requestIndex <= blockState.requests().size() && !blockState.isComplete()) {
