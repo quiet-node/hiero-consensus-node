@@ -376,16 +376,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
     @Override
     public boolean endRound(@NonNull final State state, final long roundNum) {
-
-        final var queueChanges = queueStateChangeListener.getStateChanges();
-        if (!queueChanges.isEmpty()) {
-            final var stateChangesItem = BlockItem.newBuilder()
-                    .stateChanges(new StateChanges(boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
-                    .build();
-            queueStateChangeListener.reset();
-            worker.addItem(stateChangesItem);
-        }
-
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
         if (closesBlock) {
             lifecycle.onCloseBlock(state);
