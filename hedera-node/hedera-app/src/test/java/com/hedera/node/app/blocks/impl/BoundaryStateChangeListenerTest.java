@@ -73,8 +73,8 @@ class BoundaryStateChangeListenerTest {
     }
 
     @Test
-    void targetTypesAreSingletonAndQueue() {
-        assertEquals(Set.of(SINGLETON, QUEUE), subject.stateTypes());
+    void targetTypeIsSingleton() {
+        assertEquals(Set.of(SINGLETON), subject.stateTypes());
     }
 
     @Test
@@ -97,29 +97,9 @@ class BoundaryStateChangeListenerTest {
     @Test
     void testAllStateChanges() {
         subject.singletonUpdateChange(STATE_ID, PROTO_STRING);
-        subject.queuePushChange(STATE_ID, PROTO_BYTES);
 
         List<StateChange> stateChanges = subject.allStateChanges();
-        assertEquals(2, stateChanges.size());
-    }
-
-    @Test
-    void testQueuePushChange() {
-        subject.queuePushChange(STATE_ID, PROTO_BYTES);
-
-        StateChange stateChange = subject.allStateChanges().getFirst();
-        assertEquals(QUEUE_PUSH, stateChange.changeOperation().kind());
-        assertEquals(STATE_ID, stateChange.stateId());
-        assertEquals(PROTO_BYTES.value(), stateChange.queuePush().protoBytesElement());
-    }
-
-    @Test
-    void testQueuePopChange() {
-        subject.queuePopChange(STATE_ID);
-
-        StateChange stateChange = subject.allStateChanges().getFirst();
-        assertEquals(QUEUE_POP, stateChange.changeOperation().kind());
-        assertEquals(STATE_ID, stateChange.stateId());
+        assertEquals(1, stateChanges.size());
     }
 
     @Test
