@@ -476,17 +476,6 @@ public class HandleWorkflow {
             blockRecordManager.endUserTransaction(records.stream(), state);
         }
         if (streamMode != RECORDS) {
-            final var queueChanges = queueStateChangeListener.getStateChanges();
-            if (!queueChanges.isEmpty()) {
-                final var stateChangesItem = BlockItem.newBuilder()
-                        .stateChanges(new StateChanges(
-                                asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()),
-                                new ArrayList<>(queueChanges)))
-                        .build();
-                blockStreamManager.writeItem(stateChangesItem);
-                queueStateChangeListener.reset();
-            }
-
             handleOutput.blockRecordSourceOrThrow().forEachItem(blockStreamManager::writeItem);
         }
 
@@ -582,18 +571,6 @@ public class HandleWorkflow {
                         blockRecordManager.startUserTransaction(nextTime, state);
                     }
                     final var handleOutput = executeScheduled(state, nextTime, creatorInfo, executableTxn);
-
-                    final var queueChanges = queueStateChangeListener.getStateChanges();
-                    if (!queueChanges.isEmpty()) {
-                        final var stateChangesItem = BlockItem.newBuilder()
-                                .stateChanges(new StateChanges(
-                                        asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()),
-                                        new ArrayList<>(queueChanges)))
-                                .build();
-                        blockStreamManager.writeItem(stateChangesItem);
-                        queueStateChangeListener.reset();
-                    }
-
                     handleOutput.blockRecordSourceOrThrow().forEachItem(blockStreamManager::writeItem);
 
                     if (streamMode == BOTH) {
@@ -850,15 +827,6 @@ public class HandleWorkflow {
                         .stateChanges(new StateChanges(asTimestamp(now), new ArrayList<>(kvChanges)))
                         .build();
                 blockStreamManager.writeItem(stateChangesItem);
-            }
-            // add queue changes for consistency in block stream
-            final var queueChanges = queueStateChangeListener.getStateChanges();
-            if (!queueChanges.isEmpty()) {
-                final var stateChangesItem = BlockItem.newBuilder()
-                        .stateChanges(new StateChanges(asTimestamp(now), new ArrayList<>(queueChanges)))
-                        .build();
-                blockStreamManager.writeItem(stateChangesItem);
-                queueStateChangeListener.reset();
             }
         }
     }
