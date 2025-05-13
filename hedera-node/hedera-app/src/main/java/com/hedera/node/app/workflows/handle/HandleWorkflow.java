@@ -287,6 +287,17 @@ public class HandleWorkflow {
             // Even if there is an exception somewhere, we need to commit the receipts of any handled transactions
             // to the state so these transactions cannot be replayed in future rounds
             recordCache.commitRoundReceipts(state, round.getConsensusTimestamp());
+
+            // write to blockstream after commit
+            final var queueChanges = queueStateChangeListener.getStateChanges();
+            if (!queueChanges.isEmpty()) {
+                final var stateChangesItem = BlockItem.newBuilder()
+                        .stateChanges(new StateChanges(boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
+                        .build();
+                queueStateChangeListener.reset();
+                blockStreamManager.writeItem(stateChangesItem);
+            }
+
         }
         try {
             reconcileTssState(state, round.getConsensusTimestamp());

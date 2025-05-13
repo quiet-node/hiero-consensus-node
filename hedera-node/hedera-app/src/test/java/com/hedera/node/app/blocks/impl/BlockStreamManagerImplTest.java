@@ -126,6 +126,9 @@ class BlockStreamManagerImplTest {
     private BoundaryStateChangeListener boundaryStateChangeListener;
 
     @Mock
+    private QueueStateChangeListener queueStateChangeListener;
+
+    @Mock
     private BlockStreamManager.Lifecycle lifecycle;
 
     @Mock
@@ -224,6 +227,7 @@ class BlockStreamManagerImplTest {
                 configProvider,
                 networkInfo,
                 boundaryStateChangeListener,
+                queueStateChangeListener,
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
@@ -247,6 +251,7 @@ class BlockStreamManagerImplTest {
                 configProvider,
                 networkInfo,
                 boundaryStateChangeListener,
+                queueStateChangeListener,
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
@@ -920,6 +925,7 @@ class BlockStreamManagerImplTest {
                 configProvider,
                 networkInfo,
                 boundaryStateChangeListener,
+                queueStateChangeListener,
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
