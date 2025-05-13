@@ -423,8 +423,6 @@ public class SwirldsPlatform implements Platform {
 
         notificationEngine.unregisterAll();
         notificationEngine.shutdown();
-
-        platformContext.getMetrics().shutdown();
     }
 
     /**

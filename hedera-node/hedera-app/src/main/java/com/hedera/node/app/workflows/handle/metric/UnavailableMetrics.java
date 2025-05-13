@@ -65,11 +65,6 @@ public enum UnavailableMetrics implements Metrics {
     }
 
     @Override
-    public boolean shutdown() throws InterruptedException {
-        return false;
-    }
-
-    @Override
     public void start() {
         throw new UnsupportedOperationException("Metrics are not available");
     }

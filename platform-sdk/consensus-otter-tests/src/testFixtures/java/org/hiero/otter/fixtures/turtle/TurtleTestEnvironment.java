@@ -204,5 +204,6 @@ public class TurtleTestEnvironment implements TestEnvironment {
         generator.stop();
         network.destroy();
         InMemoryAppender.clearLogs();
+        RuntimeObjectRegistry.reset();
     }
 }

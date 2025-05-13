@@ -18,7 +18,7 @@ import com.swirlds.common.io.config.FileSystemManagerConfig_;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
-import com.swirlds.common.merkle.MerkleNode;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.component.framework.model.DeterministicWiringModel;
@@ -39,8 +39,6 @@ import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedNetwork;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
 import com.swirlds.state.State;
-import com.swirlds.virtualmap.VirtualMap;
-import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
@@ -104,6 +102,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private TurtleAppState savedTurtleAppState;
     private SemanticVersion version;
     private Configuration currentConfiguration;
+    private PlatformContext platformContext;
 
     public TurtleNode(
             @NonNull final Randotron randotron,
@@ -295,26 +294,19 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     private void doShutdownNode() throws InterruptedException {
         if (lifeCycle == LifeCycle.STARTED) {
+            if (platformContext.getMetrics() instanceof NoOpMetrics noOpMetrics) {
+                noOpMetrics.clear();
+            }
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
+
             platform.destroy();
             platformStatus = null;
             platform = null;
             platformWiring = null;
             model = null;
 
-            final int childrenCount = savedTurtleAppState.getNumberOfChildren();
-            for (int i = 0; i < childrenCount; i++) {
-                final MerkleNode child = savedTurtleAppState.getChild(i);
-                // Terminate the pipeline of the virtual root node, so that resources are released.
-                if (child instanceof VirtualMap<?, ?> virtualMapChild) {
-                    final var virtualMapNestedChildrenCount = virtualMapChild.getNumberOfChildren();
-                    for (int j = 0; j < virtualMapNestedChildrenCount; j++) {
-                        if (virtualMapChild.getChild(j) instanceof VirtualRootNode<?, ?> virtualRootNode) {
-                            virtualRootNode.getPipeline().terminate();
-                        }
-                    }
-                }
-            }
+            savedTurtleAppState.clear();
+            savedTurtleAppState = null;
         }
         lifeCycle = LifeCycle.SHUTDOWN;
     }
@@ -325,7 +317,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
         setupGlobalMetrics(currentConfiguration);
 
-        final PlatformContext platformContext = TestPlatformContextBuilder.create()
+        platformContext = TestPlatformContextBuilder.create()
                 .withTime(time)
                 .withConfiguration(currentConfiguration)
                 .build();
