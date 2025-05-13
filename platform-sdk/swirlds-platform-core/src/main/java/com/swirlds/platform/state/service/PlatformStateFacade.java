@@ -24,6 +24,7 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.RecordAccessor;
+import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
@@ -306,15 +307,30 @@ public class PlatformStateFacade {
             String valueString = pair.right().toString();
             String hashString = hash == null ? "null" : hash.toString();
 
-            sb.append("k=")
-                    .append(keyString)
-                    .append(";v=")
-                    .append(valueString)
-                    .append(";path=")
-                    .append(virtualLeafBytes.path())
-                    .append(";hash=")
-                    .append(hashString)
-                    .append("\n");
+            // VirtualMapState
+            if("ffff".equals(keyString)) {
+                sb.append("k=")
+                        .append(keyString)
+                        .append(";v=")
+                        .append(new VirtualMapState(pair.right()))
+                        .append(";path=")
+                        .append(virtualLeafBytes.path())
+                        .append(";hash=")
+                        .append(hashString)
+                        .append("\n");
+
+            } else {
+                sb.append("k=")
+                        .append(keyString)
+                        .append(";v=")
+                        .append(valueString)
+                        .append(";path=")
+                        .append(virtualLeafBytes.path())
+                        .append(";hash=")
+                        .append(hashString)
+                        .append("\n");
+
+            }
         };
 
         try {
