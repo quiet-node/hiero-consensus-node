@@ -9,6 +9,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * BlockStreamProcessor is responsible for polling the block stream state manager for new requests and sending them to an active connection.
+ * It runs in a separate thread and continuously checks for new requests to process and also handles jump signals to specific blocks.
+ */
 public class BlockStreamProcessor implements Runnable {
     private static final Logger logger = LogManager.getLogger(BlockStreamProcessor.class);
     private static final int LOOP_DELAY_MS = 10;
@@ -17,11 +21,16 @@ public class BlockStreamProcessor implements Runnable {
 
     private final AtomicLong jumpTargetBlock = new AtomicLong(-1);
 
-    private AtomicLong blockNumber = new AtomicLong(-1);
+    private final AtomicLong blockNumber = new AtomicLong(-1);
     private int requestIndex = 0;
 
     private Thread thread;
 
+    /**
+     * Constructor for BlockStreamProcessor.
+     * @param configProvider The configuration provider to get the BlockStreamConfig.
+     * @param blockStreamStateManager The BlockStreamStateManager which manages global in-memory state related to the block stream.
+     */
     public BlockStreamProcessor(
             @NonNull ConfigProvider configProvider, @NonNull BlockStreamStateManager blockStreamStateManager) {
         this.blockStreamStateManager = blockStreamStateManager;
@@ -127,15 +136,20 @@ public class BlockStreamProcessor implements Runnable {
         }
     }
 
+    /**
+     * Setting the atomic long will signal the processor to jump to a specific block at the next iteration.
+     *
+     * @return The jump target block number atomic long.
+     */
     public AtomicLong getJumpTargetBlock() {
         return jumpTargetBlock;
     }
 
+    /**
+     * Get the block number that is currently being processed.
+     * @return The current block number.
+     */
     public AtomicLong getBlockNumber() {
         return blockNumber;
-    }
-
-    public int getRequestIndex() {
-        return requestIndex;
     }
 }

@@ -70,7 +70,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     // Volatile connection state
     private volatile StreamObserver<PublishStreamRequest> requestObserver;
-    private volatile Thread requestWorker;
     private volatile ConnectionState connectionState;
 
     /**
@@ -634,7 +633,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             }
             requestObserver = null;
         }
-        stopWorkerThread();
     }
 
     /**
@@ -686,24 +684,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 connectionDescriptor);
         // Set the target block for the worker loop to pick up
 
-    }
-
-    /**
-     * Stops the current worker thread if it exists and waits for it to terminate.
-     */
-    private void stopWorkerThread() {
-        synchronized (workerLock) {
-            if (requestWorker != null) {
-                requestWorker.interrupt();
-                try {
-                    requestWorker.join(5000); // Wait up to 5 seconds for thread to stop
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    logger.warn("Interrupted while waiting for request worker to stop");
-                }
-                requestWorker = null;
-            }
-        }
     }
 
     @Override
