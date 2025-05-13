@@ -42,6 +42,7 @@ import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.state.PlatformState;
+import com.hedera.node.app.HederaNewStateRoot;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
@@ -149,7 +150,7 @@ class BlockStreamManagerImplTest {
     private Round round;
 
     @Mock
-    private State state;
+    private HederaNewStateRoot state;
 
     @Mock
     private Iterator<ConsensusEvent> mockIterator;
