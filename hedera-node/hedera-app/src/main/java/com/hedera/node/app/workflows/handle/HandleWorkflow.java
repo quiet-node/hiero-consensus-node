@@ -292,12 +292,12 @@ public class HandleWorkflow {
             final var queueChanges = queueStateChangeListener.getStateChanges();
             if (!queueChanges.isEmpty()) {
                 final var stateChangesItem = BlockItem.newBuilder()
-                        .stateChanges(new StateChanges(boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
+                        .stateChanges(new StateChanges(
+                                boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
                         .build();
                 queueStateChangeListener.reset();
                 blockStreamManager.writeItem(stateChangesItem);
             }
-
         }
         try {
             reconcileTssState(state, round.getConsensusTimestamp());
@@ -364,7 +364,9 @@ public class HandleWorkflow {
                     final var queueChanges = queueStateChangeListener.getStateChanges();
                     if (!queueChanges.isEmpty()) {
                         final var stateChangesItem = BlockItem.newBuilder()
-                                .stateChanges(new StateChanges(boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
+                                .stateChanges(new StateChanges(
+                                        boundaryStateChangeListener.boundaryTimestampOrThrow(),
+                                        new ArrayList<>(queueChanges)))
                                 .build();
                         queueStateChangeListener.reset();
                         blockStreamManager.writeItem(stateChangesItem);
@@ -824,7 +826,6 @@ public class HandleWorkflow {
             @NonNull final Runnable action) {
         if (streamMode != RECORDS) {
             kvStateChangeListener.reset();
-
         }
         action.run();
         ((CommittableWritableStates) writableStates).commit();

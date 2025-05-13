@@ -271,9 +271,9 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             if (kvStateChangeListener != null) {
                 kvStateChangeListener.reset();
             }
-//            if (queueStateChangeListener != null) {
-//                queueStateChangeListener.reset();
-//            }
+            //            if (queueStateChangeListener != null) {
+            //                queueStateChangeListener.reset();
+            //            }
         }
         while (!stack.isEmpty()) {
             final var savepoint = stack.pop();
@@ -287,9 +287,9 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
             if (kvStateChangeListener != null) {
                 builder.stateChanges(kvStateChangeListener.getStateChanges());
             }
-//            if (queueStateChangeListener != null) {
-//                builder.stateChanges(queueStateChangeListener.getStateChanges());
-//            }
+            //            if (queueStateChangeListener != null) {
+            //                builder.stateChanges(queueStateChangeListener.getStateChanges());
+            //            }
         }
         setupFirstSavepoint(baseBuilder.category());
     }

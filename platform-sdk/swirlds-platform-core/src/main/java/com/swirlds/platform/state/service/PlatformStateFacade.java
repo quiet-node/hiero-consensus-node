@@ -308,7 +308,7 @@ public class PlatformStateFacade {
             String hashString = hash == null ? "null" : hash.toString();
 
             // VirtualMapState
-            if("ffff".equals(keyString)) {
+            if ("ffff".equals(keyString)) {
                 sb.append("k=")
                         .append(keyString)
                         .append(";v=")
@@ -329,7 +329,6 @@ public class PlatformStateFacade {
                         .append(";hash=")
                         .append(hashString)
                         .append("\n");
-
             }
         };
 
