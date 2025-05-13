@@ -102,6 +102,9 @@ public class TurtleAppState extends MerkleStateRoot<TurtleAppState> implements M
         return ClassVersion.ORIGINAL;
     }
 
+    /***
+     * Free resources, which are mainly held by virtual map instances.
+     */
     public void clear() {
         final MerkleNode merkleNode = getRoot();
         merkleNode.forEachNode(node -> {

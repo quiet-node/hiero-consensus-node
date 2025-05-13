@@ -170,6 +170,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
             doShutdownNode();
+
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
@@ -281,6 +282,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
             doShutdownNode();
             lifeCycle = LifeCycle.DESTROYED;
+
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }

@@ -238,8 +238,6 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
             node.destroy();
         }
         executorService.shutdownNow();
-
-        state = State.SHUTDOWN;
     }
 
     /**

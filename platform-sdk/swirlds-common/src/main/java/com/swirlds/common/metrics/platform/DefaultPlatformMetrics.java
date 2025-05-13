@@ -286,7 +286,7 @@ public class DefaultPlatformMetrics implements PlatformMetrics {
     }
 
     /**
-     * Shut down the service.
+     * Shuts down the service
      *
      * @return {@code true} if the shutdown finished on time, {@code false} if the call ran into a timeout
      * @throws InterruptedException if the current thread was interrupted while waiting

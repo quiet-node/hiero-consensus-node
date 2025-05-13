@@ -134,7 +134,7 @@ public class Turtle {
     /**
      * Stop the network, so that it can be restarted and used for other test scenarios.
      */
-    public void stop() {
+    public void destroy() {
         for (final TurtleNode node : nodes) {
             try {
                 node.destroy();

@@ -25,7 +25,6 @@ module org.hiero.otter.fixtures {
     requires com.swirlds.config.extensions;
     requires com.swirlds.merkledb;
     requires com.swirlds.metrics.api;
-    requires com.swirlds.virtualmap;
     requires org.hiero.consensus.utility;
     requires static com.github.spotbugs.annotations;
 

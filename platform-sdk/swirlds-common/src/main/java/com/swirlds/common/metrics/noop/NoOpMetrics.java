@@ -162,6 +162,9 @@ public class NoOpMetrics implements PlatformMetrics {
         // Intentional no-op
     }
 
+    /**
+     * Clear accumulated metrics to free resources
+     */
     public void clear() {
         metrics.clear();
     }
