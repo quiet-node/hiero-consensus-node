@@ -23,6 +23,7 @@ import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.BlockProof;
 import com.hedera.hapi.block.stream.MerkleSiblingHash;
 import com.hedera.hapi.block.stream.output.BlockHeader;
+import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
@@ -103,6 +104,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private final ConfigProvider configProvider;
     private final Supplier<BlockItemWriter> writerSupplier;
     private final BoundaryStateChangeListener boundaryStateChangeListener;
+    private final QueueStateChangeListener queueStateChangeListener;
     private final PlatformStateFacade platformStateFacade;
 
     private final Lifecycle lifecycle;
@@ -197,6 +199,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final ConfigProvider configProvider,
             @NonNull final NetworkInfo networkInfo,
             @NonNull final BoundaryStateChangeListener boundaryStateChangeListener,
+            @NonNull final QueueStateChangeListener queueStateChangeListener,
             @NonNull final InitialStateHash initialStateHash,
             @NonNull final SemanticVersion version,
             @NonNull final PlatformStateFacade platformStateFacade,
@@ -207,6 +210,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.writerSupplier = requireNonNull(writerSupplier);
         this.executor = (ForkJoinPool) requireNonNull(executor);
         this.boundaryStateChangeListener = requireNonNull(boundaryStateChangeListener);
+        this.queueStateChangeListener = requireNonNull(queueStateChangeListener);
         this.platformStateFacade = requireNonNull(platformStateFacade);
         this.lifecycle = requireNonNull(lifecycle);
         this.configProvider = requireNonNull(configProvider);
@@ -372,6 +376,16 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
 
     @Override
     public boolean endRound(@NonNull final State state, final long roundNum) {
+
+        final var queueChanges = queueStateChangeListener.getStateChanges();
+        if (!queueChanges.isEmpty()) {
+            final var stateChangesItem = BlockItem.newBuilder()
+                    .stateChanges(new StateChanges(boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
+                    .build();
+            queueStateChangeListener.reset();
+            worker.addItem(stateChangesItem);
+        }
+
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
         if (closesBlock) {
             lifecycle.onCloseBlock(state);
