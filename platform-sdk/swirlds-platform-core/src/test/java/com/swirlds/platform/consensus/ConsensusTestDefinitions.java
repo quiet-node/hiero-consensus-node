@@ -10,15 +10,14 @@ import static com.swirlds.platform.test.fixtures.graph.OtherParentMatrixFactory.
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.utility.Threshold;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.internal.EventImpl;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.test.fixtures.consensus.framework.ConsensusTestNode;
 import com.swirlds.platform.test.fixtures.consensus.framework.ConsensusTestOrchestrator;
 import com.swirlds.platform.test.fixtures.consensus.framework.ConsensusTestUtils;
 import com.swirlds.platform.test.fixtures.consensus.framework.OrchestratorBuilder;
 import com.swirlds.platform.test.fixtures.consensus.framework.TestInput;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusOutputValidator;
+import com.swirlds.platform.test.fixtures.consensus.framework.validation.NumberOfConsensusRoundsValidation;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.OutputEventRatioValidation;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.OutputEventsAddedInDifferentOrderValidation;
 import com.swirlds.platform.test.fixtures.consensus.framework.validation.OutputEventsEqualityValidation;
@@ -45,7 +44,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
+import org.hiero.consensus.config.EventConfig;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.roster.RosterUtils;
 
 public final class ConsensusTestDefinitions {
 
@@ -289,7 +290,7 @@ public final class ConsensusTestDefinitions {
             cliques.put(i, 1);
         }
         for (int i = 2 * cliqueSize; i < numberOfNodes; i++) {
-            cliques.put(i, 1);
+            cliques.put(i, 2);
         }
         // There are 3 cliques
         // Each clique syncs within itself frequently, but with outsiders it syncs rarely
@@ -643,5 +644,28 @@ public final class ConsensusTestDefinitions {
                         OutputEventRatioValidation.standard()
                                 .setMinimumConsensusRatio(0.9 - (0.05 * input.numberOfNodes()))));
         orchestrator.generateAllEvents().validateAndClear(consensusOutputValidatorWithEventRatioType2);
+    }
+
+    /**
+     * Tests the consensus freeze functionality
+     */
+    public static void consensusFreezeTests(@NonNull final TestInput input) {
+        final ConsensusOutputValidator consensusOutputValidator = new ConsensusOutputValidator(Set.of(
+                new OutputEventsAddedInDifferentOrderValidation(),
+                new OutputEventsEqualityValidation(),
+                OutputEventRatioValidation.standard().setMinimumConsensusRatio(0.9 - (0.05 * input.numberOfNodes()))));
+
+        final ConsensusTestOrchestrator orchestrator =
+                OrchestratorBuilder.builder().setTestInput(input).build();
+
+        // generate half of the events and validate
+        orchestrator.generateEvents(0.5).validateAndClear(consensusOutputValidator);
+        // freeze all the nodes
+        orchestrator.forEachNode(node -> node.getIntake().getFreezeCheckHolder().setFreezeCheckRef(i -> true));
+        // generate the rest of the events
+        orchestrator.generateEvents(0.5);
+        // validate that exactly 1 round reached consensus (the freeze round) and that its equal on all nodes
+        orchestrator.validate(new ConsensusOutputValidator(
+                Set.of(new NumberOfConsensusRoundsValidation(1), new OutputEventsEqualityValidation())));
     }
 }

@@ -27,6 +27,7 @@ import com.hedera.hapi.platform.state.NodeId;
 import com.hedera.hapi.services.auxiliary.hints.CrsPublicationTransactionBody;
 import com.hedera.node.app.hints.WritableHintsStore;
 import com.hedera.node.app.roster.ActiveRosters;
+import com.hedera.node.app.spi.ids.WritableEntityCounters;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.spi.WritableKVState;
@@ -60,8 +61,8 @@ public class WritableHintsStoreImpl extends ReadableHintsStoreImpl implements Wr
     private final WritableKVState<NodeId, CrsPublicationTransactionBody> crsPublications;
     private final WritableSingletonState<CRSState> crsState;
 
-    public WritableHintsStoreImpl(@NonNull final WritableStates states) {
-        super(states);
+    public WritableHintsStoreImpl(@NonNull final WritableStates states, final WritableEntityCounters entityCounters) {
+        super(states, entityCounters);
         this.hintsKeys = states.get(HINTS_KEY_SETS_KEY);
         this.nextConstruction = states.getSingleton(NEXT_HINT_CONSTRUCTION_KEY);
         this.activeConstruction = states.getSingleton(ACTIVE_HINT_CONSTRUCTION_KEY);
@@ -145,14 +146,14 @@ public class WritableHintsStoreImpl extends ReadableHintsStoreImpl implements Wr
     }
 
     @Override
-    public boolean updateAtHandoff(
-            @NonNull final Roster previousRoster,
-            @NonNull final Roster adoptedRoster,
-            @NonNull final Bytes adoptedRosterHash,
+    public boolean handoff(
+            @NonNull final Roster fromRoster,
+            @NonNull final Roster toRoster,
+            @NonNull final Bytes toRosterHash,
             final boolean forceHandoff) {
-        requireNonNull(previousRoster);
-        requireNonNull(adoptedRoster);
-        requireNonNull(adoptedRosterHash);
+        requireNonNull(fromRoster);
+        requireNonNull(toRoster);
+        requireNonNull(toRosterHash);
         final var upcomingConstruction = requireNonNull(nextConstruction.get());
         // It is pointless to adopt any incomplete construction
         if (!upcomingConstruction.hasHintsScheme()) {
@@ -163,7 +164,7 @@ public class WritableHintsStoreImpl extends ReadableHintsStoreImpl implements Wr
             }
             return false;
         }
-        final boolean handoffMatches = upcomingConstruction.targetRosterHash().equals(adoptedRosterHash);
+        final boolean handoffMatches = upcomingConstruction.targetRosterHash().equals(toRosterHash);
         if (!handoffMatches) {
             if (forceHandoff) {
                 log.warn(
@@ -172,15 +173,15 @@ public class WritableHintsStoreImpl extends ReadableHintsStoreImpl implements Wr
             } else {
                 throw new IllegalStateException("Cannot handoff to construction #"
                         + upcomingConstruction.constructionId() + " with different target roster (constructed for '"
-                        + upcomingConstruction.targetRosterHash() + " but incoming is '" + adoptedRosterHash + "')");
+                        + upcomingConstruction.targetRosterHash() + " but incoming is '" + toRosterHash + "')");
             }
         }
         log.info("Handing off to upcoming construction #{}", upcomingConstruction.constructionId());
         // The next construction is becoming the active one; so purge obsolete votes now
-        purgeVotes(requireNonNull(activeConstruction.get()), ignore -> previousRoster);
+        purgeVotes(requireNonNull(activeConstruction.get()), ignore -> fromRoster);
         // If the previous scheme's party size was different than the new one, purge the hinTS keys;
         // this is likely optional, but seems like a better default behavior than leaving them in state
-        maybePurgeHintsKeys(partySizeForRoster(adoptedRoster), previousRoster);
+        maybePurgeHintsKeys(partySizeForRoster(toRoster), fromRoster);
         activeConstruction.put(upcomingConstruction);
         nextConstruction.put(HintsConstruction.DEFAULT);
         return true;
