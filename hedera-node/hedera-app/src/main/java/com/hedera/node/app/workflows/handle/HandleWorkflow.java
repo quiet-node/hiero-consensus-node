@@ -359,6 +359,16 @@ public class HandleWorkflow {
                             platformTxn,
                             event.getSoftwareVersion(),
                             simplifiedStateSignatureTxnCallback);
+                    // write queue changes to the block stream
+                    // currently, this code captures operations / platform transactions with the upgrade file
+                    final var queueChanges = queueStateChangeListener.getStateChanges();
+                    if (!queueChanges.isEmpty()) {
+                        final var stateChangesItem = BlockItem.newBuilder()
+                                .stateChanges(new StateChanges(boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
+                                .build();
+                        queueStateChangeListener.reset();
+                        blockStreamManager.writeItem(stateChangesItem);
+                    }
                 } catch (final Exception e) {
                     logger.fatal(
                             "Possibly CATASTROPHIC failure while running the handle workflow. "
