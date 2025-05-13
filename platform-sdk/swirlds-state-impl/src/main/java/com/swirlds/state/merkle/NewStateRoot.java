@@ -425,7 +425,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
      */
     @Override
     public void setHash(Hash hash) {
-        virtualMap.setHash(hash);
+        throw new UnsupportedOperationException("VirtualMap is self hashing");
     }
 
     /**

@@ -614,7 +614,9 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         switch (platformStatus) {
             case ACTIVE -> {
                 startGrpcServer();
-                ((NewStateRoot) initState).disableStartupMode();
+                if (initState != null) {
+                    ((NewStateRoot<?>) initState).disableStartupMode();
+                }
             }
             case FREEZE_COMPLETE -> {
                 logger.info("Platform status is now FREEZE_COMPLETE");
