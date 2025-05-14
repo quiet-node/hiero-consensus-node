@@ -407,6 +407,7 @@ public class TransactionSubmitter {
 
                 Thread.sleep(FREEZE_SUBMIT_ATTEMPT_SLEEP);
             } catch (InterruptedException ex) {
+                logger.error(ex.getStackTrace());
                 Thread.currentThread().interrupt();
                 return false;
             }
