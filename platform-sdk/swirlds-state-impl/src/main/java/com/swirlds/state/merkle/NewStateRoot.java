@@ -813,4 +813,9 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
             }
         }
     }
+
+    @Override
+    public boolean isHashed() {
+        return virtualMap.isHashed();
+    }
 }

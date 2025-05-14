@@ -1244,4 +1244,9 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             }
         }
     }
+
+    @Override
+    public boolean isHashed() {
+        return getHash() != null;
+    }
 }
