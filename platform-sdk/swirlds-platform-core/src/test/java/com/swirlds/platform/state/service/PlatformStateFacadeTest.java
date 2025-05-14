@@ -25,18 +25,19 @@ import com.swirlds.state.spi.EmptyReadableStates;
 import java.time.Instant;
 import org.hiero.base.utility.test.fixtures.RandomUtils;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class PlatformStateFacadeTest {
 
-    private static TestPlatformStateFacade platformStateFacade;
-    private static MerkleNodeState state;
-    private static MerkleNodeState emptyState;
-    private static PlatformStateModifier platformStateModifier;
+    private TestPlatformStateFacade platformStateFacade;
+    private MerkleNodeState state;
+    private MerkleNodeState emptyState;
+    private PlatformStateModifier platformStateModifier;
 
-    @BeforeAll
-    static void beforeAll() {
+    @BeforeEach
+    void beforeAll() {
         final String virtualMapLabelForState =
                 "vm-state-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         state = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabelForState);

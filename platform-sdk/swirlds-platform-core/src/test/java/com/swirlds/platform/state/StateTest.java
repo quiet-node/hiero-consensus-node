@@ -28,15 +28,10 @@ class StateTest {
     @DisplayName("Test Copy")
     void testCopy() {
 
-        final MerkleNodeState state = randomSignedState().getState();
+        final MerkleNodeState state = randomSignedState(false).getState();
         final MerkleNodeState copy = state.copy();
 
         assertNotSame(state, copy, "copy should not return the same object");
-
-        state.invalidateHash();
-        TestMerkleCryptoFactory.getInstance().digestTreeSync(state.getRoot());
-        TestMerkleCryptoFactory.getInstance().digestTreeSync(copy.getRoot());
-
         assertEquals(state.getHash(), copy.getHash(), "copy should be equal to the original");
         assertFalse(state.isDestroyed(), "copy should not have been deleted");
         assertEquals(0, copy.getRoot().getReservationCount(), "copy should have no references");
@@ -50,7 +45,7 @@ class StateTest {
     @Tag(TestComponentTags.MERKLE)
     @DisplayName("Test Try Reserve")
     void tryReserveTest() {
-        final MerkleNodeState state = randomSignedState().getState();
+        final MerkleNodeState state = randomSignedState(true).getState();
         assertEquals(
                 1,
                 state.getRoot().getReservationCount(),
@@ -66,7 +61,7 @@ class StateTest {
         assertFalse(state.getRoot().tryReserve(), "tryReserve() should fail when the state is destroyed");
     }
 
-    private static SignedState randomSignedState() {
+    private static SignedState randomSignedState(boolean isHashed) {
         Random random = new Random(0);
         final String virtualMapLabel = "vm-" + StateTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         MerkleNodeState merkleStateRoot = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
@@ -80,7 +75,11 @@ class StateTest {
                 false,
                 false,
                 new PlatformStateFacade());
-        signedState.getState().setHash(CryptoRandomUtils.randomHash(random));
+        if(isHashed) {
+            // Hash the underlying VirtualMap
+            signedState.getState().getHash();
+        }
+
         return signedState;
     }
 }

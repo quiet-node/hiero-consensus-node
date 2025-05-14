@@ -15,6 +15,8 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
+import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.Signature;
 import org.hiero.consensus.crypto.PlatformSigner;
@@ -36,11 +38,7 @@ public class StateSignerTests {
 
     @Test
     void doNotSignPcesState() {
-        final Randotron randotron = Randotron.create();
-
-        final Hash stateHash = randotron.nextHash();
         final SignedState signedState = new RandomSignedStateGenerator()
-                .setStateHash(stateHash)
                 .setPcesRound(true)
                 .build();
 
@@ -57,9 +55,7 @@ public class StateSignerTests {
     void signRegularState() {
         final Randotron randotron = Randotron.create();
 
-        final Hash stateHash = randotron.nextHash();
         final SignedState signedState = new RandomSignedStateGenerator()
-                .setStateHash(stateHash)
                 .setPcesRound(false)
                 .build();
 
