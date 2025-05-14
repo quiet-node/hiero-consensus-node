@@ -557,9 +557,9 @@ class EthTxDataTest {
 
     @Test
     void populatesAccessListAsRlpCorrectly() {
-        final byte[] encodedAccessList = RLPEncoder.encodeAsList(
-                RLPEncoder.encodeAsList(RLPEncoder.encodeSequentially("key1".getBytes(), "value1".getBytes())),
-                RLPEncoder.encodeAsList(RLPEncoder.encodeSequentially("key2".getBytes(), "value2".getBytes())));
+        final byte[] encodedAccessList = RLPEncoder.list(
+                RLPEncoder.list(RLPEncoder.sequence("key1".getBytes(), "value1".getBytes())),
+                RLPEncoder.list(RLPEncoder.sequence("key2".getBytes(), "value2".getBytes())));
         final RLPList rlpList = RLPDecoder.RLP_STRICT.wrapList(encodedAccessList);
         final Object[] accessListAsRlp = rlpList.elements().stream()
                 .map(e -> e.isList() ? e.asRLPList().elements().toArray() : e.data())
@@ -588,10 +588,12 @@ class EthTxDataTest {
 
     @Test
     void equalsConsidersAccessListAsRlp() {
-        final byte[] encodedAccessList = RLPEncoder.encodeAsList(
-                RLPEncoder.encodeAsList(RLPEncoder.encodeSequentially("key1".getBytes(), "value1".getBytes())));
-        final byte[] differentEncodedAccessList = RLPEncoder.encodeAsList(
-                RLPEncoder.encodeAsList(RLPEncoder.encodeSequentially("key2".getBytes(), "value2".getBytes())));
+        final byte[] encodedAccessList = RLPEncoder.list(new Object[] {
+            RLPEncoder.list(new Object[] {RLPEncoder.sequence("key1".getBytes(), "value1".getBytes())})
+        });
+        final byte[] differentEncodedAccessList = RLPEncoder.list(new Object[] {
+            RLPEncoder.list(new Object[] {RLPEncoder.sequence("key2".getBytes(), "value2".getBytes())})
+        });
 
         final RLPList rlpList = RLPDecoder.RLP_STRICT.wrapList(encodedAccessList);
         final RLPList differentRlpList = RLPDecoder.RLP_STRICT.wrapList(differentEncodedAccessList);
@@ -734,7 +736,7 @@ class EthTxDataTest {
 
     @ParameterizedTest
     @EnumSource(EthTransactionType.class)
-    void bigPositiveValueWithDifferentTypes(EthTransactionType type) {
+    void bigPositiveValueWithDifferentTypes(final EthTransactionType type) {
         final var bigValue = BigInteger.valueOf(Long.MAX_VALUE);
 
         final var oneByte = new byte[] {1};
@@ -751,7 +753,7 @@ class EthTxDataTest {
     @Test
     void populateEthTxDataComparedToUnsignedByteArrayNoExtraByteAdded() {
         final var subject = EthTxData.populateEthTxData(Hex.decode(RAW_TX_TYPE_0_WITH_CHAIN_ID_11155111));
-        byte[] passingChainId = BigIntegers.asUnsignedByteArray(BigInteger.valueOf(11155111L));
+        final byte[] passingChainId = BigIntegers.asUnsignedByteArray(BigInteger.valueOf(11155111L));
         assertEquals(Hex.toHexString(subject.chainId()), Hex.toHexString(passingChainId));
     }
 
@@ -760,7 +762,7 @@ class EthTxDataTest {
     // Issue is better described here: https://github.com/hashgraph/hedera-services/issues/15953
     void populateEthTxDataComparedToSignedByteArrayExtraByteAdded() {
         final var subject = EthTxData.populateEthTxData(Hex.decode(RAW_TX_TYPE_0_WITH_CHAIN_ID_11155111));
-        byte[] failingChainId = BigInteger.valueOf(11155111L).toByteArray();
+        final byte[] failingChainId = BigInteger.valueOf(11155111L).toByteArray();
         assertNotEquals(Hex.toHexString(subject.chainId()), Hex.toHexString(failingChainId));
     }
 }
