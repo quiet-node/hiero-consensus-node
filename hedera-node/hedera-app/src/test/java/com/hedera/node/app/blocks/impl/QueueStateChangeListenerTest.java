@@ -8,9 +8,7 @@ import static com.swirlds.state.merkle.StateUtils.stateIdFor;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.hedera.hapi.block.stream.output.StateChange;
-import com.hedera.hapi.node.state.entity.EntityCounts;
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
-import com.hedera.hapi.node.state.primitives.ProtoString;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.schemas.V0560BlockStreamSchema;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -18,20 +16,10 @@ import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
-
-import static com.hedera.hapi.block.stream.output.StateChange.ChangeOperationOneOfType.QUEUE_POP;
-import static com.hedera.hapi.block.stream.output.StateChange.ChangeOperationOneOfType.QUEUE_PUSH;
-import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
-import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
-import static com.swirlds.state.merkle.StateUtils.stateIdFor;
-import static org.junit.jupiter.api.Assertions.*;
-
 class QueueStateChangeListenerTest {
 
     private static final int STATE_ID = 1;
     public static final ProtoBytes PROTO_BYTES = new ProtoBytes(Bytes.wrap(new byte[] {1, 2, 3}));
-
 
     private QueueStateChangeListener subject;
 
@@ -70,7 +58,4 @@ class QueueStateChangeListenerTest {
         assertEquals(QUEUE_POP, stateChange.changeOperation().kind());
         assertEquals(STATE_ID, stateChange.stateId());
     }
-}
-
-
 }
