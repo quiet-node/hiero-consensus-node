@@ -378,8 +378,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
         if (closesBlock) {
             lifecycle.onCloseBlock(state);
-            final HederaNewStateRoot hederaNewStateRoot = (HederaNewStateRoot) state;
-            hederaNewStateRoot.commitAllSingletons();
+            if (state instanceof HederaNewStateRoot hederaNewStateRoot) {
+                hederaNewStateRoot.commitAllSingletons();
+            }
             // Flush all boundary state changes besides the BlockStreamInfo
             worker.addItem(boundaryStateChangeListener.flushChanges());
             worker.sync();

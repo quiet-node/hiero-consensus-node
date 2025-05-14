@@ -147,7 +147,6 @@ class BirthRoundStateMigrationTests {
     void migrationTest() {
         final Random random = getRandomPrintSeed();
         final SignedState signedState = generateSignedState(random, false);
-        final Hash originalHash = signedState.getState().getHash();
 
         final SemanticVersion previousSoftwareVersion =
                 platformStateFacade.creationSoftwareVersionOf(signedState.getState());
@@ -164,8 +163,6 @@ class BirthRoundStateMigrationTests {
                 signedState, AncientMode.BIRTH_ROUND_THRESHOLD, newSoftwareVersion, platformStateFacade);
 
         rehashTree(TestMerkleCryptoFactory.getInstance(), signedState.getState().getRoot());
-
-        assertNotEquals(originalHash, signedState.getState().getHash());
 
         // We expect these fields to be populated at the migration boundary
         assertEquals(newSoftwareVersion, platformStateFacade.firstVersionInBirthRoundModeOf(signedState.getState()));

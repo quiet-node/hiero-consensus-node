@@ -53,7 +53,6 @@ import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.service.PlatformStateService;
-import com.swirlds.platform.state.service.WritableRosterStore;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.EntityIdFactory;
 import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
@@ -276,14 +275,16 @@ class NodeRewardManagerTest {
         lenient().when(state.getWritableStates(PlatformStateService.NAME)).thenReturn(writableStates);
 
         given(writableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY)).willReturn(nodeRewardsState);
-                given(readableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY)).willReturn(nodeRewardsState);
+        given(readableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY)).willReturn(nodeRewardsState);
         given(readableStates.<RosterState>getSingleton(ROSTER_STATES_KEY))
-                .willReturn(
-                        new OnDiskWritableSingletonState<>(RosterService.NAME, ROSTER_STATES_KEY, RosterState.PROTOBUF, virtualMap));
+                .willReturn(new OnDiskWritableSingletonState<>(
+                        RosterService.NAME, ROSTER_STATES_KEY, RosterState.PROTOBUF, virtualMap));
         given(readableStates.<EntityNumber>getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new OnDiskReadableSingletonState<>(EntityIdService.NAME, ENTITY_ID_STATE_KEY, EntityNumber.PROTOBUF, virtualMap));
+                .willReturn(new OnDiskReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, EntityNumber.PROTOBUF, virtualMap));
         given(readableStates.<EntityCounts>getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new OnDiskReadableSingletonState<>(EntityIdService.NAME, ENTITY_COUNTS_KEY, EntityCounts.PROTOBUF, virtualMap));
+                .willReturn(new OnDiskReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_COUNTS_KEY, EntityCounts.PROTOBUF, virtualMap));
         final var networkRewardState = new FunctionWritableSingletonState<>(
                 TokenService.NAME,
                 STAKING_NETWORK_REWARDS_KEY,
@@ -314,7 +315,6 @@ class NodeRewardManagerTest {
         given(writableStates.<AccountID, Account>get(ACCOUNTS_KEY)).willReturn(readableAccounts);
         given(writableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY)).willReturn(platformSingletonState);
         given(readableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY)).willReturn(platformSingletonState);
-
     }
 
     private PlatformState platformStateWithFreezeTime(@Nullable final Instant freezeTime) {

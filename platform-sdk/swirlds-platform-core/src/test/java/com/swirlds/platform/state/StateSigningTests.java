@@ -21,13 +21,13 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.test.fixtures.WeightGenerators;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.platform.roster.RosterUtils;
 import com.swirlds.platform.state.signed.SigSet;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateInvalidException;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.crypto.PreGeneratedX509Certs;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.PublicKey;
 import java.security.cert.CertificateEncodingException;
@@ -43,6 +43,7 @@ import java.util.stream.IntStream;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.Signature;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.roster.RosterUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -366,6 +367,7 @@ class StateSigningTests {
                 .setCalculateHash(true)
                 .setSignatures(new HashMap<>())
                 .setCalculateHash(true)
+                .setState(new TestMerkleStateRoot())
                 .build();
 
         final SigSet sigSet = signedState.getSigSet();

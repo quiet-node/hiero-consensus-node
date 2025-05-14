@@ -19,6 +19,8 @@ import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.STATE_M
 import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.workingDirFor;
 import static com.hedera.services.bdd.junit.support.validators.block.BlockStreamUtils.stateNameOf;
 import static com.hedera.services.bdd.junit.support.validators.block.RootHashUtils.extractRootMnemonic;
+import static com.hedera.services.bdd.spec.HapiPropertySource.getConfigRealm;
+import static com.hedera.services.bdd.spec.HapiPropertySource.getConfigShard;
 import static com.hedera.services.bdd.spec.TargetNetworkType.SUBPROCESS_NETWORK;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.platform.system.InitTrigger.GENESIS;
@@ -125,6 +127,8 @@ public class StateChangesValidator implements BlockStreamValidator {
     private final Set<String> servicesWritten = new HashSet<>();
     private final StateChangesSummary stateChangesSummary = new StateChangesSummary(new TreeMap<>());
     private final Map<String, Set<Object>> entityChanges = new LinkedHashMap<>();
+    private final long shard;
+    private final long realm;
 
     private Instant lastStateChangesTime;
     private StateChanges lastStateChanges;
@@ -168,7 +172,9 @@ public class StateChangesValidator implements BlockStreamValidator {
                 16,
                 HintsEnabled.YES,
                 HistoryEnabled.NO,
-                hintsThresholdDenominator);
+                hintsThresholdDenominator,
+                getConfigShard(),
+                getConfigRealm());
         final var blocks =
                 BlockStreamAccess.BLOCK_STREAM_ACCESS.readBlocks(node0Dir.resolve("data/blockStreams/block-0.0.3"));
         validator.validateBlocks(blocks);
@@ -225,7 +231,9 @@ public class StateChangesValidator implements BlockStreamValidator {
                     isHistoryEnabled ? HistoryEnabled.YES : HistoryEnabled.NO,
                     Optional.ofNullable(System.getProperty("hapi.spec.hintsThresholdDenominator"))
                             .map(Long::parseLong)
-                            .orElse(DEFAULT_HINTS_THRESHOLD_DENOMINATOR));
+                            .orElse(DEFAULT_HINTS_THRESHOLD_DENOMINATOR),
+                    spec.shard(),
+                    spec.realm());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -239,10 +247,14 @@ public class StateChangesValidator implements BlockStreamValidator {
             final int crsSize,
             @NonNull final HintsEnabled hintsEnabled,
             @NonNull final HistoryEnabled historyEnabled,
-            final long hintsThresholdDenominator) {
+            final long hintsThresholdDenominator,
+            final long shard,
+            final long realm) {
         this.expectedRootHash = requireNonNull(expectedRootHash);
         this.pathToNode0SwirldsLog = requireNonNull(pathToNode0SwirldsLog);
         this.hintsThresholdDenominator = hintsThresholdDenominator;
+        this.shard = shard;
+        this.realm = realm;
 
         System.setProperty(
                 "hedera.app.properties.path",
@@ -253,6 +265,9 @@ public class StateChangesValidator implements BlockStreamValidator {
         System.setProperty("tss.hintsEnabled", "" + (hintsEnabled == HintsEnabled.YES));
         System.setProperty("tss.historyEnabled", "" + (historyEnabled == HistoryEnabled.YES));
         System.setProperty("tss.initialCrsParties", "" + crsSize);
+        System.setProperty("hedera.shard", String.valueOf(shard));
+        System.setProperty("hedera.realm", String.valueOf(realm));
+
         unarchiveGenesisNetworkJson(pathToUpgradeSysFilesLoc);
         final var bootstrapConfig = new BootstrapConfigProviderImpl().getConfiguration();
         final var versionConfig = bootstrapConfig.getConfigData(VersionConfig.class);
@@ -410,30 +425,31 @@ public class StateChangesValidator implements BlockStreamValidator {
     private void assertEntityCountsMatch(final WritableSingletonState<EntityCounts> entityCounts) {
         final var actualCounts = requireNonNull(entityCounts.get());
         final var expectedNumAirdrops = entityChanges.getOrDefault(
-                stateNameOf(StateIdentifier.STATE_ID_PENDING_AIRDROPS.protoOrdinal()), Set.of());
-        final var expectedNumStakingInfos =
-                entityChanges.getOrDefault(stateNameOf(StateIdentifier.STATE_ID_STAKING_INFO.protoOrdinal()), Set.of());
+                stateNameOf(StateIdentifier.STATE_ID_PENDING_AIRDROPS.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumStakingInfos = entityChanges.getOrDefault(
+                stateNameOf(StateIdentifier.STATE_ID_STAKING_INFO.protoOrdinal(), shard, realm), Set.of());
         final var expectedNumContractStorageSlots = entityChanges.getOrDefault(
-                stateNameOf(StateIdentifier.STATE_ID_CONTRACT_STORAGE.protoOrdinal()), Set.of());
+                stateNameOf(StateIdentifier.STATE_ID_CONTRACT_STORAGE.protoOrdinal(), shard, realm), Set.of());
         final var expectedNumTokenRelations = entityChanges.getOrDefault(
-                stateNameOf(StateIdentifier.STATE_ID_TOKEN_RELATIONS.protoOrdinal()), Set.of());
-        final var expectedNumAccounts =
-                entityChanges.getOrDefault(stateNameOf(StateIdentifier.STATE_ID_ACCOUNTS.protoOrdinal()), Set.of());
-        final var expectedNumAliases =
-                entityChanges.getOrDefault(stateNameOf(StateIdentifier.STATE_ID_ALIASES.protoOrdinal()), Set.of());
+                stateNameOf(StateIdentifier.STATE_ID_TOKEN_RELATIONS.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumAccounts = entityChanges.getOrDefault(
+                stateNameOf(StateIdentifier.STATE_ID_ACCOUNTS.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumAliases = entityChanges.getOrDefault(
+                stateNameOf(StateIdentifier.STATE_ID_ALIASES.protoOrdinal(), shard, realm), Set.of());
         final var expectedNumContractBytecodes = entityChanges.getOrDefault(
-                stateNameOf(StateIdentifier.STATE_ID_CONTRACT_BYTECODE.protoOrdinal()), Set.of());
-        final var expectedNumFiles = entityChanges.getOrDefault(stateNameOf(STATE_ID_FILES.protoOrdinal()), Set.of());
-        final var expectedNumNfts =
-                entityChanges.getOrDefault(stateNameOf(StateIdentifier.STATE_ID_NFTS.protoOrdinal()), Set.of());
-        final var expectedNumNodes =
-                entityChanges.getOrDefault(stateNameOf(StateIdentifier.STATE_ID_NODES.protoOrdinal()), Set.of());
+                stateNameOf(StateIdentifier.STATE_ID_CONTRACT_BYTECODE.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumFiles =
+                entityChanges.getOrDefault(stateNameOf(STATE_ID_FILES.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumNfts = entityChanges.getOrDefault(
+                stateNameOf(StateIdentifier.STATE_ID_NFTS.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumNodes = entityChanges.getOrDefault(
+                stateNameOf(StateIdentifier.STATE_ID_NODES.protoOrdinal(), shard, realm), Set.of());
         final var expectedNumSchedules = entityChanges.getOrDefault(
-                stateNameOf(StateIdentifier.STATE_ID_SCHEDULES_BY_ID.protoOrdinal()), Set.of());
-        final var expectedNumTokens =
-                entityChanges.getOrDefault(stateNameOf(StateIdentifier.STATE_ID_TOKENS.protoOrdinal()), Set.of());
-        final var expectedNumTopics =
-                entityChanges.getOrDefault(stateNameOf(StateIdentifier.STATE_ID_TOPICS.protoOrdinal()), Set.of());
+                stateNameOf(StateIdentifier.STATE_ID_SCHEDULES_BY_ID.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumTokens = entityChanges.getOrDefault(
+                stateNameOf(StateIdentifier.STATE_ID_TOKENS.protoOrdinal(), shard, realm), Set.of());
+        final var expectedNumTopics = entityChanges.getOrDefault(
+                stateNameOf(StateIdentifier.STATE_ID_TOPICS.protoOrdinal(), shard, realm), Set.of());
 
         assertEquals(expectedNumAirdrops.size(), actualCounts.numAirdrops(), "Airdrop counts mismatch");
         assertEquals(expectedNumTokens.size(), actualCounts.numTokens(), "Token counts mismatch");
@@ -535,7 +551,7 @@ public class StateChangesValidator implements BlockStreamValidator {
 
     private void applyStateChanges(@NonNull final StateChanges stateChanges) {
         for (final var stateChange : stateChanges.stateChanges()) {
-            final var stateName = stateNameOf(stateChange.stateId());
+            final var stateName = stateNameOf(stateChange.stateId(), shard, realm);
             final var delimIndex = stateName.indexOf('.');
             if (delimIndex == -1) {
                 Assertions.fail("State name '" + stateName + "' is not in the correct format");

@@ -2,6 +2,7 @@
 package com.swirlds.platform.state;
 
 import static com.swirlds.platform.state.PlatformStateAccessor.GENESIS_ROUND;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
@@ -31,7 +32,6 @@ import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.merkle.map.MerkleMap;
-import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import com.swirlds.state.StateChangeListener;
@@ -76,7 +76,7 @@ class MerkleStateRootTest extends MerkleTestBase {
     @BeforeEach
     void setUp() {
         setupConstructableRegistry();
-        FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
+        registerMerkleStateRootClassIds();
         setupFruitMerkleMap();
         stateRoot = new TestMerkleStateRoot();
         stateRoot.init(
@@ -728,16 +728,21 @@ class MerkleStateRootTest extends MerkleTestBase {
         private StateChangeListener kvListener;
 
         @Mock
-        private StateChangeListener nonKvListener;
+        private StateChangeListener singletonListener;
+
+        @Mock
+        private StateChangeListener queueListener;
 
         @BeforeEach
         void setUp() {
             given(kvListener.stateTypes()).willReturn(EnumSet.of(MAP));
-            given(nonKvListener.stateTypes()).willReturn(EnumSet.of(QUEUE, SINGLETON));
+            given(singletonListener.stateTypes()).willReturn(EnumSet.of(SINGLETON));
+            given(queueListener.stateTypes()).willReturn(EnumSet.of(QUEUE));
             given(kvListener.stateIdFor(FIRST_SERVICE, FRUIT_STATE_KEY)).willReturn(FRUIT_STATE_ID);
             given(kvListener.stateIdFor(FIRST_SERVICE, ANIMAL_STATE_KEY)).willReturn(ANIMAL_STATE_ID);
-            given(nonKvListener.stateIdFor(FIRST_SERVICE, COUNTRY_STATE_KEY)).willReturn(COUNTRY_STATE_ID);
-            given(nonKvListener.stateIdFor(FIRST_SERVICE, STEAM_STATE_KEY)).willReturn(STEAM_STATE_ID);
+            given(singletonListener.stateIdFor(FIRST_SERVICE, COUNTRY_STATE_KEY))
+                    .willReturn(COUNTRY_STATE_ID);
+            given(queueListener.stateIdFor(FIRST_SERVICE, STEAM_STATE_KEY)).willReturn(STEAM_STATE_ID);
 
             setupAnimalMerkleMap();
             setupFruitVirtualMap();
@@ -758,7 +763,8 @@ class MerkleStateRootTest extends MerkleTestBase {
             stateRoot.putServiceStateIfAbsent(steamMetadata, () -> steamQueue);
 
             stateRoot.registerCommitListener(kvListener);
-            stateRoot.registerCommitListener(nonKvListener);
+            stateRoot.registerCommitListener(singletonListener);
+            stateRoot.registerCommitListener(queueListener);
 
             final var states = stateRoot.getWritableStates(FIRST_SERVICE);
             final var animalState = states.get(ANIMAL_STATE_KEY);
@@ -780,12 +786,13 @@ class MerkleStateRootTest extends MerkleTestBase {
             verify(kvListener).mapDeleteChange(FRUIT_STATE_ID, C_KEY);
             verify(kvListener).mapUpdateChange(ANIMAL_STATE_ID, A_KEY, AARDVARK);
             verify(kvListener).mapDeleteChange(ANIMAL_STATE_ID, C_KEY);
-            verify(nonKvListener).singletonUpdateChange(COUNTRY_STATE_ID, ESTONIA);
-            verify(nonKvListener).queuePushChange(STEAM_STATE_ID, BIOLOGY);
-            verify(nonKvListener).queuePopChange(STEAM_STATE_ID);
+            verify(singletonListener).singletonUpdateChange(COUNTRY_STATE_ID, ESTONIA);
+            verify(queueListener).queuePushChange(STEAM_STATE_ID, BIOLOGY);
+            verify(queueListener).queuePopChange(STEAM_STATE_ID);
 
             verifyNoMoreInteractions(kvListener);
-            verifyNoMoreInteractions(nonKvListener);
+            verifyNoMoreInteractions(singletonListener);
+            verifyNoMoreInteractions(queueListener);
         }
     }
 

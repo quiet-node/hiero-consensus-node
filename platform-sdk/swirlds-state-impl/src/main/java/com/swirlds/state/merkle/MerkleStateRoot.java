@@ -802,7 +802,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             for (final ReadableKVState kv : kvInstances.values()) {
                 ((WritableKVStateBase) kv).commit();
             }
-
+            commitSingletons();
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
             }
@@ -1243,5 +1243,10 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 assert virtualMap.containsKey(leafBytes.keyBytes());
             }
         }
+    }
+
+    @Override
+    public boolean isHashed() {
+        return getHash() != null;
     }
 }

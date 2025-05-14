@@ -7,14 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import java.util.Random;
-import org.hiero.base.crypto.test.fixtures.CryptoRandomUtils;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -28,15 +26,10 @@ class StateTest {
     @DisplayName("Test Copy")
     void testCopy() {
 
-        final MerkleNodeState state = randomSignedState().getState();
+        final MerkleNodeState state = randomSignedState(false).getState();
         final MerkleNodeState copy = state.copy();
 
         assertNotSame(state, copy, "copy should not return the same object");
-
-        state.invalidateHash();
-        TestMerkleCryptoFactory.getInstance().digestTreeSync(state.getRoot());
-        TestMerkleCryptoFactory.getInstance().digestTreeSync(copy.getRoot());
-
         assertEquals(state.getHash(), copy.getHash(), "copy should be equal to the original");
         assertFalse(state.isDestroyed(), "copy should not have been deleted");
         assertEquals(0, copy.getRoot().getReservationCount(), "copy should have no references");
@@ -50,7 +43,7 @@ class StateTest {
     @Tag(TestComponentTags.MERKLE)
     @DisplayName("Test Try Reserve")
     void tryReserveTest() {
-        final MerkleNodeState state = randomSignedState().getState();
+        final MerkleNodeState state = randomSignedState(true).getState();
         assertEquals(
                 1,
                 state.getRoot().getReservationCount(),
@@ -66,7 +59,7 @@ class StateTest {
         assertFalse(state.getRoot().tryReserve(), "tryReserve() should fail when the state is destroyed");
     }
 
-    private static SignedState randomSignedState() {
+    private static SignedState randomSignedState(boolean isHashed) {
         Random random = new Random(0);
         final String virtualMapLabel = "vm-" + StateTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         MerkleNodeState merkleStateRoot = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
@@ -80,7 +73,11 @@ class StateTest {
                 false,
                 false,
                 new PlatformStateFacade());
-        signedState.getState().setHash(CryptoRandomUtils.randomHash(random));
+        if (isHashed) {
+            // Hash the underlying VirtualMap
+            signedState.getState().getHash();
+        }
+
         return signedState;
     }
 }

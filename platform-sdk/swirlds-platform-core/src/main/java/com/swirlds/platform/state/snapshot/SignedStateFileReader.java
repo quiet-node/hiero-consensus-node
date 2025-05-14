@@ -8,7 +8,6 @@ import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.SUPPORTED
 import static java.nio.file.Files.exists;
 import static java.util.Objects.requireNonNull;
 
-import com.swirlds.common.RosterStateId;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
@@ -34,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.function.Function;
+import org.hiero.consensus.roster.RosterStateId;
 
 /**
  * Utility methods for reading a signed state from disk.
