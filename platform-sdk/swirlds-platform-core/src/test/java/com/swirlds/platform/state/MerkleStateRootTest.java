@@ -781,7 +781,6 @@ class MerkleStateRootTest extends MerkleTestBase {
             steamState.add(BIOLOGY);
 
             ((CommittableWritableStates) states).commit();
-            ((CommittableWritableStates) states).commitSingletons();
 
             verify(kvListener).mapUpdateChange(FRUIT_STATE_ID, E_KEY, EGGPLANT);
             verify(kvListener).mapDeleteChange(FRUIT_STATE_ID, C_KEY);
