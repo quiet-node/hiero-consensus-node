@@ -27,6 +27,7 @@ import com.swirlds.platform.state.signed.SignedStateInvalidException;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.crypto.PreGeneratedX509Certs;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.PublicKey;
 import java.security.cert.CertificateEncodingException;
@@ -366,6 +367,7 @@ class StateSigningTests {
                 .setCalculateHash(true)
                 .setSignatures(new HashMap<>())
                 .setCalculateHash(true)
+                .setState(new TestMerkleStateRoot())
                 .build();
 
         final SigSet sigSet = signedState.getSigSet();

@@ -28,6 +28,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateValidator;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
 import java.io.IOException;
 import java.time.Duration;
@@ -116,6 +117,7 @@ final class ReconnectTest {
                     .setRoster(roster)
                     .setSigningNodeIds(nodeIds)
                     .setCalculateHash(true)
+                    .setState(new TestMerkleStateRoot())
                     .buildWithFacade();
             final SignedState signedState = signedStateFacadePair.left();
             final PlatformStateFacade platformStateFacade = signedStateFacadePair.right();
