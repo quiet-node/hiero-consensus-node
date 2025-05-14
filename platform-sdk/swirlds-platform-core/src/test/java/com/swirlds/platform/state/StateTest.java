@@ -7,14 +7,12 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import java.util.Random;
-import org.hiero.base.crypto.test.fixtures.CryptoRandomUtils;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -75,7 +73,7 @@ class StateTest {
                 false,
                 false,
                 new PlatformStateFacade());
-        if(isHashed) {
+        if (isHashed) {
             // Hash the underlying VirtualMap
             signedState.getState().getHash();
         }

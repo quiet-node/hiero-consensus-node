@@ -740,7 +740,8 @@ class MerkleStateRootTest extends MerkleTestBase {
             given(queueListener.stateTypes()).willReturn(EnumSet.of(QUEUE));
             given(kvListener.stateIdFor(FIRST_SERVICE, FRUIT_STATE_KEY)).willReturn(FRUIT_STATE_ID);
             given(kvListener.stateIdFor(FIRST_SERVICE, ANIMAL_STATE_KEY)).willReturn(ANIMAL_STATE_ID);
-            given(singletonListener.stateIdFor(FIRST_SERVICE, COUNTRY_STATE_KEY)).willReturn(COUNTRY_STATE_ID);
+            given(singletonListener.stateIdFor(FIRST_SERVICE, COUNTRY_STATE_KEY))
+                    .willReturn(COUNTRY_STATE_ID);
             given(queueListener.stateIdFor(FIRST_SERVICE, STEAM_STATE_KEY)).willReturn(STEAM_STATE_ID);
 
             setupAnimalMerkleMap();
