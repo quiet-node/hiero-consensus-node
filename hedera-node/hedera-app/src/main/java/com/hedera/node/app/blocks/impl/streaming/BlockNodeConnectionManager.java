@@ -9,7 +9,13 @@ import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.ConnectionState;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
+import com.hedera.node.config.ConfigProvider;
+import com.hedera.node.config.data.BlockNodeConnectionConfig;
+import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
+import com.hedera.node.internal.network.BlockNodeConnectionInfo;
+import com.hedera.pbj.runtime.ParseException;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.helidon.common.tls.Tls;
@@ -18,6 +24,9 @@ import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
 import io.helidon.webclient.grpc.GrpcClientProtocolConfig;
 import io.helidon.webclient.grpc.GrpcServiceClient;
 import io.helidon.webclient.grpc.GrpcServiceDescriptor;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,31 +56,66 @@ public class BlockNodeConnectionManager {
     // Add a random number generator for retry jitter
     private final Random random = new Random();
 
+    private List<BlockNodeConfig> availableNodes;
     private final Map<BlockNodeConfig, BlockNodeConnection> connections;
     private final Map<BlockNodeConfig, Long> lastVerifiedBlockPerConnection;
 
-    private final BlockNodeConfigExtractor blockNodeConfigurations;
     private final BlockStreamStateManager blockStreamStateManager;
     private final ScheduledExecutorService connectionExecutor = Executors.newScheduledThreadPool(4);
     private final BlockStreamMetrics blockStreamMetrics;
+    private final ConfigProvider configProvider;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
-     * @param blockNodeConfigExtractor the block node configuration extractor
+     * @param configProvider the configuration to use
      * @param blockStreamStateManager the block stream state manager
+     * @param blockStreamMetrics the block stream metrics to track
      */
     public BlockNodeConnectionManager(
-            @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
+            @NonNull final ConfigProvider configProvider,
             @NonNull final BlockStreamStateManager blockStreamStateManager,
             @NonNull final BlockStreamMetrics blockStreamMetrics) {
-        this.blockNodeConfigurations =
-                requireNonNull(blockNodeConfigExtractor, "blockNodeConfigExtractor must not be null");
+        this.configProvider = requireNonNull(configProvider, "configProvider must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
 
         this.connections = new ConcurrentHashMap<>();
         this.lastVerifiedBlockPerConnection = new ConcurrentHashMap<>();
-        this.blockStreamMetrics = blockStreamMetrics;
+        this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
+
+        if (configProvider
+                .getConfiguration()
+                .getConfigData(BlockStreamConfig.class)
+                .streamToBlockNodes()) {
+            final var blockNodeConnectionConfigPath = configProvider
+                    .getConfiguration()
+                    .getConfigData(BlockNodeConnectionConfig.class)
+                    .blockNodeConnectionFileDir();
+
+            this.availableNodes = extractBlockNodesConfigurations(blockNodeConnectionConfigPath);
+            logger.info("Loaded block node configuration from {}", blockNodeConnectionConfigPath);
+            logger.info("Block node configuration: {}", this.availableNodes);
+        }
+    }
+
+    /**
+     * @param blockNodeConfigPath the path to the block node configuration file
+     * @return the configurations for all block nodes
+     */
+    private List<BlockNodeConfig> extractBlockNodesConfigurations(@NonNull final String blockNodeConfigPath) {
+        final var configPath = Paths.get(blockNodeConfigPath, "block-nodes.json");
+        try {
+            final byte[] jsonConfig = Files.readAllBytes(configPath);
+            final BlockNodeConnectionInfo protoConfig = BlockNodeConnectionInfo.JSON.parse(Bytes.wrap(jsonConfig));
+
+            // Convert proto config to internal config objects
+            return protoConfig.nodes().stream()
+                    .map(node -> new BlockNodeConfig(node.address(), node.port(), node.priority()))
+                    .collect(Collectors.toList());
+        } catch (IOException | ParseException e) {
+            logger.error("Failed to read block node configuration from {}", configPath, e);
+            throw new RuntimeException("Failed to read block node configuration from " + configPath, e);
+        }
     }
 
     /**
@@ -292,10 +336,9 @@ public class BlockNodeConnectionManager {
         logger.info(
                 "[{}] Establishing connection to block node based on priorities",
                 Thread.currentThread().getName());
-        List<BlockNodeConfig> availableNodes = blockNodeConfigurations.getAllNodes();
 
         final Map<Integer, List<BlockNodeConfig>> priorityGroups =
-                availableNodes.stream().collect(Collectors.groupingBy(BlockNodeConfig::priority));
+                getAvailableNodes().stream().collect(Collectors.groupingBy(BlockNodeConfig::priority));
         final List<Integer> sortedPriorities = new ArrayList<>(priorityGroups.keySet());
         sortedPriorities.sort(Integer::compare);
 
@@ -377,7 +420,7 @@ public class BlockNodeConnectionManager {
             // Create the connection object
             final GrpcServiceClient grpcClient = createNewGrpcClient(node);
             connection = new BlockNodeConnection(
-                    node, this, blockStreamStateManager, grpcClient, connectionExecutor, blockStreamMetrics);
+                    configProvider, node, this, blockStreamStateManager, grpcClient, blockStreamMetrics);
 
             connections.put(node, connection);
             // Immediately schedule the FIRST connection attempt.
@@ -398,6 +441,11 @@ public class BlockNodeConnectionManager {
     boolean isRetrying(BlockNodeConnection connection) {
         if (connection == null) return false;
         return isRetrying(connection.getNodeConfig());
+    }
+
+    @VisibleForTesting
+    List<BlockNodeConfig> getAvailableNodes() {
+        return availableNodes;
     }
 
     private boolean isRetrying(BlockNodeConfig config) {
@@ -471,7 +519,7 @@ public class BlockNodeConnectionManager {
         private NoOpConnection() {
             // Provide minimal valid state for super constructor if needed, or make super allow nulls
             // Assuming BlockNodeConfig.DEFAULT exists and manager can be null for this placeholder
-            super(BlockNodeConfig.DEFAULT, null, null, null, null, null);
+            super(null, BlockNodeConfig.DEFAULT, null, null, null, null);
         }
 
         @Override
