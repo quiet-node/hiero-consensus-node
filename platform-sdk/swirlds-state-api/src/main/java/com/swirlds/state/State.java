@@ -99,9 +99,9 @@ public interface State extends FastCopyable, Hashable {
     }
 
     /**
-     * Answers the question if the state is already hashed
+     * Answers the question if the state is already hashed.
      *
-     * @return true if the state is already hashed, false otherwise
+     * @return true if the state is already hashed, false otherwise.
      */
     default boolean isHashed() {
         throw new UnsupportedOperationException();
@@ -130,6 +130,10 @@ public interface State extends FastCopyable, Hashable {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Used to track the status of the Platform.
+     * @return {@code true} if Platform status is not {@code PlatformStatus.ACTIVE}.
+     */
     default boolean isStartUpMode() {
         return true;
     }

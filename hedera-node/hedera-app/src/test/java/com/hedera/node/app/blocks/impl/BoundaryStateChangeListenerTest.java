@@ -59,51 +59,51 @@ class BoundaryStateChangeListenerTest {
             .numStakingInfos(13)
             .build();
 
-    private BoundaryStateChangeListener subject;
+    private BoundaryStateChangeListener listener;
 
     private Configuration configuration = HederaTestConfigBuilder.createConfig();
     private StoreMetricsServiceImpl storeMetricsService = new StoreMetricsServiceImpl(new NoOpMetrics());
 
     @BeforeEach
     void setUp() {
-        subject = new BoundaryStateChangeListener(storeMetricsService, () -> configuration);
+        listener = new BoundaryStateChangeListener(storeMetricsService, () -> configuration);
     }
 
     @Test
     void targetTypeIsSingleton() {
-        assertEquals(Set.of(SINGLETON), subject.stateTypes());
+        assertEquals(Set.of(SINGLETON), listener.stateTypes());
     }
 
     @Test
     void understandsStateIds() {
         final var service = BlockStreamService.NAME;
         final var stateKey = V0560BlockStreamSchema.BLOCK_STREAM_INFO_KEY;
-        assertEquals(stateIdFor(service, stateKey), subject.stateIdFor(service, stateKey));
+        assertEquals(stateIdFor(service, stateKey), listener.stateIdFor(service, stateKey));
     }
 
     @Test
     void testFlushChanges() {
-        subject.setBoundaryTimestamp(Instant.now());
-        subject.singletonUpdateChange(STATE_ID, PROTO_STRING);
-        BlockItem blockItem = subject.flushChanges();
+        listener.setBoundaryTimestamp(Instant.now());
+        listener.singletonUpdateChange(STATE_ID, PROTO_STRING);
+        BlockItem blockItem = listener.flushChanges();
 
         assertNotNull(blockItem);
-        assertTrue(subject.allStateChanges().isEmpty());
+        assertTrue(listener.allStateChanges().isEmpty());
     }
 
     @Test
     void testAllStateChanges() {
-        subject.singletonUpdateChange(STATE_ID, PROTO_STRING);
+        listener.singletonUpdateChange(STATE_ID, PROTO_STRING);
 
-        List<StateChange> stateChanges = subject.allStateChanges();
+        List<StateChange> stateChanges = listener.allStateChanges();
         assertEquals(1, stateChanges.size());
     }
 
     @Test
     void testSingletonUpdateChange() {
-        subject.singletonUpdateChange(STATE_ID, PROTO_STRING);
+        listener.singletonUpdateChange(STATE_ID, PROTO_STRING);
 
-        StateChange stateChange = subject.allStateChanges().getFirst();
+        StateChange stateChange = listener.allStateChanges().getFirst();
         assertEquals(SINGLETON_UPDATE, stateChange.changeOperation().kind());
         assertEquals(STATE_ID, stateChange.stateId());
         assertEquals(PROTO_STRING.value(), stateChange.singletonUpdate().stringValue());
@@ -111,15 +111,15 @@ class BoundaryStateChangeListenerTest {
 
     @Test
     void getAndResetNodeFees() {
-        subject.trackCollectedNodeFees(100);
-        assertEquals(100, subject.nodeFeesCollected());
+        listener.trackCollectedNodeFees(100);
+        assertEquals(100, listener.nodeFeesCollected());
     }
 
     @Test
     void testSingletonUpdateChangeForEntityCounts() {
-        subject.singletonUpdateChange(STATE_ID_ENTITY_COUNTS, ENTITY_COUNTS);
+        listener.singletonUpdateChange(STATE_ID_ENTITY_COUNTS, ENTITY_COUNTS);
 
-        StateChange stateChange = subject.allStateChanges().getFirst();
+        StateChange stateChange = listener.allStateChanges().getFirst();
         assertEquals(SINGLETON_UPDATE, stateChange.changeOperation().kind());
         assertEquals(STATE_ID_ENTITY_COUNTS, stateChange.stateId());
         assertEquals(ENTITY_COUNTS, stateChange.singletonUpdate().entityCountsValue());

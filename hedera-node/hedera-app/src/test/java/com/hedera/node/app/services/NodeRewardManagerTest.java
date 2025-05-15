@@ -59,6 +59,8 @@ import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
 import com.swirlds.state.merkle.disk.OnDiskWritableSingletonState;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.spi.ReadableSingletonStateBase;
+import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
@@ -243,11 +245,7 @@ class NodeRewardManagerTest {
                         .activeRosterHash(Bytes.wrap("ACTIVE"))
                         .build())
                 .build());
-        final WritableSingletonStateBase<RosterState> rosterSingletonState = new FunctionWritableSingletonState<>(
-                RosterService.NAME, ROSTER_STATES_KEY, rosterStateRef::get, rosterStateRef::set);
         stateRef.set(platformState);
-        final WritableSingletonStateBase<PlatformState> platformSingletonState = new FunctionWritableSingletonState<>(
-                PlatformStateService.NAME, PLATFORM_STATE_KEY, stateRef::get, stateRef::set);
         if (networkStakingRewards == null) {
             networkStakingRewardsRef.set(NetworkStakingRewards.newBuilder()
                     .totalStakedStart(0)
@@ -269,30 +267,32 @@ class NodeRewardManagerTest {
         lenient().when(state.getWritableStates(RosterService.NAME)).thenReturn(writableStates);
         lenient().when(state.getReadableStates(EntityIdService.NAME)).thenReturn(readableStates);
         lenient().when(state.getWritableStates(EntityIdService.NAME)).thenReturn(writableStates);
-        lenient().when(state.getWritableStates(PlatformStateService.NAME)).thenReturn(writableStates);
 
         given(writableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY)).willReturn(nodeRewardsState);
         given(readableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY)).willReturn(nodeRewardsState);
+        given(readableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
+                .willReturn(new WritableSingletonStateBase<>(PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
         given(readableStates.<RosterState>getSingleton(ROSTER_STATES_KEY))
-                .willReturn(new OnDiskWritableSingletonState<>(
-                        RosterService.NAME, ROSTER_STATES_KEY, RosterState.PROTOBUF, virtualMap));
-        given(readableStates.<EntityNumber>getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new OnDiskReadableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, EntityNumber.PROTOBUF, virtualMap));
-        given(readableStates.<EntityCounts>getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new OnDiskReadableSingletonState<>(
-                        EntityIdService.NAME, ENTITY_COUNTS_KEY, EntityCounts.PROTOBUF, virtualMap));
-        final var networkRewardState = new FunctionWritableSingletonState<>(
-                TokenService.NAME,
-                STAKING_NETWORK_REWARDS_KEY,
-                networkStakingRewardsRef::get,
-                networkStakingRewardsRef::set);
+                .willReturn(
+                        new WritableSingletonStateBase<>(ROSTER_STATES_KEY, rosterStateRef::get, rosterStateRef::set));
+        given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
+                .willReturn(new ReadableSingletonStateBase<>(
+                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+        given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
+                .willReturn(new ReadableSingletonStateBase<>(
+                        ENTITY_COUNTS_KEY,
+                        () -> EntityCounts.newBuilder().numNodes(1).build()));
+        final var networkRewardState = new WritableSingletonStateBase<>(
+                STAKING_NETWORK_REWARDS_KEY, networkStakingRewardsRef::get, networkStakingRewardsRef::set);
+        final var readableNetworkRewardState =
+                new ReadableSingletonStateBase<>(STAKING_NETWORK_REWARDS_KEY, networkStakingRewardsRef::get);
         given(readableStates.<NetworkStakingRewards>getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn(networkRewardState);
         given(writableStates.<NetworkStakingRewards>getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn(networkRewardState);
+        //        given(readableNetworkRewardState.get()).willReturn(networkStakingRewardsRef.get());
         final WritableKVState<ProtoBytes, Roster> rosters = MapWritableKVState.<ProtoBytes, Roster>builder(
-                        RosterService.NAME, ROSTER_KEY)
+                        WritableRosterStore.ROSTER_KEY)
                 .build();
         rosters.put(
                 ProtoBytes.newBuilder().value(Bytes.wrap("ACTIVE")).build(),
@@ -302,16 +302,11 @@ class NodeRewardManagerTest {
                                 RosterEntry.newBuilder().nodeId(1L).build()))
                         .build());
         lenient().when(readableStates.<ProtoBytes, Roster>get(ROSTER_KEY)).thenReturn(rosters);
-        given(writableStates.<ProtoBytes, Roster>get(ROSTER_KEY)).willReturn(rosters);
-        given(writableStates.<RosterState>getSingleton(ROSTER_STATES_KEY)).willReturn(rosterSingletonState);
-        given(readableStates.<RosterState>getSingleton(ROSTER_STATES_KEY)).willReturn(rosterSingletonState);
-        final var readableAccounts = MapWritableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS_KEY)
+        final var readableAccounts = MapWritableKVState.<AccountID, Account>builder(ACCOUNTS_KEY)
                 .value(asAccount(0, 0, 801), Account.DEFAULT)
                 .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS_KEY)).willReturn(readableAccounts);
         given(writableStates.<AccountID, Account>get(ACCOUNTS_KEY)).willReturn(readableAccounts);
-        given(writableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY)).willReturn(platformSingletonState);
-        given(readableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY)).willReturn(platformSingletonState);
     }
 
     private PlatformState platformStateWithFreezeTime(@Nullable final Instant freezeTime) {

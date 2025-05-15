@@ -172,6 +172,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     private final RuntimeObjectRecord registryRecord;
 
     /**
+     * Used to track the status of the Platform.
+     * It is set to {@code true} if Platform status is not {@code PlatformStatus.ACTIVE}
+     */
+    private boolean startupMode = true;
+
+    /**
      * Create a new instance. This constructor must be used for all creations of this class.
      *
      */
@@ -197,18 +203,19 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      *
      * @param from The other state to fast-copy from. Cannot be null.
      */
-    @SuppressWarnings("rawtypes,unchecked")
     protected MerkleStateRoot(@NonNull final MerkleStateRoot<T> from) {
         // Copy the Merkle route from the source instance
         super(from);
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
         this.listeners.addAll(from.listeners);
         this.roundSupplier = from.roundSupplier;
+        this.startupMode = from.startupMode;
 
         // Copy over the metadata
         for (final var entry : from.services.entrySet()) {
             this.services.put(entry.getKey(), new HashMap<>(entry.getValue()));
         }
+
         // Copy the non-null Merkle children from the source (should also be handled by super, TBH).
         // Note we don't "compress" -- null children remain in here unless we manually remove them
         // (which would cause massive re-hashing).
@@ -218,6 +225,26 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 setChild(childIndex, childToCopy.copy());
             }
         }
+    }
+
+    public void disableStartupMode() {
+        startupMode = false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isStartUpMode() {
+        return startupMode;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isHashed() {
+        return getHash() != null;
     }
 
     @Override
@@ -802,18 +829,15 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             for (final ReadableKVState kv : kvInstances.values()) {
                 ((WritableKVStateBase) kv).commit();
             }
-            commitSingletons();
+            if (startupMode) {
+                for (final ReadableSingletonState s : singletonInstances.values()) {
+                    ((WritableSingletonStateBase) s).commit();
+                }
+            }
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
             }
             readableStatesMap.remove(serviceName);
-        }
-
-        @Override
-        public void commitSingletons() {
-            for (final ReadableSingletonState s : singletonInstances.values()) {
-                ((WritableSingletonStateBase) s).commit();
-            }
         }
 
         /**
@@ -877,6 +901,23 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @NonNull
     private static String extractStateKey(@NonNull final StateMetadata<?, ?> md) {
         return md.stateDefinition().stateKey();
+    }
+
+    /**
+     * Commit all singleton states for every registered service.
+     */
+    public void commitSingletons() {
+        for (String serviceKey : services.keySet()) {
+            final var service = services.get(serviceKey);
+            for (String stateKey : service.keySet()) {
+                StateMetadata<?, ?> stateMetadata = service.get(stateKey);
+                if (stateMetadata.stateDefinition().singleton()) {
+                    WritableStates writableStates = getWritableStates(serviceKey);
+                    final var writableSingleton = (WritableSingletonStateBase<?>) writableStates.getSingleton(stateKey);
+                    writableSingleton.commit();
+                }
+            }
+        }
     }
 
     /**
@@ -1243,10 +1284,5 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 assert virtualMap.containsKey(leafBytes.keyBytes());
             }
         }
-    }
-
-    @Override
-    public boolean isHashed() {
-        return getHash() != null;
     }
 }

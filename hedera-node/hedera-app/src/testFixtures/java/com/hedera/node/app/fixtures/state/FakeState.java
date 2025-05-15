@@ -205,11 +205,7 @@ public class FakeState implements MerkleNodeState {
             @NonNull final String serviceName, @NonNull final ListWritableQueueState<T> state) {
         listeners.forEach(listener -> {
             if (listener.stateTypes().contains(QUEUE)) {
-                try {
-                    registerQueueListener(serviceName, state, listener);
-                } catch (Exception ignore) {
-                    // Eagerly registering listeners like this may throw exception on unsupported state keys
-                }
+                registerQueueListener(serviceName, state, listener);
             }
         });
         return state;
@@ -228,7 +224,6 @@ public class FakeState implements MerkleNodeState {
             @NonNull final WritableQueueStateBase<V> queueState,
             @NonNull final StateChangeListener listener) {
         final var stateId = listener.stateIdFor(serviceName, queueState.getStateKey());
-        final var stateKey = queueState.getStateKey();
         queueState.registerListener(new QueueChangeListener<>() {
             @Override
             public void queuePushChange(@NonNull final V value) {

@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.hedera.hapi.block.stream.output.StateIdentifier;
 import com.swirlds.state.merkle.StateUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -60,7 +59,7 @@ class BlockImplUtilsTest {
 
     @ParameterizedTest
     @MethodSource("stateIdsByName")
-    void stateIdsByNameAsExpected(@Nullable final String stateName, @NonNull final StateIdentifier stateId) {
+    void stateIdsByNameAsExpected(@NonNull final String stateName, @NonNull final StateIdentifier stateId) {
         final var parts = stateName.split("\\.");
         assertThat(StateUtils.stateIdFor(parts[0], parts[1])).isEqualTo(stateId.protoOrdinal());
     }

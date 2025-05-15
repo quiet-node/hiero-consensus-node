@@ -205,6 +205,7 @@ public class TestingAppStateInitializer {
         ((CommittableWritableStates) writableStates).commit();
         return Collections.emptyList();
     }
+
     // FUTURE WORK:
     // Should be removed once the MerkleStateRoot is removed along with putServiceStateIfAbsent in
     // MerkleNodeState interface
