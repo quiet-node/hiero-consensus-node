@@ -90,7 +90,6 @@ open module com.hedera.node.test.clients {
     requires com.swirlds.base;
     requires com.swirlds.common;
     requires com.swirlds.config.api;
-    requires com.swirlds.logging;
     requires com.swirlds.merkledb;
     requires com.swirlds.metrics.api;
     requires com.swirlds.platform.core.test.fixtures;
