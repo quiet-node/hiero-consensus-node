@@ -678,6 +678,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 deserializedVersion == null ? "<NONE>" : deserializedVersion);
         if (trigger != GENESIS) {
             requireNonNull(deserializedVersion, "Deserialized version cannot be null for trigger " + trigger);
+            withListeners(state);
         }
         if (SEMANTIC_VERSION_COMPARATOR.compare(version, deserializedVersion) < 0) {
             logger.fatal(
