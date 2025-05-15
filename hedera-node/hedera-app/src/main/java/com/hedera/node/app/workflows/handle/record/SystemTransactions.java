@@ -306,7 +306,6 @@ public class SystemTransactions {
                         .serviceEndpoint(hapiEndpoints)
                         .declineReward(true)
                         .build();
-                log.info("Creating node{} via {}", nodeInfo.nodeId(), nodeCreate);
                 b.nodeCreate(nodeCreate);
             });
         }
