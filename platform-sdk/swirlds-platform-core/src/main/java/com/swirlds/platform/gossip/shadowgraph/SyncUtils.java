@@ -200,6 +200,7 @@ public final class SyncUtils {
                         connection.getDescription(),
                         events.size());
             }
+            logger.warn("SyncUtils 203");
             for (final PlatformEvent event : events) {
                 connection.getDos().writeByte(ByteConstants.COMM_EVENT_NEXT);
                 connection.getDos().writePbjRecord(event.getGossipEvent(), GossipEvent.PROTOBUF);
@@ -216,7 +217,9 @@ public final class SyncUtils {
                 }
                 connection.getDos().writeByte(ByteConstants.COMM_EVENT_DONE);
             }
+            logger.warn("SyncUtils 220");
             connection.getDos().flush();
+            logger.warn("SyncUtils 222");
 
             // if we are still reading events, send keepalive messages
             while (!eventReadingDone.await(syncKeepalivePeriod.toMillis(), TimeUnit.MILLISECONDS)) {
@@ -229,6 +232,8 @@ public final class SyncUtils {
             // node we have finished, and the reader will wait for it to send us the same byte.
             connection.getDos().writeByte(ByteConstants.COMM_SYNC_DONE);
             connection.getDos().flush();
+
+            logger.warn("SyncUtils 236");
 
             if (logger.isDebugEnabled(SYNC_INFO.getMarker())) {
                 logger.debug(SYNC_INFO.getMarker(), "{} sent COMM_SYNC_DONE", connection.getDescription());
@@ -272,10 +277,12 @@ public final class SyncUtils {
                 int count = 0;
                 while (true) {
                     // readByte() will throw a timeout exception if the socket timeout is exceeded
+                    logger.warn("Line 275 SyncUtils");
                     final byte next = connection.getDis().readByte();
                     // if the peer continuously sends COMM_SYNC_ONGOING, or sends the data really slowly,
                     // this timeout will be triggered
                     checkEventExchangeTime(maxSyncTime, startTime);
+                    logger.warn("Line 280 SyncUtils");
                     switch (next) {
                         case ByteConstants.COMM_EVENT_NEXT -> {
                             if (maxEventCount > 0) {
@@ -284,6 +291,7 @@ public final class SyncUtils {
                                     throw new IOException("max event count " + maxEventCount + " exceeded");
                                 }
                             }
+                            logger.warn("Line 287 SyncUtils");
                             final GossipEvent gossipEvent = connection.getDis().readPbjRecord(GossipEvent.PROTOBUF);
                             final PlatformEvent platformEvent = new PlatformEvent(gossipEvent);
 
@@ -291,6 +299,7 @@ public final class SyncUtils {
                             intakeEventCounter.eventEnteredIntakePipeline(connection.getOtherId());
 
                             eventHandler.accept(platformEvent);
+                            logger.warn("Line 295 SyncUtils");
                             eventsRead++;
                         }
                         case ByteConstants.COMM_EVENT_ABORT -> {
@@ -312,9 +321,9 @@ public final class SyncUtils {
                             // we are done reading event, tell the writer thread to send a COMM_SYNC_DONE
                             eventReadingDone.countDown();
                         }
-                            // while we are waiting for the peer to tell us they are done, they might send
-                            // COMM_SYNC_ONGOING
-                            // if they are still busy reading events
+                        // while we are waiting for the peer to tell us they are done, they might send
+                        // COMM_SYNC_ONGOING
+                        // if they are still busy reading events
                         case ByteConstants.COMM_SYNC_ONGOING -> {
                             // peer is still reading events, waiting for them to finish
                             if (logger.isDebugEnabled(SYNC_INFO.getMarker())) {
@@ -333,8 +342,10 @@ public final class SyncUtils {
                             }
                             return eventsRead;
                         }
-                        default -> throw new SyncException(
-                                connection, String.format("while reading events, received unexpected byte %02x", next));
+                        default ->
+                            throw new SyncException(
+                                    connection,
+                                    String.format("while reading events, received unexpected byte %02x", next));
                     }
                 }
             } finally {

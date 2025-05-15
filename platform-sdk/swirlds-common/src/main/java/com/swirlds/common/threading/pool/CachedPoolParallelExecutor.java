@@ -10,12 +10,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * An implementation that uses a CachedThreadPool to execute parallel tasks
  */
 public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
     private static final Runnable NOOP = () -> {};
+    private static final Logger log = LogManager.getLogger(CachedPoolParallelExecutor.class);
 
     /**
      * The thread pool used by this class.
@@ -154,8 +157,10 @@ public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
 
         T result = null;
         try {
+            log.warn("Call foreground task CachedPoolParallelExecutor");
             result = foregroundTask.call();
         } catch (final Throwable e) { // NOSONAR: Any exceptions & errors that occur needs to trigger onThrow.
+            log.error(e.getStackTrace());
             toThrow = new ParallelExecutionException(e);
             onThrow.run();
         }
@@ -163,6 +168,7 @@ public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
         try {
             future.get();
         } catch (InterruptedException | ExecutionException e) {
+            log.error(e.getStackTrace());
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }

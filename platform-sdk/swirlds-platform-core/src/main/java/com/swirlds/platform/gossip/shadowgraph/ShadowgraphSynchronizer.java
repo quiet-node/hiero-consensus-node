@@ -389,6 +389,7 @@ public class ShadowgraphSynchronizer {
         final CountDownLatch eventReadingDone = new CountDownLatch(1);
         // the writer will set it to true if writing is aborted
         final AtomicBoolean writeAborted = new AtomicBoolean(false);
+        logger.warn("Going go execute readWriteParallel");
         final Integer eventsRead = readWriteParallel(
                 readEventsINeed(
                         connection,
@@ -400,6 +401,7 @@ public class ShadowgraphSynchronizer {
                         maxSyncTime),
                 sendEventsTheyNeed(connection, sendList, eventReadingDone, writeAborted, syncKeepAlivePeriod),
                 connection);
+        logger.warn("readWriteParallel executed");
         if (eventsRead < 0 || writeAborted.get()) {
             // sync was aborted
             logger.info(SYNC_INFO.getMarker(), "{} sync aborted", connection::getDescription);
