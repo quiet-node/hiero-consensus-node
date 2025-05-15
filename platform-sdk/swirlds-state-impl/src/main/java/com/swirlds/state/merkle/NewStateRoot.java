@@ -727,19 +727,14 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
                 ((WritableKVStateBase) kv).commit();
             }
             if (startupMode) {
-                commitSingletons();
+                for (final ReadableSingletonState s : singletonInstances.values()) {
+                    ((WritableSingletonStateBase) s).commit();
+                }
             }
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
             }
             readableStatesMap.remove(serviceName);
-        }
-
-        @Override
-        public void commitSingletons() {
-            for (final ReadableSingletonState s : singletonInstances.values()) {
-                ((WritableSingletonStateBase) s).commit();
-            }
         }
 
         /**

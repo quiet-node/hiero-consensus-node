@@ -327,7 +327,6 @@ public final class RosterUtils {
         final WritableRosterStore writableRosterStore = new WritableRosterStore(writableStates);
         writableRosterStore.putActiveRoster(roster, round);
         ((CommittableWritableStates) writableStates).commit();
-        ((CommittableWritableStates) writableStates).commitSingletons();
     }
 
     /**

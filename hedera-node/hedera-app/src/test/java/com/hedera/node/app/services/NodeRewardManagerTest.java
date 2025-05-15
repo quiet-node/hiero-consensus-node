@@ -55,15 +55,12 @@ import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.EntityIdFactory;
-import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
-import com.swirlds.state.merkle.disk.OnDiskWritableSingletonState;
 import com.swirlds.state.spi.CommittableWritableStates;
-import com.swirlds.state.spi.ReadableStates;
-import com.swirlds.state.spi.ReadableSingletonStateBase;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.virtualmap.VirtualMap;
@@ -76,6 +73,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicReference;
 import org.hiero.base.crypto.DigestType;
+import org.hiero.consensus.roster.WritableRosterStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -271,28 +269,34 @@ class NodeRewardManagerTest {
         given(writableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY)).willReturn(nodeRewardsState);
         given(readableStates.<NodeRewards>getSingleton(NODE_REWARDS_KEY)).willReturn(nodeRewardsState);
         given(readableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
-                .willReturn(new WritableSingletonStateBase<>(PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        PlatformStateService.NAME, PLATFORM_STATE_KEY, stateRef::get, stateRef::set));
         given(readableStates.<RosterState>getSingleton(ROSTER_STATES_KEY))
-                .willReturn(
-                        new WritableSingletonStateBase<>(ROSTER_STATES_KEY, rosterStateRef::get, rosterStateRef::set));
+                .willReturn(new FunctionWritableSingletonState<>(
+                        RosterService.NAME, ROSTER_STATES_KEY, rosterStateRef::get, rosterStateRef::set));
         given(readableStates.getSingleton(ENTITY_ID_STATE_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(
-                        ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder().build()));
+                .willReturn(new FunctionReadableSingletonState<>(
+                        EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> EntityNumber.newBuilder()
+                                .build()));
         given(readableStates.getSingleton(ENTITY_COUNTS_KEY))
-                .willReturn(new ReadableSingletonStateBase<>(
+                .willReturn(new FunctionReadableSingletonState<>(
+                        EntityIdService.NAME,
                         ENTITY_COUNTS_KEY,
                         () -> EntityCounts.newBuilder().numNodes(1).build()));
-        final var networkRewardState = new WritableSingletonStateBase<>(
-                STAKING_NETWORK_REWARDS_KEY, networkStakingRewardsRef::get, networkStakingRewardsRef::set);
-        final var readableNetworkRewardState =
-                new ReadableSingletonStateBase<>(STAKING_NETWORK_REWARDS_KEY, networkStakingRewardsRef::get);
+        final var networkRewardState = new FunctionWritableSingletonState<>(
+                TokenService.NAME,
+                STAKING_NETWORK_REWARDS_KEY,
+                networkStakingRewardsRef::get,
+                networkStakingRewardsRef::set);
+        final var readableNetworkRewardState = new FunctionReadableSingletonState<>(
+                TokenService.NAME, STAKING_NETWORK_REWARDS_KEY, networkStakingRewardsRef::get);
         given(readableStates.<NetworkStakingRewards>getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn(networkRewardState);
         given(writableStates.<NetworkStakingRewards>getSingleton(STAKING_NETWORK_REWARDS_KEY))
                 .willReturn(networkRewardState);
         //        given(readableNetworkRewardState.get()).willReturn(networkStakingRewardsRef.get());
         final WritableKVState<ProtoBytes, Roster> rosters = MapWritableKVState.<ProtoBytes, Roster>builder(
-                        WritableRosterStore.ROSTER_KEY)
+                        RosterService.NAME, WritableRosterStore.ROSTER_KEY)
                 .build();
         rosters.put(
                 ProtoBytes.newBuilder().value(Bytes.wrap("ACTIVE")).build(),
@@ -302,7 +306,7 @@ class NodeRewardManagerTest {
                                 RosterEntry.newBuilder().nodeId(1L).build()))
                         .build());
         lenient().when(readableStates.<ProtoBytes, Roster>get(ROSTER_KEY)).thenReturn(rosters);
-        final var readableAccounts = MapWritableKVState.<AccountID, Account>builder(ACCOUNTS_KEY)
+        final var readableAccounts = MapWritableKVState.<AccountID, Account>builder(TokenService.NAME, ACCOUNTS_KEY)
                 .value(asAccount(0, 0, 801), Account.DEFAULT)
                 .build();
         given(readableStates.<AccountID, Account>get(ACCOUNTS_KEY)).willReturn(readableAccounts);
