@@ -287,17 +287,8 @@ public class HandleWorkflow {
             // Even if there is an exception somewhere, we need to commit the receipts of any handled transactions
             // to the state so these transactions cannot be replayed in future rounds
             recordCache.commitRoundReceipts(state, round.getConsensusTimestamp());
-
-            // write to blockstream after commit
-            final var queueChanges = queueStateChangeListener.getStateChanges();
-            if (!queueChanges.isEmpty()) {
-                final var stateChangesItem = BlockItem.newBuilder()
-                        .stateChanges(new StateChanges(
-                                boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
-                        .build();
-                queueStateChangeListener.reset();
-                blockStreamManager.writeItem(stateChangesItem);
-            }
+            // flush queue state changes to the block stream right after the commit
+            flushQueueStateChanges();
         }
         try {
             reconcileTssState(state, round.getConsensusTimestamp());
@@ -359,18 +350,9 @@ public class HandleWorkflow {
                             platformTxn,
                             event.getSoftwareVersion(),
                             simplifiedStateSignatureTxnCallback);
-                    // write queue changes to the block stream
-                    // currently, this code captures operations / platform transactions with the upgrade file
-                    final var queueChanges = queueStateChangeListener.getStateChanges();
-                    if (!queueChanges.isEmpty()) {
-                        final var stateChangesItem = BlockItem.newBuilder()
-                                .stateChanges(new StateChanges(
-                                        boundaryStateChangeListener.boundaryTimestampOrThrow(),
-                                        new ArrayList<>(queueChanges)))
-                                .build();
-                        queueStateChangeListener.reset();
-                        blockStreamManager.writeItem(stateChangesItem);
-                    }
+
+                    // currently, to capture operations with the upgrade file
+                    flushQueueStateChanges();
                 } catch (final Exception e) {
                     logger.fatal(
                             "Possibly CATASTROPHIC failure while running the handle workflow. "
@@ -993,5 +975,20 @@ public class HandleWorkflow {
                 .<BlockInfo>getSingleton(BLOCK_INFO_STATE_KEY)
                 .get();
         return !requireNonNull(blockInfo).migrationRecordsStreamed() ? POST_UPGRADE_TRANSACTION : ORDINARY_TRANSACTION;
+    }
+
+    /**
+     * Flush all queue state changes to the block stream.
+     */
+    private void flushQueueStateChanges() {
+        final var queueChanges = queueStateChangeListener.getStateChanges();
+        if (!queueChanges.isEmpty()) {
+            final var stateChangesItem = BlockItem.newBuilder()
+                    .stateChanges(new StateChanges(
+                            boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
+                    .build();
+            queueStateChangeListener.reset();
+            blockStreamManager.writeItem(stateChangesItem);
+        }
     }
 }
