@@ -36,11 +36,10 @@ public interface BlockStreamModule {
     @Singleton
     static BlockNodeConnectionManager provideBlockNodeConnectionManager(
             @NonNull final ConfigProvider configProvider,
-            @NonNull final BlockNodeConfigExtractor blockNodeConfigExtractor,
             @NonNull final BlockStreamStateManager blockStreamStateManager,
             @NonNull final BlockStreamMetrics blockStreamMetrics) {
-        final BlockNodeConnectionManager manager = new BlockNodeConnectionManager(
-                configProvider, blockStreamStateManager, blockStreamMetrics);
+        final BlockNodeConnectionManager manager =
+                new BlockNodeConnectionManager(configProvider, blockStreamStateManager, blockStreamMetrics);
         blockStreamStateManager.setBlockNodeConnectionManager(manager);
         return manager;
     }

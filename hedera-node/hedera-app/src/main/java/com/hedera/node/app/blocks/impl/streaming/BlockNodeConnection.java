@@ -17,15 +17,11 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -49,23 +45,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private final Duration endOfStreamScheduleDelay;
     private final Queue<Instant> endOfStreamTimestamps = new ConcurrentLinkedQueue<>();
 
-    // Locks and synchronization objects
-    private final Object workerLock = new Object();
-
     // Atomic state variables
     private final AtomicBoolean streamCompletionInProgress = new AtomicBoolean(false);
-<<<<<<< HEAD
-    private final AtomicLong currentBlockNumber = new AtomicLong(-1);
-    private final AtomicInteger currentRequestIndex = new AtomicInteger(0);
-    private final AtomicLong jumpTargetBlock = new AtomicLong(-1);
-
-    // Notification objects
-    private final Object newBlockAvailable = new Object();
-    private final Object newRequestAvailable = new Object();
-=======
-    private final AtomicInteger endOfStreamImmediateRestarts = new AtomicInteger(0);
-    private final AtomicInteger endOfStreamExpBackoffs = new AtomicInteger(0);
->>>>>>> bf9428e8f5 (Block Stream processor busy-loop for streaming wip)
 
     // Volatile connection state
     private volatile StreamObserver<PublishStreamRequest> requestObserver;
@@ -162,30 +143,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void handleStreamFailure() {
         close();
         blockNodeConnectionManager.handleConnectionError(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
-    }
-
-
-    private void moveToNextBlock() {
-        logger.trace(
-                "[{}] Completed sending all requests for block {} to node {}",
-                Thread.currentThread().getName(),
-                getCurrentBlockNumber(),
-                connectionDescriptor);
-        currentBlockNumber.incrementAndGet();
-        currentRequestIndex.set(0);
-
-    private void handleEndOfStreamError() {
-        scheduler.schedule(
-                () -> {
-                    logger.debug(
-                            "[{}] Attempting retry after internal error for node {} at block {}",
-                            Thread.currentThread().getName(),
-                            connectionDescriptor,
-                            blockNodeConnectionManager.getStreamingBlockNumber());
-                    blockNodeConnectionManager.handleConnectionError(this);
-                },
-                5,
-                TimeUnit.SECONDS);
     }
 
     private void handleAcknowledgement(@NonNull final Acknowledgement acknowledgement) {
@@ -560,5 +517,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     connectionDescriptor);
             streamCompletionInProgress.set(false);
         }
+    }
+
+    public ConnectionState getConnectionState() {
+        return connectionState;
     }
 }
