@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItemType.BLOCK_ITEM;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.BlockItemSet;
-import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.ConnectionState;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
@@ -18,7 +17,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -90,6 +88,7 @@ public class BlockStreamStateManager {
 
     private final Map<BlockNodeConfig, BlockNodeConnection> connections = new ConcurrentHashMap<>();
     private BlockNodeConnection activeConnection;
+    private BlockingQueue<BlockStreamQueueItem> blockStreamQueue = new LinkedBlockingQueue<>();
 
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
@@ -115,6 +114,34 @@ public class BlockStreamStateManager {
                 .streamToBlockNodes();
     }
 
+    public enum BlockStreamQueueItemType {
+        BLOCK_ITEM,
+        PRE_BLOCK_PROOF_ACTION,
+    }
+
+    public record BlockStreamQueueItem(
+            long blockNumber, @NonNull BlockStreamQueueItemType blockStreamQueueItemType, BlockItem blockItem) {
+        public BlockStreamQueueItem(long blockNumber, BlockItem blockItem) {
+            this(blockNumber, BLOCK_ITEM, blockItem);
+        }
+
+        public BlockStreamQueueItem(long blockNumber, BlockStreamQueueItemType blockStreamQueueItemType) {
+            this(blockNumber, blockStreamQueueItemType, null);
+        }
+
+        public long getBlockNumber() {
+            return blockNumber;
+        }
+
+        public BlockItem getBlockItem() {
+            return blockItem;
+        }
+
+        public BlockStreamQueueItemType getBlockStreamQueueItemType() {
+            return blockStreamQueueItemType;
+        }
+    }
+
     /**
      * @return the interval in which the block buffer will be pruned (a duration of 0 means pruning is disabled)
      */
@@ -123,16 +150,6 @@ public class BlockStreamStateManager {
                 .getConfiguration()
                 .getConfigData(BlockStreamConfig.class)
                 .blockBufferPruneInterval();
-    }
-
-    /**
-     * @return the current batch size for block items
-     */
-    private int blockItemBatchSize() {
-        return configProvider
-                .getConfiguration()
-                .getConfigData(BlockStreamConfig.class)
-                .blockItemBatchSize();
     }
 
     /**
@@ -218,62 +235,7 @@ public class BlockStreamStateManager {
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
-
-        blockState.items().add(blockItem);
-
-        // If we have enough items, create a new request
-        createRequestFromCurrentItems(blockState, false);
-    }
-
-    /**
-     * Creates zero, one, or many {@link PublishStreamRequest} for the current pending items in the block. This is a
-     * batched operation and thus a new {@link PublishStreamRequest} will be created only if there are enough pending
-     * items to fill the batch. If {@code force} is true, then a new {@link PublishStreamRequest} will be created even
-     * if the number of pending items is fewer than the configured batch size.
-     *
-     * @param blockState the block that may contain pending items
-     * @param force true if a new {@link PublishStreamRequest} should be created regardless of if there are enough items
-     *              to create a batch, otherwise if false, then a new {@link PublishStreamRequest} will only be created
-     *              if there are enough items to complete a full batch
-     */
-    public void createRequestFromCurrentItems(@NonNull final BlockState blockState, final boolean force) {
-        requireNonNull(blockState, "blockState is required");
-
-        if (blockState.items().isEmpty()) {
-            return;
-        }
-
-        final int cfgBatchSize = blockItemBatchSize();
-        final int batchSize = Math.max(1, cfgBatchSize); // if cfgBatchSize is less than 1, set the size to 1
-        final List<BlockItem> items = new ArrayList<>(batchSize);
-
-        if (force || blockState.items().size() >= batchSize) {
-            final Iterator<BlockItem> it = blockState.items().iterator();
-            while (it.hasNext() && items.size() != batchSize) {
-                items.add(it.next());
-                it.remove();
-            }
-        } else {
-            return;
-        }
-
-        // Create BlockItemSet by adding all items at once
-        final BlockItemSet itemSet = BlockItemSet.newBuilder().blockItems(items).build();
-
-        // Create the request and add it to the list
-        final PublishStreamRequest request =
-                PublishStreamRequest.newBuilder().blockItems(itemSet).build();
-
-        logger.debug(
-                "Added request to block {} - request count now: {}",
-                blockState.blockNumber(),
-                blockState.requests().size());
-        blockState.requests().add(request);
-
-        if ((!blockState.items().isEmpty() && force) || blockState.items().size() >= batchSize) {
-            // another request can be created
-            createRequestFromCurrentItems(blockState, force);
-        }
+        blockStreamQueue.add(new BlockStreamQueueItem(blockNumber, blockItem));
     }
 
     /**
@@ -287,14 +249,13 @@ public class BlockStreamStateManager {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        // Mark the block as complete
-        createRequestFromCurrentItems(blockState, true);
-        blockState.setComplete();
+        blockState.setCompletionTimestamp();
 
         logger.debug(
-                "Closed block in BlockStreamStateManager {} - request count: {}",
+                "[{}] Block {} completion timestamp set to {}",
+                Thread.currentThread().getName(),
                 blockNumber,
-                blockState.requests().size());
+                blockState.completionTimestamp());
     }
 
     /**
@@ -328,14 +289,7 @@ public class BlockStreamStateManager {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        // If there are remaining items we will create a request from them while the BlockProof is pending
-        if (!blockState.items().isEmpty()) {
-            logger.debug(
-                    "Prior to BlockProof, creating request from items in block {} size {}",
-                    blockNumber,
-                    blockState.items().size());
-            createRequestFromCurrentItems(blockState, true);
-        }
+        blockStreamQueue.add(new BlockStreamQueueItem(blockNumber, BlockStreamQueueItemType.PRE_BLOCK_PROOF_ACTION));
     }
 
     /**
@@ -407,7 +361,7 @@ public class BlockStreamStateManager {
             final BlockState block = it.next();
             ++numChecked;
 
-            if (block.isComplete()) {
+            if (block.completionTimestamp() != null) {
                 if (block.blockNumber() <= highestBlockAcked) {
                     // this block is eligible for pruning if it is old enough
                     if (block.completionTimestamp().isBefore(cutoffInstant)) {
@@ -633,5 +587,17 @@ public class BlockStreamStateManager {
 
     static String blockNodeName(@Nullable final BlockNodeConfig node) {
         return node != null ? node.address() + ":" + node.port() : "null";
+    }
+
+    public BlockingQueue<BlockStreamQueueItem> getBlockStreamQueue() {
+        return blockStreamQueue;
+    }
+
+    /**
+     * Retrieves the lowest unacked block number in the buffer. This is the lowest block number that has not been acknowledged.
+     * @return the lowest unacked block number
+     */
+    public long getLowestUnackedBlockNumber() {
+        return highestAckedBlockNumber.get() == Long.MIN_VALUE ? 0 : highestAckedBlockNumber.get() + 1;
     }
 }

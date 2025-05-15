@@ -7,8 +7,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
+import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.ConnectionState;
+import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItem;
+import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItemType;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
+import com.hedera.node.config.ConfigProvider;
+import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
@@ -36,6 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,6 +53,7 @@ import org.apache.logging.log4j.Logger;
  */
 public class BlockNodeConnectionManager {
     public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
+    private static final int PROCESSOR_LOOP_DELAY_MS = 10;
     private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
     private static final String GRPC_END_POINT =
@@ -58,10 +66,17 @@ public class BlockNodeConnectionManager {
     private final Map<BlockNodeConfig, Long> lastVerifiedBlockPerConnection;
 
     private final BlockStreamStateManager blockStreamStateManager;
-    private final BlockStreamProcessor blockStreamProcessor;
     private final ScheduledExecutorService connectionExecutor = Executors.newScheduledThreadPool(4);
     private final BlockStreamMetrics blockStreamMetrics;
     private final ConfigProvider configProvider;
+
+    private AtomicBoolean blockStreamWorkerThreadRunning = new AtomicBoolean(true);
+    private final AtomicLong jumpTargetBlock = new AtomicLong(-1);
+    private final AtomicLong streamingBlockNumber = new AtomicLong(-1);
+    private int requestIndex = 0;
+    private Thread blockStreamWorkerThread;
+
+    private ConfigProvider configProvider;
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -73,9 +88,8 @@ public class BlockNodeConnectionManager {
             @NonNull final ConfigProvider configProvider,
             @NonNull final BlockStreamStateManager blockStreamStateManager,
             @NonNull final BlockStreamMetrics blockStreamMetrics) {
-        this.configProvider = requireNonNull(configProvider, "configProvider must not be null");
-            @NonNull final BlockStreamMetrics blockStreamMetrics,
-            @NonNull final BlockStreamProcessor blockStreamProcessor) {
+        this.blockNodeConfigurations =
+                requireNonNull(blockNodeConfigExtractor, "blockNodeConfigExtractor must not be null");
         this.blockStreamStateManager =
                 requireNonNull(blockStreamStateManager, "blockStreamStateManager must not be null");
         this.lastVerifiedBlockPerConnection = new ConcurrentHashMap<>();
@@ -114,8 +128,16 @@ public class BlockNodeConnectionManager {
             logger.error("Failed to read block node configuration from {}", configPath, e);
             throw new RuntimeException("Failed to read block node configuration from " + configPath, e);
         }
+        this.configProvider = requireNonNull(configProvider, "configProvider must not be null");
         this.blockStreamMetrics = blockStreamMetrics;
-        this.blockStreamProcessor = blockStreamProcessor;
+        this.lastVerifiedBlockPerConnection = new ConcurrentHashMap<>();
+        if (configProvider
+                .getConfiguration()
+                .getConfigData(BlockStreamConfig.class)
+                .streamToBlockNodes()) {
+            blockStreamWorkerThread =
+                    Thread.ofPlatform().name("BlockStreamWorkerLoop").start(this::blockStreamWorkerLoop);
+        }
     }
 
     /**
@@ -295,8 +317,8 @@ public class BlockNodeConnectionManager {
         }
 
         if (connection.isActive()) {
-            if (blockStreamProcessor.getBlockNumber().get() == -1) {
-                blockStreamProcessor.getJumpTargetBlock().set(blockNumber);
+            if (streamingBlockNumber.get() == -1) {
+                jumpTargetBlock.set(blockNumber);
             }
         }
     }
@@ -417,13 +439,7 @@ public class BlockNodeConnectionManager {
             // Create the connection object
             final GrpcServiceClient grpcClient = createNewGrpcClient(node);
             connection = new BlockNodeConnection(
-                    node,
-                    this,
-                    blockStreamStateManager,
-                    blockStreamProcessor,
-                    grpcClient,
-                    connectionExecutor,
-                    blockStreamMetrics);
+                    node, this, blockStreamStateManager, grpcClient, connectionExecutor, blockStreamMetrics);
 
             blockStreamStateManager.getConnections().put(node, connection);
             // Immediately schedule the FIRST connection attempt.
@@ -469,7 +485,7 @@ public class BlockNodeConnectionManager {
         private NoOpConnection() {
             // Provide minimal valid state for super constructor if needed, or make super allow nulls
             // Assuming BlockNodeConfig.DEFAULT exists and manager can be null for this placeholder
-            super(null, BlockNodeConfig.DEFAULT, null, null, null, null);
+            super(BlockNodeConfig.DEFAULT, null, null, null, null, null);
         }
 
         @Override
@@ -659,6 +675,7 @@ public class BlockNodeConnectionManager {
                     .noneMatch(connection -> connection.getState().equals(ConnectionState.ACTIVE))) {
                 connection.updateConnectionState(ConnectionState.ACTIVE);
                 blockStreamStateManager.setActiveConnection(connection);
+                jumpTargetBlock.set(blockStreamStateManager.getLowestUnackedBlockNumber());
                 logger.debug(
                         "[{}] Connection task for block node {} ConnectionState: {}",
                         Thread.currentThread().getName(),
@@ -666,5 +683,177 @@ public class BlockNodeConnectionManager {
                         connection.getState());
             }
         }
+    }
+
+    private void blockStreamWorkerLoop() {
+        while (blockStreamWorkerThreadRunning.get()) {
+            try {
+                boolean shouldSleep = true;
+
+                // Process the block stream queue, creating a PublishStreamRequest for a particular Block if conditions
+                // are met
+                processBlockStreamQueue();
+
+                // Check if we need to jump to a specific block
+                jumpToBlock();
+
+                final BlockNodeConnection currentActiveConnection = blockStreamStateManager.getActiveConnection();
+                if (currentActiveConnection != null && streamingBlockNumber.get() != -1) {
+                    // Get the BlockState for streaming to the active connection
+                    final BlockState blockState = blockStreamStateManager.getBlockState(streamingBlockNumber.get());
+
+                    final long currentBlockNumber = blockStreamStateManager.getBlockNumber();
+                    // If block state is null and the streamingBlockNumber
+                    if (blockState == null && currentBlockNumber > streamingBlockNumber.get()) {
+                        logger.debug(
+                                "[{}] Block {} state not found and current block is {}, ending stream for node {}",
+                                Thread.currentThread().getName(),
+                                streamingBlockNumber.get(),
+                                currentBlockNumber,
+                                blockStreamStateManager
+                                                .getActiveConnection()
+                                                .getNodeConfig()
+                                                .address() + ":"
+                                        + blockStreamStateManager
+                                                .getActiveConnection()
+                                                .getNodeConfig()
+                                                .port());
+                        // TODO Longer scheduled delay for retry, doesn't make sense to retry within a second.
+                        // However if it's the only block node we have, we should retry quickly.
+                        currentActiveConnection.handleStreamFailure();
+                        continue;
+                    }
+
+                    if (blockState != null && !blockState.requests().isEmpty()) {
+                        if (requestIndex < blockState.requests().size()) {
+                            logger.trace(
+                                    "[{}] Processing block {} for node {}, isComplete: {}, requests: {}, requestIndex: {}",
+                                    Thread.currentThread().getName(),
+                                    streamingBlockNumber,
+                                    currentActiveConnection.getNodeConfig().address() + ":"
+                                            + currentActiveConnection
+                                                    .getNodeConfig()
+                                                    .port(),
+                                    blockState.requestsCompleted(),
+                                    blockState.requests().size(),
+                                    requestIndex);
+                            PublishStreamRequest publishStreamRequest =
+                                    blockState.requests().get(requestIndex);
+                            currentActiveConnection.sendRequest(publishStreamRequest);
+                            requestIndex++;
+                        }
+
+                        // If the requestIndex is greater than the blockState's requests list size and the blockState is
+                        // complete then
+                        // blockNumber is incremented
+                        if (requestIndex >= blockState.requests().size() && blockState.requestsCompleted()) {
+                            // Check if there is a higher priority ready connection
+                            if (blockStreamStateManager.higherPriorityStarted(currentActiveConnection)) {
+                                logger.trace(
+                                        "[{}] BlockStreamProcessor higher priority block node chosen {}",
+                                        Thread.currentThread().getName(),
+                                        blockStreamStateManager
+                                                        .getActiveConnection()
+                                                        .getNodeConfig()
+                                                        .address() + ":"
+                                                + blockStreamStateManager
+                                                        .getActiveConnection()
+                                                        .getNodeConfig()
+                                                        .port());
+                                streamingBlockNumber.set(blockStreamStateManager.getLowestUnackedBlockNumber());
+                                requestIndex = 0; // Reset request index
+                                continue;
+                            } else {
+                                logger.trace(
+                                        "[{}] BlockStreamProcessor incrementing blockNumber to {}",
+                                        Thread.currentThread().getName(),
+                                        streamingBlockNumber.get() + 1);
+                                streamingBlockNumber.getAndIncrement();
+                                requestIndex = 0; // Reset request index for the next block
+                            }
+                        }
+
+                        if (requestIndex <= blockState.requests().size() && !blockState.requestsCompleted()) {
+                            shouldSleep = false; // Don't sleep if there are more requests to process
+                        }
+                    }
+                }
+
+                if (shouldSleep
+                        && !blockStreamStateManager.getBlockStreamQueue().isEmpty()) {
+                    shouldSleep = false; // Don't sleep if there are items in the queue
+                }
+
+                // Sleep for a short duration to avoid busy waiting
+                if (shouldSleep) {
+                    Thread.sleep(PROCESSOR_LOOP_DELAY_MS);
+                }
+            } catch (InterruptedException e) {
+                logger.error(
+                        "[{}] blockStreamWorkerLoop encountered an error: {}",
+                        Thread.currentThread().getName(),
+                        e.getMessage(),
+                        e);
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                logger.error(
+                        "[{}] blockStreamWorkerLoop encountered an error: {}",
+                        Thread.currentThread().getName(),
+                        e.getMessage(),
+                        e);
+            }
+        }
+    }
+
+    private void processBlockStreamQueue() {
+        if (!blockStreamStateManager.getBlockStreamQueue().isEmpty()) {
+            BlockStreamQueueItem blockStreamQueueItem =
+                    blockStreamStateManager.getBlockStreamQueue().poll();
+            if (blockStreamQueueItem != null) {
+                long blockNumber = blockStreamQueueItem.getBlockNumber();
+                BlockItem blockItem = blockStreamQueueItem.getBlockItem();
+                BlockState blockState = blockStreamStateManager.getBlockState(blockNumber);
+                if (blockState != null) {
+                    if (blockStreamQueueItem
+                            .getBlockStreamQueueItemType()
+                            .equals(BlockStreamQueueItemType.PRE_BLOCK_PROOF_ACTION)) {
+                        blockState.createRequestFromCurrentItems(getBlockItemBatchSize(), true);
+                    } else {
+                        blockState.items().add(blockItem);
+                        blockState.createRequestFromCurrentItems(getBlockItemBatchSize(), false);
+                        if (blockItem.hasBlockProof()) {
+                            blockState.createRequestFromCurrentItems(getBlockItemBatchSize(), true);
+                            blockState.setRequestsCompleted();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private int getBlockItemBatchSize() {
+        return configProvider
+                .getConfiguration()
+                .getConfigData(BlockStreamConfig.class)
+                .blockItemBatchSize();
+    }
+
+    private boolean jumpToBlock() {
+        // Check if the processor has been signaled to jump to a specific block
+        final long targetBlock = jumpTargetBlock.getAndSet(-1); // Check and clear jump signal atomically
+        if (targetBlock >= 0) {
+            logger.debug(
+                    "[{}] BlockStreamProcessor received jump signal to block {}",
+                    Thread.currentThread().getName(),
+                    targetBlock);
+            streamingBlockNumber.set(targetBlock);
+            requestIndex = 0; // Reset request index for the new block
+            return true;
+        }
+        return false;
+    }
+
+    public AtomicLong getStreamingBlockNumber() {
+        return streamingBlockNumber;
     }
 }

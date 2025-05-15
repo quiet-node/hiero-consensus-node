@@ -20,8 +20,8 @@ import com.hedera.node.app.spi.fixtures.util.LogCaptureExtension;
 import com.hedera.node.app.spi.fixtures.util.LoggingSubject;
 import com.hedera.node.app.spi.fixtures.util.LoggingTarget;
 import com.hedera.node.config.ConfigProvider;
-import com.hedera.node.config.VersionedConfigImpl;
-import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
+import com.hedera.node.config.VersionedConfiguration;
+import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -67,13 +67,19 @@ class BlockNodeConnectionManagerTest {
     private BlockState mockBlockState;
 
     @Mock
+    private ConfigProvider configProvider;
+
+    @Mock
     private static BlockStreamMetrics blockStreamMetrics;
 
     @Mock
     private static ConfigProvider configProvider;
 
     @Mock
-    private BlockStreamProcessor blockStreamProcessor;
+    private VersionedConfiguration versionedConfiguration;
+
+    @Mock
+    private BlockStreamConfig blockStreamConfig;
 
     private static BlockNodeConfigExtractor mockBlockNodeConfigExtractor;
     private static BlockNodeConnectionManager mockBlockNodeConnectionManager;
@@ -108,8 +114,12 @@ class BlockNodeConnectionManagerTest {
 
     @BeforeEach
     void setUp() {
+        when(configProvider.getConfiguration()).thenReturn(versionedConfiguration);
+        when(versionedConfiguration.getConfigData(BlockStreamConfig.class)).thenReturn(blockStreamConfig);
+        when(blockStreamConfig.streamToBlockNodes()).thenReturn(true);
+
         blockNodeConnectionManager = new BlockNodeConnectionManager(
-                mockBlockNodeConfigExtractor, mockStateManager, blockStreamMetrics, blockStreamProcessor);
+                configProvider, mockBlockNodeConfigExtractor, mockStateManager, blockStreamMetrics);
     }
 
     @AfterAll

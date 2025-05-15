@@ -82,9 +82,6 @@ class BlockNodeConnectionTest {
     private BlockStreamStateManager blockStreamStateManager;
 
     @Mock
-    private BlockStreamProcessor blockStreamProcessor;
-
-    @Mock
     private BlockStreamMetrics blockStreamMetrics;
 
     @Mock
@@ -122,7 +119,6 @@ class BlockNodeConnectionTest {
                 blockNodeConfig,
                 blockNodeConnectionManager,
                 blockStreamStateManager,
-                blockStreamProcessor,
                 grpcServiceClient,
                 blockStreamMetrics));
 
