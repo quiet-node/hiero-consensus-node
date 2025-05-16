@@ -7,15 +7,24 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.demo.platform.fs.stresstest.proto.CreateSmartContract;
 import com.swirlds.demo.platform.fs.stresstest.proto.VirtualMerkleTransaction;
+import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
+
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import org.hiero.base.crypto.DigestType;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 
 public class VirtualMerkleTransactionHandlerTest {
 
@@ -319,5 +328,17 @@ public class VirtualMerkleTransactionHandlerTest {
         2021-11-22 23:45:49.137 166      INFO  DEMO_INFO        <<event-flow: thread-cons 0 #0>>
         VirtualMerkleTransactionHandler: Handled transaction with ops 1000 1750 1200 and id 84.
         */
+    }
+
+    @AfterAll
+    static void cleanUp() {
+        smartContract.release();
+        smartContractByteCodeVM.release();
+
+        assertEventuallyEquals(
+                0L,
+                MerkleDbDataSource::getCountOfOpenDatabases,
+                Duration.of(5, ChronoUnit.SECONDS),
+                "All databases should be closed");
     }
 }
