@@ -3,7 +3,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
@@ -125,19 +124,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * @return the current state of the connection
-     */
-    @VisibleForTesting
-    ConnectionState getState() {
-        return connectionState;
-    }
-
-    /**
      * Handles the failure of the stream by closing the connection and notifying the connection manager.
      */
     public void handleStreamFailure() {
         close();
-        blockNodeConnectionManager.handleConnectionError(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
+        blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
     }
 
     private void handleAcknowledgement(@NonNull final Acknowledgement acknowledgement) {
@@ -189,7 +180,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         && currentBlockProducing == acknowledgedBlockNumber) {
                     // We are already streaming the acknowledged block number
                     logger.debug(
-                            "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - (no buffer interaction) moving streaming ahead to Block {}",
+                            "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
                             Thread.currentThread().getName(),
                             currentBlockStreaming,
                             connectionDescriptor,
@@ -295,8 +286,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                             Thread.currentThread().getName(),
                             connectionDescriptor);
 
-                    blockNodeConnectionManager.handleConnectionError(
-                            this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
+                    blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
                 }
             }
             case STREAM_ITEMS_UNKNOWN -> {
@@ -306,6 +296,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         Thread.currentThread().getName(),
                         connectionDescriptor,
                         blockNumber);
+                blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
             }
         }
     }
@@ -331,21 +322,25 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void handleResendBlock(@NonNull final ResendBlock resendBlock) {
         final var resendBlockNumber = resendBlock.blockNumber();
-
         logger.debug(
                 "[{}] Received ResendBlock from block node {} for block {}",
                 Thread.currentThread().getName(),
                 connectionDescriptor,
                 resendBlockNumber);
 
-        close();
-
-        logger.debug(
-                "[{}] Restarting stream at the next block {} after the last verified one for block node {}",
-                Thread.currentThread().getName(),
-                resendBlockNumber,
-                connectionDescriptor);
-        restartStreamAtBlock(resendBlockNumber);
+        if (blockStreamStateManager.getBlockState(resendBlockNumber) != null) {
+            jumpToBlock(resendBlockNumber);
+        } else {
+            // If we don't have the block state, we schedule retry for this connection and establish new one
+            // with different block node
+            logger.warn(
+                    "[{}] Block node {} requested a ResendBlock of {} and block state is not available. Closing connection and will retry later.",
+                    Thread.currentThread().getName(),
+                    connectionDescriptor,
+                    resendBlockNumber);
+            close();
+            blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
+        }
     }
 
     private boolean hasExceededEndOfStreamLimit() {
@@ -361,7 +356,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         endOfStreamTimestamps.offer(now);
 
         // Check if we've exceeded the limit
-        return endOfStreamTimestamps.size() >= maxEndOfStreamsAllowed;
+        return endOfStreamTimestamps.size() > maxEndOfStreamsAllowed;
     }
 
     private String generateConnectionDescriptor(final BlockNodeConfig nodeConfig) {
@@ -391,7 +386,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 connectionDescriptor,
                 connectionState);
         closeObserver();
-        blockNodeConnectionManager.getStreamingBlockNumber().set(-1L);
+        jumpToBlock(-1L);
 
         logger.debug(
                 "[{}] Closed connection to block node {}",
@@ -421,7 +416,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @return true if the connection is active, false otherwise
      */
     public boolean isActive() {
-        return getState() == ConnectionState.ACTIVE;
+        return connectionState == ConnectionState.ACTIVE;
     }
 
     /**
@@ -442,8 +437,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void restartStreamAtBlock(final long blockNumber) {
         logger.debug("Restarting stream at block {} for node {}", blockNumber, connectionDescriptor);
 
-        blockNodeConnectionManager.getStreamingBlockNumber().set(blockNumber);
-        blockNodeConnectionManager.scheduleRetry(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
+        blockNodeConnectionManager.scheduleRetry(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY, blockNumber);
 
         logger.debug("Stream restarted at block {} for node {}", blockNumber, connectionDescriptor);
     }
@@ -463,7 +457,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockNumber,
                 connectionDescriptor);
         // Set the target block for the worker loop to pick up
-
+        blockNodeConnectionManager.getJumpTargetBlock().set(blockNumber);
     }
 
     @Override
