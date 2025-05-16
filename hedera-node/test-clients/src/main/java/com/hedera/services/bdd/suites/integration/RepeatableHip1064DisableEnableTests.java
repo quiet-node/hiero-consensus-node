@@ -19,6 +19,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doWithStartupConfig
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingTwo;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepForSeconds;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcing;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilStartOfNextStakingPeriod;
 import static com.hedera.services.bdd.suites.HapiSuite.CIVILIAN_PAYER;
@@ -38,6 +39,7 @@ import com.hedera.services.bdd.junit.LeakyRepeatableHapiTest;
 import com.hedera.services.bdd.junit.TargetEmbeddedMode;
 import com.hedera.services.bdd.junit.support.TestLifecycle;
 import com.hedera.services.bdd.spec.transactions.token.TokenMovement;
+import com.hedera.services.bdd.spec.utilops.EmbeddedVerbs;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -143,19 +145,6 @@ public class RepeatableHip1064DisableEnableTests {
                         .logged(),
                 // validate all network fees go to 0.0.801
                 validateRecordFees("notFree1", List.of(3L, 801L)),
-                // Start a new period and leave only node1 as inactive
-                mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
-                    assertEquals(1, nodeRewards.numRoundsInStakingPeriod());
-                    assertEquals(4, nodeRewards.nodeActivities().size());
-                    assertEquals(expectedNodeFees.get(), nodeRewards.nodeFeesCollected());
-                    return nodeRewards
-                            .copyBuilder()
-                            .nodeActivities(NodeActivity.newBuilder()
-                                    .nodeId(0)
-                                    .numMissedJudgeRounds(2)
-                                    .build())
-                            .build();
-                }),
                 doWithStartupConfig(
                         "nodes.targetYearlyNodeRewardsUsd",
                         target -> doWithStartupConfig(
@@ -169,6 +158,22 @@ public class RepeatableHip1064DisableEnableTests {
                                     assertTrue(prePaidRewards > 0);
                                     expectedNodeRewards.set(targetTinybars - prePaidRewards);
                                 }))),
+                sleepForSeconds(2),
+                // This is considered as one transaction submitted, so one round
+                EmbeddedVerbs.handleAnyRepeatableQueryPayment(),
+                // Start a new period and leave only node1 as inactive
+                mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
+                    assertEquals(1, nodeRewards.numRoundsInStakingPeriod());
+                    assertEquals(4, nodeRewards.nodeActivities().size());
+                    assertEquals(expectedNodeFees.get(), nodeRewards.nodeFeesCollected());
+                    return nodeRewards
+                            .copyBuilder()
+                            .nodeActivities(NodeActivity.newBuilder()
+                                    .nodeId(0)
+                                    .numMissedJudgeRounds(2)
+                                    .build())
+                            .build();
+                }),
                 balanceSnapshot("Node0Before", "0.0.3").logged(),
                 balanceSnapshot("Node1Before", "0.0.4").logged(),
                 balanceSnapshot("Node2Before", "0.0.5").logged(),
@@ -262,6 +267,20 @@ public class RepeatableHip1064DisableEnableTests {
                         .logged(),
                 // validate all network fees go to 0.0.801
                 validateRecordFees("notFree1", List.of(3L, 801L)),
+                doWithStartupConfig(
+                        "nodes.targetYearlyNodeRewardsUsd",
+                        target -> doWithStartupConfig(
+                                "nodes.numPeriodsToTargetUsd",
+                                numPeriods -> doingContextual(spec -> {
+                                    final long targetReward = (Long.parseLong(target) * 100 * TINY_PARTS_PER_WHOLE)
+                                            / Integer.parseInt(numPeriods);
+                                    final long targetTinybars =
+                                            spec.ratesProvider().toTbWithActiveRates(targetReward);
+                                    expectedNodeRewards.set(targetTinybars);
+                                }))),
+                sleepForSeconds(2),
+                // This is considered as one transaction submitted, so one round
+                EmbeddedVerbs.handleAnyRepeatableQueryPayment(),
                 // Start a new period and leave only node1 as inactive
                 mutateSingleton("TokenService", "NODE_REWARDS", (NodeRewards nodeRewards) -> {
                     assertEquals(1, nodeRewards.numRoundsInStakingPeriod());
@@ -275,17 +294,6 @@ public class RepeatableHip1064DisableEnableTests {
                                     .build())
                             .build();
                 }),
-                doWithStartupConfig(
-                        "nodes.targetYearlyNodeRewardsUsd",
-                        target -> doWithStartupConfig(
-                                "nodes.numPeriodsToTargetUsd",
-                                numPeriods -> doingContextual(spec -> {
-                                    final long targetReward = (Long.parseLong(target) * 100 * TINY_PARTS_PER_WHOLE)
-                                            / Integer.parseInt(numPeriods);
-                                    final long targetTinybars =
-                                            spec.ratesProvider().toTbWithActiveRates(targetReward);
-                                    expectedNodeRewards.set(targetTinybars);
-                                }))),
                 balanceSnapshot("Node0Before", "0.0.3").logged(),
                 balanceSnapshot("Node1Before", "0.0.4").logged(),
                 balanceSnapshot("Node2Before", "0.0.5").logged(),
