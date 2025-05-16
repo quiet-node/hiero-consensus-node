@@ -4,7 +4,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 import com.hedera.hapi.block.BlockItemSet;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.stream.BlockItem;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -19,7 +18,7 @@ import org.apache.logging.log4j.Logger;
 public class BlockState {
     private static final Logger logger = LogManager.getLogger(BlockState.class);
     private final long blockNumber;
-    private final List<BlockItem> items;
+    private final List<BlockItem> items = new ArrayList<>();
     private final List<PublishStreamRequest> requests = new ArrayList<>();
     private final AtomicBoolean requestsCreated = new AtomicBoolean(false);
     private Instant closedTimestamp = null;
@@ -29,9 +28,8 @@ public class BlockState {
      *
      * @param blockNumber the block number
      */
-    public BlockState(final long blockNumber, @NonNull final List<BlockItem> items) {
+    public BlockState(final long blockNumber) {
         this.blockNumber = blockNumber;
-        this.items = items;
     }
 
     /**

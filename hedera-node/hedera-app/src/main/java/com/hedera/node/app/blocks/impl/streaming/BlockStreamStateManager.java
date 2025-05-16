@@ -15,7 +15,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -88,7 +87,7 @@ public class BlockStreamStateManager {
 
     private final Map<BlockNodeConfig, BlockNodeConnection> connections = new ConcurrentHashMap<>();
     private BlockNodeConnection activeConnection;
-    private BlockingQueue<BlockStreamQueueItem> blockStreamQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<BlockStreamQueueItem> blockStreamQueue = new LinkedBlockingQueue<>();
 
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
@@ -114,29 +113,70 @@ public class BlockStreamStateManager {
                 .streamToBlockNodes();
     }
 
+    /**
+     * The type of item that can be in the block stream queue.
+     */
     public enum BlockStreamQueueItemType {
+        /**
+         * Indicates that the item is a block item.
+         */
         BLOCK_ITEM,
+        /**
+         * Indicates that the item is a pre-block proof action.
+         * The consumer of this item should take action to perform any actions that need to be done before the producer
+         * adds the BlockProof to the queue.
+         */
         PRE_BLOCK_PROOF_ACTION,
     }
 
+    /**
+     * Represents an item in the block stream queue between the handle thread and block stream worker thread.
+     * The type of item is represented by the {@link BlockStreamQueueItemType} enum and may indicate an action needs to be taken.
+     */
     public record BlockStreamQueueItem(
             long blockNumber, @NonNull BlockStreamQueueItemType blockStreamQueueItemType, BlockItem blockItem) {
+
+        /**
+         * Creates a new BlockStreamQueueItem with the given block number and block item.
+         * @param blockNumber the block number
+         * @param blockItem the block item
+         */
         public BlockStreamQueueItem(long blockNumber, BlockItem blockItem) {
             this(blockNumber, BLOCK_ITEM, blockItem);
         }
 
+        /**
+         * Creates a new BlockStreamQueueItem with the given block number and block stream queue item type.
+         * @param blockNumber the block number
+         * @param blockStreamQueueItemType the block stream queue item type
+         */
         public BlockStreamQueueItem(long blockNumber, BlockStreamQueueItemType blockStreamQueueItemType) {
             this(blockNumber, blockStreamQueueItemType, null);
         }
 
+        /**
+         * Gets the block number.
+         *
+         * @return the block number
+         */
         public long getBlockNumber() {
             return blockNumber;
         }
 
+        /**
+         * Gets the block item.
+         *
+         * @return the block item
+         */
         public BlockItem getBlockItem() {
             return blockItem;
         }
 
+        /**
+         * Gets the block stream queue item type.
+         *
+         * @return the block stream queue item type
+         */
         public BlockStreamQueueItemType getBlockStreamQueueItemType() {
             return blockStreamQueueItemType;
         }
@@ -210,7 +250,7 @@ public class BlockStreamStateManager {
         }
 
         // Create a new block state
-        final BlockState blockState = new BlockState(blockNumber, new ArrayList<>());
+        final BlockState blockState = new BlockState(blockNumber);
         blockBuffer.add(blockState);
         blockStatesById.put(blockNumber, blockState);
         this.blockNumber = blockNumber;
@@ -536,18 +576,36 @@ public class BlockStreamStateManager {
         }
     }
 
+    /**
+     * Gets the current active block node connection.
+     * @return the active block node connection
+     */
     public BlockNodeConnection getActiveConnection() {
         return activeConnection;
     }
 
+    /**
+     * Sets the active block node connection.
+     * @param activeConnection the active block node connection
+     */
     public void setActiveConnection(BlockNodeConnection activeConnection) {
         this.activeConnection = activeConnection;
     }
 
+    /**
+     * Returns the map of block node connections.
+     * @return the map of block node connections
+     */
     public Map<BlockNodeConfig, BlockNodeConnection> getConnections() {
         return connections;
     }
 
+    /**
+     * This method is used to check if there is a higher priority connection that is available to be switched to, and if
+     * so, it will switch to that connection and close the current block node connection.
+     * @param blockNodeConnection the current block node connection
+     * @return true if a higher priority connection was found and switched to, false otherwise
+     */
     public boolean higherPriorityStarted(BlockNodeConnection blockNodeConnection) {
         synchronized (connections) {
             // Find a pending connection with the highest priority greater than the current connection
@@ -589,6 +647,10 @@ public class BlockStreamStateManager {
         return node != null ? node.address() + ":" + node.port() : "null";
     }
 
+    /**
+     * Gets the block stream queue.
+     * @return the block stream queue
+     */
     public BlockingQueue<BlockStreamQueueItem> getBlockStreamQueue() {
         return blockStreamQueue;
     }

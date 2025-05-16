@@ -74,18 +74,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         ACTIVE
     }
 
-    protected BlockNodeConnection() {
-        // Default constructor for NoOpConnection
-        this.blockNodeConfig = null;
-        this.grpcServiceClient = null;
-        this.blockNodeConnectionManager = null;
-        this.blockStreamStateManager = null;
-        this.connectionDescriptor = null;
-        this.maxEndOfStreamsAllowed = null;
-        this.endOfStreamTimeFrame = null;
-        this.endOfStreamScheduleDelay = null;
-    }
-
     /**
      * Construct a new BlockNodeConnection.
      *

@@ -247,11 +247,7 @@ public class BlockNodeConnectionManager {
             throw new RuntimeException(e);
         }
         synchronized (blockStreamStateManager.getConnections()) {
-            blockStreamStateManager.getConnections().values().forEach(conn -> {
-                if (conn != NoOpConnection.INSTANCE) { // Avoid closing placeholder
-                    conn.close();
-                }
-            });
+            blockStreamStateManager.getConnections().values().forEach(BlockNodeConnection::close);
             blockStreamStateManager.getConnections().clear();
         }
     }
@@ -467,67 +463,6 @@ public class BlockNodeConnectionManager {
         if (config == null) return false;
         // No external lock needed, ConcurrentHashMap handles its own concurrency for single ops.
         return blockStreamStateManager.getConnections().containsKey(config);
-    }
-
-    // This class exists solely to avoid checking for null every time we reference a connection in connectionsInRetry
-    // And to handle cases where connection object creation might fail in connectToNode
-    private static class NoOpConnection extends BlockNodeConnection {
-        static final NoOpConnection INSTANCE;
-
-        static {
-            INSTANCE = new NoOpConnection();
-        }
-
-        private NoOpConnection() {
-            // Provide minimal valid state for super constructor if needed, or make super allow nulls
-            // Assuming BlockNodeConfig.DEFAULT exists and manager can be null for this placeholder
-            super();
-        }
-
-        @Override
-        public void onNext(PublishStreamResponse response) {
-            // No-op
-        }
-
-        @Override
-        public void onError(Throwable throwable) {
-            // No-op
-        }
-
-        @Override
-        public void onCompleted() {
-            // No-op
-        }
-
-        @Override
-        public void sendRequest(@NonNull final PublishStreamRequest request) {
-            // No-op
-        }
-
-        @Override
-        public boolean isActive() {
-            return false;
-        }
-
-        @Override
-        public void close() {
-            // No-op
-        }
-
-        @Override
-        public BlockNodeConfig getNodeConfig() {
-            return BlockNodeConfig.DEFAULT; // Return default or null?
-        }
-
-        @Override
-        public void updateConnectionState(@NonNull ConnectionState newState) {
-            /* No-op */
-        }
-
-        @Override
-        public void jumpToBlock(long blockNumber) {
-            /* No-op */
-        }
     }
 
     /**
