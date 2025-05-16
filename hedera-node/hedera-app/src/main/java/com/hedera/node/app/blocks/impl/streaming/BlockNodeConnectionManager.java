@@ -682,8 +682,8 @@ public class BlockNodeConnectionManager {
             return true;
         }
 
-        if (blockState != null && !blockState.requests().isEmpty()) {
-            if (requestIndex < blockState.requests().size()) {
+        if (blockState != null && blockState.requestsSize() != 0) {
+            if (requestIndex < blockState.requestsSize()) {
                 logger.trace(
                         "[{}] Processing block {} for node {}, isComplete: {}, requests: {}, requestIndex: {}",
                         Thread.currentThread().getName(),
@@ -691,15 +691,14 @@ public class BlockNodeConnectionManager {
                         currentActiveConnection.getNodeConfig().address() + ":"
                                 + currentActiveConnection.getNodeConfig().port(),
                         blockState.requestsCompleted(),
-                        blockState.requests().size(),
+                        blockState.requestsSize(),
                         requestIndex);
-                PublishStreamRequest publishStreamRequest =
-                        blockState.requests().get(requestIndex);
+                PublishStreamRequest publishStreamRequest = blockState.getRequest(requestIndex);
                 currentActiveConnection.sendRequest(publishStreamRequest);
                 requestIndex++;
             }
 
-            if (requestIndex >= blockState.requests().size() && blockState.requestsCompleted()) {
+            if (requestIndex >= blockState.requestsSize() && blockState.requestsCompleted()) {
                 if (blockStreamStateManager.higherPriorityStarted(currentActiveConnection)) {
                     logger.debug(
                             "[{}] BlockStreamProcessor higher priority block node chosen {}",
@@ -725,7 +724,7 @@ public class BlockNodeConnectionManager {
                 }
             }
 
-            if (requestIndex <= blockState.requests().size() && !blockState.requestsCompleted()) {
+            if (requestIndex <= blockState.requestsSize() && !blockState.requestsCompleted()) {
                 return false; // Don't sleep if there are more requests to process
             }
         }
@@ -747,7 +746,7 @@ public class BlockNodeConnectionManager {
                             .equals(BlockStreamQueueItemType.PRE_BLOCK_PROOF_ACTION)) {
                         blockState.createRequestFromCurrentItems(getBlockItemBatchSize(), true);
                     } else {
-                        blockState.items().add(blockItem);
+                        blockState.addItem(blockItem);
                         blockState.createRequestFromCurrentItems(getBlockItemBatchSize(), false);
                         if (blockItem.hasBlockProof()) {
                             blockState.createRequestFromCurrentItems(getBlockItemBatchSize(), true);

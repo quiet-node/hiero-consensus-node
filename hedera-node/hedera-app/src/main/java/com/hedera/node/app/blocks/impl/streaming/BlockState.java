@@ -42,21 +42,29 @@ public class BlockState {
     }
 
     /**
-     * Get the list of item bytes
-     *
-     * @return the list of item bytes
+     * Add an item to the BlockState, this will not create a PublishStreamRequest.
+     * @param item the item to add
      */
-    public List<BlockItem> items() {
-        return items;
+    public void addItem(final BlockItem item) {
+        items.add(item);
     }
 
     /**
-     * Get the list of publish stream requests
+     * Get the size of the list of PublishStreamRequests
      *
-     * @return the list of publish stream requests
+     * @return the size of the list of PublishStreamRequests
      */
-    public List<PublishStreamRequest> requests() {
-        return requests;
+    public int requestsSize() {
+        return requests.size();
+    }
+
+    /**
+     * Get the request at the given index
+     * @param index the index of the request
+     * @return the request at the given index
+     */
+    public PublishStreamRequest getRequest(int index) {
+        return requests.get(index);
     }
 
     /**
@@ -75,6 +83,9 @@ public class BlockState {
         this.requestsCreated.set(true);
     }
 
+    /**
+     * Sets the completion time of the block to now.
+     */
     public void setCompletionTimestamp() {
         this.closedTimestamp = Instant.now();
     }
@@ -88,16 +99,12 @@ public class BlockState {
         return closedTimestamp;
     }
 
-    @Override
-    public String toString() {
-        return "BlockState{" + "blockNumber="
-                + blockNumber + ", items="
-                + items + ", requests="
-                + requests + ", isComplete="
-                + requestsCreated + ", completionTimestamp="
-                + closedTimestamp + '}';
-    }
-
+    /**
+     * Create a PublishStreamRequest from the current items in the BlockState
+     *
+     * @param batchSize the size of the batch to create
+     * @param forceCreation if true, create a request even if the batch size is not met
+     */
     public void createRequestFromCurrentItems(int batchSize, boolean forceCreation) {
         batchSize = Math.max(1, batchSize); // if batchSize is less than 1, set the size to 1
         final List<BlockItem> blockItems = new ArrayList<>(batchSize);
