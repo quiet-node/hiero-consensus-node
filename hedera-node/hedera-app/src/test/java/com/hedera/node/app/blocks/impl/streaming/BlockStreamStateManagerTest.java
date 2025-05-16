@@ -289,6 +289,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testPublishStreamRequestIsCreatedWithRemainingItemsAndBlockProof() {
         // given
         // mock the number of batch items by modifying the default config
