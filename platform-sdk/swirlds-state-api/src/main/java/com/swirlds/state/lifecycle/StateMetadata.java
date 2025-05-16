@@ -97,7 +97,7 @@ public final class StateMetadata<K, V> {
         // default internal representation for strings, and we need to normalize that)
         final var data = getNormalisedStringBytes(s);
         long l = hashBytes(data);
-        logger.debug(LogMarker.STARTUP.getMarker(), "Hashed string {} to {}", s, l);
+        logger.trace(LogMarker.STARTUP.getMarker(), "Hashed string {} to {}", s, l);
         return l;
     }
 
