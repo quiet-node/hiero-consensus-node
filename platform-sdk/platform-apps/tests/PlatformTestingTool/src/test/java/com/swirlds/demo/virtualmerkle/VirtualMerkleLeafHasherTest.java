@@ -210,7 +210,6 @@ class VirtualMerkleLeafHasherTest {
                 previousHash, VirtualMapState.VM_STATE_KEY, virtualMap.getBytes(VirtualMapState.VM_STATE_KEY));
     }
 
-
     @AfterEach
     void tearDown() {
         assertEventuallyEquals(
@@ -218,7 +217,5 @@ class VirtualMerkleLeafHasherTest {
                 MerkleDbDataSource::getCountOfOpenDatabases,
                 Duration.of(5, ChronoUnit.SECONDS),
                 "All databases should be closed");
-
     }
-
 }

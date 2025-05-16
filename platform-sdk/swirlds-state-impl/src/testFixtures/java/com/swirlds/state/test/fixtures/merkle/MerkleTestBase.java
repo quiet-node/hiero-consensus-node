@@ -285,7 +285,7 @@ public class MerkleTestBase extends StateTestBase {
     @AfterEach
     void cleanUp() {
         MerkleDb.resetDefaultInstancePath();
-        if(fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > 0) {
+        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > 0) {
             fruitVirtualMap.release();
         }
         assertEventuallyEquals(

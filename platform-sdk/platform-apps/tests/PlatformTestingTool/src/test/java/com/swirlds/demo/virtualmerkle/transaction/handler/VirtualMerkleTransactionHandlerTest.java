@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.virtualmerkle.transaction.handler;
 
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
+
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.config.api.Configuration;
@@ -13,18 +15,13 @@ import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-
 import org.hiero.base.crypto.DigestType;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 
 public class VirtualMerkleTransactionHandlerTest {
 
