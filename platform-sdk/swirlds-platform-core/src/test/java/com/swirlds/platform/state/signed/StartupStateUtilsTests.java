@@ -95,6 +95,7 @@ public class StartupStateUtilsTests {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
         registry.registerConstructables("org.hiero.consensus");
+        registry.registerConstructables("org.hiero.base.crypto");
         registry.registerConstructable(new ClassConstructorPair(TestMerkleStateRoot.class, TestMerkleStateRoot::new));
     }
 
