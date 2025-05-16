@@ -56,6 +56,7 @@ public class WritableQueueStateStack<E> implements WritableQueueState<E> {
         return writableStatesStack.getCurrent().getQueue(stateKey);
     }
 
+    @NonNull
     @Override
     public String getServiceName() {
         return serviceName;

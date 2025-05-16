@@ -106,11 +106,13 @@ public final class StateInitializer {
      * to {@code MerkleNodeState}.
      * </p>
      *
+     * @deprecated This method should be removed together with {@code MerkleStateRoot}. Only state root function should be used then.
      * @param stateRootFunction a function to instantiate the state root object from a Virtual Map
      * @param stateRoot         the root of the state to initialize
      * @param metrics           the metrics
      * @return the initialized {@code MerkleNodeState}
      */
+    @Deprecated
     public static MerkleNodeState initializeMerkleNodeState(
             @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final MerkleNode stateRoot,

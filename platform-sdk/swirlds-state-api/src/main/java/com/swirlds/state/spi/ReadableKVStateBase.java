@@ -54,7 +54,7 @@ public abstract class ReadableKVStateBase<K, V> implements ReadableKVState<K, V>
      */
     // This constructor is used by some consumers of the API that are outside of this repository.
     protected ReadableKVStateBase(
-            @NonNull final String serviceName, @NonNull String stateKey, @NonNull ConcurrentMap<K, V> readCache) {
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull ConcurrentMap<K, V> readCache) {
         this.serviceName = Objects.requireNonNull(serviceName);
         this.stateKey = Objects.requireNonNull(stateKey);
         this.readCache = Objects.requireNonNull(readCache);

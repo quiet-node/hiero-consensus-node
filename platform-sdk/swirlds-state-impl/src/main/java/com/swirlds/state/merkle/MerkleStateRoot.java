@@ -904,23 +904,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     }
 
     /**
-     * Commit all singleton states for every registered service.
-     */
-    public void commitSingletons() {
-        for (String serviceKey : services.keySet()) {
-            final var service = services.get(serviceKey);
-            for (String stateKey : service.keySet()) {
-                StateMetadata<?, ?> stateMetadata = service.get(stateKey);
-                if (stateMetadata.stateDefinition().singleton()) {
-                    WritableStates writableStates = getWritableStates(serviceKey);
-                    final var writableSingleton = (WritableSingletonStateBase<?>) writableStates.getSingleton(stateKey);
-                    writableSingleton.commit();
-                }
-            }
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override

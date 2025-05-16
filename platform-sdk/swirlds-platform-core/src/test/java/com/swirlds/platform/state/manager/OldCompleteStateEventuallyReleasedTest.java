@@ -99,7 +99,7 @@ class OldCompleteStateEventuallyReleasedTest extends AbstractStateSignatureColle
                 .setRoster(roster)
                 .setRound(0)
                 .setSignatures(signatures)
-                .setState(new TestMerkleStateRoot())
+                .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestNewMerkleStateRoot
                 .build();
         stateFromDisk.getState().setHash(stateHash);
 

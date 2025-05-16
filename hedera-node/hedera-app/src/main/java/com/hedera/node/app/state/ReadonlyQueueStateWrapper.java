@@ -27,6 +27,7 @@ public class ReadonlyQueueStateWrapper<E> implements ReadableQueueState<E> {
         this.delegate = requireNonNull(delegate, "delegate must not be null");
     }
 
+    @NonNull
     @Override
     public String getServiceName() {
         return delegate.getServiceName();

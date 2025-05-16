@@ -795,7 +795,10 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         }
     }
 
-    public void commitAllSingletons() {
+    /**
+     * Commit all singleton states for every registered service.
+     */
+    public void commitSingletons() {
         for (String serviceKey : services.keySet()) {
             final var service = services.get(serviceKey);
             for (String stateKey : service.keySet()) {
@@ -809,6 +812,9 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isHashed() {
         return virtualMap.isHashed();

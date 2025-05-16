@@ -14,6 +14,7 @@ public interface ReadableState {
      * @return The name of the service. This will never be null, and will always be the same value for an
      *     instance of {@link ReadableState}.
      */
+    @NonNull
     String getServiceName();
 
     /**

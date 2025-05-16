@@ -331,5 +331,5 @@ public enum TransactionExecutors {
         }
     }
 
-    static final Metrics NO_OP_METRICS = new NoOpMetrics();
+    private static final Metrics NO_OP_METRICS = new NoOpMetrics();
 }

@@ -266,7 +266,7 @@ public class ConsistencyTestingToolState extends MerkleStateRoot<ConsistencyTest
     }
 
     @Override
-    public MerkleNode migrate(@NonNull Configuration configuration, int version) {
+    public MerkleNode migrate(@NonNull final Configuration configuration, int version) {
         return this;
     }
 }

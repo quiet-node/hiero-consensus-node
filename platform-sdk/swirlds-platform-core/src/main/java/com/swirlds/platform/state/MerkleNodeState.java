@@ -52,7 +52,7 @@ public interface MerkleNodeState extends State {
      * MUST have a correct label applied. If the node is already present, then this method does nothing
      * else.
      *
-     * @deprecated This method is only required for the MerkleStateRoot class and will be removed together with that class.
+     * @deprecated This method is only required for the {@code MerkleStateRoot} class and will be removed together with that class.
      * @param md The metadata associated with the state
      * @param nodeSupplier Returns the node to add. Cannot be null. Can be used to create the node on-the-fly.
      * @throws IllegalArgumentException if the node is neither a merkle map nor virtual map, or if
@@ -70,7 +70,7 @@ public interface MerkleNodeState extends State {
      * MUST have a correct label applied. No matter if the resulting node is newly created or already
      * present, calls the provided initialization consumer with the node.
      *
-     * @deprecated This method is only required for the MerkleStateRoot class and will be removed together with that class.
+     * @deprecated This method is only required for the {@code MerkleStateRoot} class and will be removed together with that class.
      * @param md The metadata associated with the state
      * @param nodeSupplier Returns the node to add. Cannot be null. Can be used to create the node on-the-fly.
      * @param nodeInitializer The node's initialization logic.

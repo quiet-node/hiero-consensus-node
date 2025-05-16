@@ -54,6 +54,7 @@ public class WritableSingletonStateStack<T> implements WritableSingletonState<T>
     }
 
     @Override
+    @NonNull
     public String getServiceName() {
         return serviceName;
     }

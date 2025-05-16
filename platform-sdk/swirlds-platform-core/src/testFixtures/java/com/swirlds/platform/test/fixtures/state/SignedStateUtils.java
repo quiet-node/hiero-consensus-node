@@ -16,10 +16,9 @@ public class SignedStateUtils {
         return randomSignedState(new Random(seed));
     }
 
-    // FUTURE WORK: use TestNewMerkleStateRoot
     public static SignedState randomSignedState(Random random) {
         TestPlatformStateFacade platformStateFacade = new TestPlatformStateFacade();
-        MerkleNodeState root = new TestMerkleStateRoot();
+        MerkleNodeState root = new TestMerkleStateRoot(); // FUTURE WORK: use TestNewMerkleStateRoot
         TestingAppStateInitializer.DEFAULT.initPlatformState(root);
         randomPlatformState(random, root, platformStateFacade);
         boolean shouldSaveToDisk = random.nextBoolean();

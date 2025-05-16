@@ -213,8 +213,8 @@ public class TestingAppStateInitializer {
     private static void initializeServiceState(
             MerkleNodeState state, StateMetadata<?, ?> md, Supplier<? extends MerkleNode> nodeSupplier) {
         switch (state) {
-            case MerkleStateRoot<?> merkle -> state.putServiceStateIfAbsent(md, nodeSupplier);
-            case NewStateRoot<?> newRoot -> state.initializeState(md);
+            case MerkleStateRoot<?> ignored -> state.putServiceStateIfAbsent(md, nodeSupplier);
+            case NewStateRoot<?> ignored -> state.initializeState(md);
             default ->
                 throw new IllegalStateException(
                         "Expecting MerkleStateRoot or NewStateRoot instance to be used for state initialization");

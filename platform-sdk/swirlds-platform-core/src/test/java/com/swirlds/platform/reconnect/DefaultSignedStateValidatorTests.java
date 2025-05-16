@@ -334,7 +334,7 @@ class DefaultSignedStateValidatorTests {
         };
 
         return new RandomSignedStateGenerator()
-                .setState(new TestMerkleStateRoot())
+                .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestNewMerkleStateRoot
                 .setRound(ROUND)
                 .setRoster(roster)
                 .setStateHash(stateHash)

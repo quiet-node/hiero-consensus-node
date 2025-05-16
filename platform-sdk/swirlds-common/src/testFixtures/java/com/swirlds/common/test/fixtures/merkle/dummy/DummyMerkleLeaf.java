@@ -188,7 +188,7 @@ public class DummyMerkleLeaf extends PartialMerkleLeaf implements DummyMerkleNod
      * in position 0, and that leaf will equal this node.
      */
     @Override
-    public MerkleNode migrate(@NonNull Configuration configuration, final int version) {
+    public MerkleNode migrate(@NonNull final Configuration configuration, final int version) {
         return migrationMapper.apply(this, version);
     }
 }

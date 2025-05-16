@@ -59,6 +59,7 @@ public class WritableKVStateStack<K, V> implements WritableKVState<K, V> {
      * {@inheritDoc}
      */
     @Override
+    @NonNull
     public String getServiceName() {
         return serviceName;
     }
