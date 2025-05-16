@@ -8,6 +8,8 @@ import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.state.test.fixtures.merkle.MerkleTestBase;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
+
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,6 +46,13 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         void stateKey() {
             final var state = new OnDiskWritableKVState<>(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
             assertThat(state.getStateKey()).isEqualTo(FRUIT_STATE_KEY);
+        }
+
+        @AfterEach
+        void tearDown() {
+            if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
+                fruitVirtualMap.release();
+            }
         }
     }
 
@@ -87,6 +96,14 @@ class OnDiskWritableStateTest extends MerkleTestBase {
                     .toList();
             assertThat(actual).containsExactlyInAnyOrder(A_KEY, B_KEY, C_KEY);
         }
+
+        @AfterEach
+        void tearDown() {
+            if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
+                fruitVirtualMap.release();
+            }
+        }
+
     }
 
     @Nested
@@ -244,6 +261,13 @@ class OnDiskWritableStateTest extends MerkleTestBase {
             assertThat(readValueFromMerkleMap(C_KEY)).isNull();
             assertThat(readValueFromMerkleMap(D_KEY)).isEqualTo(DATE);
             assertThat(readValueFromMerkleMap(E_KEY)).isEqualTo(ELDERBERRY);
+        }
+
+        @AfterEach
+        void tearDown() {
+            if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
+                fruitVirtualMap.release();
+            }
         }
     }
 }
