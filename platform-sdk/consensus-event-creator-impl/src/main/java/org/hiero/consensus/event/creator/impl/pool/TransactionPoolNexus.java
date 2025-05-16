@@ -2,6 +2,7 @@
 package org.hiero.consensus.event.creator.impl.pool;
 
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
+import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static org.hiero.base.CompareTo.isLessThan;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -147,6 +148,8 @@ public class TransactionPoolNexus implements TransactionSupplier {
             return false;
         }
 
+        logger.info(STARTUP.getMarker(), "Submitting application transaction");
+
         return submitTransaction(appTransaction, false);
     }
 
@@ -169,6 +172,7 @@ public class TransactionPoolNexus implements TransactionSupplier {
                 && (bufferedTransactions.size() + priorityBufferedTransactions.size()) > throttleTransactionQueueSize) {
             transactionPoolMetrics.recordRejectedAppTransaction();
             logger.error(
+                    STARTUP.getMarker(),
                     "transaction rejected because transaction pool is full, buffered transactions: {}, priority buffered transactions: {}",
                     bufferedTransactions.size(),
                     priorityBufferedTransactions.size());
@@ -176,15 +180,19 @@ public class TransactionPoolNexus implements TransactionSupplier {
         }
 
         if (priority) {
+            logger.info(STARTUP.getMarker(), "Transaction submitted with priority");
             bufferedSignatureTransactionCount++;
             transactionPoolMetrics.recordSubmittedPlatformTransaction();
         } else {
+            logger.info(STARTUP.getMarker(), "Transaction submitted was not priority");
             transactionPoolMetrics.recordAcceptedAppTransaction();
         }
 
         if (priority) {
+            logger.info(STARTUP.getMarker(), "Priority transaction added to priority buffered queue");
             priorityBufferedTransactions.add(transaction);
         } else {
+            logger.info(STARTUP.getMarker(), "Non priority transaction added to buffered queue");
             bufferedTransactions.add(transaction);
         }
 

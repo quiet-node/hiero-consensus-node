@@ -402,12 +402,16 @@ public class TransactionSubmitter {
                 attemptCount++;
 
                 if (attemptCount > FREEZE_SUBMIT_MAX_ATTEMPTS) {
+                    logger.info(
+                            LOGM_DEMO_INFO,
+                            "Attempted to send freeze transaction {} times, giving up.",
+                            FREEZE_SUBMIT_MAX_ATTEMPTS);
                     return false;
                 }
 
                 Thread.sleep(FREEZE_SUBMIT_ATTEMPT_SLEEP);
             } catch (InterruptedException ex) {
-                logger.error(ex.getStackTrace());
+                logger.error(LOGM_DEMO_INFO, ex.getStackTrace());
                 Thread.currentThread().interrupt();
                 return false;
             }

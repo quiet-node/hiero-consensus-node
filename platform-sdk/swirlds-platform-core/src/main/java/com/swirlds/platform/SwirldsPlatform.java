@@ -483,6 +483,7 @@ public class SwirldsPlatform implements Platform {
      */
     @Override
     public boolean createTransaction(@NonNull final byte[] transaction) {
+        logger.info(STARTUP.getMarker(), "Creating transaction {}", selfId);
         return transactionPoolNexus.submitApplicationTransaction(Bytes.wrap(transaction));
     }
 
