@@ -557,6 +557,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
 
     @Override
     public void init(final Platform platform, final NodeId id) {
+        logger.warn("I'm in PlatformTestingToolMain.init()");
         this.platform = platform;
         selfId = id;
 
@@ -567,6 +568,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
                 UnsafeMutablePTTStateAccessor.getInstance().getUnsafeMutableState(platform.getSelfId())) {
             final PlatformTestingToolState state = wrapper.get();
 
+            System.out.println("I'm before calling initControlStructures");
             consensusStateEventHandler.initControlStructures(this::handleMessageQuorum);
 
             // FUTURE WORK implement mirrorNode
@@ -985,9 +987,11 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
             ExpectedMapUtils.buildExpectedMapAfterReconnect(notification, platform);
             rebuildExpirationQueue(platform);
 
+            logger.warn("I'm in registerReconnectCompleteListener");
             try (final AutoCloseableWrapper<PlatformTestingToolState> wrapper =
                     UnsafeMutablePTTStateAccessor.getInstance().getUnsafeMutableState(platform.getSelfId())) {
                 final PlatformTestingToolState state = wrapper.get();
+                logger.warn("I'm before calling initControlStructures");
                 consensusStateEventHandler.initControlStructures(this::handleMessageQuorum);
                 SyntheticBottleneckConfig.getActiveConfig()
                         .registerReconnect(platform.getSelfId().id());
@@ -1070,6 +1074,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
                 state::getType,
                 state::getTimestamp);
 
+        logger.warn("I'm in handleMessageQuorum and state is " + state.getType());
         switch (state.getType()) {
             case ENTER_VALIDATION:
                 handleEnterValidation(state.getTimestamp());

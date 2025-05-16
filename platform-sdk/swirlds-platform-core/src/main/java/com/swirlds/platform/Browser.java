@@ -369,6 +369,7 @@ public class Browser {
      * @param appMain  the app to start
      */
     private static void startPlatform(@NonNull final SwirldsPlatform platform, @NonNull final SwirldMain appMain) {
+        logger.warn("Starting platform from Browser");
         appMain.init(platform, platform.getSelfId());
         platform.start();
         new ThreadConfiguration(getStaticThreadManager())
