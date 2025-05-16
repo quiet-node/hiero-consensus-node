@@ -806,17 +806,15 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
      * Commit all singleton states for every registered service.
      */
     public void commitSingletons() {
-        for (String serviceKey : services.keySet()) {
-            final var service = services.get(serviceKey);
-            for (String stateKey : service.keySet()) {
-                StateMetadata<?, ?> stateMetadata = service.get(stateKey);
-                if (stateMetadata.stateDefinition().singleton()) {
+        services.forEach((serviceKey, serviceStates) -> serviceStates.entrySet().stream()
+                .filter(stateMetadata ->
+                        stateMetadata.getValue().stateDefinition().singleton())
+                .forEach(service -> {
                     WritableStates writableStates = getWritableStates(serviceKey);
-                    final var writableSingleton = (WritableSingletonStateBase<?>) writableStates.getSingleton(stateKey);
+                    WritableSingletonStateBase<?> writableSingleton =
+                            (WritableSingletonStateBase<?>) writableStates.getSingleton(service.getKey());
                     writableSingleton.commit();
-                }
-            }
-        }
+                }));
     }
 
     /**

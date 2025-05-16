@@ -66,6 +66,7 @@ import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
+import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -908,17 +909,15 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      */
     @SuppressWarnings("DuplicatedCode")
     public void commitSingletons() {
-        for (String serviceKey : services.keySet()) {
-            final var service = services.get(serviceKey);
-            for (String stateKey : service.keySet()) {
-                StateMetadata<?, ?> stateMetadata = service.get(stateKey);
-                if (stateMetadata.stateDefinition().singleton()) {
+        services.forEach((serviceKey, serviceStates) -> serviceStates.entrySet().stream()
+                .filter(stateMetadata ->
+                        stateMetadata.getValue().stateDefinition().singleton())
+                .forEach(service -> {
                     WritableStates writableStates = getWritableStates(serviceKey);
-                    final var writableSingleton = (WritableSingletonStateBase<?>) writableStates.getSingleton(stateKey);
+                    WritableSingletonStateBase<?> writableSingleton =
+                            (WritableSingletonStateBase<?>) writableStates.getSingleton(service.getKey());
                     writableSingleton.commit();
-                }
-            }
-        }
+                }));
     }
 
     /**
@@ -970,16 +969,16 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
     // MIGRATION TO MEGA MAP
 
-    // Migration process config (TODO: discuss if should be moved to config as this is temp code)
     // Threads which iterate over the given Virtual Map, perform some operation and write into its own output
     // queue/buffer
-    private static final int THREAD_COUNT = 1;
     private static final int DATA_PER_COPY = 10_213;
-    private static final boolean VALIDATE_MIGRATION_FF = true;
 
     @Override
     public MerkleNode migrate(@NonNull final Configuration configuration, int version) {
         if (version < 32) {
+
+            boolean validateMigrationEnabled =
+                    configuration.getConfigData(VirtualMapConfig.class).validateMigrationEnabled();
 
             // Create Virtual Map
 
@@ -1007,16 +1006,31 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     STARTUP.getMarker(),
                     "Migrating all of the states (Singleton, KV and Queue) to the one Virtual Map...");
 
-            migrateSingletonStates(virtualMap, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
+            migrateSingletonStates(
+                    virtualMap,
+                    totalMigratedObjects,
+                    totalMigrationTimeMs,
+                    validateMigrationEnabled,
+                    totalValidationTimeMs);
 
             final AtomicReference<VirtualMap> virtualMapRef = new AtomicReference<>(virtualMap);
-            migrateQueueStates(virtualMapRef, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
-            migrateKVStates(virtualMapRef, totalMigratedObjects, totalMigrationTimeMs, totalValidationTimeMs);
+            migrateQueueStates(
+                    virtualMapRef,
+                    totalMigratedObjects,
+                    totalMigrationTimeMs,
+                    validateMigrationEnabled,
+                    totalValidationTimeMs);
+            migrateKVStates(
+                    virtualMapRef,
+                    totalMigratedObjects,
+                    totalMigrationTimeMs,
+                    validateMigrationEnabled,
+                    totalValidationTimeMs);
 
             logger.info(STARTUP.getMarker(), "Total migration time {} ms", totalMigrationTimeMs.get());
 
             // Validate all states migrated to the Virtual Map
-            if (VALIDATE_MIGRATION_FF) {
+            if (validateMigrationEnabled) {
                 // The `+1` accounts for the `VirtualMapState`, which is expected to already exist in the VirtualMap
                 // before the migration begins.
                 assert virtualMapRef.get().size() == totalMigratedObjects.get() + 1;
@@ -1033,6 +1047,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             VirtualMap virtualMap,
             AtomicLong totalMigratedObjects,
             AtomicLong totalMigrationTimeMs,
+            boolean validateMigrationEnabled,
             AtomicLong totalValidationTimeMs) {
         logger.info(STARTUP.getMarker(), "Migrating Singleton states to the one Virtual Map...");
 
@@ -1068,7 +1083,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
                     totalMigratedObjects.addAndGet(1);
 
-                    if (VALIDATE_MIGRATION_FF) {
+                    if (validateMigrationEnabled) {
                         long validationStartTime = System.currentTimeMillis();
                         logger.info(
                                 STARTUP.getMarker(),
@@ -1099,6 +1114,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             final AtomicReference<VirtualMap> virtualMapRef,
             AtomicLong totalMigratedObjects,
             AtomicLong totalMigrationTimeMs,
+            boolean validateMigrationEnabled,
             AtomicLong totalValidationTimeMs) {
         logger.info(STARTUP.getMarker(), "Migrating Queue states to the one Virtual Map...");
 
@@ -1155,7 +1171,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
                     totalMigratedObjects.addAndGet(originalStore.size());
 
-                    if (VALIDATE_MIGRATION_FF) {
+                    if (validateMigrationEnabled) {
                         long validationStartTime = System.currentTimeMillis();
                         logger.info(
                                 STARTUP.getMarker(),
@@ -1193,6 +1209,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             final AtomicReference<VirtualMap> virtualMapRef,
             AtomicLong totalMigratedObjects,
             AtomicLong totalMigrationTimeMs,
+            boolean validateMigrationEnabled,
             AtomicLong totalValidationTimeMs) {
         logger.info(STARTUP.getMarker(), "Migrating KV states to the one Virtual Map...");
 
@@ -1233,7 +1250,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                                 AdHocThreadManager.getStaticThreadManager(),
                                 virtualMapToMigrate,
                                 handler,
-                                THREAD_COUNT);
+                                Runtime.getRuntime().availableProcessors() - 1);
 
                         long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
                         logger.info(
@@ -1253,14 +1270,14 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                         throw new RuntimeException("Virtual Map migration process was interrupted", e);
                     }
 
-                    if (VALIDATE_MIGRATION_FF) {
+                    if (validateMigrationEnabled) {
                         long validationStartTime = System.currentTimeMillis();
                         logger.info(
                                 STARTUP.getMarker(),
                                 "Validating the new Virtual Map contains all data from the KV State {}",
                                 virtualMapToMigrate.getLabel());
 
-                        validateKVStateMigrated(virtualMapRef.get(), virtualMapToMigrate);
+                        validateKVStateMigrated(virtualMapRef.get(), virtualMapToMigrate, stateIdBytes);
 
                         long validationTimeMs = System.currentTimeMillis() - validationStartTime;
                         logger.info(
@@ -1275,14 +1292,13 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         logger.info(STARTUP.getMarker(), "Migration complete for KV states, took {} ms", kvMigrationStartTime.get());
     }
 
-    // TODO: discuss this validation (seems by size would be a viable option)
-    private static void validateKVStateMigrated(VirtualMap virtualMap, VirtualMap virtualMapToMigrate) {
+    private static void validateKVStateMigrated(
+            VirtualMap virtualMap, VirtualMap virtualMapToMigrate, Bytes stateIdBytes) {
         MerkleIterator<MerkleNode> merkleNodeMerkleIterator = virtualMapToMigrate.treeIterator();
-
         while (merkleNodeMerkleIterator.hasNext()) {
             MerkleNode next = merkleNodeMerkleIterator.next();
             if (next instanceof VirtualLeafBytes leafBytes) {
-                assert virtualMap.containsKey(leafBytes.keyBytes());
+                assert virtualMap.containsKey(stateIdBytes.append(leafBytes.keyBytes()));
             }
         }
     }
