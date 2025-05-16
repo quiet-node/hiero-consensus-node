@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.consensus.event.creator.impl.pool;
 
-import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static org.hiero.base.CompareTo.isLessThan;
 
@@ -123,25 +122,28 @@ public class TransactionPoolNexus implements TransactionSupplier {
     public synchronized boolean submitApplicationTransaction(@NonNull final Bytes appTransaction) {
         if (!healthy || platformStatus != PlatformStatus.ACTIVE) {
             logger.error(
+                    STARTUP.getMarker(),
                     "transaction rejected because platform is not healthy or not active, healthy: {%s}, status: {%s}",
-                    healthy, platformStatus);
+                    healthy,
+                    platformStatus);
             return false;
         }
 
         if (appTransaction == null) {
             // FUTURE WORK: This really should throw, but to avoid changing existing API this will be changed later.
-            illegalTransactionLogger.error(EXCEPTION.getMarker(), "transaction is null");
+            illegalTransactionLogger.error(STARTUP.getMarker(), "transaction is null");
             logger.error("transaction is null");
             return false;
         }
         if (appTransaction.length() > maximumTransactionSize) {
             // FUTURE WORK: This really should throw, but to avoid changing existing API this will be changed later.
             illegalTransactionLogger.error(
-                    EXCEPTION.getMarker(),
+                    STARTUP.getMarker(),
                     "transaction has {} bytes, maximum permissible transaction size is {}",
                     appTransaction.length(),
                     maximumTransactionSize);
             logger.error(
+                    STARTUP.getMarker(),
                     "transaction has {} bytes, maximum permissible transaction size is {}",
                     appTransaction.length(),
                     maximumTransactionSize);

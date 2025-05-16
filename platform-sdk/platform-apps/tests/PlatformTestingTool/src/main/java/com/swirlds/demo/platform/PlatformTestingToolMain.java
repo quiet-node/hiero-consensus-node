@@ -568,7 +568,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
                 UnsafeMutablePTTStateAccessor.getInstance().getUnsafeMutableState(platform.getSelfId())) {
             final PlatformTestingToolState state = wrapper.get();
 
-            logger.info(STARTUP.getMarker(), "I'm before calling initControlStructures");
+            logger.info(STARTUP.getMarker(), "I'm before calling initControlStructures in init");
             consensusStateEventHandler.initControlStructures(this::handleMessageQuorum);
 
             // FUTURE WORK implement mirrorNode
