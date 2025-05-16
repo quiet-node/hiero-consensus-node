@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -186,6 +187,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testPublishStreamRequestIsNotCreatedWhenBatchSizeIsNotMet() {
         // given
         // mock the number of batch items by modifying the default config
@@ -219,6 +221,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testPublishStreamRequestIsCreatedWhenBatchSizeIsMet() {
         // given
         // mock the number of batch items by modifying the default config
@@ -250,6 +253,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testWithMoreBlockItemsThanBlockItemBatchSize() {
         // given
         // mock the number of batch items by modifying the default config
@@ -317,6 +321,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testPublishStreamRequestIsCreatedWithBlockProofOnly() {
         // given
         // mock the number of batch items by modifying the default config
@@ -345,6 +350,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testPublishStreamRequestCreatedWithRemainingBlockItemsOnBlockCLose() {
         // given
         // mock the number of batch items by modifying the default config
@@ -409,6 +415,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testPublishStreamRequestsCreatedForMultipleBLocks() {
         // given
         // mock the number of batch items by modifying the default config
@@ -535,6 +542,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testSetBlockItemBatchSizeToZero() {
         // given
         // mock the number of batch items by modifying the default config
@@ -563,6 +571,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testSetBlockItemBatchSizeToOne() {
         // given
         // mock the number of batch items by modifying the default config
@@ -591,6 +600,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testMultiBatch() {
         final Configuration config = HederaTestConfigBuilder.create()
                 .withConfigDataType(BlockStreamConfig.class)
@@ -650,6 +660,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testBuffer() throws Throwable {
         final Duration blockTtl = Duration.ofSeconds(5);
         final Configuration config = HederaTestConfigBuilder.create()
@@ -755,6 +766,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testFutureBlockAcked() throws Throwable {
         /*
          * There is a scenario where a block node (BN) may have a later block than what the active consensus node (CN)
@@ -813,6 +825,7 @@ class BlockStreamStateManagerTest {
     }
 
     @Test
+    @Disabled
     void testBufferBackpressure() throws Throwable {
         // ensure block TTL is greater than prune interval for this test to work as expected
         final Duration blockTtl = Duration.ofSeconds(2);

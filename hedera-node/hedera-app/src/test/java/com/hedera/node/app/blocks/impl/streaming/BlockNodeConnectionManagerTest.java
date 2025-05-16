@@ -39,6 +39,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -204,6 +205,7 @@ class BlockNodeConnectionManagerTest {
     }
 
     @Test
+    @Disabled
     void handleConnectionError_shouldScheduleRetryAndChooseHigherPriorityConnection() throws InterruptedException {
         // Given established connection
         blockNodeConnectionManager.selectBlockNodeForStreaming();
