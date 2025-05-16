@@ -51,7 +51,11 @@ import org.apache.logging.log4j.Logger;
  * It is also responsible for retrying with exponential backoff if a connection fails.
  */
 public class BlockNodeConnectionManager {
+    /**
+     * Initial retry delay for connection attempts.
+     */
     public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
+
     private static final int PROCESSOR_LOOP_DELAY_MS = 10;
     private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
@@ -69,7 +73,7 @@ public class BlockNodeConnectionManager {
     private final BlockStreamMetrics blockStreamMetrics;
     private final ConfigProvider configProvider;
     private List<BlockNodeConfig> availableNodes;
-    private AtomicBoolean blockStreamWorkerThreadRunning = new AtomicBoolean(true);
+    private final AtomicBoolean blockStreamWorkerThreadRunning = new AtomicBoolean(true);
     private final AtomicLong jumpTargetBlock = new AtomicLong(-1);
     private final AtomicLong streamingBlockNumber = new AtomicLong(-1);
     private int requestIndex = 0;
@@ -297,6 +301,12 @@ public class BlockNodeConnectionManager {
         return node != null ? node.address() + ":" + node.port() : "null";
     }
 
+    /**
+     * Opens a block for streaming by setting the target block number.
+     * If the connection is already active, it will set the jump target block if the current block number is -1.
+     *
+     * @param blockNumber the block number to open
+     */
     public void openBlock(long blockNumber) {
         final BlockNodeConnection connection = getActiveConnection();
         if (connection == null) {
@@ -339,6 +349,12 @@ public class BlockNodeConnectionManager {
         }
     }
 
+    /**
+     * Selects the next available block node based on priority.
+     * It will skip over any nodes that are already in retry or have a lower priority than the current active connection.
+     *
+     * @return the next available block node configuration
+     */
     public BlockNodeConfig getNextPriorityBlockNode() {
         logger.info(
                 "[{}] Establishing connection to block node based on priorities",
@@ -443,12 +459,6 @@ public class BlockNodeConnectionManager {
     }
 
     @VisibleForTesting
-    boolean isRetrying(BlockNodeConnection connection) {
-        if (connection == null) return false;
-        return isRetrying(connection.getNodeConfig());
-    }
-
-    @VisibleForTesting
     List<BlockNodeConfig> getAvailableNodes() {
         return availableNodes;
     }
@@ -510,7 +520,7 @@ public class BlockNodeConnectionManager {
         }
 
         @Override
-        public void updateConnectionState(ConnectionState newState) {
+        public void updateConnectionState(@NonNull ConnectionState newState) {
             /* No-op */
         }
 
@@ -821,7 +831,7 @@ public class BlockNodeConnectionManager {
                 .blockItemBatchSize();
     }
 
-    private boolean jumpToBlock() {
+    private void jumpToBlock() {
         // Check if the processor has been signaled to jump to a specific block
         final long targetBlock = jumpTargetBlock.getAndSet(-1); // Check and clear jump signal atomically
         if (targetBlock >= 0) {
@@ -831,11 +841,12 @@ public class BlockNodeConnectionManager {
                     targetBlock);
             streamingBlockNumber.set(targetBlock);
             requestIndex = 0; // Reset request index for the new block
-            return true;
         }
-        return false;
     }
 
+    /**
+     * @return The block number of the block which is currently being streamed to a block node
+     */
     public AtomicLong getStreamingBlockNumber() {
         return streamingBlockNumber;
     }

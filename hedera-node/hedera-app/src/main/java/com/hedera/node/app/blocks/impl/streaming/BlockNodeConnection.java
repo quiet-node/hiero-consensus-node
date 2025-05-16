@@ -29,7 +29,11 @@ import org.apache.logging.log4j.Logger;
  * Represents a single connection to a block node. Each connection is responsible for connecting to configured block nodes
  */
 public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
+    /**
+     * A longer retry delay for when the connection is closed due to an error.
+     */
     public static final Duration LONGER_RETRY_DELAY = Duration.ofSeconds(30);
+
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
 
     private final BlockNodeConfig blockNodeConfig;
@@ -118,6 +122,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         this.endOfStreamScheduleDelay = blockNodeConnectionConfig.endOfStreamScheduleDelay();
     }
 
+    /**
+     * Creates a new bidi request observer for this block node connection.
+     */
     public void createRequestObserver() {
         requestObserver = grpcServiceClient.bidi(blockNodeConnectionManager.getGrpcEndPoint(), this);
     }
@@ -519,6 +526,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
+    /**
+     * Returns the connection state for this connection.
+     *
+     * @return the connection state
+     */
     public ConnectionState getConnectionState() {
         return connectionState;
     }
