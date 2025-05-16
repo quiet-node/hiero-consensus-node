@@ -109,6 +109,10 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     private VirtualMap virtualMap;
 
+    /**
+     * Used to track the status of the Platform.
+     * It is set to {@code true} if Platform status is not {@code PlatformStatus.ACTIVE}
+     */
     private boolean startupMode = true;
 
     public NewStateRoot(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
@@ -166,11 +170,6 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         this.merkleCryptography = merkleCryptography;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
         this.roundSupplier = roundSupplier;
-    }
-
-    @Override
-    public boolean isStartUpMode() {
-        return startupMode;
     }
 
     /**
@@ -388,6 +387,14 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
     public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
         return services;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isStartUpMode() {
+        return startupMode;
     }
 
     public void disableStartupMode() {

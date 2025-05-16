@@ -59,7 +59,7 @@ class StateTest {
         assertFalse(state.getRoot().tryReserve(), "tryReserve() should fail when the state is destroyed");
     }
 
-    private static SignedState randomSignedState(boolean isHashed) {
+    private static SignedState randomSignedState(boolean isSupposedToBeHashed) {
         Random random = new Random(0);
         final String virtualMapLabel = "vm-" + StateTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         MerkleNodeState merkleStateRoot = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
@@ -73,7 +73,7 @@ class StateTest {
                 false,
                 false,
                 new PlatformStateFacade());
-        if (isHashed) {
+        if (isSupposedToBeHashed) {
             // Hash the underlying VirtualMap
             signedState.getState().getHash();
         }
