@@ -8,7 +8,6 @@ import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.state.test.fixtures.merkle.MerkleTestBase;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -103,7 +102,6 @@ class OnDiskWritableStateTest extends MerkleTestBase {
                 fruitVirtualMap.release();
             }
         }
-
     }
 
     @Nested
