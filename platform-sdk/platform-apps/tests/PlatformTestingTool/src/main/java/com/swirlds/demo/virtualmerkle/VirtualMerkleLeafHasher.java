@@ -134,7 +134,7 @@ public class VirtualMerkleLeafHasher {
             registry.registerConstructables("com.swirlds.merkledb");
             registry.registerConstructables("com.swirlds.demo.virtualmerkle");
             registry.registerConstructables("com.swirlds.common.crypto");
-            registry.registerConstructables("org.hiero.consensus.model.crypto");
+            registry.registerConstructables("org.hiero");
         } catch (final ConstructableRegistryException e) {
             e.printStackTrace();
             return;
