@@ -9,10 +9,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
+import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
 import com.hedera.hapi.block.PublishStreamResponse.BlockAcknowledgement;
 import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
+import com.hedera.hapi.block.PublishStreamResponse.ResendBlock;
+import com.hedera.hapi.block.PublishStreamResponse.SkipBlock;
 import com.hedera.hapi.block.PublishStreamResponseCode;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
@@ -22,6 +25,7 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,12 +63,21 @@ public class BlockNodeConnectionRedoneTest {
     @Mock
     private GrpcServiceClient mockGrpcServiceClient;
 
+    private StreamObserver<Object> genericMockStreamObserver;
+
+    @Mock
+    private StreamObserver<PublishStreamResponse> mockStreamObserver;
+
     @BeforeEach
     void setUp() {
         // Setup ConfigProvider
         configProvider = createConfigProvider();
         nodeConfig = new BlockNodeConfig("localhost", 8080, 1);
         nodeConfig2 = new BlockNodeConfig("localhost", 8080, 2);
+
+        // Create a mock of StreamObserver<Object> and cast it to StreamObserver<PublishStreamResponse>
+        genericMockStreamObserver = Mockito.mock(StreamObserver.class);
+        when(mockGrpcServiceClient.bidi(any(), (StreamObserver<Object>) any())).thenReturn(genericMockStreamObserver);
 
         // Setup BlockStreamMetrics with mocks
         when(mockNodeInfo.nodeId()).thenReturn(0L);
@@ -436,6 +449,255 @@ public class BlockNodeConnectionRedoneTest {
         subject.onNext(response);
 
         assertEquals(UNINITIALIZED, subject.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamMultipleWithinTimeframe() throws InterruptedException {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        // 5 EndOfStream within 30 seconds.
+        subject.onNext(response);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        Thread.sleep(2000L);
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        subject.onNext(response);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        Thread.sleep(2000L);
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        subject.onNext(response);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        Thread.sleep(2000L);
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        subject.onNext(response);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        Thread.sleep(2000L);
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        subject.onNext(response);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        Thread.sleep(2000L);
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        subject.onNext(response);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        Thread.sleep(7000L);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        assertEquals(ACTIVE, subject2.getConnectionState());
+    }
+
+    @Test
+    void testHandleSkipBlock() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response = createSkipBlock(0L);
+
+        blockStreamStateManager.openBlock(0L);
+        blockStreamStateManager.openBlock(1L);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(1L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+    }
+
+    @Test
+    void testHandleSkipBlockIgnore() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response = createSkipBlock(5L);
+
+        blockStreamStateManager.openBlock(0L);
+        blockStreamStateManager.openBlock(1L);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+    }
+
+    @Test
+    void testHandleResendBlock() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response = createResendBlock(0L);
+
+        blockStreamStateManager.openBlock(0L);
+        blockStreamStateManager.openBlock(1L);
+
+        blockNodeConnectionManager.getJumpTargetBlock().set(1L);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(1L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+    }
+
+    @Test
+    void testHandleResendBlockNoBlockState() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response = createResendBlock(5L);
+
+        blockStreamStateManager.openBlock(0L);
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(2000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        assertEquals(ACTIVE, subject2.getConnectionState());
+    }
+
+    @Test
+    void testOnError() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        // Simulate an error
+        subject.onError(new RuntimeException("Test error"));
+
+        try {
+            Thread.sleep(2000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Verify that the connection state is set to UNINITIALIZED
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        assertEquals(ACTIVE, subject2.getConnectionState());
+    }
+
+    @Test
+    void testOnCompleted() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        // Simulate onCompleted
+        subject.onCompleted();
+
+        try {
+            Thread.sleep(2000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Verify that the connection state is set to UNINITIALIZED
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        assertEquals(ACTIVE, subject2.getConnectionState());
+    }
+
+    @Test
+    void testSendRequest() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        PublishStreamRequest expectedRequest = PublishStreamRequest.newBuilder().build();
+        subject.sendRequest(expectedRequest);
+
+        // Verify that the request was sent to the correct StreamObserver
+        Mockito.verify(genericMockStreamObserver).onNext(expectedRequest);
+    }
+
+    @Test
+    void testSendRequestNotActive() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertEquals(ACTIVE, subject.getConnectionState());
+
+        PublishStreamRequest expectedRequest = PublishStreamRequest.newBuilder().build();
+
+        subject.updateConnectionState(UNINITIALIZED);
+        subject.sendRequest(expectedRequest);
+
+        // Verify that the request was sent to the correct StreamObserver
+        Mockito.verifyNoInteractions(genericMockStreamObserver);
+    }
+
+    @NonNull
+    private static PublishStreamResponse createSkipBlock(long blockNumber) {
+        SkipBlock skipBlock = SkipBlock.newBuilder().blockNumber(blockNumber).build();
+
+        return PublishStreamResponse.newBuilder().skipBlock(skipBlock).build();
+    }
+
+    @NonNull
+    private static PublishStreamResponse createResendBlock(long blockNumber) {
+        ResendBlock resendBlock =
+                ResendBlock.newBuilder().blockNumber(blockNumber).build();
+
+        return PublishStreamResponse.newBuilder().resendBlock(resendBlock).build();
     }
 
     @NonNull
