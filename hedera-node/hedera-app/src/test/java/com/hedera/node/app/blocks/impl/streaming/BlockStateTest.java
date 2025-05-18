@@ -8,10 +8,10 @@ import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.BlockHeader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
+/**
+ * Unit tests for {@link BlockState}.
+ */
 public class BlockStateTest {
 
     private BlockState blockState;

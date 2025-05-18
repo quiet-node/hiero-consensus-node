@@ -3,7 +3,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
@@ -125,14 +124,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * @return the current state of the connection
-     */
-    @VisibleForTesting
-    ConnectionState getState() {
-        return connectionState;
-    }
-
-    /**
      * Handles the failure of the stream by closing the connection and notifying the connection manager.
      */
     public void handleStreamFailure() {
@@ -189,7 +180,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         && currentBlockProducing == acknowledgedBlockNumber) {
                     // We are already streaming the acknowledged block number
                     logger.debug(
-                            "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - (no buffer interaction) moving streaming ahead to Block {}",
+                            "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
                             Thread.currentThread().getName(),
                             currentBlockStreaming,
                             connectionDescriptor,
@@ -391,7 +382,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 connectionDescriptor,
                 connectionState);
         closeObserver();
-        blockNodeConnectionManager.getStreamingBlockNumber().set(-1L);
+        jumpToBlock(-1L);
 
         logger.debug(
                 "[{}] Closed connection to block node {}",
@@ -421,7 +412,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @return true if the connection is active, false otherwise
      */
     public boolean isActive() {
-        return getState() == ConnectionState.ACTIVE;
+        return connectionState == ConnectionState.ACTIVE;
     }
 
     /**
@@ -442,7 +433,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void restartStreamAtBlock(final long blockNumber) {
         logger.debug("Restarting stream at block {} for node {}", blockNumber, connectionDescriptor);
 
-        blockNodeConnectionManager.getStreamingBlockNumber().set(blockNumber);
+        jumpToBlock(blockNumber);
         blockNodeConnectionManager.scheduleRetry(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
 
         logger.debug("Stream restarted at block {} for node {}", blockNumber, connectionDescriptor);
@@ -463,7 +454,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockNumber,
                 connectionDescriptor);
         // Set the target block for the worker loop to pick up
-
+        blockNodeConnectionManager.getJumpTargetBlock().set(blockNumber);
     }
 
     @Override

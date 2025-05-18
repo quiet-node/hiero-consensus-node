@@ -377,7 +377,7 @@ public class BlockNodeConnectionManager {
                             || !blockStreamStateManager
                                     .getConnections()
                                     .get(node)
-                                    .getState()
+                                    .getConnectionState()
                                     .equals(ConnectionState.PENDING)) // Check if node is marked for retry
                     .toList();
 
@@ -436,8 +436,7 @@ public class BlockNodeConnectionManager {
         try {
             // Create the connection object
             final GrpcServiceClient grpcClient = createNewGrpcClient(node);
-            connection = new BlockNodeConnection(
-                    configProvider, node, this, blockStreamStateManager, grpcClient, blockStreamMetrics);
+            connection = createBlockNodeConnection(node, grpcClient);
 
             blockStreamStateManager.getConnections().put(node, connection);
             // Immediately schedule the FIRST connection attempt.
@@ -452,6 +451,14 @@ public class BlockNodeConnectionManager {
             // If creation fails, the node is simply not available now.
             // If scheduleRetry failed, it already logged and cleaned up connectionsInRetry.
         }
+    }
+
+    public BlockNodeConnection createBlockNodeConnection(
+            @NonNull BlockNodeConfig node, @NonNull GrpcServiceClient grpcClient) {
+        BlockNodeConnection connection;
+        connection = new BlockNodeConnection(
+                configProvider, node, this, blockStreamStateManager, grpcClient, blockStreamMetrics);
+        return connection;
     }
 
     @VisibleForTesting
@@ -521,10 +528,10 @@ public class BlockNodeConnectionManager {
                             "[{}] Running connection task for block node {} ConnectionState: {}",
                             Thread.currentThread().getName(),
                             blockNodeName(nodeConfig),
-                            connection.getState());
+                            connection.getConnectionState());
 
                     // Check if the connection is already active
-                    if (connection.getState().equals(ConnectionState.ACTIVE)) {
+                    if (connection.getConnectionState().equals(ConnectionState.ACTIVE)) {
                         logger.debug(
                                 "[{}] Connection task for block node {} is already active",
                                 Thread.currentThread().getName(),
@@ -537,7 +544,7 @@ public class BlockNodeConnectionManager {
                                 "[{}] Connection task for block node {} is stopping due to active connection with higher priority",
                                 Thread.currentThread().getName(),
                                 blockNodeName(nodeConfig));
-                    } else if (connection.getState().equals(ConnectionState.UNINITIALIZED)) {
+                    } else if (connection.getConnectionState().equals(ConnectionState.UNINITIALIZED)) {
                         // This is either the first connection attempt ever or the connection was closed and needs
                         // to be re-established
                         connection.createRequestObserver(); // This may throw an exception if the connection fails
@@ -546,9 +553,9 @@ public class BlockNodeConnectionManager {
                                 "[{}] Connection task for block node {} ConnectionState: {}",
                                 Thread.currentThread().getName(),
                                 blockNodeName(nodeConfig),
-                                connection.getState());
+                                connection.getConnectionState());
                         transitionActiveIfNoConnectionsAreActive(nodeConfig);
-                    } else if (connection.getState().equals(ConnectionState.PENDING)) {
+                    } else if (connection.getConnectionState().equals(ConnectionState.PENDING)) {
                         transitionActiveIfNoConnectionsAreActive(nodeConfig);
                     }
                 }
@@ -603,7 +610,7 @@ public class BlockNodeConnectionManager {
 
         private void transitionActiveIfNoConnectionsAreActive(BlockNodeConfig nodeConfig) {
             if (blockStreamStateManager.getConnections().values().stream()
-                    .noneMatch(connection -> connection.getState().equals(ConnectionState.ACTIVE))) {
+                    .noneMatch(connection -> connection.getConnectionState().equals(ConnectionState.ACTIVE))) {
                 connection.updateConnectionState(ConnectionState.ACTIVE);
                 blockStreamStateManager.setActiveConnection(connection);
                 jumpTargetBlock.set(blockStreamStateManager.getLowestUnackedBlockNumber());
@@ -611,7 +618,7 @@ public class BlockNodeConnectionManager {
                         "[{}] Connection task for block node {} ConnectionState: {}",
                         Thread.currentThread().getName(),
                         blockNodeName(nodeConfig),
-                        connection.getState());
+                        connection.getConnectionState());
             }
         }
     }
@@ -796,7 +803,7 @@ public class BlockNodeConnectionManager {
         BlockNodeConnection highestPri = null;
         for (BlockNodeConnection connection :
                 this.blockStreamStateManager.getConnections().values()) {
-            if (connection.getState().equals(ConnectionState.PENDING)
+            if (connection.getConnectionState().equals(ConnectionState.PENDING)
                     && connection.getNodeConfig().priority()
                             < blockNodeConnection.getNodeConfig().priority()) {
                 if (highestPri == null
@@ -809,5 +816,14 @@ public class BlockNodeConnectionManager {
         }
 
         return highestPri;
+    }
+
+    /**
+     * Get the jump target block number which can be updated and the block stream worker thread will jump to that block
+     * on the next iteration.
+     * @return the jump target block number
+     */
+    public AtomicLong getJumpTargetBlock() {
+        return jumpTargetBlock;
     }
 }
