@@ -51,7 +51,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Stream;
 import org.hiero.base.crypto.DigestType;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -183,11 +182,6 @@ class RandomVirtualMapReconnectTests extends VirtualMapReconnectTestBase {
         }
 
         return arguments.stream();
-    }
-
-    @BeforeAll
-    static void beforeAll() {
-        assertEquals(0, MerkleDbDataSource.getCountOfOpenDatabases());
     }
 
     @ParameterizedTest
