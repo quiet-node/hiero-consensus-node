@@ -35,6 +35,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -177,7 +178,7 @@ public class BlockNodeConnectionManager {
                     Thread.currentThread().getName(),
                     blockNodeName(connection.getNodeConfig()));
             // Schedule retry for the failed connection after a delay (initialDelay)
-            scheduleRetry(connection, initialDelay);
+            scheduleRetry(connection, initialDelay, null);
             // Immediately try to find and connect to the next available node
             selectBlockNodeForStreaming();
         }
@@ -190,7 +191,8 @@ public class BlockNodeConnectionManager {
      * @param connection the connection to schedule a retry for
      * @param initialDelay the delay before the first attempt in this sequence executes
      */
-    public void scheduleRetry(@NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay) {
+    public void scheduleRetry(
+            @NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay, Long blockNumber) {
         requireNonNull(connection);
         requireNonNull(initialDelay);
         final var nodeConfig = connection.getNodeConfig();
@@ -210,7 +212,9 @@ public class BlockNodeConnectionManager {
         // Schedule the first attempt using the connectionExecutor
         try {
             connectionExecutor.schedule(
-                    new BlockNodeConnectionTask(connection, initialDelay), delayMillis, TimeUnit.MILLISECONDS);
+                    new BlockNodeConnectionTask(connection, initialDelay, blockNumber),
+                    delayMillis,
+                    TimeUnit.MILLISECONDS);
             logger.debug(
                     "[{}] Successfully scheduled connection task for {}.",
                     Thread.currentThread().getName(),
@@ -440,7 +444,7 @@ public class BlockNodeConnectionManager {
 
             blockStreamStateManager.getConnections().put(node, connection);
             // Immediately schedule the FIRST connection attempt.
-            scheduleRetry(connection, Duration.ZERO);
+            scheduleRetry(connection, Duration.ZERO, null);
         } catch (Exception e) {
             // Catch potential errors during GrpcServiceClient or BlockNodeConnection creation
             logger.error(
@@ -507,16 +511,14 @@ public class BlockNodeConnectionManager {
         private final BlockNodeConnection connection;
         private Duration currentBackoffDelay; // Represents the delay *before* the next attempt
 
-        BlockNodeConnectionTask(@NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay) {
+        private Long blockNumber; // If becoming ACTIVE, the blockNumber to jump to
+
+        BlockNodeConnectionTask(
+                @NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay, Long blockNumber) {
             this.connection = requireNonNull(connection);
             // Ensure initial delay is non-negative for backoff calculation
             this.currentBackoffDelay = initialDelay.isNegative() ? Duration.ZERO : initialDelay;
-
-            // if the connection is scheduled for retry, we need to set the state to PENDING
-            // and filter out those connection in getNextPriorityBlockNode()
-            if (!initialDelay.isZero()) {
-                connection.updateConnectionState(ConnectionState.PENDING);
-            }
+            this.blockNumber = blockNumber;
         }
 
         @Override
@@ -613,7 +615,8 @@ public class BlockNodeConnectionManager {
                     .noneMatch(connection -> connection.getConnectionState().equals(ConnectionState.ACTIVE))) {
                 connection.updateConnectionState(ConnectionState.ACTIVE);
                 blockStreamStateManager.setActiveConnection(connection);
-                jumpTargetBlock.set(blockStreamStateManager.getLowestUnackedBlockNumber());
+                jumpTargetBlock.set(Objects.requireNonNullElseGet(
+                        blockNumber, blockStreamStateManager::getLowestUnackedBlockNumber));
                 logger.debug(
                         "[{}] Connection task for block node {} ConnectionState: {}",
                         Thread.currentThread().getName(),

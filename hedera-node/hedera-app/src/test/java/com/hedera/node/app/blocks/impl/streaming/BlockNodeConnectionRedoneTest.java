@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
 import com.hedera.hapi.block.PublishStreamResponse.BlockAcknowledgement;
+import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
+import com.hedera.hapi.block.PublishStreamResponseCode;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
@@ -40,11 +42,13 @@ public class BlockNodeConnectionRedoneTest {
 
     // Block Node Communication Components
     private BlockNodeConnection subject;
+    private BlockNodeConnection subject2;
     private BlockNodeConnectionManager blockNodeConnectionManager;
     private BlockStreamMetrics blockStreamMetrics;
     private BlockStreamStateManager blockStreamStateManager;
     private ConfigProvider configProvider;
     private BlockNodeConfig nodeConfig;
+    private BlockNodeConfig nodeConfig2;
 
     @Mock
     private Metrics mockMetrics;
@@ -60,6 +64,7 @@ public class BlockNodeConnectionRedoneTest {
         // Setup ConfigProvider
         configProvider = createConfigProvider();
         nodeConfig = new BlockNodeConfig("localhost", 8080, 1);
+        nodeConfig2 = new BlockNodeConfig("localhost", 8080, 2);
 
         // Setup BlockStreamMetrics with mocks
         when(mockNodeInfo.nodeId()).thenReturn(0L);
@@ -78,6 +83,14 @@ public class BlockNodeConnectionRedoneTest {
         subject = new BlockNodeConnection(
                 configProvider,
                 nodeConfig,
+                blockNodeConnectionManager,
+                blockStreamStateManager,
+                mockGrpcServiceClient,
+                blockStreamMetrics);
+
+        subject2 = new BlockNodeConnection(
+                configProvider,
+                nodeConfig2,
                 blockNodeConnectionManager,
                 blockStreamStateManager,
                 mockGrpcServiceClient,
@@ -200,6 +213,240 @@ public class BlockNodeConnectionRedoneTest {
         subject.onNext(response);
 
         assertEquals(-1L, blockNodeConnectionManager.getLastVerifiedBlock(nodeConfig));
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsInternalError() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        subject.onNext(response);
+
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsPersistenceFailure() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_PERSISTENCE_FAILED, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        subject.onNext(response);
+
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsTimeoutRestartsWithoutSwitching() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(ACTIVE, subject.getConnectionState());
+        assertEquals(UNINITIALIZED, subject2.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsOutOfOrderRestartsWithoutSwitching() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(ACTIVE, subject.getConnectionState());
+        assertEquals(UNINITIALIZED, subject2.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsBadStateProofRestartsWithoutSwitching() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BAD_STATE_PROOF, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(ACTIVE, subject.getConnectionState());
+        assertEquals(UNINITIALIZED, subject2.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsSuccess() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        assertEquals(ACTIVE, subject2.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsUnknown() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_UNKNOWN, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        doReturn(subject2).when(blockNodeConnectionManager).createBlockNodeConnection(any(), any());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+        assertEquals(ACTIVE, subject2.getConnectionState());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsBehindMaxLong() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response =
+                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, Long.MAX_VALUE);
+
+        blockStreamStateManager.openBlock(0L);
+        blockStreamStateManager.openBlock(100L);
+
+        blockNodeConnectionManager.getJumpTargetBlock().set(100L);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(100L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsBehind() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response = createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, 49L);
+
+        blockStreamStateManager.openBlock(0L);
+        blockStreamStateManager.openBlock(50L);
+        blockStreamStateManager.openBlock(100L);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        subject.onNext(response);
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(50L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+    }
+
+    @Test
+    void testHandleEndOfStreamClosesStreamItemsBehindNoBlockState() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        PublishStreamResponse response = createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, 49L);
+
+        blockStreamStateManager.openBlock(0L);
+        blockStreamStateManager.openBlock(100L);
+
+        try {
+            Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertEquals(0L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+
+        subject.onNext(response);
+
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
+    }
+
+    @NonNull
+    private static PublishStreamResponse createEndOfStreamResponse(
+            PublishStreamResponseCode responseCode, long lastVerifiedBlock) {
+        EndOfStream eos = EndOfStream.newBuilder()
+                .blockNumber(lastVerifiedBlock)
+                .status(responseCode)
+                .build();
+
+        return PublishStreamResponse.newBuilder().endStream(eos).build();
     }
 
     @NonNull

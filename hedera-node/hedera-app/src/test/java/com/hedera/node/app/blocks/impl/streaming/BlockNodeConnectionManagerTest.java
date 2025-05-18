@@ -150,7 +150,7 @@ class BlockNodeConnectionManagerTest {
                         .priority(1)
                         .build());
 
-        blockNodeConnectionManager.scheduleRetry(mockConnection, INITIAL_DELAY);
+        blockNodeConnectionManager.scheduleRetry(mockConnection, INITIAL_DELAY, null);
 
         // There should be no immediate attempt to establish a stream
         verify(mockConnection, times(0)).createRequestObserver();
@@ -172,7 +172,7 @@ class BlockNodeConnectionManagerTest {
         given(mockConnection.getNodeConfig())
                 .willReturn(BlockNodeConfig.newBuilder().build());
         final var initialDelay = INITIAL_DELAY;
-        blockNodeConnectionManager.scheduleRetry(mockConnection, initialDelay);
+        blockNodeConnectionManager.scheduleRetry(mockConnection, initialDelay, null);
 
         // There should be no immediate attempt to establish a stream
         verify(mockConnection, times(0)).createRequestObserver();

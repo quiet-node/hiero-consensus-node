@@ -286,8 +286,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                             Thread.currentThread().getName(),
                             connectionDescriptor);
 
-                    blockNodeConnectionManager.handleConnectionError(
-                            this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
+                    blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
                 }
             }
             case STREAM_ITEMS_UNKNOWN -> {
@@ -297,6 +296,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         Thread.currentThread().getName(),
                         connectionDescriptor,
                         blockNumber);
+                blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
             }
         }
     }
@@ -433,8 +433,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void restartStreamAtBlock(final long blockNumber) {
         logger.debug("Restarting stream at block {} for node {}", blockNumber, connectionDescriptor);
 
-        jumpToBlock(blockNumber);
-        blockNodeConnectionManager.scheduleRetry(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY);
+        blockNodeConnectionManager.scheduleRetry(this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY, blockNumber);
 
         logger.debug("Stream restarted at block {} for node {}", blockNumber, connectionDescriptor);
     }
