@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.List;
 import org.hiero.otter.fixtures.result.MultipleNodeConsensusResults;
 import org.hiero.otter.fixtures.result.MultipleNodeLogResults;
+import org.hiero.otter.fixtures.result.MultipleNodeMetricsResults;
 import org.hiero.otter.fixtures.result.MultipleNodeStatusProgression;
 
 /**
@@ -97,4 +98,7 @@ public interface Network {
      */
     @NonNull
     MultipleNodeStatusProgression getStatusProgression();
+
+    @NonNull
+    MultipleNodeMetricsResults getMetricsResultsFor(@NonNull String category, @NonNull String name);
 }

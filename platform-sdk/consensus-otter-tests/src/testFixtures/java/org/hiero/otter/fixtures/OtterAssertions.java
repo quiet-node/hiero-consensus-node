@@ -6,15 +6,19 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import org.assertj.core.api.Assertions;
 import org.hiero.otter.fixtures.assertions.MultipleNodeConsensusResultsAssert;
 import org.hiero.otter.fixtures.assertions.MultipleNodeLogResultsAssert;
+import org.hiero.otter.fixtures.assertions.MultipleNodeMetricsAssert;
 import org.hiero.otter.fixtures.assertions.MultipleNodeStatusProgressionAssert;
 import org.hiero.otter.fixtures.assertions.SingleNodeConsensusResultAssert;
 import org.hiero.otter.fixtures.assertions.SingleNodeLogResultAssert;
+import org.hiero.otter.fixtures.assertions.SingleNodeMetricsAssert;
 import org.hiero.otter.fixtures.assertions.SingleNodeStatusProgressionAssert;
 import org.hiero.otter.fixtures.result.MultipleNodeConsensusResults;
 import org.hiero.otter.fixtures.result.MultipleNodeLogResults;
+import org.hiero.otter.fixtures.result.MultipleNodeMetricsResults;
 import org.hiero.otter.fixtures.result.MultipleNodeStatusProgression;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
+import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
 import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
 
 /**
@@ -90,5 +94,15 @@ public class OtterAssertions extends Assertions {
     public static MultipleNodeStatusProgressionAssert assertThat(
             @Nullable final MultipleNodeStatusProgression statusProgression) {
         return MultipleNodeStatusProgressionAssert.assertThat(statusProgression);
+    }
+
+    @NonNull
+    public static SingleNodeMetricsAssert assertThat(@Nullable final SingleNodeMetricsResult actual) {
+        return SingleNodeMetricsAssert.assertThat(actual);
+    }
+
+    @NonNull
+    public static MultipleNodeMetricsAssert assertThat(@Nullable final MultipleNodeMetricsResults actual) {
+        return MultipleNodeMetricsAssert.assertThat(actual);
     }
 }

@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,9 +36,11 @@ import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.NodeFilter;
 import org.hiero.otter.fixtures.internal.result.MultipleNodeConsensusResultsImpl;
 import org.hiero.otter.fixtures.internal.result.MultipleNodeLogResultsImpl;
+import org.hiero.otter.fixtures.internal.result.MultipleNodeMetricsResultsImpl;
 import org.hiero.otter.fixtures.internal.result.MultipleNodeStatusProgressionImpl;
 import org.hiero.otter.fixtures.result.MultipleNodeConsensusResults;
 import org.hiero.otter.fixtures.result.MultipleNodeLogResults;
+import org.hiero.otter.fixtures.result.MultipleNodeMetricsResults;
 import org.hiero.otter.fixtures.result.MultipleNodeStatusProgression;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
@@ -238,6 +241,16 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         final List<SingleNodeStatusProgression> statusProgressions =
                 nodes.stream().map(Node::getStatusProgression).toList();
         return new MultipleNodeStatusProgressionImpl(statusProgressions);
+    }
+
+    @NonNull
+    @Override
+    public MultipleNodeMetricsResults getMetricsResultsFor(@NonNull final String category, @NonNull final String name) {
+        Objects.requireNonNull(category, "Category cannot be null.");
+        Objects.requireNonNull(name, "Name cannot be null.");
+        return new MultipleNodeMetricsResultsImpl(nodes.stream()
+                .map(node -> node.getMetricsResultFor(category, name))
+                .toList());
     }
 
     /**

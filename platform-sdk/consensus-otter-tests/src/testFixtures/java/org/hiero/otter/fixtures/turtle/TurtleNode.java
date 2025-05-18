@@ -2,8 +2,6 @@
 package org.hiero.otter.fixtures.turtle;
 
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
-import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.getMetricsProvider;
-import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.setupGlobalMetrics;
 import static com.swirlds.platform.state.signed.StartupStateUtils.loadInitialState;
 import static java.util.Objects.requireNonNull;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.APP_NAME;
@@ -24,7 +22,6 @@ import com.swirlds.component.framework.model.DeterministicWiringModel;
 import com.swirlds.component.framework.model.WiringModelBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
@@ -61,10 +58,14 @@ import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.NodeConfiguration;
 import org.hiero.otter.fixtures.internal.result.NodeResultsCollector;
 import org.hiero.otter.fixtures.internal.result.SingleNodeLogResultImpl;
+import org.hiero.otter.fixtures.internal.result.SingleNodeMetricsResultImpl;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
+import org.hiero.otter.fixtures.metric.NetworkMetrics;
+import org.hiero.otter.fixtures.metric.NodeMetrics;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
+import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
 import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
 import org.hiero.otter.fixtures.turtle.app.TurtleApp;
 import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
@@ -104,6 +105,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
+    private NodeMetrics nodeMetrics;
 
     public TurtleNode(
             @NonNull final Randotron randotron,
@@ -259,6 +261,12 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         return resultsCollector.getStatusProgression();
     }
 
+    @NonNull
+    @Override
+    public SingleNodeMetricsResult getMetricsResultFor(@NonNull final String category, @NonNull final String name) {
+        return new SingleNodeMetricsResultImpl(selfId, category, name, nodeMetrics.getHistory(category, name));
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -327,7 +335,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private void doShutdownNode() throws InterruptedException {
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
-            getMetricsProvider().removePlatformMetrics(platform.getSelfId());
+            NetworkMetrics.getInstance().unregister(selfId);
             platformWiring.stop();
             platform.getNotificationEngine().unregisterAll();
             platformStatus = null;
@@ -342,11 +350,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
         final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
 
-        setupGlobalMetrics(currentConfiguration);
+        nodeMetrics = new NodeMetrics(selfId);
+        NetworkMetrics.getInstance().register(nodeMetrics);
 
         final PlatformContext platformContext = TestPlatformContextBuilder.create()
                 .withTime(time)
                 .withConfiguration(currentConfiguration)
+                .withMetrics(nodeMetrics)
                 .build();
 
         model = WiringModelBuilder.create(platformContext.getMetrics(), time)
@@ -361,10 +371,9 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
         MerkleDb.resetDefaultInstancePath();
-        final Metrics metrics = getMetricsProvider().createPlatformMetrics(selfId);
         final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
         final RecycleBin recycleBin = RecycleBin.create(
-                metrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
+                nodeMetrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
 
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,

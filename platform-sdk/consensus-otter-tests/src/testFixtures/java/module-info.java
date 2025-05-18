@@ -7,6 +7,7 @@ module org.hiero.otter.fixtures {
     requires transitive com.swirlds.common;
     requires transitive com.swirlds.config.api;
     requires transitive com.swirlds.logging;
+    requires transitive com.swirlds.metrics.api;
     requires transitive com.swirlds.platform.core.test.fixtures;
     requires transitive com.swirlds.platform.core;
     requires transitive com.swirlds.state.api;
@@ -24,7 +25,6 @@ module org.hiero.otter.fixtures {
     requires com.swirlds.component.framework;
     requires com.swirlds.config.extensions;
     requires com.swirlds.merkledb;
-    requires com.swirlds.metrics.api;
     requires org.hiero.consensus.utility;
     requires static com.github.spotbugs.annotations;
 
@@ -35,4 +35,5 @@ module org.hiero.otter.fixtures {
     exports org.hiero.otter.fixtures.result;
     exports org.hiero.otter.fixtures.turtle;
     exports org.hiero.otter.fixtures.turtle.app;
+    exports org.hiero.otter.fixtures.metric;
 }

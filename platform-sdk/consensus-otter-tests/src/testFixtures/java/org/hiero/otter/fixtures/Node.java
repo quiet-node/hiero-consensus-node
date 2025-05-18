@@ -6,6 +6,7 @@ import java.time.Duration;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
+import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
 import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
 
 /**
@@ -91,4 +92,7 @@ public interface Node {
      */
     @NonNull
     SingleNodeStatusProgression getStatusProgression();
+
+    @NonNull
+    SingleNodeMetricsResult getMetricsResultFor(@NonNull String category, @NonNull String name);
 }
