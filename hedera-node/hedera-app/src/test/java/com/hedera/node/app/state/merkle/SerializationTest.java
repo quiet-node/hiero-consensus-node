@@ -394,5 +394,4 @@ class SerializationTest extends MerkleTestBase {
                 Duration.of(5, ChronoUnit.SECONDS),
                 "All databases should be closed");
     }
-
 }
