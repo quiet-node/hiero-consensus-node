@@ -48,8 +48,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Manages connections to block nodes, connection lifecycle and node selection.
- * It is also responsible for retrying with exponential backoff if a connection fails.
+ * Manages connections to block nodes in a Hedera network, handling connection lifecycle, node selection,
+ * and retry mechanisms. This manager is responsible for:
+ * <ul>
+ *   <li>Establishing and maintaining connections to block nodes</li>
+ *   <li>Managing connection states and lifecycle</li>
+ *   <li>Implementing priority-based node selection</li>
+ *   <li>Handling connection failures with exponential backoff</li>
+ *   <li>Coordinating block streaming across connections</li>
+ * </ul>
  */
 public class BlockNodeConnectionManager {
     /**
@@ -115,6 +122,8 @@ public class BlockNodeConnectionManager {
     }
 
     /**
+     * Extracts block node configurations from the specified configuration file.
+     *
      * @param blockNodeConfigPath the path to the block node configuration file
      * @return the configurations for all block nodes
      */
@@ -135,6 +144,8 @@ public class BlockNodeConnectionManager {
     }
 
     /**
+     * Returns the gRPC endpoint for the block stream service.
+     *
      * @return the gRPC endpoint for publish block stream
      */
     public String getGrpcEndPoint() {
@@ -227,7 +238,7 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Shuts down the connection manager, closing active connection.
+     * Gracefully shuts down the connection manager, closing active connection.
      */
     public void shutdown() {
         // Stop the block stream worker loop thread
@@ -260,7 +271,7 @@ public class BlockNodeConnectionManager {
      * Waits for at least one connection to be established.
      * Initiates connection attempts and waits using a condition variable.
      *
-     * @param timeout the maximum time to wait
+     * @param timeout the maximum duration to wait for a connection to be established
      * @return true if at least one connection was established, false if the timeout elapsed before any connections were established
      */
     public boolean waitForConnection(Duration timeout) {
@@ -448,10 +459,13 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Creates a BlockNodeConnection instance for the given node configuration.
-     * @param node The configuration of the node to connect to.
-     * @param grpcClient The gRPC client to use for the connection.
-     * @return The created BlockNodeConnection instance.
+     * Creates a new connection to a block node with the specified configuration.
+     * The connection is initialized in an UNINITIALIZED state and will be managed
+     * through its lifecycle based on priority and health.
+     *
+     * @param node the configuration for the block node to connect to
+     * @param grpcClient the gRPC client to use for streaming
+     * @return the newly created and initialized block node connection
      */
     public BlockNodeConnection createBlockNodeConnection(
             @NonNull BlockNodeConfig node, @NonNull GrpcServiceClient grpcClient) {
@@ -473,6 +487,8 @@ public class BlockNodeConnectionManager {
     }
 
     /**
+     * Updates the last verified block number for a specific block node.
+     *
      * @param blockNodeConfig the configuration for the block node
      * @param blockNumber the block number of the last verified block
      */
@@ -490,8 +506,10 @@ public class BlockNodeConnectionManager {
     }
 
     /**
+     * Retrieves the last verified block number for a specific block node.
+     *
      * @param blockNodeConfig the configuration for the block node
-     * @return the last verified block number by the given block node.
+     * @return the last verified block number by the given block node, or -1 if none are verified.
      */
     public Long getLastVerifiedBlock(@NonNull final BlockNodeConfig blockNodeConfig) {
         requireNonNull(blockNodeConfig);
@@ -517,6 +535,11 @@ public class BlockNodeConnectionManager {
             this.blockNumber = blockNumber;
         }
 
+        /**
+         * Manages the state transitions of gRPC streaming connections to Block Nodes.
+         * Connection state transitions are synchronized to ensure thread-safe updates when
+         * promoting connections from PENDING to ACTIVE state or handling failures.
+         */
         @Override
         public void run() {
             final var nodeConfig = connection.getNodeConfig();
@@ -785,6 +808,8 @@ public class BlockNodeConnectionManager {
     }
 
     /**
+     * * Returns the atomic reference tracking the current streaming block number.
+     *
      * @return The block number of the block which is currently being streamed to a block node
      */
     public AtomicLong getStreamingBlockNumber() {
@@ -818,8 +843,9 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Get the jump target block number which can be updated and the block stream worker thread will jump to that block
-     * on the next iteration.
+     * Returns the atomic reference for the block number which can be updated
+     * and the block stream worker thread will jump to that block on the next iteration.
+     *
      * @return the jump target block number
      */
     public AtomicLong getJumpTargetBlock() {

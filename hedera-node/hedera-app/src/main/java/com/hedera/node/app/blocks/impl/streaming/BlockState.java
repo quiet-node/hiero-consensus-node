@@ -13,7 +13,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Track the current block state
+ * Represents the state of a block being streamed to block nodes. This class maintains the block items,
+ * completion status, and request generation for a specific block number.
+ * The block state goes through the following lifecycle:
+ * <ul>
+ *     <li>Created when a new block is opened</li>
+ *     <li>Block items are added sequentially</li>
+ *     <li>Requests are generated from accumulated items capped by a configurable batch size</li>
+ *     <li>Block is marked as complete after all items including BlockProof are added</li>
+ * </ul>
  */
 public class BlockState {
     private static final Logger logger = LogManager.getLogger(BlockState.class);
@@ -24,7 +32,7 @@ public class BlockState {
     private Instant closedTimestamp = null;
 
     /**
-     * Create a new block state for a block number
+     * Create a new block state for the specified block number.
      *
      * @param blockNumber the block number
      */
@@ -59,8 +67,9 @@ public class BlockState {
     }
 
     /**
-     * Get the request at the given index
-     * @param index the index of the request
+     * Gets a previously generated publish stream request at the specified index.
+     *
+     * @param index the index of the request to retrieve
      * @return the request at the given index
      */
     public PublishStreamRequest getRequest(int index) {
@@ -68,7 +77,8 @@ public class BlockState {
     }
 
     /**
-     * Check if the block is complete
+     * Check if the block is complete. A block is considered complete
+     * when all its items including the block proof have been processed into requests.
      *
      * @return true if the block is complete, false otherwise
      */
@@ -77,7 +87,8 @@ public class BlockState {
     }
 
     /**
-     * Indicates the BlockState has been populated with all PublishStreamRequests
+     * Indicates the BlockState has been populated with all PublishStreamRequests.
+     * This should be called after the block proof has been added and all items processed.
      */
     public void setRequestsCompleted() {
         this.requestsCreated.set(true);
@@ -91,7 +102,7 @@ public class BlockState {
     }
 
     /**
-     * Get the completion time of the block
+     * Get the completion time of the block.
      *
      * @return the completion time, or null if the block is not complete
      */
@@ -100,7 +111,8 @@ public class BlockState {
     }
 
     /**
-     * Create a PublishStreamRequest from the current items in the BlockState
+     * Create a new PublishStreamRequest from the current items in the BlockState.
+     * The request will include up to batchSize items or fewer if a block proof is included.
      *
      * @param batchSize the size of the batch to create
      * @param forceCreation if true, create a request even if the batch size is not met
