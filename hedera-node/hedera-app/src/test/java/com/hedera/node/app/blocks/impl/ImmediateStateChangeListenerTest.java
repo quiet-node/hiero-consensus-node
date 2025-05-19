@@ -5,6 +5,7 @@ import static com.hedera.hapi.block.stream.output.StateChange.ChangeOperationOne
 import static com.hedera.hapi.block.stream.output.StateChange.ChangeOperationOneOfType.MAP_UPDATE;
 import static com.hedera.hapi.block.stream.output.StateChange.ChangeOperationOneOfType.QUEUE_POP;
 import static com.hedera.hapi.block.stream.output.StateChange.ChangeOperationOneOfType.QUEUE_PUSH;
+import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.merkle.StateUtils.stateIdFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +75,7 @@ class ImmediateStateChangeListenerTest {
 
     @Test
     void targetTypeIsQueue() {
-        assertEquals(Set.of(QUEUE), listener.stateTypes());
+        assertEquals(Set.of(MAP, QUEUE), listener.stateTypes());
     }
 
     @Test
