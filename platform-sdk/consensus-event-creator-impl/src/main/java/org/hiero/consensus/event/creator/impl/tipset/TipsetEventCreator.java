@@ -141,8 +141,8 @@ public class TipsetEventCreator implements EventCreator {
         zeroAdvancementWeightLogger = new RateLimitedLogger(logger, time, Duration.ofMinutes(1));
         noParentFoundLogger = new RateLimitedLogger(logger, time, Duration.ofMinutes(1));
 
-        this.eventWindow = EventWindow.getGenesisEventWindow(ancientMode);
-        this.eventHasher = new PbjStreamHasher();
+        eventWindow = EventWindow.getGenesisEventWindow(ancientMode);
+        eventHasher = new PbjStreamHasher();
     }
 
     /**
@@ -412,8 +412,8 @@ public class TipsetEventCreator implements EventCreator {
                 selfId,
                 lastSelfEvent == null ? null : lastSelfEvent.getDescriptor(),
                 otherParent == null ? Collections.emptyList() : Collections.singletonList(otherParent),
-                eventWindow.getAncientMode() == AncientMode.BIRTH_ROUND_THRESHOLD
-                        ? eventWindow.getPendingConsensusRound()
+                eventWindow.ancientMode() == AncientMode.BIRTH_ROUND_THRESHOLD
+                        ? eventWindow.newEventBirthRound()
                         : ConsensusConstants.ROUND_FIRST,
                 timeCreated,
                 transactionSupplier.getTransactions());
