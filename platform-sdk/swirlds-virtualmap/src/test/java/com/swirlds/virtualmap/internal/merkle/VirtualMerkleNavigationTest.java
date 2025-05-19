@@ -15,6 +15,7 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.test.fixtures.TestValueCodec;
 import com.swirlds.virtualmap.test.fixtures.VirtualTestBase;
 import java.util.Iterator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -247,5 +248,10 @@ class VirtualMerkleNavigationTest extends VirtualTestBase {
         assertSame(tl, itr.next(), "Wrong value");
         assertSame(treeRoot, itr.next(), "Wrong value");
         assertFalse(itr.hasNext(), "Expected iteration to have ended");
+    }
+
+    @AfterEach
+    void tearDown() {
+        vm.release();
     }
 }

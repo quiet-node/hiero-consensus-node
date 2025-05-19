@@ -91,7 +91,7 @@ class StateFileManagerTests {
     static void beforeAll() throws ConstructableRegistryException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
-        registry.registerConstructables("org.hiero.base.crypto");
+        registry.registerConstructables("org.hiero");
         registerMerkleStateRootClassIds();
     }
 
@@ -153,26 +153,16 @@ class StateFileManagerTests {
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile, HederaNewStateRoot::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
-        hashState(deserializedSignedState.reservedSignedState().get().getState());
+        SignedState signedState = deserializedSignedState.reservedSignedState().get();
+        hashState(signedState.getState());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
-        assertNotSame(
-                deserializedSignedState.reservedSignedState().get(),
-                originalState,
-                "deserialized object should not be the same");
+        assertNotSame(signedState, originalState, "deserialized object should not be the same");
 
-        if (validateHash) {
-            assertEquals(
-                    originalState.getState().getHash(),
-                    deserializedSignedState
-                            .reservedSignedState()
-                            .get()
-                            .getState()
-                            .getHash(),
-                    "hash should match");
-            assertEquals(
-                    originalState.getState().getHash(), deserializedSignedState.originalHash(), "hash should match");
-        }
+        assertEquals(originalState.getState().getHash(), signedState.getState().getHash(), "hash should match");
+        assertEquals(originalState.getState().getHash(), deserializedSignedState.originalHash(), "hash should match");
+
+        signedState.getState().release();
     }
 
     @ParameterizedTest
@@ -489,6 +479,6 @@ class StateFileManagerTests {
     }
 
     private static void makeImmutable(SignedState signedState) {
-        signedState.getState().copy();
+        signedState.getState().copy().release();
     }
 }

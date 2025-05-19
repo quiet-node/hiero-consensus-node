@@ -93,7 +93,7 @@ public class StartupStateUtilsTests {
     static void beforeAll() throws ConstructableRegistryException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
-        registry.registerConstructables("org.hiero.consensus");
+        registry.registerConstructables("org.hiero");
     }
 
     @NonNull
@@ -130,7 +130,7 @@ public class StartupStateUtilsTests {
                 .build();
 
         // make the state immutable
-        signedState.getState().copy();
+        signedState.getState().copy().release();
 
         TestMerkleCryptoFactory.getInstance()
                 .digestTreeSync(signedState.getState().getRoot());

@@ -2,6 +2,7 @@
 package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static com.swirlds.state.merkle.MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,6 +19,8 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
+import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.SignedState;
@@ -45,10 +48,13 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Set;
 import org.hiero.base.constructable.ConstructableRegistryException;
 import org.hiero.base.crypto.config.CryptoConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -173,7 +179,7 @@ class SerializationTest extends MerkleTestBase {
         if (forceFlush) {
             // Force flush the VMs to disk to test serialization and deserialization
             forceFlush(originalTree.getReadableStates(FIRST_SERVICE).get(ANIMAL_STATE_KEY));
-            copy.copy(); // make a fast copy because we can only write to disk an immutable copy
+            copy.copy().release(); // make a fast copy because we can only write to disk an immutable copy
             CRYPTO.digestTreeSync(copy.getRoot());
             serializedBytes = writeTree(copy.getRoot(), dir);
         } else {
@@ -184,6 +190,13 @@ class SerializationTest extends MerkleTestBase {
         final TestNewMerkleStateRoot loadedTree = loadedMerkleTree(schemaV1, serializedBytes);
 
         assertTree(loadedTree);
+        try {
+            originalTree.release();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        copy.release();
+        loadedTree.release();
     }
 
     @Test
@@ -211,7 +224,7 @@ class SerializationTest extends MerkleTestBase {
                         .round());
 
         // prepare the tree and create a snapshot
-        originalTree.copy();
+        originalTree.copy().release();
         originalTree.computeHash();
         originalTree.createSnapshot(tempDir);
 
@@ -221,6 +234,9 @@ class SerializationTest extends MerkleTestBase {
                 originalTree.loadSnapshot(tempDir.resolve(MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME));
         initServices(schemaV1, state);
         assertTree(state);
+
+        originalTree.release();
+        state.release();
     }
 
     /**
@@ -236,7 +252,7 @@ class SerializationTest extends MerkleTestBase {
         MerkleNodeState copy = originalTree.copy(); // make a copy to make VM flushable
 
         forceFlush(originalTree.getReadableStates(FIRST_SERVICE).get(ANIMAL_STATE_KEY));
-        copy.copy(); // make a fast copy because we can only write to disk an immutable copy
+        copy.copy().release(); // make a fast copy because we can only write to disk an immutable copy
         CRYPTO.digestTreeSync(copy.getRoot());
         final byte[] serializedBytes = writeTree(copy.getRoot(), dir);
 
@@ -244,7 +260,7 @@ class SerializationTest extends MerkleTestBase {
         ((OnDiskReadableKVState) originalTree.getReadableStates(FIRST_SERVICE).get(ANIMAL_STATE_KEY)).reset();
         populateVmCache(loadedTree);
 
-        loadedTree.copy(); // make a copy to store it to disk
+        loadedTree.copy().release(); // make a copy to store it to disk
 
         CRYPTO.digestTreeSync(loadedTree.getRoot());
         // refreshing the dir
@@ -258,6 +274,14 @@ class SerializationTest extends MerkleTestBase {
                 .reset();
 
         assertTree(loadedTreeWithCache);
+        try {
+            originalTree.release();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        loadedTree.release();
+        loadedTreeWithCache.release();
+        copy.release();
     }
 
     private TestNewMerkleStateRoot loadedMerkleTree(Schema schemaV1, byte[] serializedBytes) throws IOException {
@@ -345,5 +369,17 @@ class SerializationTest extends MerkleTestBase {
         assertThat(steamState.iterator())
                 .toIterable()
                 .containsExactly(ART, BIOLOGY, CHEMISTRY, DISCIPLINE, ECOLOGY, FIELDS, GEOMETRY);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
+            fruitVirtualMap.release();
+        }
+        assertEventuallyEquals(
+                0L,
+                MerkleDbDataSource::getCountOfOpenDatabases,
+                Duration.of(5, ChronoUnit.SECONDS),
+                "All databases should be closed");
     }
 }

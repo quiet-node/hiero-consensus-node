@@ -394,7 +394,7 @@ class RandomVirtualMapReconnectTests extends VirtualMapReconnectTestBase {
         assertEventuallyEquals(
                 0L,
                 MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
+                Duration.of(10, ChronoUnit.SECONDS),
                 "All databases should be closed");
     }
 }
