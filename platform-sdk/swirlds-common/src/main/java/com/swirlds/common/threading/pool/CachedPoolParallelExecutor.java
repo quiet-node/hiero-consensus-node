@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.common.threading.pool;
 
+import static com.swirlds.logging.legacy.LogMarker.STARTUP;
+
 import com.swirlds.common.threading.framework.Stoppable;
 import com.swirlds.common.threading.manager.ThreadManager;
 import java.util.concurrent.Callable;
@@ -10,12 +12,16 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * An implementation that uses a CachedThreadPool to execute parallel tasks
  */
 public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
     private static final Runnable NOOP = () -> {};
+
+    private static final Logger logger = LogManager.getLogger(CachedPoolParallelExecutor.class);
 
     /**
      * The thread pool used by this class.
@@ -156,6 +162,7 @@ public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
         try {
             result = foregroundTask.call();
         } catch (final Throwable e) { // NOSONAR: Any exceptions & errors that occur needs to trigger onThrow.
+            logger.info(STARTUP.getMarker(), "FLAKY exception in parallel executor + {}", e.getMessage());
             toThrow = new ParallelExecutionException(e);
             onThrow.run();
         }

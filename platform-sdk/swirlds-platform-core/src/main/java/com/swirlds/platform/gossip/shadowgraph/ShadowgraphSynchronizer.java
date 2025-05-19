@@ -387,6 +387,7 @@ public class ShadowgraphSynchronizer {
         final CountDownLatch eventReadingDone = new CountDownLatch(1);
         // the writer will set it to true if writing is aborted
         final AtomicBoolean writeAborted = new AtomicBoolean(false);
+        logger.info(SYNC_INFO.getMarker(), "FLAKY about to execute readWriteParallel");
         final Integer eventsRead = readWriteParallel(
                 readEventsINeed(
                         connection,
