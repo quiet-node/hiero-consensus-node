@@ -1040,7 +1040,8 @@ public class HandleWorkflow {
         if (!queueChanges.isEmpty()) {
             final var stateChangesItem = BlockItem.newBuilder()
                     .stateChanges(new StateChanges(
-                            boundaryStateChangeListener.boundaryTimestampOrThrow(), new ArrayList<>(queueChanges)))
+                            asTimestamp(boundaryStateChangeListener.lastConsensusTimeOrThrow()),
+                            new ArrayList<>(queueChanges)))
                     .build();
             queueStateChangeListener.reset();
             blockStreamManager.writeItem(stateChangesItem);
