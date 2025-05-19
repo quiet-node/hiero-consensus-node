@@ -3,6 +3,7 @@ package com.swirlds.platform.pool;
 
 import static com.swirlds.common.utility.CompareTo.isLessThan;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
+import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
@@ -122,12 +123,14 @@ public class TransactionPoolNexus implements TransactionSupplier {
      */
     public synchronized boolean submitApplicationTransaction(@NonNull final Bytes appTransaction) {
         if (!healthy || platformStatus != PlatformStatus.ACTIVE) {
+            logger.info(STARTUP.getMarker(), "FLAKY platform is not healthy, status is {}", platformStatus);
             return false;
         }
 
         if (appTransaction == null) {
             // FUTURE WORK: This really should throw, but to avoid changing existing API this will be changed later.
             illegalTransactionLogger.error(EXCEPTION.getMarker(), "transaction is null");
+            logger.info(STARTUP.getMarker(), "FLAKY application Transaction is null");
             return false;
         }
         if (appTransaction.length() > maximumTransactionSize) {
@@ -137,6 +140,7 @@ public class TransactionPoolNexus implements TransactionSupplier {
                     "transaction has {} bytes, maximum permissible transaction size is {}",
                     appTransaction.length(),
                     maximumTransactionSize);
+            logger.info(STARTUP.getMarker(), "FLAKY application Transaction is about permitted size");
             return false;
         }
 

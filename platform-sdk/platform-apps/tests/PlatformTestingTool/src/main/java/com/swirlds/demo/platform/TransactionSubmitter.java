@@ -402,6 +402,7 @@ public class TransactionSubmitter {
                 attemptCount++;
 
                 if (attemptCount > FREEZE_SUBMIT_MAX_ATTEMPTS) {
+                    logger.info(LOGM_DEMO_INFO, "FLAKY too many Sending Freeze Transaction...");
                     return false;
                 }
 
