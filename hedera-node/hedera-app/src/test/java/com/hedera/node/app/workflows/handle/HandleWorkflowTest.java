@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -189,7 +190,8 @@ class HandleWorkflowTest {
         verify(eventFromPresentCreator).consensusTransactionIterator();
         verify(recordCache).resetRoundReceipts();
         verify(recordCache)
-                .commitRoundReceipts(any(), any(), any(), immediateStateChangeListener, blockStreamManager, any());
+                .commitRoundReceipts(
+                        any(), any(), any(), same(immediateStateChangeListener), same(blockStreamManager), any());
     }
 
     @Test
