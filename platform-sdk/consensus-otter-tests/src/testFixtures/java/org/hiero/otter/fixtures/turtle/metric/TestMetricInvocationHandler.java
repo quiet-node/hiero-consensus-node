@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.hiero.otter.fixtures.metric;
+package org.hiero.otter.fixtures.turtle.metric;
 
 import static com.swirlds.metrics.api.Metric.ValueType.VALUE;
 

@@ -61,14 +61,13 @@ import org.hiero.otter.fixtures.internal.result.SingleNodeLogResultImpl;
 import org.hiero.otter.fixtures.internal.result.SingleNodeMetricsResultImpl;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
-import org.hiero.otter.fixtures.metric.NetworkMetrics;
-import org.hiero.otter.fixtures.metric.NodeMetrics;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
 import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
 import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
 import org.hiero.otter.fixtures.turtle.app.TurtleApp;
 import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
+import org.hiero.otter.fixtures.turtle.metric.NodeMetrics;
 
 /**
  * A node in the turtle network.
@@ -335,7 +334,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private void doShutdownNode() throws InterruptedException {
         if (lifeCycle == LifeCycle.STARTED) {
             // TODO: Release all resources
-            NetworkMetrics.getInstance().unregister(selfId);
             platformWiring.stop();
             platform.getNotificationEngine().unregisterAll();
             platformStatus = null;
@@ -351,8 +349,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
 
         nodeMetrics = new NodeMetrics(selfId);
-        NetworkMetrics.getInstance().register(nodeMetrics);
-
         final PlatformContext platformContext = TestPlatformContextBuilder.create()
                 .withTime(time)
                 .withConfiguration(currentConfiguration)

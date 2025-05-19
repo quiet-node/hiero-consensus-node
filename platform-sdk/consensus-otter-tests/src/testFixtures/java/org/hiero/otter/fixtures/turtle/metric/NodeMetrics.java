@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.hiero.otter.fixtures.metric;
+package org.hiero.otter.fixtures.turtle.metric;
 
 // SPDX-License-Identifier: Apache-2.0
 
@@ -46,8 +46,6 @@ public class NodeMetrics implements Metrics {
 
     public NodeMetrics(@NonNull final NodeId nodeId) {
         this.nodeId = Objects.requireNonNull(nodeId, "nodeId must not be null");
-        // auto-register to the central singleton
-        NetworkMetrics.getInstance().register(this);
     }
 
     /**
