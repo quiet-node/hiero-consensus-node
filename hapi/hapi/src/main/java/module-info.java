@@ -77,6 +77,7 @@ module com.hedera.node.hapi {
     exports com.hedera.hapi.services.auxiliary.history;
     exports com.hedera.hapi.platform.event.legacy;
     exports com.hedera.hapi.node.state.entity;
+    exports com.hedera.hapi.platform.event.codec;
 
     // for testing against Google protobuf
     opens com.hedera.hapi.block.stream.input.protoc;
