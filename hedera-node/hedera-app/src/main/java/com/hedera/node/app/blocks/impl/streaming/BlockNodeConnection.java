@@ -25,11 +25,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Represents a single connection to a block node. Each connection is responsible for connecting to configured block nodes
+ * Manages a single gRPC bidirectional streaming connection to a block node. Each connection:
+ * <ul>
+ *   <li>Handles the streaming of block items to a configured Block ode</li>
+ *   <li>Maintains connection state and handles responses from the Block Node</li>
+ *   <li>Coordinates with {@link BlockNodeConnectionManager} for managing the connection lifecycle</li>
+ *   <li>Processes block acknowledgements, retries, and error scenarios</li>
+ * </ul>
+ * <p>
+ * The connection goes through multiple states defined in {@link ConnectionState} and
+ * uses exponential backoff for retries when errors occur.
  */
 public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
     /**
-     * A longer retry delay for when the connection is closed due to an error.
+     * A longer retry delay for when the connection encounters an error.
      */
     public static final Duration LONGER_RETRY_DELAY = Duration.ofSeconds(30);
 
@@ -56,7 +65,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private volatile ConnectionState connectionState;
 
     /**
-     * Enum representing the current state of the connection.
+     * Represents the possible states of a Block Node connection:
+     * <ul>
+     *   <li>UNINITIALIZED - Initial state before stream establishment</li>
+     *   <li>PENDING - Stream established but not selected as active</li>
+     *   <li>ACTIVE - Connection is actively streaming blocks</li>
+     * </ul>
      */
     public enum ConnectionState {
         /**
@@ -68,7 +82,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
          */
         PENDING,
         /**
-         * Connection is active. Request Worker Thread is sending PublishStreamRequest's to the block node through async bidi stream.
+         * Connection is active. Block Stream Worker Thread is sending PublishStreamRequest's to the block node through async bidi stream.
          */
         ACTIVE
     }
@@ -78,7 +92,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      *
      * @param configProvider the configuration to use
      * @param nodeConfig the configuration for the block node
-     * @param blockNodeConnectionManager the connection manager for block node connections
+     * @param blockNodeConnectionManager the connection manager coordinating block node connections
      * @param blockStreamStateManager the block stream state manager for block node connections
      * @param grpcServiceClient the gRPC client to establish the bidirectional streaming to block node connections
      * @param blockStreamMetrics the block stream metrics for block node connections
@@ -117,6 +131,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
+     * Updates the connection's state.
      * @param newState the new state to transition to
      */
     public void updateConnectionState(@NonNull final ConnectionState newState) {
@@ -131,6 +146,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
     }
 
+    /**
+     * Handles the {@link Acknowledgement} response received from the block node.
+     *
+     * @param acknowledgement the acknowledgement received from the block node
+     */
     private void handleAcknowledgement(@NonNull final Acknowledgement acknowledgement) {
         if (acknowledgement.hasBlockAck()) {
             final var blockAck = acknowledgement.blockAck();
@@ -203,6 +223,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
+    /**
+     * Handles the {@link EndOfStream} response received from the block node.
+     * In most cases it indicates that the block node is unable to continue processing.
+     * @param endOfStream the EndOfStream response received from the block node
+     */
     private void handleEndOfStream(@NonNull final EndOfStream endOfStream) {
         final var blockNumber = endOfStream.blockNumber();
         final var responseCode = endOfStream.status();
@@ -301,6 +326,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
+    /**
+     * Handles the {@link SkipBlock} response received from the block node.
+     * @param skipBlock the SkipBlock response received from the block node
+     */
     private void handleSkipBlock(@NonNull final SkipBlock skipBlock) {
         final var skipBlockNumber = skipBlock.blockNumber();
         final long streamingBlockNumber =
@@ -320,6 +349,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
+    /**
+     * Handles the {@link ResendBlock} response received from the block node.
+     * If the consensus node has the requested block state available, it will start streaming it.
+     * Otherwise, it will close the connection and retry with a different block node.
+     *
+     * @param resendBlock the ResendBlock response received from the block node
+     */
     private void handleResendBlock(@NonNull final ResendBlock resendBlock) {
         final var resendBlockNumber = resendBlock.blockNumber();
         logger.debug(
@@ -343,6 +379,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
+    /**
+     * Checks if the EndOfStream rate limit has been exceeded.
+     * This method maintains a queue of timestamps for the last EndOfStream responses
+     * and checks if the number of responses exceeds the configurable limit
+     * within the configurable time frame.
+     *
+     * @return true if the rate limit has been exceeded, false otherwise
+     */
     private boolean hasExceededEndOfStreamLimit() {
         final var now = Instant.now();
         final var cutoff = now.minus(endOfStreamTimeFrame);
@@ -364,7 +408,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * If connection is active sends a request to the block node, otherwise does nothing.
+     * If connection is active sends a stream request to the block node, otherwise does nothing.
      *
      * @param request the request to send
      */
@@ -377,6 +421,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     /**
      * Idempotent operation that closes this connection (if active)
+     * and releases associated resources.
      */
     public void close() {
         updateConnectionState(ConnectionState.UNINITIALIZED);
@@ -429,7 +474,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * Restarts a new stream at a specific block number.
+     * Restarts a new stream at a specified block number.
      * This method will establish a new stream and start processing from the specified block number.
      *
      * @param blockNumber the block number to restart at
@@ -460,6 +505,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         blockNodeConnectionManager.getJumpTargetBlock().set(blockNumber);
     }
 
+    /**
+     * Processes responses received from the block node through the bidirectional gRPC stream.
+     * Handles {@link Acknowledgement}s, {@link EndOfStream} response signals, {@link SkipBlock} and {@link ResendBlock}.
+     *
+     * @param response the response received from block node
+     */
     @Override
     public void onNext(final PublishStreamResponse response) {
         if (response.hasAcknowledgement()) {
@@ -480,6 +531,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
     }
 
+    /**
+     * Handles errors received on the gRPC stream.
+     * Triggers connection retry with appropriate backoff.
+     *
+     * @param error the error that occurred on the stream
+     */
     @Override
     public void onError(final Throwable error) {
         logger.error(
@@ -491,6 +548,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         handleStreamFailure();
     }
 
+    /**
+     * Handles normal stream completion or termination.
+     * Triggers reconnection if completion was not initiated by this side.
+     */
     @Override
     public void onCompleted() {
         if (!streamCompletionInProgress.get()) {
