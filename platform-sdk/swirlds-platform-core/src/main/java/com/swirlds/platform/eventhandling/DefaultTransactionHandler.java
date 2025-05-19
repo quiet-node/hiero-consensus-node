@@ -179,6 +179,7 @@ public class DefaultTransactionHandler implements TransactionHandler {
         }
 
         if (swirldStateManager.isInFreezePeriod(consensusRound.getConsensusTimestamp())) {
+            logger.info(STARTUP.getMarker(), "FLAKY consensusRound is in freeze period");
             statusActionSubmitter.submitStatusAction(new FreezePeriodEnteredAction(consensusRound.getRoundNum()));
             freezeRoundReceived = true;
         }

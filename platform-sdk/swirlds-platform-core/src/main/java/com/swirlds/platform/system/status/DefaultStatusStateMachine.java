@@ -89,6 +89,7 @@ public class DefaultStatusStateMachine implements StatusStateMachine {
             } else if (actionClass == FallenBehindAction.class) {
                 return currentStatusLogic.processFallenBehindAction((FallenBehindAction) action);
             } else if (actionClass == FreezePeriodEnteredAction.class) {
+                logger.info(PLATFORM_STATUS.getMarker(), "FLAKY FreezePeriodEnteredAction entered");
                 return currentStatusLogic.processFreezePeriodEnteredAction((FreezePeriodEnteredAction) action);
             } else if (actionClass == ReconnectCompleteAction.class) {
                 return currentStatusLogic.processReconnectCompleteAction((ReconnectCompleteAction) action);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state;
 
+import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.platform.state.SwirldStateManagerUtils.fastCopy;
 import static java.util.Objects.requireNonNull;
 
@@ -10,6 +11,7 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.platform.NodeId;
 import com.swirlds.platform.FreezePeriodChecker;
 import com.swirlds.platform.components.transaction.system.ScopedSystemTransaction;
+import com.swirlds.platform.eventhandling.DefaultTransactionHandler;
 import com.swirlds.platform.internal.ConsensusRound;
 import com.swirlds.platform.metrics.StateMetrics;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -24,6 +26,8 @@ import java.time.Instant;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Manages all interactions with the state object required by {@link ConsensusStateEventHandler}.
@@ -63,6 +67,8 @@ public class SwirldStateManager implements FreezePeriodChecker {
     private final ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler;
 
     private final PlatformStateFacade platformStateFacade;
+
+    private static final Logger logger = LogManager.getLogger(DefaultTransactionHandler.class);
 
     /**
      * Constructor.
@@ -213,10 +219,16 @@ public class SwirldStateManager implements FreezePeriodChecker {
      */
     @Override
     public boolean isInFreezePeriod(final Instant timestamp) {
-        return PlatformStateFacade.isInFreezePeriod(
+        final var freezeTimeOf = platformStateFacade.freezeTimeOf(getConsensusState());
+        final var lastFrozenTimeOf = platformStateFacade.lastFrozenTimeOf(getConsensusState());
+
+        logger.info(
+                STARTUP.getMarker(),
+                "FLAKY Checking if {} is in freeze period. Freeze time: {}, Last frozen time: {}",
                 timestamp,
-                platformStateFacade.freezeTimeOf(getConsensusState()),
-                platformStateFacade.lastFrozenTimeOf(getConsensusState()));
+                freezeTimeOf,
+                lastFrozenTimeOf);
+        return PlatformStateFacade.isInFreezePeriod(timestamp, freezeTimeOf, lastFrozenTimeOf);
     }
 
     /**
