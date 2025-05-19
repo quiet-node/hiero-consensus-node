@@ -197,6 +197,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     migrationStateChanges,
                     startupNetworks,
                     TEST_PLATFORM_STATE_FACADE);
+            virtualMap.release();
         }
     }
 
