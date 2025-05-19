@@ -18,8 +18,7 @@ import com.hedera.node.app.HederaInjectionComponent;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
-import com.hedera.node.app.blocks.impl.KVStateChangeListener;
-import com.hedera.node.app.blocks.impl.QueueStateChangeListener;
+import com.hedera.node.app.blocks.impl.ImmediateStateChangeListener;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
 import com.hedera.node.app.config.ConfigProviderImpl;
 import com.hedera.node.app.fixtures.state.FakeState;
@@ -146,10 +145,9 @@ class IngestComponentTest {
                 .instantSource(InstantSource.system())
                 .softwareVersion(mock(SemanticVersion.class))
                 .metrics(metrics)
-                .kvStateChangeListener(new KVStateChangeListener())
+                .kvStateChangeListener(new ImmediateStateChangeListener())
                 .boundaryStateChangeListener(new BoundaryStateChangeListener(
                         new StoreMetricsServiceImpl(metrics), configProvider::getConfiguration))
-                .queueStateChangeListener(new QueueStateChangeListener())
                 .migrationStateChanges(List.of())
                 .hintsService(hintsService)
                 .historyService(historyService)

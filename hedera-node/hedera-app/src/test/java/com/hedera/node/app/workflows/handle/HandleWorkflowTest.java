@@ -26,8 +26,7 @@ import com.hedera.hapi.platform.event.EventDescriptor;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
-import com.hedera.node.app.blocks.impl.KVStateChangeListener;
-import com.hedera.node.app.blocks.impl.QueueStateChangeListener;
+import com.hedera.node.app.blocks.impl.ImmediateStateChangeListener;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.hints.HintsService;
 import com.hedera.node.app.history.HistoryService;
@@ -114,10 +113,7 @@ class HandleWorkflowTest {
     private ScheduleService scheduleService;
 
     @Mock
-    private KVStateChangeListener kvStateChangeListener;
-
-    @Mock
-    private QueueStateChangeListener queueStateChangeListener;
+    private ImmediateStateChangeListener immediateStateChangeListener;
 
     @Mock
     private BoundaryStateChangeListener boundaryStateChangeListener;
@@ -192,7 +188,8 @@ class HandleWorkflowTest {
 
         verify(eventFromPresentCreator).consensusTransactionIterator();
         verify(recordCache).resetRoundReceipts();
-        verify(recordCache).commitRoundReceipts(any(), any());
+        verify(recordCache)
+                .commitRoundReceipts(any(), any(), any(), immediateStateChangeListener, blockStreamManager, any());
     }
 
     @Test
@@ -470,8 +467,7 @@ class HandleWorkflowTest {
                 stakePeriodManager,
                 migrationStateChanges,
                 parentTxnFactory,
-                kvStateChangeListener,
-                queueStateChangeListener,
+                immediateStateChangeListener,
                 boundaryStateChangeListener,
                 scheduleService,
                 hintsService,
