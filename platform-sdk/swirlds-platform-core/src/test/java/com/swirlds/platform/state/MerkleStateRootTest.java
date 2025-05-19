@@ -851,12 +851,19 @@ class MerkleStateRootTest extends MerkleTestBase {
             assertNotSame(stateRoot, migratedState);
             assertInstanceOf(VirtualMap.class, migratedState);
             verifyNoMoreInteractions(node1, node2);
+            migratedState.release();
         }
 
         @Test
         @DisplayName("Migration from previous versions is supported")
         void migration_supported() {
-            assertDoesNotThrow(() -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1));
+            assertDoesNotThrow(
+                    () -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1).release());
+        }
+
+        @AfterEach
+        void tearDown() {
+            stateRoot.release();
         }
     }
 
@@ -932,11 +939,13 @@ class MerkleStateRootTest extends MerkleTestBase {
     }
 
     @AfterEach
-    void tearDown() {
+    void tearDown() throws InterruptedException {
         assertEventuallyEquals(
                 0L,
                 MerkleDbDataSource::getCountOfOpenDatabases,
                 Duration.of(5, ChronoUnit.SECONDS),
                 "All databases should be closed");
+        // a bit of sleep is necessary for the file resources to be released, so that JUnit can do the cleanup
+        Thread.sleep(100);
     }
 }
