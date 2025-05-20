@@ -193,6 +193,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             MerkleCryptography merkleCryptography,
             LongSupplier roundSupplier) {
         this.time = time;
+        this.configuration = configuration;
         this.metrics = metrics;
         this.merkleCryptography = merkleCryptography;
         this.roundSupplier = roundSupplier;
@@ -1225,7 +1226,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     final var stateKey = labelPair.value();
                     final var stateIdBytes = getVirtualMapKey(serviceName, stateKey);
 
-                    // TODO: discuss if optimization is needed here
                     InterruptableConsumer<Pair<Bytes, Bytes>> handler = (pair) -> {
                         VirtualMap currentMap = virtualMapRef.get();
                         if (currentMap.size() % DATA_PER_COPY == 0) {
@@ -1245,7 +1245,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                                 virtualMapToMigrate.size());
                         long migrationStartTime = System.currentTimeMillis();
 
-                        // TODO: discuss which method from VirtualMapMigration to use
                         VirtualMapMigration.extractVirtualMapData(
                                 AdHocThreadManager.getStaticThreadManager(),
                                 virtualMapToMigrate,
