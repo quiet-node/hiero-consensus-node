@@ -63,7 +63,6 @@ import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionReadableSingletonState;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualDataSourceBuilder;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -123,8 +122,6 @@ class NodeRewardManagerTest {
     private static final Instant NOW_MINUS_600 = NOW.minusSeconds(600);
     private static final Instant PREV_PERIOD = NOW.minusSeconds(1500);
 
-    private VirtualMap virtualMap;
-
     @BeforeEach
     void setUp() {
         final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
@@ -138,7 +135,6 @@ class NodeRewardManagerTest {
         MerkleDb.resetDefaultInstancePath();
         final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, CONFIGURATION);
 
-        virtualMap = new VirtualMap("VirtualMap", dsBuilder, CONFIGURATION);
         writableStates = mock(
                 WritableStates.class,
                 withSettings().extraInterfaces(CommittableWritableStates.class).strictness(Strictness.LENIENT));
