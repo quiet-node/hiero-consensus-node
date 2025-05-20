@@ -105,7 +105,9 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
     /**
      * Looks within the merkle tree for a node with the given label. This is useful for tests that
      * need to verify some change actually happened in the merkle tree.
+     * @deprecated This method is only required for the testing of MerkleStateRoot class and will be removed together with that class.
      */
+    @Deprecated
     protected MerkleNode getNodeForLabel(MerkleStateRoot stateRoot, String label) {
         // This is not idea, as it requires white-box testing -- knowing the
         // internal details of the MerkleStateRoot. But lacking a getter

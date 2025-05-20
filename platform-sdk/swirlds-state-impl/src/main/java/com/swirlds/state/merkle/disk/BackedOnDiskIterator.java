@@ -7,12 +7,17 @@ import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.iterators.MerkleIterator;
+import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+/**
+ * @deprecated This class should be removed together with {@link MerkleStateRoot}.
+ */
+@Deprecated
 public class BackedOnDiskIterator<K, V> implements Iterator<K> {
 
     protected final Codec<K> keyCodec;

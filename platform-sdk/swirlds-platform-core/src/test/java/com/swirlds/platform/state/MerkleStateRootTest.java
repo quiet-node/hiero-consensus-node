@@ -69,7 +69,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * @deprecated This test class is only required for the testing of MerkleStateRoot class and will be removed together with that class.
+ */
 @ExtendWith(MockitoExtension.class)
+@Deprecated
 class MerkleStateRootTest extends MerkleTestBase {
     /** The merkle tree we will test with */
     private TestMerkleStateRoot stateRoot;
