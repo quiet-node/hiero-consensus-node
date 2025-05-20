@@ -370,7 +370,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
-                () -> TurtleAppState.createGenesisState(currentConfiguration, roster, version),
+                () -> TurtleAppState.createGenesisState(currentConfiguration, roster, metrics, version),
                 APP_NAME,
                 SWIRLD_NAME,
                 selfId,
