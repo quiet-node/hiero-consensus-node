@@ -24,7 +24,6 @@ import org.hiero.block.api.protoc.PublishStreamRequest;
 import org.hiero.block.api.protoc.PublishStreamResponse;
 import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.protoc.PublishStreamResponse.ResendBlock;
-import org.hiero.block.api.protoc.PublishStreamResponseCode;
 
 /**
  * A simulated block node server that implements the block streaming gRPC service.
@@ -128,7 +127,7 @@ public class SimulatedBlockNodeServer {
      * @param responseCode the response code to send
      * @param blockNumber the block number to include in the response
      */
-    public void setEndOfStreamResponse(PublishStreamResponseCode responseCode, long blockNumber) {
+    public void setEndOfStreamResponse(EndOfStream.Code responseCode, long blockNumber) {
         endOfStreamConfig.set(new EndOfStreamConfig(responseCode, blockNumber));
         log.info("Set EndOfStream response to {} for block {} on port {}", responseCode, blockNumber, port);
     }
@@ -141,7 +140,7 @@ public class SimulatedBlockNodeServer {
      * @param blockNumber the block number to include in the response
      * @return the last verified block number
      */
-    public long sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
+    public long sendEndOfStreamImmediately(EndOfStream.Code responseCode, long blockNumber) {
         serviceImpl.sendEndOfStreamToAllStreams(responseCode, blockNumber);
         log.info(
                 "Sent immediate EndOfStream response with code {} for block {} on port {}",
@@ -223,15 +222,15 @@ public class SimulatedBlockNodeServer {
      * Configuration for EndOfStream responses.
      */
     private static class EndOfStreamConfig {
-        private final PublishStreamResponseCode responseCode;
+        private final EndOfStream.Code responseCode;
         private final long blockNumber;
 
-        public EndOfStreamConfig(PublishStreamResponseCode responseCode, long blockNumber) {
+        public EndOfStreamConfig(EndOfStream.Code responseCode, long blockNumber) {
             this.responseCode = responseCode;
             this.blockNumber = blockNumber;
         }
 
-        public PublishStreamResponseCode getResponseCode() {
+        public EndOfStream.Code getResponseCode() {
             return responseCode;
         }
 
@@ -394,7 +393,7 @@ public class SimulatedBlockNodeServer {
          * @param responseCode the response code to send
          * @param blockNumber the block number to include in the response
          */
-        public void sendEndOfStreamToAllStreams(PublishStreamResponseCode responseCode, long blockNumber) {
+        public void sendEndOfStreamToAllStreams(EndOfStream.Code responseCode, long blockNumber) {
             List<StreamObserver<PublishStreamResponse>> streams = new ArrayList<>(activeStreams);
             log.info(
                     "Sending EndOfStream with code {} for block {} to {} active streams on port {}",
@@ -446,9 +445,7 @@ public class SimulatedBlockNodeServer {
         }
 
         private void sendEndOfStream(
-                StreamObserver<PublishStreamResponse> observer,
-                PublishStreamResponseCode responseCode,
-                long blockNumber) {
+                StreamObserver<PublishStreamResponse> observer, EndOfStream.Code responseCode, long blockNumber) {
             try {
                 observer.onNext(PublishStreamResponse.newBuilder()
                         .setEndStream(EndOfStream.newBuilder()
@@ -558,14 +555,9 @@ public class SimulatedBlockNodeServer {
                             .setBlockAlreadyExists(false)
                             .build();
 
-            // Build the Acknowledgement message
-            PublishStreamResponse.Acknowledgement acknowledgement = PublishStreamResponse.Acknowledgement.newBuilder()
-                    .setBlockAck(blockAck)
-                    .build();
-
             // Build the full response
             PublishStreamResponse response = PublishStreamResponse.newBuilder()
-                    .setAcknowledgement(acknowledgement)
+                    .setAcknowledgement(blockAck)
                     .build();
 
             // Send the response
