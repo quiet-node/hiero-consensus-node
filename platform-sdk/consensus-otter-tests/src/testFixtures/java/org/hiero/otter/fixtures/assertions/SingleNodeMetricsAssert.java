@@ -4,10 +4,8 @@ package org.hiero.otter.fixtures.assertions;
 // SPDX-License-Identifier: Apache-2.0
 
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.util.List;
 import org.assertj.core.api.AbstractAssert;
 import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
-import org.hiero.otter.fixtures.turtle.metric.MetricsCollector.NumberValue;
 
 /**
  * Assertion class for {@link SingleNodeMetricsResult}.
@@ -44,18 +42,9 @@ public class SingleNodeMetricsAssert extends AbstractAssert<SingleNodeMetricsAss
      */
     public SingleNodeMetricsAssert neverExceeds(final double threshold) {
         isNotNull();
-        final boolean exceeded = actual.history().stream()
-                .map(NumberValue::value)
-                .mapToDouble(Number::doubleValue)
-                .anyMatch(v -> v > threshold);
-        if (exceeded) {
-            final List<Double> wrongValues = actual.history().stream()
-                    .map(NumberValue::value)
-                    .map(Number::doubleValue)
-                    .filter(v -> v > threshold)
-                    .toList();
+        if (actual.stats().getMax() > threshold) {
             failWithMessage(
-                    "Metric %s exceeded threshold %.3f. Values: %s", actual.identifier(), threshold, wrongValues);
+                    "Metric %s exceeded threshold %.3f. Stats: %s", actual.identifier(), threshold, actual.stats());
         }
         return this;
     }

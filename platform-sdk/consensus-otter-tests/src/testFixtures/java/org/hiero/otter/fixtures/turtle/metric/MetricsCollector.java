@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.fixtures.turtle.metric;
 
-import com.swirlds.base.time.Time;
 import com.swirlds.common.metrics.platform.SnapshotEvent;
 import com.swirlds.metrics.api.Metric.DataType;
 import com.swirlds.metrics.api.snapshot.Snapshot;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.time.Instant;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -20,14 +19,9 @@ import org.hiero.consensus.model.node.NodeId;
  */
 public class MetricsCollector {
 
-    private final Time time;
-    private final Map<Identifier, List<NumberValue>> numericData = new ConcurrentHashMap<>();
-    private final Map<Identifier, List<StringValue>> stringData = new ConcurrentHashMap<>();
-    private final Map<Identifier, List<BooleanValue>> booleanData = new ConcurrentHashMap<>();
-
-    public MetricsCollector(final Time time) {
-        this.time = time;
-    }
+    private final Map<Identifier, NumberStats> numericData = new ConcurrentHashMap<>();
+    private final Map<Identifier, List<String>> stringData = new ConcurrentHashMap<>();
+    private final Map<Identifier, List<Boolean>> booleanData = new ConcurrentHashMap<>();
 
     /**
      * Handle a snapshot event and store all associated metric values in memory.
@@ -45,38 +39,33 @@ public class MetricsCollector {
             final Identifier key = new Identifier(nodeId, metricId);
 
             switch (dataType) {
-                case INT, FLOAT -> {
-                    if (value instanceof Number number) {
-                        numericData
-                                .computeIfAbsent(key, k -> new ArrayList<>())
-                                .add(new NumberValue(time.now(), number));
+                case INT -> {
+                    if (value instanceof Long number) {
+                        numericData.computeIfAbsent(key, k -> new LongStats()).updateValue(number);
+                    }
+                }
+                case FLOAT -> {
+                    if (value instanceof Double number) {
+                        numericData.computeIfAbsent(key, k -> new DoubleStats()).updateValue(number);
                     }
                 }
                 case STRING -> {
                     if (value instanceof String str) {
-                        stringData.computeIfAbsent(key, k -> new ArrayList<>()).add(new StringValue(time.now(), str));
+                        stringData.computeIfAbsent(key, k -> new ArrayList<>()).add(str);
                     }
                 }
                 case BOOLEAN -> {
                     if (value instanceof Boolean bool) {
-                        booleanData
-                                .computeIfAbsent(key, k -> new ArrayList<>())
-                                .add(new BooleanValue(time.now(), bool));
+                        booleanData.computeIfAbsent(key, k -> new ArrayList<>()).add(bool);
                     }
                 }
             }
         }
     }
 
-    public List<NumberValue> getNumbers(@NonNull final NodeId nodeId, @NonNull final String metricId) {
+    public NumberStats getNumbers(@NonNull final NodeId nodeId, @NonNull final String metricId) {
         return numericData.get(new Identifier(nodeId, metricId));
     }
 
-    record Identifier(NodeId nodeId, String metricId) {}
-
-    public record NumberValue(Instant instant, Number value) {}
-
-    public record StringValue(Instant instant, String value) {}
-
-    public record BooleanValue(Instant instant, Boolean value) {}
+    record Identifier(@Nullable NodeId nodeId, @NonNull String metricId) {}
 }

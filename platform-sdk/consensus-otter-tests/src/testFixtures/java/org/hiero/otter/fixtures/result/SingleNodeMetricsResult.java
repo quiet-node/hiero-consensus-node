@@ -2,9 +2,8 @@
 package org.hiero.otter.fixtures.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.List;
 import org.hiero.consensus.model.node.NodeId;
-import org.hiero.otter.fixtures.turtle.metric.MetricsCollector.NumberValue;
+import org.hiero.otter.fixtures.turtle.metric.NumberStats;
 
 /**
  * Interface that provides the metrics results for a single node.
@@ -30,11 +29,10 @@ public interface SingleNodeMetricsResult {
     String identifier();
 
     /**
-     * Retrieves a list of historical metric values for the associated node.
-     * Each value includes a timestamp and the corresponding numeric value of the metric.
+     * Retrieves the statistical metrics associated with the numeric values for the current node.
      *
-     * @return a list of {@link NumberValue} objects representing the historical metric data
+     * @return an instance of {@link NumberStats} containing the statistics of the numeric values
      */
     @NonNull
-    List<NumberValue> history();
+    NumberStats stats();
 }

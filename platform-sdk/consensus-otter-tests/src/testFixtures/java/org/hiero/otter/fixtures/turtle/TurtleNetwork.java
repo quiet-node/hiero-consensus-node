@@ -125,7 +125,7 @@ public class TurtleNetwork implements Network, TurtleTimeManager.TimeTickReceive
         simulatedNetwork =
                 new SimulatedNetwork(randotron, roster, AVERAGE_NETWORK_DELAY, STANDARD_DEVIATION_NETWORK_DELAY);
 
-        final MetricsCollector metricCollector = new MetricsCollector(timeManager.time());
+        final MetricsCollector metricCollector = new MetricsCollector();
         final Configuration globalConfig = new TestConfigBuilder()
                 .withValue(MetricsConfig_.DISABLE_METRICS_OUTPUT, true)
                 .withValue(MetricsConfig_.CSV_WRITE_FREQUENCY, 1)
