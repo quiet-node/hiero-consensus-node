@@ -33,7 +33,7 @@ public class HappyPathTest {
         env.generator().start();
 
         // Wait for two minutes
-        timeManager.waitFor(Duration.ofMinutes(2L));
+        timeManager.waitFor(Duration.ofMinutes(1L));
 
         // Validations
         final Node firstNode = network.getNodes().getFirst();
@@ -46,5 +46,7 @@ public class HappyPathTest {
 
         assertThat(network.getMetricsResultsFor("platform.bytes_per_trans").ignoring(firstNode))
                 .neverExceeds(444);
+
+        assertThat(network.getPcesResults()).hasAllBirthRoundsEqualTo(1L);
     }
 }

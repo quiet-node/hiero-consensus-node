@@ -4,6 +4,7 @@ package org.hiero.otter.fixtures.turtle;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.platform.state.signed.StartupStateUtils.loadInitialState;
 import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.fail;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.APP_NAME;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.SWIRLD_NAME;
 
@@ -47,7 +48,6 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import org.assertj.core.api.Assertions;
 import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
@@ -61,11 +61,13 @@ import org.hiero.otter.fixtures.NodeConfiguration;
 import org.hiero.otter.fixtures.internal.result.NodeResultsCollector;
 import org.hiero.otter.fixtures.internal.result.SingleNodeLogResultImpl;
 import org.hiero.otter.fixtures.internal.result.SingleNodeMetricsResultImpl;
+import org.hiero.otter.fixtures.internal.result.SingleNodePcesResultImpl;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
 import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
+import org.hiero.otter.fixtures.result.SingleNodePcesResult;
 import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
 import org.hiero.otter.fixtures.turtle.app.TurtleApp;
 import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
@@ -103,6 +105,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private final PlatformStatusChangeListener platformStatusChangeListener;
 
     private DeterministicWiringModel model;
+    private PlatformContext platformContext;
     private Platform platform;
     private PlatformWiring platformWiring;
     private LifeCycle lifeCycle = LifeCycle.INIT;
@@ -200,6 +203,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
+            checkLifeCycle(LifeCycle.INIT, "Node has not been started previously.");
             checkLifeCycle(LifeCycle.STARTED, "Node has already been started.");
             checkLifeCycle(LifeCycle.DESTROYED, "Node has already been destroyed.");
 
@@ -271,6 +275,15 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @Override
     public SingleNodeMetricsResult getMetricsResultFor(@NonNull final String identifier) {
         return new SingleNodeMetricsResultImpl(selfId, identifier, metricCollector.getNumbers(selfId, identifier));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public SingleNodePcesResult getPcesResult() {
+        return new SingleNodePcesResultImpl(selfId, platformContext);
     }
 
     /**
@@ -377,6 +390,19 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
         final RecycleBin recycleBin = RecycleBin.create(
                 nodeMetrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
+
+        platformContext = TestPlatformContextBuilder.create()
+                .withTime(time)
+                .withConfiguration(currentConfiguration)
+                .withFileSystemManager(fileSystemManager)
+                .withMetrics(metrics)
+                .withRecycleBin(recycleBin)
+                .build();
+
+        model = WiringModelBuilder.create(platformContext.getMetrics(), time)
+                .withDeterministicModeEnabled(true)
+                .withUncaughtExceptionHandler((t, e) -> fail("Unexpected exception in wiring framework", e))
+                .build();
 
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,

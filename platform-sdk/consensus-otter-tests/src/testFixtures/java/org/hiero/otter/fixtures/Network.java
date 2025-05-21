@@ -7,6 +7,7 @@ import java.util.List;
 import org.hiero.otter.fixtures.result.MultipleNodeConsensusResults;
 import org.hiero.otter.fixtures.result.MultipleNodeLogResults;
 import org.hiero.otter.fixtures.result.MultipleNodeMetricsResults;
+import org.hiero.otter.fixtures.result.MultipleNodePcesResults;
 import org.hiero.otter.fixtures.result.MultipleNodeStatusProgression;
 
 /**
@@ -107,4 +108,12 @@ public interface Network {
      */
     @NonNull
     MultipleNodeMetricsResults getMetricsResultsFor(@NonNull String identifier);
+
+    /**
+     * Gets the results related to PCES files.
+     *
+     * @return the PCES files created by the nodes
+     */
+    @NonNull
+    MultipleNodePcesResults getPcesResults();
 }
