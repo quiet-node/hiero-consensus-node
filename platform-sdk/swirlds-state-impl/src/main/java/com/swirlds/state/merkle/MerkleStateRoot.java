@@ -67,7 +67,7 @@ import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualMapMigration;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
-import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
+import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -1082,9 +1082,10 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     logger.info(STARTUP.getMarker(), "New Virtual Map size: {}", virtualMap.size());
                     singletonMigrationTimeMs.addAndGet(migrationTimeMs);
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
-                    totalMigratedObjects.addAndGet(1);
 
                     if (validateMigrationEnabled) {
+                        totalMigratedObjects.addAndGet(1);
+
                         long validationStartTime = System.currentTimeMillis();
                         logger.info(
                                 STARTUP.getMarker(),
@@ -1170,16 +1171,18 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             virtualMapRef.get().size());
                     queueMigrationStartTime.addAndGet(migrationTimeMs);
                     totalMigrationTimeMs.addAndGet(migrationTimeMs);
-                    totalMigratedObjects.addAndGet(originalStore.size());
 
                     if (validateMigrationEnabled) {
+                        totalMigratedObjects.addAndGet(originalStore.size());
+                        totalMigratedObjects.addAndGet(1); // for QueueState
+
                         long validationStartTime = System.currentTimeMillis();
                         logger.info(
                                 STARTUP.getMarker(),
                                 "Validating the new Virtual Map contains all data from the Queue State {}",
                                 queueNodeLabel);
 
-                        validateQueueStateMigrated(virtualMapRef.get(), queueNodeLabel, serviceName, head, tail);
+                        validateQueueStateMigrated(virtualMapRef.get(), serviceName, stateKey, head, tail);
 
                         long validationTimeMs = System.currentTimeMillis() - validationStartTime;
                         logger.info(
@@ -1263,13 +1266,14 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                                 virtualMapRef.get().size());
                         kvMigrationStartTime.addAndGet(migrationTimeMs);
                         totalMigrationTimeMs.addAndGet(migrationTimeMs);
-                        totalMigratedObjects.addAndGet(virtualMapToMigrate.size());
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         throw new RuntimeException("Virtual Map migration process was interrupted", e);
                     }
 
                     if (validateMigrationEnabled) {
+                        totalMigratedObjects.addAndGet(virtualMapToMigrate.size());
+
                         long validationStartTime = System.currentTimeMillis();
                         logger.info(
                                 STARTUP.getMarker(),
@@ -1296,8 +1300,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         MerkleIterator<MerkleNode> merkleNodeMerkleIterator = virtualMapToMigrate.treeIterator();
         while (merkleNodeMerkleIterator.hasNext()) {
             MerkleNode next = merkleNodeMerkleIterator.next();
-            if (next instanceof VirtualLeafBytes leafBytes) {
-                assert virtualMap.containsKey(stateIdBytes.append(leafBytes.keyBytes()));
+            if (next instanceof VirtualLeafNode virtualLeafNode) {
+                assert virtualMap.containsKey(stateIdBytes.append(virtualLeafNode.getKey()));
             }
         }
     }
