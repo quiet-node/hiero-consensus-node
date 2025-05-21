@@ -3,11 +3,11 @@ package org.hiero.otter.fixtures.assertions;
 
 // SPDX-License-Identifier: Apache-2.0
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import org.assertj.core.api.AbstractAssert;
 import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
+import org.hiero.otter.fixtures.turtle.metric.MetricsCollector.NumberValue;
 
 /**
  * Assertion class for {@link SingleNodeMetricsResult}.
@@ -45,35 +45,18 @@ public class SingleNodeMetricsAssert extends AbstractAssert<SingleNodeMetricsAss
     public SingleNodeMetricsAssert neverExceeds(final double threshold) {
         isNotNull();
         final boolean exceeded = actual.history().stream()
-                .mapToDouble(SingleNodeMetricsAssert::toDouble)
+                .map(NumberValue::value)
+                .mapToDouble(Number::doubleValue)
                 .anyMatch(v -> v > threshold);
         if (exceeded) {
             final List<Double> wrongValues = actual.history().stream()
-                    .map(SingleNodeMetricsAssert::toDouble)
+                    .map(NumberValue::value)
+                    .map(Number::doubleValue)
                     .filter(v -> v > threshold)
                     .toList();
             failWithMessage(
-                    "Metric %s.%s exceeded threshold %.3f. Values: %s",
-                    actual.category(), actual.name(), threshold, wrongValues);
+                    "Metric %s exceeded threshold %.3f. Values: %s", actual.identifier(), threshold, wrongValues);
         }
         return this;
-    }
-
-    /**
-     * Converts a value to double
-     *
-     * @param obj the object to convert
-     * @return the double value or {@code 0.0} if the conversion failed
-     */
-    private static double toDouble(@NonNull final Object obj) {
-        if (obj instanceof Number n) {
-            return n.doubleValue();
-        }
-        // fallback – try parsing toString
-        try {
-            return Double.parseDouble(obj.toString());
-        } catch (final NumberFormatException e) {
-            return 0.0;
-        }
     }
 }

@@ -93,6 +93,12 @@ public interface Node {
     @NonNull
     SingleNodeStatusProgression getStatusProgression();
 
+    /**
+     * Retrieves the metrics result for a specific {@code identifier} on the current node.
+     *
+     * @param identifier the unique identifier for which the metrics result is to be fetched
+     * @return a {@link SingleNodeMetricsResult} instance containing the metrics result for the specified identifier
+     */
     @NonNull
-    SingleNodeMetricsResult getMetricsResultFor(@NonNull String category, @NonNull String name);
+    SingleNodeMetricsResult getMetricsResultFor(@NonNull String identifier);
 }

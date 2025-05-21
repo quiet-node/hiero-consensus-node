@@ -16,12 +16,14 @@ import com.swirlds.common.io.config.FileSystemManagerConfig_;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
+import com.swirlds.common.metrics.PlatformMetricsProvider;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.component.framework.model.DeterministicWiringModel;
 import com.swirlds.component.framework.model.WiringModelBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDb;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
@@ -67,7 +69,7 @@ import org.hiero.otter.fixtures.result.SingleNodeMetricsResult;
 import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
 import org.hiero.otter.fixtures.turtle.app.TurtleApp;
 import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
-import org.hiero.otter.fixtures.turtle.metric.NodeMetrics;
+import org.hiero.otter.fixtures.turtle.metric.MetricsCollector;
 
 /**
  * A node in the turtle network.
@@ -95,6 +97,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private final SimulatedNetwork network;
     private final TurtleNodeConfiguration nodeConfiguration;
     private final NodeResultsCollector resultsCollector;
+    private final PlatformMetricsProvider metricsProvider;
+    private final MetricsCollector metricCollector;
 
     private final PlatformStatusChangeListener platformStatusChangeListener;
 
@@ -104,7 +108,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private LifeCycle lifeCycle = LifeCycle.INIT;
 
     private PlatformStatus platformStatus;
-    private NodeMetrics nodeMetrics;
 
     public TurtleNode(
             @NonNull final Randotron randotron,
@@ -113,7 +116,9 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             @NonNull final Roster roster,
             @NonNull final KeysAndCerts keysAndCerts,
             @NonNull final SimulatedNetwork network,
-            @NonNull final Path outputDirectory) {
+            @NonNull final Path outputDirectory,
+            @NonNull final PlatformMetricsProvider metricsProvider,
+            @NonNull final MetricsCollector metricCollector) {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
@@ -130,6 +135,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                 TurtleNode.this.platformStatus = newStatus;
                 resultsCollector.addPlatformStatus(newStatus);
             };
+            this.metricsProvider = requireNonNull(metricsProvider);
+            this.metricCollector = requireNonNull(metricCollector);
 
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
@@ -262,8 +269,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     @NonNull
     @Override
-    public SingleNodeMetricsResult getMetricsResultFor(@NonNull final String category, @NonNull final String name) {
-        return new SingleNodeMetricsResultImpl(selfId, category, name, nodeMetrics.getHistory(category, name));
+    public SingleNodeMetricsResult getMetricsResultFor(@NonNull final String identifier) {
+        return new SingleNodeMetricsResultImpl(selfId, identifier, metricCollector.getNumbers(selfId, identifier));
     }
 
     /**
@@ -347,8 +354,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private void doStartNode() {
 
         final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
+        final Metrics nodeMetrics = metricsProvider.createPlatformMetrics(selfId);
 
-        nodeMetrics = new NodeMetrics(selfId);
         final PlatformContext platformContext = TestPlatformContextBuilder.create()
                 .withTime(time)
                 .withConfiguration(currentConfiguration)

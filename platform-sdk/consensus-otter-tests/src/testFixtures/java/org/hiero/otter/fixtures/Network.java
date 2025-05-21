@@ -99,6 +99,12 @@ public interface Network {
     @NonNull
     MultipleNodeStatusProgression getStatusProgression();
 
+    /**
+     * Retrieves the metrics results for a specific {@code identifier} across multiple nodes in the network.
+     *
+     * @param identifier the unique identifier for which metrics results are to be fetched
+     * @return a {@link MultipleNodeMetricsResults} instance containing the metrics results relevant to the specified identifier
+     */
     @NonNull
-    MultipleNodeMetricsResults getMetricsResultsFor(@NonNull String category, @NonNull String name);
+    MultipleNodeMetricsResults getMetricsResultsFor(@NonNull String identifier);
 }
