@@ -44,7 +44,7 @@ public class HappyPathTest {
         assertThat(network.getStatusProgression())
                 .hasSteps(target(ACTIVE).requiringInterim(REPLAYING_EVENTS, OBSERVING, CHECKING));
 
-        assertThat(network.getMetricsResultsFor("platform", "bytes_per_trans").ignoring(firstNode))
+        assertThat(network.getMetricsResultsFor("platform.bytes_per_trans").ignoring(firstNode))
                 .neverExceeds(444);
     }
 }
