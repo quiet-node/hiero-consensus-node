@@ -48,6 +48,7 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
+import org.assertj.core.api.Assertions;
 import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
@@ -369,10 +370,15 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
         final Metrics nodeMetrics = metricsProvider.createPlatformMetrics(selfId);
 
+        final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
+        final RecycleBin recycleBin = RecycleBin.create(
+                nodeMetrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
         final PlatformContext platformContext = TestPlatformContextBuilder.create()
                 .withTime(time)
                 .withConfiguration(currentConfiguration)
+                .withFileSystemManager(fileSystemManager)
                 .withMetrics(nodeMetrics)
+                .withRecycleBin(recycleBin)
                 .build();
 
         model = WiringModelBuilder.create(platformContext.getMetrics(), time)
@@ -387,17 +393,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
         MerkleDb.resetDefaultInstancePath();
-        final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
-        final RecycleBin recycleBin = RecycleBin.create(
-                nodeMetrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
-
-        platformContext = TestPlatformContextBuilder.create()
-                .withTime(time)
-                .withConfiguration(currentConfiguration)
-                .withFileSystemManager(fileSystemManager)
-                .withMetrics(metrics)
-                .withRecycleBin(recycleBin)
-                .build();
 
         model = WiringModelBuilder.create(platformContext.getMetrics(), time)
                 .withDeterministicModeEnabled(true)
