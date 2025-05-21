@@ -247,7 +247,8 @@ public class DataFileCompactor {
                 } catch (final ClosedByInterruptException e) {
                     logger.info(
                             MERKLE_DB.getMarker(),
-                            "Failed to copy data item {} / {} due to thread interruption",
+                            "[{}] Failed to copy data item {} / {} due to thread interruption",
+                            storeName,
                             fileIndex,
                             fileOffset,
                             e);
@@ -306,6 +307,7 @@ public class DataFileCompactor {
         final DataFileMetadata newFileMetadata = newFileWriter.getMetadata();
         final DataFileReader newFileReader = dataFileCollection.addNewDataFileReader(newFileCreated, newFileMetadata);
         currentReader.set(newFileReader);
+        logger.info(MERKLE_DB.getMarker(), "[{}] New compaction file, newFile={}", storeName, newFileReader.getIndex());
     }
 
     /**
@@ -322,6 +324,7 @@ public class DataFileCompactor {
         currentWriter.set(null);
         // Now include the file in future compactions
         currentReader.get().setFileCompleted();
+        logger.info(MERKLE_DB.getMarker(), "[{}] Compaction file written, fileNum={}", storeName, currentReader.get().getIndex());
         currentReader.set(null);
     }
 

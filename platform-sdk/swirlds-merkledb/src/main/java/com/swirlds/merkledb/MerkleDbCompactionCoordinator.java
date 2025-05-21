@@ -167,7 +167,8 @@ class MerkleDbCompactionCoordinator {
         if (!compactionEnabled.get()) {
             return;
         }
-        if (futuresByName.containsKey(key)) {
+        final Future<?> future = futuresByName.get(key);
+        if ((future != null) && !future.isDone()) {
             logger.debug(MERKLE_DB.getMarker(), "Compaction for {} is already in progress", key);
             return;
         }
@@ -185,7 +186,8 @@ class MerkleDbCompactionCoordinator {
      * @return {@code true} if compaction with this name is currently running, {@code false} otherwise
      */
     public boolean isCompactionRunning(final String key) {
-        return futuresByName.containsKey(key);
+        final Future<?> future = futuresByName.get(key);
+        return (future != null) && !future.isDone();
     }
 
     boolean isCompactionEnabled() {
@@ -214,7 +216,7 @@ class MerkleDbCompactionCoordinator {
             try {
                 return compactor.compact();
             } catch (final InterruptedException | ClosedByInterruptException e) {
-                logger.info(MERKLE_DB.getMarker(), "Interrupted while compacting, this is allowed");
+                logger.info(MERKLE_DB.getMarker(), "[{}] Interrupted while compacting, this is allowed", id);
             } catch (Exception e) {
                 // It is important that we capture all exceptions here, otherwise a single exception
                 // will stop all future merges from happening
