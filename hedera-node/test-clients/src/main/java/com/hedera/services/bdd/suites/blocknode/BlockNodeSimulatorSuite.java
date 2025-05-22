@@ -14,7 +14,6 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlocks
 import static com.hedera.services.bdd.suites.regression.system.MixedOperations.burstOfTps;
 import static java.time.temporal.ChronoUnit.SECONDS;
 
-import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.services.bdd.HapiBlockNode;
 import com.hedera.services.bdd.HapiBlockNode.BlockNodeConfig;
 import com.hedera.services.bdd.HapiBlockNode.SubProcessNodeConfig;
@@ -27,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream.Code;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
@@ -124,7 +124,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlocks(5).withBackgroundTraffic(true),
                 doingContextual(spec -> time.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_BEHIND)
+                        .sendEndOfStreamImmediately(Code.OUT_OF_ORDER)
                         .withBlockNumber(Long.MAX_VALUE),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),

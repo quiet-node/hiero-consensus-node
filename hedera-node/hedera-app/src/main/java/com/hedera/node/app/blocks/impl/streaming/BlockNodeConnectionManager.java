@@ -5,9 +5,6 @@ import static com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.LONG
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.hedera.hapi.block.PublishStreamRequest;
-import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.ConnectionState;
 import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItem;
@@ -46,6 +43,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
+import org.hiero.block.api.protoc.PublishStreamRequest;
+import org.hiero.block.api.protoc.PublishStreamResponse;
 
 /**
  * Manages connections to block nodes in a Hedera network, handling connection lifecycle, node selection,
@@ -68,7 +68,7 @@ public class BlockNodeConnectionManager {
     private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
     private static final String GRPC_END_POINT =
-            BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
+            BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
     // Maximum retry delay to prevent excessively long waits
     private static final Duration MAX_RETRY_DELAY = Duration.ofSeconds(10);
 
@@ -164,10 +164,11 @@ public class BlockNodeConnectionManager {
                 .build();
 
         return client.serviceClient(GrpcServiceDescriptor.builder()
-                .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
+                .serviceName(BlockStreamPublishServiceGrpc.SERVICE_NAME)
                 .putMethod(
                         GRPC_END_POINT,
-                        GrpcClientMethodDescriptor.bidirectional(BlockStreamServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
+                        GrpcClientMethodDescriptor.bidirectional(
+                                        BlockStreamPublishServiceGrpc.SERVICE_NAME, GRPC_END_POINT)
                                 .requestType(PublishStreamRequest.class)
                                 .responseType(PublishStreamResponse.class)
                                 .marshallerSupplier(new RequestResponseMarshaller.Supplier())

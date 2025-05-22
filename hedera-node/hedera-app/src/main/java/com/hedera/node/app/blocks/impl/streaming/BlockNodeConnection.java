@@ -3,12 +3,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.PublishStreamRequest;
-import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
-import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
-import com.hedera.hapi.block.PublishStreamResponse.ResendBlock;
-import com.hedera.hapi.block.PublishStreamResponse.SkipBlock;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
@@ -23,6 +17,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.PublishStreamRequest;
+import org.hiero.block.api.PublishStreamResponse;
+import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
+import org.hiero.block.api.PublishStreamResponse.EndOfStream;
+import org.hiero.block.api.PublishStreamResponse.ResendBlock;
+import org.hiero.block.api.PublishStreamResponse.SkipBlock;
 
 /**
  * Manages a single gRPC bidirectional streaming connection to a block node. Each connection:
@@ -147,15 +147,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     /**
-     * Handles the {@link Acknowledgement} response received from the block node.
+     * Handles the {@link BlockAcknowledgement} response received from the block node.
      *
      * @param acknowledgement the acknowledgement received from the block node
      */
-    private void handleAcknowledgement(@NonNull final Acknowledgement acknowledgement) {
-        if (acknowledgement.hasBlockAck()) {
-            final var blockAck = acknowledgement.blockAck();
-            final var acknowledgedBlockNumber = blockAck.blockNumber();
-            final var blockAlreadyExists = blockAck.blockAlreadyExists();
+    private void handleAcknowledgement(@NonNull final BlockAcknowledgement acknowledgement) {
+            final var acknowledgedBlockNumber = acknowledgement.blockNumber();
+            final var blockAlreadyExists = acknowledgement.blockAlreadyExists();
             synchronized (blockNodeConnectionManager.getStreamingBlockNumber()) {
                 final long currentBlockStreaming =
                         blockNodeConnectionManager.getStreamingBlockNumber().get();
@@ -218,10 +216,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     jumpToBlock(acknowledgedBlockNumber + 1);
                 }
             }
-        } else {
-            logger.warn("Unknown acknowledgement received: {}", acknowledgement);
         }
-    }
 
     /**
      * Handles the {@link EndOfStream} response received from the block node.
@@ -258,7 +253,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
 
         switch (responseCode) {
-            case STREAM_ITEMS_INTERNAL_ERROR, STREAM_ITEMS_PERSISTENCE_FAILED -> {
+            case INTERNAL_ERROR, PERSISTENCE_FAILED -> {
                 // The block node had an end of stream error and cannot continue processing.
                 // We should wait for a short period before attempting to retry
                 // to avoid overwhelming the node if it's having issues
@@ -269,7 +264,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         blockNumber);
                 blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
             }
-            case STREAM_ITEMS_TIMEOUT, STREAM_ITEMS_OUT_OF_ORDER, STREAM_ITEMS_BAD_STATE_PROOF -> {
+            case TIMEOUT, OUT_OF_ORDER, BAD_STATE_PROOF -> {
                 // We should restart the stream at the block immediately
                 // following the block where the node fell behind.
                 final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
@@ -281,7 +276,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
                 restartStreamAtBlock(restartBlockNumber);
             }
-            case STREAM_ITEMS_SUCCESS -> {
+            case SUCCESS -> {
                 // The block node orderly ended the stream. In this case, no errors occurred.
                 // We should wait for a longer period before attempting to retry.
                 logger.warn(
@@ -291,7 +286,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         blockNumber);
                 blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
             }
-            case STREAM_ITEMS_BEHIND -> {
+            case BEHIND -> {
                 // The block node is behind us, check if we have the last verified block still available in order to
                 // restart the stream from there
                 final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
@@ -314,7 +309,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     blockNodeConnectionManager.handleConnectionError(this, LONGER_RETRY_DELAY);
                 }
             }
-            case STREAM_ITEMS_UNKNOWN -> {
+            case UNKNOWN -> {
                 // This should never happen, but if it does, we should close the connection
                 logger.error(
                         "[{}] Block node {} reported an unknown error at block {}. Closing connection.",
@@ -507,7 +502,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     /**
      * Processes responses received from the block node through the bidirectional gRPC stream.
-     * Handles {@link Acknowledgement}s, {@link EndOfStream} response signals, {@link SkipBlock} and {@link ResendBlock}.
+     * Handles {@link BlockAcknowledgement}s, {@link EndOfStream} response signals, {@link SkipBlock} and {@link ResendBlock}.
      *
      * @param response the response received from block node
      */
