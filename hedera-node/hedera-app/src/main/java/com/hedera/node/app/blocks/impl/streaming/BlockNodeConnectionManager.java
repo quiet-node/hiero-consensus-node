@@ -43,9 +43,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.PublishStreamRequest;
+import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
-import org.hiero.block.api.protoc.PublishStreamRequest;
-import org.hiero.block.api.protoc.PublishStreamResponse;
 
 /**
  * Manages connections to block nodes in a Hedera network, handling connection lifecycle, node selection,

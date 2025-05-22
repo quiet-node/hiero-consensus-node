@@ -152,71 +152,70 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param acknowledgement the acknowledgement received from the block node
      */
     private void handleAcknowledgement(@NonNull final BlockAcknowledgement acknowledgement) {
-            final var acknowledgedBlockNumber = acknowledgement.blockNumber();
-            final var blockAlreadyExists = acknowledgement.blockAlreadyExists();
-            synchronized (blockNodeConnectionManager.getStreamingBlockNumber()) {
-                final long currentBlockStreaming =
-                        blockNodeConnectionManager.getStreamingBlockNumber().get();
-                final var currentBlockProducing = blockStreamStateManager.getBlockNumber();
+        final var acknowledgedBlockNumber = acknowledgement.blockNumber();
+        final var blockAlreadyExists = acknowledgement.blockAlreadyExists();
+        synchronized (blockNodeConnectionManager.getStreamingBlockNumber()) {
+            final long currentBlockStreaming =
+                    blockNodeConnectionManager.getStreamingBlockNumber().get();
+            final var currentBlockProducing = blockStreamStateManager.getBlockNumber();
 
-                // Update the last verified block by the current connection
-                blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, acknowledgedBlockNumber);
+            // Update the last verified block by the current connection
+            blockNodeConnectionManager.updateLastVerifiedBlock(blockNodeConfig, acknowledgedBlockNumber);
 
-                // Increment the ACK counter metric
-                blockStreamMetrics.incrementBlockAckReceivedCount();
+            // Increment the ACK counter metric
+            blockStreamMetrics.incrementBlockAckReceivedCount();
 
-                if (currentBlockStreaming == -1) {
-                    return;
-                }
+            if (currentBlockStreaming == -1) {
+                return;
+            }
 
-                if (blockAlreadyExists) {
-                    logger.debug(
-                            "[{}] Block {} already exists on block node {}",
-                            Thread.currentThread().getName(),
-                            acknowledgedBlockNumber,
-                            connectionDescriptor);
-                } else {
-                    logger.debug(
-                            "[{}] Block {} acknowledgement received from block node {}",
-                            Thread.currentThread().getName(),
-                            acknowledgedBlockNumber,
-                            connectionDescriptor);
-                }
+            if (blockAlreadyExists) {
+                logger.debug(
+                        "[{}] Block {} already exists on block node {}",
+                        Thread.currentThread().getName(),
+                        acknowledgedBlockNumber,
+                        connectionDescriptor);
+            } else {
+                logger.debug(
+                        "[{}] Block {} acknowledgement received from block node {}",
+                        Thread.currentThread().getName(),
+                        acknowledgedBlockNumber,
+                        connectionDescriptor);
+            }
 
-                if (currentBlockStreaming < acknowledgedBlockNumber
-                        && currentBlockProducing >= acknowledgedBlockNumber) {
-                    // We can jump to streaming the acknowledged block number
-                    logger.debug(
-                            "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
-                            Thread.currentThread().getName(),
-                            currentBlockStreaming,
-                            connectionDescriptor,
-                            acknowledgedBlockNumber,
-                            acknowledgedBlockNumber + 1L);
-                    jumpToBlock(acknowledgedBlockNumber + 1);
-                } else if (currentBlockStreaming == acknowledgedBlockNumber
-                        && currentBlockProducing == acknowledgedBlockNumber) {
-                    // We are already streaming the acknowledged block number
-                    logger.debug(
-                            "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
-                            Thread.currentThread().getName(),
-                            currentBlockStreaming,
-                            connectionDescriptor,
-                            acknowledgedBlockNumber,
-                            acknowledgedBlockNumber + 1L);
-                    jumpToBlock(acknowledgedBlockNumber + 1);
-                } else if (currentBlockStreaming < acknowledgedBlockNumber) {
-                    logger.debug(
-                            "[{}] Currently producing Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
-                            Thread.currentThread().getName(),
-                            currentBlockProducing,
-                            connectionDescriptor,
-                            acknowledgedBlockNumber,
-                            acknowledgedBlockNumber + 1L);
-                    jumpToBlock(acknowledgedBlockNumber + 1);
-                }
+            if (currentBlockStreaming < acknowledgedBlockNumber && currentBlockProducing >= acknowledgedBlockNumber) {
+                // We can jump to streaming the acknowledged block number
+                logger.debug(
+                        "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
+                        Thread.currentThread().getName(),
+                        currentBlockStreaming,
+                        connectionDescriptor,
+                        acknowledgedBlockNumber,
+                        acknowledgedBlockNumber + 1L);
+                jumpToBlock(acknowledgedBlockNumber + 1);
+            } else if (currentBlockStreaming == acknowledgedBlockNumber
+                    && currentBlockProducing == acknowledgedBlockNumber) {
+                // We are already streaming the acknowledged block number
+                logger.debug(
+                        "[{}] Currently streaming Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
+                        Thread.currentThread().getName(),
+                        currentBlockStreaming,
+                        connectionDescriptor,
+                        acknowledgedBlockNumber,
+                        acknowledgedBlockNumber + 1L);
+                jumpToBlock(acknowledgedBlockNumber + 1);
+            } else if (currentBlockStreaming < acknowledgedBlockNumber) {
+                logger.debug(
+                        "[{}] Currently producing Block {} to Block Node {} and acknowledged Block {} - moving streaming ahead to Block {}",
+                        Thread.currentThread().getName(),
+                        currentBlockProducing,
+                        connectionDescriptor,
+                        acknowledgedBlockNumber,
+                        acknowledgedBlockNumber + 1L);
+                jumpToBlock(acknowledgedBlockNumber + 1);
             }
         }
+    }
 
     /**
      * Handles the {@link EndOfStream} response received from the block node.

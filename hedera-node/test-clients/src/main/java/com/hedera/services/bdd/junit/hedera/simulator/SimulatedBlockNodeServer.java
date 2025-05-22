@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.hedera.simulator;
 
-import com.google.protobuf.ByteString;
 import com.hedera.hapi.block.stream.protoc.BlockItem;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -27,6 +26,7 @@ import org.hiero.block.api.protoc.PublishStreamResponse;
 import org.hiero.block.api.protoc.PublishStreamResponse.BlockAcknowledgement;
 import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.protoc.PublishStreamResponse.ResendBlock;
+import org.hiero.block.api.protoc.PublishStreamResponse.SkipBlock;
 
 /**
  * A simulated block node server that implements the block streaming gRPC service.
@@ -509,9 +509,7 @@ public class SimulatedBlockNodeServer {
         // Helper methods for sending specific responses
 
         private void sendEndOfStream(
-                StreamObserver<PublishStreamResponse> observer,
-                EndOfStream.Code responseCode,
-                long blockNumber) {
+                StreamObserver<PublishStreamResponse> observer, EndOfStream.Code responseCode, long blockNumber) {
             final EndOfStream endOfStream = EndOfStream.newBuilder()
                     .setStatus(responseCode)
                     .setBlockNumber(lastVerifiedBlockNumber.get()) // Use current last verified
@@ -528,9 +526,8 @@ public class SimulatedBlockNodeServer {
         }
 
         private void sendSkipBlock(StreamObserver<PublishStreamResponse> observer, long blockNumber) {
-            final PublishStreamResponse.SkipBlock skipBlock = PublishStreamResponse.SkipBlock.newBuilder()
-                    .setBlockNumber(blockNumber)
-                    .build();
+            final SkipBlock skipBlock =
+                    SkipBlock.newBuilder().setBlockNumber(blockNumber).build();
             final PublishStreamResponse response =
                     PublishStreamResponse.newBuilder().setSkipBlock(skipBlock).build();
             observer.onNext(response);
@@ -668,12 +665,13 @@ public class SimulatedBlockNodeServer {
      */
     private void buildAndSendBlockAcknowledgement(
             long blockNumber, StreamObserver<PublishStreamResponse> responseObserver, boolean blockAlreadyExists) {
-        final PublishStreamResponse.BlockAcknowledgement ack = PublishStreamResponse.BlockAcknowledgement.newBuilder()
+        final BlockAcknowledgement ack = BlockAcknowledgement.newBuilder()
                 .setBlockNumber(blockNumber)
                 .setBlockNumber(lastVerifiedBlockNumber.get())
                 .setBlockAlreadyExists(blockAlreadyExists) // Set based on the parameter
                 .build();
-        final PublishStreamResponse response = PublishStreamResponse.newBuilder().setAcknowledgement(ack).build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().setAcknowledgement(ack).build();
         try {
             responseObserver.onNext(response);
             log.debug(

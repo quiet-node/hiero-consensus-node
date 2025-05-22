@@ -16,12 +16,10 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import io.grpc.stub.StreamObserver;
 import io.helidon.webclient.grpc.GrpcServiceClient;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.time.Duration;
 import org.hiero.block.api.PublishStreamRequest;
 import org.hiero.block.api.PublishStreamResponse;
-import org.junit.jupiter.api.AfterEach;
+import org.hiero.block.api.PublishStreamResponse.EndOfStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -198,33 +196,10 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     }
 
     @Test
-    void testHandleAcknowledgementUnknown() {
-        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
-
-        assertThat(blockStreamStateManager.getConnections().containsValue(subject))
-                .isTrue();
-        assertEquals(subject.getConnectionState(), ACTIVE);
-
-        // Open Block 0
-        blockStreamStateManager.openBlock(0L);
-
-        Acknowledgement acknowledgement = Acknowledgement.newBuilder().build();
-
-        PublishStreamResponse response = PublishStreamResponse.newBuilder()
-                .acknowledgement(acknowledgement)
-                .build();
-
-        subject.onNext(response);
-
-        assertEquals(-1L, blockNodeConnectionManager.getLastVerifiedBlock(nodeConfig));
-    }
-
-    @Test
     void testHandleEndOfStreamClosesStreamItemsInternalError() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.INTERNAL_ERROR, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 
@@ -239,8 +214,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsPersistenceFailure() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_PERSISTENCE_FAILED, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.PERSISTENCE_FAILED, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 
@@ -255,8 +229,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsTimeoutRestartsWithoutSwitching() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.TIMEOUT, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 
@@ -276,8 +249,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsOutOfOrderRestartsWithoutSwitching() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.OUT_OF_ORDER, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 
@@ -297,8 +269,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsBadStateProofRestartsWithoutSwitching() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BAD_STATE_PROOF, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.BAD_STATE_PROOF, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 
@@ -318,8 +289,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsSuccess() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.SUCCESS, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 
@@ -341,8 +311,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsUnknown() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_UNKNOWN, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.UNKNOWN, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 
@@ -364,8 +333,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsBehindMaxLong() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.BEHIND, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
         blockStreamStateManager.openBlock(100L);
@@ -395,7 +363,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsBehind() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response = createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, 49L);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.BEHIND, 49L);
 
         blockStreamStateManager.openBlock(0L);
         blockStreamStateManager.openBlock(50L);
@@ -424,7 +392,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamClosesStreamItemsBehindNoBlockState() {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response = createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, 49L);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.BEHIND, 49L);
 
         blockStreamStateManager.openBlock(0L);
         blockStreamStateManager.openBlock(100L);
@@ -446,8 +414,7 @@ public class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleEndOfStreamMultipleWithinTimeframe() throws InterruptedException {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
-        PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, Long.MAX_VALUE);
+        PublishStreamResponse response = createEndOfStreamResponse(EndOfStream.Code.BEHIND, Long.MAX_VALUE);
 
         blockStreamStateManager.openBlock(0L);
 

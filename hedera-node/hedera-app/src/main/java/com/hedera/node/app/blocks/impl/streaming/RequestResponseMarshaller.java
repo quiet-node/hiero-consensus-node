@@ -8,10 +8,10 @@ import io.grpc.MethodDescriptor;
 import io.helidon.grpc.core.MarshallerSupplier;
 import java.io.IOException;
 import java.io.InputStream;
+import org.hiero.block.api.PublishStreamRequest;
+import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.codec.PublishStreamRequestProtoCodec;
 import org.hiero.block.api.codec.PublishStreamResponseProtoCodec;
-import org.hiero.block.api.protoc.PublishStreamRequest;
-import org.hiero.block.api.protoc.PublishStreamResponse;
 
 public class RequestResponseMarshaller<T> implements MethodDescriptor.Marshaller<T> {
     private final Codec<T> codec;
