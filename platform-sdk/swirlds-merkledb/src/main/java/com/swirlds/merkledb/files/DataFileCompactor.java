@@ -262,6 +262,7 @@ public class DataFileCompactor {
             });
             allDataItemsProcessed = true;
         } finally {
+            final boolean threadInterrupted = Thread.interrupted();
             // Even if the thread is interrupted, make sure the new compacted file is properly closed
             // and is included to future compactions
             snapshotCompactionLock.acquire();
@@ -276,6 +277,9 @@ public class DataFileCompactor {
                 }
             } finally {
                 snapshotCompactionLock.release();
+                if (threadInterrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
         }
 
