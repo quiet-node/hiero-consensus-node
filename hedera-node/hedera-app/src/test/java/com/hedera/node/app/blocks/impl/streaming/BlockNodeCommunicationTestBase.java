@@ -10,6 +10,8 @@ import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
 import com.hedera.hapi.block.PublishStreamResponse.ResendBlock;
 import com.hedera.hapi.block.PublishStreamResponse.SkipBlock;
 import com.hedera.hapi.block.PublishStreamResponseCode;
+import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.block.stream.BlockProof;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
@@ -78,5 +80,15 @@ public abstract class BlockNodeCommunicationTestBase {
                 .withValue("blockStream.blockItemBatchSize", BATCH_SIZE)
                 .getOrCreateConfig();
         return () -> new VersionedConfigImpl(config, 1L);
+    }
+
+    protected static BlockItem newBlockTxItem() {
+        return BlockItem.newBuilder().build();
+    }
+
+    protected static BlockItem newBlockProofItem() {
+        return BlockItem.newBuilder()
+                .blockProof(BlockProof.newBuilder().build())
+                .build();
     }
 }

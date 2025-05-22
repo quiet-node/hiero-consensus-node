@@ -10,8 +10,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.stream.BlockItem;
-import com.hedera.hapi.block.stream.BlockProof;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.internal.network.BlockNodeConfig;
@@ -148,24 +146,37 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         blockStreamStateManager.openBlock(0L);
 
+        final var blockItem = newBlockTxItem();
         for (int i = 0; i < BATCH_SIZE; i++) {
-            blockStreamStateManager.addItem(0L, BlockItem.newBuilder().build());
+            blockStreamStateManager.addItem(0L, blockItem);
         }
+
+        // Block Stream Worker Thread should advance a bit
+        Thread.sleep(100);
+
+        assertThat(blockStreamStateManager.getBlockState(0L).requestsSize()).isEqualTo(1);
+
         // Add a BlockItem in the next batch
-        blockStreamStateManager.addItem(0L, BlockItem.newBuilder().build());
+        blockStreamStateManager.addItem(0L, blockItem);
 
         // Trigger Streaming PreBlockProofItems
         blockStreamStateManager.streamPreBlockProofItems(0L);
+
+        // Block Stream Worker Thread should advance a bit
+        Thread.sleep(100);
+
+        assertThat(blockStreamStateManager.getBlockState(0L).requestsSize()).isEqualTo(2);
 
         // Close Block
         blockStreamStateManager.closeBlock(0L);
 
         // Add BlockProof
-        blockStreamStateManager.addItem(
-                0L,
-                BlockItem.newBuilder()
-                        .blockProof(BlockProof.newBuilder().build())
-                        .build());
+        blockStreamStateManager.addItem(0L, newBlockProofItem());
+
+        // Block Stream Worker Thread should advance a bit
+        Thread.sleep(100);
+
+        assertThat(blockStreamStateManager.getBlockState(0L).requestsSize()).isEqualTo(3);
 
         blockStreamStateManager.openBlock(1L);
 
@@ -173,5 +184,63 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         // Block Stream Worker Thread should move to Block #1
         assertEquals(1L, blockNodeConnectionManager.getStreamingBlockNumber().get());
+    }
+
+    @Test
+    void testBatchSizeIsRespectedWhenCreatingPublishStreamRequests() throws InterruptedException {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertThat(blockStreamStateManager.getConnections().containsValue(subject))
+                .isTrue();
+        assertEquals(subject.getConnectionState(), ACTIVE);
+
+        blockStreamStateManager.openBlock(0L);
+
+        final var blockItem = newBlockTxItem();
+        for (int i = 0; i < BATCH_SIZE - 1; i++) {
+            blockStreamStateManager.addItem(0L, blockItem);
+        }
+
+        // Block Stream Worker Thread should advance a bit
+        Thread.sleep(100);
+
+        assertThat(blockStreamStateManager.getBlockState(0L).requestsSize()).isEqualTo(0);
+
+        // Add a BlockItem in the next batch
+        blockStreamStateManager.addItem(0L, blockItem);
+
+        // Block Stream Worker Thread should advance a bit
+        Thread.sleep(100);
+
+        assertThat(blockStreamStateManager.getBlockState(0L).requestsSize()).isEqualTo(1);
+    }
+
+    @Test
+    void testPublishStreamRequestsCreatedForMultipleBlocks() throws InterruptedException {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertThat(blockStreamStateManager.getConnections().containsValue(subject))
+                .isTrue();
+        assertEquals(subject.getConnectionState(), ACTIVE);
+
+        blockStreamStateManager.openBlock(0L);
+        blockStreamStateManager.openBlock(1L);
+        blockStreamStateManager.openBlock(2L);
+        final var blockItem = newBlockTxItem();
+
+        // when
+        for (int i = 0; i < BATCH_SIZE; i++) {
+            blockStreamStateManager.addItem(0L, blockItem);
+            blockStreamStateManager.addItem(1L, blockItem);
+            blockStreamStateManager.addItem(2L, blockItem);
+        }
+
+        // Block Stream Worker Thread should advance a bit
+        Thread.sleep(100);
+
+        // then
+        assertThat(blockStreamStateManager.getBlockState(0L).requestsSize()).isEqualTo(1);
+        assertThat(blockStreamStateManager.getBlockState(1L).requestsSize()).isEqualTo(1);
+        assertThat(blockStreamStateManager.getBlockState(2L).requestsSize()).isEqualTo(1);
     }
 }
