@@ -10,6 +10,7 @@ import com.hedera.node.app.spi.fees.Fees;
 import com.hedera.node.app.spi.validation.ExpiryValidator;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.record.DeleteCapableTransactionStreamBuilder;
+import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -51,7 +52,6 @@ public interface TokenServiceApi {
      * Validates the creation of a given staking election relative to the given account store, network info,
      * and staking config.
      *
-     * @param isStakingEnabled       if staking is enabled
      * @param hasDeclineRewardChange if the transaction body has decline reward field to be updated
      * @param stakedIdKind           staked id kind (account or node)
      * @param stakedAccountIdInOp    staked account id
@@ -61,7 +61,6 @@ public interface TokenServiceApi {
      * @throws HandleException if the staking election is invalid
      */
     void assertValidStakingElectionForCreation(
-            boolean isStakingEnabled,
             boolean hasDeclineRewardChange,
             @NonNull String stakedIdKind,
             @Nullable AccountID stakedAccountIdInOp,
@@ -73,7 +72,6 @@ public interface TokenServiceApi {
      * Validates the update of a given staking election relative to the given account store, network info,
      * and staking config.
      *
-     * @param isStakingEnabled       if staking is enabled
      * @param hasDeclineRewardChange if the transaction body has decline reward field to be updated
      * @param stakedIdKind           staked id kind (account or node)
      * @param stakedAccountIdInOp    staked account id
@@ -83,7 +81,6 @@ public interface TokenServiceApi {
      * @throws HandleException if the staking election is invalid
      */
     void assertValidStakingElectionForUpdate(
-            boolean isStakingEnabled,
             boolean hasDeclineRewardChange,
             @NonNull String stakedIdKind,
             @Nullable AccountID stakedAccountIdInOp,
@@ -165,14 +162,14 @@ public interface TokenServiceApi {
      *
      * @param payer the id of the account that should be charged
      * @param amount the amount to charge
-     * @param recordBuilder the record builder to record the fees in
+     * @param streamBuilder the record builder to record the fees in
      * @param cb if not null, a callback to receive the fee disbursements
      * @return the total fees charged
      */
     Fees chargeFee(
             @NonNull AccountID payer,
             long amount,
-            @NonNull FeeStreamBuilder recordBuilder,
+            @NonNull StreamBuilder streamBuilder,
             @Nullable ObjLongConsumer<AccountID> cb);
 
     /**

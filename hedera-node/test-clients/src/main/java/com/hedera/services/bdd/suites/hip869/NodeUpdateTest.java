@@ -6,7 +6,6 @@ import static com.hedera.services.bdd.junit.EmbeddedReason.NEEDS_STATE_ACCESS;
 import static com.hedera.services.bdd.junit.hedera.utils.AddressBookUtils.endpointFor;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asDnsServiceEndpoint;
-import static com.hedera.services.bdd.spec.HapiPropertySource.asEntityString;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asServiceEndpoint;
 import static com.hedera.services.bdd.spec.HapiPropertySource.invalidServiceEndpoint;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
@@ -16,17 +15,21 @@ import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.nodeCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.nodeDelete;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.nodeUpdate;
+import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
 import static com.hedera.services.bdd.spec.utilops.EmbeddedVerbs.viewNode;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.ADDRESS_BOOK_CONTROL;
 import static com.hedera.services.bdd.suites.HapiSuite.DEFAULT_PAYER;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.NONSENSE_KEY;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HBAR;
+import static com.hedera.services.bdd.suites.hip869.NodeCreateTest.GRPC_PROXY_ENDPOINT_FQDN;
 import static com.hedera.services.bdd.suites.hip869.NodeCreateTest.generateX509Certificates;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.GOSSIP_ENDPOINTS_EXCEEDED_LIMIT;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.GOSSIP_ENDPOINT_CANNOT_HAVE_FQDN;
+import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.GRPC_WEB_PROXY_NOT_SUPPORTED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ADMIN_KEY;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ENDPOINT;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_GOSSIP_CA_CERTIFICATE;
@@ -40,11 +43,13 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.SERVICE_ENDPOI
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.UPDATE_NODE_ACCOUNT_NOT_ALLOWED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.services.bdd.junit.EmbeddedHapiTest;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
+import com.hedera.services.bdd.junit.LeakyEmbeddedHapiTest;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
 import com.hederahashgraph.api.proto.java.ServiceEndpoint;
 import java.security.cert.CertificateEncodingException;
@@ -153,7 +158,40 @@ public class NodeUpdateTest {
                         .hasKnownStatus(INVALID_IPV4_ADDRESS));
     }
 
+    @LeakyHapiTest(overrides = {"nodes.webProxyEndpointsEnabled"})
+    final Stream<DynamicTest> validateGrpcProxyEndpoint() throws CertificateEncodingException {
+        return hapiTest(
+                overriding("nodes.webProxyEndpointsEnabled", "true"),
+                newKeyNamed("adminKey"),
+                nodeCreate("testNode")
+                        .adminKey("adminKey")
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded()),
+                nodeUpdate("testNode")
+                        .adminKey("adminKey")
+                        .grpcProxyEndpoint(invalidServiceEndpoint())
+                        .hasKnownStatus(INVALID_IPV4_ADDRESS));
+    }
+
     @EmbeddedHapiTest(NEEDS_STATE_ACCESS)
+    final Stream<DynamicTest> cantUpdateGrpcProxyEndpointIfDisabled() throws CertificateEncodingException {
+        return hapiTest(
+                newKeyNamed("adminKey"),
+                nodeCreate("testNode")
+                        .adminKey("adminKey")
+                        .gossipCaCertificate(gossipCertificates.getFirst().getEncoded())
+                        .withNoWebProxyEndpoint()
+                        .description("newNode"),
+                viewNode("testNode", node -> assertNull(node.grpcProxyEndpoint())),
+                nodeUpdate("testNode")
+                        .grpcProxyEndpoint(toPbj(GRPC_PROXY_ENDPOINT_FQDN))
+                        .description("updatedNode")
+                        .signedBy("adminKey", DEFAULT_PAYER)
+                        .hasKnownStatus(GRPC_WEB_PROXY_NOT_SUPPORTED));
+    }
+
+    @LeakyEmbeddedHapiTest(
+            reason = NEEDS_STATE_ACCESS,
+            overrides = {"nodes.webProxyEndpointsEnabled"})
     final Stream<DynamicTest> updateMultipleFieldsWork() throws CertificateEncodingException {
         final var proxyWebEndpoint = toPbj(endpointFor("127.0.0.3", 123));
         final var updateOp = nodeUpdate("testNode")
@@ -169,6 +207,7 @@ public class NodeUpdateTest {
                 .gossipCaCertificate(gossipCertificates.getLast().getEncoded())
                 .grpcCertificateHash("grpcCert".getBytes());
         return hapiTest(
+                overriding("nodes.webProxyEndpointsEnabled", "true"),
                 newKeyNamed("adminKey"),
                 newKeyNamed("adminKey2"),
                 nodeCreate("testNode")
@@ -213,7 +252,7 @@ public class NodeUpdateTest {
                 .adminKey("adminKey2")
                 .signedBy(DEFAULT_PAYER, "adminKey", "adminKey2")
                 .description("updated description")
-                .accountId(asEntityString(100))
+                .accountId("100")
                 .gossipEndpoint(List.of(
                         asServiceEndpoint("127.0.0.1:60"),
                         asServiceEndpoint("127.0.0.2:60"),
@@ -230,7 +269,7 @@ public class NodeUpdateTest {
                         .adminKey("adminKey")
                         .gossipCaCertificate(gossipCertificates.getFirst().getEncoded()),
                 updateOp,
-                viewNode("testNode", node -> {
+                withOpContext((spec, log) -> allRunFor(spec, viewNode("testNode", node -> {
                     assertEquals("updated description", node.description(), "Node description should be updated");
                     assertIterableEquals(
                             List.of(
@@ -256,8 +295,8 @@ public class NodeUpdateTest {
                             node.grpcCertificateHash(),
                             "Node grpcCertificateHash should be updated");
                     assertEquals(toPbj(updateOp.getAdminKey()), node.adminKey(), "Node adminKey should be updated");
-                    assertEquals(toPbj(asAccount(asEntityString(100))), node.accountId());
-                }),
+                    assertEquals(toPbj(asAccount(spec, 100)), node.accountId(), "Node accountId should be updated");
+                }))),
                 overriding("nodes.updateAccountIdAllowed", "false"));
     }
 
@@ -315,9 +354,10 @@ public class NodeUpdateTest {
                         .hasKnownStatus(GOSSIP_ENDPOINTS_EXCEEDED_LIMIT));
     }
 
-    @HapiTest
+    @LeakyHapiTest(overrides = {"nodes.webProxyEndpointsEnabled"})
     final Stream<DynamicTest> updateWithDefaultGrpcProxyFails() throws CertificateEncodingException {
         return hapiTest(
+                overriding("nodes.webProxyEndpointsEnabled", "true"),
                 newKeyNamed("adminKey"),
                 nodeCreate("testNode")
                         .adminKey("adminKey")

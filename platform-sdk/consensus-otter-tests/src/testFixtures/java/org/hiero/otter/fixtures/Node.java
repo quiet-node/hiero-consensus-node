@@ -4,6 +4,10 @@ package org.hiero.otter.fixtures;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
+import org.hiero.otter.fixtures.result.SingleNodeLogResult;
+import org.hiero.otter.fixtures.result.SingleNodePcesResult;
+import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
 
 /**
  * Interface representing a node in the network.
@@ -64,4 +68,36 @@ public interface Node {
      */
     @NonNull
     NodeId getSelfId();
+
+    /**
+     * Gets the consensus rounds of the node.
+     *
+     * @return the consensus rounds of the node
+     */
+    @NonNull
+    SingleNodeConsensusResult getConsensusResult();
+
+    /**
+     * Gets the log results of this node.
+     *
+     * @return the log results of this node
+     */
+    @NonNull
+    SingleNodeLogResult getLogResult();
+
+    /**
+     * Gets the status progression of the node.
+     *
+     * @return the status progression of the node
+     */
+    @NonNull
+    SingleNodeStatusProgression getStatusProgression();
+
+    /**
+     * Gets the results related to PCES files.
+     *
+     * @return the PCES files created by the node
+     */
+    @NonNull
+    SingleNodePcesResult getPcesResult();
 }

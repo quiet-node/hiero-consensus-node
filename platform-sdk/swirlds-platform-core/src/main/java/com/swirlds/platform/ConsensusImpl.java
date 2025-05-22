@@ -47,7 +47,7 @@ import org.hiero.base.crypto.Hash;
 import org.hiero.base.utility.CommonUtils;
 import org.hiero.consensus.config.EventConfig;
 import org.hiero.consensus.model.event.AncientMode;
-import org.hiero.consensus.model.event.EventConstants;
+import org.hiero.consensus.model.event.NonDeterministicGeneration;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusConstants;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
@@ -490,7 +490,7 @@ public class ConsensusImpl implements Consensus {
         rounds.setConsensusRelevantNGen(initJudges.getJudges().stream()
                 .map(EventImpl::getNGen)
                 .min(Long::compareTo)
-                .orElse(EventConstants.FIRST_GENERATION));
+                .orElse(NonDeterministicGeneration.FIRST_GENERATION));
         initJudges = null;
 
         return true;
@@ -762,7 +762,13 @@ public class ConsensusImpl implements Consensus {
         return new ConsensusRound(
                 roster,
                 consensusEvents,
-                new EventWindow(decidedRoundNumber, nonAncientThreshold, nonExpiredThreshold, ancientMode),
+                new EventWindow(
+                        decidedRoundNumber,
+                        // by default, we set the birth round for new events to the pending round
+                        decidedRoundNumber + 1,
+                        nonAncientThreshold,
+                        nonExpiredThreshold,
+                        ancientMode),
                 new ConsensusSnapshot(
                         decidedRoundNumber,
                         List.of(),
@@ -1323,10 +1329,5 @@ public class ConsensusImpl implements Consensus {
     @Override
     public long getFameDecidedBelow() {
         return rounds.getFameDecidedBelow();
-    }
-
-    @Override
-    public ConsensusRounds getRounds() {
-        return rounds;
     }
 }
