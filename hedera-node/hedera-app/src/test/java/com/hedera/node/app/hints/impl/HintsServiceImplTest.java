@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.hints.impl;
 
+import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.hedera.hapi.node.state.hints.HintsConstruction;
 import com.hedera.hapi.node.state.hints.HintsScheme;
@@ -67,6 +69,7 @@ class HintsServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        given(component.configSupplier()).willReturn(() -> DEFAULT_CONFIG);
         subject = new HintsServiceImpl(component, library);
     }
 
@@ -104,7 +107,8 @@ class HintsServiceImplTest {
 
         subject.reconcile(activeRosters, hintsStore, CONSENSUS_NOW, tssConfig, true);
 
-        verifyNoInteractions(component);
+        verify(component).configSupplier();
+        verifyNoMoreInteractions(component);
     }
 
     @Test

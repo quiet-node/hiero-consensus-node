@@ -2,6 +2,8 @@
 package com.hedera.node.app.workflows;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.CONSENSUS_SUBMIT_MESSAGE;
+import static com.hedera.hapi.node.base.HederaFunctionality.CRS_PUBLICATION;
+import static com.hedera.hapi.node.base.HederaFunctionality.HISTORY_PROOF_VOTE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INSUFFICIENT_TX_FEE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TRANSACTION_BODY;
@@ -19,7 +21,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_OVERSIZE;
 import static com.hedera.node.app.hapi.utils.CommonPbjConverters.fromPbj;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.ResponseCodeEnum;
@@ -74,6 +75,9 @@ public class TransactionChecker {
     private static final int USER_TRANSACTION_NONCE = 0;
     private static final List<HederaFunctionality> FUNCTIONALITIES_WITH_MAX_CUSTOM_FEES =
             List.of(CONSENSUS_SUBMIT_MESSAGE);
+    // These are inner transactions that are not jumbo but sometimes are bigger than 6kb.
+    private static final List<HederaFunctionality> NON_JUMBO_TRANSACTIONS_BIGGER_THAN_6_KB =
+            List.of(CRS_PUBLICATION, HISTORY_PROOF_VOTE);
 
     // Metric config for keeping track of the number of deprecated transactions received
     private static final String COUNTER_DEPRECATED_TXNS_NAME = "DeprTxnsRcv";
@@ -277,26 +281,24 @@ public class TransactionChecker {
      * modules themselves).</p>
      *
      * @param signedTx the {@link SignedTransaction} that needs to be checked
-     * @param serializedTx if set, the serialized transaction bytes to include in the {@link TransactionInfo}
+     * @param serializedSignedTx if set, the serialized transaction bytes to include in the {@link TransactionInfo}
      * @return an {@link TransactionInfo} with the parsed and checked entities
      * @throws PreCheckException if the data is not valid
      * @throws NullPointerException if one of the arguments is {@code null}
      */
     @NonNull
-    public TransactionInfo checkSigned(@NonNull final SignedTransaction signedTx, @Nullable Bytes serializedTx)
+    public TransactionInfo checkSigned(@NonNull final SignedTransaction signedTx, @NonNull Bytes serializedSignedTx)
             throws PreCheckException {
         final var tx = Transaction.newBuilder()
-                .bodyBytes(signedTx.bodyBytes())
-                .sigMap(signedTx.sigMap())
+                .signedTransactionBytes(serializedSignedTx)
                 .build();
-        return check(tx, tx.bodyBytes(), tx.sigMap(), serializedTx);
+        return check(tx, signedTx.bodyBytes(), signedTx.sigMap(), null);
     }
 
     public TransactionInfo checkParsed(@NonNull final TransactionInfo txInfo) throws PreCheckException {
         try {
             checkPrefixMismatch(txInfo.signatureMap().sigPair());
             checkTransactionBody(txInfo.txBody(), txInfo.functionality());
-            checkJumboTransactionBody(txInfo);
             return txInfo;
         } catch (PreCheckException e) {
             throw new DueDiligenceException(e.responseCode(), txInfo);
@@ -372,21 +374,14 @@ public class TransactionChecker {
         }
     }
 
-    @VisibleForTesting
-    void checkJumboTransactionBody(TransactionInfo txInfo) throws PreCheckException {
+    public void checkJumboTransactionBody(TransactionInfo txInfo) throws PreCheckException {
         final var jumboTxnEnabled = jumboTransactionsConfig.isEnabled();
         final var allowedJumboHederaFunctionalities = jumboTransactionsConfig.allowedHederaFunctionalities();
-        final var maxJumboEthereumCallDataSize = jumboTransactionsConfig.ethereumMaxCallDataSize();
 
         if (jumboTxnEnabled
-                && txInfo.serializedTransaction().length() > hederaConfig.transactionMaxBytes()
-                && !allowedJumboHederaFunctionalities.contains(fromPbj(txInfo.functionality()))) {
-            throw new PreCheckException(TRANSACTION_OVERSIZE);
-        }
-
-        if (txInfo.txBody() != null
-                && txInfo.txBody().hasEthereumTransaction()
-                && txInfo.txBody().ethereumTransaction().ethereumData().length() > maxJumboEthereumCallDataSize) {
+                && txInfo.transaction().protobufSize() > hederaConfig.transactionMaxBytes()
+                && !allowedJumboHederaFunctionalities.contains(fromPbj(txInfo.functionality()))
+                && !NON_JUMBO_TRANSACTIONS_BIGGER_THAN_6_KB.contains(txInfo.functionality())) {
             throw new PreCheckException(TRANSACTION_OVERSIZE);
         }
     }

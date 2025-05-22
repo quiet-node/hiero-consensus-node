@@ -182,7 +182,6 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
 
     @Override
     protected boolean submitOp(HapiSpec spec) throws Throwable {
-        fixNodeFor(spec);
         configureTlsFor(spec);
         int retryCount = 1;
         while (true) {
@@ -783,9 +782,13 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
         return self();
     }
 
-    public T setNode(String account) {
-        node = Optional.of(HapiPropertySource.asAccount(account));
+    public T setNode(String accountNum) {
+        node = Optional.of(accountNum);
+        return self();
+    }
 
+    public T setNode(long accountNum) {
+        node = Optional.of(Long.toString(accountNum));
         return self();
     }
 
@@ -886,7 +889,7 @@ public abstract class HapiTxnOp<T extends HapiTxnOp<T>> extends HapiSpecOperatio
         return self();
     }
 
-    public Optional<AccountID> getNode() {
+    public Optional<String> getNode() {
         return node;
     }
 }

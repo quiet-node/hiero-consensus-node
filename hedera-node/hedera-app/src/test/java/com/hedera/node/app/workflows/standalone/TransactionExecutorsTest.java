@@ -88,7 +88,6 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.EntityIdFactory;
@@ -117,8 +116,8 @@ import java.util.Spliterators;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 import org.apache.tuweni.bytes.Bytes32;
-import org.hiero.base.crypto.internal.CryptoUtils;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.AddressBook;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
@@ -386,7 +385,6 @@ public class TransactionExecutorsTest {
         final var configBuilder = HederaTestConfigBuilder.create();
         overrides.forEach(configBuilder::withValue);
         final var config = configBuilder.getOrCreateConfig();
-        final var networkInfo = fakeNetworkInfo();
         final var servicesRegistry = new FakeServicesRegistry();
         final var appContext = new AppContextImpl(
                 InstantSource.system(),
@@ -457,6 +455,17 @@ public class TransactionExecutorsTest {
                             .expirationSecond(Long.MAX_VALUE)
                             .tinybarBalance(
                                     (long) i == accountsConfig.treasury() ? ledgerConfig.totalTinyBarFloat() : 0L)
+                            .build());
+        }
+        for (final long num : List.of(800L, 801L)) {
+            final var accountId = AccountID.newBuilder().accountNum(num).build();
+            accounts.put(
+                    accountId,
+                    Account.newBuilder()
+                            .accountId(accountId)
+                            .key(systemKey)
+                            .expirationSecond(Long.MAX_VALUE)
+                            .tinybarBalance(0L)
                             .build());
         }
         ((CommittableWritableStates) writableStates).commit();
@@ -582,7 +591,7 @@ public class TransactionExecutorsTest {
 
     public static X509Certificate randomX509Certificate() {
         try {
-            final SecureRandom secureRandom = CryptoUtils.getDetRandom();
+            final SecureRandom secureRandom = SecureRandom.getInstance("SHA1PRNG", "SUN");
 
             final KeyPairGenerator rsaKeyGen = KeyPairGenerator.getInstance("RSA");
             rsaKeyGen.initialize(3072, secureRandom);

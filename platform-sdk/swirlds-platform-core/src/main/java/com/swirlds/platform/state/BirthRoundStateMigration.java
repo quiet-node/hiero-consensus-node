@@ -53,6 +53,15 @@ public final class BirthRoundStateMigration {
         final MerkleNodeState state = initialState.getState();
         final boolean isGenesis = platformStateFacade.isGenesisStateOf(state);
         if (isGenesis) {
+            if (ancientMode == AncientMode.BIRTH_ROUND_THRESHOLD) {
+                logger.info(
+                        STARTUP.getMarker(),
+                        "Starting from genesis with birth round ancient mode. Setting first version in birth round mode to {}.",
+                        appVersion);
+                platformStateFacade.bulkUpdateOf(state, v -> {
+                    v.setFirstVersionInBirthRoundMode(appVersion);
+                });
+            }
             // Genesis state, no action needed.
             logger.info(STARTUP.getMarker(), "Birth round state migration is not needed for genesis state.");
             return;
@@ -95,6 +104,7 @@ public final class BirthRoundStateMigration {
                 .round(consensusSnapshot.round())
                 .consensusTimestamp(consensusSnapshot.consensusTimestamp())
                 .judgeIds(consensusSnapshot.judgeIds())
+                .judgeHashes(consensusSnapshot.judgeHashes())
                 .nextConsensusNumber(consensusSnapshot.nextConsensusNumber())
                 .minimumJudgeInfoList(modifiedJudgeInfoList)
                 .build();
