@@ -31,7 +31,8 @@ public class QueueStateCodec implements Codec<QueueState> {
      */
     @NonNull
     @Override
-    public QueueState parse(@NonNull ReadableSequentialData input, boolean strictMode, int maxDepth)
+    public QueueState parse(
+            @NonNull ReadableSequentialData input, boolean strictMode, boolean parseUnknownFields, int maxDepth)
             throws ParseException {
         return new QueueState(input);
     }

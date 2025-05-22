@@ -328,7 +328,11 @@ public class DataFileCompactor {
         currentWriter.set(null);
         // Now include the file in future compactions
         currentReader.get().setFileCompleted();
-        logger.info(MERKLE_DB.getMarker(), "[{}] Compaction file written, fileNum={}", storeName, currentReader.get().getIndex());
+        logger.info(
+                MERKLE_DB.getMarker(),
+                "[{}] Compaction file written, fileNum={}",
+                storeName,
+                currentReader.get().getIndex());
         currentReader.set(null);
     }
 
