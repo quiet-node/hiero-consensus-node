@@ -22,10 +22,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -95,7 +96,7 @@ public class DataFileCompactor {
      * compaction on hold, which is critical as snapshots should be as fast as possible, while
      * compactions are just background processes.
      */
-    private final Semaphore snapshotCompactionLock = new Semaphore(1);
+    private final Lock snapshotCompactionLock = new ReentrantLock();
 
     /**
      * Start time of the current compaction, or null if compaction isn't running
@@ -191,13 +192,13 @@ public class DataFileCompactor {
                 .map(file -> file.getMetadata().getCreationDate())
                 .max(Instant::compareTo)
                 .orElseGet(Instant::now);
-        snapshotCompactionLock.acquire();
+        snapshotCompactionLock.lock();
         try {
             currentCompactionStartTime.set(startTime);
             newCompactedFiles.clear();
             startNewCompactionFile(targetCompactionLevel);
         } finally {
-            snapshotCompactionLock.release();
+            snapshotCompactionLock.unlock();
         }
 
         // We need a map to find readers by file index below. It doesn't have to be synchronized
@@ -236,7 +237,7 @@ public class DataFileCompactor {
                 // Take the lock. If a snapshot is started in a different thread, this call
                 // will block until the snapshot is done. The current file will be flushed,
                 // and current data file writer and reader will point to a new file
-                snapshotCompactionLock.acquire();
+                snapshotCompactionLock.lock();
                 try {
                     final DataFileWriter newFileWriter = currentWriter.get();
                     final BufferedData itemBytes = reader.readDataItem(fileOffset);
@@ -257,15 +258,14 @@ public class DataFileCompactor {
                     logger.error(EXCEPTION.getMarker(), "Failed to copy data item {} / {}", fileIndex, fileOffset, z);
                     throw z;
                 } finally {
-                    snapshotCompactionLock.release();
+                    snapshotCompactionLock.unlock();
                 }
             });
             allDataItemsProcessed = true;
         } finally {
-            final boolean threadInterrupted = Thread.interrupted();
             // Even if the thread is interrupted, make sure the new compacted file is properly closed
             // and is included to future compactions
-            snapshotCompactionLock.acquire();
+            snapshotCompactionLock.lock();
             try {
                 // Finish writing the last file. In rare cases, it may be an empty file
                 finishCurrentCompactionFile();
@@ -276,10 +276,7 @@ public class DataFileCompactor {
                     dataFileCollection.deleteFiles(filesToCompact);
                 }
             } finally {
-                snapshotCompactionLock.release();
-                if (threadInterrupted) {
-                    Thread.currentThread().interrupt();
-                }
+                snapshotCompactionLock.unlock();
             }
         }
 
@@ -354,7 +351,7 @@ public class DataFileCompactor {
      * @see #resumeCompaction()
      */
     public void pauseCompaction() throws IOException {
-        snapshotCompactionLock.acquireUninterruptibly();
+        snapshotCompactionLock.lock();
         // Check if compaction is currently in progress. If so, flush and close the current file, so
         // it's included to the snapshot
         final DataFileWriter compactionWriter = currentWriter.get();
@@ -390,7 +387,7 @@ public class DataFileCompactor {
                 startNewCompactionFile(compactionLevelInProgress.getAndSet(0));
             }
         } finally {
-            snapshotCompactionLock.release();
+            snapshotCompactionLock.unlock();
         }
     }
 

@@ -21,7 +21,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -75,7 +74,8 @@ class MerkleDbCompactionCoordinator {
         return compactionExecutor;
     }
 
-    private final AtomicBoolean compactionEnabled = new AtomicBoolean();
+    // Synchronized on this
+    private boolean compactionEnabled = false;
 
     // A map of compactor futures by task names
     final Map<String, Future<Boolean>> futuresByName = new ConcurrentHashMap<>(16);
@@ -104,8 +104,8 @@ class MerkleDbCompactionCoordinator {
     /**
      * Enables background compaction.
      */
-    void enableBackgroundCompaction() {
-        compactionEnabled.set(true);
+    synchronized void enableBackgroundCompaction() {
+        compactionEnabled = true;
     }
 
     /**
@@ -134,7 +134,9 @@ class MerkleDbCompactionCoordinator {
      * compacting methods will be ignored until {@link #enableBackgroundCompaction()} is called.
      */
     void stopAndDisableBackgroundCompaction() {
-        compactionEnabled.set(false);
+        synchronized (this) {
+            compactionEnabled = false;
+        }
         // Interrupt all running compaction tasks, if any
         for (final Future<Boolean> futureEntry : futuresByName.values()) {
             futureEntry.cancel(true);
@@ -163,12 +165,11 @@ class MerkleDbCompactionCoordinator {
      * @param key Compaction task name
      * @param compactor Compactor to run
      */
-    public void compactIfNotRunningYet(final String key, final DataFileCompactor compactor) {
-        if (!compactionEnabled.get()) {
+    public synchronized void compactIfNotRunningYet(final String key, final DataFileCompactor compactor) {
+        if (!compactionEnabled) {
             return;
         }
-        final Future<?> future = futuresByName.get(key);
-        if ((future != null) && !future.isDone()) {
+        if (isCompactionRunning(key)) {
             logger.debug(MERKLE_DB.getMarker(), "Compaction for {} is already in progress", key);
             return;
         }
@@ -190,8 +191,8 @@ class MerkleDbCompactionCoordinator {
         return (future != null) && !future.isDone();
     }
 
-    boolean isCompactionEnabled() {
-        return compactionEnabled.get();
+    synchronized boolean isCompactionEnabled() {
+        return compactionEnabled;
     }
 
     /**
