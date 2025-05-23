@@ -2,7 +2,10 @@
 package com.hedera.node.app.service.contract.impl.test.exec.metrics;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 
+import com.hedera.hapi.node.base.AccountID;
 import com.hedera.node.app.service.contract.impl.exec.metrics.TransactionDurationMetrics;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
@@ -30,7 +33,13 @@ class TransactionDurationMetricsTest {
     private HederaEvmTransaction transaction1;
 
     @Mock
+    private AccountID sender1;
+
+    @Mock
     private HederaEvmTransaction transaction2;
+
+    @Mock
+    private AccountID sender2;
 
     @BeforeEach
     void setUp() {
@@ -51,7 +60,7 @@ class TransactionDurationMetricsTest {
     void recordsAndRetrievesTransactionDuration() {
         // Given
         final long duration = 100L;
-
+        prepareTransactionMocks();
         // When
         subject.recordTransactionDuration(transaction1, duration);
 
@@ -63,7 +72,6 @@ class TransactionDurationMetricsTest {
     void returnsZeroForNonExistentTransaction() {
         // Given
         final HederaEvmTransaction nonExistentTransaction = transaction2;
-
         // When
         final long duration = subject.getDuration(nonExistentTransaction);
 
@@ -76,7 +84,7 @@ class TransactionDurationMetricsTest {
         // Given
         final long duration1 = 100L;
         final long duration2 = 200L;
-
+        prepareTransactionMocks();
         // When
         subject.recordTransactionDuration(transaction1, duration1);
         subject.recordTransactionDuration(transaction2, duration2);
@@ -91,12 +99,19 @@ class TransactionDurationMetricsTest {
         // Given
         final long initialDuration = 100L;
         final long updatedDuration = 200L;
-
+        prepareTransactionMocks();
         // When
         subject.recordTransactionDuration(transaction1, initialDuration);
         subject.recordTransactionDuration(transaction1, updatedDuration);
 
         // Then
         assertThat(subject.getDuration(transaction1)).isEqualTo(updatedDuration);
+    }
+
+    private void prepareTransactionMocks() {
+        given(transaction1.senderId()).willReturn(sender1);
+        given(transaction1.nonce()).willReturn(1L);
+        lenient().when(transaction2.senderId()).thenReturn(sender2);
+        lenient().when(transaction2.nonce()).thenReturn(2L);
     }
 }

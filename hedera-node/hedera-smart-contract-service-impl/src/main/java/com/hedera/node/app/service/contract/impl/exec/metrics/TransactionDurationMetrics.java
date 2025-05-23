@@ -60,7 +60,8 @@ public class TransactionDurationMetrics {
      * @return the duration in nanoseconds
      */
     public long getDuration(@NonNull final HederaEvmTransaction transaction) {
-        final var metric = txnDuration.get(transaction);
+        final var key = new TransactionMetricKey(transaction.senderId(), transaction.nonce());
+        final var metric = txnDuration.get(key);
         return metric != null ? metric.get() : 0;
     }
 }
