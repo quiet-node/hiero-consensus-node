@@ -7,6 +7,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.PublishStreamResponse;
@@ -60,7 +64,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         nodeConfig2 = new BlockNodeConfig("localhost", 8080, 2);
 
         // Create a mock of StreamObserver<Object> and cast it to StreamObserver<PublishStreamResponse>
-        genericMockStreamObserver = Mockito.mock(StreamObserver.class);
+        genericMockStreamObserver = mock(StreamObserver.class);
         when(mockGrpcServiceClient.bidi(any(), (StreamObserver<Object>) any())).thenReturn(genericMockStreamObserver);
 
         // Setup BlockStreamMetrics with mocks
@@ -71,8 +75,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
 
         // Setup BlockNodeConnectionManager
-        blockNodeConnectionManager = Mockito.spy(
-                new BlockNodeConnectionManager(configProvider, blockStreamStateManager, blockStreamMetrics));
+        blockNodeConnectionManager =
+                spy(new BlockNodeConnectionManager(configProvider, blockStreamStateManager, blockStreamMetrics));
 
         blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
 
@@ -107,6 +111,35 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         blockNodeConnectionManager.shutdown();
 
         assertEquals(subject.getConnectionState(), UNINITIALIZED);
+    }
+
+    @Test
+    void testHandleConnectionError() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertThat(blockStreamStateManager.getConnections().containsValue(subject))
+                .isTrue();
+        assertEquals(subject.getConnectionState(), ACTIVE);
+
+        final var initialDelay = Duration.ofSeconds(1);
+        blockNodeConnectionManager.handleConnectionError(subject, initialDelay);
+
+        verify(blockNodeConnectionManager).scheduleRetry(subject, initialDelay, null);
+        verify(blockNodeConnectionManager, times(2)).selectBlockNodeForStreaming();
+    }
+
+    @Test
+    void testUpdateLastVerifiedBlock() {
+        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
+
+        assertThat(blockStreamStateManager.getConnections().containsValue(subject))
+                .isTrue();
+        assertEquals(subject.getConnectionState(), ACTIVE);
+
+        blockNodeConnectionManager.updateLastVerifiedBlock(nodeConfig, 0L);
+
+        assertEquals(0L, blockNodeConnectionManager.getLastVerifiedBlock(nodeConfig));
+        assertThat(blockStreamStateManager.isAcked(0L)).isTrue();
     }
 
     @Test
