@@ -1,13 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.hedera.simulator;
 
-import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
-import com.hedera.hapi.block.protoc.PublishStreamRequest;
-import com.hedera.hapi.block.protoc.PublishStreamResponse;
-import com.hedera.hapi.block.protoc.PublishStreamResponse.Acknowledgement;
-import com.hedera.hapi.block.protoc.PublishStreamResponse.EndOfStream;
-import com.hedera.hapi.block.protoc.PublishStreamResponse.ResendBlock;
-import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.hapi.block.stream.protoc.BlockItem;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -27,6 +20,11 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
+import org.hiero.block.api.protoc.PublishStreamRequest;
+import org.hiero.block.api.protoc.PublishStreamResponse;
+import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream;
+import org.hiero.block.api.protoc.PublishStreamResponse.ResendBlock;
 
 /**
  * A simulated block node server that implements the block streaming gRPC service.
@@ -88,7 +86,7 @@ public class SimulatedBlockNodeServer {
      *
      * @param port the port to listen on
      */
-    public SimulatedBlockNodeServer(int port) {
+    public SimulatedBlockNodeServer(final int port) {
         this.port = port;
         this.serviceImpl = new MockBlockStreamServiceImpl();
         this.server = ServerBuilder.forPort(port).addService(serviceImpl).build();
@@ -112,7 +110,7 @@ public class SimulatedBlockNodeServer {
             try {
                 server.shutdown().awaitTermination(5, TimeUnit.SECONDS);
                 log.info("Simulated block node server on port {} stopped", port);
-            } catch (InterruptedException e) {
+            } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.error("Error stopping simulated block node server on port {}", port, e);
             }
@@ -135,7 +133,7 @@ public class SimulatedBlockNodeServer {
      * @param responseCode the response code to send
      * @param blockNumber the block number to include in the response
      */
-    public void setEndOfStreamResponse(PublishStreamResponseCode responseCode, long blockNumber) {
+    public void setEndOfStreamResponse(final EndOfStream.Code responseCode, final long blockNumber) {
         endOfStreamConfig.set(new EndOfStreamConfig(responseCode, blockNumber));
         log.info("Set EndOfStream response to {} for block {} on port {}", responseCode, blockNumber, port);
     }
@@ -148,7 +146,7 @@ public class SimulatedBlockNodeServer {
      * @param blockNumber the block number to include in the response
      * @return the last verified block number
      */
-    public long sendEndOfStreamImmediately(PublishStreamResponseCode responseCode, long blockNumber) {
+    public long sendEndOfStreamImmediately(final EndOfStream.Code responseCode, final long blockNumber) {
         serviceImpl.sendEndOfStreamToAllStreams(responseCode, blockNumber);
         log.info(
                 "Sent immediate EndOfStream response with code {} for block {} on port {}",
@@ -164,7 +162,7 @@ public class SimulatedBlockNodeServer {
      *
      * @param blockNumber the block number to skip
      */
-    public void sendSkipBlockImmediately(long blockNumber) {
+    public void sendSkipBlockImmediately(final long blockNumber) {
         serviceImpl.sendSkipBlockToAllStreams(blockNumber);
         log.info("Sent immediate SkipBlock response for block {} on port {}", blockNumber, port);
     }
@@ -175,7 +173,7 @@ public class SimulatedBlockNodeServer {
      *
      * @param blockNumber the block number to resend
      */
-    public void sendResendBlockImmediately(long blockNumber) {
+    public void sendResendBlockImmediately(final long blockNumber) {
         serviceImpl.sendResendBlockToAllStreams(blockNumber);
         log.info("Sent immediate ResendBlock response for block {} on port {}", blockNumber, port);
     }
@@ -195,7 +193,7 @@ public class SimulatedBlockNodeServer {
      * @param blockNumber the block number to check
      * @return true if the block has been fully received, false otherwise
      */
-    public boolean hasReceivedBlock(long blockNumber) {
+    public boolean hasReceivedBlock(final long blockNumber) {
         blockTrackingLock.readLock().lock();
         try {
             // A block is considered received only if we have its proof
@@ -228,35 +226,20 @@ public class SimulatedBlockNodeServer {
         log.info("Reset all responses to default behavior on port {}", port);
     }
 
-    /**
-     * Configuration for EndOfStream responses.
-     */
-    private static class EndOfStreamConfig {
-        private final PublishStreamResponseCode responseCode;
-        private final long blockNumber;
-
-        public EndOfStreamConfig(PublishStreamResponseCode responseCode, long blockNumber) {
-            this.responseCode = responseCode;
-            this.blockNumber = blockNumber;
-        }
-
-        public PublishStreamResponseCode getResponseCode() {
-            return responseCode;
-        }
-
-        public long getBlockNumber() {
-            return blockNumber;
-        }
+        /**
+         * Configuration for EndOfStream responses.
+         */
+        private record EndOfStreamConfig(EndOfStream.Code responseCode, long blockNumber) {
     }
 
     /**
      * Implementation of the BlockStreamService that can be configured to respond
      * with different response codes.
      */
-    private class MockBlockStreamServiceImpl extends BlockStreamServiceGrpc.BlockStreamServiceImplBase {
+    private class MockBlockStreamServiceImpl extends BlockStreamPublishServiceGrpc.BlockStreamPublishServiceImplBase {
         @Override
-        public StreamObserver<PublishStreamRequest> publishBlockStream(
-                StreamObserver<PublishStreamResponse> responseObserver) {
+        public StreamObserver<org.hiero.block.api.protoc.PublishStreamRequest> publishBlockStream(
+                final StreamObserver<org.hiero.block.api.protoc.PublishStreamResponse> responseObserver) {
             // Add the new stream observer to the list of active streams
             activeStreams.add(responseObserver);
             log.info(
@@ -268,10 +251,10 @@ public class SimulatedBlockNodeServer {
                 private Long currentBlockNumber = null; // Track block number for this specific stream
 
                 @Override
-                public void onNext(PublishStreamRequest request) {
+                public void onNext(final PublishStreamRequest request) {
                     final EndOfStreamConfig config = endOfStreamConfig.getAndSet(null);
                     if (config != null) {
-                        sendEndOfStream(responseObserver, config.getResponseCode(), config.getBlockNumber());
+                        sendEndOfStream(responseObserver, config.responseCode(), config.blockNumber());
                         return;
                     }
 
@@ -360,8 +343,8 @@ public class SimulatedBlockNodeServer {
                                             currentBlockNumber,
                                             streamingBlocks.get(blockNumber) != null
                                                     ? streamingBlocks
-                                                            .get(blockNumber)
-                                                            .hashCode()
+                                                    .get(blockNumber)
+                                                    .hashCode()
                                                     : "none");
                                     // Continue to the next BlockItem in the request
                                     continue;
@@ -403,7 +386,7 @@ public class SimulatedBlockNodeServer {
                 }
 
                 @Override
-                public void onError(Throwable t) {
+                public void onError(final Throwable t) {
                     log.error("Error in block stream on port {}: {}", port, t.getMessage(), t);
                     handleStreamError(responseObserver);
                 }
@@ -415,7 +398,7 @@ public class SimulatedBlockNodeServer {
                     removeStreamFromTracking(responseObserver);
                     try {
                         responseObserver.onCompleted();
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                         log.warn(
                                 "Exception calling onCompleted for stream {} on port {}: {}",
                                 responseObserver.hashCode(),
@@ -432,7 +415,7 @@ public class SimulatedBlockNodeServer {
          * @param responseCode the response code to send
          * @param blockNumber the block number to include
          */
-        public void sendEndOfStreamToAllStreams(PublishStreamResponseCode responseCode, long blockNumber) {
+        public void sendEndOfStreamToAllStreams(final EndOfStream.Code responseCode, final long blockNumber) {
             log.info(
                     "Sending EndOfStream ({}, block {}) to {} active streams on port {}",
                     responseCode,
@@ -441,14 +424,14 @@ public class SimulatedBlockNodeServer {
                     port);
             blockTrackingLock.writeLock().lock(); // Lock needed to safely iterate and modify activeStreams potentially
             try {
-                List<StreamObserver<PublishStreamResponse>> streamsToRemove = new ArrayList<>();
+                final List<StreamObserver<PublishStreamResponse>> streamsToRemove = new ArrayList<>();
                 for (final StreamObserver<PublishStreamResponse> observer : activeStreams) {
                     try {
                         sendEndOfStream(observer, responseCode, blockNumber);
                         // Assuming EndOfStream terminates the connection from server side perspective
                         observer.onCompleted();
                         streamsToRemove.add(observer); // Mark for removal after iteration
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                         log.error("Failed to send EndOfStream to stream {} on port {}", observer.hashCode(), port, e);
                         streamsToRemove.add(observer); // Remove problematic stream
                     }
@@ -465,7 +448,7 @@ public class SimulatedBlockNodeServer {
          *
          * @param blockNumber the block number to skip
          */
-        public void sendSkipBlockToAllStreams(long blockNumber) {
+        public void sendSkipBlockToAllStreams(final long blockNumber) {
             log.info(
                     "Sending SkipBlock for block {} to {} active streams on port {}",
                     blockNumber,
@@ -475,7 +458,7 @@ public class SimulatedBlockNodeServer {
             for (final StreamObserver<PublishStreamResponse> observer : activeStreams) {
                 try {
                     sendSkipBlock(observer, blockNumber);
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     log.error("Failed to send SkipBlock to stream {} on port {}", observer.hashCode(), port, e);
                     // Decide if we should remove the stream on failure
                     // removeStreamFromTracking(observer);
@@ -488,7 +471,7 @@ public class SimulatedBlockNodeServer {
          *
          * @param blockNumber the block number to resend
          */
-        public void sendResendBlockToAllStreams(long blockNumber) {
+        public void sendResendBlockToAllStreams(final long blockNumber) {
             log.info(
                     "Sending ResendBlock for block {} to {} active streams on port {}",
                     blockNumber,
@@ -498,7 +481,7 @@ public class SimulatedBlockNodeServer {
             for (final StreamObserver<PublishStreamResponse> observer : activeStreams) {
                 try {
                     sendResendBlock(observer, blockNumber);
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     log.error("Failed to send ResendBlock to stream {} on port {}", observer.hashCode(), port, e);
                     // Decide if we should remove the stream on failure
                     // removeStreamFromTracking(observer);
@@ -509,9 +492,9 @@ public class SimulatedBlockNodeServer {
         // Helper methods for sending specific responses
 
         private void sendEndOfStream(
-                StreamObserver<PublishStreamResponse> observer,
-                PublishStreamResponseCode responseCode,
-                long blockNumber) {
+                final StreamObserver<PublishStreamResponse> observer,
+                final EndOfStream.Code responseCode,
+                final long blockNumber) {
             final EndOfStream endOfStream = EndOfStream.newBuilder()
                     .setStatus(responseCode)
                     .setBlockNumber(lastVerifiedBlockNumber.get()) // Use current last verified
@@ -527,7 +510,7 @@ public class SimulatedBlockNodeServer {
                     port);
         }
 
-        private void sendSkipBlock(StreamObserver<PublishStreamResponse> observer, long blockNumber) {
+        private void sendSkipBlock(final StreamObserver<PublishStreamResponse> observer, final long blockNumber) {
             final PublishStreamResponse.SkipBlock skipBlock = PublishStreamResponse.SkipBlock.newBuilder()
                     .setBlockNumber(blockNumber)
                     .build();
@@ -537,7 +520,7 @@ public class SimulatedBlockNodeServer {
             log.debug("Sent SkipBlock for block {} to stream {} on port {}", blockNumber, observer.hashCode(), port);
         }
 
-        private void sendResendBlock(StreamObserver<PublishStreamResponse> observer, long blockNumber) {
+        private void sendResendBlock(final StreamObserver<PublishStreamResponse> observer, final long blockNumber) {
             final ResendBlock resendBlock =
                     ResendBlock.newBuilder().setBlockNumber(blockNumber).build();
             final PublishStreamResponse response = PublishStreamResponse.newBuilder()
@@ -553,7 +536,7 @@ public class SimulatedBlockNodeServer {
          *
          * @param observer The observer to remove.
          */
-        private void removeStreamFromTracking(StreamObserver<PublishStreamResponse> observer) {
+        private void removeStreamFromTracking(final StreamObserver<PublishStreamResponse> observer) {
             blockTrackingLock.writeLock().lock();
             try {
                 removeStreamFromTrackingInternal(observer);
@@ -567,7 +550,7 @@ public class SimulatedBlockNodeServer {
          *
          * @param observer The observer to remove.
          */
-        private void removeStreamFromTrackingInternal(StreamObserver<PublishStreamResponse> observer) {
+        private void removeStreamFromTrackingInternal(final StreamObserver<PublishStreamResponse> observer) {
             if (activeStreams.remove(observer)) {
                 log.info(
                         "Removed stream observer {} from active list on port {}. Remaining: {}",
@@ -578,7 +561,7 @@ public class SimulatedBlockNodeServer {
             // Check if this stream was actively sending a block and remove it from tracking
             streamingBlocks.entrySet().removeIf(entry -> {
                 if (entry.getValue() == observer) {
-                    long blockNumber = entry.getKey();
+                    final long blockNumber = entry.getKey();
                     log.warn(
                             "Stream {} disconnected while sending block {}. Removing from streaming state on port {}.",
                             observer.hashCode(),
@@ -597,12 +580,12 @@ public class SimulatedBlockNodeServer {
          *
          * @param erroredObserver The observer that encountered the error.
          */
-        private void handleStreamError(StreamObserver<PublishStreamResponse> erroredObserver) {
+        private void handleStreamError(final StreamObserver<PublishStreamResponse> erroredObserver) {
             Long blockNumberOnError = null;
             // Find if this observer was streaming a block
             blockTrackingLock.readLock().lock(); // Read lock sufficient to check streamingBlocks
             try {
-                Optional<Map.Entry<Long, StreamObserver<PublishStreamResponse>>> entry =
+                final Optional<Map.Entry<Long, StreamObserver<PublishStreamResponse>>> entry =
                         streamingBlocks.entrySet().stream()
                                 .filter(e -> e.getValue() == erroredObserver)
                                 .findFirst();
@@ -638,7 +621,7 @@ public class SimulatedBlockNodeServer {
                             port);
                     try {
                         sendResendBlock(chosenStream, blockNumberOnError);
-                    } catch (Exception e) {
+                    } catch (final Exception e) {
                         log.error(
                                 "Failed to send ResendBlock for block {} to stream {} on port {}.",
                                 blockNumberOnError,
@@ -667,15 +650,16 @@ public class SimulatedBlockNodeServer {
      * @param blockAlreadyExists Indicates if the block was already fully processed.
      */
     private void buildAndSendBlockAcknowledgement(
-            long blockNumber, StreamObserver<PublishStreamResponse> responseObserver, boolean blockAlreadyExists) {
+            final long blockNumber,
+            final StreamObserver<PublishStreamResponse> responseObserver,
+            final boolean blockAlreadyExists) {
         final PublishStreamResponse.BlockAcknowledgement ack = PublishStreamResponse.BlockAcknowledgement.newBuilder()
                 .setBlockNumber(blockNumber)
-                .setBlockNumber(lastVerifiedBlockNumber.get())
+                .setBlockNumber(lastVerifiedBlockNumber.get()) // TODO: why is the block number set twice? which is correct?
                 .setBlockAlreadyExists(blockAlreadyExists) // Set based on the parameter
                 .build();
         final PublishStreamResponse response = PublishStreamResponse.newBuilder()
-                .setAcknowledgement(
-                        Acknowledgement.newBuilder().setBlockAck(ack).build())
+                .setAcknowledgement(ack)
                 .build();
         try {
             responseObserver.onNext(response);

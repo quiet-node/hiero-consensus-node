@@ -7,9 +7,6 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
-import com.hedera.hapi.block.PublishStreamRequest;
-import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.protoc.BlockStreamServiceGrpc;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.ConnectionState;
 import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItem;
@@ -52,6 +49,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.PublishStreamRequest;
+import org.hiero.block.api.PublishStreamResponse;
+import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 
 /**
  * Manages connections to block nodes in a Hedera network, handling connection lifecycle, node selection,
@@ -113,7 +113,7 @@ public class BlockNodeConnectionManager {
         this.executorService = requireNonNull(executorService);
 
         final String endpoint =
-                BlockStreamServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
+                BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
         grpcEndpoint = requireNonNull(endpoint, "gRPC endpoint is missing");
 
         final Thread workerThread;
@@ -207,10 +207,10 @@ public class BlockNodeConnectionManager {
                 .build();
 
         return client.serviceClient(GrpcServiceDescriptor.builder()
-                .serviceName(BlockStreamServiceGrpc.SERVICE_NAME)
+                .serviceName(BlockStreamPublishServiceGrpc.SERVICE_NAME)
                 .putMethod(
                         grpcEndpoint,
-                        GrpcClientMethodDescriptor.bidirectional(BlockStreamServiceGrpc.SERVICE_NAME, grpcEndpoint)
+                        GrpcClientMethodDescriptor.bidirectional(BlockStreamPublishServiceGrpc.SERVICE_NAME, grpcEndpoint)
                                 .requestType(PublishStreamRequest.class)
                                 .responseType(PublishStreamResponse.class)
                                 .marshallerSupplier(new RequestResponseMarshaller.Supplier())

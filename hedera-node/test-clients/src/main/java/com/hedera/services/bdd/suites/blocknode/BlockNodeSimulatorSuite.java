@@ -14,7 +14,6 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlocks
 import static com.hedera.services.bdd.suites.regression.system.MixedOperations.burstOfTps;
 import static java.time.temporal.ChronoUnit.SECONDS;
 
-import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.services.bdd.HapiBlockNode;
 import com.hedera.services.bdd.HapiBlockNode.BlockNodeConfig;
 import com.hedera.services.bdd.HapiBlockNode.SubProcessNodeConfig;
@@ -27,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream.Code;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
@@ -43,10 +43,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0},
+                            blockNodePriorities = {0})
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
@@ -60,10 +60,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0},
+                            blockNodePriorities = {0})
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingBufferFull() {
@@ -75,28 +75,28 @@ public class BlockNodeSimulatorSuite {
     @HapiTest
     @HapiBlockNode(
             blockNodeConfigs = {
-                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR),
+                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
+                    @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
+                    @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR),
             },
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 1,
-                        blockNodeIds = {1},
-                        blockNodePriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 2,
-                        blockNodeIds = {2},
-                        blockNodePriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 3,
-                        blockNodeIds = {3},
-                        blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0},
+                            blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 1,
+                            blockNodeIds = {1},
+                            blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 2,
+                            blockNodeIds = {2},
+                            blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 3,
+                            blockNodeIds = {3},
+                            blockNodePriorities = {0}),
             })
     @Order(1)
     final Stream<DynamicTest> allNodesStreamingHappyPath() {
@@ -110,21 +110,21 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0},
+                            blockNodePriorities = {0})
             })
     @Order(2)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsCanStreamGenesisBlock() {
-        AtomicReference<Instant> time = new AtomicReference<>();
-        List<Integer> portNumbers = new ArrayList<>();
+        final AtomicReference<Instant> time = new AtomicReference<>();
+        final List<Integer> portNumbers = new ArrayList<>();
         return hapiTest(
                 doingContextual(spec -> portNumbers.add(spec.getBlockNodePortById(0))),
                 waitUntilNextBlocks(5).withBackgroundTraffic(true),
                 doingContextual(spec -> time.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_BEHIND)
+                        .sendEndOfStreamImmediately(Code.BEHIND)
                         .withBlockNumber(Long.MAX_VALUE),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
@@ -142,21 +142,21 @@ public class BlockNodeSimulatorSuite {
     @HapiBlockNode(
             networkSize = 1,
             blockNodeConfigs = {
-                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
-                @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR)
+                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
+                    @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
+                    @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR)
             },
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0, 1, 2, 3},
-                        blockNodePriorities = {0, 1, 2, 3})
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0, 1, 2, 3},
+                            blockNodePriorities = {0, 1, 2, 3})
             })
     @Order(3)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickle() {
-        AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
-        List<Integer> portNumbers = new ArrayList<>();
+        final AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
+        final List<Integer> portNumbers = new ArrayList<>();
         return hapiTest(
                 doingContextual(spec -> {
                     portNumbers.add(spec.getBlockNodePortById(0));
@@ -218,14 +218,14 @@ public class BlockNodeSimulatorSuite {
             networkSize = 2,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 1,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0},
+                            blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 1,
+                            blockNodeIds = {0},
+                            blockNodePriorities = {0})
             })
     @Order(4)
     final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {

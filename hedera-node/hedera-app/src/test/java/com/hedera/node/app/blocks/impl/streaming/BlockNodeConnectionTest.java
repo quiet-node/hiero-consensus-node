@@ -13,12 +13,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import com.hedera.hapi.block.PublishStreamRequest;
-import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
-import com.hedera.hapi.block.PublishStreamResponse.BlockAcknowledgement;
-import com.hedera.hapi.block.PublishStreamResponse.ResponseOneOfType;
-import com.hedera.hapi.block.PublishStreamResponseCode;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.BlockHeader;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnection.ConnectionState;
@@ -34,6 +28,11 @@ import java.lang.invoke.VarHandle;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Queue;
+import org.hiero.block.api.PublishStreamRequest;
+import org.hiero.block.api.PublishStreamResponse;
+import org.hiero.block.api.PublishStreamResponse.EndOfStream;
+import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
+import org.hiero.block.api.PublishStreamResponse.ResponseOneOfType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -131,23 +130,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     }
 
     @Test
-    void testOnNext_acknowledgement_missingBlockAck() {
-        final Acknowledgement acknowledgement = Acknowledgement.newBuilder()
-                .blockAck((BlockAcknowledgement) null) // ensure no ACK exists
-                .build();
-        final PublishStreamResponse response = PublishStreamResponse.newBuilder()
-                .acknowledgement(acknowledgement)
-                .build();
-
-        connection.onNext(response);
-
-        verify(metrics).incrementAcknowledgedBlockCount();
-        verifyNoInteractions(stateManager);
-        verifyNoInteractions(connectionManager);
-        verifyNoMoreInteractions(metrics);
-    }
-
-    @Test
     void testOnNext_acknowledgement_notStreaming() {
         final PublishStreamResponse response = createBlockAckResponse(10L, false);
         when(connectionManager.currentStreamingBlockNumber())
@@ -228,7 +210,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnNext_endOfStream_exceededMaxPermitted() {
         openConnectionAndResetMocks();
         final PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, 10L);
+                createEndOfStreamResponse(Code.BEHIND, 10L);
 
         // populate the end of stream timestamp queue with some data so the next call exceeds the max allowed
         // the queue assumes chronological ordering, so make sure the oldest are added first
@@ -244,7 +226,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
 
         assertThat(eosTimestamps).hasSize(6);
 
-        verify(metrics).incrementEndOfStreamCount(PublishStreamResponseCode.STREAM_ITEMS_BEHIND);
+        verify(metrics).incrementEndOfStreamCount(Code.BEHIND);
         verify(requestObserver).onCompleted();
         verify(connectionManager).jumpToBlockIfNeeded(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(eq(connection), any(Duration.class));
@@ -256,9 +238,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
 
     @ParameterizedTest
     @EnumSource(
-            value = PublishStreamResponseCode.class,
-            names = {"STREAM_ITEMS_INTERNAL_ERROR", "STREAM_ITEMS_PERSISTENCE_FAILED"})
-    void testOnNext_endOfStream_blockNodeInternalError(final PublishStreamResponseCode responseCode) {
+            value = EndOfStream.Code.class,
+            names = {"INTERNAL_ERROR", "PERSISTENCE_FAILED"})
+    void testOnNext_endOfStream_blockNodeInternalError(final EndOfStream.Code responseCode) {
         openConnectionAndResetMocks();
         final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
 
@@ -276,9 +258,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
 
     @ParameterizedTest
     @EnumSource(
-            value = PublishStreamResponseCode.class,
-            names = {"STREAM_ITEMS_TIMEOUT", "STREAM_ITEMS_OUT_OF_ORDER", "STREAM_ITEMS_BAD_STATE_PROOF"})
-    void testOnNext_endOfStream_clientFailures(final PublishStreamResponseCode responseCode) {
+            value = EndOfStream.Code.class,
+            names = {"TIMEOUT", "OUT_OF_ORDER", "BAD_STATE_PROOF"})
+    void testOnNext_endOfStream_clientFailures(final EndOfStream.Code responseCode) {
         openConnectionAndResetMocks();
         final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
 
@@ -299,11 +281,11 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         openConnectionAndResetMocks();
         // STREAM_ITEMS_SUCCESS is sent when the block node is gracefully shutting down
         final PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS, 10L);
+                createEndOfStreamResponse(Code.SUCCESS, 10L);
 
         connection.onNext(response);
 
-        verify(metrics).incrementEndOfStreamCount(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS);
+        verify(metrics).incrementEndOfStreamCount(Code.SUCCESS);
         verify(requestObserver).onCompleted();
         verify(connectionManager).jumpToBlockIfNeeded(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
@@ -317,12 +299,12 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnNext_endOfStream_blockNodeBehind_blockExists() {
         openConnectionAndResetMocks();
         final PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, 10L);
+                createEndOfStreamResponse(Code.BEHIND, 10L);
         when(stateManager.getBlockState(11L)).thenReturn(new BlockState(11L));
 
         connection.onNext(response);
 
-        verify(metrics).incrementEndOfStreamCount(PublishStreamResponseCode.STREAM_ITEMS_BEHIND);
+        verify(metrics).incrementEndOfStreamCount(Code.BEHIND);
         verify(requestObserver).onCompleted();
         verify(connectionManager).jumpToBlockIfNeeded(-1L);
         verify(connectionManager).scheduleRetry(connection, Duration.ofSeconds(1), 11L);
@@ -337,12 +319,12 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnNext_endOfStream_blockNodeBehind_blockDoesNotExist() {
         openConnectionAndResetMocks();
         final PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_BEHIND, 10L);
+                createEndOfStreamResponse(Code.BEHIND, 10L);
         when(stateManager.getBlockState(11L)).thenReturn(null);
 
         connection.onNext(response);
 
-        verify(metrics).incrementEndOfStreamCount(PublishStreamResponseCode.STREAM_ITEMS_BEHIND);
+        verify(metrics).incrementEndOfStreamCount(Code.BEHIND);
         verify(requestObserver).onCompleted();
         verify(connectionManager).jumpToBlockIfNeeded(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
@@ -357,11 +339,11 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnNext_endOfStream_itemsUnknown() {
         openConnectionAndResetMocks();
         final PublishStreamResponse response =
-                createEndOfStreamResponse(PublishStreamResponseCode.STREAM_ITEMS_UNKNOWN, 10L);
+                createEndOfStreamResponse(Code.UNKNOWN, 10L);
 
         connection.onNext(response);
 
-        verify(metrics).incrementEndOfStreamCount(PublishStreamResponseCode.STREAM_ITEMS_UNKNOWN);
+        verify(metrics).incrementEndOfStreamCount(Code.UNKNOWN);
         verify(requestObserver).onCompleted();
         verify(connectionManager).jumpToBlockIfNeeded(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));

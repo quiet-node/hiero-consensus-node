@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
-import com.hedera.hapi.block.BlockItemSet;
-import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.stream.BlockItem;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
@@ -12,6 +10,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.BlockItemSet;
+import org.hiero.block.api.PublishStreamRequest;
 
 /**
  * Represents the state of a block being streamed to block nodes. This class maintains the block items,
