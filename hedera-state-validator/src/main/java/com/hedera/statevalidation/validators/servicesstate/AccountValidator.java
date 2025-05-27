@@ -9,7 +9,6 @@ import com.hedera.node.app.service.token.impl.TokenServiceImpl;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
-import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -20,9 +19,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 
 @ExtendWith({StateResolver.class, ReportResolver.class, SlackReportGenerator.class})
 @Tag("account")
@@ -35,8 +33,7 @@ public class AccountValidator {
     // https://help.hedera.com/hc/en-us/articles/360000665518-What-is-the-total-supply-of-HBAR-
     final long TOTAL_tHBAR_SUPPLY = 5_000_000_000_000_000_000L;
 
-    @ParameterizedTest
-    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
+    @Test
     void validate(DeserializedSignedState deserializedState, Report report) throws IOException {
         final MerkleNodeState servicesState =
                 deserializedState.reservedSignedState().get().getState();

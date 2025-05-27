@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.statevalidation.validators.state;
-// todo hackathon
-// import com.github.difflib.DiffUtils;
-// import com.github.difflib.patch.Patch;
+
 import static com.hedera.statevalidation.parameterresolver.InitUtils.CONFIGURATION;
 import static com.swirlds.common.merkle.utility.MerkleUtils.rehashTree;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -12,7 +10,6 @@ import com.hedera.statevalidation.parameterresolver.HashInfo;
 import com.hedera.statevalidation.parameterresolver.HashInfoResolver;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
-import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.common.crypto.Hash;
@@ -23,9 +20,8 @@ import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 
 @ExtendWith({StateResolver.class, ReportResolver.class, SlackReportGenerator.class, HashInfoResolver.class})
 @Tag("rehash")
@@ -37,8 +33,7 @@ public class Rehash {
      */
     public static final int HASH_DEPTH = 5;
 
-    @ParameterizedTest
-    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
+    @Test
     void reHash(DeserializedSignedState deserializedSignedState, Report report) {
 
         MerkleCryptography merkleCryptography = MerkleCryptographyFactory.create(CONFIGURATION);
@@ -64,8 +59,7 @@ public class Rehash {
      * @param report                  The report object, propagated by the ReportResolver.
      * @param hashInfo                The hash info object, propagated by the HashInfoResolver.
      */
-    @ParameterizedTest
-    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
+    @Test
     void validateMerkleTree(DeserializedSignedState deserializedSignedState, Report report, HashInfo hashInfo) {
 
         var platformStateFacade = new PlatformStateFacade(ServicesSoftwareVersion::new);
@@ -77,13 +71,7 @@ public class Rehash {
         // skipping irrelevant lines
         final var revisedLines = filterLines(fullList);
 
-        // todo hackathon
-        // Compute the patch
-        // Patch<String> patch = DiffUtils.diff(originalLines, revisedLines);
-        // if (!patch.getDeltas().isEmpty()) {
-        //    log.error(patch);
-        //    fail("The diff is expected to be empty.");
-        // }
+        assertEquals(originalLines, revisedLines, "The Merkle tree structure does not match the expected state.");
     }
 
     private List<String> filterLines(List<String> lines) {

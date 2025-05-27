@@ -14,7 +14,6 @@ import com.hedera.node.app.service.token.impl.TokenServiceImpl;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
-import com.hedera.statevalidation.parameterresolver.VirtualMapAndDataSourceProvider;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.base.utility.Pair;
@@ -31,9 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ArgumentsSource;
 
 @ExtendWith({StateResolver.class, ReportResolver.class, SlackReportGenerator.class})
 @Tag("tokenRelations")
@@ -41,8 +39,7 @@ public class TokenRelationsIntegrity {
 
     private static final Logger log = LogManager.getLogger(TokenRelationsIntegrity.class);
 
-    @ParameterizedTest
-    @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
+    @Test
     void validate(DeserializedSignedState deserializedState, Report report) throws InterruptedException {
         final MerkleStateRoot servicesState =
                 (MerkleStateRoot) deserializedState.reservedSignedState().get().getState();
