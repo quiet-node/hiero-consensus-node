@@ -27,7 +27,7 @@ import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.VarHandle;
 import java.lang.reflect.Method;
 import java.time.Duration;
-import java.util.concurrent.BlockingQueue;
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,7 +39,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -53,7 +52,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         try {
             final Lookup lookup = MethodHandles.lookup();
             blockBufferHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
-                    .findVarHandle(BlockStreamStateManager.class, "blockBuffer", BlockingQueue.class);
+                    .findVarHandle(BlockStreamStateManager.class, "blockBuffer", Queue.class);
             execSvcHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
                     .findVarHandle(BlockStreamStateManager.class, "execSvc", ScheduledExecutorService.class);
             final Method checkBufferMethod = BlockStreamStateManager.class.getDeclaredMethod("checkBuffer");
@@ -300,67 +299,6 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     }
 
     @Test
-    void testSetBlockItemBatchSizeToZero() throws InterruptedException {
-        // given
-        configProvider = createConfigProvider(0L);
-        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-
-        // Setup BlockNodeConnectionManager
-        blockNodeConnectionManager = Mockito.spy(
-                new BlockNodeConnectionManager(configProvider, blockStreamStateManager, blockStreamMetrics));
-        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
-
-        blockStreamStateManager.setBlockNodeConnectionManager(
-                BlockStreamStateManagerTest.this.blockNodeConnectionManager);
-
-        blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
-        final var blockItem1 = newBlockHeaderItem();
-        final var blockItem2 = newBlockTxItem();
-
-        // when
-        blockStreamStateManager.addItem(TEST_BLOCK_NUMBER, blockItem1);
-        blockStreamStateManager.addItem(TEST_BLOCK_NUMBER, blockItem2);
-
-        // Block Stream Worker Thread should advance a bit
-        Thread.sleep(100);
-
-        // then
-        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER).requestsSize())
-                .isEqualTo(2);
-    }
-
-    @Test
-    void testSetBlockItemBatchSizeToOne() throws InterruptedException {
-        // given
-        configProvider = createConfigProvider(1L);
-        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-
-        // Setup BlockNodeConnectionManager
-        blockNodeConnectionManager = Mockito.spy(
-                new BlockNodeConnectionManager(configProvider, blockStreamStateManager, blockStreamMetrics));
-        blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
-
-        blockStreamStateManager.setBlockNodeConnectionManager(
-                BlockStreamStateManagerTest.this.blockNodeConnectionManager);
-
-        blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
-
-        final var blockItem1 = newBlockHeaderItem();
-        final var blockItem2 = newBlockTxItem();
-
-        // when
-        blockStreamStateManager.addItem(TEST_BLOCK_NUMBER, blockItem1);
-        blockStreamStateManager.addItem(TEST_BLOCK_NUMBER, blockItem2);
-
-        // Block Stream Worker Thread should advance a bit
-        Thread.sleep(100);
-
-        // then
-        assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER).requestsSize())
-                .isEqualTo(2);
-    }
-
-    @Test
     void testOpenExistingBlock() {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
         blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
@@ -393,7 +331,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
 
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
         blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
-        final BlockingQueue<?> buffer = (BlockingQueue<?>) blockBufferHandle.get(blockStreamStateManager);
+        final Queue<?> buffer = (Queue<?>) blockBufferHandle.get(blockStreamStateManager);
 
         // IdealMaxBufferSize = BlockTtl (5s) / BlockPeriod (1s) = 5
 
@@ -549,7 +487,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         // Add another block to trigger the prune, then verify the state... there should only be blocks 6 and 7 buffered
         blockStreamStateManager.openBlock(7L);
 
-        final BlockingQueue<?> buffer = (BlockingQueue<?>) blockBufferHandle.get(blockStreamStateManager);
+        final Queue<?> buffer = (Queue<?>) blockBufferHandle.get(blockStreamStateManager);
         assertThat(buffer).hasSize(2);
         assertThat(blockStreamStateManager.getBlockState(6L)).isNotNull();
         assertThat(blockStreamStateManager.getBlockState(7L)).isNotNull();
@@ -674,34 +612,5 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
 
         // Verify that blockNodeConnectionManager.openBlock was not called
         verify(blockNodeConnectionManager, never()).openBlock(TEST_BLOCK_NUMBER);
-    }
-
-    @Test
-    void createRequestFromCurrentItemsShouldNotNotifyConnectionsWhenStreamingToBlockNodesDisabled() {
-        // Configure streamToBlockNodes to return false
-        final var mockConfig = HederaTestConfigBuilder.create()
-                .withConfigDataType(BlockStreamConfig.class)
-                .withValue("blockStream.writerMode", BlockStreamWriterMode.FILE)
-                .withValue("blockStream.blockItemBatchSize", 3)
-                .getOrCreateConfig();
-        given(configProvider.getConfiguration()).willReturn(new VersionedConfigImpl(mockConfig, 1));
-
-        // Create a new instance
-        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
-
-        // Open a block and add items
-        blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
-        blockStreamStateManager.addItem(TEST_BLOCK_NUMBER, newBlockHeaderItem());
-        blockStreamStateManager.addItem(TEST_BLOCK_NUMBER, newBlockTxItem());
-
-        // Get the block state
-        final BlockState blockState = blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER);
-
-        // Call createRequestFromCurrentItems
-        // blockStreamStateManager.createRequestFromCurrentItems(blockState, true);
-
-        // Verify that blockNodeConnectionManager.notifyConnectionsOfNewRequest was not called
-        // verify(blockNodeConnectionManager, never()).notifyConnectionsOfNewRequest();
     }
 }

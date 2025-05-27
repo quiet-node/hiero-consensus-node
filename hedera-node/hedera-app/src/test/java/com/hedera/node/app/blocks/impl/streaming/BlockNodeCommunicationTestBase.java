@@ -3,6 +3,8 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.hedera.hapi.block.BlockItemSet;
+import com.hedera.hapi.block.PublishStreamRequest;
 import com.hedera.hapi.block.PublishStreamResponse;
 import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
 import com.hedera.hapi.block.PublishStreamResponse.BlockAcknowledgement;
@@ -26,42 +28,40 @@ import java.util.Objects;
  */
 public abstract class BlockNodeCommunicationTestBase {
 
-    protected static final long BATCH_SIZE = 5L;
+    protected static final int BATCH_SIZE = 5;
 
     @NonNull
-    protected static PublishStreamResponse createSkipBlock(long blockNumber) {
-        SkipBlock skipBlock = SkipBlock.newBuilder().blockNumber(blockNumber).build();
-
+    protected static PublishStreamResponse createSkipBlock(final long blockNumber) {
+        final SkipBlock skipBlock =
+                SkipBlock.newBuilder().blockNumber(blockNumber).build();
         return PublishStreamResponse.newBuilder().skipBlock(skipBlock).build();
     }
 
     @NonNull
-    protected static PublishStreamResponse createResendBlock(long blockNumber) {
-        ResendBlock resendBlock =
+    protected static PublishStreamResponse createResendBlock(final long blockNumber) {
+        final ResendBlock resendBlock =
                 ResendBlock.newBuilder().blockNumber(blockNumber).build();
-
         return PublishStreamResponse.newBuilder().resendBlock(resendBlock).build();
     }
 
     @NonNull
     protected static PublishStreamResponse createEndOfStreamResponse(
-            PublishStreamResponseCode responseCode, long lastVerifiedBlock) {
-        EndOfStream eos = EndOfStream.newBuilder()
+            final PublishStreamResponseCode responseCode, final long lastVerifiedBlock) {
+        final EndOfStream eos = EndOfStream.newBuilder()
                 .blockNumber(lastVerifiedBlock)
                 .status(responseCode)
                 .build();
-
         return PublishStreamResponse.newBuilder().endStream(eos).build();
     }
 
     @NonNull
-    protected static PublishStreamResponse createBlockAckResponse(long blockNumber, boolean alreadyExists) {
-        BlockAcknowledgement blockAck = BlockAcknowledgement.newBuilder()
+    protected static PublishStreamResponse createBlockAckResponse(final long blockNumber, final boolean alreadyExists) {
+        final BlockAcknowledgement blockAck = BlockAcknowledgement.newBuilder()
                 .blockNumber(blockNumber)
                 .blockAlreadyExists(alreadyExists)
                 .build();
 
-        Acknowledgement acknowledgement =
+        final Acknowledgement acknowledgement =
                 Acknowledgement.newBuilder().blockAck(blockAck).build();
 
         return PublishStreamResponse.newBuilder()
@@ -69,7 +69,13 @@ public abstract class BlockNodeCommunicationTestBase {
                 .build();
     }
 
-    protected ConfigProvider createConfigProvider(long batchSize) {
+    @NonNull
+    protected static PublishStreamRequest createRequest(final BlockItem... items) {
+        final BlockItemSet itemSet = BlockItemSet.newBuilder().blockItems(items).build();
+        return PublishStreamRequest.newBuilder().blockItems(itemSet).build();
+    }
+
+    protected ConfigProvider createConfigProvider() {
         final var configPath = Objects.requireNonNull(
                         BlockNodeCommunicationTestBase.class.getClassLoader().getResource("bootstrap/"))
                 .getPath();
@@ -78,7 +84,7 @@ public abstract class BlockNodeCommunicationTestBase {
         final var config = HederaTestConfigBuilder.create()
                 .withValue("blockStream.writerMode", "FILE_AND_GRPC")
                 .withValue("blockNode.blockNodeConnectionFileDir", configPath)
-                .withValue("blockStream.blockItemBatchSize", batchSize)
+                .withValue("blockStream.blockItemBatchSize", BATCH_SIZE)
                 .getOrCreateConfig();
         return () -> new VersionedConfigImpl(config, 1L);
     }
