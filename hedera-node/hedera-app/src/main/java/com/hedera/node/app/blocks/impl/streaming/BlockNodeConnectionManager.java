@@ -64,33 +64,93 @@ import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
  * </ul>
  */
 public class BlockNodeConnectionManager {
+
+    private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
+
     /**
      * Initial retry delay for connection attempts.
      */
     public static final Duration INITIAL_RETRY_DELAY = Duration.ofSeconds(1);
-
+    /**
+     * The amount of time the worker thread will sleep when there is no work available to process.
+     */
     private static final int PROCESSOR_LOOP_DELAY_MS = 10;
-    private static final Logger logger = LogManager.getLogger(BlockNodeConnectionManager.class);
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
-    // Maximum retry delay to prevent excessively long waits
+    /**
+     * The maximum delay used for reties.
+     */
     private static final Duration MAX_RETRY_DELAY = Duration.ofSeconds(10);
-
+    /**
+     * The gRPC endpoint used to establish communication between the consensus node and block node.
+     */
     private final String grpcEndpoint;
+    /**
+     * Tracks what the last verified block for each connection is. Note: The data maintained here is based on what the
+     * block node has informed the consensus node of. If a block node is not actively connected, then this data may be
+     * incorrect from the perspective of the block node. It is only when the block node informs the consensus node of
+     * its status, then the data will be accurate.
+     */
     private final Map<BlockNodeConfig, Long> lastVerifiedBlockPerConnection;
-
+    /**
+     * Manager that maintains the block stream on this consensus node.
+     */
     private final BlockStreamStateManager blockStreamStateManager;
+    /**
+     * Scheduled executor service that is used to scheduled asynchronous tasks such as reconnecting to block nodes.
+     */
     private final ScheduledExecutorService executorService;
+    /**
+     * Metrics API for block stream-specific metrics.
+     */
     private final BlockStreamMetrics blockStreamMetrics;
+    /**
+     * Mechanism to retrieve configuration properties related to block-node communication.
+     */
     private final ConfigProvider configProvider;
-    private final List<BlockNodeConfig> availableNodes;
+    /**
+     * List of available block nodes this consensus node can connect to, or at least attempt to. This list is read upon
+     * startup from the configuration file(s) on disk.
+     */
+    private final List<BlockNodeConfig> availableBlockNodes;
+    /**
+     * Flag that indicates if this connection manager is active or not. In this case, being active means it is actively
+     * processing blocks and attempting to send them to a block node.
+     */
     private final AtomicBoolean isConnectionManagerActive = new AtomicBoolean(false);
+    /**
+     * In certain cases, there will be times when we need to jump to a specific block to stream to a block node (e.g.
+     * after receiving a SkipBlock or ResendBlock response). When one of these cases arises, this will be updated to
+     * indicate which block to jump to upon the next iteration of the worker loop. A value of -1 indicates no jumping
+     * is requested.
+     */
     private final AtomicLong jumpTargetBlock = new AtomicLong(-1);
+    /**
+     * This tracks which block is actively being streamed to a block node from this consensus node. A value of -1
+     * indicates that no streaming is currently in progress.
+     */
     private final AtomicLong streamingBlockNumber = new AtomicLong(-1);
+    /**
+     * This connection streams requests (maintained by {@link BlockState}) in an orderly fashion. This value represents
+     * the index of the request that is being sent to the block node (or was last sent).
+     */
     private int requestIndex = 0;
+    /**
+     * Reference to the worker thread that handles creating requests and sending requests to the connected block node.
+     */
     private final AtomicReference<Thread> blockStreamWorkerThreadRef;
-
+    /**
+     * Map that contains one or more connections to block nodes. The connections in this map will be a subset (or all)
+     * of the available block node connections. (see {@link BlockNodeConnectionManager#availableBlockNodes})
+     */
     private final Map<BlockNodeConfig, BlockNodeConnection> connections = new ConcurrentHashMap<>();
+    /**
+     * Reference to the currently active connection. If this reference is null, then there is no active connection.
+     */
     private final AtomicReference<BlockNodeConnection> activeConnectionRef = new AtomicReference<>();
+    /**
+     * Flag that indicates if streaming to block nodes is enabled. This flag is set once upon startup and cannot change.
+     */
+    private final AtomicBoolean isStreamingEnabled = new AtomicBoolean(false);
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -115,18 +175,20 @@ public class BlockNodeConnectionManager {
                 BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
         grpcEndpoint = requireNonNull(endpoint, "gRPC endpoint is missing");
 
+        isStreamingEnabled.set(isStreamingEnabled());
         final Thread workerThread;
 
-        if (isStreamingEnabled()) {
+        if (isStreamingEnabled.get()) {
             final String blockNodeConnectionConfigPath = blockNodeConnectionFileDir();
 
-            availableNodes = new ArrayList<>(extractBlockNodesConfigurations(blockNodeConnectionConfigPath));
+            availableBlockNodes = new ArrayList<>(extractBlockNodesConfigurations(blockNodeConnectionConfigPath));
             logger.info("Loaded block node configuration from {}", blockNodeConnectionConfigPath);
-            logger.info("Block node configuration: {}", availableNodes);
+            logger.info("Block node configuration: {}", availableBlockNodes);
 
             workerThread = Thread.ofPlatform().name("BlockStreamWorkerLoop").start(this::blockStreamWorkerLoop);
         } else {
-            availableNodes = new ArrayList<>();
+            logger.info("Block node streaming is disabled; will not setup connections to block nodes");
+            availableBlockNodes = new ArrayList<>();
             // Create a dummy thread that does nothing to avoid null checks later
             workerThread = Thread.ofPlatform().name("BlockStreamWorkerLoop").start(() -> {});
         }
@@ -227,6 +289,10 @@ public class BlockNodeConnectionManager {
      */
     public void rescheduleAndSelectNewNode(
             @NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        
         requireNonNull(connection);
         requireNonNull(initialDelay);
 
@@ -250,6 +316,10 @@ public class BlockNodeConnectionManager {
             @NonNull final BlockNodeConnection connection,
             @NonNull final Duration initialDelay,
             @Nullable final Long blockNumber) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        
         requireNonNull(connection);
         requireNonNull(initialDelay);
         final long delayMillis = Math.max(0, initialDelay.toMillis());
@@ -277,6 +347,10 @@ public class BlockNodeConnectionManager {
      * Gracefully shuts down the connection manager, closing active connection.
      */
     public void shutdown() {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        
         logger.info("Shutting down connection manager!");
         // Stop the block stream worker loop thread
         isConnectionManagerActive.set(false);
@@ -312,6 +386,10 @@ public class BlockNodeConnectionManager {
      * block.
      */
     public void start() {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        
         if (!isConnectionManagerActive.compareAndSet(false, true)) {
             throw new IllegalStateException("Connection manager already started");
         }
@@ -328,6 +406,10 @@ public class BlockNodeConnectionManager {
     // Note: This is made public for future use when the block buffer is partially saturated, until then only tests call
     // it
     public boolean selectNewBlockNodeForStreaming() {
+        if (!isStreamingEnabled.get()) {
+            return false;
+        }
+        
         final BlockNodeConfig selectedNode = getNextPriorityBlockNode();
 
         if (selectedNode == null) {
@@ -351,7 +433,7 @@ public class BlockNodeConnectionManager {
     private @Nullable BlockNodeConfig getNextPriorityBlockNode() {
         logger.debug("Searching for new block node connection based on node priorities...");
 
-        final SortedMap<Integer, List<BlockNodeConfig>> priorityGroups = availableNodes.stream()
+        final SortedMap<Integer, List<BlockNodeConfig>> priorityGroups = availableBlockNodes.stream()
                 .collect(Collectors.groupingBy(BlockNodeConfig::priority, TreeMap::new, Collectors.toList()));
 
         BlockNodeConfig selectedNode = null;
@@ -429,6 +511,10 @@ public class BlockNodeConnectionManager {
      * @param blockNumber the block number to open
      */
     public void openBlock(final long blockNumber) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        
         final BlockNodeConnection activeConnection = activeConnectionRef.get();
         if (activeConnection == null) {
             logger.warn("No active connections available for streaming block {}", blockNumber);
@@ -447,11 +533,14 @@ public class BlockNodeConnectionManager {
      * @param blockNumber the block number of the last verified block
      */
     public void updateLastVerifiedBlock(@NonNull final BlockNodeConfig blockNodeConfig, final long blockNumber) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        
         requireNonNull(blockNodeConfig);
 
-        lastVerifiedBlockPerConnection.compute(blockNodeConfig, (cfg, lastVerifiedBlockNumber) -> {
-            return lastVerifiedBlockNumber == null ? blockNumber : Math.max(lastVerifiedBlockNumber, blockNumber);
-        });
+        lastVerifiedBlockPerConnection.compute(blockNodeConfig, (cfg, lastVerifiedBlockNumber) ->
+                lastVerifiedBlockNumber == null ? blockNumber : Math.max(lastVerifiedBlockNumber, blockNumber));
         blockStreamStateManager.setLatestAcknowledgedBlock(blockNumber);
     }
 
@@ -618,8 +707,12 @@ public class BlockNodeConnectionManager {
      *
      * @param blockNumberToJumpTo the block number to jump to
      */
-    public void jumpToBlockIfNeeded(final long blockNumberToJumpTo) {
-        logger.debug("Jumping to block {}", blockNumberToJumpTo);
+    public void jumpToBlock(final long blockNumberToJumpTo) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        
+        logger.debug("Marking request to jump to block {}", blockNumberToJumpTo);
         jumpTargetBlock.set(blockNumberToJumpTo);
     }
 
@@ -631,7 +724,6 @@ public class BlockNodeConnectionManager {
     class BlockNodeConnectionTask implements Runnable {
         private final BlockNodeConnection connection;
         private Duration currentBackoffDelay; // Represents the delay *before* the next attempt
-
         private final Long blockNumber; // If becoming ACTIVE, the blockNumber to jump to
 
         BlockNodeConnectionTask(
@@ -651,6 +743,10 @@ public class BlockNodeConnectionManager {
          */
         @Override
         public void run() {
+            if (!isStreamingEnabled.get()) {
+                return;
+            }
+            
             if (!isConnectionManagerActive.get()) {
                 logger.info("Connection task will not run because the connection manager has shutdown");
                 return;

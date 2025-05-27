@@ -41,25 +41,56 @@ import org.hiero.block.api.PublishStreamResponse.SkipBlock;
  * uses exponential backoff for retries when errors occur.
  */
 public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
+
+    private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
+
     /**
      * A longer retry delay for when the connection encounters an error.
      */
     public static final Duration LONGER_RETRY_DELAY = Duration.ofSeconds(30);
-
-    private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
-
+    /**
+     * The configuration specific to the block node this connection is for.
+     */
     private final BlockNodeConfig blockNodeConfig;
+    /**
+     * The gRPC client to use for creating bi-directional streams between the consensus node and block node.
+     */
     private final GrpcServiceClient grpcServiceClient;
+    /**
+     * The "parent" connection manager that manages the lifecycle of this connection.
+     */
     private final BlockNodeConnectionManager blockNodeConnectionManager;
+    /**
+     * Manager that maintains the system-wide state as it pertains to block streaming. Access here is used to retrieve
+     * blocks for streaming and indicating which blocks have been acknowledged by the block node.
+     */
     private final BlockStreamStateManager blockStreamStateManager;
+    /**
+     * Metrics API for block stream-specific metrics.
+     */
     private final BlockStreamMetrics blockStreamMetrics;
-
-    // The EndOfStream rate limit allowed in a time frame
-    private final Integer maxEndOfStreamsAllowed;
+    /**
+     * Configuration property: the maximum number of EndOfStream responses permitted on this connection before taking
+     * corrective action (e.g. reconnecting).
+     */
+    private final int maxEndOfStreamsAllowed;
+    /**
+     * Configuration property: the time window in which a certain number of EndOfStream responses is permitted before
+     * corrective action is taken. This works alongside {@link BlockNodeConnection#maxEndOfStreamsAllowed}.
+     */
     private final Duration endOfStreamTimeFrame;
+    /**
+     * If corrective action needs to be taken (e.g. reconnect) because of too many EndOfStream responses in the
+     * permitted time frame, then this duration is used as the delay for acting upon that corrective action. For example,
+     * if a reconnect is needed and the delay is configured to five seconds, then the reconnect will be scheduled in
+     * five seconds.
+     */
     private final Duration endOfStreamScheduleDelay;
+    /**
+     * Queue for tracking the instances of EndOfStream responses received from the block node for this connection. This
+     * queue will be periodically pruned.
+     */
     private final Queue<Instant> endOfStreamTimestamps = new ConcurrentLinkedQueue<>();
-
     /**
      * Flag that indicates if this stream is currently shutting down, as initiated by this consensus node.
      */
@@ -68,8 +99,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * Stream observer used to send messages to the block node.
      */
     private StreamObserver<PublishStreamRequest> blockNodeStreamObserver;
-
+    /**
+     * Reference to the current state of this connection.
+     */
     private final AtomicReference<ConnectionState> connectionState;
+    /**
+     * The gRPC endpoint used to establish bi-directional communication between the consensus node and block node.
+     */
     private final String grpcEndpoint;
 
     /**
@@ -225,11 +261,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         logger.debug("[{}] Received EndOfStream response (block={}, responseCode={})", this, blockNumber, responseCode);
 
         // Always end the stream when we receive an end of stream message
-        try {
-            close();
-        } catch (final RuntimeException e) {
-            logger.warn("[{}] Error occurred while attempting to close connection", this);
-        }
+        close();
 
         // Include this new EoS response in our set that tracks the occurrences of EoS responses
         endOfStreamTimestamps.add(Instant.now());
@@ -395,23 +427,27 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request);
-        if (isActive() && blockNodeStreamObserver != null) {
+        if (connectionState.get() == ConnectionState.ACTIVE && blockNodeStreamObserver != null) {
             blockNodeStreamObserver.onNext(request);
         }
     }
 
     /**
-     * Idempotent operation that closes this connection (if active)
-     * and releases associated resources.
+     * Idempotent operation that closes this connection (if active) and releases associated resources. If there is a
+     * failure in closing the connection, the error will be logged and not propagated back to the caller.
      */
     public void close() {
-        logger.debug("[{}] Closing connection...", this);
+        try {
+            logger.debug("[{}] Closing connection...", this);
 
-        updateConnectionState(ConnectionState.UNINITIALIZED);
-        closeObserver();
-        jumpToBlock(-1L);
+            updateConnectionState(ConnectionState.UNINITIALIZED);
+            closeObserver();
+            jumpToBlock(-1L);
 
-        logger.debug("[{}] Connection successfully closed", this);
+            logger.debug("[{}] Connection successfully closed", this);
+        } catch (final RuntimeException e) {
+            logger.warn("[{}] Error occurred while attempting to close connection", this);
+        }
     }
 
     private void closeObserver() {
@@ -427,15 +463,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             }
             blockNodeStreamObserver = null;
         }
-    }
-
-    /**
-     * Returns whether the connection is active.
-     *
-     * @return true if the connection is active, false otherwise
-     */
-    private boolean isActive() {
-        return connectionState.get() == ConnectionState.ACTIVE;
     }
 
     /**
@@ -469,7 +496,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     private void jumpToBlock(final long blockNumber) {
         logger.debug("[{}] Jumping to block {}", this, blockNumber);
         // Set the target block for the worker loop to pick up
-        blockNodeConnectionManager.jumpToBlockIfNeeded(blockNumber);
+        blockNodeConnectionManager.jumpToBlock(blockNumber);
     }
 
     /**

@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
@@ -70,6 +71,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
     private static final VarHandle streamingBlockNumberHandle;
     private static final VarHandle lastVerifiedBlockPerConnectionHandle;
     private static final VarHandle connectivityTaskConnectionHandle;
+    private static final VarHandle isStreamingEnabledHandle;
     private static final MethodHandle jumpToBlockIfNeededHandle;
     private static final MethodHandle processBlockStreamQueueHandle;
     private static final MethodHandle processStreamingToBlockNodeHandle;
@@ -86,7 +88,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
             connectionsHandle = MethodHandles.privateLookupIn(BlockNodeConnectionManager.class, lookup)
                     .findVarHandle(BlockNodeConnectionManager.class, "connections", Map.class);
             availableNodesHandle = MethodHandles.privateLookupIn(BlockNodeConnectionManager.class, lookup)
-                    .findVarHandle(BlockNodeConnectionManager.class, "availableNodes", List.class);
+                    .findVarHandle(BlockNodeConnectionManager.class, "availableBlockNodes", List.class);
             activeConnectionRefHandle = MethodHandles.privateLookupIn(BlockNodeConnectionManager.class, lookup)
                     .findVarHandle(BlockNodeConnectionManager.class, "activeConnectionRef", AtomicReference.class);
             jumpTargetHandle = MethodHandles.privateLookupIn(BlockNodeConnectionManager.class, lookup)
@@ -98,6 +100,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
                     .findVarHandle(BlockNodeConnectionManager.class, "lastVerifiedBlockPerConnection", Map.class);
             connectivityTaskConnectionHandle = MethodHandles.privateLookupIn(BlockNodeConnectionTask.class, lookup)
                     .findVarHandle(BlockNodeConnectionTask.class, "connection", BlockNodeConnection.class);
+            isStreamingEnabledHandle = MethodHandles.privateLookupIn(BlockNodeConnectionManager.class, lookup)
+                    .findVarHandle(BlockNodeConnectionManager.class, "isStreamingEnabled", AtomicBoolean.class);
 
             final Method jumpToBlockIfNeeded =
                     BlockNodeConnectionManager.class.getDeclaredMethod("jumpToBlockIfNeeded");
@@ -631,7 +635,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final AtomicLong jumpTarget = jumpTarget();
         jumpTarget.set(-1);
 
-        connectionManager.jumpToBlockIfNeeded(16);
+        connectionManager.jumpToBlock(16);
 
         assertThat(jumpTarget).hasValue(16L);
 
@@ -1269,9 +1273,9 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         assertThat(errorRef).hasNullValue();
         assertThat(currentStreamingBlock).hasValue(11L);
 
-        verify(stateManager, times(2)).getBlockState(10L);
-        verify(stateManager, times(2)).getBlockNumber();
-        verify(stateManager, times(2)).getBlockStreamItemQueue();
+        verify(stateManager, atLeast(2)).getBlockState(10L);
+        verify(stateManager, atLeast(2)).getBlockNumber();
+        verify(stateManager, atLeast(2)).getBlockStreamItemQueue();
         verify(connection).sendRequest(req1);
         verify(connection).sendRequest(req2);
 
@@ -1328,15 +1332,135 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         assertThat(errorRef).hasNullValue();
         assertThat(currentStreamingBlock).hasValue(11L);
 
-        verify(stateManager, times(2)).getBlockState(10L);
-        verify(stateManager, times(2)).getBlockNumber();
+        verify(stateManager, atLeast(2)).getBlockState(10L);
+        verify(stateManager, atLeast(2)).getBlockNumber();
         // the queue will be accessed 3 times, the first time failing and then two more "normal" times
-        verify(stateManager, times(3)).getBlockStreamItemQueue();
+        verify(stateManager, atLeast(3)).getBlockStreamItemQueue();
         verify(connection).sendRequest(req1);
         verify(connection).sendRequest(req2);
 
         verifyNoMoreInteractions(connection);
         verifyNoMoreInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testScheduleAndSelectNewNode_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+        final BlockNodeConnection connection = mock(BlockNodeConnection.class);
+
+        connectionManager.rescheduleAndSelectNewNode(connection, Duration.ZERO);
+
+        verifyNoInteractions(connection);
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testScheduleRetry_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+        final BlockNodeConnection connection = mock(BlockNodeConnection.class);
+
+        connectionManager.scheduleRetry(connection, Duration.ZERO, 10L);
+
+        verifyNoInteractions(connection);
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testShutdown_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+
+        connectionManager.shutdown();
+
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testStartup_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        final AtomicBoolean isManagerActive = isActiveFlag();
+        isStreamingEnabled.set(false);
+        isManagerActive.set(false);
+
+        connectionManager.start();
+
+        assertThat(isManagerActive).isFalse();
+
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testSelectNewBlockNodeForStreaming_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+
+        connectionManager.selectNewBlockNodeForStreaming();
+
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testOpenBlock_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+
+        connectionManager.openBlock(10L);
+
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testUpdateLastVerifiedBlock_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+
+        connectionManager.updateLastVerifiedBlock(mock(BlockNodeConfig.class), 1L);
+
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testJumpToBlock_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+
+        connectionManager.jumpToBlock(100L);
+
+        assertThat(jumpTarget()).hasValue(-1L);
+
+        verifyNoInteractions(stateManager);
+        verifyNoInteractions(executorService);
+        verifyNoInteractions(metrics);
+    }
+
+    @Test
+    void testConnectionTask_run_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        isStreamingEnabled.set(false);
+        final BlockNodeConnection connection = mock(BlockNodeConnection.class);
+
+        connectionManager.new BlockNodeConnectionTask(connection, Duration.ZERO, 100L);
+
+        verifyNoInteractions(connection);
+        verifyNoInteractions(stateManager);
         verifyNoInteractions(executorService);
         verifyNoInteractions(metrics);
     }
@@ -1378,6 +1502,10 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
     private BlockNodeConnection connectionFromTask(@NonNull final BlockNodeConnectionTask task) {
         requireNonNull(task);
         return (BlockNodeConnection) connectivityTaskConnectionHandle.get(task);
+    }
+
+    private AtomicBoolean isStreamingEnabled() {
+        return (AtomicBoolean) isStreamingEnabledHandle.get(connectionManager);
     }
 
     private Map<BlockNodeConfig, Long> lastVerifiedBlockPerConnection() {

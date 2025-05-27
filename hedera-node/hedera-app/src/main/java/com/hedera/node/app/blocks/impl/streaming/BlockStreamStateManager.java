@@ -79,16 +79,32 @@ public class BlockStreamStateManager {
      */
     private static final AtomicReference<CompletableFuture<Boolean>> backpressureCompletableFutureRef =
             new AtomicReference<>();
-
-    private long blockNumber = -1;
+    /**
+     * The most recent produced block number (i.e. the last block to be opened). A value of -1 indicates that no blocks
+     * have been open/produced yet.
+     */
+    private long lastProducedBlockNumber = -1;
+    /**
+     * Mechanism to retrieve configuration properties related to block-node communication.
+     */
     private final ConfigProvider configProvider;
-
-    // Reference to the connection manager for notifications
+    /**
+     * Reference to the connection manager.
+     */
     private BlockNodeConnectionManager blockNodeConnectionManager;
-
+    /**
+     * Metrics API for block stream-specific metrics.
+     */
     private final BlockStreamMetrics blockStreamMetrics;
-
-    private final Queue<BlockStreamQueueItem> blockStreamQueue = new ConcurrentLinkedQueue<>();
+    /**
+     * Queue that contains pending items that need to be added to blocks and converted to requests for eventual delivery
+     * to block nodes.
+     */
+    private final Queue<BlockStreamQueueItem> blockStreamItemQueue = new ConcurrentLinkedQueue<>();
+    /**
+     * Flag that indicates if streaming to block nodes is enabled. This flag is set once upon startup and cannot change.
+     */
+    private static final AtomicBoolean isStreamingEnabled = new AtomicBoolean(false);
 
     /**
      * Creates a new BlockStreamStateManager with the given configuration.
@@ -100,9 +116,10 @@ public class BlockStreamStateManager {
             @NonNull final ConfigProvider configProvider, @NonNull final BlockStreamMetrics blockStreamMetrics) {
         this.configProvider = configProvider;
         this.blockStreamMetrics = blockStreamMetrics;
+        isStreamingEnabled.set(streamToBlockNodesEnabled());
 
         // Only start the pruning thread if we're streaming to block nodes
-        if (streamToBlockNodesEnabled()) {
+        if (isStreamingEnabled.get()) {
             scheduleNextPruning();
         }
     }
@@ -213,16 +230,19 @@ public class BlockStreamStateManager {
      * @throws IllegalArgumentException if the block number is negative
      */
     public void openBlock(final long blockNumber) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
         if (blockNumber < 0) throw new IllegalArgumentException("Block number must be non-negative");
 
-        if (this.blockNumber >= blockNumber) {
+        if (this.lastProducedBlockNumber >= blockNumber) {
             logger.error(
                     "Attempted to open a new block with number {}, but a block with the same or later number "
                             + "(latest: {}) has already been opened",
                     blockNumber,
-                    this.blockNumber);
+                    this.lastProducedBlockNumber);
             throw new IllegalStateException("Attempted to open a new block with number " + blockNumber
-                    + ", but a block with the same or later number (latest: " + this.blockNumber
+                    + ", but a block with the same or later number (latest: " + this.lastProducedBlockNumber
                     + ") has already been opened");
         }
 
@@ -230,13 +250,9 @@ public class BlockStreamStateManager {
         final BlockState blockState = new BlockState(blockNumber);
         blockBuffer.add(blockState);
         blockStatesById.put(blockNumber, blockState);
-        this.blockNumber = blockNumber;
+        this.lastProducedBlockNumber = blockNumber;
         blockStreamMetrics.setProducingBlockNumber(blockNumber);
-
-        // Only notify block nodes if we're streaming to them
-        if (streamToBlockNodesEnabled()) {
-            blockNodeConnectionManager.openBlock(blockNumber);
-        }
+        blockNodeConnectionManager.openBlock(blockNumber);
     }
 
     /**
@@ -247,12 +263,15 @@ public class BlockStreamStateManager {
      * @throws IllegalStateException if no block is currently open
      */
     public void addItem(final long blockNumber, @NonNull final BlockItem blockItem) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
         requireNonNull(blockItem, "blockItem must not be null");
         final BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
-        blockStreamQueue.add(new BlockStreamQueueItem(blockNumber, blockItem));
+        blockStreamItemQueue.add(new BlockStreamStateManager.BlockStreamQueueItem(blockNumber, blockItem));
     }
 
     /**
@@ -261,6 +280,10 @@ public class BlockStreamStateManager {
      * @throws IllegalStateException if no block is currently open
      */
     public void closeBlock(final long blockNumber) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+
         final BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
@@ -269,8 +292,7 @@ public class BlockStreamStateManager {
         blockState.setCompletionTimestamp();
 
         logger.debug(
-                "[{}] Block {} completion timestamp set to {}",
-                Thread.currentThread().getName(),
+                "Block {} completion timestamp set to {}",
                 blockNumber,
                 blockState.completionTimestamp());
     }
@@ -301,12 +323,16 @@ public class BlockStreamStateManager {
      * @param blockNumber the block number
      */
     public void streamPreBlockProofItems(final long blockNumber) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+
         final BlockState blockState = getBlockState(blockNumber);
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        blockStreamQueue.add(new BlockStreamQueueItem(blockNumber, BlockStreamQueueItemType.PRE_BLOCK_PROOF_ACTION));
+        blockStreamItemQueue.add(new BlockStreamQueueItem(blockNumber, BlockStreamQueueItemType.PRE_BLOCK_PROOF_ACTION));
     }
 
     /**
@@ -315,6 +341,10 @@ public class BlockStreamStateManager {
      * @param blockNumber the block number to mark acknowledged up to and including
      */
     public void setLatestAcknowledgedBlock(final long blockNumber) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+
         final long highestBlock = highestAckedBlockNumber.updateAndGet(current -> Math.max(current, blockNumber));
         blockStreamMetrics.setLatestAcknowledgedBlockNumber(highestBlock);
     }
@@ -325,7 +355,7 @@ public class BlockStreamStateManager {
      * @return the current block number or -1 if no blocks have been opened yet
      */
     public long getBlockNumber() {
-        return blockNumber;
+        return lastProducedBlockNumber;
     }
 
     /**
@@ -333,6 +363,10 @@ public class BlockStreamStateManager {
      * enough capacity - i.e. the buffer is saturated - then this method will block until there is enough capacity.
      */
     public static void ensureNewBlocksPermitted() {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+
         final CompletableFuture<Boolean> cf = backpressureCompletableFutureRef.get();
         if (cf != null && !cf.isDone()) {
             try {
@@ -441,6 +475,10 @@ public class BlockStreamStateManager {
      * continues to be saturated.
      */
     private void checkBuffer() {
+        if (!streamToBlockNodesEnabled()) {
+            return;
+        }
+
         final boolean isSaturatedBeforePrune = isBufferSaturated.get();
         final BlockStreamStateManager.PruneResult result = pruneBuffer();
         final boolean isSaturatedAfterPrune = result.isSaturated();
@@ -489,7 +527,7 @@ public class BlockStreamStateManager {
                      * be enabled.
                      */
                     logger.warn("Multiple backpressure blocking futures encountered; this may indicate multiple state "
-                            + "managers or buffer pruning tasks were concurrently active");
+                            + "managers or buffer pruning tasks were concurrently active (enabling back pressure)");
                     oldCf.complete(false);
                 }
                 newCf = new CompletableFuture<>();
@@ -512,7 +550,7 @@ public class BlockStreamStateManager {
                      * completed and that we are no longer applying backpressure and thus no longer blocking.
                      */
                     logger.warn("Multiple backpressure blocking futures encountered; this may indicate multiple state "
-                            + "managers or buffer pruning tasks were concurrently active");
+                            + "managers or buffer pruning tasks were concurrently active (disabling back pressure)");
                     oldCf.complete(true);
                 }
                 newCf = CompletableFuture.completedFuture(true);
@@ -521,6 +559,10 @@ public class BlockStreamStateManager {
     }
 
     private void scheduleNextPruning() {
+        if (!streamToBlockNodesEnabled()) {
+            return;
+        }
+
         /*
         The prune interval may be set to 0, which will effectively disable the pruning. However, we still want to
         maintain some sensible interval to re-check if the interval has changed, in particular if it is no longer set to
@@ -558,7 +600,7 @@ public class BlockStreamStateManager {
      * @return the block stream queue
      */
     public Queue<BlockStreamQueueItem> getBlockStreamItemQueue() {
-        return blockStreamQueue;
+        return blockStreamItemQueue;
     }
 
     /**

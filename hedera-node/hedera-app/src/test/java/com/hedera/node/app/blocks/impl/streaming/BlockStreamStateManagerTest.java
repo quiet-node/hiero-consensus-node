@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
-import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -11,9 +10,12 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.block.stream.output.BlockHeader;
+import com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItem;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
@@ -28,10 +30,12 @@ import java.lang.invoke.VarHandle;
 import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
@@ -46,6 +50,9 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
 
     private static final VarHandle execSvcHandle;
     private static final VarHandle blockBufferHandle;
+    private static final VarHandle isStreamingEnabledHandle;
+    private static final VarHandle blockStreamItemQueueHandle;
+    private static final VarHandle backPressureFutureRefHandle;
     private static final MethodHandle checkBufferHandle;
 
     static {
@@ -55,6 +62,13 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
                     .findVarHandle(BlockStreamStateManager.class, "blockBuffer", Queue.class);
             execSvcHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
                     .findVarHandle(BlockStreamStateManager.class, "execSvc", ScheduledExecutorService.class);
+            isStreamingEnabledHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
+                    .findStaticVarHandle(BlockStreamStateManager.class, "isStreamingEnabled", AtomicBoolean.class);
+            blockStreamItemQueueHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
+                    .findVarHandle(BlockStreamStateManager.class, "blockStreamItemQueue", Queue.class);
+            backPressureFutureRefHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
+                    .findStaticVarHandle(BlockStreamStateManager.class, "backpressureCompletableFutureRef", AtomicReference.class);
+
             final Method checkBufferMethod = BlockStreamStateManager.class.getDeclaredMethod("checkBuffer");
             checkBufferMethod.setAccessible(true);
             checkBufferHandle = lookup.unreflect(checkBufferMethod);
@@ -71,7 +85,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     private ConfigProvider configProvider;
 
     @Mock
-    private BlockNodeConnectionManager blockNodeConnectionManager;
+    private BlockNodeConnectionManager connectionManager;
 
     @Mock
     private BlockStreamMetrics blockStreamMetrics;
@@ -79,12 +93,26 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     private BlockStreamStateManager blockStreamStateManager;
 
     @BeforeEach
-    void setUp() {
-        lenient().when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(DEFAULT_CONFIG, 1));
+    void beforeEach() {
+        final Configuration config = HederaTestConfigBuilder.create()
+                .withConfigDataType(BlockStreamConfig.class)
+                .withValue("blockStream.writerMode", "GRPC")
+                .getOrCreateConfig();
+
+        lenient()
+                .when(configProvider.getConfiguration())
+                .thenReturn(new VersionedConfigImpl(config, 1));
+
+
     }
 
     @AfterEach
     void afterEach() throws InterruptedException {
+        final CompletableFuture<Boolean> f = backpressureCompletableFutureRef().getAndSet(null);
+        if (f != null) {
+            f.complete(false);
+        }
+
         // stop the async pruning thread(s)
         final ScheduledExecutorService execSvc = (ScheduledExecutorService) execSvcHandle.get(blockStreamStateManager);
         execSvc.shutdownNow();
@@ -95,7 +123,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testOpenNewBlock() {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
         // given
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         // when
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
 
@@ -115,7 +143,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testCleanUp_NotCompletedBlockState_ShouldNotBeRemoved() {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
         // given
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
 
         // when
@@ -134,7 +162,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
         // given
         // expiry period set to zero in order for completed state to be cleared
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
         blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER).setCompletionTimestamp();
 
@@ -150,7 +178,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testMaintainMultipleBlockStates() {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
         // given
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         // when
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER2);
@@ -188,6 +216,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         // mock the number of batch items by modifying the default config
         final var mockConfig = HederaTestConfigBuilder.create()
                 .withConfigDataType(BlockStreamConfig.class)
+                .withValue("blockStream.writerMode", "GRPC")
                 .withValue("blockStream.blockItemBatchSize", 5)
                 .withValue("blockStream.blockBufferPruneInterval", Duration.ZERO) // disable auto pruning
                 .getOrCreateConfig();
@@ -196,7 +225,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         // make blockStreamStateManager use the mocked config
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
 
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER2);
         blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER).setCompletionTimestamp();
@@ -216,7 +245,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testGetCurrentBlockNumberWhenNoNewBlockIsOpened() {
         // given
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         // when and then
         // -1 is a sentinel value indicating no block has been opened
@@ -227,7 +256,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testGetCurrentBlockNumberWhenNewBlockIsOpened() {
         // given
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER2);
 
         // when and then
@@ -239,7 +268,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testOpenBlockWithNegativeBlockNumber() {
         // given
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         // when and then
         assertThatThrownBy(() -> blockStreamStateManager.openBlock(-1L))
@@ -254,7 +283,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testAddNullBlockItem() {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
         // given
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
 
         // when and then
@@ -267,7 +296,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testAddBlockItemToNonExistentBlockState() {
         // given
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         // when and then
         assertThatThrownBy(() -> blockStreamStateManager.addItem(
@@ -280,7 +309,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testGetNonExistentBlockState() {
         // given
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         // when and then
         assertThat(blockStreamStateManager.getBlockState(TEST_BLOCK_NUMBER)).isNull();
@@ -290,7 +319,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     void testStreamPreBlockProofItemsForNonExistentBlockState() {
         // given
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         // when and then
         assertThatThrownBy(() -> blockStreamStateManager.streamPreBlockProofItems(TEST_BLOCK_NUMBER))
@@ -301,7 +330,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     @Test
     void testOpenExistingBlock() {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         blockStreamStateManager.openBlock(2L);
 
         // try to open the same block number
@@ -322,6 +351,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         final Duration blockTtl = Duration.ofSeconds(5);
         final Configuration config = HederaTestConfigBuilder.create()
                 .withConfigDataType(BlockStreamConfig.class)
+                .withValue("blockStream.writerMode", "GRPC")
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
                 .withValue("blockStream.blockItemBatchSize", 3)
                 .withValue("blockStream.blockBufferTtl", blockTtl)
@@ -330,8 +360,8 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
 
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
-        final Queue<?> buffer = (Queue<?>) blockBufferHandle.get(blockStreamStateManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
+        final Queue<BlockState> buffer = bufferQueue(blockStreamStateManager);
 
         // IdealMaxBufferSize = BlockTtl (5s) / BlockPeriod (1s) = 5
 
@@ -440,6 +470,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         final Duration blockTtl = Duration.ofSeconds(1);
         final Configuration config = HederaTestConfigBuilder.create()
                 .withConfigDataType(BlockStreamConfig.class)
+                .withValue("blockStream.writerMode", "GRPC")
                 .withValue("blockStream.blockItemBatchSize", 3)
                 .withValue("blockStream.blockBufferTtl", blockTtl)
                 .withValue("blockStream.blockBufferPruneInterval", Duration.ZERO) // disable auto pruning
@@ -448,7 +479,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
 
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
 
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
         blockStreamStateManager.openBlock(1L);
 
         // Block 1 has been added. Now lets ack up to block 5
@@ -487,7 +518,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         // Add another block to trigger the prune, then verify the state... there should only be blocks 6 and 7 buffered
         blockStreamStateManager.openBlock(7L);
 
-        final Queue<?> buffer = (Queue<?>) blockBufferHandle.get(blockStreamStateManager);
+        final Queue<BlockState> buffer = bufferQueue(blockStreamStateManager);
         assertThat(buffer).hasSize(2);
         assertThat(blockStreamStateManager.getBlockState(6L)).isNotNull();
         assertThat(blockStreamStateManager.getBlockState(7L)).isNotNull();
@@ -508,7 +539,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
         when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
 
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         final CountDownLatch startLatch = new CountDownLatch(1);
         final CountDownLatch doneLatch = new CountDownLatch(1);
@@ -561,7 +592,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
     @Test
     void testSetLatestAcknowledgedBlock() {
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         blockStreamStateManager.setLatestAcknowledgedBlock(1L);
         verify(blockStreamMetrics).setLatestAcknowledgedBlockNumber(1L);
@@ -605,12 +636,127 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
 
         // Create a new instance
         blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
-        blockStreamStateManager.setBlockNodeConnectionManager(blockNodeConnectionManager);
+        blockStreamStateManager.setBlockNodeConnectionManager(connectionManager);
 
         // Call openBlock
         blockStreamStateManager.openBlock(TEST_BLOCK_NUMBER);
 
         // Verify that blockNodeConnectionManager.openBlock was not called
-        verify(blockNodeConnectionManager, never()).openBlock(TEST_BLOCK_NUMBER);
+        verify(connectionManager, never()).openBlock(TEST_BLOCK_NUMBER);
+    }
+
+    @Test
+    void testOpenBlock_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
+        final Queue<BlockState> buffer = bufferQueue(blockStreamStateManager);
+
+        isStreamingEnabled.set(false);
+
+        blockStreamStateManager.openBlock(10L);
+
+        assertThat(buffer).isEmpty();
+
+        verifyNoInteractions(blockStreamMetrics);
+        verifyNoInteractions(connectionManager);
+    }
+
+    @Test
+    void testAddItem_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
+        final Queue<BlockStreamQueueItem> itemQueue = blockStreamItemQueue(blockStreamStateManager);
+
+        isStreamingEnabled.set(false);
+
+        final BlockItem item = BlockItem.newBuilder()
+                .blockHeader(BlockHeader.newBuilder().number(10L).build())
+                .build();
+
+        blockStreamStateManager.addItem(10L, item);
+
+        assertThat(itemQueue).isEmpty();
+
+        verifyNoInteractions(blockStreamMetrics);
+        verifyNoInteractions(connectionManager);
+    }
+
+    @Test
+    void testCloseBlock_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
+
+        isStreamingEnabled.set(false);
+
+        blockStreamStateManager.closeBlock(10L);
+
+        verifyNoInteractions(blockStreamMetrics);
+        verifyNoInteractions(connectionManager);
+    }
+
+    @Test
+    void testStreamPreBlockProofItems_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
+
+        isStreamingEnabled.set(false);
+
+        blockStreamStateManager.streamPreBlockProofItems(10L);
+
+        verifyNoInteractions(blockStreamMetrics);
+        verifyNoInteractions(connectionManager);
+    }
+
+    @Test
+    void testSetLatestAcknowledgedBlock_streamingDisabled() {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
+
+        isStreamingEnabled.set(false);
+
+        blockStreamStateManager.setLatestAcknowledgedBlock(10L);
+
+        verifyNoInteractions(blockStreamMetrics);
+        verifyNoInteractions(connectionManager);
+    }
+
+    @Test
+    void testEnsureNewBlocksPermitted_streamingDisabled() throws InterruptedException {
+        final AtomicBoolean isStreamingEnabled = isStreamingEnabled();
+        final AtomicReference<CompletableFuture<Boolean>> backPressureFutureRef = backpressureCompletableFutureRef();
+        blockStreamStateManager = new BlockStreamStateManager(configProvider, blockStreamMetrics);
+
+        isStreamingEnabled.set(false);
+        backPressureFutureRef.set(new CompletableFuture<>());
+
+        final CountDownLatch doneLatch = new CountDownLatch(1);
+
+        ForkJoinPool.commonPool().execute(() -> {
+            BlockStreamStateManager.ensureNewBlocksPermitted();
+            doneLatch.countDown();
+        });
+
+        assertThat(doneLatch.await(1, TimeUnit.SECONDS)).isTrue();
+
+        verifyNoInteractions(blockStreamMetrics);
+        verifyNoInteractions(connectionManager);
+    }
+
+    // Utilities
+
+    private Queue<BlockStreamQueueItem> blockStreamItemQueue(final BlockStreamStateManager stateManager) {
+        return (Queue<BlockStreamQueueItem>) blockStreamItemQueueHandle.get(stateManager);
+    }
+
+    private AtomicBoolean isStreamingEnabled() {
+        return (AtomicBoolean) isStreamingEnabledHandle.get();
+    }
+
+    private AtomicReference<CompletableFuture<Boolean>> backpressureCompletableFutureRef() {
+        return (AtomicReference<CompletableFuture<Boolean>>) backPressureFutureRefHandle.get();
+    }
+
+    private Queue<BlockState> bufferQueue(final BlockStreamStateManager stateManager) {
+        return (Queue<BlockState>) blockBufferHandle.get(stateManager);
     }
 }
