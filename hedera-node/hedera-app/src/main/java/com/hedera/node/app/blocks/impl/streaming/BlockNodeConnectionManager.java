@@ -75,6 +75,7 @@ public class BlockNodeConnectionManager {
      * The amount of time the worker thread will sleep when there is no work available to process.
      */
     private static final int PROCESSOR_LOOP_DELAY_MS = 10;
+
     private static final long RETRY_BACKOFF_MULTIPLIER = 2;
     /**
      * The maximum delay used for reties.
@@ -292,7 +293,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return;
         }
-        
+
         requireNonNull(connection);
         requireNonNull(initialDelay);
 
@@ -319,7 +320,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return;
         }
-        
+
         requireNonNull(connection);
         requireNonNull(initialDelay);
         final long delayMillis = Math.max(0, initialDelay.toMillis());
@@ -350,7 +351,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return;
         }
-        
+
         logger.info("Shutting down connection manager!");
         // Stop the block stream worker loop thread
         isConnectionManagerActive.set(false);
@@ -389,7 +390,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return;
         }
-        
+
         if (!isConnectionManagerActive.compareAndSet(false, true)) {
             throw new IllegalStateException("Connection manager already started");
         }
@@ -409,7 +410,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return false;
         }
-        
+
         final BlockNodeConfig selectedNode = getNextPriorityBlockNode();
 
         if (selectedNode == null) {
@@ -514,7 +515,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return;
         }
-        
+
         final BlockNodeConnection activeConnection = activeConnectionRef.get();
         if (activeConnection == null) {
             logger.warn("No active connections available for streaming block {}", blockNumber);
@@ -536,11 +537,13 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return;
         }
-        
+
         requireNonNull(blockNodeConfig);
 
-        lastVerifiedBlockPerConnection.compute(blockNodeConfig, (cfg, lastVerifiedBlockNumber) ->
-                lastVerifiedBlockNumber == null ? blockNumber : Math.max(lastVerifiedBlockNumber, blockNumber));
+        lastVerifiedBlockPerConnection.compute(
+                blockNodeConfig,
+                (cfg, lastVerifiedBlockNumber) ->
+                        lastVerifiedBlockNumber == null ? blockNumber : Math.max(lastVerifiedBlockNumber, blockNumber));
         blockStreamStateManager.setLatestAcknowledgedBlock(blockNumber);
     }
 
@@ -711,7 +714,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return;
         }
-        
+
         logger.debug("Marking request to jump to block {}", blockNumberToJumpTo);
         jumpTargetBlock.set(blockNumberToJumpTo);
     }
@@ -746,7 +749,7 @@ public class BlockNodeConnectionManager {
             if (!isStreamingEnabled.get()) {
                 return;
             }
-            
+
             if (!isConnectionManagerActive.get()) {
                 logger.info("Connection task will not run because the connection manager has shutdown");
                 return;

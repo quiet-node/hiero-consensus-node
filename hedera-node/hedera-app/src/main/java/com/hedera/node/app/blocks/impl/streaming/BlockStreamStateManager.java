@@ -291,10 +291,7 @@ public class BlockStreamStateManager {
 
         blockState.setCompletionTimestamp();
 
-        logger.debug(
-                "Block {} completion timestamp set to {}",
-                blockNumber,
-                blockState.completionTimestamp());
+        logger.debug("Block {} completion timestamp set to {}", blockNumber, blockState.completionTimestamp());
     }
 
     /**
@@ -332,7 +329,8 @@ public class BlockStreamStateManager {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
 
-        blockStreamItemQueue.add(new BlockStreamQueueItem(blockNumber, BlockStreamQueueItemType.PRE_BLOCK_PROOF_ACTION));
+        blockStreamItemQueue.add(
+                new BlockStreamQueueItem(blockNumber, BlockStreamQueueItemType.PRE_BLOCK_PROOF_ACTION));
     }
 
     /**

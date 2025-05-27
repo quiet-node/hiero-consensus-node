@@ -67,7 +67,8 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
             blockStreamItemQueueHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
                     .findVarHandle(BlockStreamStateManager.class, "blockStreamItemQueue", Queue.class);
             backPressureFutureRefHandle = MethodHandles.privateLookupIn(BlockStreamStateManager.class, lookup)
-                    .findStaticVarHandle(BlockStreamStateManager.class, "backpressureCompletableFutureRef", AtomicReference.class);
+                    .findStaticVarHandle(
+                            BlockStreamStateManager.class, "backpressureCompletableFutureRef", AtomicReference.class);
 
             final Method checkBufferMethod = BlockStreamStateManager.class.getDeclaredMethod("checkBuffer");
             checkBufferMethod.setAccessible(true);
@@ -99,11 +100,7 @@ class BlockStreamStateManagerTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.writerMode", "GRPC")
                 .getOrCreateConfig();
 
-        lenient()
-                .when(configProvider.getConfiguration())
-                .thenReturn(new VersionedConfigImpl(config, 1));
-
-
+        lenient().when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
     }
 
     @AfterEach
