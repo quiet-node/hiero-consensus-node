@@ -363,6 +363,15 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
                 consensusRound, stateLifecycleManager.getMutableState());
         final ReservedSignedState<T> reservedSignedState;
         if (isBoundary || freezeRoundReceived) {
+            if (freezeRoundReceived && !isBoundary) {
+                logger.error(
+                        EXCEPTION.getMarker(),
+                        """
+                                The freeze round {} is not a boundary round. The freeze state will be saved to disk, \
+                                but the app may not have done some work that it needs to (like finishing a block). The \
+                                app must ensure that the freeze round is always a boundary round.""",
+                        consensusRound.getRoundNum());
+            }
             handlerMetrics.setPhase(GETTING_STATE_TO_SIGN);
             final T immutableStateCons = stateLifecycleManager.copyMutableState();
 

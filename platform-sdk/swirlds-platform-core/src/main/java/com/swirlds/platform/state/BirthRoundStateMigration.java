@@ -51,6 +51,15 @@ public final class BirthRoundStateMigration {
 
         final boolean isGenesis = platformStateFacade.isGenesisStateOf(initialState);
         if (isGenesis) {
+            if (ancientMode == AncientMode.BIRTH_ROUND_THRESHOLD) {
+                logger.info(
+                        STARTUP.getMarker(),
+                        "Starting from genesis with birth round ancient mode. Setting first version in birth round mode to {}.",
+                        appVersion);
+                platformStateFacade.bulkUpdateOf(initialState, v -> {
+                    v.setFirstVersionInBirthRoundMode(appVersion);
+                });
+            }
             // Genesis state, no action needed.
             logger.info(STARTUP.getMarker(), "Birth round state migration is not needed for genesis state.");
             return;

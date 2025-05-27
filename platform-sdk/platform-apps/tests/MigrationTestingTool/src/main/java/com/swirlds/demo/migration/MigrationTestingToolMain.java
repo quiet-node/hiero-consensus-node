@@ -3,8 +3,7 @@ package com.swirlds.demo.migration;
 
 import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_SECONDS;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.FAKE_CONSENSUS_STATE_EVENT_HANDLER;
-import static com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler.registerMerkleStateRootClassIds;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.RosterEntry;
@@ -18,6 +17,7 @@ import com.swirlds.platform.ParameterProvider;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
+import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -65,7 +65,7 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
     private double toCreate = 0;
     private long lastGenerateTime = System.nanoTime();
 
-    public static final int SOFTWARE_VERSION = 61;
+    public static final int SOFTWARE_VERSION = 63;
     public static final SemanticVersion PREVIOUS_SOFTWARE_VERSION =
             SemanticVersion.newBuilder().major(SOFTWARE_VERSION - 1).build();
     private static final SemanticVersion semanticVersion =
@@ -172,7 +172,7 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
     @Override
     public MigrationTestingToolState newStateRoot() {
         final MigrationTestingToolState state = new MigrationTestingToolState();
-        FAKE_CONSENSUS_STATE_EVENT_HANDLER.initStates(state);
+        TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
     }
 

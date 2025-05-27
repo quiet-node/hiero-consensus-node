@@ -9,6 +9,7 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
+import com.swirlds.platform.freeze.FreezeCheckHolder;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -23,11 +24,9 @@ import com.swirlds.platform.wiring.PlatformWiring;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import org.hiero.consensus.event.creator.impl.pool.TransactionPoolNexus;
 import org.hiero.consensus.model.event.PlatformEvent;
@@ -59,8 +58,8 @@ import org.hiero.consensus.roster.RosterHistory;
  *                                               into gossip event storage, per peer
  * @param randomBuilder                          a builder for creating random number generators
  * @param transactionPoolNexus                   provides transactions to be added to new events
- * @param isInFreezePeriodReference              a reference to a predicate that determines if a timestamp is in the
- *                                               freeze period, this can be deleted as soon as the CES is retired.
+ * @param freezeCheckHolder                      a reference to a predicate that determines if a timestamp is in the
+ *                                               freeze period
  * @param latestImmutableStateProviderReference  a reference to a method that supplies the latest immutable state. Input
  *                                               argument is a string explaining why we are getting this state (for
  *                                               debugging). Return value may be null (implementation detail of
@@ -104,7 +103,7 @@ public record PlatformBuildingBlocks<T extends MerkleNodeState>(
         @NonNull IntakeEventCounter intakeEventCounter,
         @NonNull RandomBuilder randomBuilder,
         @NonNull TransactionPoolNexus transactionPoolNexus,
-        @NonNull AtomicReference<Predicate<Instant>> isInFreezePeriodReference,
+        @NonNull FreezeCheckHolder freezeCheckHolder,
         @NonNull AtomicReference<Function<String, ReservedSignedState<T>>> latestImmutableStateProviderReference,
         @NonNull PcesFileTracker initialPcesFiles,
         @NonNull String consensusEventStreamName,
@@ -134,7 +133,7 @@ public record PlatformBuildingBlocks<T extends MerkleNodeState>(
         requireNonNull(intakeEventCounter);
         requireNonNull(randomBuilder);
         requireNonNull(transactionPoolNexus);
-        requireNonNull(isInFreezePeriodReference);
+        requireNonNull(freezeCheckHolder);
         requireNonNull(latestImmutableStateProviderReference);
         requireNonNull(initialPcesFiles);
         requireNonNull(consensusEventStreamName);

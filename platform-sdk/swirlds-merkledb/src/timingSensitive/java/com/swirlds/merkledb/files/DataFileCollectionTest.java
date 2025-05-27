@@ -41,8 +41,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -152,7 +154,6 @@ class DataFileCollectionTest {
                 storedOffsets.put(i, storeDataItem(fileCollection, dataValue));
             }
             final DataFileReader newFile = fileCollection.endWriting(0, count + 100);
-            newFile.setFileCompleted();
             assertEquals(new KeyRange(0, count + 100), fileCollection.getValidKeyRange(), "Range should be this");
             assertEquals(Files.size(newFile.getPath()), newFile.getSize());
             count += 100;
@@ -183,7 +184,6 @@ class DataFileCollectionTest {
             assertEquals(f, metadata.getIndex(), "Data file metadata should know self-index");
             assertTrue(metadata.getCreationDate().isAfter(TEST_START), "Creation dates should go forward in time");
             assertTrue(metadata.getCreationDate().isBefore(Instant.now()), "Creation dates may not be in the future");
-            assertEquals(100, metadata.getDataItemCount(), "unexpected DataItemCount");
             assertEquals(Files.size(dataFileReader.getPath()), dataFileReader.getSize(), "unexpected DataFileSize");
         }
     }
@@ -321,8 +321,7 @@ class DataFileCollectionTest {
                             "test",
                             null,
                             testCallback,
-                            l -> new SlowImmutableIndexedObjectListUsingArray<DataFileReader>(
-                                    DataFileReader[]::new, l));
+                            l -> new SlowImmutableIndexedObjectListUsingArray<>(DataFileReader[]::new, l));
                     fileCollectionMap.put(testType, reopenedFileCollection);
                 },
                 "Shouldn't be a problem re-opening a closed collection");
@@ -368,7 +367,7 @@ class DataFileCollectionTest {
                 }
             } else if (thread == (NUM_OF_THREADS - 1)) { // move thread
                 System.out.println("DataFileCollectionTest.merge");
-                List<Path> mergedFiles = null;
+                List<Path> mergedFiles;
                 try {
                     List<DataFileReader> filesToMerge = fileCollection.getAllCompletedFiles();
                     System.out.println("filesToMerge = " + filesToMerge.size());
@@ -395,9 +394,9 @@ class DataFileCollectionTest {
                             return storedOffsets.putIfEqual(key, oldValue, newValue);
                         }
 
-                        public <T extends Throwable> void forEach(final LongAction<T> action)
+                        public <T extends Throwable> boolean forEach(final LongAction<T> action, BooleanSupplier cond)
                                 throws InterruptedException, T {
-                            storedOffsets.forEach(action);
+                            return storedOffsets.forEach(action, cond);
                         }
                     };
 
@@ -475,7 +474,7 @@ class DataFileCollectionTest {
             // store in file
             storedOffsets.put(i, storeDataItem(fileCollection, dataValue));
         }
-        fileCollection.endWriting(0, 1000).setFileCompleted();
+        fileCollection.endWriting(0, 1000);
         // check we now have 2 files
         try (Stream<Path> list = Files.list(tempFileDir.resolve(testType.name()))) {
             assertEquals(
@@ -495,7 +494,6 @@ class DataFileCollectionTest {
         checkData(fileCollectionMap.get(testType), storedOffsetsMap.get(testType), testType, 50, 1000, 10_000);
     }
 
-    @SuppressWarnings("unchecked")
     @Order(202)
     @ParameterizedTest
     @EnumSource(FilesTestType.class)
@@ -505,10 +503,15 @@ class DataFileCollectionTest {
         final LongListHeap storedOffsets = storedOffsetsMap.get(testType);
         final AtomicBoolean mergeComplete = new AtomicBoolean(false);
         // start compaction paused so that we can test pausing
-        fileCompactor.pauseCompaction();
+        final CountDownLatch compactionPausedLatch = new CountDownLatch(1);
 
         IntStream.range(0, 3).parallel().forEach(thread -> {
             if (thread == 0) { // checking thread, keep reading and checking data all
+                try {
+                    compactionPausedLatch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 // the time while we are merging
                 while (!mergeComplete.get()) {
                     try {
@@ -531,6 +534,11 @@ class DataFileCollectionTest {
                     }
                 }
             } else if (thread == 1) { // move thread
+                try {
+                    compactionPausedLatch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 // merge 2 files
                 try {
                     List<DataFileReader> allFiles = fileCollection.getAllCompletedFiles();
@@ -555,9 +563,9 @@ class DataFileCollectionTest {
                             return storedOffsets.putIfEqual(key, oldValue, newValue);
                         }
 
-                        public <T extends Throwable> void forEach(final LongAction<T> action)
+                        public <T extends Throwable> boolean forEach(final LongAction<T> action, BooleanSupplier cond)
                                 throws InterruptedException, T {
-                            storedOffsets.forEach(action);
+                            return storedOffsets.forEach(action, cond);
                         }
                     };
                     fileCompactor.compactFiles(indexUpdater, allFiles, 1);
@@ -567,6 +575,12 @@ class DataFileCollectionTest {
                 }
                 mergeComplete.set(true);
             } else if (thread == 2) { // un-pause merging thread
+                try {
+                    fileCompactor.pauseCompaction();
+                    compactionPausedLatch.countDown();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
                 System.out.println("Unpause thread starting and waiting 300ms");
                 try {
                     MILLISECONDS.sleep(300);
@@ -662,7 +676,7 @@ class DataFileCollectionTest {
         assertSame(10, fileCollection2.getAllCompletedFiles().size(), "Should be 10 files available for merging");
         // merge
         fileCompactor.compactFiles(storedOffsets, fileCollection2.getAllCompletedFiles(), 1);
-        // check 1 files were opened and data is correct
+        // check 1 file were opened and data is correct
         assertSame(1, fileCollection2.getAllCompletedFiles().size(), "Should be 1 files");
         assertEquals(
                 1,
@@ -698,24 +712,25 @@ class DataFileCollectionTest {
                 // store in file
                 storedOffsets.put(i, storeDataItem(fileCollection, dataValue));
             }
-            fileCollection.endWriting(0, count + 100).setFileCompleted();
+            fileCollection.endWriting(0, count + 100);
             count += 100;
         }
     }
 
     /**
-     * This test emulates scenario in which compaction is interrupted by thread interruption. This event shouldn't be
-     * reported as an error in the logs.
+     * This test emulates scenario in which compaction is interrupted. This event shouldn't be
+     * reported as an error in the logs, and there should be no exceptions on the threads running
+     * compaction tasks.
      */
     @Test
-    public void testClosedByInterruptException() throws IOException {
+    public void testClosedByInterrupt() throws IOException {
         // mock appender to capture the log statements
-        final MockAppender mockAppender = new MockAppender("testClosedByInterruptException");
+        final MockAppender mockAppender = new MockAppender("testClosedByInterrupt");
         Logger logger = (Logger) LogManager.getLogger(DataFileCompactor.class);
         mockAppender.start();
         logger.addAppender(mockAppender);
-        final Path dbDir = tempFileDir.resolve("testClosedByInterruptException");
-        final String storeName = "testClosedByInterruptException";
+        final Path dbDir = tempFileDir.resolve("testClosedByInterrupt");
+        final String storeName = "testClosedByInterrupt";
 
         // init file collection with some content to compact
         final DataFileCollection fileCollection = new DataFileCollection(MERKLE_DB_CONFIG, dbDir, storeName, null);
@@ -725,26 +740,20 @@ class DataFileCollectionTest {
                 MERKLE_DB_CONFIG, storeName, fileCollection, storedOffsets, null, null, null, null);
         populateDataFileCollection(FilesTestType.fixed, fileCollection, storedOffsets);
 
-        // a flag to make sure that `compactFiles` th
-        AtomicBoolean closedByInterruptFromCompaction = new AtomicBoolean(false);
-
         final Thread thread = new Thread(() -> {
             List<DataFileReader> allCompletedFiles = fileCollection.getAllCompletedFiles();
-            DataFileReader spy = Mockito.spy(allCompletedFiles.get(0));
+            DataFileReader spy = Mockito.spy(allCompletedFiles.getFirst());
             try {
                 when(spy.leaseFileChannel()).thenAnswer(invocation -> {
                     // on the first call to leaseFileChannel(), we interrupt the thread
-                    Thread.currentThread().interrupt();
+                    compactor.interruptCompaction();
                     return invocation.callRealMethod();
                 });
 
                 List<DataFileReader> allCompletedFilesUpdated = new ArrayList<>(allCompletedFiles);
                 allCompletedFilesUpdated.set(0, spy);
                 compactor.compactFiles(storedOffsets, allCompletedFilesUpdated, 1);
-            } catch (InterruptedException e) {
-                // we expect interrupted exception here
-                closedByInterruptFromCompaction.set(true);
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 fail("Exception should not be thrown");
             }
             reset(spy);
@@ -753,15 +762,11 @@ class DataFileCollectionTest {
         try {
             assertEventuallyTrue(
                     () -> {
-                        if (!closedByInterruptFromCompaction.get()) {
-                            return false;
-                        }
                         if (mockAppender.size() == 0) {
                             return false;
                         }
                         final String logMsg = mockAppender.get(0);
-                        assertTrue(logMsg.startsWith("MERKLE_DB - INFO - Failed to copy data item 0"));
-                        assertTrue(logMsg.endsWith("due to thread interruption"));
+                        assertTrue(logMsg.contains("Some files to compact haven't been processed"));
                         return true;
                     },
                     Duration.ofMillis(5000),
