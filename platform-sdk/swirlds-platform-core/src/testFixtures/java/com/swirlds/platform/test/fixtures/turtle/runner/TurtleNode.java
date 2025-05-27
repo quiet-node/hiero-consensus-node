@@ -148,7 +148,8 @@ public class TurtleNode {
         final HashedReservedSignedState<TurtleTestingToolState> reservedState = getInitialState(
                 recycleBin,
                 version,
-                TurtleTestingToolState::getStateRootNode,
+                () -> TurtleTestingToolState.getStateRootNode(metrics),
+                TurtleTestingToolState::new,
                 "foo",
                 "bar",
                 nodeId,
@@ -159,7 +160,7 @@ public class TurtleNode {
 
         final State state = initialState.get().getState();
         final long round = platformStateFacade.roundOf(state);
-        final PlatformBuilder<?> platformBuilder = PlatformBuilder.create(
+        final PlatformBuilder platformBuilder = PlatformBuilder.create(
                         "foo",
                         "bar",
                         softwareVersion,
@@ -169,6 +170,8 @@ public class TurtleNode {
                         AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
                         RosterUtils.buildRosterHistory(initialState.get().getState(), round),
                         platformStateFacade,
+                        TurtleTestingToolState::new,
+                        platformStateFacade,
                         new TestStateLifecycleManager<>())
                 .withModel(model)
                 .withRandomBuilder(new RandomBuilder(randotron.nextLong()))
@@ -177,9 +180,9 @@ public class TurtleNode {
                 .withConfiguration(configuration)
                 .withSystemTransactionEncoderCallback(StateSignatureTransaction.PROTOBUF::toBytes);
 
-        final PlatformComponentBuilder<?> platformComponentBuilder = platformBuilder.buildComponentBuilder();
+        final PlatformComponentBuilder platformComponentBuilder = platformBuilder.buildComponentBuilder();
 
-        final PlatformBuildingBlocks<?> buildingBlocks = platformComponentBuilder.getBuildingBlocks();
+        final PlatformBuildingBlocks buildingBlocks = platformComponentBuilder.getBuildingBlocks();
 
         final ComponentWiring<ConsensusRoundsHolder, Void> consensusRoundsHolderWiring =
                 new ComponentWiring<>(model, ConsensusRoundsHolder.class, TaskSchedulerConfiguration.parse("DIRECT"));

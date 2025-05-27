@@ -209,6 +209,7 @@ public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
     public void init(@NonNull PlatformContext platformContext) {
         state.init(
                 platformContext.getTime(),
+                platformContext.getConfiguration(),
                 platformContext.getMetrics(),
                 platformContext.getMerkleCryptography(),
                 () -> {

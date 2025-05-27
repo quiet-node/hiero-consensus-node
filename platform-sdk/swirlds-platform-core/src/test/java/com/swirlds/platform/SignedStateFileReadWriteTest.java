@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.node.app.HederaNewStateRoot;
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
@@ -37,6 +38,7 @@ import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.state.snapshot.SignedStateFileUtils;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.State;
 import java.io.BufferedReader;
@@ -115,6 +117,7 @@ class SignedStateFileReadWriteTest {
 
         final String fileString = sb.toString();
         assertTrue(fileString.contains(hashInfoString), "hash info string not found");
+        state.release();
     }
 
     @Test
@@ -128,7 +131,8 @@ class SignedStateFileReadWriteTest {
         assertFalse(exists(signatureSetFile), "signature set file should not yet exist");
 
         State state = signedState.getState();
-        state.copy();
+        state.copy().release();
+        TestMerkleCryptoFactory.getInstance().digestTreeSync(((TestNewMerkleStateRoot) state).getRoot());
         state.createSnapshot(testDirectory);
         writeSignatureSetFile(testDirectory, signedState);
 
@@ -138,8 +142,8 @@ class SignedStateFileReadWriteTest {
         MerkleDb.resetDefaultInstancePath();
         Configuration configuration =
                 TestPlatformContextBuilder.create().build().getConfiguration();
-        final DeserializedSignedState deserializedSignedState =
-                readStateFile(stateFile, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
+        final DeserializedSignedState deserializedSignedState = readStateFile(
+                stateFile, HederaNewStateRoot::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
         TestMerkleCryptoFactory.getInstance()
                 .digestTreeSync(deserializedSignedState
                         .reservedSignedState()
@@ -154,6 +158,8 @@ class SignedStateFileReadWriteTest {
                 deserializedSignedState.reservedSignedState().get().getState().getHash(),
                 "hash should match");
         assertNotSame(signedState, deserializedSignedState.reservedSignedState(), "state should be a different object");
+        signedState.getState().release();
+        deserializedSignedState.reservedSignedState().get().getState().release();
     }
 
     @Test
@@ -178,7 +184,8 @@ class SignedStateFileReadWriteTest {
                 .build();
 
         // make immutable
-        signedState.getState().copy();
+        signedState.getState().copy().release();
+        TestMerkleCryptoFactory.getInstance().digestTreeSync((signedState.getState()).getRoot());
 
         writeSignedStateToDisk(
                 platformContext,

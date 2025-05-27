@@ -32,6 +32,7 @@ import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Function;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
@@ -123,6 +124,17 @@ public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
         final HelloSwirldDemoState state = new HelloSwirldDemoState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19004
+     * </p>
+     */
+    @Override
+    public Function<VirtualMap, HelloSwirldDemoState> stateRootFromVirtualMap() {
+        throw new UnsupportedOperationException();
     }
 
     @Override

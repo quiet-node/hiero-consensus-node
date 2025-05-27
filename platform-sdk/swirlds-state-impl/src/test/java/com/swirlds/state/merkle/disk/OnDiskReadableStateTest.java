@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle.disk;
 
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 
+import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.test.fixtures.merkle.MerkleTestBase;
 import com.swirlds.virtualmap.VirtualMap;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,21 +23,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class OnDiskReadableStateTest extends MerkleTestBase {
+
     @BeforeEach
     void setUp() {
         setupFruitVirtualMap();
     }
 
-    private void add(String key, String value) {
-        add(fruitVirtualMap, onDiskKeyClassId(), STRING_CODEC, onDiskValueClassId(), STRING_CODEC, key, value);
-    }
-
-    private static long onDiskValueClassId() {
-        return onDiskValueClassId(FRUIT_STATE_KEY);
-    }
-
-    private static long onDiskKeyClassId() {
-        return onDiskKeyClassId(FRUIT_STATE_KEY);
+    private void add(String serviceName, String stateKey, String key, String value) {
+        add(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, STRING_CODEC, key, value);
     }
 
     @Nested
@@ -39,28 +38,42 @@ class OnDiskReadableStateTest extends MerkleTestBase {
     final class ConstructorTest {
 
         @Test
-        @DisplayName("You must specify the metadata")
+        @DisplayName("You must specify the serviceName")
+        void nullServiceNameThrows() {
+            assertThatThrownBy(() -> new OnDiskReadableKVState<>(
+                            null, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap))
+                    .isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        @DisplayName("You must specify the stateKey")
         void nullStateKeyThrows() {
-            //noinspection DataFlowIssue
-            assertThatThrownBy(
-                            () -> new OnDiskReadableKVState<>(null, onDiskKeyClassId(), STRING_CODEC, fruitVirtualMap))
+            assertThatThrownBy(() -> new OnDiskReadableKVState<>(
+                            FRUIT_SERVICE_NAME, null, STRING_CODEC, STRING_CODEC, fruitVirtualMap))
                     .isInstanceOf(NullPointerException.class);
         }
 
         @Test
         @DisplayName("You must specify the virtual map")
         void nullVirtualMapThrows() {
-            //noinspection DataFlowIssue
-            assertThatThrownBy(
-                            () -> new OnDiskReadableKVState<>(FRUIT_STATE_KEY, onDiskKeyClassId(), STRING_CODEC, null))
+            assertThatThrownBy(() -> new OnDiskReadableKVState<>(
+                            FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, null))
                     .isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        @DisplayName("The serviceName matches that supplied")
+        void serviceName() {
+            final var state = new OnDiskReadableKVState<>(
+                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
+            assertThat(state.getServiceName()).isEqualTo(FRUIT_SERVICE_NAME);
         }
 
         @Test
         @DisplayName("The stateKey matches that supplied")
         void stateKey() {
-            final var state =
-                    new OnDiskReadableKVState<>(FRUIT_STATE_KEY, onDiskKeyClassId(), STRING_CODEC, fruitVirtualMap);
+            final var state = new OnDiskReadableKVState<>(
+                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
             assertThat(state.getStateKey()).isEqualTo(FRUIT_STATE_KEY);
         }
     }
@@ -72,10 +85,11 @@ class OnDiskReadableStateTest extends MerkleTestBase {
 
         @BeforeEach
         void setUp() {
-            state = new OnDiskReadableKVState<>(FRUIT_STATE_KEY, onDiskKeyClassId(), STRING_CODEC, fruitVirtualMap);
-            add(A_KEY, APPLE);
-            add(B_KEY, BANANA);
-            add(C_KEY, CHERRY);
+            state = new OnDiskReadableKVState<>(
+                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, APPLE);
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, B_KEY, BANANA);
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, C_KEY, CHERRY);
         }
 
         @Test
@@ -93,10 +107,29 @@ class OnDiskReadableStateTest extends MerkleTestBase {
 
     @Test
     @DisplayName("The method warm() calls the appropriate method on the virtual map")
-    void warm(@Mock VirtualMap<OnDiskKey<String>, OnDiskValue<String>> virtualMapMock) {
-        final var state =
-                new OnDiskReadableKVState<>(FRUIT_STATE_KEY, onDiskKeyClassId(), STRING_CODEC, virtualMapMock);
+    void warm(@Mock VirtualMap virtualMapMock) {
+        final var state = new OnDiskReadableKVState<>(
+                FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, virtualMapMock);
         state.warm(A_KEY);
-        verify(virtualMapMock).warm(new OnDiskKey<>(onDiskKeyClassId(), STRING_CODEC, A_KEY));
+        verify(virtualMapMock)
+                .warm(StateUtils.getVirtualMapKey(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, STRING_CODEC));
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
+            fruitVirtualMap.release();
+        }
+        assertEventuallyEquals(
+                0L,
+                MerkleDbDataSource::getCountOfOpenDatabases,
+                Duration.of(5, ChronoUnit.SECONDS),
+                "All databases should be closed");
+        try {
+            // FUTURE WORK: need a better way to make sure that DB files are deleted
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

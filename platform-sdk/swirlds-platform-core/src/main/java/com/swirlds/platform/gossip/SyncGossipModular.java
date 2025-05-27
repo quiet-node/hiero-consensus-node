@@ -35,12 +35,15 @@ import com.swirlds.platform.reconnect.ReconnectPlatformHelperImpl;
 import com.swirlds.platform.reconnect.ReconnectSyncHelper;
 import com.swirlds.platform.reconnect.ReconnectThrottle;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.SwirldStateManager;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.wiring.NoInput;
 import com.swirlds.platform.wiring.components.Gossip;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.cert.X509Certificate;
@@ -48,6 +51,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -94,6 +98,8 @@ public class SyncGossipModular implements Gossip {
      * @param loadReconnectState            a method that should be called when a state from reconnect is obtained
      * @param clearAllPipelinesForReconnect this method should be called to clear all pipelines prior to a reconnect
      * @param intakeEventCounter            keeps track of the number of events in the intake pipeline from each peer
+     * @param platformStateFacade           the facade to access the platform state
+     * @param stateRootFunction             a function to instantiate the state root object from a Virtual Map
      */
     public SyncGossipModular(
             @NonNull final PlatformContext platformContext,
@@ -108,7 +114,9 @@ public class SyncGossipModular implements Gossip {
             @NonNull final Runnable clearAllPipelinesForReconnect,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final StateLifecycleManager stateLifecycleManager) {
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
+            @NonNull final StateLifecycleManager stateLifecycleManager
+    ) {
 
         final RosterEntry selfEntry = RosterUtils.getRosterEntry(roster, selfId.id());
         final X509Certificate selfCert = RosterUtils.fetchGossipCaCertificate(selfEntry);
@@ -158,7 +166,8 @@ public class SyncGossipModular implements Gossip {
                         stateLifecycleManager,
                         selfId,
                         this.syncProtocol,
-                        platformStateFacade),
+                        platformStateFacade,
+                        stateRootFunction),
                 syncProtocol);
 
         final ProtocolConfig protocolConfig = platformContext.getConfiguration().getConfigData(ProtocolConfig.class);
@@ -182,6 +191,8 @@ public class SyncGossipModular implements Gossip {
      * @param stateLifecycleManager            manages the mutable state
      * @param selfId                        this node's ID
      * @param gossipController              way to pause/resume gossip while reconnect is in progress
+     * @param platformStateFacade           the facade to access the platform state
+     * @param stateRootFunction             a function to instantiate the state root object from a Virtual Map
      * @return constructed ReconnectProtocol
      */
     public ReconnectProtocol createReconnectProtocol(
@@ -195,7 +206,8 @@ public class SyncGossipModular implements Gossip {
             @NonNull final StateLifecycleManager<MerkleNodeState> stateLifecycleManager,
             @NonNull final NodeId selfId,
             @NonNull final GossipController gossipController,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
 
         final ReconnectConfig reconnectConfig =
                 platformContext.getConfiguration().getConfigData(ReconnectConfig.class);
@@ -227,7 +239,8 @@ public class SyncGossipModular implements Gossip {
                         roster,
                         reconnectConfig.asyncStreamTimeout(),
                         reconnectMetrics,
-                        platformStateFacade),
+                        platformStateFacade,
+                        stateRootFunction),
                 stateConfig,
                 platformStateFacade);
 

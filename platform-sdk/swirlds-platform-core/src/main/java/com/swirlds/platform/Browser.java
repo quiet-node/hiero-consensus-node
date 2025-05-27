@@ -59,6 +59,7 @@ import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.util.BootstrapUtils;
 import com.swirlds.state.State;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.awt.GraphicsEnvironment;
@@ -69,6 +70,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.crypto.Cryptography;
@@ -265,6 +267,7 @@ public class Browser {
                     recycleBin,
                     appMain.getSemanticVersion(),
                     appMain::newStateRoot,
+                    stateRootFromVirtualMap(appMain),
                     appMain.getClass().getName(),
                     appDefinition.getSwirldName(),
                     nodeId,
@@ -297,6 +300,7 @@ public class Browser {
                     AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
                     RosterUtils.buildRosterHistory(state, round),
                     platformStateFacade,
+                    stateRootFromVirtualMap(appMain),
                     stateLifecycleManager);
             if (showUi && index == 0) {
                 builder.withPreconsensusEventCallback(guiEventStorage::handlePreconsensusEvent);
@@ -382,5 +386,15 @@ public class Browser {
                 .setRunnable(appMain)
                 .setDaemon(false)
                 .build(true);
+    }
+
+    /**
+     * A function to instantiate the state root object from a Virtual Map.
+     *
+     * @return a function that accepts a {@code VirtualMap} and returns the state root object.
+     */
+    private static Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(@NonNull final SwirldMain appMain) {
+        Objects.requireNonNull(appMain);
+        return (virtualMap) -> (com.swirlds.platform.state.MerkleNodeState) appMain.stateRootFromVirtualMap();
     }
 }

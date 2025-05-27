@@ -2,6 +2,7 @@
 package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -15,11 +16,12 @@ import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDb;
+import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.merkledb.config.MerkleDbConfig;
-import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
-import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
+import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
+import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StartupNetworks;
@@ -32,12 +34,15 @@ import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.test.fixtures.merkle.TestSchema;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -178,18 +183,21 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
          * Utility method that migrates from version 9 to 10
          */
         void migrateFromV9ToV10() {
+            final var virtualMapLabel =
+                    "vm-" + MerkleSchemaRegistryTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+            final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
             SemanticVersion latestVersion = version(10, 0, 0);
             schemaRegistry.migrate(
-                    new TestMerkleStateRoot(),
+                    new TestNewMerkleStateRoot(virtualMap),
                     version(9, 0, 0),
                     latestVersion,
                     config,
                     config,
-                    mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
                     startupNetworks,
                     TEST_PLATFORM_STATE_FACADE);
+            virtualMap.release();
         }
     }
 
@@ -207,7 +215,17 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             for (int i = 1; i < versions.length; i++) {
                 versions[i] = version(0, i, 0);
             }
-            merkleTree = new TestMerkleStateRoot();
+            final var virtualMapLabel =
+                    "vm-" + MerkleSchemaRegistryTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
+            merkleTree = TestNewMerkleStateRoot.createInstanceWithVirtualMapLabel(virtualMapLabel);
+        }
+
+        @AfterEach
+        void tearDown() {
+            merkleTree.release();
+            if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() >= 0) {
+                fruitVirtualMap.release();
+            }
         }
 
         @Test
@@ -220,7 +238,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[1],
                             config,
                             config,
-                            mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
                             startupNetworks,
@@ -238,7 +255,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             null,
                             config,
                             config,
-                            mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
                             startupNetworks,
@@ -256,7 +272,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[1],
                             null,
                             null,
-                            mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
                             startupNetworks,
@@ -274,25 +289,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[1],
                             null,
                             config,
-                            mock(Metrics.class),
-                            new HashMap<>(),
-                            migrationStateChanges,
-                            startupNetworks,
-                            TEST_PLATFORM_STATE_FACADE))
-                    .isInstanceOf(NullPointerException.class);
-        }
-
-        @Test
-        @DisplayName("Calling migrate with a null metrics throws NPE")
-        void nullMetricsThrows() {
-            //noinspection ConstantConditions
-            assertThatThrownBy(() -> schemaRegistry.migrate(
-                            merkleTree,
-                            versions[0],
-                            versions[1],
-                            config,
-                            config,
-                            null,
                             new HashMap<>(),
                             migrationStateChanges,
                             startupNetworks,
@@ -310,7 +306,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[4],
                             config,
                             config,
-                            mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
                             startupNetworks,
@@ -332,7 +327,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[1],
                     config,
                     config,
-                    mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
                     startupNetworks,
@@ -356,7 +350,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[5],
                     config,
                     config,
-                    mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
                     startupNetworks,
@@ -381,7 +374,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[5],
                     config,
                     config,
-                    mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
                     startupNetworks,
@@ -414,7 +406,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[7],
                     config,
                     config,
-                    mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
                     startupNetworks,
@@ -585,7 +576,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         versions[1],
                         config,
                         config,
-                        mock(Metrics.class),
                         new HashMap<>(),
                         migrationStateChanges,
                         startupNetworks,
@@ -614,7 +604,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         versions[2],
                         config,
                         config,
-                        mock(Metrics.class),
                         new HashMap<>(),
                         migrationStateChanges,
                         startupNetworks,
@@ -654,7 +643,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         versions[3],
                         config,
                         config,
-                        mock(Metrics.class),
                         new HashMap<>(),
                         migrationStateChanges,
                         startupNetworks,
@@ -699,7 +687,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                                 versions[2],
                                 config,
                                 config,
-                                mock(Metrics.class),
                                 new HashMap<>(),
                                 migrationStateChanges,
                                 startupNetworks,
@@ -727,5 +714,17 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         .hasCauseInstanceOf(ConstructableRegistryException.class);
             }
         }
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
+            fruitVirtualMap.release();
+        }
+        assertEventuallyEquals(
+                0L,
+                MerkleDbDataSource::getCountOfOpenDatabases,
+                Duration.of(5, ChronoUnit.SECONDS),
+                "All databases should be closed");
     }
 }

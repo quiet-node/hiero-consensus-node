@@ -33,6 +33,7 @@ import com.swirlds.platform.state.NoOpConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -44,6 +45,7 @@ import java.util.IllegalFormatException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.function.Function;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
@@ -310,6 +312,17 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
         final StatsDemoState state = new StatsDemoState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19004
+     * </p>
+     */
+    @Override
+    public Function<VirtualMap, StatsDemoState> stateRootFromVirtualMap() {
+        throw new UnsupportedOperationException();
     }
 
     @NonNull

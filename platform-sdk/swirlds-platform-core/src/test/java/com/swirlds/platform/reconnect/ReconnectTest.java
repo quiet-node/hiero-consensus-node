@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.reconnect;
 
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
@@ -9,17 +10,17 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.node.app.HederaNewStateRoot;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.test.fixtures.WeightGenerators;
-import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.merkle.util.PairedStreams;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
+import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.platform.metrics.ReconnectMetrics;
 import com.swirlds.platform.network.Connection;
 import com.swirlds.platform.network.SocketConnection;
@@ -29,6 +30,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateValidator;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
 import java.io.IOException;
 import java.time.Duration;
@@ -79,6 +81,11 @@ final class ReconnectTest {
     @AfterAll
     static void tearDown() {
         RandomSignedStateGenerator.releaseAllBuiltSignedStates();
+        assertEventuallyEquals(
+                0L,
+                MerkleDbDataSource::getCountOfOpenDatabases,
+                Duration.of(5, ChronoUnit.SECONDS),
+                "All databases should be closed");
     }
 
     @Test
@@ -112,17 +119,19 @@ final class ReconnectTest {
                 .withWeightGenerator((l, i) -> WeightGenerators.balancedNodeWeights(numNodes, weightPerNode * numNodes))
                 .build();
 
-        try (final PairedStreams pairedStreams = new PairedStreams()) {
+        try (final PairedStreams pairedStreams = new PairedStreams(); ) {
             final Pair<SignedState<MerkleNodeState>, TestPlatformStateFacade> signedStateFacadePair =
                     new RandomSignedStateGenerator()
                             .setRoster(roster)
                             .setSigningNodeIds(nodeIds)
-                            .buildWithFacade();
+                            .setCalculateHash(true)
+                    .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestNewMerkleStateRoot
+                    .buildWithFacade();
             final SignedState signedState = signedStateFacadePair.left();
             final PlatformStateFacade platformStateFacade = signedStateFacadePair.right();
 
-            final MerkleCryptography cryptography = TestMerkleCryptoFactory.getInstance();
-            cryptography.digestSync(signedState.getState().getRoot());
+            // hash the underlying VM
+            signedState.getState().getRoot().getHash();
 
             final ReconnectLearner receiver = buildReceiver(
                     signedState.getState(),
@@ -192,6 +201,7 @@ final class ReconnectTest {
                 state,
                 RECONNECT_SOCKET_TIMEOUT,
                 reconnectMetrics,
-                platformStateFacade);
+                platformStateFacade,
+                HederaNewStateRoot::new);
     }
 }

@@ -2,6 +2,7 @@
 package com.swirlds.platform.state.snapshot;
 
 import static com.swirlds.common.io.streams.StreamDebugUtils.deserializeAndDebugOnFailure;
+import static com.swirlds.platform.StateInitializer.initializeMerkleNodeState;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.SIGNATURE_SET_FILE_NAME;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.SUPPORTED_SIGSET_VERSIONS;
 import static java.nio.file.Files.exists;
@@ -22,6 +23,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.lifecycle.StateMetadata;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -30,6 +32,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.function.Function;
 import org.hiero.consensus.roster.RosterStateId;
 
 /**
@@ -45,8 +48,9 @@ public final class SignedStateFileReader {
      * @return a signed state with it's associated hash (as computed when the state was serialized)
      * @throws IOException if there is any problems with reading from a file
      */
-    public static <T extends MerkleNodeState> @NonNull DeserializedSignedState<T> readStateFile(
+    public static @NonNull DeserializedSignedState readStateFile(
             @NonNull final Path stateFile,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final PlatformStateFacade stateFacade,
             @NonNull final PlatformContext platformContext)
             throws IOException {
@@ -57,8 +61,8 @@ public final class SignedStateFileReader {
 
         checkSignedStatePath(stateFile);
 
-        final DeserializedSignedState<T> returnState;
-        final MerkleTreeSnapshotReader.StateFileData data = MerkleTreeSnapshotReader.readStateFileData(stateFile);
+        final DeserializedSignedState returnState;
+        final MerkleTreeSnapshotReader.StateFileData data = MerkleTreeSnapshotReader.readStateFileData(conf, stateFile);
         final File sigSetFile =
                 stateFile.getParent().resolve(SIGNATURE_SET_FILE_NAME).toFile();
         final SigSet sigSet = deserializeAndDebugOnFailure(
@@ -67,10 +71,13 @@ public final class SignedStateFileReader {
                     return in.readSerializable();
                 });
 
-        final SignedState<T> newSignedState = new SignedState<>(
+        final MerkleNodeState merkleNodeState =
+                initializeMerkleNodeState(stateRootFunction, data.stateRoot(), platformContext.getMetrics());
+
+        final SignedState newSignedState = new SignedState(
                 conf,
                 CryptoStatic::verifySignature,
-                (T) data.stateRoot(),
+                merkleNodeState,
                 "SignedStateFileReader.readStateFile()",
                 false,
                 false,
@@ -82,7 +89,7 @@ public final class SignedStateFileReader {
 
         newSignedState.setSigSet(sigSet);
 
-        returnState = new DeserializedSignedState<>(
+        returnState = new DeserializedSignedState(
                 newSignedState.reserve("SignedStateFileReader.readStateFile()"), data.hash());
 
         return returnState;
@@ -157,11 +164,22 @@ public final class SignedStateFileReader {
                 .forEach(def -> {
                     final var md = new StateMetadata<>(name, schema, def);
                     if (def.singleton() || def.onDisk()) {
-                        state.putServiceStateIfAbsent(md, () -> {
-                            throw new IllegalStateException(
-                                    "State nodes " + md.stateDefinition().stateKey() + " for service " + name
-                                            + " are supposed to exist in the state snapshot already.");
-                        });
+                        try {
+                            // Production case
+                            // Attempt to initialize the state if it is a NewStateRoot
+                            state.initializeState(md);
+                        } catch (UnsupportedOperationException e) {
+                            // Non production case (testing tools)
+                            // Otherwise assume it is a MerkleStateRoot
+
+                            // This branch should be removed once the MerkleStateRoot is removed along with
+                            // putServiceStateIfAbsent method in the MerkleNodeState interface
+                            state.putServiceStateIfAbsent(md, () -> {
+                                throw new IllegalStateException(
+                                        "State nodes " + md.stateDefinition().stateKey() + " for service " + name
+                                                + " are supposed to exist in the state snapshot already.");
+                            });
+                        }
                     } else {
                         throw new IllegalStateException(
                                 "Only singletons and onDisk virtual maps are supported as stub states");

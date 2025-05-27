@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state;
 
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.platform.state.PlatformStateAccessor.GENESIS_ROUND;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
@@ -8,9 +9,13 @@ import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
 import static com.swirlds.state.merkle.MerkleStateRoot.CURRENT_VERSION;
+import static com.swirlds.state.merkle.MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +33,7 @@ import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.merkle.map.MerkleMap;
+import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import com.swirlds.state.StateChangeListener;
@@ -41,6 +47,9 @@ import com.swirlds.state.spi.WritableKVState;
 import com.swirlds.state.spi.WritableQueueState;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.test.fixtures.merkle.TestSchema;
+import com.swirlds.virtualmap.VirtualMap;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -50,6 +59,7 @@ import java.util.List;
 import java.util.Set;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.config.CryptoConfig;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -59,7 +69,11 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/**
+ * @deprecated This test class is only required for the testing of MerkleStateRoot class and will be removed together with that class.
+ */
 @ExtendWith(MockitoExtension.class)
+@Deprecated
 class MerkleStateRootTest extends MerkleTestBase {
     /** The merkle tree we will test with */
     private TestMerkleStateRoot stateRoot;
@@ -74,7 +88,8 @@ class MerkleStateRootTest extends MerkleTestBase {
         registerMerkleStateRootClassIds();
         setupFruitMerkleMap();
         stateRoot = new TestMerkleStateRoot();
-        stateRoot.init(new FakeTime(), new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
+        stateRoot.init(
+                new FakeTime(), CONFIGURATION, new NoOpMetrics(), mock(MerkleCryptography.class), () -> GENESIS_ROUND);
     }
 
     /** Looks for a merkle node with the given label */
@@ -139,13 +154,16 @@ class MerkleStateRootTest extends MerkleTestBase {
         void addingVirtualMapService() {
             // Given a virtual map
             setupFruitVirtualMap();
+            try {
+                // When added to the merkle tree
+                stateRoot.putServiceStateIfAbsent(fruitMetadata, () -> fruitVirtualMap);
 
-            // When added to the merkle tree
-            stateRoot.putServiceStateIfAbsent(fruitMetadata, () -> fruitVirtualMap);
-
-            // Then we can see it is on the tree
-            assertThat(stateRoot.getNumberOfChildren()).isEqualTo(1);
-            assertThat(getNodeForLabel(fruitLabel)).isSameAs(fruitVirtualMap);
+                // Then we can see it is on the tree
+                assertThat(stateRoot.getNumberOfChildren()).isEqualTo(1);
+                assertThat(getNodeForLabel(fruitLabel)).isSameAs(fruitVirtualMap);
+            } finally {
+                fruitVirtualMap.release();
+            }
         }
 
         @Test
@@ -232,9 +250,23 @@ class MerkleStateRootTest extends MerkleTestBase {
         @DisplayName("Adding non-VirtualMap merkle node with on-disk metadata throws")
         void merkleMapWithOnDiskThrows() {
             setupFruitVirtualMap();
-            assertThatThrownBy(() -> stateRoot.putServiceStateIfAbsent(fruitVirtualMetadata, () -> fruitMerkleMap))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Mismatch");
+            try {
+                assertThatThrownBy(() -> stateRoot.putServiceStateIfAbsent(fruitVirtualMetadata, () -> fruitMerkleMap))
+                        .isInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("Mismatch");
+
+            } finally {
+                fruitVirtualMap.release();
+            }
+        }
+
+        @AfterEach
+        void tearDown() {
+            assertEventuallyEquals(
+                    0L,
+                    MerkleDbDataSource::getCountOfOpenDatabases,
+                    Duration.of(5, ChronoUnit.SECONDS),
+                    "All databases should be closed");
         }
     }
 
@@ -380,13 +412,17 @@ class MerkleStateRootTest extends MerkleTestBase {
         void readVirtualMap() {
             // Given a State with the fruit virtual map
             setupFruitVirtualMap();
-            stateRoot.putServiceStateIfAbsent(fruitMetadata, () -> fruitVirtualMap);
+            try {
+                stateRoot.putServiceStateIfAbsent(fruitMetadata, () -> fruitVirtualMap);
 
-            // When we get the ReadableStates
-            final var states = stateRoot.getReadableStates(FIRST_SERVICE);
+                // When we get the ReadableStates
+                final var states = stateRoot.getReadableStates(FIRST_SERVICE);
 
-            // Then it isn't null
-            assertThat(states.get(FRUIT_STATE_KEY)).isNotNull();
+                // Then it isn't null
+                assertThat(states.get(FRUIT_STATE_KEY)).isNotNull();
+            } finally {
+                fruitVirtualMap.release();
+            }
         }
 
         @Test
@@ -593,13 +629,17 @@ class MerkleStateRootTest extends MerkleTestBase {
         void readVirtualMap() {
             // Given a State with the fruit virtual map
             setupFruitVirtualMap();
-            stateRoot.putServiceStateIfAbsent(fruitMetadata, () -> fruitVirtualMap);
+            try {
+                stateRoot.putServiceStateIfAbsent(fruitMetadata, () -> fruitVirtualMap);
 
-            // When we get the WritableStates
-            final var states = stateRoot.getWritableStates(FIRST_SERVICE);
+                // When we get the WritableStates
+                final var states = stateRoot.getWritableStates(FIRST_SERVICE);
 
-            // Then it isn't null
-            assertThat(states.get(FRUIT_STATE_KEY)).isNotNull();
+                // Then it isn't null
+                assertThat(states.get(FRUIT_STATE_KEY)).isNotNull();
+            } finally {
+                fruitVirtualMap.release();
+            }
         }
 
         @Test
@@ -722,16 +762,21 @@ class MerkleStateRootTest extends MerkleTestBase {
         private StateChangeListener kvListener;
 
         @Mock
-        private StateChangeListener nonKvListener;
+        private StateChangeListener singletonListener;
+
+        @Mock
+        private StateChangeListener queueListener;
 
         @BeforeEach
         void setUp() {
             given(kvListener.stateTypes()).willReturn(EnumSet.of(MAP));
-            given(nonKvListener.stateTypes()).willReturn(EnumSet.of(QUEUE, SINGLETON));
+            given(singletonListener.stateTypes()).willReturn(EnumSet.of(SINGLETON));
+            given(queueListener.stateTypes()).willReturn(EnumSet.of(QUEUE));
             given(kvListener.stateIdFor(FIRST_SERVICE, FRUIT_STATE_KEY)).willReturn(FRUIT_STATE_ID);
             given(kvListener.stateIdFor(FIRST_SERVICE, ANIMAL_STATE_KEY)).willReturn(ANIMAL_STATE_ID);
-            given(nonKvListener.stateIdFor(FIRST_SERVICE, COUNTRY_STATE_KEY)).willReturn(COUNTRY_STATE_ID);
-            given(nonKvListener.stateIdFor(FIRST_SERVICE, STEAM_STATE_KEY)).willReturn(STEAM_STATE_ID);
+            given(singletonListener.stateIdFor(FIRST_SERVICE, COUNTRY_STATE_KEY))
+                    .willReturn(COUNTRY_STATE_ID);
+            given(queueListener.stateIdFor(FIRST_SERVICE, STEAM_STATE_KEY)).willReturn(STEAM_STATE_ID);
 
             setupAnimalMerkleMap();
             setupFruitVirtualMap();
@@ -752,7 +797,8 @@ class MerkleStateRootTest extends MerkleTestBase {
             stateRoot.putServiceStateIfAbsent(steamMetadata, () -> steamQueue);
 
             stateRoot.registerCommitListener(kvListener);
-            stateRoot.registerCommitListener(nonKvListener);
+            stateRoot.registerCommitListener(singletonListener);
+            stateRoot.registerCommitListener(queueListener);
 
             final var states = stateRoot.getWritableStates(FIRST_SERVICE);
             final var animalState = states.get(ANIMAL_STATE_KEY);
@@ -774,12 +820,23 @@ class MerkleStateRootTest extends MerkleTestBase {
             verify(kvListener).mapDeleteChange(FRUIT_STATE_ID, C_KEY);
             verify(kvListener).mapUpdateChange(ANIMAL_STATE_ID, A_KEY, AARDVARK);
             verify(kvListener).mapDeleteChange(ANIMAL_STATE_ID, C_KEY);
-            verify(nonKvListener).singletonUpdateChange(COUNTRY_STATE_ID, ESTONIA);
-            verify(nonKvListener).queuePushChange(STEAM_STATE_ID, BIOLOGY);
-            verify(nonKvListener).queuePopChange(STEAM_STATE_ID);
+            verify(singletonListener).singletonUpdateChange(COUNTRY_STATE_ID, ESTONIA);
+            verify(queueListener).queuePushChange(STEAM_STATE_ID, BIOLOGY);
+            verify(queueListener).queuePopChange(STEAM_STATE_ID);
 
             verifyNoMoreInteractions(kvListener);
-            verifyNoMoreInteractions(nonKvListener);
+            verifyNoMoreInteractions(singletonListener);
+            verifyNoMoreInteractions(queueListener);
+        }
+
+        @AfterEach
+        void tearDown() {
+            fruitVirtualMap.release();
+            assertEventuallyEquals(
+                    0L,
+                    MerkleDbDataSource::getCountOfOpenDatabases,
+                    Duration.of(5, ChronoUnit.SECONDS),
+                    "All databases should be closed");
         }
     }
 
@@ -787,21 +844,30 @@ class MerkleStateRootTest extends MerkleTestBase {
     @DisplayName("Migrate test")
     class MigrateTest {
         @Test
-        @DisplayName("If the version is current, nothing ever happens")
-        void migrate_currentVersion() {
+        @DisplayName("If the version is previous, migration happens")
+        void migrate_previousVersion() {
             var node1 = mock(MerkleNode.class);
             stateRoot.setChild(0, node1);
             var node2 = mock(MerkleNode.class);
             stateRoot.setChild(1, node2);
             reset(node1, node2);
-            assertSame(stateRoot, stateRoot.migrate(CURRENT_VERSION));
+            var migratedState = stateRoot.migrate(CONFIGURATION, MINIMUM_SUPPORTED_VERSION);
+            assertNotSame(stateRoot, migratedState);
+            assertInstanceOf(VirtualMap.class, migratedState);
             verifyNoMoreInteractions(node1, node2);
+            migratedState.release();
         }
 
         @Test
-        @DisplayName("Migration from previous versions is not supported")
-        void migration_not_supported() {
-            assertThrows(UnsupportedOperationException.class, () -> stateRoot.migrate(CURRENT_VERSION - 1));
+        @DisplayName("Migration from previous versions is supported")
+        void migration_supported() {
+            assertDoesNotThrow(
+                    () -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1).release());
+        }
+
+        @AfterEach
+        void tearDown() {
+            stateRoot.release();
         }
     }
 
@@ -834,7 +900,7 @@ class MerkleStateRootTest extends MerkleTestBase {
             merkleCryptography = MerkleCryptographyFactory.create(ConfigurationBuilder.create()
                     .withConfigDataType(CryptoConfig.class)
                     .build());
-            stateRoot.init(new FakeTime(), new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
+            stateRoot.init(new FakeTime(), CONFIGURATION, new NoOpMetrics(), merkleCryptography, () -> GENESIS_ROUND);
         }
 
         @Test
@@ -874,5 +940,16 @@ class MerkleStateRootTest extends MerkleTestBase {
             Hash hash2 = stateRoot.getHash();
             assertSame(hash1, hash2);
         }
+    }
+
+    @AfterEach
+    void tearDown() throws InterruptedException {
+        assertEventuallyEquals(
+                0L,
+                MerkleDbDataSource::getCountOfOpenDatabases,
+                Duration.of(5, ChronoUnit.SECONDS),
+                "All databases should be closed");
+        // a bit of sleep is necessary for the file resources to be released, so that JUnit can do the cleanup
+        Thread.sleep(100);
     }
 }

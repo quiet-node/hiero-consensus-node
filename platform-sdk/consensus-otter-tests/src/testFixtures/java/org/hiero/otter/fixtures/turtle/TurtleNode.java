@@ -39,6 +39,7 @@ import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.state.TestStateLifecycleManager;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedNetwork;
+import com.swirlds.platform.test.fixtures.turtle.runner.TurtleTestingToolState;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
 import com.swirlds.state.State;
@@ -387,12 +388,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
-                () -> TurtleAppState.createGenesisState(currentConfiguration, roster, version),
+                () -> TurtleAppState.createGenesisState(currentConfiguration, roster, metrics, version),
                 APP_NAME,
                 SWIRLD_NAME,
                 selfId,
                 platformStateFacade,
-                platformContext);
+                platformContext,
+                TurtleTestingToolState::new);
         final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
@@ -411,6 +413,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                         eventStreamLoc,
                         rosterHistory,
                         platformStateFacade,
+                        TurtleTestingToolState::new,
                         new TestStateLifecycleManager())
                 .withPlatformContext(platformContext)
                 .withConfiguration(currentConfiguration)

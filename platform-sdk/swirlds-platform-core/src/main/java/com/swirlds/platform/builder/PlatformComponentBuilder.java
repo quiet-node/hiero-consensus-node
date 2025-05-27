@@ -105,9 +105,9 @@ import org.hiero.consensus.model.event.CesEvent;
  *     <li>A component must not be a static singleton or use static stateful variables in any way.</li>
  * </ul>
  */
-public class PlatformComponentBuilder<T extends MerkleNodeState> {
+public class PlatformComponentBuilder {
 
-    private final PlatformBuildingBlocks<T> blocks;
+    private final PlatformBuildingBlocks blocks;
 
     private EventHasher eventHasher;
     private InternalEventValidator internalEventValidator;
@@ -139,7 +139,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
     private LatestCompleteStateNotifier latestCompleteStateNotifier;
     private FutureEventBuffer futureEventBuffer;
 
-    private SwirldsPlatform<T> swirldsPlatform;
+    private SwirldsPlatform swirldsPlatform;
 
     private boolean metricsDocumentationEnabled = true;
 
@@ -154,7 +154,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @param blocks the build context for the platform under construction, contains all data needed to construct
      *               platform components
      */
-    public PlatformComponentBuilder(@NonNull final PlatformBuildingBlocks<T> blocks) {
+    public PlatformComponentBuilder(@NonNull final PlatformBuildingBlocks blocks) {
         this.blocks = Objects.requireNonNull(blocks);
     }
 
@@ -164,7 +164,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return the build context
      */
     @NonNull
-    public PlatformBuildingBlocks<T> getBuildingBlocks() {
+    public PlatformBuildingBlocks getBuildingBlocks() {
         return blocks;
     }
 
@@ -188,7 +188,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
         used = true;
 
         try (final ReservedSignedState initialState = blocks.initialState()) {
-            swirldsPlatform = new SwirldsPlatform<T>(this);
+            swirldsPlatform = new SwirldsPlatform(this);
             return swirldsPlatform;
         } finally {
             if (metricsDocumentationEnabled) {
@@ -211,7 +211,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withMetricsDocumentationEnabled(final boolean metricsDocumentationEnabled) {
+    public PlatformComponentBuilder withMetricsDocumentationEnabled(final boolean metricsDocumentationEnabled) {
         throwIfAlreadyUsed();
         this.metricsDocumentationEnabled = metricsDocumentationEnabled;
         return this;
@@ -224,7 +224,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withEventHasher(@NonNull final EventHasher eventHasher) {
+    public PlatformComponentBuilder withEventHasher(@NonNull final EventHasher eventHasher) {
         throwIfAlreadyUsed();
         if (this.eventHasher != null) {
             throw new IllegalStateException("Event hasher has already been set");
@@ -255,7 +255,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withInternalEventValidator(
+    public PlatformComponentBuilder withInternalEventValidator(
             @NonNull final InternalEventValidator internalEventValidator) {
         throwIfAlreadyUsed();
         if (this.internalEventValidator != null) {
@@ -291,7 +291,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withEventDeduplicator(@NonNull final EventDeduplicator eventDeduplicator) {
+    public PlatformComponentBuilder withEventDeduplicator(@NonNull final EventDeduplicator eventDeduplicator) {
         throwIfAlreadyUsed();
         if (this.eventDeduplicator != null) {
             throw new IllegalStateException("Event deduplicator has already been set");
@@ -323,7 +323,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withEventSignatureValidator(
+    public PlatformComponentBuilder withEventSignatureValidator(
             @NonNull final EventSignatureValidator eventSignatureValidator) {
         throwIfAlreadyUsed();
         if (this.eventSignatureValidator != null) {
@@ -360,7 +360,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @param stateGarbageCollector the state garbage collector to use
      * @return this builder
      */
-    public PlatformComponentBuilder<T> withStateGarbageCollector(
+    public PlatformComponentBuilder withStateGarbageCollector(
             @NonNull final StateGarbageCollector stateGarbageCollector) {
         throwIfAlreadyUsed();
         if (this.stateGarbageCollector != null) {
@@ -393,7 +393,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withSelfEventSigner(@NonNull final SelfEventSigner selfEventSigner) {
+    public PlatformComponentBuilder withSelfEventSigner(@NonNull final SelfEventSigner selfEventSigner) {
         throwIfAlreadyUsed();
         if (this.selfEventSigner != null) {
             throw new IllegalStateException("Self event signer has already been set");
@@ -441,7 +441,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withOrphanBuffer(@NonNull final OrphanBuffer orphanBuffer) {
+    public PlatformComponentBuilder withOrphanBuffer(@NonNull final OrphanBuffer orphanBuffer) {
         throwIfAlreadyUsed();
         if (this.orphanBuffer != null) {
             throw new IllegalStateException("Orphan buffer has already been set");
@@ -458,8 +458,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withEventCreationManager(
-            @NonNull final EventCreationManager eventCreationManager) {
+    public PlatformComponentBuilder withEventCreationManager(@NonNull final EventCreationManager eventCreationManager) {
         throwIfAlreadyUsed();
         if (this.eventCreationManager != null) {
             throw new IllegalStateException("Event creation manager has already been set");
@@ -501,7 +500,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withConsensusEngine(@NonNull final ConsensusEngine consensusEngine) {
+    public PlatformComponentBuilder withConsensusEngine(@NonNull final ConsensusEngine consensusEngine) {
         throwIfAlreadyUsed();
         if (this.consensusEngine != null) {
             throw new IllegalStateException("Consensus engine has already been set");
@@ -536,8 +535,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withConsensusEventStream(
-            @NonNull final ConsensusEventStream consensusEventStream) {
+    public PlatformComponentBuilder withConsensusEventStream(@NonNull final ConsensusEventStream consensusEventStream) {
         throwIfAlreadyUsed();
         if (this.consensusEventStream != null) {
             throw new IllegalStateException("Consensus event stream has already been set");
@@ -576,7 +574,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withStatusStateMachine(@NonNull final StatusStateMachine statusStateMachine) {
+    public PlatformComponentBuilder withStatusStateMachine(@NonNull final StatusStateMachine statusStateMachine) {
         throwIfAlreadyUsed();
         if (this.statusStateMachine != null) {
             throw new IllegalStateException("Status state machine has already been set");
@@ -608,7 +606,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withSignedStateSentinel(@NonNull final SignedStateSentinel signedStateSentinel) {
+    public PlatformComponentBuilder withSignedStateSentinel(@NonNull final SignedStateSentinel signedStateSentinel) {
         throwIfAlreadyUsed();
         if (this.signedStateSentinel != null) {
             throw new IllegalStateException("Signed state sentinel has already been set");
@@ -640,7 +638,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withTransactionPrehandler(
+    public PlatformComponentBuilder withTransactionPrehandler(
             @NonNull final TransactionPrehandler transactionPrehandler) {
         throwIfAlreadyUsed();
         if (this.transactionPrehandler != null) {
@@ -676,7 +674,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withInlinePcesWriter(@NonNull final InlinePcesWriter inlinePcesWriter) {
+    public PlatformComponentBuilder withInlinePcesWriter(@NonNull final InlinePcesWriter inlinePcesWriter) {
         throwIfAlreadyUsed();
         if (this.inlinePcesWriter != null) {
             throw new IllegalStateException("Inline PCES writer has already been set");
@@ -719,7 +717,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withIssDetector(@NonNull final IssDetector issDetector) {
+    public PlatformComponentBuilder withIssDetector(@NonNull final IssDetector issDetector) {
         throwIfAlreadyUsed();
         if (this.issDetector != null) {
             throw new IllegalStateException("ISS detector has already been set");
@@ -788,7 +786,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withIssHandler(@NonNull final IssHandler issHandler) {
+    public PlatformComponentBuilder withIssHandler(@NonNull final IssHandler issHandler) {
         throwIfAlreadyUsed();
         if (this.issHandler != null) {
             throw new IllegalStateException("ISS handler has already been set");
@@ -827,7 +825,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withStaleEventDetector(@NonNull final StaleEventDetector staleEventDetector) {
+    public PlatformComponentBuilder withStaleEventDetector(@NonNull final StaleEventDetector staleEventDetector) {
         throwIfAlreadyUsed();
         if (this.staleEventDetector != null) {
             throw new IllegalStateException("Stale event detector has already been set");
@@ -861,7 +859,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withTransactionResubmitter(
+    public PlatformComponentBuilder withTransactionResubmitter(
             @NonNull final TransactionResubmitter transactionResubmitter) {
         throwIfAlreadyUsed();
         if (this.transactionResubmitter != null) {
@@ -894,7 +892,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withTransactionPool(@NonNull final TransactionPool transactionPool) {
+    public PlatformComponentBuilder withTransactionPool(@NonNull final TransactionPool transactionPool) {
         throwIfAlreadyUsed();
         if (this.transactionPool != null) {
             throw new IllegalStateException("Transaction pool has already been set");
@@ -925,7 +923,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withGossip(@NonNull final Gossip gossip) {
+    public PlatformComponentBuilder withGossip(@NonNull final Gossip gossip) {
         throwIfAlreadyUsed();
         if (this.gossip != null) {
             throw new IllegalStateException("Gossip has already been set");
@@ -957,6 +955,8 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
                     () -> blocks.clearAllPipelinesForReconnectReference().get().run(),
                     blocks.intakeEventCounter(),
                     blocks.platformStateFacade(),
+                    blocks.stateRootFunction());
+                    blocks.platformStateFacade(),
                     blocks.stateLifecycleManager());
         }
         return gossip;
@@ -969,7 +969,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withStateHasher(@NonNull final StateHasher stateHasher) {
+    public PlatformComponentBuilder withStateHasher(@NonNull final StateHasher stateHasher) {
         throwIfAlreadyUsed();
         if (this.stateHasher != null) {
             throw new IllegalStateException("Signed state hasher has already been set");
@@ -1000,8 +1000,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withStateSnapshotManager(
-            @NonNull final StateSnapshotManager stateSnapshotManager) {
+    public PlatformComponentBuilder withStateSnapshotManager(@NonNull final StateSnapshotManager stateSnapshotManager) {
         throwIfAlreadyUsed();
         if (this.stateSnapshotManager != null) {
             throw new IllegalStateException("State snapshot manager has already been set");
@@ -1042,7 +1041,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withHashLogger(@NonNull final HashLogger hashLogger) {
+    public PlatformComponentBuilder withHashLogger(@NonNull final HashLogger hashLogger) {
         throwIfAlreadyUsed();
         if (this.hashLogger != null) {
             throw new IllegalStateException("Hash logger has already been set");
@@ -1073,7 +1072,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withBranchDetector(@NonNull final BranchDetector branchDetector) {
+    public PlatformComponentBuilder withBranchDetector(@NonNull final BranchDetector branchDetector) {
         throwIfAlreadyUsed();
         if (this.branchDetector != null) {
             throw new IllegalStateException("Branch detector has already been set");
@@ -1105,7 +1104,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withBranchReporter(@NonNull final BranchReporter branchReporter) {
+    public PlatformComponentBuilder withBranchReporter(@NonNull final BranchReporter branchReporter) {
         throwIfAlreadyUsed();
         if (this.branchReporter != null) {
             throw new IllegalStateException("Branch reporter has already been set");
@@ -1137,7 +1136,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @param stateSigner the state signer to use
      * @return this builder
      */
-    public PlatformComponentBuilder<T> withStateSigner(@NonNull final StateSigner stateSigner) {
+    public PlatformComponentBuilder withStateSigner(@NonNull final StateSigner stateSigner) {
         throwIfAlreadyUsed();
         if (this.stateSigner != null) {
             throw new IllegalStateException("State signer has already been set");
@@ -1168,7 +1167,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withTransactionHandler(@NonNull final TransactionHandler transactionHandler) {
+    public PlatformComponentBuilder withTransactionHandler(@NonNull final TransactionHandler transactionHandler) {
         throwIfAlreadyUsed();
         if (this.transactionHandler != null) {
             throw new IllegalStateException("Transaction handler has already been set");
@@ -1188,7 +1187,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
     @NonNull
     public TransactionHandler buildTransactionHandler() {
         if (transactionHandler == null) {
-            transactionHandler = new DefaultTransactionHandler<T>(
+            transactionHandler = new DefaultTransactionHandler(
                     blocks.platformContext(),
                     blocks.statusActionSubmitterReference().get(),
                     blocks.appVersion(),
@@ -1208,7 +1207,7 @@ public class PlatformComponentBuilder<T extends MerkleNodeState> {
      * @return this builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> withLatestCompleteStateNotifier(
+    public PlatformComponentBuilder withLatestCompleteStateNotifier(
             @NonNull final LatestCompleteStateNotifier latestCompleteStateNotifier) {
         throwIfAlreadyUsed();
         if (this.latestCompleteStateNotifier != null) {

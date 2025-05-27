@@ -41,6 +41,7 @@ import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -78,6 +79,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
 
     private final ConsensusStateEventHandler<T> consensusStateEventHandler;
     private final PlatformStateFacade platformStateFacade;
+    private final Function<VirtualMap, MerkleNodeState> stateRootFunction;
     private final StateLifecycleManager<T> stateLifecycleManager;
 
     private final NodeId selfId;
@@ -152,6 +154,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
      * @param consensusEventStreamName a part of the name of the directory where the consensus event stream is written
      * @param rosterHistory            the roster history provided by the application to use at startup
      * @param platformStateFacade      the facade to access the platform state
+     * @param stateRootFunction        a function to instantiate the state root object from a Virtual Map
      * @param stateLifecycleManager    the state lifecycle manager
      */
     @NonNull
@@ -165,6 +168,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
             @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final StateLifecycleManager<T> stateLifecycleManager) {
         return new PlatformBuilder<T>(
                 appName,
@@ -176,6 +180,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
                 consensusEventStreamName,
                 rosterHistory,
                 platformStateFacade,
+                stateRootFunction,
                 stateLifecycleManager);
     }
 
@@ -192,6 +197,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
      * @param consensusEventStreamName a part of the name of the directory where the consensus event stream is written
      * @param rosterHistory            the roster history provided by the application to use at startup
      * @param platformStateFacade      the facade to access the platform state
+     * @param stateRootFunction        a function to instantiate the state root object from a Virtual Map
      * @param stateLifecycleManager    the state lifecycle manager
      */
     private PlatformBuilder(
@@ -204,6 +210,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
             @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final StateLifecycleManager<T> stateLifecycleManager) {
 
         this.appName = Objects.requireNonNull(appName);
@@ -215,6 +222,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
         this.consensusEventStreamName = Objects.requireNonNull(consensusEventStreamName);
         this.rosterHistory = Objects.requireNonNull(rosterHistory);
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
+        this.stateRootFunction = Objects.requireNonNull(stateRootFunction);
         this.stateLifecycleManager = Objects.requireNonNull(stateLifecycleManager);
     }
 
@@ -507,6 +515,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
                 firstPlatform,
                 consensusStateEventHandler,
                 platformStateFacade,
+                stateRootFunction,
                 stateLifecycleManager);
 
         return new PlatformComponentBuilder<T>(buildingBlocks);

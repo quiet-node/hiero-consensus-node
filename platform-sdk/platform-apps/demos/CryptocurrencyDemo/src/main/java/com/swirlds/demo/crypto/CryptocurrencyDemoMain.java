@@ -29,12 +29,14 @@ import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.Random;
+import java.util.function.Function;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
@@ -203,6 +205,17 @@ public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoStat
     @Override
     public StateLifecycleManager<CryptocurrencyDemoState> newStateLifecycleManager() {
         return new StateLifecycleManagerImpl<>(new NoOpMetrics());
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19004
+     * </p>
+     */
+    @Override
+    public Function<VirtualMap, CryptocurrencyDemoState> stateRootFromVirtualMap() {
+        throw new UnsupportedOperationException();
     }
 
     /**

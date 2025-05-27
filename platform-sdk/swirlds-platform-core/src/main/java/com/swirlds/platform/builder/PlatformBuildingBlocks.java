@@ -14,6 +14,7 @@ import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.iss.IssScratchpad;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -21,6 +22,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -69,6 +71,8 @@ import org.hiero.consensus.roster.RosterHistory;
  * @param consensusEventStreamName               a part of the name of the directory where the consensus event stream is written
  * @param issScratchpad                          scratchpad storage for ISS recovery
  * @param notificationEngine                     for sending notifications to the application (legacy pattern)
+ * @param firstPlatform                          if this is the first platform being built (there is static setup that
+ *                                               needs to be done, long term plan is to stop using static variables)
  * @param statusActionSubmitterReference         a reference to the status action submitter, this can be deleted once
  *                                               platform status management is handled by the wiring framework
  * @param getLatestCompleteStateReference        a reference to a supplier that supplies the latest immutable state,
@@ -78,15 +82,16 @@ import org.hiero.consensus.roster.RosterHistory;
  *                                               removed once reconnect is made compatible with the wiring framework
  * @param clearAllPipelinesForReconnectReference a reference to a runnable that clears all pipelines for reconnect, can
  *                                               be removed once reconnect is made compatible with the wiring framework
- * @param firstPlatform                          if this is the first platform being built (there is static setup that
- *                                               needs to be done, long term plan is to stop using static variables)
+ * @param swirldStateManager                     responsible for the mutable state, this is exposed here due to
+ *                                               reconnect, can be removed once reconnect is made compatible with the
+ *                                               wiring framework
  * @param platformStateFacade                    the facade to access the platform state
+ * @param stateRootFunction                      a function to instantiate the state root object from a Virtual Map
  * @param stateLifecycleManager                  responsible for maintaining references to the mutable state and the latest immutable state,
  *                                               this is exposed here due to reconnect, can be removed once reconnect is made compatible with the
  *                                               wiring framework
- *
  */
-public record PlatformBuildingBlocks<T extends MerkleNodeState>(
+public record PlatformBuildingBlocks(
         @NonNull PlatformWiring platformWiring,
         @NonNull PlatformContext platformContext,
         @NonNull WiringModel model,
@@ -95,7 +100,7 @@ public record PlatformBuildingBlocks<T extends MerkleNodeState>(
         @NonNull String mainClassName,
         @NonNull String swirldName,
         @NonNull SemanticVersion appVersion,
-        @NonNull ReservedSignedState<T> initialState,
+        @NonNull ReservedSignedState initialState,
         @NonNull RosterHistory rosterHistory,
         @NonNull ApplicationCallbacks applicationCallbacks,
         @Nullable Consumer<PlatformEvent> preconsensusEventConsumer,
@@ -104,18 +109,20 @@ public record PlatformBuildingBlocks<T extends MerkleNodeState>(
         @NonNull RandomBuilder randomBuilder,
         @NonNull TransactionPoolNexus transactionPoolNexus,
         @NonNull FreezeCheckHolder freezeCheckHolder,
-        @NonNull AtomicReference<Function<String, ReservedSignedState<T>>> latestImmutableStateProviderReference,
+        @NonNull AtomicReference<Function<String, ReservedSignedState>> latestImmutableStateProviderReference,
         @NonNull PcesFileTracker initialPcesFiles,
         @NonNull String consensusEventStreamName,
         @NonNull Scratchpad<IssScratchpad> issScratchpad,
         @NonNull NotificationEngine notificationEngine,
         @NonNull AtomicReference<StatusActionSubmitter> statusActionSubmitterReference,
-        @NonNull AtomicReference<Supplier<ReservedSignedState<T>>> getLatestCompleteStateReference,
-        @NonNull AtomicReference<Consumer<SignedState<?>>> loadReconnectStateReference,
+        @NonNull SwirldStateManager swirldStateManager,
+        @NonNull AtomicReference<Supplier<ReservedSignedState>> getLatestCompleteStateReference,
+        @NonNull AtomicReference<Consumer<SignedState>> loadReconnectStateReference,
         @NonNull AtomicReference<Runnable> clearAllPipelinesForReconnectReference,
         boolean firstPlatform,
-        @NonNull ConsensusStateEventHandler<T> consensusStateEventHandler,
+        @NonNull ConsensusStateEventHandler consensusStateEventHandler,
         @NonNull PlatformStateFacade platformStateFacade,
+        @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction,
         @NonNull StateLifecycleManager<T> stateLifecycleManager) {
 
     public PlatformBuildingBlocks {
@@ -143,6 +150,9 @@ public record PlatformBuildingBlocks<T extends MerkleNodeState>(
         requireNonNull(getLatestCompleteStateReference);
         requireNonNull(loadReconnectStateReference);
         requireNonNull(clearAllPipelinesForReconnectReference);
+        requireNonNull(consensusStateEventHandler);
+        requireNonNull(platformStateFacade);
+        requireNonNull(stateRootFunction);
         requireNonNull(stateLifecycleManager);
     }
 }
