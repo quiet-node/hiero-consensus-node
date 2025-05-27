@@ -106,11 +106,11 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         assertThat(blockStreamStateManager.getConnections().containsValue(subject))
                 .isTrue();
-        assertEquals(subject.getConnectionState(), ACTIVE);
+        assertEquals(ACTIVE, subject.getConnectionState());
 
         blockNodeConnectionManager.shutdown();
 
-        assertEquals(subject.getConnectionState(), UNINITIALIZED);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
     }
 
     @Test
@@ -119,7 +119,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         assertThat(blockStreamStateManager.getConnections().containsValue(subject))
                 .isTrue();
-        assertEquals(subject.getConnectionState(), ACTIVE);
+        assertEquals(ACTIVE, subject.getConnectionState());
 
         final var initialDelay = Duration.ofSeconds(1);
         blockNodeConnectionManager.handleConnectionError(subject, initialDelay);
@@ -134,7 +134,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         assertThat(blockStreamStateManager.getConnections().containsValue(subject))
                 .isTrue();
-        assertEquals(subject.getConnectionState(), ACTIVE);
+        assertEquals(ACTIVE, subject.getConnectionState());
 
         blockNodeConnectionManager.updateLastVerifiedBlock(nodeConfig, 0L);
 
@@ -153,7 +153,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         blockNodeConnectionManager.waitForConnection(Duration.ofSeconds(5));
 
         // Verify the connection state is UNINITIALIZED after the exception
-        assertEquals(subject.getConnectionState(), UNINITIALIZED);
+        assertEquals(UNINITIALIZED, subject.getConnectionState());
 
         // Allow time for retry logic
         Thread.sleep(3000);
@@ -166,7 +166,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         Thread.sleep(3000);
 
         // Verify the connection state is ACTIVE after retry
-        assertEquals(subject.getConnectionState(), ACTIVE);
+        assertEquals(ACTIVE, subject.getConnectionState());
     }
 
     @Test
@@ -175,7 +175,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         assertThat(blockStreamStateManager.getConnections().containsValue(subject))
                 .isTrue();
-        assertEquals(subject.getConnectionState(), ACTIVE);
+        assertEquals(ACTIVE, subject.getConnectionState());
 
         blockStreamStateManager.openBlock(0L);
 
@@ -225,7 +225,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         assertThat(blockStreamStateManager.getConnections().containsValue(subject))
                 .isTrue();
-        assertEquals(subject.getConnectionState(), ACTIVE);
+        assertEquals(ACTIVE, subject.getConnectionState());
 
         blockStreamStateManager.openBlock(0L);
 
@@ -254,7 +254,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         assertThat(blockStreamStateManager.getConnections().containsValue(subject))
                 .isTrue();
-        assertEquals(subject.getConnectionState(), ACTIVE);
+        assertEquals(ACTIVE, subject.getConnectionState());
 
         blockStreamStateManager.openBlock(0L);
         blockStreamStateManager.openBlock(1L);
