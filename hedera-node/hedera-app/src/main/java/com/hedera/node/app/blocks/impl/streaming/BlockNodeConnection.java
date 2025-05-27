@@ -3,13 +3,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
-import org.hiero.block.api.PublishStreamRequest;
-import org.hiero.block.api.PublishStreamResponse;
-import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
-import org.hiero.block.api.PublishStreamResponse.EndOfStream;
-import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
-import org.hiero.block.api.PublishStreamResponse.ResendBlock;
-import org.hiero.block.api.PublishStreamResponse.SkipBlock;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
@@ -27,6 +20,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.PublishStreamRequest;
+import org.hiero.block.api.PublishStreamResponse;
+import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
+import org.hiero.block.api.PublishStreamResponse.EndOfStream;
+import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
+import org.hiero.block.api.PublishStreamResponse.ResendBlock;
+import org.hiero.block.api.PublishStreamResponse.SkipBlock;
 
 /**
  * Manages a single gRPC bidirectional streaming connection to a block node. Each connection:
@@ -249,7 +249,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             blockNodeConnectionManager.rescheduleAndSelectNewNode(this, endOfStreamScheduleDelay);
             return;
         }
-
 
         switch (responseCode) {
             case Code.INTERNAL_ERROR, Code.PERSISTENCE_FAILED -> {

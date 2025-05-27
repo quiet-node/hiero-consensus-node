@@ -3,15 +3,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.hedera.hapi.block.BlockItemSet;
-import com.hedera.hapi.block.PublishStreamRequest;
-import com.hedera.hapi.block.PublishStreamResponse;
-import com.hedera.hapi.block.PublishStreamResponse.Acknowledgement;
-import com.hedera.hapi.block.PublishStreamResponse.BlockAcknowledgement;
-import com.hedera.hapi.block.PublishStreamResponse.EndOfStream;
-import com.hedera.hapi.block.PublishStreamResponse.ResendBlock;
-import com.hedera.hapi.block.PublishStreamResponse.SkipBlock;
-import com.hedera.hapi.block.PublishStreamResponseCode;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.BlockProof;
 import com.hedera.hapi.block.stream.output.BlockHeader;
@@ -22,6 +13,13 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+import org.hiero.block.api.BlockItemSet;
+import org.hiero.block.api.PublishStreamRequest;
+import org.hiero.block.api.PublishStreamResponse;
+import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
+import org.hiero.block.api.PublishStreamResponse.EndOfStream;
+import org.hiero.block.api.PublishStreamResponse.ResendBlock;
+import org.hiero.block.api.PublishStreamResponse.SkipBlock;
 
 /**
  * Base class for tests that involve block node communication.
@@ -46,7 +44,7 @@ public abstract class BlockNodeCommunicationTestBase {
 
     @NonNull
     protected static PublishStreamResponse createEndOfStreamResponse(
-            final PublishStreamResponseCode responseCode, final long lastVerifiedBlock) {
+            final EndOfStream.Code responseCode, final long lastVerifiedBlock) {
         final EndOfStream eos = EndOfStream.newBuilder()
                 .blockNumber(lastVerifiedBlock)
                 .status(responseCode)
@@ -61,12 +59,7 @@ public abstract class BlockNodeCommunicationTestBase {
                 .blockAlreadyExists(alreadyExists)
                 .build();
 
-        final Acknowledgement acknowledgement =
-                Acknowledgement.newBuilder().blockAck(blockAck).build();
-
-        return PublishStreamResponse.newBuilder()
-                .acknowledgement(acknowledgement)
-                .build();
+        return PublishStreamResponse.newBuilder().acknowledgement(blockAck).build();
     }
 
     @NonNull

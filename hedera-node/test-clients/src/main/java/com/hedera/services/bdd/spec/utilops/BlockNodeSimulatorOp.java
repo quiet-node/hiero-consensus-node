@@ -518,7 +518,8 @@ public class BlockNodeSimulatorOp extends UtilOp {
          * @param lastVerifiedBlockConsumer the consumer to receive the last verified block number
          * @return this builder
          */
-        public GetLastVerifiedBlockBuilder exposingLastVerifiedBlockNumber(final Consumer<Long> lastVerifiedBlockConsumer) {
+        public GetLastVerifiedBlockBuilder exposingLastVerifiedBlockNumber(
+                final Consumer<Long> lastVerifiedBlockConsumer) {
             this.lastVerifiedBlockConsumer = lastVerifiedBlockConsumer;
             return this;
         }

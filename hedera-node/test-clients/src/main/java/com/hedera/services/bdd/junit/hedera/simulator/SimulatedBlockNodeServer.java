@@ -226,11 +226,10 @@ public class SimulatedBlockNodeServer {
         log.info("Reset all responses to default behavior on port {}", port);
     }
 
-        /**
-         * Configuration for EndOfStream responses.
-         */
-        private record EndOfStreamConfig(EndOfStream.Code responseCode, long blockNumber) {
-    }
+    /**
+     * Configuration for EndOfStream responses.
+     */
+    private record EndOfStreamConfig(EndOfStream.Code responseCode, long blockNumber) {}
 
     /**
      * Implementation of the BlockStreamService that can be configured to respond
@@ -343,8 +342,8 @@ public class SimulatedBlockNodeServer {
                                             currentBlockNumber,
                                             streamingBlocks.get(blockNumber) != null
                                                     ? streamingBlocks
-                                                    .get(blockNumber)
-                                                    .hashCode()
+                                                            .get(blockNumber)
+                                                            .hashCode()
                                                     : "none");
                                     // Continue to the next BlockItem in the request
                                     continue;
@@ -655,12 +654,12 @@ public class SimulatedBlockNodeServer {
             final boolean blockAlreadyExists) {
         final PublishStreamResponse.BlockAcknowledgement ack = PublishStreamResponse.BlockAcknowledgement.newBuilder()
                 .setBlockNumber(blockNumber)
-                .setBlockNumber(lastVerifiedBlockNumber.get()) // TODO: why is the block number set twice? which is correct?
+                .setBlockNumber(
+                        lastVerifiedBlockNumber.get()) // TODO: why is the block number set twice? which is correct?
                 .setBlockAlreadyExists(blockAlreadyExists) // Set based on the parameter
                 .build();
-        final PublishStreamResponse response = PublishStreamResponse.newBuilder()
-                .setAcknowledgement(ack)
-                .build();
+        final PublishStreamResponse response =
+                PublishStreamResponse.newBuilder().setAcknowledgement(ack).build();
         try {
             responseObserver.onNext(response);
             log.debug(

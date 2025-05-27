@@ -99,7 +99,8 @@ public class BlockNodeSimulatorController {
      * @param blockNumber the block number to include in the response
      * @return the last verified block number from the simulator, or 0 if the index is invalid
      */
-    public long sendEndOfStreamImmediately(final long index, final EndOfStream.Code responseCode, final long blockNumber) {
+    public long sendEndOfStreamImmediately(
+            final long index, final EndOfStream.Code responseCode, final long blockNumber) {
         long lastVerifiedBlockNumber = 0L;
         if (index >= 0 && index < simulatedBlockNodes.size()) {
             final SimulatedBlockNodeServer server = simulatedBlockNodes.get(index);

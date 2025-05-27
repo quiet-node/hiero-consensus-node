@@ -50,7 +50,6 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.PublishStreamRequest;
-import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 
 /**
@@ -210,9 +209,10 @@ public class BlockNodeConnectionManager {
                 .serviceName(BlockStreamPublishServiceGrpc.SERVICE_NAME)
                 .putMethod(
                         grpcEndpoint,
-                        GrpcClientMethodDescriptor.bidirectional(BlockStreamPublishServiceGrpc.SERVICE_NAME, grpcEndpoint)
-                                .requestType(PublishStreamRequest.class)
-                                .responseType(PublishStreamResponse.class)
+                        GrpcClientMethodDescriptor.bidirectional(
+                                        BlockStreamPublishServiceGrpc.SERVICE_NAME, grpcEndpoint)
+                                .requestType(org.hiero.block.api.protoc.PublishStreamRequest.class)
+                                .responseType(org.hiero.block.api.protoc.PublishStreamResponse.class)
                                 .marshallerSupplier(new RequestResponseMarshaller.Supplier())
                                 .build())
                 .build());
