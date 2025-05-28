@@ -61,15 +61,16 @@ public class PcesWriterBenchmark {
         mutableFile.close();
         FileUtils.deleteDirectory(directory);
     }
-    /*
-    Results on a M1 Max MacBook Pro:
 
-    Benchmark                       (syncEveryEvent)  (useFileChannelWriter)   Mode  Cnt       Score        Error  Units
-    PcesWriterBenchmark.writeEvent              true                    true  thrpt    3   12440.268 ±  42680.146  ops/s
-    PcesWriterBenchmark.writeEvent              true                   false  thrpt    3   16244.412 ±  38461.148  ops/s
-    PcesWriterBenchmark.writeEvent             false                    true  thrpt    3  411138.079 ± 110692.138  ops/s
-    PcesWriterBenchmark.writeEvent             false                   false  thrpt    3  643582.781 ± 154393.415  ops/s
-    */
+    //Linux benchmark
+    //Benchmark                              (pcesFileWriterType)   Mode  Cnt       Score        Error  Units
+    //PcesWriterBenchmark.writeEvent                OUTPUT_STREAM  thrpt    3  402513.131 ± 266641.090  ops/s
+    //PcesWriterBenchmark.writeEvent                 FILE_CHANNEL  thrpt    3  465751.805 ± 633311.931  ops/s
+    //PcesWriterBenchmark.writeEvent            FILE_CHANNEL_SYNC  thrpt    3    1200.434 ±   2370.299  ops/s
+    //PcesWriterBenchmark.writeEventAndSync         OUTPUT_STREAM  thrpt    3    1126.327 ±   2161.654  ops/s
+    //PcesWriterBenchmark.writeEventAndSync          FILE_CHANNEL  thrpt    3     984.342 ±    352.266  ops/s
+    //PcesWriterBenchmark.writeEventAndSync     FILE_CHANNEL_SYNC  thrpt    3     881.496 ±   2015.275  ops/s
+
     @Benchmark
     @BenchmarkMode(Mode.Throughput)
     @OutputTimeUnit(TimeUnit.SECONDS)
