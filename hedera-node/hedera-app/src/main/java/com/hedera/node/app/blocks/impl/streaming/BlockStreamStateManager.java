@@ -4,6 +4,7 @@ package com.hedera.node.app.blocks.impl.streaming;
 import static com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItemType.BLOCK_ITEM;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
@@ -208,8 +209,17 @@ public class BlockStreamStateManager {
     /**
      * @return true if the block buffer has blocks that are expired but unacknowledged, else false
      */
+    @VisibleForTesting
     public boolean isBufferSaturated() {
         return isBufferSaturated.get();
+    }
+
+    /**
+     * @return the current CompletableFuture reference used for backpressure
+     */
+    @VisibleForTesting
+    public static CompletableFuture<Boolean> backPressureCompletableFutureRef() {
+        return backpressureCompletableFutureRef.get();
     }
 
     /**
@@ -365,7 +375,7 @@ public class BlockStreamStateManager {
             return;
         }
 
-        final CompletableFuture<Boolean> cf = backpressureCompletableFutureRef.get();
+        final CompletableFuture<Boolean> cf = backPressureCompletableFutureRef();
         if (cf != null && !cf.isDone()) {
             try {
                 logger.error("!!! Block buffer is saturated; blocking thread until buffer is no longer saturated");
@@ -512,7 +522,7 @@ public class BlockStreamStateManager {
             CompletableFuture<Boolean> oldCf;
             CompletableFuture<Boolean> newCf;
             do {
-                oldCf = backpressureCompletableFutureRef.get();
+                oldCf = backPressureCompletableFutureRef();
                 if (oldCf != null) {
                     /**
                      * If everything is behaving as expected, then this condition should never be encountered. At any
@@ -536,7 +546,7 @@ public class BlockStreamStateManager {
             CompletableFuture<Boolean> newCf;
 
             do {
-                oldCf = backpressureCompletableFutureRef.get();
+                oldCf = backPressureCompletableFutureRef();
                 if (oldCf != null) {
                     /**
                      * If everything is behaving as expected, then this condition should never be encountered. At any

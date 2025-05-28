@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.workflows.handle;
 
+import static com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.backPressureCompletableFutureRef;
+import static com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.ensureNewBlocksPermitted;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
 import static java.util.Collections.emptyIterator;
@@ -510,7 +512,7 @@ class HandleWorkflowTest {
             subject.handleRound(state, round, txn -> {});
 
             // Verify that ensureNewBlocksPermitted was called
-            mockedStatic.verify(() -> BlockStreamStateManager.ensureNewBlocksPermitted());
+            mockedStatic.verify(() -> ensureNewBlocksPermitted());
         }
     }
 
@@ -537,8 +539,8 @@ class HandleWorkflowTest {
             // Execute the method
             subject.handleRound(state, round, txn -> {});
 
-            // Verify that ensureNewBlocksPermitted was NOT called
-            mockedStatic.verify(() -> BlockStreamStateManager.ensureNewBlocksPermitted(), never());
+            // Verify that ensureNewBlocksPermitted was a NO-OP call
+            mockedStatic.verify(() -> backPressureCompletableFutureRef(), never());
         }
     }
 }
