@@ -352,10 +352,12 @@ class StateFileManagerTests {
 
                     Configuration configuration =
                             TestPlatformContextBuilder.create().build().getConfiguration();
+                    // Restore to a new MerkleDb instance
+                    MerkleDb.resetDefaultInstancePath();
                     final SignedState stateFromDisk = assertDoesNotThrow(
                             () -> SignedStateFileReader.readStateFile(
-                                            savedStateInfo.stateFile(),
-                                            HederaNewStateRoot::new,
+                                                savedStateInfo.stateFile(),
+                                                HederaNewStateRoot::new,
                                             TEST_PLATFORM_STATE_FACADE,
                                             PlatformContext.create(configuration))
                                     .reservedSignedState()
@@ -368,6 +370,7 @@ class StateFileManagerTests {
                             originalState.getConsensusTimestamp(),
                             stateFromDisk.getConsensusTimestamp(),
                             "timestamp should match");
+                    stateFromDisk.getState().release();
                 }
 
                 // The first state with a timestamp after this boundary should be saved
