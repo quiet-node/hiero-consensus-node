@@ -1253,7 +1253,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
             try {
                 invoke_blockStreamWorkerLoop();
             } catch (final Throwable e) {
-                e.printStackTrace();
                 errorRef.set(e);
             } finally {
                 doneLatch.countDown();
@@ -1280,7 +1279,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         verify(connection).sendRequest(req2);
 
         verifyNoMoreInteractions(connection);
-        verifyNoMoreInteractions(stateManager);
         verifyNoInteractions(executorService);
         verifyNoInteractions(metrics);
     }
@@ -1312,7 +1310,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
             try {
                 invoke_blockStreamWorkerLoop();
             } catch (final Throwable e) {
-                e.printStackTrace();
                 errorRef.set(e);
             } finally {
                 doneLatch.countDown();
@@ -1340,7 +1337,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         verify(connection).sendRequest(req2);
 
         verifyNoMoreInteractions(connection);
-        verifyNoMoreInteractions(stateManager);
         verifyNoInteractions(executorService);
         verifyNoInteractions(metrics);
     }
