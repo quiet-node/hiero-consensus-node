@@ -347,13 +347,15 @@ class StateFileManagerTests {
 
                     Configuration configuration =
                             TestPlatformContextBuilder.create().build().getConfiguration();
+                    // Restore to a new MerkleDb instance
+                    MerkleDb.resetDefaultInstancePath();
                     final SignedState stateFromDisk = assertDoesNotThrow(
                             () -> SignedStateFileReader.readStateFile(
-                                            savedStateInfo.stateFile(),
-                                            TEST_PLATFORM_STATE_FACADE,
-                                            PlatformContext.create(configuration))
-                                    .reservedSignedState()
-                                    .get(),
+                                                savedStateInfo.stateFile(),
+                                                TEST_PLATFORM_STATE_FACADE,
+                                                PlatformContext.create(configuration))
+                                        .reservedSignedState()
+                                        .get(),
                             "should be able to read state on disk");
 
                     final SignedState originalState = savedStates.get(savedStates.size() - index - 1);
@@ -362,6 +364,7 @@ class StateFileManagerTests {
                             originalState.getConsensusTimestamp(),
                             stateFromDisk.getConsensusTimestamp(),
                             "timestamp should match");
+                    stateFromDisk.getState().release();
                 }
 
                 // The first state with a timestamp after this boundary should be saved
