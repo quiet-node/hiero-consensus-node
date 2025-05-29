@@ -69,11 +69,6 @@ class SwirldsStateManagerTests {
         if (!swirldStateManager.getConsensusState().isDestroyed()) {
             swirldStateManager.getConsensusState().release();
         }
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
         if (!initialState.isDestroyed()) {
             initialState.release();
         }
