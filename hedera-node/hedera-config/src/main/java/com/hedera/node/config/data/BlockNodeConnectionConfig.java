@@ -17,7 +17,7 @@ import java.time.Duration;
  */
 @ConfigData("blockNode")
 public record BlockNodeConnectionConfig(
-        @ConfigProperty(defaultValue = "true") @NodeProperty boolean shutdownNodeOnNoBlockNodes,
+        @ConfigProperty(defaultValue = "false") @NodeProperty boolean shutdownNodeOnNoBlockNodes,
         @ConfigProperty(defaultValue = "data/config") @NodeProperty String blockNodeConnectionFileDir,
         @ConfigProperty(defaultValue = "block-nodes.json") @NodeProperty String blockNodeConfigFile,
         @ConfigProperty(defaultValue = "5") @NodeProperty int maxEndOfStreamsAllowed,

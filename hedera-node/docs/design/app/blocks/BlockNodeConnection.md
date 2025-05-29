@@ -36,7 +36,7 @@ It manages connection state, handles communication, and reports errors to the `B
 ## Component Interaction
 
 - Communicates bi-directionally with `BlockNodeConnectionManager`.
-- Updates stream status via `BlockStreamStateManager`.
+- Updates stream status via `BlockBufferService`.
 
 ## State Management
 

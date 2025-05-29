@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
-import static com.hedera.node.app.blocks.impl.streaming.BlockStreamStateManager.BlockStreamQueueItemType.BLOCK_ITEM;
+import static com.hedera.node.app.blocks.impl.streaming.BlockBufferService.BlockStreamQueueItemType.BLOCK_ITEM;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -34,15 +34,13 @@ import org.apache.logging.log4j.Logger;
  * Manages the state and lifecycle of blocks being streamed to block nodes.
  * This class is responsible for:
  * <ul>
- *     <li>Providing methods for adding items to blocks and creating requests</li>
  *     <li>Maintaining the block states in a buffer</li>
  *     <li>Handling backpressure when the buffer is saturated</li>
  *     <li>Pruning the buffer based on TTL and saturation</li>
- *     <li>Coordinating block node connections</li>
  * </ul>
  */
-public class BlockStreamStateManager {
-    private static final Logger logger = LogManager.getLogger(BlockStreamStateManager.class);
+public class BlockBufferService {
+    private static final Logger logger = LogManager.getLogger(BlockBufferService.class);
 
     /**
      * Buffer that stores recent blocks. This buffer is unbounded, however when opening a new block the buffer will be
@@ -108,12 +106,12 @@ public class BlockStreamStateManager {
     private static final AtomicBoolean isStreamingEnabled = new AtomicBoolean(false);
 
     /**
-     * Creates a new BlockStreamStateManager with the given configuration.
+     * Creates a new BlockBufferService with the given configuration.
      *
      * @param configProvider the configuration provider
      * @param blockStreamMetrics metrics factory for monitoring block streaming
      */
-    public BlockStreamStateManager(
+    public BlockBufferService(
             @NonNull final ConfigProvider configProvider, @NonNull final BlockStreamMetrics blockStreamMetrics) {
         this.configProvider = configProvider;
         this.blockStreamMetrics = blockStreamMetrics;
@@ -281,7 +279,7 @@ public class BlockStreamStateManager {
         if (blockState == null) {
             throw new IllegalStateException("Block state not found for block " + blockNumber);
         }
-        blockStreamItemQueue.add(new BlockStreamStateManager.BlockStreamQueueItem(blockNumber, blockItem));
+        blockStreamItemQueue.add(new BlockBufferService.BlockStreamQueueItem(blockNumber, blockItem));
     }
 
     /**
@@ -488,7 +486,7 @@ public class BlockStreamStateManager {
         }
 
         final boolean isSaturatedBeforePrune = isBufferSaturated.get();
-        final BlockStreamStateManager.PruneResult result = pruneBuffer();
+        final BlockBufferService.PruneResult result = pruneBuffer();
         final boolean isSaturatedAfterPrune = result.isSaturated();
         isBufferSaturated.set(isSaturatedAfterPrune);
         final double saturationPercent = result.calculateSaturationPercent();

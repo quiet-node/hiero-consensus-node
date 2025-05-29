@@ -14,7 +14,7 @@
 This document describes the internal design and responsibilities of the `BlockNodeConnectionManager` class.
 This component manages active connections, handling connection lifecycle, and coordinating
 with individual connection instances. There should be only one active connection at a time.
-The class also interacts with the `BlockStreamStateManager` to synchronize stream state.
+The class also interacts with the `BlockBufferService` to synchronize stream state.
 
 ## Definitions
 
@@ -25,7 +25,7 @@ The class also interacts with the `BlockStreamStateManager` to synchronize strea
 <dt>BlockNodeConnection</dt>
 <dd>A representation of a single connection to block node, managed by the connection manager.</dd>
 
-<dt>BlockStreamStateManager</dt>
+<dt>BlockBufferService</dt>
 <dd>The component responsible for maintaining the state of block streams received or sent over connections.</dd>
 
 <dt>Connection Lifecycle</dt>
@@ -44,7 +44,7 @@ The class also interacts with the `BlockStreamStateManager` to synchronize strea
 ## Component Interaction
 
 - Maintains a bidirectional association with each connection.
-- Delegates block-related streaming control to the `BlockStreamStateManager`.
+- Delegates block-related streaming control to the `BlockBufferService`.
 - Updates connection state and retry schedule based on feedback from connections.
 
 ## Sequence Diagrams
@@ -54,7 +54,7 @@ The class also interacts with the `BlockStreamStateManager` to synchronize strea
 ```mermaid
 sequenceDiagram
     participant Manager as BlockNodeConnectionManager
-    participant StreamMgr as BlockStreamStateManager
+    participant StreamMgr as BlockBufferService
     participant Conn as BlockNodeConnection
 
     Manager->>Manager: selectBlockNodeForStreaming()
@@ -93,4 +93,4 @@ sequenceDiagram
 - Implements backoff-based retry scheduling when connections fail.
 - Detects and cleans up errored or stalled connections.
 - If `getLastVerifiedBlock()` or other state is unavailable, logs warnings and may skip the connection.
-- Ensures that only one active connection is driving the stream via coordination with `BlockStreamStateManager`.
+- Ensures that only one active connection is driving the stream via coordination with `BlockBufferService`.

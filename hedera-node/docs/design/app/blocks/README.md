@@ -6,12 +6,12 @@ class or component and its role, including interactions with other components.
 
 ## Contents
 
-| Document                                                       |         Component          | Description                                                                                                 |
-|:---------------------------------------------------------------|----------------------------|:------------------------------------------------------------------------------------------------------------|
-| [BlockNodeConnectionManager.md](BlockNodeConnectionManager.md) | BlockNodeConnectionManager | Internal design and behavior of the BlockNodeConnectionManager class, managing node connections.            |
-| [BlockNodeConnection.md](BlockNodeConnection.md)               | BlockNodeConnection        | Internal design and behavior of the BlockNodeConnection class, representing an individual connection.       |
-| [BlockState.md](BlockState.md)                                 | BlockState                 | Internal design of the BlockState component, managing state information for blocks.                         |
-| [BlockStreamStateManager.md](BlockStreamStateManager.md)       | BlockStreamStateManager    | Internal design and responsibilities of BlockStreamStateManager, handling stream state and synchronization. |
+| Document                                                       |         Component          | Description                                                                                            |
+|:---------------------------------------------------------------|----------------------------|:-------------------------------------------------------------------------------------------------------|
+| [BlockNodeConnectionManager.md](BlockNodeConnectionManager.md) | BlockNodeConnectionManager | Internal design and behavior of the BlockNodeConnectionManager class, managing node connections.       |
+| [BlockNodeConnection.md](BlockNodeConnection.md)               | BlockNodeConnection        | Internal design and behavior of the BlockNodeConnection class, representing an individual connection.  |
+| [BlockState.md](BlockState.md)                                 | BlockState                 | Internal design of the BlockState component, managing state information for blocks.                    |
+| [BlockBufferService.md](BlockBufferService.md)                 | BlockBufferService         | Internal design and responsibilities of BlockBufferService, handling stream state and synchronization. |
 
 ## Components Interaction Flow
 
@@ -21,7 +21,7 @@ The following diagram illustrates the main flow and interactions between these c
 sequenceDiagram
     participant Manager as BlockNodeConnectionManager
     participant Connection as BlockNodeConnection
-    participant StateMgr as BlockStreamStateManager
+    participant StateMgr as BlockBufferService
     participant BlockState as BlockState
 
     Manager->>Connection: Initiate connection
