@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle.disk;
 
-import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.hedera.pbj.runtime.ParseException;
-import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.state.test.fixtures.merkle.MerkleTestBase;
 import com.swirlds.virtualmap.VirtualMap;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
+import java.io.IOException;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.AfterEach;
@@ -53,10 +51,13 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         }
 
         @AfterEach
-        void tearDown() {
+        void tearDown() throws IOException {
             if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
                 fruitVirtualMap.release();
             }
+
+            fruitVirtualMap.getDataSource().close();
+            MerkleDbTestUtils.assertAllDatabasesClosed();
         }
     }
 
@@ -102,10 +103,13 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         }
 
         @AfterEach
-        void tearDown() {
+        void tearDown() throws IOException {
             if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
                 fruitVirtualMap.release();
             }
+
+            fruitVirtualMap.getDataSource().close();
+            MerkleDbTestUtils.assertAllDatabasesClosed();
         }
     }
 
@@ -238,6 +242,7 @@ class OnDiskWritableStateTest extends MerkleTestBase {
             fruitVirtualMap = fruitVirtualMap.copy();
             oldVirtualMap.release();
             state = new OnDiskWritableKVState<>(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
+            oldVirtualMap.release();
             assertThat(state.get(A_KEY)).isEqualTo(APPLE);
             state.remove(B_KEY);
             assertThat(state.get(C_KEY)).isEqualTo(CHERRY);
@@ -270,20 +275,8 @@ class OnDiskWritableStateTest extends MerkleTestBase {
     }
 
     @AfterEach
-    void tearDown() {
-        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
-            fruitVirtualMap.release();
-        }
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
-        try {
-            // FUTURE WORK: need a better way to make sure that DB files are deleted
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+    void tearDown() throws IOException {
+        fruitVirtualMap.getDataSource().close();
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }

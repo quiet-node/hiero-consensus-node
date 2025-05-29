@@ -37,7 +37,6 @@ import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.state.snapshot.SignedStateFileUtils;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
-import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.State;
 import java.io.BufferedReader;
@@ -131,7 +130,6 @@ class SignedStateFileReadWriteTest {
 
         State state = signedState.getState();
         state.copy().release();
-        TestMerkleCryptoFactory.getInstance().digestTreeSync(((TestMerkleStateRoot) state).getRoot());
         state.createSnapshot(testDirectory);
         writeSignatureSetFile(testDirectory, signedState);
 
@@ -184,7 +182,6 @@ class SignedStateFileReadWriteTest {
 
         // make immutable
         signedState.getState().copy().release();
-        TestMerkleCryptoFactory.getInstance().digestTreeSync((signedState.getState()).getRoot());
 
         writeSignedStateToDisk(
                 platformContext,

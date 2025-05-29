@@ -152,7 +152,8 @@ class StateFileManagerTests {
         final DeserializedSignedState deserializedSignedState =
                 readStateFile(stateFile, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
         SignedState signedState = deserializedSignedState.reservedSignedState().get();
-        hashState(signedState.getState());
+        TestMerkleCryptoFactory.getInstance()
+                .digestTreeSync(signedState.getState().getRoot());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
         assertNotSame(signedState, originalState, "deserialized object should not be the same");
