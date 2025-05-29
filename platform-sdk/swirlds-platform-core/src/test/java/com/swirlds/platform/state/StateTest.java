@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
-import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
@@ -90,10 +90,6 @@ class StateTest {
 
     @AfterEach
     void tearDown() {
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }

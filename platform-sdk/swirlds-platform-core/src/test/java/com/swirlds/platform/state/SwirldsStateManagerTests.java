@@ -16,7 +16,7 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.SwirldsPlatform;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
@@ -74,6 +74,13 @@ class SwirldsStateManagerTests {
                 MerkleDbDataSource::getCountOfOpenDatabases,
                 Duration.of(5, ChronoUnit.SECONDS),
                 "All databases should be closed");
+        if (!initialState.isDestroyed()) {
+            initialState.release();
+        }
+        if (!swirldStateManager.getConsensusState().isDestroyed()) {
+            swirldStateManager.getConsensusState().release();
+        }
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 
     @Test

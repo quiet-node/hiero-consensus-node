@@ -65,6 +65,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class SerializationTest extends MerkleTestBase {
 
+    private static final Logger logger = LogManager.getLogger(RandomSignedStateGenerator.class);
+
     private Path dir;
     private Configuration config;
 
@@ -192,7 +194,7 @@ class SerializationTest extends MerkleTestBase {
         try {
             originalTree.release();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception while releasing state", e);
         }
         copy.release();
         loadedTree.release();
@@ -276,7 +278,7 @@ class SerializationTest extends MerkleTestBase {
         try {
             originalTree.release();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception while releasing state", e);
         }
         loadedTree.release();
         loadedTreeWithCache.release();

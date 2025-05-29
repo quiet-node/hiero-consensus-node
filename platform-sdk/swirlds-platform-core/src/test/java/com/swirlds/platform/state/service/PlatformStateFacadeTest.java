@@ -16,7 +16,7 @@ import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.test.fixtures.state.TestNewMerkleStateRoot;
@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.hiero.base.utility.test.fixtures.RandomUtils;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,11 +59,7 @@ class PlatformStateFacadeTest {
         state.release();
         emptyState.release();
 
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 
     @Test
