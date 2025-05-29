@@ -107,7 +107,7 @@ These configurations ensure scalable, resilient, and tunable block node communic
 
 These settings control how the Consensus Node discovers and connects to Block Nodes, and define fallback behavior if connections fail.
 - Connection File Path & Name: The node loads block node definitions from a file (e.g., `block-nodes.json`) located in a specified directory.
-- Connection Management: Parameters like `waitPeriodForActiveConnection` and `maxEndOfStreamsAllowed` manage retries and limits.
+- Connection Management: Parameters like `maxEndOfStreamsAllowed` and `endOfStreamTimeFrame` manage retries and limits.
 - Shutdown Behavior: If no connections are made and `shutdownNodeOnNoBlockNodes` is true, the node will shut down to avoid running in a degraded state.
 
 ## Block Stream Configurations
