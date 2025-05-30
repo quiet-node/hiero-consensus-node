@@ -130,6 +130,10 @@ class SignedStateFileReadWriteTest {
 
         State state = signedState.getState();
         state.copy().release();
+        TestMerkleCryptoFactory.getInstance()
+                .digestTreeSync(signedState
+                        .getState()
+                        .getRoot());
         state.createSnapshot(testDirectory);
         writeSignatureSetFile(testDirectory, signedState);
 
@@ -182,6 +186,10 @@ class SignedStateFileReadWriteTest {
 
         // make immutable
         signedState.getState().copy().release();
+        TestMerkleCryptoFactory.getInstance()
+                .digestTreeSync(signedState
+                        .getState()
+                        .getRoot());
 
         writeSignedStateToDisk(
                 platformContext,
