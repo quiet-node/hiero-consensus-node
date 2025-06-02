@@ -13,10 +13,12 @@ import com.hedera.node.app.service.contract.impl.exec.FeatureFlags;
 import com.hedera.node.app.service.contract.impl.exec.gas.SystemContractGasCalculator;
 import com.hedera.node.app.service.contract.impl.exec.gas.TinybarValues;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
+import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
 import com.hedera.node.app.service.contract.impl.hevm.HevmPropagatedCallFailure;
 import com.hedera.node.app.service.contract.impl.infra.StorageAccessTracker;
 import com.hedera.node.app.service.contract.impl.records.ContractOperationStreamBuilder;
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
+import com.hedera.node.app.spi.throttle.ThrottleAdviser;
 import com.hedera.node.app.spi.workflows.record.DeleteCapableTransactionStreamBuilder;
 import com.hedera.node.config.data.ContractsConfig;
 import com.swirlds.config.api.Configuration;
@@ -400,5 +402,12 @@ public class FrameUtils {
         final HederaOpsDurationCounter opsDurationCounter =
                 initialFrameOf(frame).getContextVariable(HEDERA_OPS_DURATION);
         return opsDurationCounter.getOpsDurationCounter();
+    }
+
+    public static ThrottleAdviser throttleAdviser(@NonNull final MessageFrame frame) {
+        return ((HederaWorldUpdater) frame.getWorldUpdater())
+                .enhancement()
+                .systemOperations()
+                .throttleAdviser();
     }
 }

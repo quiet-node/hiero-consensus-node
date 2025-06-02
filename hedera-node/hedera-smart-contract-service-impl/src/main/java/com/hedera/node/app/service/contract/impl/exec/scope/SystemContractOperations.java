@@ -13,6 +13,7 @@ import com.hedera.hapi.node.contract.ContractFunctionResult;
 import com.hedera.hapi.node.transaction.ExchangeRate;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.contract.impl.records.ContractCallStreamBuilder;
+import com.hedera.node.app.spi.throttle.ThrottleAdviser;
 import com.hedera.node.app.spi.workflows.DispatchOptions.UsePresetTxnId;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -149,4 +150,10 @@ public interface SystemContractOperations {
      */
     @Nullable
     Key maybeEthSenderKey();
+
+    /**
+     * Returns the throttle adviser for the current system contract operations.
+     * @return the throttle adviser
+     */
+    ThrottleAdviser throttleAdviser();
 }

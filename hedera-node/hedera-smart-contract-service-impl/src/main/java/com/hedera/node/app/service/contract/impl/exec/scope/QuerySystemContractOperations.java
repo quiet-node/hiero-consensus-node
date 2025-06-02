@@ -14,6 +14,7 @@ import com.hedera.hapi.node.transaction.ExchangeRate;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.contract.impl.annotations.QueryScope;
 import com.hedera.node.app.service.contract.impl.records.ContractCallStreamBuilder;
+import com.hedera.node.app.spi.throttle.ThrottleAdviser;
 import com.hedera.node.app.spi.workflows.DispatchOptions.UsePresetTxnId;
 import com.hedera.node.app.spi.workflows.QueryContext;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
@@ -98,6 +99,11 @@ public class QuerySystemContractOperations implements SystemContractOperations {
     @Override
     @Nullable
     public Key maybeEthSenderKey() {
+        return null;
+    }
+
+    @Override
+    public ThrottleAdviser throttleAdviser() {
         return null;
     }
 }

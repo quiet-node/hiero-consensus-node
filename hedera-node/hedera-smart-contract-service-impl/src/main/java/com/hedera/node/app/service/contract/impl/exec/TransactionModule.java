@@ -36,6 +36,7 @@ import com.hedera.node.app.service.contract.impl.records.ContractOperationStream
 import com.hedera.node.app.service.contract.impl.state.EvmFrameStateFactory;
 import com.hedera.node.app.service.contract.impl.state.ScopedEvmFrameStateFactory;
 import com.hedera.node.app.service.file.ReadableFileStore;
+import com.hedera.node.app.spi.throttle.ThrottleAdviser;
 import com.hedera.node.app.spi.validation.AttributeValidator;
 import com.hedera.node.app.spi.validation.ExpiryValidator;
 import com.hedera.node.app.spi.workflows.ComputeDispatchFeesAsTopLevel;
@@ -207,6 +208,12 @@ public interface TransactionModule {
         requireNonNull(nativeOperations);
         requireNonNull(systemContractOperations);
         return new HederaWorldUpdater.Enhancement(operations.begin(), nativeOperations, systemContractOperations);
+    }
+
+    @Provides
+    @TransactionScope
+    static ThrottleAdviser provideThrottleAdviser(@NonNull final HandleContext context) {
+        return context.throttleAdviser();
     }
 
     @Binds

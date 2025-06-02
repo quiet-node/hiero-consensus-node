@@ -2,6 +2,7 @@
 package com.hedera.node.app.service.contract.impl.hevm;
 
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.incrementOpsDuration;
+import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.throttleAdviser;
 import static com.hedera.node.app.service.contract.impl.hevm.HederaOpsDuration.MULTIPLIER_FACTOR;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -216,6 +217,7 @@ public class HederaEVM extends EVM {
                         .getOrDefault(
                                 opcode,
                                 result.getGasCost() * hederaOpsDuration.opsDurationMultiplier() / MULTIPLIER_FACTOR);
+                throttleAdviser(frame).shouldThrottleByOpsDuration(usedOpsDuration);
             }
 
             if (frame.getState() == State.CODE_EXECUTING) {
