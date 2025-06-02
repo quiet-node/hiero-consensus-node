@@ -16,7 +16,7 @@ public class PcesFileEventStats {
      * @param size the written event size in bytes
      * @param bufferExpanded whether a buffer expansion happened
      */
-    void updateEventStats(final int size, final boolean bufferExpanded) {
+    void updateEventStats(final long size, final boolean bufferExpanded) {
         averageEventSize.add(size);
         if (bufferExpanded) {
             totalExpansions.incrementAndGet();

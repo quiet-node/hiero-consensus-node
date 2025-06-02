@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event.preconsensus;
 
+import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.metrics.api.Metrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -15,8 +17,10 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
     private final CommonPcesWriter commonPcesWriter;
     private final NodeId selfId;
     private final FileSyncOption fileSyncOption;
-    private final Metrics metrics;
-
+    private final Time time;
+    private final RunningAverageMetric avgWriteDuration;
+    private final RunningAverageMetric avgSyncDuration;
+    private final RunningAverageMetric avgTotalWriteDuration;
     /**
      * Constructor
      *
@@ -31,11 +35,15 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
         Objects.requireNonNull(fileManager, "fileManager is required");
         this.commonPcesWriter = new CommonPcesWriter(platformContext, fileManager);
         this.selfId = Objects.requireNonNull(selfId, "selfId is required");
-        this.metrics = platformContext.getMetrics();
+        this.time = platformContext.getTime();
         this.fileSyncOption = platformContext
                 .getConfiguration()
                 .getConfigData(PcesConfig.class)
                 .inlinePcesSyncOption();
+        final Metrics metrics = platformContext.getMetrics();
+        this.avgWriteDuration = metrics.getOrCreate(PcesMetrics.PCES_AVG_WRITE_DURATION);
+        this.avgSyncDuration = metrics.getOrCreate(PcesMetrics.PCES_AVG_SYNC_DURATION);
+        this.avgTotalWriteDuration = metrics.getOrCreate(PcesMetrics.PCES_AVG_TOTAL_WRITE_DURATION);
     }
 
     @Override
@@ -60,29 +68,29 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
             return event;
         }
 
-        long nanoWriteStartTime = 0;
-        long nanoWriteEndTime = 0;
-        long nanoSyncEndTime = 0;
+        long nanoWriteStartTime = nanoStartTime;
+        long nanoWriteEndTime = nanoStartTime;
+        long nanoSyncEndTime = nanoStartTime;
         try {
             commonPcesWriter.prepareOutputStream(event);
-            nanoWriteStartTime = System.nanoTime();
+            nanoWriteStartTime = time.nanoTime();
             commonPcesWriter.getCurrentMutableFile().writeEvent(event);
-            nanoWriteEndTime = System.nanoTime();
+            nanoWriteEndTime = time.nanoTime();
             nanoSyncEndTime = nanoWriteEndTime;
             if (fileSyncOption == FileSyncOption.EVERY_EVENT
                     || (fileSyncOption == FileSyncOption.EVERY_SELF_EVENT
                             && event.getCreatorId().equals(selfId))) {
 
                 commonPcesWriter.getCurrentMutableFile().sync();
-                nanoSyncEndTime = System.nanoTime();
+                nanoSyncEndTime = time.nanoTime();
             }
             return event;
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         } finally {
-            metrics.getOrCreate(PcesMetrics.PCES_AVG_WRITE_DURATION).update(nanoWriteEndTime - nanoWriteStartTime);
-            metrics.getOrCreate(PcesMetrics.PCES_AVG_SYNC_DURATION).update(nanoSyncEndTime - nanoWriteEndTime);
-            metrics.getOrCreate(PcesMetrics.PCES_AVG_TOTAL_WRITE_DURATION).update(System.nanoTime() - nanoStartTime);
+            avgWriteDuration.update(nanoWriteEndTime - nanoWriteStartTime);
+            avgSyncDuration.update(nanoSyncEndTime - nanoWriteEndTime);
+            avgTotalWriteDuration.update(time.nanoTime() - nanoStartTime);
         }
     }
 

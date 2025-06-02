@@ -69,7 +69,7 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     @Override
     public void writeEvent(@NonNull final GossipEvent event) throws IOException {
         final int size = GossipEvent.PROTOBUF.measureRecord(event);
-        boolean expandBuffer = size > buffer.capacity();
+        final boolean expandBuffer = size > buffer.capacity();
         try {
             if (expandBuffer) {
                 MemoryUtils.closeDirectByteBuffer(buffer);
