@@ -68,9 +68,11 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
             return event;
         }
 
-        long nanoWriteStartTime = nanoStartTime;
-        long nanoWriteEndTime = nanoStartTime;
-        long nanoSyncEndTime = nanoStartTime;
+        // 0 has the effect of possible wrong measurements in case of error, but it prevents
+        // cases that, because of an exception thrown, we try to update metrics with a less than 0 value.
+        long nanoWriteStartTime = 0;
+        long nanoWriteEndTime = 0;
+        long nanoSyncEndTime = 0;
         try {
             commonPcesWriter.prepareOutputStream(event);
             nanoWriteStartTime = time.nanoTime();
