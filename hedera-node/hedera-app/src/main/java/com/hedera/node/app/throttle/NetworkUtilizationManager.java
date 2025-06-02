@@ -2,7 +2,6 @@
 package com.hedera.node.app.throttle;
 
 import com.hedera.hapi.node.base.HederaFunctionality;
-import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.workflows.TransactionInfo;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -49,18 +48,13 @@ public interface NetworkUtilizationManager {
     void leakUnusedGasPreviouslyReserved(@NonNull final TransactionInfo txnInfo, final long value);
 
     /**
-     * Determines if the transaction should be throttled after the transaction handler has been executed.
-     * Currently only relevant for contract ops duration throttle.
+     * Determines if the transaction should be throttled during transaction handling based on ops duration.
      *
-     * @param txnInfo       - the transaction information.
-     * @param txnStream     - the stream builder containing the results of the transaction
+     * @param currentOpsDuration - the ops duration consumed by the transaction so far
      * @param consensusTime - the consensus time
      * @return whether the transaction should be throttled
      */
-    boolean shouldThrottlePostHandle(
-            @NonNull final TransactionInfo txnInfo,
-            @NonNull final StreamBuilder txnStream,
-            @NonNull final Instant consensusTime);
+    boolean shouldThrottleByOpsDuration(final long currentOpsDuration, @NonNull final Instant consensusTime);
 
     /**
      * Verifies if the throttle in this operation context has enough capacity to handle the given number of the

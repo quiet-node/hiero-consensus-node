@@ -53,7 +53,6 @@ import com.hedera.node.app.service.schedule.impl.ReadableScheduleStoreImpl;
 import com.hedera.node.app.service.token.ReadableAccountStore;
 import com.hedera.node.app.service.token.ReadableTokenRelationStore;
 import com.hedera.node.app.spi.workflows.HandleException;
-import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.store.ReadableStoreFactory;
 import com.hedera.node.app.workflows.TransactionInfo;
 import com.hedera.node.config.data.AccountsConfig;
@@ -190,18 +189,12 @@ public class ThrottleAccumulator {
     }
 
     /**
-     * Determines if there is capacity in throttles that should be checked after the transaction handler has been called.
-     * Currently only relevant for contract ops duration throttle.
+     * Checks if capacity has been breached in the ops duration throttle.
      *
-     * @param txnInfo the transaction information
-     * @param txnStream the StreamBuilder containing the results of executing the transaction
      * @param now the instant of time the transaction throttling should be checked for
      * @return whether the transaction should be throttled
      */
-    public boolean checkAndEnforcePostHandleThrottle(
-            @NonNull final TransactionInfo txnInfo,
-            @NonNull final StreamBuilder txnStream,
-            @NonNull final Instant now) {
+    public boolean checkAndEnforceOpsDurationThrottle(final long currentOpsDuration, @NonNull final Instant now) {
         if (throttleType == NOOP_THROTTLE) {
             return false;
         }
@@ -209,9 +202,7 @@ public class ThrottleAccumulator {
 
         final boolean shouldThrottleByOpsDuration =
                 configSupplier.get().getConfigData(ContractsConfig.class).throttleThrottleByOpsDuration();
-        if (shouldThrottleByOpsDuration
-                && isContractFunction(txnInfo.functionality())
-                && opsDurationThrottle.allow(now, txnStream.getOpsDurationForContractTxn())) {
+        if (shouldThrottleByOpsDuration && opsDurationThrottle.allow(now, currentOpsDuration)) {
             opsDurationThrottle.reclaimLastAllowedUse();
             return true;
         }

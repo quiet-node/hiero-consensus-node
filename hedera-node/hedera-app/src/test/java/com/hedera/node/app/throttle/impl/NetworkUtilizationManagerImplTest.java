@@ -118,9 +118,9 @@ class NetworkUtilizationManagerImplTest {
     @Test
     void verifyShouldThrottlePostHandle() {
         // when
-        subject.shouldThrottlePostHandle(transactionInfo, streamBuilder, consensusNow);
+        subject.shouldThrottleByOpsDuration(1_000_000, consensusNow);
 
         // then
-        verify(throttleAccumulator).checkAndEnforcePostHandleThrottle(transactionInfo, streamBuilder, consensusNow);
+        verify(throttleAccumulator).checkAndEnforceOpsDurationThrottle(1_000_000, consensusNow);
     }
 }

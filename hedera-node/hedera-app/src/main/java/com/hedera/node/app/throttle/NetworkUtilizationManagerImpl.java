@@ -11,7 +11,6 @@ import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.fees.congestion.CongestionMultipliers;
-import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.throttle.annotations.BackendThrottle;
 import com.hedera.node.app.workflows.TransactionInfo;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -72,11 +71,8 @@ public class NetworkUtilizationManagerImpl implements NetworkUtilizationManager 
     }
 
     @Override
-    public boolean shouldThrottlePostHandle(
-            @NonNull final TransactionInfo txnInfo,
-            @NonNull final StreamBuilder txnStream,
-            @NonNull final Instant consensusTime) {
-        return backendThrottle.checkAndEnforcePostHandleThrottle(txnInfo, txnStream, consensusTime);
+    public boolean shouldThrottleByOpsDuration(final long currentOpsDuration, @NonNull final Instant consensusTime) {
+        return backendThrottle.checkAndEnforceOpsDurationThrottle(currentOpsDuration, consensusTime);
     }
 
     @Override
