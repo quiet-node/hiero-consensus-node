@@ -7,7 +7,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 /**
- * A testcontainer for running a block node server instance.
+ * A test container for running a block node server instance.
  */
 public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
     private static final int INTERNAL_PORT = 8080;
@@ -18,7 +18,7 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
     /**
      * Creates a new block node container with the default image.
      */
-    public BlockNodeContainer(long blockNodeId) {
+    public BlockNodeContainer(final long blockNodeId) {
         this(DEFAULT_IMAGE_NAME, blockNodeId);
     }
 
@@ -27,7 +27,7 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
      *
      * @param dockerImageName the docker image to use
      */
-    public BlockNodeContainer(DockerImageName dockerImageName, long blockNodeId) {
+    public BlockNodeContainer(DockerImageName dockerImageName, final long blockNodeId) {
         super(dockerImageName);
         withExposedPorts(INTERNAL_PORT);
         withNetworkAliases("block-node-" + blockNodeId);
@@ -45,7 +45,12 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
         return getMappedPort(INTERNAL_PORT);
     }
 
-    public void waitForHealthy(Duration timeout) {
+    /**
+     * Waits for the block node container to be healthy by configuring the health check timeout.
+     *
+     * @param timeout the maximum duration to wait for the container's health check to pass
+     */
+    public void waitForHealthy(final Duration timeout) {
         waitingFor(Wait.forHealthcheck().withStartupTimeout(timeout));
     }
 

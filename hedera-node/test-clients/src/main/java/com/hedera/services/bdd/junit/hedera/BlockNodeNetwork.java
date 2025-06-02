@@ -124,7 +124,7 @@ public class BlockNodeNetwork {
             } else if (mode == BlockNodeMode.SIMULATOR) {
                 // Find an available port
                 int port = findAvailablePort();
-                SimulatedBlockNodeServer server = new SimulatedBlockNodeServer(port);
+                final SimulatedBlockNodeServer server = new SimulatedBlockNodeServer(port);
                 try {
                     server.start();
                 } catch (Exception e) {
@@ -136,9 +136,9 @@ public class BlockNodeNetwork {
         }
     }
 
-    private void startRealBlockNodeContainer(long blockNodeId) {
+    private void startRealBlockNodeContainer(final long blockNodeId) {
         try {
-            BlockNodeContainer container = new BlockNodeContainer(blockNodeId);
+            final BlockNodeContainer container = new BlockNodeContainer(blockNodeId);
 
             container.start();
             container.waitForHealthy(Duration.ofSeconds(10));
@@ -162,7 +162,7 @@ public class BlockNodeNetwork {
             long blockNodeId = blockNodeIds[blockNodeIndex];
             BlockNodeMode mode = blockNodeModeById.get(blockNodeId);
             if (mode == BlockNodeMode.REAL) {
-                BlockNodeContainer blockNode = blockNodeContainerById.get(blockNodeId);
+                final BlockNodeContainer blockNode = blockNodeContainerById.get(blockNodeId);
                 int priority = (int) blockNodePrioritiesBySubProcessNodeId.get(node.getNodeId())[blockNodeIndex];
                 blockNodes.add(new BlockNodeConfig(blockNode.getHost(), blockNode.getGrpcPort(), priority));
             } else if (mode == BlockNodeMode.SIMULATOR) {
