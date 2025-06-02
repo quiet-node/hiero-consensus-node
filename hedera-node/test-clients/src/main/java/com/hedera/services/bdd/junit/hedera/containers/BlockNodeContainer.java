@@ -11,14 +11,15 @@ import org.testcontainers.utility.DockerImageName;
  */
 public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
     private static final int INTERNAL_PORT = 8080;
-    private static final DockerImageName DEFAULT_IMAGE_NAME = DockerImageName.parse("block-node-server:0.4.0-SNAPSHOT");
-    private static final String blockNodeVersion = "0.4.0-SNAPSHOT";
+    private static final DockerImageName DEFAULT_IMAGE_NAME =
+            DockerImageName.parse("ghcr.io/hiero-ledger/hiero-block-node:0.12.0-SNAPSHOT");
+    private static final String blockNodeVersion = "0.12.0-SNAPSHOT";
 
     /**
      * Creates a new block node container with the default image.
      */
-    public BlockNodeContainer() {
-        this(DEFAULT_IMAGE_NAME);
+    public BlockNodeContainer(long blockNodeId) {
+        this(DEFAULT_IMAGE_NAME, blockNodeId);
     }
 
     /**
@@ -26,9 +27,10 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
      *
      * @param dockerImageName the docker image to use
      */
-    public BlockNodeContainer(DockerImageName dockerImageName) {
+    public BlockNodeContainer(DockerImageName dockerImageName, long blockNodeId) {
         super(dockerImageName);
         withExposedPorts(INTERNAL_PORT);
+        withNetworkAliases("block-node-" + blockNodeId);
         withEnv("VERSION", blockNodeVersion);
         waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)));
         waitingFor(Wait.forHealthcheck());
@@ -41,5 +43,14 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
      */
     public int getGrpcPort() {
         return getMappedPort(INTERNAL_PORT);
+    }
+
+    public void waitForHealthy(Duration timeout) {
+        waitingFor(Wait.forHealthcheck().withStartupTimeout(timeout));
+    }
+
+    @Override
+    public String toString() {
+        return this.getHost() + ":" + this.getGrpcPort();
     }
 }
