@@ -48,14 +48,10 @@ public class PcesOutputStreamFileWriter implements PcesFileWriter {
 
     @Override
     public void writeEvent(@NonNull final GossipEvent event) throws IOException {
-        long size = Integer.BYTES;
-        try {
-            size = out.writePbjRecord(event, GossipEvent.PROTOBUF);
-        } finally {
-            // We subtract Integer.BYTES given that writePbjRecord writes the size of the record first,
-            // and we are interested on the size value not in the length of written bytes
-            stats.updateEventStats(size - Integer.BYTES, false);
-        }
+        // We subtract Integer.BYTES given that writePbjRecord writes the size of the record first.
+        // and we are interested on the size value not in the length of written bytes
+        final long size = out.writePbjRecord(event, GossipEvent.PROTOBUF) - Integer.BYTES;
+        stats.updateEventStats(size, false);
     }
 
     @Override

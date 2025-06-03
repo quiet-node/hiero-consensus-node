@@ -57,7 +57,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
     @NonNull
     @Override
     public PlatformEvent writeEvent(@NonNull PlatformEvent event) {
-        long nanoStartTime = System.nanoTime();
+        long nanoStartTime = time.nanoTime();
         // if we aren't streaming new events yet, assume that the given event is already durable
         if (!commonPcesWriter.isStreamingNewEvents()) {
             return event;
@@ -68,30 +68,23 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
             return event;
         }
 
-        // 0 has the effect of possible wrong measurements in case of error, but it prevents
-        // cases that, because of an exception thrown, we try to update metrics with a less than 0 value.
-        long nanoWriteStartTime = 0;
-        long nanoWriteEndTime = 0;
-        long nanoSyncEndTime = 0;
         try {
             commonPcesWriter.prepareOutputStream(event);
-            nanoWriteStartTime = time.nanoTime();
+            long nanoWriteStartTime = time.nanoTime();
             commonPcesWriter.getCurrentMutableFile().writeEvent(event);
-            nanoWriteEndTime = time.nanoTime();
-            nanoSyncEndTime = nanoWriteEndTime;
+            avgWriteDuration.update(time.nanoTime() - nanoWriteStartTime);
+
             if (fileSyncOption == FileSyncOption.EVERY_EVENT
                     || (fileSyncOption == FileSyncOption.EVERY_SELF_EVENT
                             && event.getCreatorId().equals(selfId))) {
-
+                long nanoSyncStartTime = time.nanoTime();
                 commonPcesWriter.getCurrentMutableFile().sync();
-                nanoSyncEndTime = time.nanoTime();
+                avgSyncDuration.update(time.nanoTime() - nanoSyncStartTime);
             }
             return event;
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         } finally {
-            avgWriteDuration.update(nanoWriteEndTime - nanoWriteStartTime);
-            avgSyncDuration.update(nanoSyncEndTime - nanoWriteEndTime);
             avgTotalWriteDuration.update(time.nanoTime() - nanoStartTime);
         }
     }
