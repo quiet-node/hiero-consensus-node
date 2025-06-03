@@ -141,7 +141,7 @@ public class BlockNodeNetwork {
             final BlockNodeContainer container = new BlockNodeContainer(blockNodeId);
 
             container.start();
-            container.waitForHealthy(Duration.ofSeconds(10));
+            container.waitForHealthy(Duration.ofMinutes(2));
 
             blockNodeContainerById.put(blockNodeId, container);
 
