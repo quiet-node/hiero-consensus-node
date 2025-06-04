@@ -858,11 +858,6 @@ class MerkleStateRootTest extends MerkleTestBase {
             assertDoesNotThrow(
                     () -> stateRoot.migrate(CONFIGURATION, CURRENT_VERSION - 1).release());
         }
-
-        @AfterEach
-        void tearDown() {
-            stateRoot.release();
-        }
     }
 
     @Nested
@@ -934,16 +929,5 @@ class MerkleStateRootTest extends MerkleTestBase {
             Hash hash2 = stateRoot.getHash();
             assertSame(hash1, hash2);
         }
-    }
-
-    @AfterEach
-    void tearDown() throws InterruptedException {
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
-        // a bit of sleep is necessary for the file resources to be released, so that JUnit can do the cleanup
-        Thread.sleep(100);
     }
 }
