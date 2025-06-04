@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.merkledb;
 
-import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyFalse;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.*;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.createMetrics;
@@ -54,8 +53,6 @@ class MerkleDbDataSourceMetricsTest {
     public void beforeEach() throws IOException {
         // check db count
         MerkleDbTestUtils.assertAllDatabasesClosed();
-        assertEventuallyEquals(
-                0L, MerkleDbDataSource::getCountOfOpenDatabases, Duration.ofSeconds(1), "Expected no open dbs");
         // create db
         dataSource = createDataSource(testDirectory, TABLE_NAME, long_fixed, COUNT * 10, HASHES_RAM_THRESHOLD);
 
