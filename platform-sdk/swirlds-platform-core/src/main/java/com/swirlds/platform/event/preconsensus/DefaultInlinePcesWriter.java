@@ -37,6 +37,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
                 .inlinePcesSyncOption();
 
         this.pcesFileEventStats = new PcesFileEventStats(platformContext.getTime());
+        this.pcesFileEventStats.registerMetrics(platformContext.getMetrics());
     }
 
     @Override
