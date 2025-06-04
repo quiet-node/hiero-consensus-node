@@ -71,18 +71,18 @@ public class PcesMetrics {
             .withDescription("The age of the oldest preconsensus event file, in seconds.");
     private final LongGauge preconsensusEventFileOldestSeconds;
 
-    public static final RunningAverageMetric.Config AVG_EVENT_SIZE = new RunningAverageMetric.Config(
+    public static final RunningAverageMetric.Config PCES_AVG_EVENT_SIZE = new RunningAverageMetric.Config(
                     CATEGORY, "pcesAvgEventSize")
-            .withDescription("The average size of an event");
+            .withDescription("The average length in bytes of an event written in a pces file");
     public static final RunningAverageMetric.Config PCES_AVG_SYNC_DURATION = new RunningAverageMetric.Config(
                     CATEGORY, "pcesAvgSyncDuration")
-            .withDescription("the amount of time it takes to complete a flush operation.");
+            .withDescription("The amount of time it takes to complete a flush operation");
     public static final RunningAverageMetric.Config PCES_AVG_WRITE_DURATION = new RunningAverageMetric.Config(
                     CATEGORY, "pcesAvgWriteDuration")
-            .withDescription("the amount of time it takes to complete a single write operation");
+            .withDescription("The amount of time it takes to complete a single write operation");
     public static final RunningAverageMetric.Config PCES_AVG_TOTAL_WRITE_DURATION = new RunningAverageMetric.Config(
                     CATEGORY, "pcesAvgTotalWriteDuration")
-            .withDescription("the amount of time it takes to write a single event to the stream");
+            .withDescription("The amount of time it takes to write a single event to the stream");
 
     /**
      * Construct preconsensus event metrics.
@@ -104,7 +104,7 @@ public class PcesMetrics {
         preconsensusEventFileOldestSeconds = metrics.getOrCreate(PRECONSENSUS_EVENT_FILE_OLDEST_SECONDS_CONFIG);
 
         // crating the metrics early so we know they can be exported to the csv
-        metrics.getOrCreate(PcesMetrics.AVG_EVENT_SIZE);
+        metrics.getOrCreate(PcesMetrics.PCES_AVG_EVENT_SIZE);
         metrics.getOrCreate(PcesMetrics.PCES_AVG_SYNC_DURATION);
         metrics.getOrCreate(PcesMetrics.PCES_AVG_WRITE_DURATION);
         metrics.getOrCreate(PcesMetrics.PCES_AVG_TOTAL_WRITE_DURATION);

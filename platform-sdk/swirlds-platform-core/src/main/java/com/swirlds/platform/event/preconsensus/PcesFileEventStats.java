@@ -2,6 +2,7 @@
 package com.swirlds.platform.event.preconsensus;
 
 import com.swirlds.base.time.Time;
+import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.stats.AtomicAverage;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -63,7 +64,7 @@ public class PcesFileEventStats {
         private final long start;
         private final AtomicAverage stat;
 
-        private OpDurationTracker(final Time time, AtomicAverage stat) {
+        private OpDurationTracker(@NonNull final Time time, @NonNull final AtomicAverage stat) {
             this.time = time;
             this.start = time.nanoTime();
             this.stat = stat;
@@ -82,11 +83,15 @@ public class PcesFileEventStats {
      * Updates the metrics with the stats reported by the writer
      */
     public void registerMetrics(@NonNull final Metrics metrics) {
+        final RunningAverageMetric avgWriteMetric = metrics.getOrCreate(PcesMetrics.PCES_AVG_WRITE_DURATION);
+        final RunningAverageMetric avgSyncMetric = metrics.getOrCreate(PcesMetrics.PCES_AVG_SYNC_DURATION);
+        final RunningAverageMetric avgTotalWrite = metrics.getOrCreate(PcesMetrics.PCES_AVG_TOTAL_WRITE_DURATION);
+        final RunningAverageMetric avgEventSizeMetric = metrics.getOrCreate(PcesMetrics.PCES_AVG_EVENT_SIZE);
         metrics.addUpdater(() -> {
-            metrics.getOrCreate(PcesMetrics.PCES_AVG_WRITE_DURATION).update(avgWriteDuration.get());
-            metrics.getOrCreate(PcesMetrics.PCES_AVG_SYNC_DURATION).update(avgSyncDuration.get());
-            metrics.getOrCreate(PcesMetrics.PCES_AVG_TOTAL_WRITE_DURATION).update(avgWriteEventDuration.get());
-            metrics.getOrCreate(PcesMetrics.AVG_EVENT_SIZE).update(averageEventSize.get());
+            avgWriteMetric.update(avgWriteDuration.get());
+            avgSyncMetric.update(avgSyncDuration.get());
+            avgTotalWrite.update(avgWriteEventDuration.get());
+            avgEventSizeMetric.update(averageEventSize.get());
         });
     }
 }

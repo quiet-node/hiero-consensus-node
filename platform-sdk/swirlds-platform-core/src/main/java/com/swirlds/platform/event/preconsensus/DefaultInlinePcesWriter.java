@@ -67,9 +67,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
             commonPcesWriter.prepareOutputStream(event);
             final OpDurationTracker writeOp = pcesFileEventStats.avgWriteDuration();
             final long size = commonPcesWriter.getCurrentMutableFile().writeEvent(event);
-            // We subtract Integer.BYTES given that writeEvent returns the total write length
-            // which includes a leading integer to store the size of the record.
-            pcesFileEventStats.updateEventSize(size - Integer.BYTES);
+            pcesFileEventStats.updateEventSize(size);
             writeOp.end();
 
             if (fileSyncOption == FileSyncOption.EVERY_EVENT
