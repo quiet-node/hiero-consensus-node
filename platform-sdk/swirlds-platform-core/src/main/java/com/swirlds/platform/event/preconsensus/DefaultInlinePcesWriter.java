@@ -50,7 +50,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
      */
     @NonNull
     @Override
-    public PlatformEvent writeEvent(@NonNull PlatformEvent event) {
+    public PlatformEvent writeEvent(@NonNull final PlatformEvent event) {
         final OpDurationTracker eventWriteOp = pcesFileEventStats.avgWriteEventDuration();
 
         // if we aren't streaming new events yet, assume that the given event is already durable
