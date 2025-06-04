@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event.preconsensus;
 
-import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.metrics.RunningAverageMetric;
-import com.swirlds.metrics.api.Metrics;
+import com.swirlds.platform.event.preconsensus.PcesFileEventStats.OpDurationTracker;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -17,10 +15,8 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
     private final CommonPcesWriter commonPcesWriter;
     private final NodeId selfId;
     private final FileSyncOption fileSyncOption;
-    private final Time time;
-    private final RunningAverageMetric avgWriteDuration;
-    private final RunningAverageMetric avgSyncDuration;
-    private final RunningAverageMetric avgTotalWriteDuration;
+    private final PcesFileEventStats pcesFileEventStats;
+
     /**
      * Constructor
      *
@@ -35,15 +31,12 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
         Objects.requireNonNull(fileManager, "fileManager is required");
         this.commonPcesWriter = new CommonPcesWriter(platformContext, fileManager);
         this.selfId = Objects.requireNonNull(selfId, "selfId is required");
-        this.time = platformContext.getTime();
         this.fileSyncOption = platformContext
                 .getConfiguration()
                 .getConfigData(PcesConfig.class)
                 .inlinePcesSyncOption();
-        final Metrics metrics = platformContext.getMetrics();
-        this.avgWriteDuration = metrics.getOrCreate(PcesMetrics.PCES_AVG_WRITE_DURATION);
-        this.avgSyncDuration = metrics.getOrCreate(PcesMetrics.PCES_AVG_SYNC_DURATION);
-        this.avgTotalWriteDuration = metrics.getOrCreate(PcesMetrics.PCES_AVG_TOTAL_WRITE_DURATION);
+
+        this.pcesFileEventStats = new PcesFileEventStats(platformContext.getTime());
     }
 
     @Override
@@ -57,7 +50,8 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
     @NonNull
     @Override
     public PlatformEvent writeEvent(@NonNull PlatformEvent event) {
-        long nanoStartTime = time.nanoTime();
+        final OpDurationTracker eventWriteOp = pcesFileEventStats.avgWriteEventDuration();
+
         // if we aren't streaming new events yet, assume that the given event is already durable
         if (!commonPcesWriter.isStreamingNewEvents()) {
             return event;
@@ -70,22 +64,25 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
 
         try {
             commonPcesWriter.prepareOutputStream(event);
-            long nanoWriteStartTime = time.nanoTime();
-            commonPcesWriter.getCurrentMutableFile().writeEvent(event);
-            avgWriteDuration.update(time.nanoTime() - nanoWriteStartTime);
+            final OpDurationTracker writeOp = pcesFileEventStats.avgWriteDuration();
+            final long size = commonPcesWriter.getCurrentMutableFile().writeEvent(event);
+            // We subtract Integer.BYTES given that writeEvent returns the total write length
+            // which includes a leading integer to store the size of the record.
+            pcesFileEventStats.updateEventSize(size - Integer.BYTES);
+            writeOp.end();
 
             if (fileSyncOption == FileSyncOption.EVERY_EVENT
                     || (fileSyncOption == FileSyncOption.EVERY_SELF_EVENT
                             && event.getCreatorId().equals(selfId))) {
-                long nanoSyncStartTime = time.nanoTime();
+                final OpDurationTracker syncOp = pcesFileEventStats.avgSyncDuration();
                 commonPcesWriter.getCurrentMutableFile().sync();
-                avgSyncDuration.update(time.nanoTime() - nanoSyncStartTime);
+                syncOp.end();
             }
             return event;
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         } finally {
-            avgTotalWriteDuration.update(time.nanoTime() - nanoStartTime);
+            eventWriteOp.end();
         }
     }
 

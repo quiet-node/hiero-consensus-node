@@ -1,39 +1,92 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event.preconsensus;
 
-import com.swirlds.common.utility.LongRunningAverage;
-import java.util.concurrent.atomic.AtomicLong;
+import com.swirlds.base.time.Time;
+import com.swirlds.metrics.api.Metrics;
+import com.swirlds.platform.stats.AtomicAverage;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.Objects;
 
 /**
  * Used by {@link PcesFileWriter} to keeps local stats during the writing process.
  */
 public class PcesFileEventStats {
-    private final LongRunningAverage averageEventSize = new LongRunningAverage(10000);
-    private final AtomicLong totalExpansions = new AtomicLong();
+    private final AtomicAverage averageEventSize = new AtomicAverage();
+    private final AtomicAverage avgWriteDuration = new AtomicAverage();
+    private final AtomicAverage avgSyncDuration = new AtomicAverage();
+    private final AtomicAverage avgWriteEventDuration = new AtomicAverage();
+    private final Time time;
+
+    PcesFileEventStats(@NonNull final Time time) {
+        this.time = Objects.requireNonNull(time);
+    }
 
     /**
-     * Updates the stats related to the total write operation
-     * @param size the written event size in bytes
-     * @param bufferExpanded whether a buffer expansion happened
+     * Updates the event size in bytes
+     * @param size the event size in bytes
      */
-    void updateEventStats(final long size, final boolean bufferExpanded) {
-        averageEventSize.add(size);
-        if (bufferExpanded) {
-            totalExpansions.incrementAndGet();
+    void updateEventSize(final long size) {
+        if (size > 0) averageEventSize.update(size);
+    }
+
+    /**
+     * returns a tracker for the average duration of a pcesFile write operation
+     */
+    @NonNull
+    OpDurationTracker avgWriteDuration() {
+        return new OpDurationTracker(time, avgWriteDuration);
+    }
+
+    /**
+     * returns a tracker for the average duration of the time it takes for an event to reach to disk.
+     * Includes sync and other metadata processing.
+     */
+    @NonNull
+    OpDurationTracker avgWriteEventDuration() {
+        return new OpDurationTracker(time, avgWriteEventDuration);
+    }
+
+    /**
+     * returns a tracker for the average duration of a pcesFile sync operation
+     */
+    @NonNull
+    OpDurationTracker avgSyncDuration() {
+        return new OpDurationTracker(time, avgSyncDuration);
+    }
+
+    /**
+     * Allows to track the duration of an operation
+     */
+    static class OpDurationTracker {
+
+        private final Time time;
+        private final long start;
+        private final AtomicAverage stat;
+
+        private OpDurationTracker(final Time time, AtomicAverage stat) {
+            this.time = time;
+            this.start = time.nanoTime();
+            this.stat = stat;
+        }
+
+        /**
+         * records the duration since the creation of the tracker and registers the value.
+         */
+        void end() {
+            final long end = time.nanoTime();
+            stat.update(end - start);
         }
     }
 
     /**
-     * @return the average event size written in bytes
+     * Updates the metrics with the stats reported by the writer
      */
-    public long averageEventSize() {
-        return averageEventSize.getAverage();
-    }
-
-    /**
-     * @return the number of times the buffer was expanded
-     */
-    public long totalExpansions() {
-        return totalExpansions.get();
+    public void registerMetrics(@NonNull final Metrics metrics) {
+        metrics.addUpdater(() -> {
+            metrics.getOrCreate(PcesMetrics.PCES_AVG_WRITE_DURATION).update(avgWriteDuration.get());
+            metrics.getOrCreate(PcesMetrics.PCES_AVG_SYNC_DURATION).update(avgSyncDuration.get());
+            metrics.getOrCreate(PcesMetrics.PCES_AVG_TOTAL_WRITE_DURATION).update(avgWriteEventDuration.get());
+            metrics.getOrCreate(PcesMetrics.AVG_EVENT_SIZE).update(averageEventSize.get());
+        });
     }
 }

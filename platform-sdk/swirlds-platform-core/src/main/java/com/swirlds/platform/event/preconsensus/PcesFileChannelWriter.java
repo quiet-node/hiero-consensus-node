@@ -29,9 +29,6 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     private WritableSequentialData writableSequentialData;
     /** Tracks the size of the file in bytes */
     private int fileSize;
-    /** Keeps stats of the writing process */
-    private final PcesFileEventStats stats;
-
     /**
      * Create a new writer that writes events to a file using a {@link FileChannel}.
      *
@@ -57,7 +54,6 @@ public class PcesFileChannelWriter implements PcesFileWriter {
         this.channel = FileChannel.open(filePath, allOpenOptions.toArray(OpenOption[]::new));
         this.buffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
         this.writableSequentialData = BufferedData.wrap(buffer);
-        this.stats = new PcesFileEventStats();
     }
 
     @Override
@@ -67,21 +63,18 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     }
 
     @Override
-    public void writeEvent(@NonNull final GossipEvent event) throws IOException {
+    public long writeEvent(@NonNull final GossipEvent event) throws IOException {
         final int size = GossipEvent.PROTOBUF.measureRecord(event);
         final boolean expandBuffer = size > buffer.capacity();
-        try {
-            if (expandBuffer) {
-                MemoryUtils.closeDirectByteBuffer(buffer);
-                buffer = ByteBuffer.allocateDirect(size);
-                writableSequentialData = BufferedData.wrap(buffer);
-            }
-            buffer.putInt(size);
-            GossipEvent.PROTOBUF.write(event, writableSequentialData);
-            flipWriteClear();
-        } finally {
-            stats.updateEventStats(size, expandBuffer);
+        if (expandBuffer) {
+            MemoryUtils.closeDirectByteBuffer(buffer);
+            buffer = ByteBuffer.allocateDirect(size);
+            writableSequentialData = BufferedData.wrap(buffer);
         }
+        buffer.putInt(size);
+        GossipEvent.PROTOBUF.write(event, writableSequentialData);
+        flipWriteClear();
+        return size;
     }
 
     /**
@@ -120,9 +113,5 @@ public class PcesFileChannelWriter implements PcesFileWriter {
     @Override
     public long fileSize() {
         return fileSize;
-    }
-
-    public PcesFileEventStats getStats() {
-        return stats;
     }
 }

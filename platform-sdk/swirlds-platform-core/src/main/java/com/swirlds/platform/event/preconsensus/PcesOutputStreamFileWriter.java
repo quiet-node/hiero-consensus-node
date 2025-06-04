@@ -23,8 +23,6 @@ public class PcesOutputStreamFileWriter implements PcesFileWriter {
     private final FileDescriptor fileDescriptor;
     /** Counts the bytes written to the file */
     private final CountingStreamExtension counter;
-    /** Keeps stats of the writing process */
-    private final PcesFileEventStats stats;
 
     /**
      * Create a new file writer.
@@ -36,7 +34,6 @@ public class PcesOutputStreamFileWriter implements PcesFileWriter {
         counter = new CountingStreamExtension(false);
         final FileOutputStream fileOutputStream = new FileOutputStream(filePath.toFile());
         fileDescriptor = fileOutputStream.getFD();
-        this.stats = new PcesFileEventStats();
         out = new SerializableDataOutputStream(
                 new ExtendableOutputStream(new BufferedOutputStream(fileOutputStream), counter));
     }
@@ -47,11 +44,8 @@ public class PcesOutputStreamFileWriter implements PcesFileWriter {
     }
 
     @Override
-    public void writeEvent(@NonNull final GossipEvent event) throws IOException {
-        // We subtract Integer.BYTES given that writePbjRecord writes the size of the record first.
-        // and we are interested on the size value not in the length of written bytes
-        final long size = out.writePbjRecord(event, GossipEvent.PROTOBUF) - Integer.BYTES;
-        stats.updateEventStats(size, false);
+    public long writeEvent(@NonNull final GossipEvent event) throws IOException {
+        return out.writePbjRecord(event, GossipEvent.PROTOBUF);
     }
 
     @Override
@@ -77,10 +71,5 @@ public class PcesOutputStreamFileWriter implements PcesFileWriter {
     @Override
     public long fileSize() {
         return counter.getCount();
-    }
-
-    @Override
-    public PcesFileEventStats getStats() {
-        return stats;
     }
 }
