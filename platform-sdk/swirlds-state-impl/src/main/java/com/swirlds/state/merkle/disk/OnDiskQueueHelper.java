@@ -3,7 +3,6 @@ package com.swirlds.state.merkle.disk;
 
 import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static com.swirlds.state.merkle.logging.StateLogger.logQueueIterate;
-import static com.swirlds.virtualmap.internal.merkle.VirtualMapState.VM_STATE_KEY;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
@@ -11,7 +10,6 @@ import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.queue.QueueState;
 import com.swirlds.state.merkle.queue.QueueStateCodec;
 import com.swirlds.virtualmap.VirtualMap;
-import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
@@ -151,8 +149,6 @@ public final class OnDiskQueueHelper<E> {
      */
     public void updateState(@NonNull final QueueState state) {
         virtualMap.put(StateUtils.getVirtualMapKeyForSingleton(serviceName, stateKey), state, QueueStateCodec.INSTANCE);
-        VirtualMapState vmState = virtualMap.getState();
-        virtualMap.put(VM_STATE_KEY, vmState, null, vmState.toBytes());
     }
 
     /**

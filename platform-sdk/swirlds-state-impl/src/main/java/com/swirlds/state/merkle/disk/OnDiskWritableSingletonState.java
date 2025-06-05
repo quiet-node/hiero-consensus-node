@@ -5,7 +5,6 @@ import static com.swirlds.state.merkle.StateUtils.computeLabel;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRead;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonRemove;
 import static com.swirlds.state.merkle.logging.StateLogger.logSingletonWrite;
-import static com.swirlds.virtualmap.internal.merkle.VirtualMapState.VM_STATE_KEY;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
@@ -13,7 +12,6 @@ import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.virtualmap.VirtualMap;
-import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
@@ -62,7 +60,6 @@ public class OnDiskWritableSingletonState<T> extends WritableSingletonStateBase<
     @Override
     protected void putIntoDataSource(@NonNull T value) {
         virtualMap.put(StateUtils.getVirtualMapKeyForSingleton(serviceName, stateKey), value, valueCodec);
-        updateVmState();
         // Log to transaction state log, what was put
         logSingletonWrite(computeLabel(serviceName, stateKey), value);
     }
@@ -72,13 +69,7 @@ public class OnDiskWritableSingletonState<T> extends WritableSingletonStateBase<
     protected void removeFromDataSource() {
         final var removed =
                 virtualMap.remove(StateUtils.getVirtualMapKeyForSingleton(serviceName, stateKey), valueCodec);
-        updateVmState();
         // Log to transaction state log, what was removed
         logSingletonRemove(computeLabel(serviceName, stateKey), removed);
-    }
-
-    private void updateVmState() {
-        VirtualMapState vmState = virtualMap.getState();
-        virtualMap.put(VM_STATE_KEY, vmState, null, vmState.toBytes());
     }
 }
