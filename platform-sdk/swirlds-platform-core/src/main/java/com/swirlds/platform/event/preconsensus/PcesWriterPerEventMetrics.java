@@ -13,7 +13,7 @@ import javax.annotation.Nonnull;
  * Used by {@link DefaultInlinePcesWriter} to keep track of the write and sync duration.
  * This class is not threadsafe.
  */
-public class PcesWriterPerEventMetrics {
+class PcesWriterPerEventMetrics {
 
     private static final IntegerPairAccumulator.Config<Double> PCES_AVG_EVENT_SIZE =
             new IntegerPairAccumulator.Config<>(CATEGORY, "pcesAvgEventSize", Double.class, AVERAGE)
@@ -38,7 +38,7 @@ public class PcesWriterPerEventMetrics {
     private long writeStart;
     private long syncStart;
 
-    public PcesWriterPerEventMetrics(@Nonnull final Metrics metrics, @Nonnull final Time time) {
+    PcesWriterPerEventMetrics(@Nonnull final Metrics metrics, @Nonnull final Time time) {
         this.avgWriteMetric = metrics.getOrCreate(PCES_AVG_WRITE_DURATION);
         this.avgSyncMetric = metrics.getOrCreate(PCES_AVG_SYNC_DURATION);
         this.avgTotalWrite = metrics.getOrCreate(PCES_AVG_TOTAL_WRITE_DURATION);
@@ -90,6 +90,15 @@ public class PcesWriterPerEventMetrics {
     }
 
     /**
+     * Clears the previously recorded start times
+     */
+    void clear() {
+        this.totalWriteStart = 0;
+        this.writeStart = 0;
+        this.syncStart = 0;
+    }
+
+    /**
      * Returns the duration in nanos from the given start up to now as reported by time instance
      * @param startNanos the start of the duration to consider
      * @return the value in nanos of the duration, up to Integer.MAX_VALUE
@@ -106,14 +115,5 @@ public class PcesWriterPerEventMetrics {
      */
     private static int asInt(final long val) {
         return val > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) val;
-    }
-
-    /**
-     * Clears the previously recorded start times
-     */
-    public void clear() {
-        this.totalWriteStart = 0;
-        this.writeStart = 0;
-        this.syncStart = 0;
     }
 }
