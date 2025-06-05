@@ -112,5 +112,4 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
         VirtualMapState vmState = virtualMap.getState();
         virtualMap.put(VM_STATE_KEY, vmState, null, vmState.toBytes());
     }
-
 }
