@@ -139,7 +139,7 @@ public class BlockNodeConnectionManager {
     /**
      * Reference to the worker thread that handles creating requests and sending requests to the connected block node.
      */
-    private final AtomicReference<Thread> blockStreamWorkerThreadRef;
+    private AtomicReference<Thread> blockStreamWorkerThreadRef;
     /**
      * Map that contains one or more connections to block nodes. The connections in this map will be a subset (or all)
      * of the available block node connections. (see {@link BlockNodeConnectionManager#availableBlockNodes})
@@ -175,9 +175,7 @@ public class BlockNodeConnectionManager {
         final String endpoint =
                 BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
         grpcEndpoint = requireNonNull(endpoint, "gRPC endpoint is missing");
-
         isStreamingEnabled.set(isStreamingEnabled());
-        final Thread workerThread;
 
         if (isStreamingEnabled.get()) {
             final String blockNodeConnectionConfigPath = blockNodeConnectionFileDir();
@@ -185,16 +183,10 @@ public class BlockNodeConnectionManager {
             availableBlockNodes = new ArrayList<>(extractBlockNodesConfigurations(blockNodeConnectionConfigPath));
             logger.info("Loaded block node configuration from {}", blockNodeConnectionConfigPath);
             logger.info("Block node configuration: {}", availableBlockNodes);
-
-            workerThread = Thread.ofPlatform().name("BlockStreamWorkerLoop").start(this::blockStreamWorkerLoop);
-            blockStreamMetrics.registerMetrics();
         } else {
             logger.info("Block node streaming is disabled; will not setup connections to block nodes");
             availableBlockNodes = new ArrayList<>();
-            workerThread = null;
         }
-
-        blockStreamWorkerThreadRef = new AtomicReference<>(workerThread);
     }
 
     /**
@@ -396,6 +388,12 @@ public class BlockNodeConnectionManager {
         if (!isConnectionManagerActive.compareAndSet(false, true)) {
             throw new IllegalStateException("Connection manager already started");
         }
+
+        final Thread workerThread =
+                Thread.ofPlatform().name("BlockStreamWorkerLoop").start(this::blockStreamWorkerLoop);
+        blockStreamMetrics.registerMetrics();
+
+        blockStreamWorkerThreadRef = new AtomicReference<>(workerThread);
 
         if (!selectNewBlockNodeForStreaming()) {
             throw new IllegalStateException("No block nodes available to connect to");
