@@ -175,7 +175,6 @@ public class BlockNodeConnectionManager {
         final String endpoint =
                 BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
         grpcEndpoint = requireNonNull(endpoint, "gRPC endpoint is missing");
-
         isStreamingEnabled.set(isStreamingEnabled());
 
         if (isStreamingEnabled.get()) {
@@ -390,7 +389,7 @@ public class BlockNodeConnectionManager {
         if (!isConnectionManagerActive.compareAndSet(false, true)) {
             throw new IllegalStateException("Connection manager already started");
         }
-
+        
         // start worker thread
         final Thread t = Thread.ofPlatform().name("BlockStreamWorkerLoop").start(this::blockStreamWorkerLoop);
         blockStreamWorkerThreadRef.set(t);
