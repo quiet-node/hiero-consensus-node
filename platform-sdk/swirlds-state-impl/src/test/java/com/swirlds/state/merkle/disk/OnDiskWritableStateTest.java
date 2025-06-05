@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle.disk;
 
-import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
+import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.merkledb.MerkleDbDataSource;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.test.fixtures.merkle.MerkleTestBase;
 import com.swirlds.virtualmap.VirtualMap;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
+import java.io.IOException;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.AfterEach;
@@ -75,27 +74,30 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         }
 
         @AfterEach
-        void tearDown() {
+        void tearDown() throws IOException {
             if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
                 fruitVirtualMap.release();
             }
+
+            fruitVirtualMap.getDataSource().close();
+            MerkleDbTestUtils.assertAllDatabasesClosed();
         }
     }
 
-    private void add(String serviceName, String stateKey, String key, String value) {
-        add(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, STRING_CODEC, key, value);
+    private void add(String serviceName, String stateKey, ProtoBytes key, String value) {
+        add(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, key, value);
     }
 
     @Nested
     @DisplayName("Query Tests")
     final class QueryTest {
-        private OnDiskWritableKVState<String, String> state;
+        private OnDiskWritableKVState<ProtoBytes, String> state;
 
         @BeforeEach
         void setUp() {
             setupFruitVirtualMap();
             state = new OnDiskWritableKVState<>(
-                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
+                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC, fruitVirtualMap);
             add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, APPLE);
             add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, B_KEY, BANANA);
             add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, C_KEY, CHERRY);
@@ -125,34 +127,37 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         }
 
         @AfterEach
-        void tearDown() {
+        void tearDown() throws IOException {
             if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
                 fruitVirtualMap.release();
             }
+
+            fruitVirtualMap.getDataSource().close();
+            MerkleDbTestUtils.assertAllDatabasesClosed();
         }
     }
 
     @Nested
     @DisplayName("Mutation Tests")
     final class MutationTest {
-        private OnDiskWritableKVState<String, String> state;
+        private OnDiskWritableKVState<ProtoBytes, String> state;
 
         @BeforeEach
         void setUp() {
             setupFruitVirtualMap();
             state = new OnDiskWritableKVState<>(
-                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
+                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC, fruitVirtualMap);
             add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, APPLE);
             add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, B_KEY, BANANA);
         }
 
-        boolean merkleMapContainsKey(String key) {
-            final Bytes keyBytes = StateUtils.getVirtualMapKey(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, key, STRING_CODEC);
+        boolean merkleMapContainsKey(ProtoBytes key) {
+            final Bytes keyBytes = StateUtils.getVirtualMapKeyForKv(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, key);
             return fruitVirtualMap.containsKey(keyBytes);
         }
 
-        String readValueFromMerkleMap(String key) {
-            final Bytes keyBytes = StateUtils.getVirtualMapKey(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, key, STRING_CODEC);
+        String readValueFromMerkleMap(ProtoBytes key) {
+            final Bytes keyBytes = StateUtils.getVirtualMapKeyForKv(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, key);
             return fruitVirtualMap.get(keyBytes, STRING_CODEC);
         }
 
@@ -264,7 +269,7 @@ class OnDiskWritableStateTest extends MerkleTestBase {
             fruitVirtualMap = fruitVirtualMap.copy();
             oldVirtualMap.release();
             state = new OnDiskWritableKVState<>(
-                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, fruitVirtualMap);
+                    FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC, fruitVirtualMap);
             assertThat(state.get(A_KEY)).isEqualTo(APPLE);
             state.remove(B_KEY);
             assertThat(state.get(C_KEY)).isEqualTo(CHERRY);
@@ -297,20 +302,8 @@ class OnDiskWritableStateTest extends MerkleTestBase {
     }
 
     @AfterEach
-    void tearDown() {
-        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
-            fruitVirtualMap.release();
-        }
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
-        try {
-            // FUTURE WORK: need a better way to make sure that DB files are deleted
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+    void tearDown() throws IOException {
+        fruitVirtualMap.getDataSource().close();
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }

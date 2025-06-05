@@ -2,11 +2,11 @@
 package com.swirlds.platform.test.fixtures.state;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.pbj.runtime.Codec;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.utility.Labeled;
 import com.swirlds.merkle.map.MerkleMap;
-import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.lifecycle.StateMetadata;
 import com.swirlds.state.merkle.MerkleStateRoot;
@@ -15,7 +15,6 @@ import com.swirlds.state.merkle.memory.InMemoryValue;
 import com.swirlds.state.test.fixtures.StateTestBase;
 import com.swirlds.state.test.fixtures.merkle.TestSchema;
 import com.swirlds.virtualmap.VirtualMap;
-import org.junit.jupiter.api.AfterEach;
 
 /**
  * This base class provides helpful methods and defaults for simplifying the other merkle related
@@ -43,10 +42,10 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
 
     protected SemanticVersion v1 = SemanticVersion.newBuilder().major(1).build();
 
-    protected StateMetadata<String, String> fruitMetadata;
-    protected StateMetadata<String, String> fruitVirtualMetadata;
-    protected StateMetadata<String, String> animalMetadata;
-    protected StateMetadata<Long, String> spaceMetadata;
+    protected StateMetadata<ProtoBytes, String> fruitMetadata;
+    protected StateMetadata<ProtoBytes, String> fruitVirtualMetadata;
+    protected StateMetadata<ProtoBytes, String> animalMetadata;
+    protected StateMetadata<ProtoBytes, String> spaceMetadata;
     protected StateMetadata<String, String> steamMetadata;
     protected StateMetadata<String, String> countryMetadata;
 
@@ -57,7 +56,7 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
         fruitMetadata = new StateMetadata<>(
                 FIRST_SERVICE,
                 new TestSchema(1),
-                StateDefinition.inMemory(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC));
+                StateDefinition.inMemory(FRUIT_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC));
     }
 
     /** Sets up the "Fruit" virtual map, label, and metadata. */
@@ -67,7 +66,7 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
         fruitVirtualMetadata = new StateMetadata<>(
                 FIRST_SERVICE,
                 new TestSchema(1),
-                StateDefinition.onDisk(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC, 100));
+                StateDefinition.onDisk(FRUIT_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC, 100));
     }
 
     /** Sets up the "Animal" merkle map, label, and metadata. */
@@ -77,7 +76,7 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
         animalMetadata = new StateMetadata<>(
                 FIRST_SERVICE,
                 new TestSchema(1),
-                StateDefinition.inMemory(ANIMAL_STATE_KEY, STRING_CODEC, STRING_CODEC));
+                StateDefinition.inMemory(ANIMAL_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC));
     }
 
     /** Sets up the "Space" merkle map, label, and metadata. */
@@ -85,7 +84,9 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
     protected void setupSpaceMerkleMap() {
         super.setupSpaceMerkleMap();
         spaceMetadata = new StateMetadata<>(
-                SECOND_SERVICE, new TestSchema(1), StateDefinition.inMemory(SPACE_STATE_KEY, LONG_CODEC, STRING_CODEC));
+                SECOND_SERVICE,
+                new TestSchema(1),
+                StateDefinition.inMemory(SPACE_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC));
     }
 
     @Override
@@ -124,28 +125,22 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
 
     /** A convenience method for adding a k/v pair to a merkle map */
     protected void add(
-            MerkleMap<InMemoryKey<String>, InMemoryValue<String, String>> map,
-            StateMetadata<String, String> md,
-            String key,
+            MerkleMap<InMemoryKey<ProtoBytes>, InMemoryValue<ProtoBytes, String>> map,
+            StateMetadata<ProtoBytes, String> md,
+            ProtoBytes key,
             String value) {
         final var def = md.stateDefinition();
         super.add(map, md.inMemoryValueClassId(), def.keyCodec(), def.valueCodec(), key, value);
     }
 
     /** A convenience method for adding a k/v pair to a virtual map */
-    protected void add(VirtualMap map, StateMetadata<String, String> md, String key, String value) {
+    protected void add(VirtualMap map, StateMetadata<ProtoBytes, String> md, ProtoBytes key, String value) {
         super.add(
                 map,
                 md.serviceName(),
                 md.stateDefinition().stateKey(),
-                md.stateDefinition().keyCodec(),
                 md.stateDefinition().valueCodec(),
                 key,
                 value);
-    }
-
-    @AfterEach
-    void cleanUp() {
-        MerkleDb.resetDefaultInstancePath();
     }
 }

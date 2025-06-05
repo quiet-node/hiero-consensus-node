@@ -2,7 +2,6 @@
 package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
-import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -10,13 +9,13 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
 import com.hedera.hapi.node.base.SemanticVersion;
+import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.hedera.node.config.data.HederaConfig;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
@@ -34,8 +33,6 @@ import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.test.fixtures.merkle.TestSchema;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
@@ -80,7 +77,9 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
         final var hederaConfig = mock(HederaConfig.class);
         lenient().when(config.getConfigData(HederaConfig.class)).thenReturn(hederaConfig);
         final var merkleDbConfig = mock(MerkleDbConfig.class);
+        lenient().when(merkleDbConfig.goodAverageBucketEntryCount()).thenReturn(32);
         lenient().when(merkleDbConfig.longListChunkSize()).thenReturn(1024);
+        lenient().when(merkleDbConfig.maxNumOfKeys()).thenReturn(1000L);
         lenient().when(config.getConfigData(MerkleDbConfig.class)).thenReturn(merkleDbConfig);
         final var virtualMapConfig = mock(VirtualMapConfig.class);
         lenient().when(config.getConfigData(VirtualMapConfig.class)).thenReturn(virtualMapConfig);
@@ -436,7 +435,8 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     @Override
                     @SuppressWarnings("rawtypes")
                     public Set<StateDefinition> statesToCreate() {
-                        final var fruitDef = StateDefinition.inMemory(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC);
+                        final var fruitDef =
+                                StateDefinition.inMemory(FRUIT_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC);
                         return Set.of(fruitDef);
                     }
 
@@ -445,7 +445,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         assertThat(ctx).isNotNull();
                         assertThat(ctx.previousVersion()).isNull();
                         assertThat(ctx.newStates().size()).isEqualTo(1);
-                        final WritableKVState<String, String> fruit =
+                        final WritableKVState<ProtoBytes, String> fruit =
                                 ctx.newStates().get(FRUIT_STATE_KEY);
                         fruit.put(A_KEY, APPLE);
                         fruit.put(B_KEY, BANANA);
@@ -460,7 +460,8 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     @Override
                     @SuppressWarnings("rawtypes")
                     public Set<StateDefinition> statesToCreate() {
-                        final var animalDef = StateDefinition.onDisk(ANIMAL_STATE_KEY, STRING_CODEC, STRING_CODEC, 100);
+                        final var animalDef =
+                                StateDefinition.onDisk(ANIMAL_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC, 100);
                         final var countryDef = StateDefinition.singleton(COUNTRY_STATE_KEY, STRING_CODEC);
                         return Set.of(animalDef, countryDef);
                     }
@@ -475,7 +476,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         // and nothing new
                         assertThat(previousStates.isEmpty()).isFalse();
                         assertThat(previousStates.contains(FRUIT_STATE_KEY)).isTrue();
-                        final ReadableKVState<String, String> oldFruit = previousStates.get(FRUIT_STATE_KEY);
+                        final ReadableKVState<ProtoBytes, String> oldFruit = previousStates.get(FRUIT_STATE_KEY);
                         assertThat(oldFruit.keys()).toIterable().hasSize(3);
                         assertThat(oldFruit.get(A_KEY)).isEqualTo(APPLE);
                         assertThat(oldFruit.get(B_KEY)).isEqualTo(BANANA);
@@ -488,12 +489,12 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         assertThat(newStates.contains(COUNTRY_STATE_KEY)).isTrue();
 
                         // Add in the new animals
-                        final WritableKVState<String, String> animals = newStates.get(ANIMAL_STATE_KEY);
+                        final WritableKVState<ProtoBytes, String> animals = newStates.get(ANIMAL_STATE_KEY);
                         animals.put(A_KEY, AARDVARK);
                         animals.put(B_KEY, BEAR);
 
                         // Remove, update, and add fruit
-                        final WritableKVState<String, String> fruit = newStates.get(FRUIT_STATE_KEY);
+                        final WritableKVState<ProtoBytes, String> fruit = newStates.get(FRUIT_STATE_KEY);
                         fruit.remove(A_KEY);
                         fruit.put(B_KEY, BLACKBERRY);
                         fruit.put(E_KEY, EGGPLANT);
@@ -531,12 +532,12 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         // Verify that everything in v2 is still here
                         assertThat(previousStates.stateKeys())
                                 .containsExactlyInAnyOrder(FRUIT_STATE_KEY, ANIMAL_STATE_KEY, COUNTRY_STATE_KEY);
-                        final ReadableKVState<String, String> oldFruit = previousStates.get(FRUIT_STATE_KEY);
+                        final ReadableKVState<ProtoBytes, String> oldFruit = previousStates.get(FRUIT_STATE_KEY);
                         assertThat(oldFruit.keys()).toIterable().containsExactlyInAnyOrder(B_KEY, C_KEY, E_KEY);
                         assertThat(oldFruit.get(B_KEY)).isEqualTo(BLACKBERRY);
                         assertThat(oldFruit.get(C_KEY)).isEqualTo(CHERRY);
                         assertThat(oldFruit.get(E_KEY)).isEqualTo(EGGPLANT);
-                        final ReadableKVState<String, String> oldAnimals = previousStates.get(ANIMAL_STATE_KEY);
+                        final ReadableKVState<ProtoBytes, String> oldAnimals = previousStates.get(ANIMAL_STATE_KEY);
                         assertThat(oldAnimals.get(A_KEY)).isEqualTo(AARDVARK);
                         assertThat(oldAnimals.get(B_KEY)).isEqualTo(BEAR);
 
@@ -546,7 +547,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         assertThat(newStates.contains(ANIMAL_STATE_KEY)).isTrue();
 
                         // Add in a new animal
-                        final WritableKVState<String, String> animals = newStates.get(ANIMAL_STATE_KEY);
+                        final WritableKVState<ProtoBytes, String> animals = newStates.get(ANIMAL_STATE_KEY);
                         animals.put(C_KEY, CUTTLEFISH);
 
                         // And I should still see the COUNTRY_STATE_KEY in the previousStates,
@@ -584,7 +585,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                 // Then we see that the values for A, B, and C are available
                 final var readableStates = merkleTree.getReadableStates(FIRST_SERVICE);
                 assertThat(readableStates.size()).isEqualTo(1);
-                final ReadableKVState<String, String> fruitV1 = readableStates.get(FRUIT_STATE_KEY);
+                final ReadableKVState<ProtoBytes, String> fruitV1 = readableStates.get(FRUIT_STATE_KEY);
                 assertThat(fruitV1.keys()).toIterable().containsExactlyInAnyOrder(A_KEY, B_KEY, C_KEY);
             }
 
@@ -613,11 +614,11 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                 final var readableStates = merkleTree.getReadableStates(FIRST_SERVICE);
                 assertThat(readableStates.size()).isEqualTo(3);
 
-                final ReadableKVState<String, String> fruitV2 = readableStates.get(FRUIT_STATE_KEY);
+                final ReadableKVState<ProtoBytes, String> fruitV2 = readableStates.get(FRUIT_STATE_KEY);
                 assertThat(fruitV2.keys()).toIterable().containsExactlyInAnyOrder(B_KEY, C_KEY, E_KEY);
                 assertThat(fruitV2.get(B_KEY)).isEqualTo(BLACKBERRY);
 
-                final ReadableKVState<String, String> animalV2 = readableStates.get(ANIMAL_STATE_KEY);
+                final ReadableKVState<ProtoBytes, String> animalV2 = readableStates.get(ANIMAL_STATE_KEY);
                 assertThat(animalV2.get(A_KEY)).isEqualTo(AARDVARK);
                 assertThat(animalV2.get(B_KEY)).isEqualTo(BEAR);
 
@@ -660,7 +661,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         .isInstanceOf(IllegalArgumentException.class);
 
                 // And this should be updated
-                final ReadableKVState<String, String> animalV2 = readableStates.get(ANIMAL_STATE_KEY);
+                final ReadableKVState<ProtoBytes, String> animalV2 = readableStates.get(ANIMAL_STATE_KEY);
                 assertThat(animalV2.get(A_KEY)).isEqualTo(AARDVARK);
                 assertThat(animalV2.get(B_KEY)).isEqualTo(BEAR);
                 assertThat(animalV2.get(C_KEY)).isEqualTo(CUTTLEFISH);
@@ -714,17 +715,5 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         .hasCauseInstanceOf(ConstructableRegistryException.class);
             }
         }
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
-            fruitVirtualMap.release();
-        }
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
     }
 }

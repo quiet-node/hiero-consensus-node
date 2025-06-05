@@ -157,7 +157,7 @@ class MerkleDbCompactionCoordinator {
             return;
         }
         if (isCompactionRunning(key)) {
-            logger.debug(MERKLE_DB.getMarker(), "Compaction for {} is already in progress", key);
+            logger.info(MERKLE_DB.getMarker(), "Compaction for {} is already in progress", key);
             return;
         }
         compactorsByName.put(key, compactor);
@@ -201,7 +201,7 @@ class MerkleDbCompactionCoordinator {
             try {
                 return compactor.compact();
             } catch (final InterruptedException | ClosedByInterruptException e) {
-                logger.info(MERKLE_DB.getMarker(), "[{}] Interrupted while compacting, this is allowed", id);
+                logger.info(MERKLE_DB.getMarker(), "Interrupted while compacting, this is allowed");
             } catch (Exception e) {
                 // It is important that we capture all exceptions here, otherwise a single exception
                 // will stop all future merges from happening

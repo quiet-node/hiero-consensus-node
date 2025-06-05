@@ -2,11 +2,11 @@
 package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
-import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static com.swirlds.state.merkle.MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.hedera.node.config.data.HederaConfig;
 import com.swirlds.base.test.fixtures.time.FakeTime;
@@ -19,7 +19,6 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.SignedState;
@@ -47,13 +46,12 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Set;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hiero.base.constructable.ConstructableRegistryException;
 import org.hiero.base.crypto.config.CryptoConfig;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,6 +62,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SerializationTest extends MerkleTestBase {
+
+    private static final Logger logger = LogManager.getLogger(RandomSignedStateGenerator.class);
 
     private Path dir;
     private Configuration config;
@@ -95,8 +95,8 @@ class SerializationTest extends MerkleTestBase {
             @Override
             @SuppressWarnings("rawtypes")
             public Set<StateDefinition> statesToCreate() {
-                final var fruitDef = StateDefinition.inMemory(FRUIT_STATE_KEY, STRING_CODEC, STRING_CODEC);
-                final var animalDef = StateDefinition.onDisk(ANIMAL_STATE_KEY, STRING_CODEC, STRING_CODEC, 100);
+                final var fruitDef = StateDefinition.inMemory(FRUIT_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC);
+                final var animalDef = StateDefinition.onDisk(ANIMAL_STATE_KEY, ProtoBytes.PROTOBUF, STRING_CODEC, 100);
                 final var countryDef = StateDefinition.singleton(COUNTRY_STATE_KEY, STRING_CODEC);
                 final var steamDef = StateDefinition.queue(STEAM_STATE_KEY, STRING_CODEC);
                 return Set.of(fruitDef, animalDef, countryDef, steamDef);
@@ -105,7 +105,7 @@ class SerializationTest extends MerkleTestBase {
             @Override
             public void migrate(@NonNull final MigrationContext ctx) {
                 final var newStates = ctx.newStates();
-                final WritableKVState<String, String> fruit = newStates.get(FRUIT_STATE_KEY);
+                final WritableKVState<ProtoBytes, String> fruit = newStates.get(FRUIT_STATE_KEY);
                 fruit.put(A_KEY, APPLE);
                 fruit.put(B_KEY, BANANA);
                 fruit.put(C_KEY, CHERRY);
@@ -114,8 +114,8 @@ class SerializationTest extends MerkleTestBase {
                 fruit.put(F_KEY, FIG);
                 fruit.put(G_KEY, GRAPE);
 
-                final OnDiskWritableKVState<String, String> animals =
-                        (OnDiskWritableKVState<String, String>) (OnDiskWritableKVState) newStates.get(ANIMAL_STATE_KEY);
+                final OnDiskWritableKVState<ProtoBytes, String> animals = (OnDiskWritableKVState<ProtoBytes, String>)
+                        (OnDiskWritableKVState) newStates.get(ANIMAL_STATE_KEY);
                 animals.put(A_KEY, AARDVARK);
                 animals.put(B_KEY, BEAR);
                 animals.put(C_KEY, CUTTLEFISH);
@@ -192,7 +192,7 @@ class SerializationTest extends MerkleTestBase {
         try {
             originalTree.release();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception while releasing state", e);
         }
         copy.release();
         loadedTree.release();
@@ -276,7 +276,7 @@ class SerializationTest extends MerkleTestBase {
         try {
             originalTree.release();
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Exception while releasing state", e);
         }
         loadedTree.release();
         loadedTreeWithCache.release();
@@ -331,7 +331,7 @@ class SerializationTest extends MerkleTestBase {
 
     private static void populateVmCache(State loadedTree) {
         final var states = loadedTree.getWritableStates(FIRST_SERVICE);
-        final WritableKVState<String, String> animalState = states.get(ANIMAL_STATE_KEY);
+        final WritableKVState<ProtoBytes, String> animalState = states.get(ANIMAL_STATE_KEY);
         assertThat(animalState.get(A_KEY)).isEqualTo(AARDVARK);
         assertThat(animalState.get(B_KEY)).isEqualTo(BEAR);
         assertThat(animalState.get(C_KEY)).isEqualTo(CUTTLEFISH);
@@ -343,7 +343,7 @@ class SerializationTest extends MerkleTestBase {
 
     private static void assertTree(State loadedTree) {
         final var states = loadedTree.getReadableStates(FIRST_SERVICE);
-        final ReadableKVState<String, String> fruitState = states.get(FRUIT_STATE_KEY);
+        final ReadableKVState<ProtoBytes, String> fruitState = states.get(FRUIT_STATE_KEY);
         assertThat(fruitState.get(A_KEY)).isEqualTo(APPLE);
         assertThat(fruitState.get(B_KEY)).isEqualTo(BANANA);
         assertThat(fruitState.get(C_KEY)).isEqualTo(CHERRY);
@@ -352,7 +352,7 @@ class SerializationTest extends MerkleTestBase {
         assertThat(fruitState.get(F_KEY)).isEqualTo(FIG);
         assertThat(fruitState.get(G_KEY)).isEqualTo(GRAPE);
 
-        final ReadableKVState<String, String> animalState = states.get(ANIMAL_STATE_KEY);
+        final ReadableKVState<ProtoBytes, String> animalState = states.get(ANIMAL_STATE_KEY);
         assertThat(animalState.get(A_KEY)).isEqualTo(AARDVARK);
         assertThat(animalState.get(B_KEY)).isEqualTo(BEAR);
         assertThat(animalState.get(C_KEY)).isEqualTo(CUTTLEFISH);
@@ -368,17 +368,5 @@ class SerializationTest extends MerkleTestBase {
         assertThat(steamState.iterator())
                 .toIterable()
                 .containsExactly(ART, BIOLOGY, CHEMISTRY, DISCIPLINE, ECOLOGY, FIELDS, GEOMETRY);
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() > -1) {
-            fruitVirtualMap.release();
-        }
-        assertEventuallyEquals(
-                0L,
-                MerkleDbDataSource::getCountOfOpenDatabases,
-                Duration.of(5, ChronoUnit.SECONDS),
-                "All databases should be closed");
     }
 }

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle.disk;
 
-import static com.swirlds.virtualmap.internal.merkle.VirtualMapState.VM_STATE_KEY;
+import static com.hedera.pbj.runtime.ProtoParserTools.readNextFieldNumber;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.platform.state.VirtualMapKey;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -16,14 +17,13 @@ import java.util.NoSuchElementException;
 
 public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
 
-    private final Bytes stateId;
+    private final int stateId;
     private final MerkleIterator<MerkleNode> itr;
     private K next = null;
 
-    public OnDiskIterator(
-            @NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec, @NonNull final Bytes stateId) {
+    public OnDiskIterator(@NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec, final int stateId) {
         super(virtualMap, keyCodec);
-        this.stateId = requireNonNull(stateId);
+        this.stateId = stateId;
         itr = requireNonNull(virtualMap).treeIterator();
     }
 
@@ -33,16 +33,16 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
             return true;
         }
         while (itr.hasNext()) {
-            final var merkleNode = itr.next();
+            final MerkleNode merkleNode = itr.next();
             if (merkleNode instanceof VirtualLeafNode leaf) {
-                final var k = leaf.getKey();
-                // VirtualMap metadata should not be considered as a possible result of the iterator
-                if (k.equals(VM_STATE_KEY)) {
-                    continue;
-                }
-                if (checkKey(k)) {
+                final Bytes k = leaf.getKey();
+                // Here we rely on the fact that `VirtualMapKey` has a single `OneOf` field.
+                // So, tge next field number is the key type
+                int nextNextStateId = readNextFieldNumber(k.toReadableSequentialData());
+                if (stateId == nextNextStateId) {
                     try {
-                        this.next = keyCodec.parse(k.getBytes(2, k.length() - 2));
+                        VirtualMapKey parse = VirtualMapKey.PROTOBUF.parse(k);
+                        this.next = parse.key().as();
                         return true;
                     } catch (final ParseException e) {
                         throw new RuntimeException("Failed to parse a key", e);
@@ -62,16 +62,5 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
         final var k = next;
         next = null;
         return k;
-    }
-
-    /**
-     * Checks if the state ID extracted from the provided {@link Bytes} key matches the current iterator's state ID.
-     *
-     * @param key the {@link Bytes} object from which the state ID will be extracted
-     * @return {@code true} if the extracted state ID matches the iterator's state ID, {@code false} otherwise
-     */
-    private boolean checkKey(final Bytes key) {
-        final Bytes stateIdFromKey = key.getBytes(0, 2);
-        return stateIdFromKey.equals(this.stateId);
     }
 }

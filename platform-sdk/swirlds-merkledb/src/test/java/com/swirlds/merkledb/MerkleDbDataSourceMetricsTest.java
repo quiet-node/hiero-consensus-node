@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.merkledb;
 
-import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyEquals;
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyFalse;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.*;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.createMetrics;
@@ -53,8 +52,7 @@ class MerkleDbDataSourceMetricsTest {
     @BeforeEach
     public void beforeEach() throws IOException {
         // check db count
-        assertEventuallyEquals(
-                0L, MerkleDbDataSource::getCountOfOpenDatabases, Duration.ofSeconds(1), "Expected no open dbs");
+        MerkleDbTestUtils.assertAllDatabasesClosed();
         // create db
         dataSource = createDataSource(testDirectory, TABLE_NAME, long_fixed, COUNT * 10, HASHES_RAM_THRESHOLD);
 
@@ -62,8 +60,7 @@ class MerkleDbDataSourceMetricsTest {
         dataSource.registerMetrics(metrics);
 
         // check db count
-        assertEventuallyEquals(
-                1L, MerkleDbDataSource::getCountOfOpenDatabases, Duration.ofSeconds(1), "Expected only 1 db");
+        MerkleDbTestUtils.assertSomeDatabasesStillOpen(1L);
     }
 
     @Tag(TestComponentTags.VMAP)
@@ -166,8 +163,7 @@ class MerkleDbDataSourceMetricsTest {
     @AfterEach
     public void afterEach() throws IOException {
         dataSource.close();
-        assertEventuallyEquals(
-                0L, MerkleDbDataSource::getCountOfOpenDatabases, Duration.ofSeconds(1), "Expected no open dbs");
+        MerkleDbTestUtils.assertAllDatabasesClosed();
         // check the database was deleted
         assertEventuallyFalse(
                 () -> Files.exists(testDirectory.resolve(TABLE_NAME)),
