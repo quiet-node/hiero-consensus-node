@@ -181,10 +181,10 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
      * @param builder this object is responsible for building platform components and other things needed by the
      *                platform
      */
-    public SwirldsPlatform(@NonNull final PlatformComponentBuilder<T> builder) {
-        final PlatformBuildingBlocks<T> blocks = builder.getBuildingBlocks();
+    public SwirldsPlatform(@NonNull final PlatformComponentBuilder builder) {
+        final PlatformBuildingBlocks blocks = builder.getBuildingBlocks();
         platformContext = blocks.platformContext();
-        final ConsensusStateEventHandler<T> consensusStateEventHandler = blocks.consensusStateEventHandler();
+        final ConsensusStateEventHandler consensusStateEventHandler = blocks.consensusStateEventHandler();
 
         ancientMode = platformContext
                 .getConfiguration()
@@ -192,7 +192,7 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
                 .getAncientMode();
 
         // The reservation on this state is held by the caller of this constructor.
-        final SignedState<T> initialState = blocks.initialState().get();
+        final SignedState initialState = blocks.initialState().get();
 
         // This method is a no-op if we are not in birth round mode, or if we have already migrated.
         final SemanticVersion appVersion = blocks.appVersion();
@@ -279,14 +279,15 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
 
         initializeState(this, platformContext, initialState, consensusStateEventHandler, platformStateFacade);
 
-        final StateLifecycleManager<T> stateLifecycleManager = blocks.stateLifecycleManager();
+        final StateLifecycleManager stateLifecycleManager = blocks.stateLifecycleManager();
         // This object makes a copy of the state. After this point, initialState becomes immutable.
 
         stateLifecycleManager.setInitialState(initialState.getState());
 
         final EventWindowManager eventWindowManager = new DefaultEventWindowManager();
 
-        blocks.freezeCheckHolder().setFreezeCheckRef(createInFreezePeriodPredicate(stateLifecycleManager, platformStateFacade));
+        blocks.freezeCheckHolder()
+                .setFreezeCheckRef(createInFreezePeriodPredicate(stateLifecycleManager, platformStateFacade));
 
         final BirthRoundMigrationShim birthRoundMigrationShim =
                 buildBirthRoundMigrationShim(initialState, ancientMode, platformStateFacade);
@@ -399,9 +400,9 @@ public class SwirldsPlatform<T extends MerkleNodeState> implements Platform {
     }
 
     private static <T extends MerkleNodeState> Predicate<Instant> createInFreezePeriodPredicate(
-            StateLifecycleManager<T> stateLifecycleManager, PlatformStateFacade platformStateFacade) {
+            StateLifecycleManager stateLifecycleManager, PlatformStateFacade platformStateFacade) {
         return timestamp -> {
-            MerkleNodeState mutableState = stateLifecycleManager.getMutableState();
+            State mutableState = stateLifecycleManager.getMutableState();
             return PlatformStateFacade.isInFreezePeriod(
                     timestamp,
                     platformStateFacade.freezeTimeOf(mutableState),

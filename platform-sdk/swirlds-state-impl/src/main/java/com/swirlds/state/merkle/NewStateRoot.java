@@ -824,4 +824,19 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     public boolean isHashed() {
         return virtualMap.isHashed();
     }
+
+    @Override
+    public void reserve() {
+        getRoot().reserve();
+    }
+
+    @Override
+    public boolean tryReserve() {
+        return getRoot().tryReserve();
+    }
+
+    @Override
+    public int getReservationCount() {
+        return getRoot().getReservationCount();
+    }
 }

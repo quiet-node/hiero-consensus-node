@@ -25,7 +25,6 @@ import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.metrics.RoundHandlingMetrics;
 import com.swirlds.platform.metrics.StateMetrics;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -55,13 +54,13 @@ import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
 /**
  * A standard implementation of {@link TransactionHandler}.
  */
-public class DefaultTransactionHandler<T extends MerkleNodeState> implements TransactionHandler {
+public class DefaultTransactionHandler implements TransactionHandler {
 
     private static final Logger logger = LogManager.getLogger(DefaultTransactionHandler.class);
 
     private final RoundHandlingMetrics handlerMetrics;
 
-    private final StateLifecycleManager<T> stateLifecycleManager;
+    private final StateLifecycleManager stateLifecycleManager;
 
     /**
      * Whether a round in a freeze period has been received. This may never be reset to false after it is set to true.
@@ -118,7 +117,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
     /**
      * The handler for consensus state events.
      */
-    private final ConsensusStateEventHandler<T> consensusStateEventHandler;
+    private final ConsensusStateEventHandler<State> consensusStateEventHandler;
 
     /**
      * The node ID of this node.
@@ -145,8 +144,8 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
             @NonNull final StatusActionSubmitter statusActionSubmitter,
             @NonNull final SemanticVersion softwareVersion,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final StateLifecycleManager<T> stateLifecycleManager,
-            @NonNull final ConsensusStateEventHandler<T> consensusStateEventHandler,
+            @NonNull final StateLifecycleManager stateLifecycleManager,
+            @NonNull final ConsensusStateEventHandler consensusStateEventHandler,
             @NonNull final Roster roster,
             @NonNull final NodeId selfId) {
 
@@ -214,7 +213,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
             return null;
         }
 
-        final T mutableState = stateLifecycleManager.getMutableState();
+        final State mutableState = stateLifecycleManager.getMutableState();
         if (PlatformStateFacade.isInFreezePeriod(
                 consensusRound.getConsensusTimestamp(),
                 platformStateFacade.freezeTimeOf(mutableState),
@@ -267,7 +266,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
      */
     private Queue<ScopedSystemTransaction<StateSignatureTransaction>> handleRoundForState(final ConsensusRound round) {
         uptimeTracker.handleRound(round);
-        final T stateRoot = stateLifecycleManager.getMutableState();
+        final State stateRoot = stateLifecycleManager.getMutableState();
         final Queue<ScopedSystemTransaction<StateSignatureTransaction>> scopedSystemTransactions =
                 new ConcurrentLinkedQueue<>();
 
@@ -361,7 +360,7 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
 
         final boolean isBoundary = consensusStateEventHandler.onSealConsensusRound(
                 consensusRound, stateLifecycleManager.getMutableState());
-        final ReservedSignedState<T> reservedSignedState;
+        final ReservedSignedState reservedSignedState;
         if (isBoundary || freezeRoundReceived) {
             if (freezeRoundReceived && !isBoundary) {
                 logger.error(
@@ -373,10 +372,10 @@ public class DefaultTransactionHandler<T extends MerkleNodeState> implements Tra
                         consensusRound.getRoundNum());
             }
             handlerMetrics.setPhase(GETTING_STATE_TO_SIGN);
-            final T immutableStateCons = stateLifecycleManager.copyMutableState();
+            final State immutableStateCons = stateLifecycleManager.copyMutableState();
 
             handlerMetrics.setPhase(CREATING_SIGNED_STATE);
-            final SignedState<T> signedState = new SignedState<>(
+            final SignedState signedState = new SignedState(
                     platformContext.getConfiguration(),
                     CryptoStatic::verifySignature,
                     immutableStateCons,

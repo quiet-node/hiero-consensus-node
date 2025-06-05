@@ -5,6 +5,7 @@ import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_MICROSECONDS;
 import static java.util.Objects.requireNonNull;
 
 import com.swirlds.metrics.api.Metrics;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.lifecycle.StateLifecycleMetrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -13,13 +14,12 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  * This is a default implementation of {@link StateLifecycleManager} that manages the lifecycle of a state object.
  * This class is thread-safe.
  *
- * @param <T> the type of the state object
  */
-public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements StateLifecycleManager<T> {
+public class StateLifecycleManagerImpl implements StateLifecycleManager {
     /**
      * reference to the state that reflects all known consensus transactions
      */
-    private T currentState;
+    private State currentState;
 
     private final StateLifecycleMetrics stateLifecycleMetrics;
 
@@ -32,7 +32,7 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
      * {@inheritDoc}
      */
     @Override
-    public synchronized void setInitialState(@NonNull final T state) {
+    public synchronized void setInitialState(@NonNull final State state) {
         setInitialState(state, false);
     }
 
@@ -40,11 +40,11 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
      * {@inheritDoc}
      */
     @Override
-    public synchronized void overwriteExistingState(@NonNull final T state) {
+    public synchronized void overwriteExistingState(@NonNull final State state) {
         setInitialState(state, true);
     }
 
-    private void setInitialState(@NonNull final T state, final boolean overwrite) {
+    private void setInitialState(@NonNull final State state, final boolean overwrite) {
         requireNonNull(state);
 
         if (!overwrite && currentState != null) {
@@ -57,11 +57,11 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
         fastCopyAndUpdateRefs(state);
     }
 
-    private void fastCopyAndUpdateRefs(final T state) {
+    private void fastCopyAndUpdateRefs(final State state) {
         final long copyStart = System.nanoTime();
 
         // Create a fast copy
-        final T copy = state.copy();
+        final State copy = state.copy();
         // Increment the reference count because this reference becomes the new value
         copy.reserve();
 
@@ -79,7 +79,7 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
      * {@inheritDoc}
      */
     @Override
-    public synchronized T getMutableState() {
+    public synchronized State getMutableState() {
         return currentState;
     }
 
@@ -87,8 +87,8 @@ public class StateLifecycleManagerImpl<T extends MerkleStateRoot<T>> implements 
      * {@inheritDoc}
      */
     @Override
-    public synchronized T copyMutableState() {
-        T currentState = this.currentState;
+    public synchronized State copyMutableState() {
+        State currentState = this.currentState;
         // creation of a copy will reduce the reference count of the original state, but we still want the state to be
         // around
         currentState.reserve();

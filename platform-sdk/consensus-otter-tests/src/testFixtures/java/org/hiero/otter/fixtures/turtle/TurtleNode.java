@@ -12,7 +12,6 @@ import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.SWIRLD_NAME;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
-import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
@@ -33,7 +32,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.test.fixtures.state.TestStateLifecycleManager;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
 import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedNetwork;
@@ -424,9 +422,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                 .withPlatformContext(platformContext)
                 .withConfiguration(currentConfiguration)
                 .withKeysAndCerts(keysAndCerts)
-                .withSystemTransactionEncoderCallback(txn ->
-                        Bytes.wrap(TransactionFactory.createStateSignatureTransaction((StateSignatureTransaction) txn)
-                                .toByteArray()))
+                .withSystemTransactionEncoderCallback(txn -> Bytes.wrap(
+                        TransactionFactory.createStateSignatureTransaction(txn).toByteArray()))
                 .withModel(model)
                 .withRandomBuilder(new RandomBuilder(randotron.nextLong()));
 

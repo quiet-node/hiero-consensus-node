@@ -7,6 +7,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +34,7 @@ public final class BirthRoundStateMigration {
      * @param appVersion   the current application version
      */
     public static void modifyStateForBirthRoundMigration(
-            @NonNull final MerkleNodeState initialState,
+            @NonNull final State initialState,
             @NonNull final AncientMode ancientMode,
             @NonNull final SemanticVersion appVersion,
             @NonNull final PlatformStateFacade platformStateFacade) {

@@ -648,4 +648,29 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
     public boolean isStartUpMode() {
         return state.isStartUpMode();
     }
+
+    @Override
+    public void reserve() {
+        state.reserve();
+    }
+
+    @Override
+    public boolean tryReserve() {
+        return state.tryReserve();
+    }
+
+    @Override
+    public boolean release() {
+        return state.release();
+    }
+
+    @Override
+    public int getReservationCount() {
+        return state.getReservationCount();
+    }
+
+    @Override
+    public boolean isDestroyed() {
+        return state.isDestroyed();
+    }
 }

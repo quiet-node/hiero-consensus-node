@@ -115,21 +115,20 @@ final class ReconnectTest {
                 .build();
 
         try (final PairedStreams pairedStreams = new PairedStreams(); ) {
-            final Pair<SignedState<MerkleNodeState>, TestPlatformStateFacade> signedStateFacadePair =
-                    new RandomSignedStateGenerator()
-                            .setRoster(roster)
-                            .setSigningNodeIds(nodeIds)
-                            .setCalculateHash(true)
+            final Pair<SignedState, TestPlatformStateFacade> signedStateFacadePair = new RandomSignedStateGenerator()
+                    .setRoster(roster)
+                    .setSigningNodeIds(nodeIds)
+                    .setCalculateHash(true)
                     .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestNewMerkleStateRoot
                     .buildWithFacade();
             final SignedState signedState = signedStateFacadePair.left();
             final PlatformStateFacade platformStateFacade = signedStateFacadePair.right();
 
             // hash the underlying VM
-            signedState.getState().getRoot().getHash();
+            ((MerkleNodeState) signedState.getState()).getRoot().getHash();
 
             final ReconnectLearner receiver = buildReceiver(
-                    signedState.getState(),
+                    (MerkleNodeState) signedState.getState(),
                     new DummyConnection(
                             platformContext, pairedStreams.getLearnerInput(), pairedStreams.getLearnerOutput()),
                     reconnectMetrics,

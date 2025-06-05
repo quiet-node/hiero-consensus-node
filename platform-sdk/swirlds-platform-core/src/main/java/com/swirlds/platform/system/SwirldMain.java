@@ -5,10 +5,9 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.State;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
 import java.util.function.Function;
@@ -18,7 +17,7 @@ import org.hiero.consensus.model.node.NodeId;
  * To implement a swirld, create a class that implements SwirldMain. Its constructor should have no parameters, and its
  * run() method should run until the user quits the swirld.
  */
-public interface SwirldMain<T extends MerkleNodeState> extends Runnable {
+public interface SwirldMain<T extends State> extends Runnable {
 
     /**
      * Get configuration types to be registered.
@@ -39,7 +38,7 @@ public interface SwirldMain<T extends MerkleNodeState> extends Runnable {
      *
      * <p>
      * Any changes necessary to initialize {@link State} should be made in
-     * {@link ConsensusStateEventHandler#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SemanticVersion)}
+     * {@link ConsensusStateEventHandler#onStateInitialized(State, Platform, InitTrigger, SemanticVersion)}
      * </p>
      *
      * @param platform the Platform that instantiated this SwirldMain
@@ -88,7 +87,7 @@ public interface SwirldMain<T extends MerkleNodeState> extends Runnable {
      * Instantiate and return a new instance of the state lifecycle manager for this SwirldMain object.
      * @return state lifecycle manager
      */
-    StateLifecycleManager<T> newStateLifecycleManager();
+    StateLifecycleManager newStateLifecycleManager();
 
     /**
      * <p>

@@ -21,11 +21,11 @@ import com.swirlds.common.utility.Threshold;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.SignatureVerifier;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedStateHistory.SignedStateAction;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
+import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.security.cert.X509Certificate;
@@ -65,7 +65,7 @@ import org.hiero.consensus.roster.RosterUtils;
  * rejoining after a long absence.
  * </p>
  */
-public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
+public class SignedState implements SignedStateInfo {
 
     private static final Logger logger = LogManager.getLogger(SignedState.class);
 
@@ -92,7 +92,7 @@ public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
     /**
      * The root of the merkle state.
      */
-    private final T state;
+    private final State state;
 
     /**
      * The timestamp of when this object was created.
@@ -179,7 +179,7 @@ public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
     public SignedState(
             @NonNull final Configuration configuration,
             @NonNull final SignatureVerifier signatureVerifier,
-            @NonNull final T state,
+            @NonNull final State state,
             @NonNull final String reason,
             final boolean freezeState,
             final boolean deleteOnBackgroundThread,
@@ -188,7 +188,7 @@ public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
         this.platformStateFacade = platformStateFacade;
         this.signatureVerifier = requireNonNull(signatureVerifier);
         this.state = requireNonNull(state);
-        state.getRoot().reserve();
+        state.reserve();
 
         final StateConfig stateConfig = configuration.getConfigData(StateConfig.class);
         if (stateConfig.stateHistoryEnabled()) {
@@ -283,7 +283,7 @@ public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
      *
      * @return the state contained in the signed state
      */
-    public @NonNull T getState() {
+    public @NonNull State getState() {
         return state;
     }
 
@@ -319,7 +319,7 @@ public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
      *               reserved should attempt to use a unique reason, as this makes debugging reservation bugs easier.
      * @return a wrapper that holds the state and the reservation
      */
-    public @NonNull ReservedSignedState<T> reserve(@NonNull final String reason) {
+    public @NonNull ReservedSignedState reserve(@NonNull final String reason) {
         return ReservedSignedState.createAndReserve(this, reason);
     }
 
@@ -443,7 +443,7 @@ public class SignedState<T extends MerkleNodeState> implements SignedStateInfo {
         if (other == null || getClass() != other.getClass()) {
             return false;
         }
-        final SignedState<T> that = (SignedState<T>) other;
+        final SignedState that = (SignedState) other;
         return Objects.equals(sigSet, that.sigSet) && Objects.equals(state, that.state);
     }
 

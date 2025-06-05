@@ -288,4 +288,21 @@ public class FakeState implements MerkleNodeState {
     public void unregisterService(@NonNull String serviceName) {
         throw new UnsupportedOperationException();
     }
+
+    // default implementation
+
+    @Override
+    public boolean tryReserve() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean isDestroyed() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int getReservationCount() {
+        throw new UnsupportedOperationException();
+    }
 }

@@ -14,4 +14,4 @@ import org.hiero.base.crypto.Hash;
  * 		the hash of the signed state when it was serialized, may not be the same as the current hash
  */
 public record DeserializedSignedState<T extends MerkleNodeState>(
-        ReservedSignedState<T> reservedSignedState, Hash originalHash) {}
+        ReservedSignedState reservedSignedState, Hash originalHash) {}

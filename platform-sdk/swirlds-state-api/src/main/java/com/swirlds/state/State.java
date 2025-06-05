@@ -3,6 +3,7 @@ package com.swirlds.state;
 
 import com.swirlds.base.time.Time;
 import com.swirlds.common.FastCopyable;
+import com.swirlds.common.Reservable;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
@@ -24,7 +25,7 @@ import org.hiero.base.crypto.Hashable;
  * structures provided by the hashgraph platform. But most of our code doesn't need to know that
  * detail, and are happy with just the API provided by this interface.
  */
-public interface State extends FastCopyable, Hashable {
+public interface State extends FastCopyable, Hashable, Reservable {
     /**
      * Initializes the state with the given parameters.
      * @param time The time provider.

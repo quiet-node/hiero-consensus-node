@@ -10,23 +10,22 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
+import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
  * Encapsulates the logic for calling
- * {@link ConsensusStateEventHandler#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SemanticVersion)}
+ * {@link ConsensusStateEventHandler#onStateInitialized(State, Platform, InitTrigger, SemanticVersion)}
  * startup time.
  */
 public final class StateInitializer {
@@ -60,7 +59,7 @@ public final class StateInitializer {
             trigger = RESTART;
         }
 
-        final MerkleNodeState initialState = signedState.getState();
+        final State initialState = signedState.getState();
 
         // Although the state from disk / genesis state is initially hashed, we are actually dealing with a copy
         // of that state here. That copy should have caused the hash to be cleared.
@@ -73,29 +72,17 @@ public final class StateInitializer {
         consensusStateEventHandler.onStateInitialized(
                 signedState.getState(), platform, trigger, previousSoftwareVersion);
 
-        abortAndThrowIfInterrupted(
-                () -> {
-                    try {
-                        platformContext
-                                .getMerkleCryptography()
-                                .digestTreeAsync(initialState.getRoot())
-                                .get();
-                    } catch (final ExecutionException e) {
-                        throw new RuntimeException(e);
-                    }
-                },
-                "interrupted while attempting to hash the state");
+        abortAndThrowIfInterrupted(initialState::getHash, "interrupted while attempting to hash the state");
 
         // If our hash changes as a result of the new address book then our old signatures may become invalid.
         signedState.pruneInvalidSignatures();
 
-        final StateConfig stateConfig = platformContext.getConfiguration().getConfigData(StateConfig.class);
         logger.info(
                 STARTUP.getMarker(),
                 """
                         The platform is using the following initial state:
                         {}""",
-                platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
+                platformStateFacade.getInfoString(signedState.getState()));
     }
 
     /**
@@ -113,8 +100,8 @@ public final class StateInitializer {
      * @return the initialized {@code MerkleNodeState}
      */
     @Deprecated
-    public static MerkleNodeState initializeMerkleNodeState(
-            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
+    public static State initializeMerkleNodeState(
+            @NonNull final Function<VirtualMap, ? extends State> stateRootFunction,
             @NonNull final MerkleNode stateRoot,
             @NonNull final Metrics metrics) {
         if (stateRoot instanceof VirtualMap virtualMap) {

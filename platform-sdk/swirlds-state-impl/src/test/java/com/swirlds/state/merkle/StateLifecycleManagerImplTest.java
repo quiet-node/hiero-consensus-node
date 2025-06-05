@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
+import com.swirlds.config.api.Configuration;
+import com.swirlds.state.State;
 import java.util.function.LongSupplier;
 import org.hiero.base.exceptions.ReferenceCountException;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,17 +30,20 @@ class StateLifecycleManagerImplTest {
     @Mock
     private LongSupplier mockRoundSupplier;
 
-    private StateLifecycleManagerImpl<TestMerkleStateRoot> stateLifecycleManager;
+    @Mock
+    private Configuration configuration;
+
+    private StateLifecycleManagerImpl stateLifecycleManager;
 
     @BeforeEach
     void setUp() {
         noOpMetrics = new NoOpMetrics();
-        stateLifecycleManager = new StateLifecycleManagerImpl<>(noOpMetrics);
+        stateLifecycleManager = new StateLifecycleManagerImpl(noOpMetrics);
     }
 
     private TestMerkleStateRoot createInitializedState() {
         TestMerkleStateRoot state = new TestMerkleStateRoot();
-        state.init(mockTime, noOpMetrics, mockCryptography, mockRoundSupplier);
+        state.init(mockTime, configuration, noOpMetrics, mockCryptography, mockRoundSupplier);
         return state;
     }
 
@@ -51,7 +56,7 @@ class StateLifecycleManagerImplTest {
         stateLifecycleManager.setInitialState(state);
 
         // Assert
-        TestMerkleStateRoot mutableState = stateLifecycleManager.getMutableState();
+        State mutableState = stateLifecycleManager.getMutableState();
         assertNotNull(mutableState);
         assertNotSame(state, mutableState);
 
@@ -81,16 +86,16 @@ class StateLifecycleManagerImplTest {
         TestMerkleStateRoot firstState = createInitializedState();
         stateLifecycleManager.setInitialState(firstState);
 
-        TestMerkleStateRoot firstMutableState = stateLifecycleManager.getMutableState();
+        State firstMutableState = stateLifecycleManager.getMutableState();
 
         // Create a new state for the overwrite
-        TestMerkleStateRoot newState = createInitializedState();
+        State newState = createInitializedState();
 
         // Act
         stateLifecycleManager.overwriteExistingState(newState);
 
         // Assert
-        TestMerkleStateRoot newMutableState = stateLifecycleManager.getMutableState();
+        State newMutableState = stateLifecycleManager.getMutableState();
         assertNotNull(newMutableState);
         assertNotSame(newState, newMutableState);
         assertNotSame(firstMutableState, newMutableState);
@@ -102,13 +107,13 @@ class StateLifecycleManagerImplTest {
     @Test
     void testOverwriteExistingStateWhenNoInitialState() {
         // Arrange
-        TestMerkleStateRoot newState = createInitializedState();
+        State newState = createInitializedState();
 
         // Act
         stateLifecycleManager.overwriteExistingState(newState);
 
         // Assert
-        TestMerkleStateRoot mutableState = stateLifecycleManager.getMutableState();
+        State mutableState = stateLifecycleManager.getMutableState();
         assertNotNull(mutableState);
         assertNotSame(newState, mutableState);
 
@@ -119,7 +124,7 @@ class StateLifecycleManagerImplTest {
     @Test
     void testGetMutableStateWhenNoState() {
         // Act
-        TestMerkleStateRoot result = stateLifecycleManager.getMutableState();
+        State result = stateLifecycleManager.getMutableState();
 
         // Assert
         assertNull(result);
@@ -128,11 +133,11 @@ class StateLifecycleManagerImplTest {
     @Test
     void testGetMutableState() {
         // Arrange
-        TestMerkleStateRoot state = createInitializedState();
+        State state = createInitializedState();
         stateLifecycleManager.setInitialState(state);
 
         // Act
-        TestMerkleStateRoot result = stateLifecycleManager.getMutableState();
+        State result = stateLifecycleManager.getMutableState();
 
         // Assert
         assertNotNull(result);
@@ -142,14 +147,14 @@ class StateLifecycleManagerImplTest {
     @Test
     void testCopyMutableState() {
         // Arrange
-        TestMerkleStateRoot state = createInitializedState();
+        State state = createInitializedState();
         stateLifecycleManager.setInitialState(state);
 
-        TestMerkleStateRoot firstMutableState = stateLifecycleManager.getMutableState();
+        State firstMutableState = stateLifecycleManager.getMutableState();
 
         // Act
-        TestMerkleStateRoot immutableResult = stateLifecycleManager.copyMutableState();
-        TestMerkleStateRoot newMutableState = stateLifecycleManager.getMutableState();
+        State immutableResult = stateLifecycleManager.copyMutableState();
+        State newMutableState = stateLifecycleManager.getMutableState();
 
         // Assert
         assertNotNull(immutableResult);
@@ -174,13 +179,13 @@ class StateLifecycleManagerImplTest {
         stateLifecycleManager.setInitialState(initialState);
 
         // First copy operation
-        TestMerkleStateRoot firstMutableState = stateLifecycleManager.getMutableState();
-        TestMerkleStateRoot firstImmutable = stateLifecycleManager.copyMutableState();
-        TestMerkleStateRoot secondMutableState = stateLifecycleManager.getMutableState();
+        State firstMutableState = stateLifecycleManager.getMutableState();
+        State firstImmutable = stateLifecycleManager.copyMutableState();
+        State secondMutableState = stateLifecycleManager.getMutableState();
 
         // Second copy operation
-        TestMerkleStateRoot secondImmutable = stateLifecycleManager.copyMutableState();
-        TestMerkleStateRoot thirdMutableState = stateLifecycleManager.getMutableState();
+        State secondImmutable = stateLifecycleManager.copyMutableState();
+        State thirdMutableState = stateLifecycleManager.getMutableState();
 
         // Assert
         assertSame(firstMutableState, firstImmutable);

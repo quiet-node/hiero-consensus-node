@@ -145,7 +145,7 @@ public class TurtleNode {
         final var recycleBin =
                 RecycleBin.create(metrics, configuration, getStaticThreadManager(), time, fileSystemManager, nodeId);
 
-        final HashedReservedSignedState<TurtleTestingToolState> reservedState = getInitialState(
+        final HashedReservedSignedState reservedState = getInitialState(
                 recycleBin,
                 version,
                 () -> TurtleTestingToolState.getStateRootNode(metrics),
@@ -160,25 +160,26 @@ public class TurtleNode {
 
         final State state = initialState.get().getState();
         final long round = platformStateFacade.roundOf(state);
-        final PlatformBuilder platformBuilder = PlatformBuilder.create(
-                        "foo",
-                        "bar",
-                        softwareVersion,
-                        initialState,
-                        TURTLE_CONSENSUS_STATE_EVENT_HANDLER,
-                        nodeId,
-                        AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
-                        RosterUtils.buildRosterHistory(initialState.get().getState(), round),
-                        platformStateFacade,
-                        TurtleTestingToolState::new,
-                        platformStateFacade,
-                        new TestStateLifecycleManager<>())
-                .withModel(model)
-                .withRandomBuilder(new RandomBuilder(randotron.nextLong()))
-                .withKeysAndCerts(privateKeys)
-                .withPlatformContext(platformContext)
-                .withConfiguration(configuration)
-                .withSystemTransactionEncoderCallback(StateSignatureTransaction.PROTOBUF::toBytes);
+        final PlatformBuilder<TurtleTestingToolState> platformBuilder =
+                (PlatformBuilder<TurtleTestingToolState>) (PlatformBuilder) PlatformBuilder.create(
+                                "foo",
+                                "bar",
+                                softwareVersion,
+                                initialState,
+                                TURTLE_CONSENSUS_STATE_EVENT_HANDLER,
+                                nodeId,
+                                AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
+                                RosterUtils.buildRosterHistory(
+                                        initialState.get().getState(), round),
+                                platformStateFacade,
+                                TurtleTestingToolState::new,
+                                new TestStateLifecycleManager())
+                        .withModel(model)
+                        .withRandomBuilder(new RandomBuilder(randotron.nextLong()))
+                        .withKeysAndCerts(privateKeys)
+                        .withPlatformContext(platformContext)
+                        .withConfiguration(configuration)
+                        .withSystemTransactionEncoderCallback(StateSignatureTransaction.PROTOBUF::toBytes);
 
         final PlatformComponentBuilder platformComponentBuilder = platformBuilder.buildComponentBuilder();
 

@@ -33,9 +33,9 @@ import com.swirlds.platform.state.NoOpConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -332,8 +332,8 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
     }
 
     @Override
-    public StateLifecycleManager<StatsDemoState> newStateLifecycleManager() {
-        return new StateLifecycleManagerImpl<>(new NoOpMetrics());
+    public StateLifecycleManager newStateLifecycleManager() {
+        return new StateLifecycleManagerImpl(new NoOpMetrics());
     }
 
     /**

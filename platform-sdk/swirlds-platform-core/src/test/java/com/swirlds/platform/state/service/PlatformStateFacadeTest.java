@@ -230,7 +230,7 @@ class PlatformStateFacadeTest {
 
     @Test
     void testGetInfoString() {
-        final var infoString = platformStateFacade.getInfoString(state, 1);
+        final var infoString = platformStateFacade.getInfoString(state);
         System.out.println(infoString);
         assertThat(infoString)
                 .contains("Round:")

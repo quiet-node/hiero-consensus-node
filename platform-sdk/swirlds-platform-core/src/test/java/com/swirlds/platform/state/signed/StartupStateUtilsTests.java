@@ -22,7 +22,6 @@ import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.TestRecycleBin;
-import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
@@ -132,8 +131,7 @@ public class StartupStateUtilsTests {
 
         // make the state immutable
         signedState.getState().copy().release();
-        TestMerkleCryptoFactory.getInstance()
-                .digestTreeSync(signedState.getState().getRoot());
+        signedState.getState().getHash();
 
         final Path savedStateDirectory =
                 signedStateFilePath.getSignedStateDirectory(mainClassName, selfId, swirldName, round);
@@ -212,7 +210,7 @@ public class StartupStateUtilsTests {
 
         assertEquals(latestState.getRound(), loadedState.getRound());
         assertEquals(latestState.getState().getHash(), loadedState.getState().getHash());
-        RandomSignedStateGenerator.releaseReservable(loadedState.getState().getRoot());
+        RandomSignedStateGenerator.releaseReservable(loadedState.getState());
     }
 
     @Test
@@ -302,7 +300,7 @@ public class StartupStateUtilsTests {
         }
 
         if (loadedState != null) {
-            RandomSignedStateGenerator.releaseReservable(loadedState.getState().getRoot());
+            RandomSignedStateGenerator.releaseReservable(loadedState.getState());
         }
 
         final Path savedStateDirectory = signedStateFilePath

@@ -113,4 +113,27 @@ public class WrappedState implements State, Hashable {
     public boolean isStartUpMode() {
         return delegate.isStartUpMode();
     }
+
+    @Override
+    public void reserve() {}
+
+    @Override
+    public boolean tryReserve() {
+        return delegate.tryReserve();
+    }
+
+    @Override
+    public boolean release() {
+        return delegate.release();
+    }
+
+    @Override
+    public boolean isDestroyed() {
+        return delegate.isDestroyed();
+    }
+
+    @Override
+    public int getReservationCount() {
+        return delegate.getReservationCount();
+    }
 }

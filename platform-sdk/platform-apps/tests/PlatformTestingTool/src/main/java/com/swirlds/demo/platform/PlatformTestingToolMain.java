@@ -77,9 +77,9 @@ import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.system.SystemExitUtils;
 import com.swirlds.platform.system.state.notifications.NewSignedStateListener;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
+import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
@@ -880,8 +880,8 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
     }
 
     @Override
-    public StateLifecycleManager<PlatformTestingToolState> newStateLifecycleManager() {
-        return new StateLifecycleManagerImpl<>(new NoOpMetrics());
+    public StateLifecycleManager newStateLifecycleManager() {
+        return new StateLifecycleManagerImpl(new NoOpMetrics());
     }
 
     /**

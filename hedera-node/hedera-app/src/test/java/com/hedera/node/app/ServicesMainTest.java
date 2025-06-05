@@ -41,7 +41,7 @@ final class ServicesMainTest {
     private Hedera hedera;
 
     @Mock
-    private HederaStateRoot state;
+    private HederaNewStateRoot state;
 
     private final ServicesMain subject = new ServicesMain();
 

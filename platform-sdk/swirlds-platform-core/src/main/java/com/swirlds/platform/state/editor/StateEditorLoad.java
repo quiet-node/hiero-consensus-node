@@ -17,6 +17,7 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.platform.config.DefaultConfiguration;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -88,7 +89,8 @@ public class StateEditorLoad extends StateEditorOperation {
 
         // Invalidate hashes in path down from root
         try (final ReservedSignedState reservedSignedState = getStateEditor().getState("StateEditorLoad.run()")) {
-            new MerkleRouteIterator(reservedSignedState.get().getState().getRoot(), parent.getRoute())
+            new MerkleRouteIterator(
+                            ((MerkleNodeState) reservedSignedState.get().getState()).getRoot(), parent.getRoute())
                     .forEachRemaining(Hashable::invalidateHash);
         }
     }

@@ -34,17 +34,15 @@ import com.swirlds.platform.reconnect.ReconnectPlatformHelper;
 import com.swirlds.platform.reconnect.ReconnectPlatformHelperImpl;
 import com.swirlds.platform.reconnect.ReconnectSyncHelper;
 import com.swirlds.platform.reconnect.ReconnectThrottle;
-import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.SwirldStateManager;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.wiring.NoInput;
 import com.swirlds.platform.wiring.components.Gossip;
-import com.swirlds.virtualmap.VirtualMap;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -108,15 +106,14 @@ public class SyncGossipModular implements Gossip {
             @NonNull final Roster roster,
             @NonNull final NodeId selfId,
             @NonNull final SemanticVersion appVersion,
-            @NonNull final Supplier<ReservedSignedState<?>> latestCompleteState,
+            @NonNull final Supplier<ReservedSignedState> latestCompleteState,
             @NonNull final StatusActionSubmitter statusActionSubmitter,
             @NonNull final Consumer<SignedState> loadReconnectState,
             @NonNull final Runnable clearAllPipelinesForReconnect,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
-            @NonNull final StateLifecycleManager stateLifecycleManager
-    ) {
+            @NonNull final Function<VirtualMap, ? extends State> stateRootFunction,
+            @NonNull final StateLifecycleManager stateLifecycleManager) {
 
         final RosterEntry selfEntry = RosterUtils.getRosterEntry(roster, selfId.id());
         final X509Certificate selfCert = RosterUtils.fetchGossipCaCertificate(selfEntry);
@@ -199,15 +196,15 @@ public class SyncGossipModular implements Gossip {
             @NonNull final PlatformContext platformContext,
             @NonNull final FallenBehindManager fallenBehindManager,
             @NonNull final ThreadManager threadManager,
-            @NonNull final Supplier<ReservedSignedState<?>> latestCompleteState,
+            @NonNull final Supplier<ReservedSignedState> latestCompleteState,
             @NonNull final Roster roster,
             @NonNull final Consumer<SignedState> loadReconnectState,
             @NonNull final Runnable clearAllPipelinesForReconnect,
-            @NonNull final StateLifecycleManager<MerkleNodeState> stateLifecycleManager,
+            @NonNull final StateLifecycleManager stateLifecycleManager,
             @NonNull final NodeId selfId,
             @NonNull final GossipController gossipController,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
+            @NonNull final Function<VirtualMap, ? extends State> stateRootFunction) {
 
         final ReconnectConfig reconnectConfig =
                 platformContext.getConfiguration().getConfigData(ReconnectConfig.class);

@@ -42,7 +42,6 @@ import com.swirlds.platform.eventhandling.DefaultTransactionPrehandler;
 import com.swirlds.platform.eventhandling.TransactionHandler;
 import com.swirlds.platform.eventhandling.TransactionPrehandler;
 import com.swirlds.platform.gossip.SyncGossipModular;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.hasher.DefaultStateHasher;
 import com.swirlds.platform.state.hasher.StateHasher;
 import com.swirlds.platform.state.hashlogger.DefaultHashLogger;
@@ -955,8 +954,7 @@ public class PlatformComponentBuilder {
                     () -> blocks.clearAllPipelinesForReconnectReference().get().run(),
                     blocks.intakeEventCounter(),
                     blocks.platformStateFacade(),
-                    blocks.stateRootFunction());
-                    blocks.platformStateFacade(),
+                    blocks.stateRootFunction(),
                     blocks.stateLifecycleManager());
         }
         return gossip;

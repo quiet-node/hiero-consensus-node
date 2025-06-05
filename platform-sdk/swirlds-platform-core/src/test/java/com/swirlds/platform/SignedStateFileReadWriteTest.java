@@ -97,8 +97,8 @@ class SignedStateFileReadWriteTest {
         final SignedState signedState = new RandomSignedStateGenerator()
                 .setSoftwareVersion(platformVersion)
                 .build();
-        final MerkleNodeState state = signedState.getState();
-        writeHashInfoFile(platformContext, testDirectory, state, stateFacade);
+        final MerkleNodeState state = (MerkleNodeState) signedState.getState();
+        writeHashInfoFile(testDirectory, state, stateFacade);
         final StateConfig stateConfig =
                 new TestConfigBuilder().getOrCreateConfig().getConfigData(StateConfig.class);
 
@@ -131,8 +131,7 @@ class SignedStateFileReadWriteTest {
 
         State state = signedState.getState();
         state.copy().release();
-        TestMerkleCryptoFactory.getInstance()
-                .digestTreeSync(signedState.getState().getRoot());
+        signedState.getState().getHash();
         state.createSnapshot(testDirectory);
         writeSignatureSetFile(testDirectory, signedState);
 
@@ -144,22 +143,16 @@ class SignedStateFileReadWriteTest {
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile, HederaNewStateRoot::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
-        TestMerkleCryptoFactory.getInstance()
-                .digestTreeSync(deserializedSignedState
-                        .reservedSignedState()
-                        .get()
-                        .getState()
-                        .getRoot());
+        State deserializedState =
+                deserializedSignedState.reservedSignedState().get().getState();
+        TestMerkleCryptoFactory.getInstance().digestTreeSync(((MerkleNodeState) deserializedState).getRoot());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
         assertEquals(signedState.getState().getHash(), deserializedSignedState.originalHash(), "hash should match");
-        assertEquals(
-                signedState.getState().getHash(),
-                deserializedSignedState.reservedSignedState().get().getState().getHash(),
-                "hash should match");
+        assertEquals(signedState.getState().getHash(), deserializedState.getHash(), "hash should match");
         assertNotSame(signedState, deserializedSignedState.reservedSignedState(), "state should be a different object");
         signedState.getState().release();
-        deserializedSignedState.reservedSignedState().get().getState().release();
+        deserializedState.release();
     }
 
     @Test
@@ -185,8 +178,7 @@ class SignedStateFileReadWriteTest {
 
         // make immutable
         signedState.getState().copy().release();
-        TestMerkleCryptoFactory.getInstance()
-                .digestTreeSync(signedState.getState().getRoot());
+        TestMerkleCryptoFactory.getInstance().digestTreeSync((((MerkleNodeState) signedState.getState()).getRoot()));
 
         writeSignedStateToDisk(
                 platformContext,

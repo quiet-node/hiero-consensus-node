@@ -3,7 +3,6 @@ package com.swirlds.platform.state.signed;
 
 import static java.util.Objects.requireNonNull;
 
-import com.swirlds.platform.state.MerkleNodeState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hiero.base.crypto.Hash;
 
@@ -13,8 +12,7 @@ import org.hiero.base.crypto.Hash;
  * @param state the reserved signed state
  * @param hash the hash of the state
  */
-public record HashedReservedSignedState<T extends MerkleNodeState>(
-        @NonNull ReservedSignedState<T> state, @NonNull Hash hash) {
+public record HashedReservedSignedState(@NonNull ReservedSignedState state, @NonNull Hash hash) {
     public HashedReservedSignedState {
         requireNonNull(state);
         requireNonNull(hash);

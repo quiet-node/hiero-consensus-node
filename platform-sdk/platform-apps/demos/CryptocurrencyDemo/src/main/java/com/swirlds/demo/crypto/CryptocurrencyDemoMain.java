@@ -29,9 +29,9 @@ import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -203,8 +203,8 @@ public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoStat
     }
 
     @Override
-    public StateLifecycleManager<CryptocurrencyDemoState> newStateLifecycleManager() {
-        return new StateLifecycleManagerImpl<>(new NoOpMetrics());
+    public StateLifecycleManager newStateLifecycleManager() {
+        return new StateLifecycleManagerImpl(new NoOpMetrics());
     }
 
     /**

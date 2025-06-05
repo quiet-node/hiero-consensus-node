@@ -6,8 +6,8 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.threading.manager.ThreadManager;
 import com.swirlds.platform.metrics.ReconnectMetrics;
 import com.swirlds.platform.network.Connection;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
@@ -24,7 +24,7 @@ public class ReconnectLearnerFactory {
     private final ThreadManager threadManager;
     private final PlatformContext platformContext;
     private final PlatformStateFacade platformStateFacade;
-    private final Function<VirtualMap, MerkleNodeState> stateRootFunction;
+    private final Function<VirtualMap, ? extends State> stateRootFunction;
 
     /**
      * @param platformContext the platform context
@@ -42,7 +42,7 @@ public class ReconnectLearnerFactory {
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics statistics,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
+            @NonNull final Function<VirtualMap, ? extends State> stateRootFunction) {
         this.platformContext = Objects.requireNonNull(platformContext);
         this.threadManager = Objects.requireNonNull(threadManager);
         this.roster = Objects.requireNonNull(roster);
@@ -59,7 +59,7 @@ public class ReconnectLearnerFactory {
      * @param workingState the state to use to perform a delta based reconnect
      * @return a new instance
      */
-    public ReconnectLearner create(final Connection conn, final MerkleNodeState workingState) {
+    public ReconnectLearner create(final Connection conn, final State workingState) {
         return new ReconnectLearner(
                 platformContext,
                 threadManager,

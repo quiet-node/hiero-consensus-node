@@ -13,9 +13,9 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.security.SecureRandom;
@@ -121,8 +121,8 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
     }
 
     @Override
-    public StateLifecycleManager<ConsistencyTestingToolState> newStateLifecycleManager() {
-        return new StateLifecycleManagerImpl<>(new NoOpMetrics());
+    public StateLifecycleManager newStateLifecycleManager() {
+        return new StateLifecycleManagerImpl(new NoOpMetrics());
     }
 
     /**

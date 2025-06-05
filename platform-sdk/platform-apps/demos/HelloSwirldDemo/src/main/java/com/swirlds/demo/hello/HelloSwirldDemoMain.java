@@ -30,6 +30,7 @@ import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
@@ -138,8 +139,8 @@ public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
     }
 
     @Override
-    public StateLifecycleManager<HelloSwirldDemoState> newStateLifecycleManager() {
-        return new StateLifecycleManagerImpl<>(new NoOpMetrics());
+    public StateLifecycleManager newStateLifecycleManager() {
+        return new StateLifecycleManagerImpl(new NoOpMetrics());
     }
 
     @NonNull

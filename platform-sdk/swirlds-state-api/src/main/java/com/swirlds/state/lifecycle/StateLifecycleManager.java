@@ -6,9 +6,8 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Implementations of this class are responsible for managing the lifecycle of a state object.
- * @param <T> the type of the state
  */
-public interface StateLifecycleManager<T extends State> {
+public interface StateLifecycleManager {
     /**
      * Sets the initial State for the platform. This method should only be called once.
      * It will through an IllegalStateException if called more than once.
@@ -16,7 +15,7 @@ public interface StateLifecycleManager<T extends State> {
      *
      * @param state the initial state. It must be mutable and not destroyed.
      */
-    void setInitialState(@NonNull final T state);
+    void setInitialState(@NonNull final State state);
 
     /**
      * Overwrites the existing state with the new state.
@@ -26,13 +25,13 @@ public interface StateLifecycleManager<T extends State> {
      *
      * @param state the new state, It must be mutable and not destroyed.
      */
-    void overwriteExistingState(@NonNull final T state);
+    void overwriteExistingState(@NonNull final State state);
 
     /**
      * Get the mutable state. The implementation makes sure that this method can't be executed simultaneously
      * with {@link #copyMutableState()}. It can be achieved by using a lock or any other synchronization mechanism.
      */
-    T getMutableState();
+    State getMutableState();
 
     /**
      * Creates a mutable copy of the state. The previous mutable state becomes immutable,
@@ -40,5 +39,5 @@ public interface StateLifecycleManager<T extends State> {
      *
      * @return an instance of the state that just became immutable, that is, the previous mutable state.
      */
-    T copyMutableState();
+    State copyMutableState();
 }

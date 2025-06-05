@@ -73,9 +73,9 @@ import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.util.BootstrapUtils;
 import com.swirlds.state.State;
-import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import com.swirlds.state.merkle.StateLifecycleManagerImpl;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.InstantSource;
@@ -102,7 +102,7 @@ import org.hiero.consensus.roster.RosterUtils;
  *
  * <p>This class simply delegates to {@link Hedera}.
  */
-public class ServicesMain implements SwirldMain<HederaStateRoot> {
+public class ServicesMain implements SwirldMain<HederaNewStateRoot> {
     private static final Logger logger = LogManager.getLogger(ServicesMain.class);
 
     /**
@@ -153,7 +153,7 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
      * {@inheritDoc}
      */
     @Override
-    public @NonNull HederaStateRoot newStateRoot() {
+    public @NonNull HederaNewStateRoot newStateRoot() {
         return hederaOrThrow().newStateRoot();
     }
 
@@ -162,7 +162,7 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
      * Specifically, {@link HederaNewStateRoot}.
      */
     @Override
-    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap() {
+    public Function<VirtualMap, HederaNewStateRoot> stateRootFromVirtualMap() {
         return hederaOrThrow().stateRootFromVirtualMap();
     }
 
@@ -170,7 +170,7 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
      * {@inheritDoc}
      */
     @Override
-    public ConsensusStateEventHandler<HederaStateRoot> newConsensusStateEvenHandler() {
+    public ConsensusStateEventHandler<HederaNewStateRoot> newConsensusStateEvenHandler() {
         return new ConsensusStateEventHandlerImpl(hederaOrThrow());
     }
 
@@ -178,8 +178,8 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
      * {@inheritDoc}
      */
     @Override
-    public StateLifecycleManager<HederaStateRoot> newStateLifecycleManager() {
-        return new StateLifecycleManagerImpl<>(metrics);
+    public StateLifecycleManager newStateLifecycleManager() {
+        return new StateLifecycleManagerImpl(metrics);
     }
 
     /**
@@ -214,7 +214,7 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
      *     and the working directory <i>settings.txt</i>, providing the same
      *     {@link Hedera#newStateRoot()} method reference as the genesis state
      *     factory. (<b>IMPORTANT:</b> This step instantiates and invokes
-     *     {@link ConsensusStateEventHandler#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SemanticVersion)}
+     *     {@link ConsensusStateEventHandler#onStateInitialized(State, Platform, InitTrigger, SemanticVersion)}
      *     on a {@link MerkleNodeState} instance that delegates the call back to our
      *     Hedera instance.)</li>
      *     <li>Call {@link Hedera#init(Platform, NodeId)} to complete startup phase
@@ -303,7 +303,8 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
         final var fileSystemManager = FileSystemManager.create(platformConfig);
         final var recycleBin =
                 RecycleBin.create(metrics, platformConfig, getStaticThreadManager(), time, fileSystemManager, selfId);
-        ConsensusStateEventHandler<HederaStateRoot> consensusStateEventHandler = hedera.newConsensusStateEvenHandler();
+        ConsensusStateEventHandler<HederaNewStateRoot> consensusStateEventHandler =
+                hedera.newConsensusStateEvenHandler();
         final PlatformContext platformContext = PlatformContext.create(
                 platformConfig,
                 Time.getCurrent(),
@@ -312,7 +313,7 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
                 recycleBin,
                 merkleCryptography);
         final Optional<AddressBook> maybeDiskAddressBook = loadLegacyAddressBook();
-        final HashedReservedSignedState<HederaStateRoot> reservedState = loadInitialState(
+        final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
                 () -> {
@@ -336,14 +337,13 @@ public class ServicesMain implements SwirldMain<HederaStateRoot> {
                 platformStateFacade,
                 platformContext,
                 hedera.stateRootFromVirtualMap());
-        final ReservedSignedState<HederaStateRoot> initialState = reservedState.state();
-        final HederaStateRoot state = initialState.get().getState();
+        final ReservedSignedState initialState = reservedState.state();
+        final HederaNewStateRoot state = (HederaNewStateRoot) initialState.get().getState();
         if (genesisNetwork.get() == null) {
             hedera.initializeStatesApi(state, RESTART, platformConfig);
         }
         hedera.setInitialStateHash(reservedState.hash());
-        final StateLifecycleManager<HederaStateRoot> stateLifecycleManager =
-                new StateLifecycleManagerImpl<>(platformContext.getMetrics());
+        final StateLifecycleManager stateLifecycleManager = new StateLifecycleManagerImpl(platformContext.getMetrics());
 
         // --- Create the platform context and initialize the cryptography ---
         final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));

@@ -23,6 +23,7 @@ import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.status.actions.ReconnectCompleteAction;
 import com.swirlds.platform.wiring.PlatformWiring;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
@@ -45,9 +46,9 @@ public class ReconnectStateLoader<T extends MerkleNodeState> {
     private final SignedStateNexus latestImmutableStateNexus;
     private final SavedStateController savedStateController;
     private final Roster roster;
-    private final ConsensusStateEventHandler<T> consensusStateEventHandler;
+    private final ConsensusStateEventHandler consensusStateEventHandler;
     private final PlatformStateFacade platformStateFacade;
-    private final StateLifecycleManager<T> stateLifecycleManager;
+    private final StateLifecycleManager stateLifecycleManager;
 
     /**
      * Constructor.
@@ -67,9 +68,9 @@ public class ReconnectStateLoader<T extends MerkleNodeState> {
             @NonNull final SignedStateNexus latestImmutableStateNexus,
             @NonNull final SavedStateController savedStateController,
             @NonNull final Roster roster,
-            @NonNull final ConsensusStateEventHandler<T> consensusStateEventHandler,
+            @NonNull final ConsensusStateEventHandler consensusStateEventHandler,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final StateLifecycleManager<T> stateLifecycleManager) {
+            @NonNull final StateLifecycleManager stateLifecycleManager) {
         this.platform = Objects.requireNonNull(platform);
         this.platformContext = Objects.requireNonNull(platformContext);
         this.platformWiring = Objects.requireNonNull(platformWiring);
@@ -86,7 +87,7 @@ public class ReconnectStateLoader<T extends MerkleNodeState> {
      *
      * @param signedState the signed state that was received from the sender
      */
-    public void loadReconnectState(@NonNull final SignedState<T> signedState) {
+    public void loadReconnectState(@NonNull final SignedState signedState) {
         // the state was received, so now we load its data into different objects
         logger.info(LogMarker.STATE_HASH.getMarker(), "RECONNECT: loadReconnectState: reloading state");
         logger.debug(RECONNECT.getMarker(), "`loadReconnectState` : reloading state");
@@ -96,7 +97,7 @@ public class ReconnectStateLoader<T extends MerkleNodeState> {
             // It's important to call init() before loading the signed state. The loading process makes copies
             // of the state, and we want to be sure that the first state in the chain of copies has been initialized.
             final Hash reconnectHash = signedState.getState().getHash();
-            final T state = signedState.getState();
+            final State state = signedState.getState();
             final SemanticVersion creationSoftwareVersion = platformStateFacade.creationSoftwareVersionOf(state);
             signedState.init(platformContext);
             consensusStateEventHandler.onStateInitialized(

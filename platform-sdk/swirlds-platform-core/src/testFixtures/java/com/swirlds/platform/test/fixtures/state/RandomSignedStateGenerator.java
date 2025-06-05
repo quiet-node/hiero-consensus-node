@@ -113,7 +113,7 @@ public class RandomSignedStateGenerator {
      *
      * @return a new signed state
      */
-    public SignedState<MerkleNodeState> build() {
+    public SignedState build() {
         return buildWithFacade().left();
     }
 
@@ -122,7 +122,7 @@ public class RandomSignedStateGenerator {
      *
      * @return a new signed state
      */
-    public Pair<SignedState<MerkleNodeState>, TestPlatformStateFacade> buildWithFacade() {
+    public Pair<SignedState, TestPlatformStateFacade> buildWithFacade() {
 
         final Roster rosterInstance;
         if (roster == null) {
@@ -509,8 +509,9 @@ public class RandomSignedStateGenerator {
     public static void releaseAllBuiltSignedStates() {
         builtSignedStates.get().forEach(signedState -> {
             try {
-                releaseReservable(signedState.getState().getRoot());
-                signedState.getState().getRoot().treeIterator().forEachRemaining(node -> {
+                MerkleNodeState merkleNodeState = (MerkleNodeState) signedState.getState();
+                releaseReservable(merkleNodeState.getRoot());
+                merkleNodeState.getRoot().treeIterator().forEachRemaining(node -> {
                     if (node instanceof VirtualMap) {
                         while (node.getReservationCount() >= 0) {
                             node.release();

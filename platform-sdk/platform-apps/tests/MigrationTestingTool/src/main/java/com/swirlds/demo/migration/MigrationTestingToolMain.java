@@ -195,8 +195,8 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
     }
 
     @Override
-    public StateLifecycleManager<MigrationTestingToolState> newStateLifecycleManager() {
-        return new StateLifecycleManagerImpl<>(new NoOpMetrics());
+    public StateLifecycleManager newStateLifecycleManager() {
+        return new StateLifecycleManagerImpl(new NoOpMetrics());
     }
 
     /**

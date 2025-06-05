@@ -72,6 +72,7 @@ import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.Service;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableSingletonState;
@@ -132,7 +133,7 @@ public class StateChangesValidator implements BlockStreamValidator {
 
     private Instant lastStateChangesTime;
     private StateChanges lastStateChanges;
-    private MerkleNodeState state;
+    private State state;
 
     @Nullable
     private final HintsLibrary hintsLibrary;
@@ -280,7 +281,7 @@ public class StateChangesValidator implements BlockStreamValidator {
         this.hintsLibrary = (hintsEnabled == HintsEnabled.YES) ? new HintsLibraryImpl() : null;
         this.historyLibrary = (historyEnabled == HistoryEnabled.YES) ? new HistoryLibraryImpl() : null;
         // get the state hash before applying the state changes from current block
-        this.genesisStateHash = CRYPTO.digestTreeSync(stateToBeCopied.getRoot());
+        this.genesisStateHash = stateToBeCopied.getHash();
 
         logger.info("Registered all Service and migrated state definitions to version {}", servicesVersion);
     }
@@ -314,8 +315,7 @@ public class StateChangesValidator implements BlockStreamValidator {
             if (i != 0 && shouldVerifyProof) {
                 final var stateToBeCopied = state;
                 this.state = stateToBeCopied.copy();
-                startOfStateHash =
-                        CRYPTO.digestTreeSync(stateToBeCopied.getRoot()).getBytes();
+                startOfStateHash = stateToBeCopied.getHash().getBytes();
             }
             final StreamingTreeHasher inputTreeHasher = new NaiveStreamingTreeHasher();
             final StreamingTreeHasher outputTreeHasher = new NaiveStreamingTreeHasher();
@@ -407,7 +407,7 @@ public class StateChangesValidator implements BlockStreamValidator {
 
         // To make sure that VirtualMapState is persisted after all changes from the block stream were applied
         state.copy();
-        CRYPTO.digestTreeSync(state.getRoot());
+        state.getHash();
         final var rootHash = requireNonNull(state.getHash()).getBytes();
 
         if (!expectedRootHash.equals(rootHash)) {
@@ -415,7 +415,7 @@ public class StateChangesValidator implements BlockStreamValidator {
             if (expectedRootMnemonic == null) {
                 throw new AssertionError("No expected root mnemonic found in " + pathToNode0SwirldsLog);
             }
-            final var actualRootMnemonic = rootMnemonicFor(state.getRoot());
+            final var actualRootMnemonic = rootMnemonicFor(((MerkleNodeState) state).getRoot());
             final var errorMsg = new StringBuilder("Hashes did not match for the following states,");
 
             if (!expectedRootMnemonic.equals(actualRootMnemonic)) {

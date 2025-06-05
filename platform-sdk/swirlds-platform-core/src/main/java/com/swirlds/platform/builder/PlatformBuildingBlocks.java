@@ -13,8 +13,6 @@ import com.swirlds.platform.freeze.FreezeCheckHolder;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
-import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.iss.IssScratchpad;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -22,8 +20,9 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
-import com.swirlds.virtualmap.VirtualMap;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.concurrent.atomic.AtomicReference;
@@ -82,9 +81,6 @@ import org.hiero.consensus.roster.RosterHistory;
  *                                               removed once reconnect is made compatible with the wiring framework
  * @param clearAllPipelinesForReconnectReference a reference to a runnable that clears all pipelines for reconnect, can
  *                                               be removed once reconnect is made compatible with the wiring framework
- * @param swirldStateManager                     responsible for the mutable state, this is exposed here due to
- *                                               reconnect, can be removed once reconnect is made compatible with the
- *                                               wiring framework
  * @param platformStateFacade                    the facade to access the platform state
  * @param stateRootFunction                      a function to instantiate the state root object from a Virtual Map
  * @param stateLifecycleManager                  responsible for maintaining references to the mutable state and the latest immutable state,
@@ -115,15 +111,14 @@ public record PlatformBuildingBlocks(
         @NonNull Scratchpad<IssScratchpad> issScratchpad,
         @NonNull NotificationEngine notificationEngine,
         @NonNull AtomicReference<StatusActionSubmitter> statusActionSubmitterReference,
-        @NonNull SwirldStateManager swirldStateManager,
         @NonNull AtomicReference<Supplier<ReservedSignedState>> getLatestCompleteStateReference,
         @NonNull AtomicReference<Consumer<SignedState>> loadReconnectStateReference,
         @NonNull AtomicReference<Runnable> clearAllPipelinesForReconnectReference,
         boolean firstPlatform,
         @NonNull ConsensusStateEventHandler consensusStateEventHandler,
         @NonNull PlatformStateFacade platformStateFacade,
-        @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction,
-        @NonNull StateLifecycleManager<T> stateLifecycleManager) {
+        @NonNull Function<VirtualMap, ? extends State> stateRootFunction,
+        @NonNull StateLifecycleManager stateLifecycleManager) {
 
     public PlatformBuildingBlocks {
         requireNonNull(platformWiring);

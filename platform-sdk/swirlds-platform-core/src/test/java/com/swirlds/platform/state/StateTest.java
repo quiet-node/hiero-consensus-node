@@ -28,7 +28,7 @@ class StateTest {
     @DisplayName("Test Copy")
     void testCopy() {
 
-        final MerkleNodeState state = randomSignedState(false).getState();
+        final MerkleNodeState state = (MerkleNodeState) randomSignedState(false).getState();
         final MerkleNodeState copy = state.copy();
 
         assertNotSame(state, copy, "copy should not return the same object");
@@ -47,7 +47,7 @@ class StateTest {
     @Tag(TestComponentTags.MERKLE)
     @DisplayName("Test Try Reserve")
     void tryReserveTest() {
-        final MerkleNodeState state = randomSignedState(true).getState();
+        final MerkleNodeState state = (MerkleNodeState) randomSignedState(true).getState();
         assertEquals(
                 1,
                 state.getRoot().getReservationCount(),

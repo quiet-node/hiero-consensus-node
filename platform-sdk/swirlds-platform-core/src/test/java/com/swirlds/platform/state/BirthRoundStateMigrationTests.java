@@ -103,7 +103,7 @@ class BirthRoundStateMigrationTests {
         assertEquals(originalHash, signedState.getState().getHash());
 
         // Rehash the state, just in case
-        rehashTree(TestMerkleCryptoFactory.getInstance(), signedState.getState().getRoot());
+        rehashTree(TestMerkleCryptoFactory.getInstance(), ((MerkleNodeState) signedState.getState()).getRoot());
 
         assertEquals(originalHash, signedState.getState().getHash());
     }
@@ -124,7 +124,7 @@ class BirthRoundStateMigrationTests {
             v.setFirstVersionInBirthRoundMode(previousSoftwareVersion);
             v.setLowestJudgeGenerationBeforeBirthRoundMode(100);
         });
-        rehashTree(TestMerkleCryptoFactory.getInstance(), signedState.getState().getRoot());
+        rehashTree(TestMerkleCryptoFactory.getInstance(), ((MerkleNodeState) signedState.getState()).getRoot());
         final Hash originalHash = signedState.getState().getHash();
 
         BirthRoundStateMigration.modifyStateForBirthRoundMigration(
@@ -133,7 +133,7 @@ class BirthRoundStateMigrationTests {
         assertEquals(originalHash, signedState.getState().getHash());
 
         // Rehash the state, just in case
-        rehashTree(TestMerkleCryptoFactory.getInstance(), signedState.getState().getRoot());
+        rehashTree(TestMerkleCryptoFactory.getInstance(), ((MerkleNodeState) signedState.getState()).getRoot());
 
         assertEquals(originalHash, signedState.getState().getHash());
     }
@@ -163,7 +163,7 @@ class BirthRoundStateMigrationTests {
         BirthRoundStateMigration.modifyStateForBirthRoundMigration(
                 signedState.getState(), AncientMode.BIRTH_ROUND_THRESHOLD, newSoftwareVersion, platformStateFacade);
 
-        rehashTree(TestMerkleCryptoFactory.getInstance(), signedState.getState().getRoot());
+        rehashTree(TestMerkleCryptoFactory.getInstance(), ((MerkleNodeState) signedState.getState()).getRoot());
 
         // We expect these fields to be populated at the migration boundary
         assertEquals(newSoftwareVersion, platformStateFacade.firstVersionInBirthRoundModeOf(signedState.getState()));

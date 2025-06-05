@@ -41,8 +41,9 @@ import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
-import com.swirlds.virtualmap.VirtualMap;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -75,12 +76,12 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
 
     private final String appName;
     private final SemanticVersion softwareVersion;
-    private final ReservedSignedState<T> initialState;
+    private final ReservedSignedState initialState;
 
-    private final ConsensusStateEventHandler<T> consensusStateEventHandler;
+    private final ConsensusStateEventHandler consensusStateEventHandler;
     private final PlatformStateFacade platformStateFacade;
-    private final Function<VirtualMap, MerkleNodeState> stateRootFunction;
-    private final StateLifecycleManager<T> stateLifecycleManager;
+    private final Function<VirtualMap, ? extends State> stateRootFunction;
+    private final StateLifecycleManager stateLifecycleManager;
 
     private final NodeId selfId;
     private final String swirldName;
@@ -162,14 +163,14 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
             @NonNull final String appName,
             @NonNull final String swirldName,
             @NonNull final SemanticVersion softwareVersion,
-            @NonNull final ReservedSignedState<T> initialState,
-            @NonNull final ConsensusStateEventHandler<T> consensusStateEventHandler,
+            @NonNull final ReservedSignedState initialState,
+            @NonNull final ConsensusStateEventHandler consensusStateEventHandler,
             @NonNull final NodeId selfId,
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
-            @NonNull final StateLifecycleManager<T> stateLifecycleManager) {
+            @NonNull final Function<VirtualMap, ? extends State> stateRootFunction,
+            @NonNull final StateLifecycleManager stateLifecycleManager) {
         return new PlatformBuilder<T>(
                 appName,
                 swirldName,
@@ -204,14 +205,14 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
             @NonNull final String appName,
             @NonNull final String swirldName,
             @NonNull final SemanticVersion softwareVersion,
-            @NonNull final ReservedSignedState<T> initialState,
-            @NonNull final ConsensusStateEventHandler<T> consensusStateEventHandler,
+            @NonNull final ReservedSignedState initialState,
+            @NonNull final ConsensusStateEventHandler consensusStateEventHandler,
             @NonNull final NodeId selfId,
             @NonNull final String consensusEventStreamName,
             @NonNull final RosterHistory rosterHistory,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
-            @NonNull final StateLifecycleManager<T> stateLifecycleManager) {
+            @NonNull final Function<VirtualMap, ? extends State> stateRootFunction,
+            @NonNull final StateLifecycleManager stateLifecycleManager) {
 
         this.appName = Objects.requireNonNull(appName);
         this.swirldName = Objects.requireNonNull(swirldName);
@@ -404,7 +405,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
      * @return a new platform component builder
      */
     @NonNull
-    public PlatformComponentBuilder<T> buildComponentBuilder() {
+    public PlatformComponentBuilder buildComponentBuilder() {
         throwIfAlreadyUsed();
         used = true;
 
@@ -485,7 +486,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
         final PlatformWiring platformWiring = new PlatformWiring(
                 platformContext, model, callbacks, initialState.get().isGenesisState());
 
-        final PlatformBuildingBlocks<T> buildingBlocks = new PlatformBuildingBlocks<T>(
+        final PlatformBuildingBlocks buildingBlocks = new PlatformBuildingBlocks(
                 platformWiring,
                 platformContext,
                 model,
@@ -518,7 +519,7 @@ public final class PlatformBuilder<T extends MerkleNodeState> {
                 stateRootFunction,
                 stateLifecycleManager);
 
-        return new PlatformComponentBuilder<T>(buildingBlocks);
+        return new PlatformComponentBuilder(buildingBlocks);
     }
 
     /**

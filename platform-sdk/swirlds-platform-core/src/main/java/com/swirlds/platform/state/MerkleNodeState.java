@@ -125,4 +125,14 @@ public interface MerkleNodeState extends State {
     default MerkleNodeState loadSnapshot(final @NonNull Path targetPath) throws IOException {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    default void reserve() {
+        getRoot().reserve();
+    }
+
+    @Override
+    default boolean release() {
+        return getRoot().release();
+    }
 }

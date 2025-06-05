@@ -317,7 +317,7 @@ class SerializationTest extends MerkleTestBase {
                 new MerkleSchemaRegistry(registry, FIRST_SERVICE, DEFAULT_CONFIG, new SchemaApplications());
         originalRegistry.register(schemaV1);
         originalRegistry.migrate(
-                originalTree,
+                (MerkleNodeState) originalTree,
                 null,
                 v1,
                 config,
@@ -326,7 +326,7 @@ class SerializationTest extends MerkleTestBase {
                 migrationStateChanges,
                 startupNetworks,
                 TEST_PLATFORM_STATE_FACADE);
-        return originalTree;
+        return (MerkleNodeState) originalTree;
     }
 
     private static void populateVmCache(State loadedTree) {

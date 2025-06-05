@@ -17,6 +17,7 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.config.DefaultConfiguration;
 import com.swirlds.platform.crypto.CryptoStatic;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateReference;
@@ -26,7 +27,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
-import java.util.concurrent.ExecutionException;
 import picocli.CommandLine;
 
 /**
@@ -64,15 +64,7 @@ public class StateEditor {
             System.out.println("\nLoading state from " + statePath);
             signedState.set(reservedSignedState.get(), "StateEditor constructor");
             System.out.println("Hashing state");
-            try {
-                platformContext
-                        .getMerkleCryptography()
-                        .digestTreeAsync(reservedSignedState.get().getState().getRoot())
-                        .get();
-            } catch (final InterruptedException | ExecutionException e) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("problem encountered while hashing state", e);
-            }
+            reservedSignedState.get().getState().getHash();
             System.out.println("Hash = " + reservedSignedState.get().getState().getHash());
         }
     }
@@ -116,7 +108,7 @@ public class StateEditor {
             while (true) {
                 try (final ReservedSignedState reservedSignedState = getState("StateEditor.start()")) {
                     final MerkleTraversable merkleTraversable =
-                            reservedSignedState.get().getState().getRoot();
+                            ((MerkleNodeState) reservedSignedState.get().getState()).getRoot();
                     target = merkleTraversable.getNodeAtRoute(currentWorkingRoute);
                     break;
                 } catch (final NoSuchElementException e) {
@@ -170,7 +162,7 @@ public class StateEditor {
     public void setCurrentWorkingRoute(final MerkleRoute currentWorkingRoute) {
         try (final ReservedSignedState reservedSignedState = getState("StateEditor.setCurrentWorkingRoute()")) {
             final MerkleTraversable merkleTraversable =
-                    reservedSignedState.get().getState().getRoot();
+                    ((MerkleNodeState) reservedSignedState.get().getState()).getRoot();
             merkleTraversable.getNodeAtRoute(currentWorkingRoute); // throws if invalid
             this.currentWorkingRoute = currentWorkingRoute;
         }
@@ -221,7 +213,7 @@ public class StateEditor {
     public MerkleNode getRelativeNode(final String path) {
         try (final ReservedSignedState reservedSignedState = getState("StateEditor.getRelativeNode()")) {
             final MerkleTraversable merkleTraversable =
-                    reservedSignedState.get().getState().getRoot();
+                    ((MerkleNodeState) reservedSignedState.get().getState()).getRoot();
             return merkleTraversable.getNodeAtRoute(getRelativeRoute(path));
         }
     }
@@ -249,7 +241,7 @@ public class StateEditor {
 
         try (final ReservedSignedState reservedSignedState = signedState.getAndReserve("StateEditor.getParentInfo()")) {
             final MerkleTraversable merkleTraversable =
-                    reservedSignedState.get().getState().getRoot();
+                    ((MerkleNodeState) reservedSignedState.get().getState()).getRoot();
             final MerkleNode parent = merkleTraversable.getNodeAtRoute(parentPath);
             if (parent == null) {
                 throw new IllegalArgumentException("The node at " + formatRoute(parentPath) + " is null.");

@@ -41,7 +41,7 @@ public class TransactionHandlerTester {
     private final ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler;
     private final TestPlatformStateFacade platformStateFacade;
     private final TestMerkleStateRoot consensusState;
-    private final StateLifecycleManager<TestMerkleStateRoot> stateLifecycleManager;
+    private final StateLifecycleManager stateLifecycleManager;
 
     /**
      * Constructs a new {@link TransactionHandlerTester} with the given {@link AddressBook}.
