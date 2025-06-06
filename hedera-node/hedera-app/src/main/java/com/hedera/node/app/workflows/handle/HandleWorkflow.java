@@ -806,7 +806,7 @@ public class HandleWorkflow {
             @NonNull final Instant now,
             @NonNull final Runnable action) {
         if (streamMode != RECORDS) {
-            immediateStateChangeListener.reset();
+            immediateStateChangeListener.resetKvStateChanges();
         }
         action.run();
         ((CommittableWritableStates) writableStates).commit();
