@@ -36,7 +36,6 @@ import com.swirlds.common.metrics.platform.PlatformMetricsFactoryImpl;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
-import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.LongGauge;
 import com.swirlds.metrics.api.Metric;
@@ -88,7 +87,6 @@ import org.hiero.base.crypto.Hash;
 import org.hiero.base.exceptions.ReferenceCountException;
 import org.hiero.base.io.streams.SerializableDataInputStream;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -1092,8 +1090,8 @@ class VirtualMapTests extends VirtualTestBase {
 
         VirtualMap copy = map.copy();
         map.release();
-        map = copy;
         map.waitUntilFlushed();
+        map = copy;
 
         // Move key/value to a different path, then delete
         map.remove(TestObjectKey.longToKey(0));
@@ -1106,8 +1104,8 @@ class VirtualMapTests extends VirtualTestBase {
 
         copy = map.copy();
         map.release();
-        map = copy;
         map.waitUntilFlushed();
+        map = copy;
 
         // During this second flush, key/value 0 must be deleted from the map despite it's
         // path the virtual tree doesn't match the path in the data source
@@ -1503,7 +1501,7 @@ class VirtualMapTests extends VirtualTestBase {
                 .getOrCreateConfig();
 
         final VirtualDataSourceBuilder builder = new InMemoryBuilder();
-        VirtualMap map = new VirtualMap(VM_LABEL, builder, CONFIGURATION);
+        VirtualMap map = new VirtualMap(VM_LABEL, builder, configuration);
         ;
         assertEquals(0, map.getFlushCandidateThreshold());
         final int flushInterval =
@@ -1634,10 +1632,5 @@ class VirtualMapTests extends VirtualTestBase {
         }
 
         return hits;
-    }
-
-    @AfterEach
-    void tearDown() {
-        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }
