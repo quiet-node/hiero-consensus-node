@@ -769,7 +769,7 @@ class DataFileCollectionTest {
                             return false;
                         }
                         for (int i = 0; i < mockAppender.size(); i++) {
-                            if(mockAppender.get(i).contains("Some files to compact haven't been processed")) {
+                            if (mockAppender.get(i).contains("Some files to compact haven't been processed")) {
                                 return true;
                             }
                         }
