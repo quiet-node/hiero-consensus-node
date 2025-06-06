@@ -770,7 +770,7 @@ public class PlatformComponentBuilder {
 
             issDetector = new DefaultIssDetector(
                     blocks.platformContext(),
-                    blocks.swirldStateManager(),
+                    blocks.stateLifecycleManager(),
                     blocks.rosterHistory().getCurrentRoster(),
                     blocks.appVersion(),
                     ignorePreconsensusSignatures,
