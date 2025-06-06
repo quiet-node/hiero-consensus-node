@@ -72,7 +72,7 @@ class IssDetectorTests extends PlatformTest {
 
         final PlatformContext platformContext = createDefaultPlatformContext();
         final IssDetector issDetector = new DefaultIssDetector(
-                platformContext, mock(Roster.class), SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
+                platformContext, null, mock(Roster.class), SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
 
         issDetector.handleState(stateWrapperForIssDetector);
         assertTrue(stateWrapperForIssDetector.isClosed(), "State passed to the ISS Detector should be closed");
@@ -95,8 +95,8 @@ class IssDetectorTests extends PlatformTest {
 
         final PlatformContext platformContext = createDefaultPlatformContext();
 
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, null, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -223,8 +223,8 @@ class IssDetectorTests extends PlatformTest {
             }
         }
 
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, null, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -320,8 +320,8 @@ class IssDetectorTests extends PlatformTest {
                 .build();
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, null, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -436,8 +436,8 @@ class IssDetectorTests extends PlatformTest {
                 .build();
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, null, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -522,8 +522,8 @@ class IssDetectorTests extends PlatformTest {
                 .build();
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, null, roster, SemanticVersion.DEFAULT, false, DO_NOT_IGNORE_ROUNDS);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -602,7 +602,7 @@ class IssDetectorTests extends PlatformTest {
                 .roundsNonAncient();
 
         final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, roster, SemanticVersion.DEFAULT, false, 1);
+                new DefaultIssDetector(platformContext, null, roster, SemanticVersion.DEFAULT, false, 1);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;

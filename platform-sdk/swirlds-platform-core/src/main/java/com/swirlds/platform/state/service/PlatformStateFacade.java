@@ -303,7 +303,11 @@ public class PlatformStateFacade {
     public String getInfoString(@NonNull final State state, final int hashDepth) {
         final MerkleNodeState merkleNodeState = (MerkleNodeState) state;
         return createInfoString(
-                hashDepth, readablePlatformStateStore(state), merkleNodeState.getHash(), merkleNodeState.getRoot());
+                        hashDepth,
+                        readablePlatformStateStore(state),
+                        merkleNodeState.getHash(),
+                        merkleNodeState.getRoot())
+                .concat(merkleNodeState.getInfoJson());
     }
 
     private PlatformStateAccessor readablePlatformStateStore(@NonNull final State state) {
