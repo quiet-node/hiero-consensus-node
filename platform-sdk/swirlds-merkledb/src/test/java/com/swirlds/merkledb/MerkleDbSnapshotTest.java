@@ -99,8 +99,6 @@ class MerkleDbSnapshotTest {
         for (int i = 0; i < MAPS_COUNT; i++) {
             final VirtualMap vm = stateRoot.getChild(i);
             final VirtualMapState state = vm.getState();
-            System.out.println("state.getFirstLeafPath() = " + state.getFirstLeafPath());
-            System.out.println("state.getLastLeafPath() = " + state.getLastLeafPath());
             for (int path = 0; path <= state.getLastLeafPath(); path++) {
                 final Hash hash = vm.getRecords().findHash(path);
                 Assertions.assertNotNull(hash);
@@ -225,9 +223,11 @@ class MerkleDbSnapshotTest {
         closeDataSources(restoredStateRoot);
     }
 
-    private static void closeDataSources(MerkleInternal initialRoot) throws IOException {
+    private static void closeDataSources(MerkleInternal initialRoot) throws IOException, InterruptedException {
         for (int i = 0; i < MAPS_COUNT; i++) {
-            ((VirtualMap) initialRoot.getChild(i)).getDataSource().close();
+            final VirtualMap vm = initialRoot.getChild(i);
+            vm.getPipeline().awaitTermination(8, TimeUnit.SECONDS);
+            vm.getDataSource().close();
         }
     }
 

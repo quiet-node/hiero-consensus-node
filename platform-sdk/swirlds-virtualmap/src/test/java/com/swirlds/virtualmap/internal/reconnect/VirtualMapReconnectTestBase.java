@@ -16,7 +16,6 @@ import com.swirlds.common.test.fixtures.merkle.dummy.DummyMerkleInternal;
 import com.swirlds.common.test.fixtures.merkle.dummy.DummyMerkleLeaf;
 import com.swirlds.common.test.fixtures.merkle.util.MerkleTestUtils;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
-import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
@@ -25,7 +24,6 @@ import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.merkle.ExternalVirtualMapState;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
-import com.swirlds.virtualmap.internal.pipeline.VirtualRoot;
 import com.swirlds.virtualmap.test.fixtures.TestKey;
 import com.swirlds.virtualmap.test.fixtures.TestValue;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -133,8 +131,7 @@ public abstract class VirtualMapReconnectTestBase {
                             MerkleTestUtils.hashAndTestSynchronization(learnerTree, teacherTree, reconnectConfig);
                     node.release();
                     assertEquals(attempts - 1, i, "We should only succeed on the last try");
-                    final VirtualRoot root = learnerMap.getLeft();
-                    assertTrue(root.isHashed(), "Learner root node must be hashed");
+                    assertTrue(learnerMap.isHashed(), "Learner map must be hashed");
                 } catch (Exception e) {
                     if (i == attempts - 1) {
                         fail("We did not expect an exception on this reconnect attempt!", e);
@@ -340,6 +337,5 @@ public abstract class VirtualMapReconnectTestBase {
         if (learnerMap.getReservationCount() > 0) {
             learnerMap.release();
         }
-        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }

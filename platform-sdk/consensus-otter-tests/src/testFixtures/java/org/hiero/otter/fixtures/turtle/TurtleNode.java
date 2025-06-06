@@ -44,8 +44,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
 import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
@@ -55,6 +53,7 @@ import org.hiero.consensus.roster.ReadableRosterStoreImpl;
 import org.hiero.consensus.roster.RosterHistory;
 import org.hiero.consensus.roster.RosterStateId;
 import org.hiero.consensus.roster.RosterUtils;
+import org.hiero.otter.fixtures.AsyncNodeActions;
 import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.NodeConfiguration;
 import org.hiero.otter.fixtures.internal.result.NodeResultsCollector;
@@ -77,7 +76,6 @@ import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
 public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     public static final String THREAD_CONTEXT_NODE_ID = "nodeId";
-    private static final Logger log = LogManager.getLogger(TurtleNode.class);
 
     private enum LifeCycle {
         INIT,
@@ -96,15 +94,23 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private final TurtleLogging logging;
     private final TurtleNodeConfiguration nodeConfiguration;
     private final NodeResultsCollector resultsCollector;
-
     private final PlatformStatusChangeListener platformStatusChangeListener;
+    private final AsyncNodeActions asyncNodeActions = new TurtleAcyncNodeActions();
 
-    private DeterministicWiringModel model;
     private PlatformContext platformContext;
-    private Platform platform;
-    private PlatformWiring platformWiring;
     private LifeCycle lifeCycle = LifeCycle.INIT;
+    private SemanticVersion version = Node.DEFAULT_VERSION;
 
+    @Nullable
+    private DeterministicWiringModel model;
+
+    @Nullable
+    private Platform platform;
+
+    @Nullable
+    private PlatformWiring platformWiring;
+
+    @Nullable
     private PlatformStatus platformStatus;
 
     /**
@@ -115,6 +121,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * @param roster the initial roster
      * @param keysAndCerts the keys and certificates of the node
      * @param network the simulated network
+     * @param logging the logging instance for the node
      * @param outputDirectory the output directory for the node
      */
     public TurtleNode(
@@ -151,20 +158,19 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     }
 
     /**
-     * Returns the status of the platform while the node is running or {@code null} if not.
-     *
-     * @return the status of the platform
+     * {@inheritDoc}
      */
+    @Override
     @Nullable
-    PlatformStatus platformStatus() {
+    public PlatformStatus platformStatus() {
         return platformStatus;
     }
 
     /**
      * {@inheritDoc}
      */
-    @NonNull
     @Override
+    @NonNull
     public NodeId getSelfId() {
         return selfId;
     }
@@ -173,7 +179,38 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * {@inheritDoc}
      */
     @Override
-    public void failUnexpectedly(@NonNull final Duration timeout) throws InterruptedException {
+    @NonNull
+    public SemanticVersion getVersion() {
+        return version;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setVersion(@NonNull final SemanticVersion version) {
+        this.version = requireNonNull(version);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void bumpConfigVersion() {
+        int newBuildNumber;
+        try {
+            newBuildNumber = Integer.parseInt(version.build()) + 1;
+        } catch (final NumberFormatException e) {
+            newBuildNumber = 1;
+        }
+        this.version = this.version.copyBuilder().build("" + newBuildNumber).build();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void killImmediately() throws InterruptedException {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
@@ -188,11 +225,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * {@inheritDoc}
      */
     @Override
-    public void shutdownGracefully(@NonNull final Duration timeout) throws InterruptedException {
+    public void shutdownGracefully() throws InterruptedException {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
-            platformWiring.flushIntakePipeline();
+            if (platformWiring != null) {
+                platformWiring.flushIntakePipeline();
+            }
             doShutdownNode();
 
         } finally {
@@ -204,11 +243,10 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * {@inheritDoc}
      */
     @Override
-    public void revive(@NonNull final Duration timeout) {
+    public void start() {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
-            checkLifeCycle(LifeCycle.INIT, "Node has not been started previously.");
             checkLifeCycle(LifeCycle.STARTED, "Node has already been started.");
             checkLifeCycle(LifeCycle.DESTROYED, "Node has already been destroyed.");
 
@@ -224,6 +262,14 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * {@inheritDoc}
      */
     @Override
+    public AsyncNodeActions withTimeout(@NonNull final Duration timeout) {
+        return asyncNodeActions;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void submitTransaction(@NonNull final byte[] transaction) {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
@@ -231,6 +277,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             checkLifeCycle(LifeCycle.INIT, "Node has not been started yet.");
             checkLifeCycle(LifeCycle.SHUTDOWN, "Node has been shut down.");
             checkLifeCycle(LifeCycle.DESTROYED, "Node has been destroyed.");
+            assert platform != null; // platform must be initialized if lifeCycle is STARTED
 
             platform.createTransaction(transaction);
 
@@ -291,29 +338,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @Override
     public void tick(@NonNull final Instant now) {
         if (lifeCycle == LifeCycle.STARTED) {
+            assert model != null; // model must be initialized if lifeCycle is STARTED
             try {
                 ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
                 model.tick();
             } finally {
                 ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
             }
-        }
-    }
-
-    /**
-     * Start the node
-     */
-    public void start() {
-        try {
-            ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
-
-            checkLifeCycle(LifeCycle.STARTED, "Node has already been started.");
-            checkLifeCycle(LifeCycle.DESTROYED, "Node has already been destroyed.");
-
-            doStartNode();
-
-        } finally {
-            ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
     }
 
@@ -346,7 +377,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     private void doShutdownNode() throws InterruptedException {
         if (lifeCycle == LifeCycle.STARTED) {
-            // TODO: Release all resources
+            assert platform != null; // platform must be initialized if lifeCycle is STARTED
+            assert platformWiring != null; // platformWiring must be initialized if lifeCycle is STARTED
             getMetricsProvider().removePlatformMetrics(platform.getSelfId());
             platformWiring.stop();
             platform.getNotificationEngine().unregisterAll();
@@ -363,10 +395,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
 
         setupGlobalMetrics(currentConfiguration);
-
-        final SemanticVersion version =
-                currentConfiguration.getValue(TurtleNodeConfiguration.SOFTWARE_VERSION, SemanticVersion.class);
-        assert version != null; // avoids a warning, not really needed as there is always a default
 
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
         MerkleDb.resetDefaultInstancePath();
@@ -445,5 +473,35 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         platform.start();
 
         lifeCycle = LifeCycle.STARTED;
+    }
+
+    /**
+     * Turtle-specific implementation of {@link AsyncNodeActions}.
+     */
+    private class TurtleAcyncNodeActions implements AsyncNodeActions {
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void killImmediately() throws InterruptedException {
+            TurtleNode.this.killImmediately();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shutdownGracefully() throws InterruptedException {
+            TurtleNode.this.shutdownGracefully();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void start() {
+            TurtleNode.this.start();
+        }
     }
 }

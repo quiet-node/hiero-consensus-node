@@ -1202,7 +1202,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .platformStateFacade(platformStateFacade)
                 .build();
         // Initialize infrastructure for fees, exchange rates, and throttles from the working state
-        daggerApp.initializer().accept(state);
+        daggerApp.initializer().initialize(state, streamMode);
+        logConfiguration();
         notifications.register(PlatformStatusChangeListener.class, this);
         notifications.register(ReconnectCompleteListener.class, daggerApp.reconnectListener());
         notifications.register(StateWriteToDiskCompleteListener.class, daggerApp.stateWriteToDiskListener());

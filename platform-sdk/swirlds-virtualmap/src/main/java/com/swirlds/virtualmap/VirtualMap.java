@@ -528,7 +528,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     }
 
     // Exposed for tests only.
-    VirtualPipeline getPipeline() {
+    public VirtualPipeline getPipeline() {
         return pipeline;
     }
 
