@@ -28,6 +28,7 @@ module org.hiero.otter.fixtures {
     requires com.swirlds.merkledb;
     requires org.hiero.consensus.utility;
     requires org.junit.jupiter.params;
+    requires org.junit.platform.commons;
     requires static com.github.spotbugs.annotations;
 
     exports org.hiero.otter.fixtures;

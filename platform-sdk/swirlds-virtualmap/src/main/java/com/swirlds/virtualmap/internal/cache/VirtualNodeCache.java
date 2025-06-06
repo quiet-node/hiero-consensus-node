@@ -533,7 +533,7 @@ public final class VirtualNodeCache implements FastCopyable, SelfSerializable {
                         "Merged version {}, {} dirty leaves, {} dirty internals",
                         fastCopyVersion,
                         dirtyLeaves.size(),
-                        dirtyHashes.seal());
+                        dirtyHashes.size());
             }
         }
     }

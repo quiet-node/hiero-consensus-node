@@ -528,7 +528,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     }
 
     // Exposed for tests only.
-    VirtualPipeline getPipeline() {
+    public VirtualPipeline getPipeline() {
         return pipeline;
     }
 
@@ -1469,11 +1469,16 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             }
             logger.info(RECONNECT.getMarker(), "call postInit()");
             nodeRemover = null;
+            VirtualMapState originalMapState = originalMap.getState();
             originalMap = null;
-            state = new VirtualMapState(reconnectRecords
-                    .getDataSource()
-                    .loadLeafRecord(VM_STATE_KEY)
-                    .valueBytes());
+            VirtualLeafBytes reconnectedStateBytes =
+                    reconnectRecords.getDataSource().loadLeafRecord(VM_STATE_KEY);
+            // if we can't find the state, then the teacher map was empty
+            if (reconnectedStateBytes == null) {
+                state = originalMapState;
+            } else {
+                state = new VirtualMapState(reconnectedStateBytes.valueBytes());
+            }
             postInit(state);
         } catch (IOException e) {
             final var message = "VirtualMap@" + getRoute() + " failed to get load VirtualMapState after reconnect";
