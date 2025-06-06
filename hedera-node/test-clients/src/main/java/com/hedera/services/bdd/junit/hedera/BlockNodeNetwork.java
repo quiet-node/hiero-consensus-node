@@ -120,7 +120,7 @@ public class BlockNodeNetwork {
             final long blockNodeId = entry.getKey();
             final BlockNodeMode mode = entry.getValue();
             if (mode == BlockNodeMode.REAL) {
-                startRealBlockNodeContainer(blockNodeId);
+                startRealBlockNodeContainer(blockNodeId, findAvailablePort());
             } else if (mode == BlockNodeMode.SIMULATOR) {
                 // Find an available port
                 int port = findAvailablePort();
@@ -136,9 +136,9 @@ public class BlockNodeNetwork {
         }
     }
 
-    private void startRealBlockNodeContainer(final long blockNodeId) {
+    private void startRealBlockNodeContainer(final long blockNodeId, final int port) {
         try {
-            final BlockNodeContainer container = new BlockNodeContainer(blockNodeId);
+            final BlockNodeContainer container = new BlockNodeContainer(blockNodeId, port);
 
             container.start();
             container.waitForHealthy(Duration.ofMinutes(2));
