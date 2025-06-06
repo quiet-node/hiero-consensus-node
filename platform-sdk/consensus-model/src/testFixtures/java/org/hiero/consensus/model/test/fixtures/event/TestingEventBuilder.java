@@ -33,8 +33,6 @@ import org.hiero.consensus.model.node.NodeId;
  */
 public class TestingEventBuilder {
     private static final Instant DEFAULT_TIMESTAMP = Instant.ofEpochMilli(1588771316678L);
-    private static final SemanticVersion DEFAULT_SOFTWARE_VERSION =
-            SemanticVersion.newBuilder().major(1).build();
     private static final NodeId DEFAULT_CREATOR_ID = NodeId.of(0);
     private static final int DEFAULT_APP_TRANSACTION_COUNT = 2;
     private static final int DEFAULT_SYSTEM_TRANSACTION_COUNT = 0;
@@ -121,13 +119,6 @@ public class TestingEventBuilder {
     private Long birthRound;
 
     /**
-     * The software version of the event.
-     * <p>
-     * If not set, defaults to {@link #DEFAULT_SOFTWARE_VERSION}.
-     */
-    private SemanticVersion softwareVersion;
-
-    /**
      * The consensus timestamp of the event.
      * <p>
      * If consensus order is set, and consensus timestamp is not set, it will be a random timestamp.
@@ -182,20 +173,6 @@ public class TestingEventBuilder {
      */
     public @NonNull TestingEventBuilder setNGen(final long nGen) {
         this.nGen = nGen;
-        return this;
-    }
-
-    /**
-     * Set the software version of the event.
-     * <p>
-     * If not set, defaults to {@link #DEFAULT_SOFTWARE_VERSION}.
-     *
-     * @param softwareVersion the software version
-     * @return this instance
-     */
-    public @NonNull TestingEventBuilder setSoftwareVersion(@Nullable final SemanticVersion softwareVersion) {
-        this.softwareVersion =
-                SemanticVersion.newBuilder().major(softwareVersion.major()).build();
         return this;
     }
 
@@ -487,10 +464,6 @@ public class TestingEventBuilder {
      * @return the new event
      */
     public @NonNull PlatformEvent build() {
-        if (softwareVersion == null) {
-            softwareVersion = DEFAULT_SOFTWARE_VERSION;
-        }
-
         if (creatorId == null) {
             if (selfParent != null) {
                 creatorId = selfParent.getCreatorId();
@@ -533,7 +506,6 @@ public class TestingEventBuilder {
         }
 
         final UnsignedEvent unsignedEvent = new UnsignedEvent(
-                softwareVersion,
                 creatorId,
                 selfParentDescriptor,
                 otherParentDescriptors,

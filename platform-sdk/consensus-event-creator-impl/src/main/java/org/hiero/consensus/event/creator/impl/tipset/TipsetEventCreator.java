@@ -52,7 +52,6 @@ public class TipsetEventCreator implements EventCreator {
     private final TipsetWeightCalculator tipsetWeightCalculator;
     private final ChildlessEventTracker childlessOtherEventTracker;
     private final TransactionSupplier transactionSupplier;
-    private final SemanticVersion softwareVersion;
     private EventWindow eventWindow;
 
     /**
@@ -103,7 +102,6 @@ public class TipsetEventCreator implements EventCreator {
      * @param signer              used for signing things with this node's private key
      * @param roster              the current roster
      * @param selfId              this node's ID
-     * @param softwareVersion     the current software version of the application
      * @param transactionSupplier provides transactions to be included in new events
      */
     public TipsetEventCreator(
@@ -112,7 +110,6 @@ public class TipsetEventCreator implements EventCreator {
             @NonNull final HashSigner signer,
             @NonNull final Roster roster,
             @NonNull final NodeId selfId,
-            @NonNull final SemanticVersion softwareVersion,
             @NonNull final TransactionSupplier transactionSupplier) {
 
         this.time = platformContext.getTime();
@@ -120,7 +117,6 @@ public class TipsetEventCreator implements EventCreator {
         this.signer = Objects.requireNonNull(signer);
         this.selfId = Objects.requireNonNull(selfId);
         this.transactionSupplier = Objects.requireNonNull(transactionSupplier);
-        this.softwareVersion = Objects.requireNonNull(softwareVersion);
         this.roster = Objects.requireNonNull(roster);
 
         final EventCreationConfig eventCreationConfig =
@@ -408,7 +404,6 @@ public class TipsetEventCreator implements EventCreator {
         }
 
         final UnsignedEvent event = new UnsignedEvent(
-                softwareVersion,
                 selfId,
                 lastSelfEvent == null ? null : lastSelfEvent.getDescriptor(),
                 otherParent == null ? Collections.emptyList() : Collections.singletonList(otherParent),

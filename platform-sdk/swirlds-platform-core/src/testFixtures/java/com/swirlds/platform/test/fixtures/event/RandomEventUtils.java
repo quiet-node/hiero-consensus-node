@@ -75,7 +75,6 @@ public class RandomEventUtils {
                     .forEach(convertedTransactions::add);
         }
         final UnsignedEvent unsignedEvent = new UnsignedEvent(
-                SemanticVersion.newBuilder().major(1).build(),
                 creatorId,
                 selfDescriptor,
                 otherDescriptor == null ? Collections.emptyList() : Collections.singletonList(otherDescriptor),

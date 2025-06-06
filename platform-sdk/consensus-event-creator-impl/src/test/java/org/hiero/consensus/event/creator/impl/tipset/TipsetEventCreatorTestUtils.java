@@ -66,11 +66,7 @@ public class TipsetEventCreatorTestUtils {
         final HashSigner signer = mock(HashSigner.class);
         when(signer.sign(any())).thenAnswer(invocation -> randomSignature(random));
 
-        final SemanticVersion softwareVersion =
-                SemanticVersion.newBuilder().major(1).build();
-
-        return new TipsetEventCreator(
-                platformContext, random, signer, roster, nodeId, softwareVersion, transactionSupplier);
+        return new TipsetEventCreator(platformContext, random, signer, roster, nodeId, transactionSupplier);
     }
 
     /**

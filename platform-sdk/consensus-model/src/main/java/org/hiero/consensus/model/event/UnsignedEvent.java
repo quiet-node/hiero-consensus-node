@@ -51,7 +51,6 @@ public class UnsignedEvent implements Hashable {
      * @param transactions    list of transactions included in this event instance
      */
     public UnsignedEvent(
-            @NonNull final SemanticVersion softwareVersion,
             @NonNull final NodeId creatorId,
             @Nullable final EventDescriptorWrapper selfParent,
             @NonNull final List<EventDescriptorWrapper> otherParents,
@@ -63,7 +62,8 @@ public class UnsignedEvent implements Hashable {
         this.parents = this.metadata.getAllParents().stream()
                 .map(EventDescriptorWrapper::eventDescriptor)
                 .toList();
-        this.eventCore = new EventCore(creatorId.id(), birthRound, HapiUtils.asTimestamp(timeCreated), softwareVersion);
+        this.eventCore = new EventCore(creatorId.id(), birthRound, HapiUtils.asTimestamp(timeCreated),
+                SemanticVersion.newBuilder().build());
     }
 
     /**
