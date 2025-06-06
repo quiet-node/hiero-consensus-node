@@ -618,8 +618,8 @@ class IssDetectorTests extends PlatformTest {
                 .getConfigData(ConsensusConfig.class)
                 .roundsNonAncient();
 
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, stateLifecycleManager, roster, SemanticVersion.DEFAULT, false, 1);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, stateLifecycleManager, roster, SemanticVersion.DEFAULT, false, 1);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;

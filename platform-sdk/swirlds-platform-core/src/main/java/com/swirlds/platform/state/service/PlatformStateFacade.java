@@ -299,9 +299,7 @@ public class PlatformStateFacade {
      */
     @NonNull
     public String getInfoString(@NonNull final State state) {
-        return createInfoString(
-                        readablePlatformStateStore(state),
-                        state.getHash())
+        return createInfoString(readablePlatformStateStore(state), state.getHash())
                 .concat(state.getInfoJson());
     }
 
