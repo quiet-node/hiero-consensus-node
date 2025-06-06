@@ -88,14 +88,12 @@ public class ImmediateStateChangeListener implements StateChangeListener {
      */
     public void resetKvStateChanges() {
         kvStateChanges.clear();
-        queueStateChanges.clear();
     }
 
     /**
      * Resets queue state changes.
      */
     public void resetQueueStateChanges() {
-        kvStateChanges.clear();
         queueStateChanges.clear();
     }
 
@@ -160,6 +158,22 @@ public class ImmediateStateChangeListener implements StateChangeListener {
                 .queuePop(new QueuePopChange())
                 .build();
         queueStateChanges.add(stateChange);
+    }
+
+    /**
+     * Returns the list of kv state changes.
+     * @return the list of kv state changes
+     */
+    public List<StateChange> getKvStateChanges() {
+        return kvStateChanges;
+    }
+
+    /**
+     * Returns the list of queue state changes.
+     * @return the list of queue state changes
+     */
+    public List<StateChange> getQueueStateChanges() {
+        return queueStateChanges;
     }
 
     /**
