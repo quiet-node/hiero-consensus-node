@@ -425,7 +425,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                 selfId,
                 platformStateFacade,
                 platformContext,
-                TurtleTestingToolState::new);
+                TurtleAppState::new);
         final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
@@ -444,7 +444,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                         eventStreamLoc,
                         rosterHistory,
                         platformStateFacade,
-                        TurtleTestingToolState::new)
+                        TurtleAppState::new)
                 .withPlatformContext(platformContext)
                 .withConfiguration(currentConfiguration)
                 .withKeysAndCerts(keysAndCerts)
