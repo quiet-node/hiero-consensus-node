@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state;
 
+import com.swirlds.common.Reservable;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.state.State;
@@ -16,7 +17,7 @@ import java.util.function.Supplier;
  * Represent a state backed up by the Merkle tree. It's a {@link State} implementation that is backed by a Merkle tree.
  * It provides methods to manage the service states in the merkle tree.
  */
-public interface MerkleNodeState extends State {
+public interface MerkleNodeState extends State, Reservable {
 
     /**
      * @return an instance representing a root of the Merkle tree. For the most of the implementations
@@ -132,7 +133,22 @@ public interface MerkleNodeState extends State {
     }
 
     @Override
+    default boolean tryReserve() {
+        return getRoot().tryReserve();
+    }
+
+    @Override
+    default int getReservationCount() {
+        return getRoot().getReservationCount();
+    }
+
+    @Override
     default boolean release() {
         return getRoot().release();
+    }
+
+    @Override
+    default boolean isDestroyed() {
+        return getRoot().isDestroyed();
     }
 }

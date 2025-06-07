@@ -13,6 +13,7 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.base.time.Time;
+import com.swirlds.common.Reservable;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.ReferenceCounter;
 import com.swirlds.common.utility.RuntimeObjectRecord;
@@ -188,7 +189,7 @@ public class SignedState implements SignedStateInfo {
         this.platformStateFacade = platformStateFacade;
         this.signatureVerifier = requireNonNull(signatureVerifier);
         this.state = requireNonNull(state);
-        state.reserve();
+        ((Reservable) state).reserve();
 
         final StateConfig stateConfig = configuration.getConfigData(StateConfig.class);
         if (stateConfig.stateHistoryEnabled()) {

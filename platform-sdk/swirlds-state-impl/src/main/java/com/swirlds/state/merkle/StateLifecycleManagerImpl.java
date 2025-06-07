@@ -4,6 +4,7 @@ package com.swirlds.state.merkle;
 import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_MICROSECONDS;
 import static java.util.Objects.requireNonNull;
 
+import com.swirlds.common.Reservable;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StateLifecycleManager;
@@ -63,7 +64,7 @@ public class StateLifecycleManagerImpl implements StateLifecycleManager {
         // Create a fast copy
         final State copy = state.copy();
         // Increment the reference count because this reference becomes the new value
-        copy.reserve();
+        ((Reservable)copy).reserve();
 
         final long copyEnd = System.nanoTime();
 
@@ -91,7 +92,7 @@ public class StateLifecycleManagerImpl implements StateLifecycleManager {
         State currentState = this.currentState;
         // creation of a copy will reduce the reference count of the original state, but we still want the state to be
         // around
-        currentState.reserve();
+        ((Reservable) currentState).reserve();
         fastCopyAndUpdateRefs(currentState);
         // returning the original state that became immutable
         return currentState;

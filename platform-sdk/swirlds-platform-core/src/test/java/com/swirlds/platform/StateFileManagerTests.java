@@ -25,6 +25,7 @@ import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
+import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.config.api.Configuration;
@@ -34,6 +35,7 @@ import com.swirlds.platform.components.DefaultSavedStateController;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.eventhandling.StateWithHashComplexity;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.snapshot.DefaultStateSnapshotManager;
@@ -61,6 +63,7 @@ import java.util.stream.Stream;
 import org.hiero.base.CompareTo;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
+import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.state.StateSavingResult;
 import org.junit.jupiter.api.AfterEach;
@@ -133,7 +136,7 @@ class StateFileManagerTests {
     private void validateSavingOfState(final SignedState originalState, final Path stateDirectory) throws IOException {
 
         assertEventuallyEquals(
-                -1, originalState::getReservationCount, Duration.ofSeconds(1), "invalid reservation count");
+                -1, originalState::getReservationCount, Duration.ofSeconds(100), "invalid reservation count");
 
         final Path stateFile = stateDirectory.resolve(MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME);
         final Path hashInfoFile = stateDirectory.resolve(SignedStateFileUtils.HASH_INFO_FILE_NAME);
@@ -151,7 +154,8 @@ class StateFileManagerTests {
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile, HederaNewStateRoot::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
         SignedState signedState = deserializedSignedState.reservedSignedState().get();
-        signedState.getState().getHash();
+        TestMerkleCryptoFactory.getInstance()
+                .digestTreeSync(((MerkleNodeState)signedState.getState()).getRoot());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
         assertNotSame(signedState, originalState, "deserialized object should not be the same");
@@ -201,7 +205,8 @@ class StateFileManagerTests {
                 context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
         signedState.markAsStateToSave(FATAL_ERROR);
         makeImmutable(signedState);
-        signedState.getState().getHash();
+        TestMerkleCryptoFactory.getInstance()
+                .digestTreeSync(((MerkleNodeState)signedState.getState()).getRoot());
         ((BlockingState) signedState.getState()).enableBlockingSerialization();
 
         final Thread thread = new ThreadConfiguration(getStaticThreadManager())

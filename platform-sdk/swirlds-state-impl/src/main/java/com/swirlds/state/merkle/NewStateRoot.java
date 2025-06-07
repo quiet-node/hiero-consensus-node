@@ -888,18 +888,4 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         return rootJson.toString();
     }
 
-    @Override
-    public void reserve() {
-        getRoot().reserve();
-    }
-
-    @Override
-    public boolean tryReserve() {
-        return getRoot().tryReserve();
-    }
-
-    @Override
-    public int getReservationCount() {
-        return getRoot().getReservationCount();
-    }
 }

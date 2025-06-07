@@ -650,23 +650,8 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
     }
 
     @Override
-    public void reserve() {
-        state.reserve();
-    }
-
-    @Override
-    public boolean tryReserve() {
-        return state.tryReserve();
-    }
-
-    @Override
     public boolean release() {
         return state.release();
-    }
-
-    @Override
-    public int getReservationCount() {
-        return state.getReservationCount();
     }
 
     @Override

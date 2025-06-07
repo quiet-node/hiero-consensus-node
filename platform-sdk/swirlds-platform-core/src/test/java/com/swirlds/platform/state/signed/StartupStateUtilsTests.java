@@ -14,6 +14,7 @@ import static org.mockito.Mockito.spy;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.node.app.HederaNewStateRoot;
 import com.swirlds.base.time.Time;
+import com.swirlds.common.Reservable;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
@@ -210,7 +211,7 @@ public class StartupStateUtilsTests {
 
         assertEquals(latestState.getRound(), loadedState.getRound());
         assertEquals(latestState.getState().getHash(), loadedState.getState().getHash());
-        RandomSignedStateGenerator.releaseReservable(loadedState.getState());
+        RandomSignedStateGenerator.releaseReservable((Reservable) loadedState.getState());
     }
 
     @Test
@@ -300,7 +301,7 @@ public class StartupStateUtilsTests {
         }
 
         if (loadedState != null) {
-            RandomSignedStateGenerator.releaseReservable(loadedState.getState());
+            RandomSignedStateGenerator.releaseReservable((Reservable) loadedState.getState());
         }
 
         final Path savedStateDirectory = signedStateFilePath

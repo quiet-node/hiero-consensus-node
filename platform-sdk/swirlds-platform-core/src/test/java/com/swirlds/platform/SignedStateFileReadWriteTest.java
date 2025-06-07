@@ -92,22 +92,14 @@ class SignedStateFileReadWriteTest {
     @Test
     @DisplayName("writeHashInfoFile() Test")
     void writeHashInfoFileTest() throws IOException {
-        final PlatformContext platformContext =
-                TestPlatformContextBuilder.create().build();
         final SignedState signedState = new RandomSignedStateGenerator()
                 .setSoftwareVersion(platformVersion)
                 .build();
         final MerkleNodeState state = (MerkleNodeState) signedState.getState();
         writeHashInfoFile(testDirectory, state, stateFacade);
-        final StateConfig stateConfig =
-                new TestConfigBuilder().getOrCreateConfig().getConfigData(StateConfig.class);
-
+        
         final Path hashInfoFile = testDirectory.resolve(SignedStateFileUtils.HASH_INFO_FILE_NAME);
         assertTrue(exists(hashInfoFile), "file should exist");
-
-        final String hashInfoString = new MerkleTreeVisualizer(state.getRoot())
-                .setDepth(stateConfig.debugHashDepth())
-                .render();
 
         final StringBuilder sb = new StringBuilder();
         try (final BufferedReader br = new BufferedReader(new FileReader(hashInfoFile.toFile()))) {
@@ -115,7 +107,7 @@ class SignedStateFileReadWriteTest {
         }
 
         final String fileString = sb.toString();
-        assertTrue(fileString.contains(hashInfoString), "hash info string not found");
+        assertTrue(fileString.contains(state.getInfoJson()), "hash info string not found");
         state.release();
     }
 

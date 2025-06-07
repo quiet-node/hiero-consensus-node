@@ -115,14 +115,6 @@ public class WrappedState implements State, Hashable {
     }
 
     @Override
-    public void reserve() {}
-
-    @Override
-    public boolean tryReserve() {
-        return delegate.tryReserve();
-    }
-
-    @Override
     public boolean release() {
         return delegate.release();
     }
@@ -130,10 +122,5 @@ public class WrappedState implements State, Hashable {
     @Override
     public boolean isDestroyed() {
         return delegate.isDestroyed();
-    }
-
-    @Override
-    public int getReservationCount() {
-        return delegate.getReservationCount();
     }
 }
