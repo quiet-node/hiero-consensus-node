@@ -1065,7 +1065,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         return streamMode != RECORDS;
     }
 
-    public ImmediateStateChangeListener kvStateChangeListener() {
+    public ImmediateStateChangeListener immediateStateChangeListener() {
         return immediateStateChangeListener;
     }
 
@@ -1168,7 +1168,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 .instantSource(appContext.instantSource())
                 .throttleFactory(appContext.throttleFactory())
                 .metrics(metrics)
-                .kvStateChangeListener(immediateStateChangeListener)
+                .immediateStateChangeListener(immediateStateChangeListener)
                 .boundaryStateChangeListener(boundaryStateChangeListener)
                 .migrationStateChanges(migrationStateChanges != null ? migrationStateChanges : new ArrayList<>())
                 .initialStateHash(initialStateHash)
