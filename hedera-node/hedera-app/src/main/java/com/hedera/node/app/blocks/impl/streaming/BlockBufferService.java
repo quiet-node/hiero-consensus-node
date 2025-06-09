@@ -328,9 +328,8 @@ public class BlockBufferService {
         block period (e.g. 2 seconds). This gives us an ideal number of blocks in the buffer.
          */
         final Duration blockPeriod = blockPeriod();
-        final long idealMaxBufferSize = blockPeriod.isZero() || blockPeriod.isNegative()
-                ? 150
-                : ttl.dividedBy(blockPeriod());
+        final long idealMaxBufferSize =
+                blockPeriod.isZero() || blockPeriod.isNegative() ? 150 : ttl.dividedBy(blockPeriod());
         int numPruned = 0;
         int numChecked = 0;
         int numPendingAck = 0;
