@@ -887,5 +887,4 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
 
         return rootJson.toString();
     }
-
 }

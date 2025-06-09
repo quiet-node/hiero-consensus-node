@@ -3,7 +3,6 @@ package com.swirlds.state;
 
 import com.swirlds.base.time.Time;
 import com.swirlds.common.FastCopyable;
-import com.swirlds.common.Reservable;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;

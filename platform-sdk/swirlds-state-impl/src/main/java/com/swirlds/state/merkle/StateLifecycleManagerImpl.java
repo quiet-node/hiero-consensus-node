@@ -64,7 +64,7 @@ public class StateLifecycleManagerImpl implements StateLifecycleManager {
         // Create a fast copy
         final State copy = state.copy();
         // Increment the reference count because this reference becomes the new value
-        ((Reservable)copy).reserve();
+        ((Reservable) copy).reserve();
 
         final long copyEnd = System.nanoTime();
 

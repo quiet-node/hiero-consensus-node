@@ -63,7 +63,6 @@ import java.util.stream.Stream;
 import org.hiero.base.CompareTo;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
-import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.state.StateSavingResult;
 import org.junit.jupiter.api.AfterEach;
@@ -154,8 +153,7 @@ class StateFileManagerTests {
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile, HederaNewStateRoot::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
         SignedState signedState = deserializedSignedState.reservedSignedState().get();
-        TestMerkleCryptoFactory.getInstance()
-                .digestTreeSync(((MerkleNodeState)signedState.getState()).getRoot());
+        TestMerkleCryptoFactory.getInstance().digestTreeSync(((MerkleNodeState) signedState.getState()).getRoot());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
         assertNotSame(signedState, originalState, "deserialized object should not be the same");
@@ -205,8 +203,7 @@ class StateFileManagerTests {
                 context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
         signedState.markAsStateToSave(FATAL_ERROR);
         makeImmutable(signedState);
-        TestMerkleCryptoFactory.getInstance()
-                .digestTreeSync(((MerkleNodeState)signedState.getState()).getRoot());
+        TestMerkleCryptoFactory.getInstance().digestTreeSync(((MerkleNodeState) signedState.getState()).getRoot());
         ((BlockingState) signedState.getState()).enableBlockingSerialization();
 
         final Thread thread = new ThreadConfiguration(getStaticThreadManager())

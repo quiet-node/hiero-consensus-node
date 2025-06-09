@@ -6,11 +6,9 @@ import static com.swirlds.virtualmap.internal.Path.INVALID_PATH;
 import static com.swirlds.virtualmap.internal.Path.ROOT_PATH;
 import static java.util.Objects.requireNonNull;
 
-import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualMap;
-import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
-import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
+import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.Path;
 import com.swirlds.virtualmap.internal.merkle.VirtualInternalNode;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
@@ -38,12 +36,8 @@ import org.hiero.base.crypto.HashBuilder;
  * <p>There should be one {@link VirtualHasher} shared across all copies of a {@link VirtualMap}
  * "family".
  *
- * @param <K>
- * 		The {@link VirtualKey} type
- * @param <V>
- * 		The {@link VirtualValue} type
  */
-public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
+public final class VirtualHasher {
     /**
      * Use this for all logging, as controlled by the optional data/log4j2.xml file
      */
@@ -65,7 +59,7 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
      * A listener to notify about hashing events. This listener is stored in a class field to
      * avoid passing it as an arg to every hashing task.
      */
-    private VirtualHashListener<K, V> listener;
+    private VirtualHashListener listener;
 
     /**
      * An instance of {@link Cryptography} used to hash leaves.
@@ -221,7 +215,7 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
         private final long path;
 
         // Leaf data. May be null
-        private VirtualLeafRecord<K, V> leaf;
+        private VirtualLeafBytes<?> leaf;
 
         LeafHashTask(final ForkJoinPool pool, final long path) {
             super(pool, 2);
@@ -234,9 +228,9 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
             super.complete();
         }
 
-        void setLeaf(final VirtualLeafRecord<K, V> leaf) {
+        void setLeaf(final VirtualLeafBytes<?> leaf) {
             assert leaf != null;
-            assert path == leaf.getPath();
+            assert path == leaf.path();
             this.leaf = leaf;
             send();
         }
@@ -245,7 +239,7 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
         protected boolean onExecute() {
             Hash hash = null;
             if (leaf != null) {
-                hash = CRYPTOGRAPHY.digestSync(leaf);
+                hash = leaf.hash(HASH_BUILDER_THREAD_LOCAL.get());
                 listener.onLeafHashed(leaf);
                 listener.onNodeHashed(path, hash);
             }
@@ -340,17 +334,17 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
      */
     public Hash hash(
             final LongFunction<Hash> hashReader,
-            final Iterator<VirtualLeafRecord<K, V>> sortedDirtyLeaves,
+            final Iterator<VirtualLeafBytes> sortedDirtyLeaves,
             final long firstLeafPath,
             final long lastLeafPath,
-            VirtualHashListener<K, V> listener,
+            VirtualHashListener listener,
             final @NonNull VirtualMapConfig virtualMapConfig) {
         requireNonNull(virtualMapConfig);
 
         // We don't want to include null checks everywhere, so let the listener be NoopListener if null
         if (listener == null) {
             listener =
-                    new VirtualHashListener<>() {
+                    new VirtualHashListener() {
                         /* noop */
                     };
         }
@@ -425,8 +419,8 @@ public final class VirtualHasher<K extends VirtualKey, V extends VirtualValue> {
         // it completes all task dependencies, so the task is executed.
 
         while (sortedDirtyLeaves.hasNext()) {
-            VirtualLeafRecord<K, V> leaf = sortedDirtyLeaves.next();
-            long curPath = leaf.getPath();
+            VirtualLeafBytes<?> leaf = sortedDirtyLeaves.next();
+            long curPath = leaf.path();
             LeafHashTask leafTask = (LeafHashTask) allTasks.remove(curPath);
             if (leafTask == null) {
                 leafTask = new LeafHashTask(hashingPool, curPath);
