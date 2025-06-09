@@ -261,23 +261,6 @@ public class BlockBufferService {
     }
 
     /**
-     * Creates a new request from the current items in the block prior to BlockProof if there are any.
-     * @param blockNumber the block number
-     */
-    public void preBlockProofAction(final long blockNumber) {
-        if (!isStreamingEnabled.get()) {
-            return;
-        }
-
-        final BlockState blockState = getBlockState(blockNumber);
-        if (blockState == null) {
-            throw new IllegalStateException("Block state not found for block " + blockNumber);
-        }
-
-        blockState.updatePreProofState();
-    }
-
-    /**
      * Marks all blocks up to and including the specified block as being acknowledged by any Block Node.
      *
      * @param blockNumber the block number to mark acknowledged up to and including

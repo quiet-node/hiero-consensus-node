@@ -71,10 +71,4 @@ public class FileAndGrpcBlockItemWriter implements BlockItemWriter {
     public void writePbjItem(@NonNull BlockItem item) {
         throw new UnsupportedOperationException("writePbjItem is not supported in this implementation");
     }
-
-    @Override
-    public void preBlockProofAction() {
-        // The FileBlockItemWriter doesn't support preBlockProofAction, so we don't call it here
-        this.grpcBlockItemWriter.preBlockProofAction();
-    }
 }

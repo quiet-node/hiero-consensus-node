@@ -2,11 +2,14 @@
 package com.hedera.node.app.blocks.impl.streaming;
 
 import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.block.stream.output.StateChange;
+import com.hedera.hapi.block.stream.output.StateChanges;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -104,9 +107,14 @@ public class BlockState {
                     "[Block {}] Block proof item added, but block proof already encountered (state={})",
                     blockNumber,
                     proofItemInfo.state.get());
-        } else if (item.hasStateChanges() && preProofItemInfo.state.get() != ItemState.NIL) {
-            logger.warn(
-                    "[Block {}] Block state changes item added, but pre-proof action is already taken", blockNumber);
+        } else if (item.hasStateChanges()) {
+            if (isPreProofItemReceived(item.stateChanges())
+                    && !preProofItemInfo.state.compareAndSet(ItemState.NIL, ItemState.ADDED)) {
+                logger.warn(
+                        "[Block {}] Block state changes item added, but state changes already encountered (state={})",
+                        blockNumber,
+                        preProofItemInfo.state.get());
+            }
         }
 
         pendingItems.add(item);
@@ -195,11 +203,12 @@ public class BlockState {
             if (item.hasBlockHeader()) {
                 logger.trace("[Block {}] Block header packed in request #{}", blockNumber, index);
                 headerItemInfo.packedInRequest(index);
+            } else if (item.hasStateChanges()) {
+                if (isPreProofItemReceived(item.stateChanges())) {
+                    logger.trace("[Block {}] Block state changes packed in request #{}", blockNumber, index);
+                    preProofItemInfo.packedInRequest(index);
+                }
             } else if (item.hasBlockProof()) {
-                logger.trace("[Block {}] Pre-proof block state changes packed in request #{}", blockNumber, index);
-                preProofItemInfo.packedInRequest(
-                        index - 1); // pre-proof is packed in the previous request before the proof
-
                 logger.trace("[Block {}] Block proof packed in request #{}", blockNumber, index);
                 proofItemInfo.packedInRequest(index);
             }
@@ -248,11 +257,11 @@ public class BlockState {
         }
     }
 
-    /**
-     * Update the state of the pre-proof item to indicate that it has been added.
-     */
-    public void updatePreProofState() {
-        preProofItemInfo.state.compareAndSet(ItemState.NIL, ItemState.ADDED);
+    private boolean isPreProofItemReceived(final StateChanges stateChanges) {
+        return stateChanges.stateChanges().stream()
+                .map(StateChange::singletonUpdate)
+                .filter(Objects::nonNull)
+                .anyMatch(update -> update.hasBlockStreamInfoValue() && update.blockStreamInfoValue() != null);
     }
 
     @Override
