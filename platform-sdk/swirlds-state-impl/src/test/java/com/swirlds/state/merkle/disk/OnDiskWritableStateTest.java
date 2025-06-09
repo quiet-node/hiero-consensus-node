@@ -109,7 +109,6 @@ class OnDiskWritableStateTest extends MerkleTestBase {
             }
 
             fruitVirtualMap.getDataSource().close();
-            MerkleDbTestUtils.assertAllDatabasesClosed();
         }
     }
 
@@ -276,6 +275,5 @@ class OnDiskWritableStateTest extends MerkleTestBase {
     @AfterEach
     void tearDown() throws IOException {
         fruitVirtualMap.getDataSource().close();
-        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }

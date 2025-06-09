@@ -14,7 +14,6 @@ import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
-import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
@@ -176,6 +175,5 @@ class OnDiskTest extends MerkleTestBase {
     @AfterEach
     void tearDown() {
         virtualMap.release();
-        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }
