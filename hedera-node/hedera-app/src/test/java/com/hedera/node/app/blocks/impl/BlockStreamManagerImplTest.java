@@ -54,6 +54,8 @@ import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.metrics.api.Counter;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
@@ -154,6 +156,12 @@ class BlockStreamManagerImplTest {
     @Mock
     private ConsensusEvent mockEvent;
 
+    @Mock
+    private Metrics metrics;
+
+    @Mock
+    private Counter indirectProofsCounter;
+
     private final AtomicReference<Bytes> lastAItem = new AtomicReference<>();
     private final AtomicReference<Bytes> lastBItem = new AtomicReference<>();
     private final AtomicReference<PlatformState> stateRef = new AtomicReference<>();
@@ -166,6 +174,7 @@ class BlockStreamManagerImplTest {
     @BeforeEach
     void setUp() {
         writableStates = mock(WritableStates.class, withSettings().extraInterfaces(CommittableWritableStates.class));
+        lenient().when(metrics.getOrCreate(any(Counter.Config.class))).thenReturn(indirectProofsCounter);
     }
 
     @Test
@@ -227,7 +236,8 @@ class BlockStreamManagerImplTest {
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
-                lifecycle);
+                lifecycle,
+                metrics);
         assertSame(Instant.EPOCH, subject.lastIntervalProcessTime());
         subject.setLastIntervalProcessTime(CONSENSUS_NOW);
         assertEquals(CONSENSUS_NOW, subject.lastIntervalProcessTime());
@@ -250,7 +260,8 @@ class BlockStreamManagerImplTest {
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
-                lifecycle);
+                lifecycle,
+                metrics);
         assertThrows(IllegalStateException.class, () -> subject.startRound(round, state));
     }
 
@@ -659,6 +670,8 @@ class BlockStreamManagerImplTest {
         assertEquals(N_BLOCK_NO + 1, bProof.block());
         assertEquals(FIRST_FAKE_SIGNATURE, bProof.blockSignature());
         assertTrue(bProof.siblingHashes().isEmpty());
+
+        verify(indirectProofsCounter).increment();
     }
 
     @Test
@@ -934,7 +947,8 @@ class BlockStreamManagerImplTest {
                 hashInfo,
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
-                lifecycle);
+                lifecycle,
+                metrics);
         given(state.getReadableStates(BlockStreamService.NAME)).willReturn(readableStates);
         given(state.getReadableStates(PlatformStateService.NAME)).willReturn(readableStates);
         infoRef.set(blockStreamInfo);
