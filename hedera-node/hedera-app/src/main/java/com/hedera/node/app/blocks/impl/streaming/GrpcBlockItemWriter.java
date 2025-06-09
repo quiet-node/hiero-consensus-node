@@ -79,8 +79,8 @@ public class GrpcBlockItemWriter implements BlockItemWriter {
      * to create a streaming request for all accumulated items before the block proof is added.
      */
     @Override
-    public void writePreBlockProofItems() {
-        // no-op
+    public void preBlockProofAction() {
+        blockBufferService.preBlockProofAction(blockNumber);
     }
 
     /**

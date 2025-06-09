@@ -104,11 +104,9 @@ public class BlockState {
                     "[Block {}] Block proof item added, but block proof already encountered (state={})",
                     blockNumber,
                     proofItemInfo.state.get());
-        } else if (item.hasStateChanges() && !preProofItemInfo.state.compareAndSet(ItemState.NIL, ItemState.ADDED)) {
+        } else if (item.hasStateChanges() && preProofItemInfo.state.get() != ItemState.NIL) {
             logger.warn(
-                    "[Block {}] Block state changes item added, but state changes already encountered (state={})",
-                    blockNumber,
-                    preProofItemInfo.state.get());
+                    "[Block {}] Block state changes item added, but pre-proof action is already taken", blockNumber);
         }
 
         pendingItems.add(item);
@@ -197,10 +195,11 @@ public class BlockState {
             if (item.hasBlockHeader()) {
                 logger.trace("[Block {}] Block header packed in request #{}", blockNumber, index);
                 headerItemInfo.packedInRequest(index);
-            } else if (item.hasStateChanges()) {
-                logger.trace("[Block {}] Block state changes packed in request #{}", blockNumber, index);
-                preProofItemInfo.packedInRequest(index);
             } else if (item.hasBlockProof()) {
+                logger.trace("[Block {}] Block state changes packed in request #{}", blockNumber, index);
+                preProofItemInfo.packedInRequest(
+                        index - 1); // pre-proof is packed in the previous request before the proof
+
                 logger.trace("[Block {}] Block proof packed in request #{}", blockNumber, index);
                 proofItemInfo.packedInRequest(index);
             }
@@ -247,6 +246,13 @@ public class BlockState {
         if (requestIndex == proofItemInfo.requestIndex.get()) {
             proofItemInfo.state.set(ItemState.SENT);
         }
+    }
+
+    /**
+     * Update the state of the pre-proof item to indicate that it has been added.
+     */
+    public void updatePreProofState() {
+        preProofItemInfo.state.compareAndSet(ItemState.NIL, ItemState.ADDED);
     }
 
     @Override
