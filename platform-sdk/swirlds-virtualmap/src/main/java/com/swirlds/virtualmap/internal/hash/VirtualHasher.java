@@ -10,8 +10,6 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.Path;
-import com.swirlds.virtualmap.internal.merkle.VirtualInternalNode;
-import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,7 +23,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.concurrent.AbstractTask;
 import org.hiero.base.crypto.Cryptography;
-import org.hiero.base.crypto.CryptographyProvider;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.HashBuilder;
 
@@ -35,9 +32,9 @@ import org.hiero.base.crypto.HashBuilder;
  *
  * <p>There should be one {@link VirtualHasher} shared across all copies of a {@link VirtualMap}
  * "family".
- *
  */
 public final class VirtualHasher {
+
     /**
      * Use this for all logging, as controlled by the optional data/log4j2.xml file
      */
@@ -60,11 +57,6 @@ public final class VirtualHasher {
      * avoid passing it as an arg to every hashing task.
      */
     private VirtualHashListener listener;
-
-    /**
-     * An instance of {@link Cryptography} used to hash leaves.
-     */
-    private static final Cryptography CRYPTOGRAPHY = CryptographyProvider.getInstance();
 
     /**
      * Tracks if this virtual hasher has been shut down. If true (indicating that the hasher
@@ -177,7 +169,7 @@ public final class VirtualHasher {
                         if (right == null) {
                             right = hashReader.apply(rankPath + i * 2 + 1);
                         }
-                        ins[i] = hash(hashedPath, left, right);
+                        ins[i] = hash(left, right);
                         listener.onNodeHashed(hashedPath, ins[i]);
                     }
                 }
@@ -190,15 +182,9 @@ public final class VirtualHasher {
             return true;
         }
 
-        static Hash hash(final long path, final Hash left, final Hash right) {
-            final long classId = path == ROOT_PATH ? VirtualRootNode.CLASS_ID : VirtualInternalNode.CLASS_ID;
-            final int serId = path == ROOT_PATH
-                    ? VirtualRootNode.ClassVersion.CURRENT_VERSION
-                    : VirtualInternalNode.SERIALIZATION_VERSION;
+        static Hash hash(final Hash left, final Hash right) {
             final HashBuilder builder = HASH_BUILDER_THREAD_LOCAL.get();
             builder.reset();
-            builder.update(classId);
-            builder.update(serId);
             builder.update(left);
             builder.update(right);
             return builder.build();
@@ -332,6 +318,7 @@ public final class VirtualHasher {
      * @param virtualMapConfig platform configuration for VirtualMap
      * @return The hash of the root of the tree
      */
+    @SuppressWarnings("rawtypes")
     public Hash hash(
             final LongFunction<Hash> hashReader,
             final Iterator<VirtualLeafBytes> sortedDirtyLeaves,
@@ -564,6 +551,6 @@ public final class VirtualHasher {
     }
 
     public Hash emptyRootHash() {
-        return ChunkHashTask.hash(ROOT_PATH, Cryptography.NULL_HASH, Cryptography.NULL_HASH);
+        return ChunkHashTask.hash(Cryptography.NULL_HASH, Cryptography.NULL_HASH);
     }
 }

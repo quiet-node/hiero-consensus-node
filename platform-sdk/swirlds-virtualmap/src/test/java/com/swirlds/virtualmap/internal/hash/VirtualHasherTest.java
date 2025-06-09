@@ -39,6 +39,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 /**
  * Tests for the {@link VirtualHasher}.
  */
+@SuppressWarnings("rawtypes")
 class VirtualHasherTest extends VirtualHasherTestBase {
 
     /**
