@@ -54,9 +54,9 @@ public class MigrationStateChanges {
      * transactional units into {@link com.swirlds.state.spi.WritableKVState} instances.
      */
     public void trackCommit() {
-        final var maybeKvChanges = immediateStateChangeListener.getStateChanges();
-        if (!maybeKvChanges.isEmpty()) {
-            stateChanges.add(new ArrayList<>(maybeKvChanges));
+        final var maybeKvAndQueueChanges = immediateStateChangeListener.getStateChanges();
+        if (!maybeKvAndQueueChanges.isEmpty()) {
+            stateChanges.add(new ArrayList<>(maybeKvAndQueueChanges));
             immediateStateChangeListener.reset();
         }
     }

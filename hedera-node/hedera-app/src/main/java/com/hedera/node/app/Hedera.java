@@ -1092,7 +1092,7 @@ public final class Hedera implements SwirldMain<HederaNewStateRoot>, PlatformSta
         return streamMode != RECORDS;
     }
 
-    public ImmediateStateChangeListener kvStateChangeListener() {
+    public ImmediateStateChangeListener immediateStateChangeListener() {
         return immediateStateChangeListener;
     }
 
@@ -1195,7 +1195,7 @@ public final class Hedera implements SwirldMain<HederaNewStateRoot>, PlatformSta
                 .instantSource(appContext.instantSource())
                 .throttleFactory(appContext.throttleFactory())
                 .metrics(metrics)
-                .kvStateChangeListener(immediateStateChangeListener)
+                .immediateStateChangeListener(immediateStateChangeListener)
                 .boundaryStateChangeListener(boundaryStateChangeListener)
                 .migrationStateChanges(migrationStateChanges != null ? migrationStateChanges : new ArrayList<>())
                 .initialStateHash(initialStateHash)
