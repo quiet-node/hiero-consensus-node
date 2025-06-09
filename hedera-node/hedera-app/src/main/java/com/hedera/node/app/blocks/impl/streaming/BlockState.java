@@ -196,7 +196,7 @@ public class BlockState {
                 logger.trace("[Block {}] Block header packed in request #{}", blockNumber, index);
                 headerItemInfo.packedInRequest(index);
             } else if (item.hasBlockProof()) {
-                logger.trace("[Block {}] Block state changes packed in request #{}", blockNumber, index);
+                logger.trace("[Block {}] Pre-proof block state changes packed in request #{}", blockNumber, index);
                 preProofItemInfo.packedInRequest(
                         index - 1); // pre-proof is packed in the previous request before the proof
 

@@ -139,6 +139,7 @@ class BlockStateTest {
         final BlockItem item = newBlockStateChangesItem();
 
         block.addItem(item);
+        block.updatePreProofState();
 
         assertThat(headerInfo.state()).hasValue(ItemState.NIL);
         assertThat(preProofInfo.state()).hasValue(ItemState.ADDED);
@@ -306,14 +307,16 @@ class BlockStateTest {
 
         block.addItem(newBlockTxItem());
         block.addItem(newBlockStateChangesItem());
+        block.addItem(newBlockProofItem());
 
+        block.updatePreProofState();
         block.processPendingItems(10);
 
         assertThat(pendingItems).isEmpty();
         assertThat(block.numRequestsCreated()).isEqualTo(1);
         final PublishStreamRequest request1 = block.getRequest(0);
         assertThat(request1).isNotNull();
-        assertThat(request1.blockItems().blockItems()).hasSize(2);
+        assertThat(request1.blockItems().blockItems()).hasSize(3);
         assertThat(preProofInfo.state()).hasValue(ItemState.PACKED);
     }
 
@@ -356,6 +359,8 @@ class BlockStateTest {
         block.addItem(newBlockTxItem());
         block.addItem(newBlockStateChangesItem());
         block.addItem(newBlockProofItem());
+
+        block.updatePreProofState();
 
         assertThat(pendingItems).hasSize(9);
         assertThat(headerInfo.state()).hasValue(ItemState.ADDED);
