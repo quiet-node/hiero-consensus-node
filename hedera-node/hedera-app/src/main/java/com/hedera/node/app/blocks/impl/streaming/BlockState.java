@@ -170,7 +170,8 @@ public class BlockState {
                     "[Block {}] Block proof item added, but block proof already encountered (state={})",
                     blockNumber,
                     proofItemInfo.state.get());
-        } else if (item.hasStateChanges() && isPreProofItemReceived(item.stateChangesOrElse(StateChanges.DEFAULT))
+        } else if (item.hasStateChanges()
+                && isPreProofItemReceived(item.stateChangesOrElse(StateChanges.DEFAULT))
                 && !preProofItemInfo.state.compareAndSet(ItemState.NIL, ItemState.ADDED)) {
             logger.warn(
                     "[Block {}] Block state changes item added, but state changes already encountered (state={})",
@@ -211,10 +212,13 @@ public class BlockState {
         if (closedTimestamp.compareAndSet(null, now)) {
             logger.debug("[Block {}] closed at {}", blockNumber, now);
         } else {
-            logger.warn("[Block {}] Attempted to close block at {}, but this block was already closed at {}. "
-                            + "Ignoring new close attempt.", blockNumber, now, closedTimestamp.get());
+            logger.warn(
+                    "[Block {}] Attempted to close block at {}, but this block was already closed at {}. "
+                            + "Ignoring new close attempt.",
+                    blockNumber,
+                    now,
+                    closedTimestamp.get());
         }
-
     }
 
     /**
@@ -270,7 +274,8 @@ public class BlockState {
             if (item.hasBlockHeader()) {
                 logger.trace("[Block {}] Block header packed in request #{}", blockNumber, index);
                 headerItemInfo.packedInRequest(index);
-            } else if (item.hasStateChanges() && isPreProofItemReceived(item.stateChangesOrElse(StateChanges.DEFAULT))) {
+            } else if (item.hasStateChanges()
+                    && isPreProofItemReceived(item.stateChangesOrElse(StateChanges.DEFAULT))) {
                 logger.trace("[Block {}] Block state changes packed in request #{}", blockNumber, index);
                 preProofItemInfo.packedInRequest(index);
             } else if (item.hasBlockProof()) {
