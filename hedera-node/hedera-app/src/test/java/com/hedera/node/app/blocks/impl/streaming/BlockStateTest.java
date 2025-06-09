@@ -188,6 +188,17 @@ class BlockStateTest {
     }
 
     @Test
+    void testCloseBlock_alreadyClosed() throws InterruptedException {
+        block.closeBlock();
+
+        Thread.sleep(3_000);
+        final Instant aLilBeforeNow = Instant.now().minusSeconds(2);
+
+        block.closeBlock();
+        assertThat(block.closedTimestamp()).isNotNull().isBefore(aLilBeforeNow);
+    }
+
+    @Test
     void testProcessPendingItems_nonePending() {
         final Map<Integer, RequestWrapper> requestsByIndex = requestsByIndex();
         final Queue<BlockItem> pendingItems = pendingItems();
