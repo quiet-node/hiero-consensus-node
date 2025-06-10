@@ -42,7 +42,6 @@ public class UnsignedEvent implements Hashable {
     /**
      * Create a UnsignedEvent object
      *
-     * @param softwareVersion the software version of the node that created this event.
      * @param creatorId       ID of this event's creator
      * @param selfParent      self parent event descriptor
      * @param otherParents    other parent event descriptors
