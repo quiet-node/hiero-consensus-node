@@ -3,7 +3,6 @@ package org.hiero.consensus.model.test.fixtures.event;
 
 import static org.hiero.consensus.model.event.EventConstants.MINIMUM_ROUND_CREATED;
 
-import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.EventConsensusData;
 import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
@@ -506,12 +505,7 @@ public class TestingEventBuilder {
         }
 
         final UnsignedEvent unsignedEvent = new UnsignedEvent(
-                creatorId,
-                selfParentDescriptor,
-                otherParentDescriptors,
-                birthRound,
-                timeCreated,
-                transactionBytes);
+                creatorId, selfParentDescriptor, otherParentDescriptors, birthRound, timeCreated, transactionBytes);
 
         final byte[] signature = new byte[SignatureType.RSA.signatureLength()];
         random.nextBytes(signature);

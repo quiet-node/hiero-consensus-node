@@ -4,7 +4,6 @@ package org.hiero.consensus.event.creator.impl.tipset;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static org.hiero.consensus.event.creator.impl.tipset.TipsetAdvancementWeight.ZERO_ADVANCEMENT_WEIGHT;
 
-import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
