@@ -34,6 +34,8 @@ public class BlockNodeNetwork {
     private final Map<Long, BlockNodeMode> blockNodeModeById = new HashMap<>();
     private final Map<Long, SimulatedBlockNodeServer> simulatedBlockNodeById = new HashMap<>();
     private final Map<Long, BlockNodeContainer> blockNodeContainerById = new HashMap<>();
+    // Add map to track shutdown container ports
+    private final Map<Long, Integer> shutdownContainerPorts = new HashMap<>();
 
     // SubProcessNode configuration for Block Nodes (just priorities for now)
     private final Map<Long, long[]> blockNodePrioritiesBySubProcessNodeId = new HashMap<>();
@@ -233,6 +235,10 @@ public class BlockNodeNetwork {
 
     public Map<Long, BlockNodeContainer> getBlockNodeContainerById() {
         return blockNodeContainerById;
+    }
+
+    public Map<Long, Integer> getShutdownContainerPorts() {
+        return shutdownContainerPorts;
     }
 
     public Map<Long, long[]> getBlockNodePrioritiesBySubProcessNodeId() {

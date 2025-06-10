@@ -31,23 +31,43 @@ public class BlockNodeContainerOp extends UtilOp {
     protected boolean submitOp(HapiSpec spec) throws Throwable {
         final var blockNodeContainerMap =
                 HapiSpec.TARGET_BLOCK_NODE_NETWORK.get().getBlockNodeContainerById();
-        final BlockNodeContainer blockNodeContainer = blockNodeContainerMap.get(nodeIndex);
+        final var shutdownContainerPorts =
+                HapiSpec.TARGET_BLOCK_NODE_NETWORK.get().getShutdownContainerPorts();
 
         switch (action) {
             case START_CONTAINER:
-                blockNodeContainer.start();
-                // Wait for container to be fully ready and network to stabilize
-                Thread.sleep(5000);
-                log.info("Started container {} and waited for readiness", nodeIndex);
-                blockNodeContainerMap.put(nodeIndex, blockNodeContainer);
+                if (!shutdownContainerPorts.containsKey(nodeIndex)) {
+                    log.error("Cannot start simulator {} because it has not been shut down", nodeIndex);
+                    return false;
+                }
+
+                try {
+                    final int port = shutdownContainerPorts.get(nodeIndex);
+                    final BlockNodeContainer blockNodeContainer = new BlockNodeContainer(nodeIndex, port);
+
+                    blockNodeContainer.start();
+
+                    // Wait for container to be fully ready and network to stabilize
+                    Thread.sleep(5000);
+                    log.info("Started container {} and waited for readiness", nodeIndex);
+                    blockNodeContainerMap.put(nodeIndex, blockNodeContainer);
+                    shutdownContainerPorts.remove(nodeIndex);
+                } catch (final Exception e) {
+                    log.error("Failed to start container {}", nodeIndex, e);
+                    return false;
+                }
                 break;
             case SHUTDOWN_CONTAINER:
                 log.info("Shutting down container {}", nodeIndex);
-                blockNodeContainer.stop();
+                final BlockNodeContainer shutdownContainer = blockNodeContainerMap.get(nodeIndex);
+
+                shutdownContainer.stop();
+                shutdownContainerPorts.put(nodeIndex, shutdownContainer.getGrpcPort());
+
                 // Wait for container to fully stop and network to recognize it
                 Thread.sleep(3000);
                 log.info("Container {} shutdown complete", nodeIndex);
-                blockNodeContainerMap.remove(nodeIndex, blockNodeContainer);
+                blockNodeContainerMap.remove(nodeIndex, shutdownContainer);
                 break;
             default:
                 throw new IllegalStateException("Unknown action: " + action);
