@@ -4,6 +4,7 @@ package com.hedera.node.app.blocks.impl.streaming;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.StateChange;
 import com.hedera.hapi.block.stream.output.StateChanges;
+import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
@@ -364,15 +365,13 @@ public class BlockState {
      * @return true if this state changes include the block stream info value, else false
      */
     private boolean isPreProofItemReceived(@NonNull final StateChanges stateChanges) {
-        final var updates = stateChanges.stateChanges().stream()
+        return stateChanges.stateChanges().stream()
                 .map(StateChange::singletonUpdate)
                 .filter(Objects::nonNull)
-                .toList();
-
-        // We want to check if the block stream info value is the only singleton update state change
-        // because in genesis block, we will have one more occurrence of the block stream info value
-        // at the very beginning of the block.
-        return updates.size() == 1 && updates.getFirst().hasBlockStreamInfoValue();
+                .anyMatch(update -> update.hasBlockStreamInfoValue()
+                        && update.blockStreamInfoValueOrElse(BlockStreamInfo.DEFAULT)
+                                        .blockNumber()
+                                != -1);
     }
 
     @Override
