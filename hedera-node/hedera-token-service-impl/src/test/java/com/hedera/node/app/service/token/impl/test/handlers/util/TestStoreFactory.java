@@ -4,7 +4,7 @@ package com.hedera.node.app.service.token.impl.test.handlers.util;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ACCOUNTS_KEY;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ALIASES_KEY;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TOKENS_KEY;
-import static com.hedera.node.app.service.token.impl.test.handlers.util.StateBuilderUtil.AIRDROPS;
+import static com.hedera.node.app.service.token.impl.schemas.V0530TokenSchema.AIRDROPS_KEY;
 import static org.mockito.Mockito.mock;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -33,8 +33,6 @@ import com.hedera.node.app.service.token.impl.WritableTokenRelationStore;
 import com.hedera.node.app.service.token.impl.WritableTokenStore;
 import com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema;
 import com.hedera.node.app.spi.ids.WritableEntityCounters;
-import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
-import com.swirlds.config.api.Configuration;
 import com.swirlds.state.test.fixtures.MapReadableStates;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
@@ -47,8 +45,6 @@ import java.util.Map;
 public final class TestStoreFactory {
 
     private static final WritableEntityCounters entityCounters = mock(WritableEntityCounters.class);
-
-    private static final Configuration CONFIGURATION = HederaTestConfigBuilder.createConfig();
 
     private TestStoreFactory() {
         throw new UnsupportedOperationException("Utility Class");
@@ -189,7 +185,7 @@ public final class TestStoreFactory {
 
     public static WritableAirdropStore newWritableStoreWithAirdrops(PendingAirdropId... airdrops) {
         return new WritableAirdropStore(
-                new MapWritableStates(Map.of(AIRDROPS, newAirdropStateFromAirdrops(airdrops))), entityCounters);
+                new MapWritableStates(Map.of(AIRDROPS_KEY, newAirdropStateFromAirdrops(airdrops))), entityCounters);
     }
 
     private static MapWritableKVState<PendingAirdropId, AccountPendingAirdrop> newAirdropStateFromAirdrops(
@@ -199,6 +195,6 @@ public final class TestStoreFactory {
             backingMap.put(airdrop, AccountPendingAirdrop.newBuilder().build());
         }
 
-        return new MapWritableKVState<>(TokenService.NAME, AIRDROPS, backingMap);
+        return new MapWritableKVState<>(TokenService.NAME, AIRDROPS_KEY, backingMap);
     }
 }
