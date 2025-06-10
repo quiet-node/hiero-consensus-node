@@ -89,7 +89,7 @@ class CompactionInterruptTest {
      * Both are acceptable.
      */
     @ParameterizedTest
-    @ValueSource(ints = {0, 50})
+    @ValueSource(ints = {1, 50})
     void startMergeWhileSnapshottingThenInterrupt(int delayMs) throws Exception {
         runTaskAndCleanThreadLocals(() -> startMergeWhileSnapshottingThenInterruptImpl(delayMs));
     }
@@ -146,31 +146,31 @@ class CompactionInterruptTest {
         return true;
     }
 
-    private static void stopCompactionAndVerifyItsStopped(String tableName, MerkleDbCompactionCoordinator compactor) {
+    private static void stopCompactionAndVerifyItsStopped(String tableName, MerkleDbCompactionCoordinator coordinator) {
         ThreadPoolExecutor compactingExecutor = (ThreadPoolExecutor)
                 MerkleDbCompactionCoordinator.getCompactionExecutor(CONFIGURATION.getConfigData(MerkleDbConfig.class));
         long initCount = compactingExecutor.getCompletedTaskCount();
 
-        // getting access to the guts of the compactor to check the state of the futures
-        final DataFileCompactor hashStoreDiskFuture;
-        final DataFileCompactor pathToKeyValueFuture;
-        final DataFileCompactor objectKeyToPathFuture;
-        synchronized (compactor) {
-            hashStoreDiskFuture = compactor.compactorsByName.get("hashStoreDisk");
-            pathToKeyValueFuture = compactor.compactorsByName.get("pathToKeyValue");
-            objectKeyToPathFuture = compactor.compactorsByName.get("keyToPath");
+        // getting access to the guts of the coordinator to check the state of the compactors
+        final DataFileCompactor hashStoreDiskCompactor;
+        final DataFileCompactor pathToKeyValueCompactor;
+        final DataFileCompactor objectKeyToPathCompactor;
+        synchronized (coordinator) {
+            hashStoreDiskCompactor = coordinator.compactorsByName.get("hashStoreDisk");
+            pathToKeyValueCompactor = coordinator.compactorsByName.get("pathToKeyValue");
+            objectKeyToPathCompactor = coordinator.compactorsByName.get("keyToPath");
         }
 
         // stopping the compaction
-        compactor.stopAndDisableBackgroundCompaction();
+        coordinator.stopAndDisableBackgroundCompaction();
 
-        assertFalse(compactor.isCompactionEnabled(), "compactionEnabled should be false");
+        assertFalse(coordinator.isCompactionEnabled(), "compactionEnabled should be false");
 
-        assertFalse(hashStoreDiskFuture.notInterrupted(), "hashStoreDiskFuture should be interrupted");
-        assertFalse(pathToKeyValueFuture.notInterrupted(), "pathToKeyValueFuture should be interrupted");
-        assertFalse(objectKeyToPathFuture.notInterrupted(), "objectKeyToPathFuture should be interrupted");
-        synchronized (compactor) {
-            assertTrue(compactor.compactorsByName.isEmpty(), "compactorsByName should be empty");
+        assertFalse(hashStoreDiskCompactor.notInterrupted(), "hashStoreDiskCompactor should be interrupted");
+        assertFalse(pathToKeyValueCompactor.notInterrupted(), "pathToKeyValueCompactor should be interrupted");
+        assertFalse(objectKeyToPathCompactor.notInterrupted(), "objectKeyToPathCompactor should be interrupted");
+        synchronized (coordinator) {
+            assertTrue(coordinator.compactorsByName.isEmpty(), "compactorsByName should be empty");
         }
         assertEventuallyEquals(
                 0, () -> compactingExecutor.getQueue().size(), Duration.ofMillis(100), "The queue should be empty");
