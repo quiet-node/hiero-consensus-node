@@ -662,7 +662,7 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
 
     private void givenReadableStakingInfoStore() {
         readableStakingInfoState = MapReadableKVState.<EntityNumber, StakingNodeInfo>builder(
-                        TokenService.NAME, "STAKING_INFOS")
+                        TokenService.NAME, STAKING_INFO_KEY)
                 .value(node0Id, node0Info)
                 .value(node1Id, node1Info)
                 .build();
@@ -673,7 +673,7 @@ public class CryptoTokenHandlerTestBase extends StateBuilderUtil {
 
     private void givenWritableStakingInfoStore() {
         writableStakingInfoState = MapWritableKVState.<EntityNumber, StakingNodeInfo>builder(
-                        TokenService.NAME, "STAKING_INFOS")
+                        TokenService.NAME, STAKING_INFO_KEY)
                 .value(node0Id, node0Info)
                 .value(node1Id, node1Info)
                 .build();

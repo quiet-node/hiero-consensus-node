@@ -4,6 +4,7 @@ package com.hedera.node.app.service.token.impl.test.handlers.util;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ACCOUNTS_KEY;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ALIASES_KEY;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TOKENS_KEY;
+import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TOKEN_RELS_KEY;
 import static com.hedera.node.app.service.token.impl.schemas.V0530TokenSchema.AIRDROPS_KEY;
 import static org.mockito.Mockito.mock;
 
@@ -114,7 +115,7 @@ public final class TestStoreFactory {
     public static ReadableTokenRelationStore newReadableStoreWithTokenRels(final TokenRelation... tokenRels) {
         final var wrappedState = newTokenRelStateFromTokenRels(tokenRels);
         return new ReadableTokenRelationStoreImpl(
-                new MapReadableStates(Map.of(V0490TokenSchema.TOKEN_RELS_KEY, wrappedState)), entityCounters);
+                new MapReadableStates(Map.of(TOKEN_RELS_KEY, wrappedState)), entityCounters);
     }
 
     private static MapWritableKVState<EntityIDPair, TokenRelation> newTokenRelStateFromTokenRels(
@@ -140,7 +141,7 @@ public final class TestStoreFactory {
     public static WritableTokenRelationStore newWritableStoreWithTokenRels(final TokenRelation... tokenRels) {
         final var wrappingState = newTokenRelStateFromTokenRels(tokenRels);
         return new WritableTokenRelationStore(
-                new MapWritableStates(Map.of(V0490TokenSchema.TOKEN_RELS_KEY, wrappingState)), entityCounters);
+                new MapWritableStates(Map.of(TOKEN_RELS_KEY, wrappingState)), entityCounters);
     }
 
     /**
