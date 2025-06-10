@@ -278,6 +278,7 @@ public class BlockState {
         final int index = requestIdxCtr.getAndIncrement();
         final Iterator<BlockItem> it = pendingItems.iterator();
 
+        boolean forceCreation = false;
         while (it.hasNext()) {
             final BlockItem item = it.next();
             blockItems.add(item);
@@ -285,6 +286,7 @@ public class BlockState {
 
             if (item.hasBlockHeader()) {
                 if (headerItemInfo.packedInRequest(index)) {
+                    forceCreation = true;
                     logger.trace("[Block {}] Block header packed in request #{}", blockNumber, index);
                 } else {
                     logger.warn(
@@ -295,6 +297,7 @@ public class BlockState {
             } else if (item.hasStateChanges()
                     && isPreProofItemReceived(item.stateChangesOrElse(StateChanges.DEFAULT))) {
                 if (preProofItemInfo.packedInRequest(index)) {
+                    forceCreation = true;
                     logger.trace("[Block {}] Pre-proof block state change packed in request #{}", blockNumber, index);
                 } else {
                     logger.warn(
@@ -304,6 +307,7 @@ public class BlockState {
                 }
             } else if (item.hasBlockProof()) {
                 if (proofItemInfo.packedInRequest(index)) {
+                    forceCreation = true;
                     logger.trace("[Block {}] Block proof packed in request #{}", blockNumber, index);
                 } else {
                     logger.warn(
@@ -313,7 +317,7 @@ public class BlockState {
                 }
             }
 
-            if (!it.hasNext() || blockItems.size() == maxItems) {
+            if (!it.hasNext() || blockItems.size() == maxItems || forceCreation) {
                 break;
             }
         }
@@ -325,7 +329,12 @@ public class BlockState {
         final RequestWrapper rs = new RequestWrapper(index, psr, new AtomicBoolean(false));
         requestsByIndex.put(index, rs);
 
-        logger.debug("[Block {}] Created new request (index={}, numItems={})", blockNumber, index, blockItems.size());
+        logger.debug(
+                "[Block {}] Created new request (index={}, numItems={}) with {}",
+                blockNumber,
+                index,
+                blockItems.size(),
+                blockItems);
 
         if (!pendingItems.isEmpty()) {
             processPendingItems(batchSize);
