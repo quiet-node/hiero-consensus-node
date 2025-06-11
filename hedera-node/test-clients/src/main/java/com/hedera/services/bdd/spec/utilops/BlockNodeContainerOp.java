@@ -62,7 +62,7 @@ public class BlockNodeContainerOp extends UtilOp {
                 final BlockNodeContainer shutdownContainer = blockNodeContainerMap.get(nodeIndex);
 
                 shutdownContainer.stop();
-                shutdownContainerPorts.put(nodeIndex, shutdownContainer.getGrpcPort());
+                shutdownContainerPorts.put(nodeIndex, shutdownContainer.getPort());
 
                 // Wait for container to fully stop and network to recognize it
                 Thread.sleep(3000);

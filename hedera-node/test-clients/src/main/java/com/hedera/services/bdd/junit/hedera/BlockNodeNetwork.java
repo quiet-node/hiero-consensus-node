@@ -166,7 +166,7 @@ public class BlockNodeNetwork {
             if (mode == BlockNodeMode.REAL) {
                 final BlockNodeContainer blockNode = blockNodeContainerById.get(blockNodeId);
                 int priority = (int) blockNodePrioritiesBySubProcessNodeId.get(node.getNodeId())[blockNodeIndex];
-                blockNodes.add(new BlockNodeConfig(blockNode.getHost(), blockNode.getGrpcPort(), priority));
+                blockNodes.add(new BlockNodeConfig(blockNode.getHost(), blockNode.getPort(), priority));
             } else if (mode == BlockNodeMode.SIMULATOR) {
                 SimulatedBlockNodeServer sim = simulatedBlockNodeById.get(blockNodeId);
                 int priority = (int) blockNodePrioritiesBySubProcessNodeId.get(node.getNodeId())[blockNodeIndex];

@@ -15,7 +15,7 @@
     </RollingFile>
 
     <RollingFile name="RollingFile" fileName="output/hgcaa.log"
-      filePattern="output/hgcaa-%i.log">
+                 filePattern="output/hgcaa-%i.log">
       <PatternLayout>
         <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %-4L %c{1} - %m{nolookups}%n</pattern>
       </PatternLayout>
@@ -26,7 +26,7 @@
     </RollingFile>
 
     <RollingFile name="QueriesRollingFile" fileName="output/queries.log"
-      filePattern="output/queries-%i.log">
+                 filePattern="output/queries-%i.log">
       <BurstFilter level="INFO" rate="50" maxBurst="500"/>
       <PatternLayout>
         <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p %-4L %c{1} - %m{nolookups}%n</pattern>
@@ -38,7 +38,7 @@
     </RollingFile>
 
     <RollingFile name="fileLog" fileName="output/swirlds.log"
-      filePattern="output/swirlds-sdk-%i.log">
+                 filePattern="output/swirlds-sdk-%i.log">
       <PatternLayout>
         <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-8sn %-5p %-16marker &lt;%t&gt; %c{1}: %msg{nolookups}%n</pattern>
       </PatternLayout>
@@ -49,7 +49,7 @@
     </RollingFile>
 
     <RollingFile name="vMapLog" fileName="output/swirlds-vmap.log"
-      filePattern="output/swirlds-vmap-%i.log">
+                 filePattern="output/swirlds-vmap-%i.log">
       <PatternLayout>
         <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-8sn %-5p %-16marker &lt;%t&gt; %c{1}: %msg{nolookups}%n</pattern>
       </PatternLayout>
@@ -61,7 +61,7 @@
 
     <!-- Platform hash stream logs -->
     <RollingFile name="swirldsHashStream" fileName="output/swirlds-hashstream/swirlds-hashstream.log"
-      filePattern="output/swirlds-hashstream/swirlds-hashstream-%i.log">
+                 filePattern="output/swirlds-hashstream/swirlds-hashstream-%i.log">
       <PatternLayout>
         <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-8sn %-5p %-16marker &lt;%t&gt; %c{1}: %msg{nolookups}%n</pattern>
       </PatternLayout>
@@ -234,7 +234,7 @@
       <AppenderRef ref="Console"/>
       <AppenderRef ref="RollingFile"/>
     </Logger>
-    <Logger name="com.hedera.node.app.blocks.impl.streaming" level="INFO" additivity="false">
+    <Logger name="com.hedera.node.app.blocks.impl.streaming" level="DEBUG" additivity="false">
       <AppenderRef ref="Console"/>
       <AppenderRef ref="RollingFile"/>
     </Logger>

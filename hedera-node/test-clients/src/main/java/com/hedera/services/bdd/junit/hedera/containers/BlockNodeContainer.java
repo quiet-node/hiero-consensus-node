@@ -35,23 +35,6 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
                 .withEnv("VERSION", blockNodeVersion)
                 .waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)))
                 .waitingFor(Wait.forHealthcheck());
-
-        /*// Configure a proper health check command
-                .withHealthcheck(Test.defaultHealthcheck()
-                    .withCommand("grpc-health-probe -addr=:"+port)
-                    .withStartPeriod(Duration.ofSeconds(10))
-                    .withInterval(Duration.ofSeconds(5))
-                    .withTimeout(Duration.ofSeconds(3))
-                    .withRetries(10))
-                // Use a combined wait strategy
-                .waitingFor(Wait.forHealthcheck()
-                    .withStartupTimeout(Duration.ofMinutes(2)));
-
-        // Add grpc-health-probe tool to the container for health checks
-        this.withCommand("sh", "-c",
-            "wget -qO/bin/grpc-health-probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.19/grpc_health_probe-linux-amd64 && " +
-            "chmod +x /bin/grpc-health-probe && " +
-            "exec java -jar /app/block-node.jar");*/
     }
 
     @Override
@@ -80,7 +63,7 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
      *
      * @return the host port mapped to the container's internal port
      */
-    public int getGrpcPort() {
+    public int getPort() {
         return getMappedPort(port);
     }
 
@@ -95,6 +78,6 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
 
     @Override
     public String toString() {
-        return this.getHost() + ":" + this.getGrpcPort();
+        return this.getHost() + ":" + this.getPort();
     }
 }
