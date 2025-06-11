@@ -329,12 +329,7 @@ public class BlockState {
         final RequestWrapper rs = new RequestWrapper(index, psr, new AtomicBoolean(false));
         requestsByIndex.put(index, rs);
 
-        logger.debug(
-                "[Block {}] Created new request (index={}, numItems={}) with {}",
-                blockNumber,
-                index,
-                blockItems.size(),
-                blockItems);
+        logger.debug("[Block {}] Created new request (index={}, numItems={})", blockNumber, index, blockItems.size());
 
         if (!pendingItems.isEmpty()) {
             processPendingItems(batchSize);
