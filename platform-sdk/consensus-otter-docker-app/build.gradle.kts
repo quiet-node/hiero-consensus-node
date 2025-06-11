@@ -49,7 +49,7 @@ tasks.named<Jar>("testFixturesJar") {
 
     manifest {
         attributes(
-            "Main-Class" to "org.hiero.consensus.otter.docker.app.DockerApp",
+            "Main-Class" to "org.hiero.consensus.otter.docker.app.DockerInit",
             "Class-Path" to testFixturesClassPath,
         )
     }

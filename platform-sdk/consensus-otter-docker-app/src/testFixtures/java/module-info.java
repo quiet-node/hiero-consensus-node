@@ -10,4 +10,7 @@ module org.hiero.consensus.otter.docker.app {
     requires com.swirlds.logging;
     requires org.apache.logging.log4j;
     requires static transitive com.github.spotbugs.annotations;
+    requires com.swirlds.merkledb;
+    requires com.swirlds.config.extensions;
+    requires com.swirlds.platform.core.test.fixtures;
 }
