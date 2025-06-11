@@ -376,16 +376,14 @@ class BlockStateTest {
         block.processPendingItems(4);
 
         assertThat(pendingItems).isEmpty();
-        assertThat(block.numRequestsCreated()).isEqualTo(4);
+        assertThat(block.numRequestsCreated()).isEqualTo(3);
 
         final PublishStreamRequest request1 = block.getRequest(0);
-        assertThat(request1.blockItems().blockItems()).hasSize(1);
+        assertThat(request1.blockItems().blockItems()).hasSize(4);
         final PublishStreamRequest request2 = block.getRequest(1);
         assertThat(request2.blockItems().blockItems()).hasSize(4);
         final PublishStreamRequest request3 = block.getRequest(2);
-        assertThat(request3.blockItems().blockItems()).hasSize(3);
-        final PublishStreamRequest request4 = block.getRequest(3);
-        assertThat(request4.blockItems().blockItems()).hasSize(1);
+        assertThat(request3.blockItems().blockItems()).hasSize(1);
     }
 
     @Test

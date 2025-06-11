@@ -286,7 +286,6 @@ public class BlockState {
 
             if (item.hasBlockHeader()) {
                 if (headerItemInfo.packedInRequest(index)) {
-                    forceCreation = true;
                     logger.trace("[Block {}] Block header packed in request #{}", blockNumber, index);
                 } else {
                     logger.warn(
