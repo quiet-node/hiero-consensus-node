@@ -12,9 +12,10 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.hedera.node.config.data.HederaConfig;
 import com.swirlds.common.config.StateCommonConfig;
+import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
+import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -83,13 +84,18 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
         final var virtualMapConfig = mock(VirtualMapConfig.class);
         lenient().when(config.getConfigData(VirtualMapConfig.class)).thenReturn(virtualMapConfig);
         lenient().when(virtualMapConfig.maximumVirtualMapSize()).thenReturn(Long.valueOf(Integer.MAX_VALUE));
+        final var fileSystemManagerConfig = mock(FileSystemManagerConfig.class);
+        lenient().when(fileSystemManagerConfig.rootPath()).thenReturn("data");
+        lenient().when(fileSystemManagerConfig.tmpDir()).thenReturn("tmp");
+        lenient().when(fileSystemManagerConfig.userDataDir()).thenReturn("saved");
+        lenient().when(config.getConfigData(FileSystemManagerConfig.class)).thenReturn(fileSystemManagerConfig);
         final var temporaryFileDbConfig = mock(TemporaryFileConfig.class);
         lenient().when(config.getConfigData(TemporaryFileConfig.class)).thenReturn(temporaryFileDbConfig);
         final var stateCommonConfig = mock(StateCommonConfig.class);
         lenient().when(config.getConfigData(StateCommonConfig.class)).thenReturn(stateCommonConfig);
-        lenient()
-                .when(temporaryFileDbConfig.getTemporaryFilePath(stateCommonConfig))
-                .thenReturn("test");
+        //        lenient()
+        //                .when(temporaryFileDbConfig.getTemporaryFilePath(stateCommonConfig))
+        //                .thenReturn("test");
     }
 
     @Nested
@@ -189,6 +195,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     latestVersion,
                     config,
                     config,
+                    mock(FileSystemManager.class),
                     mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
@@ -233,6 +240,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[1],
                             config,
                             config,
+                            mock(FileSystemManager.class),
                             mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
@@ -251,6 +259,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             null,
                             config,
                             config,
+                            mock(FileSystemManager.class),
                             mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
@@ -269,6 +278,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[1],
                             null,
                             null,
+                            mock(FileSystemManager.class),
                             mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
@@ -287,6 +297,26 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[1],
                             null,
                             config,
+                            mock(FileSystemManager.class),
+                            mock(Metrics.class),
+                            new HashMap<>(),
+                            migrationStateChanges,
+                            startupNetworks,
+                            TEST_PLATFORM_STATE_FACADE))
+                    .isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        @DisplayName("Calling migrate with a null fileSystemManager throws NPE")
+        void nullFileSystemManagerThrows() {
+            //noinspection ConstantConditions
+            assertThatThrownBy(() -> schemaRegistry.migrate(
+                            merkleTree,
+                            versions[0],
+                            versions[1],
+                            config,
+                            config,
+                            null,
                             mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
@@ -305,6 +335,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[1],
                             config,
                             config,
+                            mock(FileSystemManager.class),
                             null,
                             new HashMap<>(),
                             migrationStateChanges,
@@ -323,6 +354,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                             versions[4],
                             config,
                             config,
+                            mock(FileSystemManager.class),
                             mock(Metrics.class),
                             new HashMap<>(),
                             migrationStateChanges,
@@ -345,6 +377,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[1],
                     config,
                     config,
+                    mock(FileSystemManager.class),
                     mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
@@ -369,6 +402,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[5],
                     config,
                     config,
+                    mock(FileSystemManager.class),
                     mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
@@ -394,6 +428,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[5],
                     config,
                     config,
+                    mock(FileSystemManager.class),
                     mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
@@ -427,6 +462,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                     versions[7],
                     config,
                     config,
+                    mock(FileSystemManager.class),
                     mock(Metrics.class),
                     new HashMap<>(),
                     migrationStateChanges,
@@ -446,12 +482,6 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
         @Nested
         @DisplayName("Migration State Impact Tests")
         class StateImpactTest {
-            @BeforeEach
-            void setUp() {
-                // Use a fresh database instance for each test
-                MerkleDb.resetDefaultInstancePath();
-            }
-
             Schema createV1Schema() {
                 return new TestSchema(versions[1]) {
                     @NonNull
@@ -598,6 +628,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         versions[1],
                         config,
                         config,
+                        mock(FileSystemManager.class),
                         mock(Metrics.class),
                         new HashMap<>(),
                         migrationStateChanges,
@@ -627,6 +658,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         versions[2],
                         config,
                         config,
+                        FileSystemManager.create(config),
                         mock(Metrics.class),
                         new HashMap<>(),
                         migrationStateChanges,
@@ -667,6 +699,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                         versions[3],
                         config,
                         config,
+                        FileSystemManager.create(config),
                         mock(Metrics.class),
                         new HashMap<>(),
                         migrationStateChanges,
@@ -712,6 +745,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
                                 versions[2],
                                 config,
                                 config,
+                                mock(FileSystemManager.class),
                                 mock(Metrics.class),
                                 new HashMap<>(),
                                 migrationStateChanges,

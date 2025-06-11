@@ -22,7 +22,6 @@ import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.component.framework.model.DeterministicWiringModel;
 import com.swirlds.component.framework.model.WiringModelBuilder;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
@@ -396,7 +395,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         setupGlobalMetrics(currentConfiguration);
 
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
-        MerkleDb.resetDefaultInstancePath();
         final Metrics metrics = getMetricsProvider().createPlatformMetrics(selfId);
         final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
         final RecycleBin recycleBin = RecycleBin.create(
@@ -418,7 +416,8 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
-                () -> TurtleAppState.createGenesisState(currentConfiguration, roster, version),
+                () -> TurtleAppState.createGenesisState(
+                        currentConfiguration, platformContext.getFileSystemManager(), roster, version),
                 APP_NAME,
                 SWIRLD_NAME,
                 selfId,

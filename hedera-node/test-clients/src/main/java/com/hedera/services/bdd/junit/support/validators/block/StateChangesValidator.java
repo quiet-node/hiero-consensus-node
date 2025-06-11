@@ -65,6 +65,7 @@ import com.hedera.services.bdd.junit.support.BlockStreamAccess;
 import com.hedera.services.bdd.junit.support.BlockStreamValidator;
 import com.hedera.services.bdd.junit.support.translators.inputs.TransactionParts;
 import com.hedera.services.bdd.spec.HapiSpec;
+import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.utility.MerkleTreeVisualizer;
@@ -274,7 +275,7 @@ public class StateChangesValidator implements BlockStreamValidator {
         final var hedera = ServicesMain.newHedera(metrics, new PlatformStateFacade());
         this.state = hedera.newStateRoot();
         final var platformConfig = ServicesMain.buildPlatformConfig();
-        hedera.initializeStatesApi(state, GENESIS, platformConfig);
+        hedera.initializeStatesApi(state, GENESIS, PlatformContext.create(platformConfig), platformConfig);
         final var stateToBeCopied = state;
         state = state.copy();
         this.hintsLibrary = (hintsEnabled == HintsEnabled.YES) ? new HintsLibraryImpl() : null;

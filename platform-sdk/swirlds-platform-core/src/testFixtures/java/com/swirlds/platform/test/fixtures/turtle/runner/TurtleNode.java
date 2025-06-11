@@ -25,7 +25,6 @@ import com.swirlds.component.framework.wires.input.InputWire;
 import com.swirlds.component.framework.wires.output.OutputWire;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
-import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
@@ -137,7 +136,6 @@ public class TurtleNode {
                 SemanticVersion.newBuilder().major(1).build();
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
         final var version = SemanticVersion.newBuilder().major(1).build();
-        MerkleDb.resetDefaultInstancePath();
         final var metrics = getMetricsProvider().createPlatformMetrics(nodeId);
         final var fileSystemManager = FileSystemManager.create(configuration);
         final var recycleBin =
