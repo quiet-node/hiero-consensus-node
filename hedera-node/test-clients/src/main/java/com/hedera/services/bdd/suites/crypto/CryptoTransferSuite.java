@@ -4,10 +4,8 @@ package com.hedera.services.bdd.suites.crypto;
 import static com.google.protobuf.ByteString.copyFromUtf8;
 import static com.hedera.node.app.hapi.utils.EthSigsUtils.recoverAddressFromPubKey;
 import static com.hedera.services.bdd.junit.TestTags.CRYPTO;
-import static com.hedera.services.bdd.spec.HapiPropertySource.accountIdFromHexedMirrorAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccountString;
-import static com.hedera.services.bdd.spec.HapiPropertySource.asSolidityAddress;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asTopicString;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
@@ -89,6 +87,8 @@ import static com.hedera.services.bdd.suites.HapiSuite.TOKEN_TREASURY;
 import static com.hedera.services.bdd.suites.HapiSuite.flattened;
 import static com.hedera.services.bdd.suites.contract.Utils.aaWith;
 import static com.hedera.services.bdd.suites.contract.Utils.accountIdFromEvmAddress;
+import static com.hedera.services.bdd.suites.contract.Utils.accountIdFromHexedMirrorAddress;
+import static com.hedera.services.bdd.suites.contract.Utils.asSolidityAddress;
 import static com.hedera.services.bdd.suites.contract.Utils.captureOneChildCreate2MetaFor;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrParamFunction;
 import static com.hedera.services.bdd.suites.contract.Utils.mirrorAddrWith;
@@ -528,9 +528,9 @@ public class CryptoTransferSuite {
                     final var registry = spec.registry();
                     ftId.set(registry.getTokenID(FUNGIBLE_TOKEN));
                     nftId.set(registry.getTokenID(NON_FUNGIBLE_TOKEN));
-                    partyId.set(accountIdFromHexedMirrorAddress(partyMirrorAddr.get()));
+                    partyId.set(accountIdFromHexedMirrorAddress(spec, partyMirrorAddr.get()));
                     partyLiteral.set(asAccountString(partyId.get()));
-                    counterId.set(accountIdFromHexedMirrorAddress(counterMirrorAddr.get()));
+                    counterId.set(accountIdFromHexedMirrorAddress(spec, counterMirrorAddr.get()));
                     counterLiteral.set(asAccountString(counterId.get()));
                 }),
                 sourcing(() -> tokenAssociate(partyLiteral.get(), List.of(FUNGIBLE_TOKEN, NON_FUNGIBLE_TOKEN))

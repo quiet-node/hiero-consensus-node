@@ -11,7 +11,6 @@ import static com.hedera.services.bdd.junit.hedera.ExternalPath.APPLICATION_LOG;
 import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.ensureDir;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiPropertySource.asAccountString;
-import static com.hedera.services.bdd.spec.HapiPropertySource.idAsHeadlongAddress;
 import static com.hedera.services.bdd.spec.TargetNetworkType.EMBEDDED_NETWORK;
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.contractWith;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
@@ -51,6 +50,7 @@ import static com.hedera.services.bdd.suites.HapiSuite.SECP_256K1_SHAPE;
 import static com.hedera.services.bdd.suites.HapiSuite.STAKING_REWARD;
 import static com.hedera.services.bdd.suites.HapiSuite.THROTTLE_DEFS;
 import static com.hedera.services.bdd.suites.contract.Utils.asAddress;
+import static com.hedera.services.bdd.suites.contract.Utils.idAsHeadlongAddress;
 import static com.hedera.services.bdd.suites.contract.Utils.isLongZeroAddress;
 import static com.hedera.services.bdd.suites.crypto.CryptoTransferSuite.sdec;
 import static com.hedera.services.bdd.suites.utils.sysfiles.serdes.ThrottleDefsLoader.protoDefsFromResource;
@@ -1923,8 +1923,7 @@ public class UtilVerbs {
                     .sorted(Comparator.comparing(ContractID::getContractNum))
                     .toList();
             final var createdId = createdIds.get(creationNum);
-            final var accDetails = getContractInfo(CommonUtils.hex(
-                            asEvmAddress(createdId.getShardNum(), createdId.getRealmNum(), createdId.getContractNum())))
+            final var accDetails = getContractInfo(CommonUtils.hex(asEvmAddress(createdId.getContractNum())))
                     .logged();
             allRunFor(spec, accDetails);
         });
@@ -2000,6 +1999,10 @@ public class UtilVerbs {
                             "%s fee (%s) more than %.2f percent different than expected!",
                             sdec(actualUsdCharged, 4), txn, allowedPercentDiff));
         });
+    }
+
+    public static CustomSpecAssert validateInnerTxnChargedUsd(String txn, String parent, double expectedUsd) {
+        return validateInnerTxnChargedUsd(txn, parent, expectedUsd, 1.00);
     }
 
     public static CustomSpecAssert validateInnerTxnChargedUsd(
@@ -2566,7 +2569,7 @@ public class UtilVerbs {
     }
 
     private static Object swapLongZeroToEVMAddresses(HapiSpec spec, Object arg, Address address) {
-        if (isLongZeroAddress(spec.shard(), spec.realm(), explicitFromHeadlong(address))) {
+        if (isLongZeroAddress(explicitFromHeadlong(address))) {
             var contractNum = numberOfLongZero(explicitFromHeadlong(address));
             if (spec.registry().hasEVMAddress(String.valueOf(contractNum))) {
                 return HapiParserUtil.asHeadlongAddress(spec.registry().getEVMAddress(String.valueOf(contractNum)));

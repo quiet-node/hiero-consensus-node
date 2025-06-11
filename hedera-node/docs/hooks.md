@@ -1,4 +1,5 @@
 ---
+
 hip: 1195
 title: Hiero hooks and an application to allowances
 author: Michael Tinker <@tinker-michaelj>
@@ -50,7 +51,7 @@ proposed fee-based access control for message submissions to topics.
 Hooks provide a more general solution to the problem of users needing custom business logic for their entities. For
 example, a token issuer might need to enforce rules on every transaction involving their token for regulatory or
 business reasons. A **transfer hook** installable on token types could enforce these rules without requiring the
-issuer to take a full design proposal through the HIP process. It would also preserve the performance and simplicity of 
+issuer to take a full design proposal through the HIP process. It would also preserve the performance and simplicity of
 the native APIs, unlike moving everything into custom ERC-20 smart contracts.
 
 In short, by avoiding protocol-level changes for every important customization, hooks can greatly streamline innovation
@@ -69,14 +70,15 @@ The protobuf API for hooks in general, and EVM hooks in particular, follows in l
 A primary concern for EVM hooks is deciding what account pays for the EVM gas upfront before executing the hook. We
 propose a simple, unified approach that hooks themselves can optimize with refund logic if desired. That is, for every
 hook,
- - The payer of the transaction triggering the hook pays for the upfront gas cost. 
- - The hook API includes the gas fee charged as an API parameter, so the hook can refund some or all of this gas cost.
- - The payer will only be charged if they explicitly set a non-zero gas limit on the transaction. 
+- The payer of the transaction triggering the hook pays for the upfront gas cost.
+- The hook API includes the gas fee charged as an API parameter, so the hook can refund some or all of this gas cost.
+- The payer will only be charged if they explicitly set a non-zero gas limit on the transaction.
 
 We propose the same gas price for EVM hook execution as for other contract operations. However, unlike contract calls,
 which are charged purely in gas, hook executions are already "gated" by the fee of their triggering transaction.
-So it makes sense to reduce the intrinsic gas cost of their execution. We propose adding two more properties to give 
+So it makes sense to reduce the intrinsic gas cost of their execution. We propose adding two more properties to give
 this effect while keeping it customizable for Hiero network operators.
+
 ```
 hooks.evm.pureIntrinsicGasCost=1000
 hooks.evm.lambdaIntrinsicGasCost=1000
@@ -84,9 +86,9 @@ hooks.evm.lambdaIntrinsicGasCost=1000
 
 ### Rent collection
 
-An account's storage footprint in network state grows with its number of associated tokens, and a contract's storage 
+An account's storage footprint in network state grows with its number of associated tokens, and a contract's storage
 footprint grows with its number of used storage slots. In the same way, an entity's storage footprint will grow with
-both its number of installed hooks; and the number of storage slots used by those hooks. 
+both its number of installed hooks; and the number of storage slots used by those hooks.
 
 At the time of this HIP, rent was not yet enabled on Hedera mainnet, but it is inevitable it will be in the future. To
 support seamless extension of rent to hooks, we propose to keep in network state two pieces of summary data for each
@@ -100,13 +102,13 @@ The rent of an entity with `N` installed hooks using `S` storage slots will then
 
 We propose EVM hooks be subject to the same gas throttle as top-level contract calls. Specifically, when an EVM hook
 executes, its initial EVM sender address is the payer of the referencing transaction. If this payer is throttle exempt
-(that is, a system account with entity number below `accounts.lastThrottleExempt=100`), no throttles are applied. 
-Otherwise, if the network is at capacity for gas usage, EVM hook execution will be throttled on that basis and the 
+(that is, a system account with entity number below `accounts.lastThrottleExempt=100`), no throttles are applied.
+Otherwise, if the network is at capacity for gas usage, EVM hook execution will be throttled on that basis and the
 triggering transaction fail with a status of `CONSENSUS_GAS_EXHAUSTED`, just as a top-level contract call would.
 
 The network will also throttle the rate at which hooks can be installed, using the same throttle buckets as for contract
-creation, with pricing similar to the current `$1.00 USD` cost of the HAPI contract create operation. (Or likely higher, 
-to amortize the extra complexity of the hook lifecycle.) The dApps that build valuable meta-protocols using hooks may 
+creation, with pricing similar to the current `$1.00 USD` cost of the HAPI contract create operation. (Or likely higher,
+to amortize the extra complexity of the hook lifecycle.) The dApps that build valuable meta-protocols using hooks may
 subsidize this cost to ease user onboarding.
 
 ### The EVM environment for hooks
@@ -115,21 +117,21 @@ There are two important differences between the EVM execution environment for a 
 top-level contract call. Namely,
 1. Throughout the hook's EVM transaction, its bytecode always has the special address `0x16d`.
 2. The hook is an extension of the installing entity; it has the installer's Hiero system contract privileges.
- 
-Everything else is identical to the EVM environment of a top-level contract call in the same block. 
 
-**Important:** We recognize, and strongly affirm, the sensitivity and power of making lambda hooks an extension of the 
-installing entity. Users with material security hygiene will not casually draft or install hooks on their entities. The 
-hooks in broad use will have been published as application HIPs; been extensively reviewed, debated, and audited; and 
-ultimately given special treatment by ecosystem wallets and block explorers. 
+Everything else is identical to the EVM environment of a top-level contract call in the same block.
+
+**Important:** We recognize, and strongly affirm, the sensitivity and power of making lambda hooks an extension of the
+installing entity. Users with material security hygiene will not casually draft or install hooks on their entities. The
+hooks in broad use will have been published as application HIPs; been extensively reviewed, debated, and audited; and
+ultimately given special treatment by ecosystem wallets and block explorers.
 
 Let us consider the two differences above in more detail.
 
-#### `0x16d` contract address 
+#### `0x16d` contract address
 
-Conceptually, the initial EVM message frame for a hook transaction is a `DELEGATECALL` from the system contract 
+Conceptually, the initial EVM message frame for a hook transaction is a `DELEGATECALL` from the system contract
 address `0x16d` to the hook's implementing contract. That is, even though the hook's implementing bytecode was created
-with a Hiero contract id `0.0.H`, that bytecode _executes_ with a contract address of `0x16d`. If it calls another 
+with a Hiero contract id `0.0.H`, that bytecode _executes_ with a contract address of `0x16d`. If it calls another
 contract and that contract, in turn, calls back to address `0x16d`, then control flow returns to the hook's bytecode.
 
 As a concrete example, suppose account `0.0.A` installs an EVM lambda hook for the `ACCOUNT_ALLOWANCE_HOOK` extension
@@ -143,8 +145,8 @@ The network will construct an initial EVM message frame with,
 4. Storage of the `0.0.A/1` lambda EVM hook; and,
 5. Gas remaining of `99_000` (lower intrinsic gas cost).
 
-The hook can then proceed with arbitrary actions, including calls to other contracts, `SLOAD` and `SSTORE` operations 
-with its storage, and so on. We expect the most common type of hook contract to implement a single external method that 
+The hook can then proceed with arbitrary actions, including calls to other contracts, `SLOAD` and `SSTORE` operations
+with its storage, and so on. We expect the most common type of hook contract to implement a single external method that
 reverts when not executed by the network _as a hook_. That is,
 
 ```solidity
@@ -174,27 +176,27 @@ contract HookContract {
 }
 ```
 
-(Note that the `hookFunction(IHieroHook.HookContext)` signature above is just a representative placeholder. Each actual 
+(Note that the `hookFunction(IHieroHook.HookContext)` signature above is just a representative placeholder. Each actual
 hook, such as the account allowance hook in this HIP, will have its own ABI signature that adds relevant parameters in
 addition to the universal `context` parameter.)
 
 #### Privileges of the installing entity
 
 A hook is an extension of the installing entity, in the style of Ethereum's [account abstraction](https://ethereum.org/en/roadmap/account-abstraction/)
-vision. This means the hook has the Hiero privileges of the installer. If it calls Hiero system contracts, they 
-automatically execute on behalf of the installing entity. 
+vision. This means the hook has the Hiero privileges of the installer. If it calls Hiero system contracts, they
+automatically execute on behalf of the installing entity.
 
 And if the installing entity has a balance, the hook can use the installer's balance to refund gas fees to `msg.sender`
 or otherwise transfer value.
 
 Again, we realize and affirm that programmatic entity extension introduces security risks. But users that install
 only the hooks that the community has audited and adopted through application HIPs can then enjoy the full
-power of EVM programmability without incurring any special risk. 
+power of EVM programmability without incurring any special risk.
 
 #### Pure EVM hooks
 
 Pure EVM hooks execute in the same conceptual model, but in an extremely restricted mode. Not only is the initial EVM
-frame marked `static`, which prohibits all state-changing operations; but the network also disables the `PREVRANDAO`, 
+frame marked `static`, which prohibits all state-changing operations; but the network also disables the `PREVRANDAO`,
 `SLOAD`, and `CALL` opcodes. That is, a pure hook cannot do anything but apply a pure function to its input data.
 
 ### Mirror node and block explorer support
@@ -202,10 +204,10 @@ frame marked `static`, which prohibits all state-changing operations; but the ne
 Mirror nodes and block explorers will want to give at least summary data of what hooks are installed on an entity. For
 example, the Hedera public mirror node has an [`/api/v1/accounts/{accountId}` endpoint](https://mainnet-public.mirrornode.hedera.com/api/v1/docs/#/accounts/getAccount)
 that returns a JSON object with the account's current balance, keys, and so on. We propose this JSON object be extended
-with fields `number_installed_hooks` and `total_hook_storage_slots` to give the number of installed hooks and the total 
+with fields `number_installed_hooks` and `total_hook_storage_slots` to give the number of installed hooks and the total
 number of storage slots used by those hooks for the account.
 
-It would also be natural to add a new `/api/v1/accounts/{accountId}/hooks` endpoint that returns a paged JSON 
+It would also be natural to add a new `/api/v1/accounts/{accountId}/hooks` endpoint that returns a paged JSON
 object with at least a subset of the information in the example below.
 
 ```jsonc
@@ -275,9 +277,8 @@ enum HookExtensionPoint {
 }
 ```
 
-Users install hooks by setting new `HookInstall` fields on `CryptoCreate`s or `CryptoUpdate`s transaction. This message 
+Users install hooks by setting new `HookInstall` fields on `CryptoCreate`s or `CryptoUpdate`s transaction. This message
 is,
-
 
 ```protobuf
 /***
@@ -339,7 +340,7 @@ message LambdaEvmHook {
    * Initial storage contents for the lambda, if any.
    */
   repeated LambdaStorageSlot storage_slots = 2;
-  
+
   /**
    * If set, a key that that can be used to sign LambdaSStore transactions
    * customizing the lambda's storage. If not set, only the installer's key
@@ -531,7 +532,7 @@ stream. Executing a lambda EVM hook, however, produces `ContractCall` block item
 `TransactionResult`, `TransactionOutput`) as following children of the triggering transaction, in the order of each
 executed lambda.
 
-When an EVM hook is installed, its representation in `ContractService` state is as below. (Note the `prev`/`next` 
+When an EVM hook is installed, its representation in `ContractService` state is as below. (Note the `prev`/`next`
 pointers are an implementation detail transparent to the user. The protocol uses them to efficiently traverse the list
 of installed hooks when archiving the account.)
 
@@ -628,9 +629,10 @@ message LambdaSlotKey {
 After an entity has installed a lambda, a new `LambdaSStore` transaction supports efficiently updating the
 lambda's storage. It must be signed by either the installer's key or the storage key set in the lambda's `LambdaEvmHook`
 definition.
+
 ```protobuf
 /**
- * Adds or removes key/value pairs in the storage of a lambda. Either the installer's key or an storage key defined in 
+ * Adds or removes key/value pairs in the storage of a lambda. Either the installer's key or an storage key defined in
  * the `LambdaEvmHook` must sign the transaction.
  */
 message LambdaSStoreTransactionBody {
@@ -677,15 +679,15 @@ message CryptoUpdateTransactionBody {
 }
 ```
 
-If either transaction repeats a hook index in its `hook_installs` list, it will fail with status 
-`HOOK_INDEX_REPEATED_IN_INSTALLS`. If the `CryptoUpdateTransactionBody` tries to install a hook at an index that is 
-already occupied, it will fail with status `HOOK_INDEX_IN_USE`. If the `CryptoUpdateTransactionBody` tries to uninstall 
+If either transaction repeats a hook index in its `hook_installs` list, it will fail with status
+`HOOK_INDEX_REPEATED_IN_INSTALLS`. If the `CryptoUpdateTransactionBody` tries to install a hook at an index that is
+already occupied, it will fail with status `HOOK_INDEX_IN_USE`. If the `CryptoUpdateTransactionBody` tries to uninstall
 a hook from an index not in use, it will fail with status `HOOK_NOT_FOUND`. To support atomic hook updates for
 compliance reasons, we **do** support uninstalling and reinstalling a hook at the same index in a single `CryptoUpdate`.
 
 We extend the `Account` message in `TokenService` state to include the number of installed hooks and the total number of
 storage slots they use; as well as the index of the last hooks in the doubly-linked list of hook installed by
-the account. 
+the account.
 
 ```protobuf
 message Account {
@@ -694,7 +696,7 @@ message Account {
    * The number of hook currently installed on this account.
    */
   uint64 number_installed_hooks = 36;
-  
+
    /**
     * The total number of storage slots used by all hooks installed on this account.
     */
@@ -955,16 +957,16 @@ In progress, please see [here](https://github.com/hashgraph/hedera-services/pull
 
 ## Rejected Ideas
 
-1. We considered **automatic** hooks that execute even without being explicitly referenced by a transaction. While this 
-feature could be useful in the future (for example, as an "anti-dusting" hook), we deemed it out of scope here.
+1. We considered **automatic** hooks that execute even without being explicitly referenced by a transaction. While this
+   feature could be useful in the future (for example, as an "anti-dusting" hook), we deemed it out of scope here.
 2. We considered adding an `IHieroExecutionEnv` interface to the `0x16d` system contract with APIs available only to
-executing EVM hooks. While interesting, there was no benefit for the initial use case in this HIP.
+   executing EVM hooks. While interesting, there was no benefit for the initial use case in this HIP.
 3. We considered using a family of allowance extension points, one for each type of asset exchange. (That is,
-`PRE_HBAR_DEBIT`, `PRE_FUNGIBLE_CREDIT`, `PRE_NFT_TRANSFER`, and so on.) Ultimately the single `ACCOUNT_ALLOWANCE`
-extension point seemed more approachable, especially as calls can encode any extra context the hook's `allow()`
-method needs to efficiently focus on one aspect of the proposed transfers.
-4. We considered support multiple charging schemes for hooks, such as `CALLER_PAYS` and `CALLER_PAYS_ON_FAILURE`. 
-Ultimately it seemed better to keep the charging scheme simple and let hooks manage any refunds themselves.
+   `PRE_HBAR_DEBIT`, `PRE_FUNGIBLE_CREDIT`, `PRE_NFT_TRANSFER`, and so on.) Ultimately the single `ACCOUNT_ALLOWANCE`
+   extension point seemed more approachable, especially as calls can encode any extra context the hook's `allow()`
+   method needs to efficiently focus on one aspect of the proposed transfers.
+4. We considered support multiple charging schemes for hooks, such as `CALLER_PAYS` and `CALLER_PAYS_ON_FAILURE`.
+   Ultimately it seemed better to keep the charging scheme simple and let hooks manage any refunds themselves.
 
 ## Open Issues
 
