@@ -15,7 +15,7 @@
 Node. This wrapper around the block data is used to associate items and requests to the block, along with tracking state
 changes such as if the block proof has been sent.
 
-A block itself is made up of many items including, but not limited to: one block header, transactions, and one block 
+A block itself is made up of many items including, but not limited to: one block header, transactions, and one block
 proof. These items will get batched into one or more requests that get sent to a Block Node.
 
 ## Definitions
