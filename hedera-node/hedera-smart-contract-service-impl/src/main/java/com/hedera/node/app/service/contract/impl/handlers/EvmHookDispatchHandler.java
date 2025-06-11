@@ -34,17 +34,17 @@ public class EvmHookDispatchHandler implements TransactionHandler {
     @Override
     public void handle(@NonNull final HandleContext context) throws HandleException {
         requireNonNull(context);
-        final var op = context.body().evmHookDispatchOrThrow();
+        final var op = context.body().hookDispatchOrThrow();
         switch (op.action().kind()) {
-            case HOOK_ID_TO_UNINSTALL -> {
+            case HOOK_ID_TO_DELETE -> {
                 final var store = context.storeFactory().writableStore(WritableEvmHookStore.class);
-                store.markDeleted(op.hookIdToUninstallOrThrow());
+                store.markDeleted(op.hookIdToDeleteOrThrow());
             }
-            case INSTALLATION -> {
+            case CREATION -> {
                 final var store = context.storeFactory().writableStore(WritableEvmHookStore.class);
-                final var installation = op.installationOrThrow();
-                store.installEvmHook(
-                        installation.nextHookIndex(), installation.installerIdOrThrow(), installation.installOrThrow());
+                final var creation = op.creationOrThrow();
+                store.createEvmHook(
+                        creation.entityIdOrThrow(), creation, creation.nextHookId());
             }
             case EXECUTION -> {}
         }

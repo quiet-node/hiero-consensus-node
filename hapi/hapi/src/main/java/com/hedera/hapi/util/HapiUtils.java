@@ -185,7 +185,7 @@ public class HapiUtils {
             case CRYPTO_TRANSFER -> HederaFunctionality.CRYPTO_TRANSFER;
             case ETHEREUM_TRANSACTION -> HederaFunctionality.ETHEREUM_TRANSACTION;
             case LAMBDA_SSTORE -> HederaFunctionality.LAMBDA_S_STORE;
-            case EVM_HOOK_DISPATCH -> HederaFunctionality.EVM_HOOK_DISPATCH;
+            case HOOK_DISPATCH -> HederaFunctionality.HOOK_DISPATCH;
             case FILE_APPEND -> HederaFunctionality.FILE_APPEND;
             case FILE_CREATE -> HederaFunctionality.FILE_CREATE;
             case FILE_UPDATE -> HederaFunctionality.FILE_UPDATE;

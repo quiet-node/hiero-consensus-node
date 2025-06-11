@@ -35,11 +35,11 @@ import static org.apache.tuweni.bytes.Bytes.EMPTY;
 import com.esaulpaugh.headlong.util.Integers;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.ContractID;
+import com.hedera.hapi.node.base.CreatedHookId;
 import com.hedera.hapi.node.base.Duration;
 import com.hedera.hapi.node.base.EvmHookCall;
 import com.hedera.hapi.node.base.FileID;
 import com.hedera.hapi.node.base.HederaFunctionality;
-import com.hedera.hapi.node.base.HookId;
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.contract.ContractCallTransactionBody;
 import com.hedera.hapi.node.contract.ContractCreateTransactionBody;
@@ -147,7 +147,7 @@ public class HevmTransactionFactory {
             case CONTRACT_CREATE_INSTANCE -> fromHapiCreate(payerId, body.contractCreateInstanceOrThrow());
             case CONTRACT_CALL -> fromHapiCall(payerId, body.contractCallOrThrow());
             case ETHEREUM_TRANSACTION -> fromHapiEthereum(payerId, body.ethereumTransactionOrThrow());
-            case EVM_HOOK_DISPATCH -> fromLambdaDispatch(payerId, body.evmHookDispatchOrThrow());
+            case HOOK_DISPATCH -> fromHookDispatch(payerId, body.hookDispatchOrThrow());
             default -> throw new IllegalArgumentException("Not a contract operation");
         };
     }
@@ -172,7 +172,7 @@ public class HevmTransactionFactory {
                 false);
     }
 
-    private HederaEvmTransaction fromLambdaDispatch(
+    private HederaEvmTransaction fromHookDispatch(
             @NonNull final AccountID payer, @NonNull final HookDispatchTransactionBody body) {
         final var details = assertValidDispatch(body);
         return new HederaEvmTransaction(
@@ -332,24 +332,23 @@ public class HevmTransactionFactory {
         }
 
         public Bytes callData() {
-            return call.evmCallData();
+            return call.data();
         }
     }
 
     private @NonNull DispatchDetails assertValidDispatch(@NonNull final HookDispatchTransactionBody body) {
         final var execution = body.executionOrThrow();
         final var call = execution.callOrThrow();
-        final var hookId = HookId.newBuilder()
-                .installerId(execution.installerIdOrThrow())
-                .index(call.index())
+        final var hookId = CreatedHookId.newBuilder()
+                .entityId(execution.hookEntityIdOrThrow())
+                .hookId(call.hookId())
                 .build();
         final var evmHookState = requireNonNull(evmHookStore).getEvmHook(hookId);
         validateTrue(evmHookState != null, HOOK_NOT_FOUND);
         final long minGasLimit = Math.max(
                 ContractServiceImpl.INTRINSIC_GAS_LOWER_BOUND, gasCalculator.transactionIntrinsicGasCost(EMPTY, false));
         final var evmHookCall = call.evmHookCallOrThrow();
-        final long gasLimit =
-                evmHookCall.gasLimitOrElse(evmHookState.defaultGasLimitOrElse(contractsConfig.defaultLambdaGasLimit()));
+        final long gasLimit = evmHookCall.gasLimit();
         validateTrue(gasLimit >= minGasLimit, INSUFFICIENT_GAS);
         validateTrue(gasLimit <= contractsConfig.maxGasPerSec(), MAX_GAS_LIMIT_EXCEEDED);
         return new DispatchDetails(evmHookState, evmHookCall, gasLimit);

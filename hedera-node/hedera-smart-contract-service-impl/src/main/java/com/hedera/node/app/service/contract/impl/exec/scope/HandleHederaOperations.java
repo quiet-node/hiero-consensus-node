@@ -515,7 +515,8 @@ public class HandleHederaOperations implements HederaOperations {
                     op.maxAutomaticTokenAssociations(),
                     op.autoRenewAccountId(),
                     op.stakedId(),
-                    op.declineReward());
+                    op.declineReward(),
+                    List.of());
         } else {
             return op;
         }

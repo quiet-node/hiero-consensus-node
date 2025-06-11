@@ -436,45 +436,46 @@ message TransactionID {
 }
 
 /**
- * Once a hook is installed, its id.
+ * Once a hook is created, its full id.
+ * <p>
+ * A composite of its owning entity's id and an arbitrary 64-bit hook id
+ * (which need not be sequential).
  */
-message HookId {
+message CreatedHookId {
     /**
-     * The id of the hook's installer.
+     * The hook's owning entity id.
      */
-    HookInstallerId installer_id = 1;
+    HookEntityId entity_id = 1;
 
     /**
-     * A unique identifier for the hook given the installer.
+     * An arbitrary 64-bit identifier.
      */
-    uint64 index = 2;
+    int64 hook_id = 2;
 }
 
 /**
- * The id of an entity that has installed a hook.
+ * The id of an entity using a hook.
  */
-message HookInstallerId {
-    oneof installer_id {
+message HookEntityId {
+    oneof entity_id {
         /**
-         * An account installing a hook.
+         * An account using a hook.
          */
         AccountID account_id = 1;
     }
 }
 
 /**
- * Specifies a call to a hook from within a transaction where
- * the hook owner is implied by the point of use. (For example,
- * it would never make sense to try to use an account allowance
- * hook for account 0.0.X inside an AccountAmount for account
- * 0.0.Y; hence we only need to give the index of which of
- * 0.0.Y's hooks we want to call.)
+ * Specifies a call to a hook from within a transaction where the hook owner is implied by the point of use.
+ * <p>
+ * For example, if the hook is an account allowance hook, then it is clear from the balance adjustment being
+ * attempted which account must own the referenced hook.
  */
 message HookCall {
     /**
-     * The index of the hook to call.
+     * The id of the hook to call.
      */
-    uint64 index = 1;
+    int64 hook_id = 1;
 
     /**
      * Specifies details of the call.
@@ -492,14 +493,14 @@ message HookCall {
  */
 message EvmHookCall {
     /**
-     * Extra call data to pass.
+     * Call data to pass to the hook via the IHieroHook.HookContext#data field.
      */
-    bytes evm_call_data = 1;
+    bytes data = 1;
 
     /**
-     * If set, an explicit gas limit to use.
+     * The gas limit to use.
      */
-    google.protobuf.UInt64Value gas_limit = 3;
+    uint64 gas_limit = 2;
 }
 
 /**
@@ -536,8 +537,8 @@ message AccountAmount {
     bool is_approval = 3;
 
     /**
-     * If set, a call to a hook of type `ACCOUNT_ALLOWANCE_HOOK` installed on
-     * accountID that must succeed for the transaction to occur.
+     * If set, a call to a hook of type `ACCOUNT_ALLOWANCE_HOOK` present on the
+     * scoped account that must succeed for the containing CryptoTransfer to occur.
      */
     HookCall allowance_hook_call = 4;
 }
@@ -1781,9 +1782,9 @@ enum HederaFunctionality {
     LambdaSStore = 109;
 
     /**
-     * (Internal-only) Dispatch an EVM hook action.
+     * (Internal-only) Dispatch a hook action.
      */
-    EvmHookDispatch = 110;
+    HookDispatch = 110;
 
 }
 

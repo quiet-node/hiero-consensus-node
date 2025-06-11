@@ -30,7 +30,7 @@ import com.hedera.services.bdd.spec.keys.SigControl;
 import com.hedera.services.bdd.spec.transactions.HapiTxnOp;
 import com.hedera.services.bdd.spec.transactions.TxnUtils;
 import com.hedera.services.bdd.spec.transactions.contract.HapiParserUtil;
-import com.hedera.services.bdd.spec.transactions.lambda.HookInstaller;
+import com.hedera.services.bdd.spec.transactions.lambda.HookCreator;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.ContractID;
 import com.hederahashgraph.api.proto.java.CryptoCreateTransactionBody;
@@ -93,7 +93,7 @@ public class HapiCryptoCreate extends HapiTxnOp<HapiCryptoCreate> {
     private boolean setEvmAddressAliasFromKey = false;
     private Optional<ShardID> shardId = Optional.empty();
     private Optional<RealmID> realmId = Optional.empty();
-    private final List<HookInstaller> hookInstallers = new ArrayList<>();
+    private final List<HookCreator> hookCreators = new ArrayList<>();
 
     @Override
     public HederaFunctionality type() {
@@ -135,9 +135,9 @@ public class HapiCryptoCreate extends HapiTxnOp<HapiCryptoCreate> {
         return this;
     }
 
-    public HapiCryptoCreate installing(@NonNull final HookInstaller installer) {
+    public HapiCryptoCreate installing(@NonNull final HookCreator installer) {
         Objects.requireNonNull(installer);
-        hookInstallers.add(installer);
+        hookCreators.add(installer);
         return this;
     }
 
@@ -343,9 +343,9 @@ public class HapiCryptoCreate extends HapiTxnOp<HapiCryptoCreate> {
                                 b.setStakedNodeId(stakedNodeId.get());
                             }
                             b.setDeclineReward(isDeclinedReward);
-                            hookInstallers.forEach(installer -> {
-                                allRunFor(spec, installer.specSetupOp());
-                                b.addHookInstalls(CommonPbjConverters.fromPbj(installer.getInstallation()));
+                            hookCreators.forEach(creator -> {
+                                allRunFor(spec, creator.specSetupOp());
+                                b.addHookCreationDetails(CommonPbjConverters.fromPbj(creator.getCreationDetails()));
                             });
                         });
         return b -> b.setCryptoCreateAccount(opBody);

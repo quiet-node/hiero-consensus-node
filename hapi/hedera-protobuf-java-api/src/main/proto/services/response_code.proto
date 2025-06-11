@@ -1769,7 +1769,7 @@ enum ResponseCodeEnum {
     /**
      * A user attempted to install a hook at an index already in use.
      */
-    HOOK_INDEX_IN_USE = 401;
+    HOOK_ID_IN_USE = 401;
 
     /**
      * A transaction tried to execute a hook that did not match the specified
@@ -1801,4 +1801,14 @@ enum ResponseCodeEnum {
      * A hook id was invalid.
      */
     INVALID_HOOK_ID = 407;
+
+    /**
+     * A lambda storage update was invalid.
+     */
+    INVALID_LAMBDA_STORAGE_UPDATE = 408;
+
+    /**
+     * A user repeated the same hook id in a creation details list.
+     */
+    HOOK_ID_REPEATED_IN_CREATION_DETAILS = 409;
 }

@@ -131,16 +131,16 @@ public class TxnUtils {
 
     /**
      * Small helper to more concisely express a call to an EVM hook.
-     * @param index the index of the EVM hook
+     * @param hookId the index of the EVM hook
      * @param callData the call data to be passed to the EVM hook
      * @return the {@link HookCall}
      */
     public static HookCall evmHookCall(
-            final long index, @NonNull final com.hedera.pbj.runtime.io.buffer.Bytes callData) {
+            final long hookId, @NonNull final com.hedera.pbj.runtime.io.buffer.Bytes callData) {
         requireNonNull(callData);
         return HookCall.newBuilder()
-                .index(index)
-                .evmHookCall(EvmHookCall.newBuilder().evmCallData(callData))
+                .hookId(hookId)
+                .evmHookCall(EvmHookCall.newBuilder().data(callData))
                 .build();
     }
 

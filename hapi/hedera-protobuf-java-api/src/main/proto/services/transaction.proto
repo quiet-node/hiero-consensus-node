@@ -658,9 +658,9 @@ message TransactionBody {
         LambdaSStoreTransactionBody lambda_sstore = 75;
 
         /**
-         * An internal-only transaction body for dispatching a hook installation, removal, or execution.
+         * An internal-only transaction body for dispatching a EVM hook creation, deletion, or execution.
          */
-        HookDispatchTransactionBody evm_hook_dispatch = 76;
+        HookDispatchTransactionBody hook_dispatch = 76;
     }
 
     /**

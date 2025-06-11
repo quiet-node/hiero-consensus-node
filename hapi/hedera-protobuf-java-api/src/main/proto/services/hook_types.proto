@@ -40,39 +40,39 @@ enum HookExtensionPoint {
 }
 
 /**
- * Specifies the installation of a new hook at a specific id for the given owner.
+ * Specifies the creation of a new hook at the given id for the given entity.
  */
-message HookInstallation {
+message HookCreation {
   /**
-   * The id of the hook's installer.
+   * The id of the hook's entity.
    */
-  HookInstallerId installer_id = 1;
+  HookEntityId entity_id = 1;
 
   /**
-   * The hook install details.
+   * The creation details.
    */
-  HookInstall install = 2;
+  HookCreationDetails details = 2;
 
   /**
-   * The index of the hook the new installation should be previous
-   * to in the owner's doubly-linked list of hooks.
+   * The id of the hook the new hook should be previous* to in the owner's
+   * doubly-linked list of hooks.
    */
-  uint64 next_hook_index = 3;
+  uint64 next_hook_id = 3;
 }
 
 /***
- * How to install a hook.
+ * The details of a hook's creation.
  */
-message HookInstall {
+message HookCreationDetails {
   /**
    * The extension point for the hook.
    */
   HookExtensionPoint extension_point = 1;
 
   /**
-   * The entity index to install the hook at.
+   * The id to create the hook at.
    */
-  uint64 index = 2;
+  uint64 hook_id = 2;
 
   /**
    * The hook implementation.
@@ -96,53 +96,6 @@ message HookInstall {
    * the hook.
    */
   proto.Key admin_key = 5;
-
-  /**
-   * The charging specification for the hook.
-   */
-  HookChargingSpec charging_spec = 6;
-}
-
-/**
- * Specifies how a hook's execution costs are charged.
- */
-message HookChargingSpec {
-  /**
-   * The charging specification.
-   */
-  oneof charging_spec {
-    /**
-     * The default charging pattern for a hook, which is to charge the caller.
-     */
-    CallerPays caller_pays = 1;
-    /**
-     * A charging pattern for a hook where the caller is charged only if the
-     * hook fails.
-     */
-    CallerPaysOnFailure caller_pays_on_failure = 2;
-  }
-}
-
-/**
- * A placeholder signifying the default charging pattern for a hook, which is
- * to charge the caller of the transaction that triggers the hook the costs of
- * executing the hook.
- */
-message CallerPays {
-}
-
-/**
- * Specifies a charging pattern for a hook where the caller of the transaction
- * that triggers the hook is charged the costs of executing the hook only if
- * the hook fails. When the hook succeeds, the costs are charged to the
- * specified payer account.
- */
-message CallerPaysOnFailure {
-  /**
-   * The account ID of the payer that is charged for the hook's execution when
-   * the hook succeeds.
-   */
-  proto.AccountID hook_payer_id = 1;
 }
 
 /**
@@ -165,9 +118,9 @@ message LambdaEvmHook {
   EvmHookSpec spec = 1;
 
   /**
-   * Initial storage contents for the lambda, if any.
+   * Initial storage updates for the lambda, if any.
    */
-  repeated LambdaStorageSlot storage_slots = 2;
+  repeated LambdaStorageUpdate storage_updates = 2;
 }
 
 /**
@@ -183,11 +136,55 @@ message EvmHookSpec {
      */
     ContractID contract_id = 1;
   }
+}
+
+/**
+ * Specifies a key/value pair in the storage of a lambda, either by the explicit storage
+ * slot contents; or by a combination of a Solidity mapping's slot key and the key into
+ * that mapping.
+ */
+message LambdaStorageUpdate {
+  oneof update {
+    /**
+     * An explicit storage slot update.
+     */
+    LambdaStorageSlot storage_slot = 1;
+    /**
+     * An implicit storage slot update specified as a Solidity mapping entry.
+     */
+    LambdaMappingEntry mapping_entry = 2;
+  }
+}
+
+/**
+ * Specifies a storage slot update via indirection into a Solidity mapping.
+ * <p>
+ * Concretely, if the Solidity mapping is itself at slot `mapping_slot`, then
+ * the * storage slot for key `key` in the mapping is defined by the relationship
+ * `key_storage_slot = keccak256(abi.encodePacked(mapping_slot, key))`.
+ * <p>
+ * This message lets a metaprotocol be specified in terms of changes to a
+ * Solidity mapping's entries. If only raw slots could be updated, then a block
+ * stream consumer following the metaprotocol would have to invert the Keccak256
+ * hash to determine which mapping entry was being updated, which is not possible.
+ */
+message LambdaMappingEntry {
+  /**
+   * The slot that corresponds to the Solidity mapping itself.
+   */
+  bytes mapping_slot = 1;
 
   /**
-   * If present, the default gas limit to use when executing the EVM hook.
+   * The 32-byte key of the mapping entry; leading zeros may be omitted.
    */
-  google.protobuf.UInt64Value default_gas_limit = 2;
+  bytes key = 2;
+
+  /**
+   * If the mapping entry is present and non-zero, the 32-byte value of key in the mapping;
+   * leading zeros may be omitted. Leaving this field empty or setting it to binary zeros
+   * in an update clears the entry from the mapping.
+   */
+  bytes value = 3;
 }
 
 /**

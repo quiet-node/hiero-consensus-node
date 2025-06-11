@@ -5,31 +5,33 @@ import static com.hedera.node.app.hapi.utils.CommonPbjConverters.fromPbj;
 import static com.hederahashgraph.api.proto.java.HederaFunctionality.LambdaSStore;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.node.base.HookInstallerId;
+import com.hedera.hapi.node.base.HookEntityId;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.transactions.HapiTxnOp;
 import com.hederahashgraph.api.proto.java.HederaFunctionality;
 import com.hederahashgraph.api.proto.java.LambdaSStoreTransactionBody;
 import com.hederahashgraph.api.proto.java.LambdaStorageSlot;
+import com.hederahashgraph.api.proto.java.LambdaStorageUpdate;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionBody;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public class HapiLambdaSStore extends HapiTxnOp<HapiLambdaSStore> {
     private List<LambdaStorageSlot> slots = new ArrayList<>();
 
     @NonNull
-    private final HookInstallerId.InstallerIdOneOfType ownerType;
+    private final HookEntityId.EntityIdOneOfType ownerType;
 
     @NonNull
     private final String ownerName;
 
     public static HapiLambdaSStore storeAccountLambda(@NonNull final String account) {
-        return new HapiLambdaSStore(HookInstallerId.InstallerIdOneOfType.ACCOUNT_ID, account);
+        return new HapiLambdaSStore(HookEntityId.EntityIdOneOfType.ACCOUNT_ID, account);
     }
 
     public HapiLambdaSStore slots(@NonNull final Bytes... kv) {
@@ -46,8 +48,8 @@ public class HapiLambdaSStore extends HapiTxnOp<HapiLambdaSStore> {
     }
 
     private HapiLambdaSStore(
-            @NonNull final HookInstallerId.InstallerIdOneOfType ownerType, @NonNull final String ownerName) {
-        this.ownerType = requireNonNull(ownerType);
+            @NonNull final HookEntityId.EntityIdOneOfType entityType, @NonNull final String ownerName) {
+        this.ownerType = requireNonNull(entityType);
         this.ownerName = requireNonNull(ownerName);
     }
 
@@ -69,9 +71,11 @@ public class HapiLambdaSStore extends HapiTxnOp<HapiLambdaSStore> {
 
     @Override
     protected Consumer<TransactionBody.Builder> opBodyDef(HapiSpec spec) throws Throwable {
+        final var updates = Stream.concat(Stream.empty(), slots.stream()
+                .map(slot -> LambdaStorageUpdate.newBuilder().setStorageSlot(slot).build())).toList();
         final var op = spec.txns()
                 .<LambdaSStoreTransactionBody, LambdaSStoreTransactionBody.Builder>body(
-                        LambdaSStoreTransactionBody.class, b -> b.addAllStorageSlots(slots));
+                        LambdaSStoreTransactionBody.class, b -> b.addAllStorageUpdates(updates));
         return b -> b.setLambdaSstore(op);
     }
 }

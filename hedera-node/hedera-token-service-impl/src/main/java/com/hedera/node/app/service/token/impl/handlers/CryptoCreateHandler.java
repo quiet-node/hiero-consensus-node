@@ -49,10 +49,10 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.Duration;
 import com.hedera.hapi.node.base.HederaFunctionality;
-import com.hedera.hapi.node.base.HookInstallerId;
+import com.hedera.hapi.node.base.HookEntityId;
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.SubType;
-import com.hedera.hapi.node.hooks.HookInstallation;
+import com.hedera.hapi.node.hooks.HookCreation;
 import com.hedera.hapi.node.lambda.HookDispatchTransactionBody;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.token.CryptoCreateTransactionBody;
@@ -295,18 +295,18 @@ public class CryptoCreateHandler extends BaseCryptoHandler implements Transactio
         }
 
         long nextIndex = 0;
-        for (final var install : op.hookInstalls()) {
-            final var installerId =
-                    HookInstallerId.newBuilder().accountId(createdAccountID).build();
+        for (final var creationDetails : op.hookCreationDetails()) {
+            final var entityId =
+                    HookEntityId.newBuilder().accountId(createdAccountID).build();
             final var body = TransactionBody.newBuilder()
-                    .evmHookDispatch(HookDispatchTransactionBody.newBuilder()
-                            .installation(new HookInstallation(installerId, install, nextIndex))
+                    .hookDispatch(HookDispatchTransactionBody.newBuilder()
+                            .creation(new HookCreation(entityId, creationDetails, nextIndex))
                             .build())
                     .build();
             final var dispatchBuilder = context.dispatch(DispatchOptions.stepDispatch(
                     context.payer(), body, StreamBuilder.class, NOOP_TRANSACTION_CUSTOMIZER));
             validateSuccess(dispatchBuilder.status());
-            nextIndex = install.index();
+            nextIndex = creationDetails.hookId();
         }
     }
 

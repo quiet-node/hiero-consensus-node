@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.exec;
 
-import static com.hedera.hapi.node.base.HederaFunctionality.EVM_HOOK_DISPATCH;
+import static com.hedera.hapi.node.base.HederaFunctionality.HOOK_DISPATCH;
 
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.node.app.service.contract.impl.annotations.InitialState;
@@ -38,7 +38,7 @@ public interface TransactionInitialStateModule {
     @TransactionScope
     static ReadableEvmHookStore provideInitialEvmHookStore(
             @NonNull final HandleContext context, @NonNull final HederaFunctionality function) {
-        return function == EVM_HOOK_DISPATCH ? context.storeFactory().readableStore(ReadableEvmHookStore.class) : null;
+        return function == HOOK_DISPATCH ? context.storeFactory().readableStore(ReadableEvmHookStore.class) : null;
     }
 
     @Provides

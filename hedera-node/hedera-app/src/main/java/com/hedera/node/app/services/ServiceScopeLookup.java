@@ -53,7 +53,7 @@ public class ServiceScopeLookup {
                     CONTRACT_DELETE_INSTANCE,
                     ETHEREUM_TRANSACTION,
                     LAMBDA_SSTORE,
-                    EVM_HOOK_DISPATCH -> ContractService.NAME;
+                    HOOK_DISPATCH -> ContractService.NAME;
 
             case CRYPTO_CREATE_ACCOUNT,
                     CRYPTO_UPDATE_ACCOUNT,

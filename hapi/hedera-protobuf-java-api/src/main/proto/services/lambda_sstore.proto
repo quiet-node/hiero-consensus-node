@@ -36,10 +36,10 @@ message LambdaSStoreTransactionBody {
   /**
    * The id of the lambda EVM hook whose storage is being updated.
    */
-  HookId hook_id = 1;
+  CreatedHookId hook_id = 1;
 
   /**
    * The updates to the storage of the lambda.
    */
-  repeated LambdaStorageSlot storage_slots = 2;
+  repeated LambdaStorageUpdate storage_updates = 2;
 }

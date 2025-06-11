@@ -7,7 +7,7 @@ import static com.hedera.node.app.service.contract.impl.schemas.V061ContractSche
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.ContractID;
-import com.hedera.hapi.node.base.HookId;
+import com.hedera.hapi.node.base.CreatedHookId;
 import com.hedera.hapi.node.state.contract.SlotValue;
 import com.hedera.hapi.node.state.hooks.EvmHookState;
 import com.hedera.hapi.node.state.hooks.LambdaSlotKey;
@@ -25,7 +25,7 @@ import java.util.List;
  */
 public class ReadableEvmHookStore {
     private final ReadableKVState<LambdaSlotKey, SlotValue> storage;
-    private final ReadableKVState<HookId, EvmHookState> hookStates;
+    private final ReadableKVState<CreatedHookId, EvmHookState> hookStates;
 
     public ReadableEvmHookStore(@NonNull final ReadableStates states) {
         requireNonNull(states);
@@ -63,7 +63,7 @@ public class ReadableEvmHookStore {
      * @param hookId the hook ID
      * @return the EVM hook state, or null if not found
      */
-    public @Nullable EvmHookState getEvmHook(@NonNull final HookId hookId) {
+    public @Nullable EvmHookState getEvmHook(@NonNull final CreatedHookId hookId) {
         requireNonNull(hookId);
         return hookStates.get(hookId);
     }
@@ -75,7 +75,7 @@ public class ReadableEvmHookStore {
      * @return a list of slots
      * @throws HandleException if the hook
      */
-    public EvmHookView getView(@NonNull final HookId hookId, @NonNull final List<Bytes> keys) throws HandleException {
+    public EvmHookView getView(@NonNull final CreatedHookId hookId, @NonNull final List<Bytes> keys) throws HandleException {
         requireNonNull(hookId);
         requireNonNull(keys);
         final var state = hookStates.get(hookId);

@@ -7,7 +7,7 @@ import static com.hedera.services.bdd.spec.transactions.TxnUtils.evmHookCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoTransfer;
 import static com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer.CommonTransferAllowanceSwaps.swapWithSenderAllowanceHook;
-import static com.hedera.services.bdd.spec.transactions.lambda.HookInstaller.lambdaAt;
+import static com.hedera.services.bdd.spec.transactions.lambda.HookCreator.lambdaAt;
 import static com.hedera.services.bdd.spec.transactions.token.TokenMovement.movingUnique;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HUNDRED_HBARS;
 

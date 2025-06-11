@@ -35,34 +35,33 @@ import "services/hook_types.proto";
 message HookDispatchTransactionBody {
   oneof action {
     /**
-     * The id of the hook to uninstall.
+     * The id of the hook to delete.
      */
-    HookId hook_id_to_uninstall = 1;
+    CreatedHookId hook_id_to_delete = 1;
 
     /**
-     * The installation of a new hook.
+     * Creation details for a new hook.
      */
-    HookInstallation installation = 2;
+    HookCreation creation = 2;
 
     /**
-     * An execution of an installed hook.
+     * Execution details of an existing hook.
      */
     HookExecution execution = 3;
   }
 }
 
 /**
- * Specifies the execution of a hook by its installer id and
- * the details of the call (which includes the index).
+ * Details the execution of a hook.
  */
 message HookExecution {
   /**
-   * The id of the hook's installer.
+   * The id of the hook's entity.
    */
-  HookInstallerId installer_id = 1;
+  HookEntityId hook_entity_id = 1;
 
   /**
-   * The call details.
+   * The details of the call, including which hook id to call.
    */
   HookCall call = 2;
 }

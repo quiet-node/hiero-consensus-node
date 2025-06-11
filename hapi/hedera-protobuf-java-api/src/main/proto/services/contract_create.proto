@@ -43,6 +43,7 @@ option java_package = "com.hederahashgraph.api.proto.java";
 // <<<pbj.java_package = "com.hedera.hapi.node.contract">>> This comment is special code for setting PBJ Compiler java package
 option java_multiple_files = true;
 
+import "services/hook_types.proto";
 import "services/basic_types.proto";
 import "services/duration.proto";
 
@@ -272,4 +273,9 @@ message ContractCreateTransactionBody {
      * without reward.
      */
     bool decline_reward = 19;
+
+    /**
+     * Details of hooks to add immediately after creating this contract.
+     */
+    repeated HookCreationDetails hook_creation_details = 20;
 }

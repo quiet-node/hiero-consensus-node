@@ -386,6 +386,7 @@ public class CryptoHandlerTestBase {
                 null,
                 0,
                 0,
+                0,
                 0);
     }
 
@@ -424,6 +425,7 @@ public class CryptoHandlerTestBase {
                 false,
                 null,
                 null,
+                0,
                 0,
                 0,
                 0);

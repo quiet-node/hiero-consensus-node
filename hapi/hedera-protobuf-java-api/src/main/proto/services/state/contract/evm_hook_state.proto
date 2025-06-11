@@ -37,16 +37,16 @@ import "services/hook_types.proto";
 import "google/protobuf/wrappers.proto";
 
 /**
- * The representation of a lambda in state, including the previous and next indexes of its owner's lambda list.
+ * The representation of an EVM hook in state, including the previous and next hook ids in its owner's list.
  */
 message EvmHookState {
   /**
    * For state proofs, the id of this hook.
    */
-  proto.HookId hook_id = 1;
+  proto.CreatedHookId hook_id = 1;
 
   /**
-   * The type of the hook.
+   * The type of the EVM hook.
    */
   EvmHookType type = 2;
 
@@ -61,59 +61,31 @@ message EvmHookState {
   proto.ContractID hook_contract_id = 4;
 
   /**
-   * The charging pattern of the hook.
+   * True if the hook has been deleted.
    */
-  proto.HookChargingSpec charging_spec = 5;
+  bool deleted = 5;
 
   /**
-   * If set, the default gas limit to use when executing the lambda.
+   * For a lambda, its first storage key.
    */
-  google.protobuf.UInt64Value default_gas_limit = 6;
+  bytes first_contract_storage_key = 6;
 
   /**
-   * True if the hook has been removed.
-   */
-  bool deleted = 7;
-
-  /**
-   * For a lambda EVM hook, its first storage key.
-   */
-  bytes first_contract_storage_key = 8;
-
-  /**
-   * If non-zero, the index of the hook preceding this one in the owner's
-   * doubly-linked list of hook.
-   */
-  uint64 previous_index = 9;
-
-  /**
-   * If non-zero, the index of the hook following this one in the owner's
+   * If set, the id of the hook preceding this one in the owner's
    * doubly-linked list of hooks.
    */
-  uint64 next_index = 10;
+  google.protobuf.UInt64Value previous_hook_id = 7;
 
   /**
-   * The number of storage slots a lambda EVM hook is using.
+   * If set, the id of the hook following this one in the owner's
+   * doubly-linked list of hooks.
    */
-  uint32 num_storage_slots = 11;
-}
-
-/**
- * The key of a lambda's storage slot.
- *
- * For each lambda, its EVM storage is a mapping of 256-bit keys (or "words")
- * to 256-bit values.
- */
-message LambdaSlotKey {
-  /**
-   * The id of the lambda EVM hook that owns this slot.
-   */
-  proto.HookId hook_id = 1;
+  google.protobuf.UInt64Value next_hook_id = 8;
 
   /**
-   * The EVM key of this slot, left-padded with zeros to form a 256-bit word.
+   * The number of storage slots a lambda is using.
    */
-  bytes key = 2;
+  uint32 num_storage_slots = 9;
 }
 
 /**
@@ -128,4 +100,22 @@ enum EvmHookType {
    * A lambda EVM hook.
    */
   LAMBDA = 1;
+}
+
+/**
+ * The key of a lambda's storage slot.
+ *
+ * For each lambda, its EVM storage is a mapping of 256-bit keys (or "words")
+ * to 256-bit values.
+ */
+message LambdaSlotKey {
+  /**
+   * The id of the lambda EVM hook that owns this slot.
+   */
+  proto.CreatedHookId hook_id = 1;
+
+  /**
+   * The EVM key of this slot, left-padded with zeros to form a 256-bit word.
+   */
+  bytes key = 2;
 }

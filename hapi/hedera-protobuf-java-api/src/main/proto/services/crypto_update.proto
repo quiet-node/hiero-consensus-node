@@ -218,12 +218,12 @@ message CryptoUpdateTransactionBody {
     google.protobuf.BoolValue decline_reward = 18;
 
     /**
-     * The hooks to install on the account.
+     * The hooks to create for the account.
      */
-    repeated HookInstall hook_installs = 19;
+    repeated HookCreationDetails hook_creation_details = 19;
 
     /**
-     * The indexes of the hooks to uninstall from the account.
+     * The ids the hooks to delete from the account.
      */
-    repeated uint64 hook_indexes_to_uninstall = 20;
+    repeated int64 hook_ids_to_delete = 20;
 }

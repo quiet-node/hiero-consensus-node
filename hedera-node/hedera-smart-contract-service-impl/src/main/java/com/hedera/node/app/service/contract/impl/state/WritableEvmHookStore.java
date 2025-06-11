@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.state;
 
-import static com.hedera.hapi.node.base.ResponseCodeEnum.HOOK_INDEX_IN_USE;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.HOOK_ID_IN_USE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.HOOK_NOT_FOUND;
 import static com.hedera.node.app.hapi.utils.EntityType.HOOK;
 import static com.hedera.node.app.service.contract.impl.infra.IterableStorageManager.insertAccessedValue;
@@ -15,10 +15,10 @@ import static com.hedera.node.app.service.contract.impl.state.StorageAccess.Stor
 import static com.hedera.node.app.spi.workflows.HandleException.validateTrue;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.node.base.HookId;
-import com.hedera.hapi.node.base.HookInstallerId;
-import com.hedera.hapi.node.hooks.HookInstall;
-import com.hedera.hapi.node.hooks.LambdaStorageSlot;
+import com.hedera.hapi.node.base.CreatedHookId;
+import com.hedera.hapi.node.base.HookEntityId;
+import com.hedera.hapi.node.hooks.HookCreation;
+import com.hedera.hapi.node.hooks.LambdaStorageUpdate;
 import com.hedera.hapi.node.state.contract.SlotValue;
 import com.hedera.hapi.node.state.hooks.EvmHookState;
 import com.hedera.hapi.node.state.hooks.EvmHookType;
@@ -40,7 +40,7 @@ import java.util.List;
 public class WritableEvmHookStore extends ReadableEvmHookStore {
     private final ContractStateStore stateStore;
     private final WritableEntityCounters entityCounters;
-    private final WritableKVState<HookId, EvmHookState> hookStates;
+    private final WritableKVState<CreatedHookId, EvmHookState> hookStates;
     private final WritableKVState<LambdaSlotKey, SlotValue> storage;
 
     public WritableEvmHookStore(
@@ -57,14 +57,20 @@ public class WritableEvmHookStore extends ReadableEvmHookStore {
      * If a new value is {@link Bytes#EMPTY}, the slot is removed.
      *
      * @param hookId the lambda ID
-     * @param slots the slot updates
+     * @param updates the slot updates
      * @throws HandleException if the lambda ID is not found
      */
-    public void updateSlots(@NonNull final HookId hookId, @NonNull final List<LambdaStorageSlot> slots)
+    public void updateSlots(
+            @NonNull final CreatedHookId hookId,
+            @NonNull final List<LambdaStorageUpdate> updates)
             throws HandleException {
-        final List<Bytes> keys = new ArrayList<>(slots.size());
-        for (final var slot : slots) {
-            keys.add(slot.key());
+        final List<Bytes> keys = new ArrayList<>(updates.size());
+        for (final var update : updates) {
+            if (update.hasStorageSlot()) {
+                keys.add(update.storageSlotOrThrow().key());
+            } else {
+                throw new AssertionError("Not implemented");
+            }
         }
         final var view = getView(hookId, keys);
         final var contractId = view.contractId();
@@ -72,7 +78,7 @@ public class WritableEvmHookStore extends ReadableEvmHookStore {
         int slotUsageChange = 0;
         for (int i = 0, n = keys.size(); i < n; i++) {
             final var slot = view.selectedSlots().get(i);
-            final var update = SlotUpdate.from(slot, slots.get(i).value());
+            final var update = SlotUpdate.from(slot, updates.get(i));
             firstKey = switch (update.asAccessType()) {
                 case REMOVAL -> {
                     slotUsageChange--;
@@ -109,58 +115,61 @@ public class WritableEvmHookStore extends ReadableEvmHookStore {
      * @param hookId the lambda ID
      * @throws HandleException if the lambda ID is not found
      */
-    public void markDeleted(@NonNull final HookId hookId) {
+    public void markDeleted(@NonNull final CreatedHookId hookId) {
         final var state = hookStates.get(hookId);
         validateTrue(state != null, HOOK_NOT_FOUND);
         hookStates.put(hookId, state.copyBuilder().deleted(true).build());
     }
 
     /**
-     * Tries to install a new lambda with the given id.
-     *
-     * @param installerId the installer ID
-     * @param install the installation
-     * @throws HandleException if the installation is invalid
+     * Tries to create a new EVM hook for the given entity.
+     * @param entityId the entity ID
+     * @param creation the hook creation spec
+     * @throws HandleException if the creation fails
      */
-    public void installEvmHook(
-            final long nextIndex, @NonNull final HookInstallerId installerId, @NonNull final HookInstall install)
+    public void createEvmHook(
+            @NonNull final HookEntityId entityId,
+            @NonNull final HookCreation creation,
+            final long nextHookId)
             throws HandleException {
-        final var hookId = new HookId(installerId, install.index());
-        validateTrue(hookStates.get(hookId) == null, HOOK_INDEX_IN_USE);
+        final var details = creation.detailsOrThrow();
+        final var hookId = new CreatedHookId(entityId, details.hookId());
+        validateTrue(hookStates.get(hookId) == null, HOOK_ID_IN_USE);
         final var type =
-                switch (install.hook().kind()) {
+                switch (details.hook().kind()) {
                     case PURE_EVM_HOOK -> EvmHookType.PURE;
                     case LAMBDA_EVM_HOOK -> EvmHookType.LAMBDA;
-                    default -> throw new IllegalStateException("Not an EVM hook - " + install);
+                    default -> throw new IllegalStateException("Not an EVM hook - " + creation);
                 };
         final var evmHookSpec = type == EvmHookType.PURE
-                ? install.pureEvmHookOrThrow().specOrThrow()
-                : install.lambdaEvmHookOrThrow().specOrThrow();
+                ? details.pureEvmHookOrThrow().specOrThrow()
+                : details.lambdaEvmHookOrThrow().specOrThrow();
         final var state = EvmHookState.newBuilder()
                 .hookId(hookId)
                 .type(type)
-                .extensionPoint(install.extensionPoint())
+                .extensionPoint(details.extensionPoint())
                 .hookContractId(evmHookSpec.contractIdOrThrow())
-                .defaultGasLimit(evmHookSpec.defaultGasLimit())
-                .chargingSpec(install.chargingSpecOrThrow())
                 .deleted(false)
                 .firstContractStorageKey(Bytes.EMPTY)
-                .previousIndex(0L)
-                .nextIndex(nextIndex)
+                .previousHookId(null)
+                .nextHookId(nextHookId)
                 .numStorageSlots(0)
                 .build();
         hookStates.put(hookId, state);
         if (type == EvmHookType.LAMBDA) {
-            final var initialStorageSlots = install.lambdaEvmHookOrThrow().storageSlots();
-            if (!initialStorageSlots.isEmpty()) {
-                updateSlots(hookId, initialStorageSlots);
+            final var initialUpdates = details.lambdaEvmHookOrThrow().storageUpdates();
+            if (!initialUpdates.isEmpty()) {
+                updateSlots(hookId, initialUpdates);
             }
         }
         entityCounters.incrementEntityTypeCount(HOOK);
     }
 
     private record SlotUpdate(@NonNull Bytes key, @Nullable Bytes oldValue, @Nullable Bytes newValue) {
-        public static SlotUpdate from(@NonNull final Slot slot, @NonNull final Bytes value) {
+        public static SlotUpdate from(@NonNull final Slot slot, @NonNull final LambdaStorageUpdate update) {
+            final var value = update.hasStorageSlot()
+                    ? update.storageSlotOrThrow().value()
+                    : update.mappingEntryOrThrow().value();
             return new SlotUpdate(slot.key().key(), slot.maybeBytesValue(), Bytes.EMPTY.equals(value) ? null : value);
         }
 

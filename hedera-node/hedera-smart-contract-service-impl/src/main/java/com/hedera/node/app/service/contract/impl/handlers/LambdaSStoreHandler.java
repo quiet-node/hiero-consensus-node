@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.handlers;
 
-import static com.hedera.hapi.node.base.HookInstallerId.InstallerIdOneOfType.ACCOUNT_ID;
+import static com.hedera.hapi.node.base.HookEntityId.EntityIdOneOfType.ACCOUNT_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_HOOK_ID;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_LAMBDA_STORAGE_UPDATE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.LAMBDA_STORAGE_KEY_TOO_LONG;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.LAMBDA_STORAGE_VALUE_TOO_LONG;
 import static com.hedera.node.app.spi.workflows.PreCheckException.validateTruePreCheck;
@@ -34,14 +35,22 @@ public class LambdaSStoreHandler implements TransactionHandler {
         final var op = context.body().lambdaSstoreOrThrow();
         validateTruePreCheck(op.hasHookId(), INVALID_HOOK_ID);
         final var hookId = op.hookIdOrThrow();
-        validateTruePreCheck(hookId.hasInstallerId(), INVALID_HOOK_ID);
-        final var ownerType = hookId.installerIdOrThrow().installerId().kind();
+        validateTruePreCheck(hookId.hasEntityId(), INVALID_HOOK_ID);
+        final var ownerType = hookId.entityIdOrThrow().entityId().kind();
         validateTruePreCheck(ownerType == ACCOUNT_ID, INVALID_HOOK_ID);
-        // Lambda indexes start at 1
-        validateTruePreCheck(hookId.index() > 0, INVALID_HOOK_ID);
-        for (final var slot : op.storageSlots()) {
-            validateTruePreCheck(slot.key().length() <= MAX_KV_LEN, LAMBDA_STORAGE_KEY_TOO_LONG);
-            validateTruePreCheck(slot.value().length() <= MAX_KV_LEN, LAMBDA_STORAGE_VALUE_TOO_LONG);
+        for (final var update : op.storageUpdates()) {
+            if (update.hasStorageSlot()) {
+                final var slot = update.storageSlotOrThrow();
+                validateTruePreCheck(slot.key().length() <= MAX_KV_LEN, LAMBDA_STORAGE_KEY_TOO_LONG);
+                validateTruePreCheck(slot.value().length() <= MAX_KV_LEN, LAMBDA_STORAGE_VALUE_TOO_LONG);
+            } else if (update.hasMappingEntry()) {
+                final var mappingEntry = update.mappingEntryOrThrow();
+                validateTruePreCheck(mappingEntry.mappingSlot().length() <= MAX_KV_LEN, LAMBDA_STORAGE_KEY_TOO_LONG);
+                validateTruePreCheck(mappingEntry.key().length() <= MAX_KV_LEN, LAMBDA_STORAGE_KEY_TOO_LONG);
+                validateTruePreCheck(mappingEntry.value().length() <= MAX_KV_LEN, LAMBDA_STORAGE_VALUE_TOO_LONG);
+            } else {
+                throw new PreCheckException(INVALID_LAMBDA_STORAGE_UPDATE);
+            }
         }
     }
 
@@ -49,7 +58,7 @@ public class LambdaSStoreHandler implements TransactionHandler {
     public void preHandle(@NonNull final PreHandleContext context) throws PreCheckException {
         requireNonNull(context);
         final var op = context.body().lambdaSstoreOrThrow();
-        context.requireKeyOrThrow(op.hookIdOrThrow().installerIdOrThrow().accountIdOrThrow(), INVALID_HOOK_ID);
+        context.requireKeyOrThrow(op.hookIdOrThrow().entityIdOrThrow().accountIdOrThrow(), INVALID_HOOK_ID);
     }
 
     @Override
@@ -57,6 +66,6 @@ public class LambdaSStoreHandler implements TransactionHandler {
         requireNonNull(context);
         final var op = context.body().lambdaSstoreOrThrow();
         final var lambdaStore = context.storeFactory().writableStore(WritableEvmHookStore.class);
-        lambdaStore.updateSlots(op.hookIdOrThrow(), op.storageSlots());
+        lambdaStore.updateSlots(op.hookIdOrThrow(), op.storageUpdates());
     }
 }

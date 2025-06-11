@@ -31,7 +31,7 @@ import com.hedera.services.bdd.spec.queries.crypto.HapiGetAccountInfo;
 import com.hedera.services.bdd.spec.queries.crypto.ReferenceType;
 import com.hedera.services.bdd.spec.transactions.HapiTxnOp;
 import com.hedera.services.bdd.spec.transactions.TxnUtils;
-import com.hedera.services.bdd.spec.transactions.lambda.HookInstaller;
+import com.hedera.services.bdd.spec.transactions.lambda.HookCreator;
 import com.hedera.services.bdd.suites.HapiSuite;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.CryptoGetInfoResponse;
@@ -75,7 +75,7 @@ public class HapiCryptoUpdate extends HapiTxnOp<HapiCryptoUpdate> {
     private Optional<Boolean> isDeclinedReward = Optional.empty();
 
     private ReferenceType referenceType = ReferenceType.REGISTRY_NAME;
-    private final List<HookInstaller> hookInstallers = new ArrayList<>();
+    private final List<HookCreator> hookCreators = new ArrayList<>();
 
     public HapiCryptoUpdate(String account) {
         this.account = account;
@@ -242,9 +242,9 @@ public class HapiCryptoUpdate extends HapiTxnOp<HapiCryptoUpdate> {
                                 builder.setStakedNodeId(newStakedNodeId.get());
                             }
                             isDeclinedReward.ifPresent(b -> builder.setDeclineReward(BoolValue.of(b)));
-                            hookInstallers.forEach(installer -> {
-                                allRunFor(spec, installer.specSetupOp());
-                                builder.addHookInstalls(CommonPbjConverters.fromPbj(installer.getInstallation()));
+                            hookCreators.forEach(creator -> {
+                                allRunFor(spec, creator.specSetupOp());
+                                builder.addHookCreationDetails(CommonPbjConverters.fromPbj(creator.getCreationDetails()));
                             });
                         });
         if (logUpdateDetailsToSysout) {
