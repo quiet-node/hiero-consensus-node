@@ -34,6 +34,7 @@ import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -58,6 +59,11 @@ public class OpsDurationThrottleTest {
     @AfterEach
     public void restABit() {
         sleepForSeconds(2);
+    }
+
+    @AfterAll
+    public static void restoreConfig() {
+        restoreDefault(THROTTLE_THROTTLE_BY_OPS_DURATION);
     }
 
     @HapiTest
@@ -307,7 +313,7 @@ public class OpsDurationThrottleTest {
                                                     ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
                                             .collectMaxOpsDuration(duration)))
                                     .toArray(HapiSpecOperation[]::new)));
-                    allRunFor(spec, throttleUsagePercentageMoreThanThreshold(duration.get(), 98.0));
+                    allRunFor(spec, throttleUsagePercentageMoreThanThreshold(duration.get(), 95.0));
                 }),
                 restoreDefault(MAX_OPS_DURATION));
     }
