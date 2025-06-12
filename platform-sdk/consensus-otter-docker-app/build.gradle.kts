@@ -29,63 +29,33 @@ testFixturesModuleInfo {
     runtimeOnly("io.helidon.webclient.grpc")
 }
 
-val testFixturesLibsForManifest =
-    configurations.detachedConfiguration().apply {
-        extendsFrom(configurations.testFixturesRuntimeClasspath.get())
-        isTransitive = true
-        attributes { attribute(Attribute.of("javaModule", Boolean::class.javaObjectType), false) }
-    }
-
-val testFixturesClassPath: String by lazy {
-    testFixturesLibsForManifest
-        .resolve()
-        .filter { it.name.endsWith(".jar") }
-        .sortedBy { it.name }
-        .joinToString(" ") { "../lib/${it.name}" }
-}
-
-tasks.named<Jar>("testFixturesJar") {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-    manifest {
-        attributes(
-            "Main-Class" to "org.hiero.consensus.otter.docker.app.DockerInit",
-            "Class-Path" to testFixturesClassPath,
+tasks.testFixturesJar {
+    inputs.files(configurations.testFixturesRuntimeClasspath)
+    manifest { attributes("Main-Class" to "org.hiero.consensus.otter.docker.app.DockerInit") }
+    doFirst {
+        manifest.attributes(
+            "Class-Path" to
+                    inputs.files
+                        .filter { it.extension == "jar" }
+                        .map { "../lib/" + it.name }
+                        .sorted()
+                        .joinToString(separator = " ")
         )
     }
 }
 
-val copyTestFixturesLib =
-    tasks.register<Sync>("copyTestFixturesLib") {
-        dependsOn(tasks.named("jar"))
+tasks.register<Sync>("copyTestFixturesLib") {
+    from(configurations.testFixturesRuntimeClasspath)
+    into(layout.buildDirectory.dir("data/lib"))
+}
 
-        val artifactView =
-            testFixturesLibsForManifest.incoming.artifactView {
-                attributes {
-                    attribute(Attribute.of("javaModule", Boolean::class.javaObjectType), false)
-                }
-            }
-
-        artifactView.artifacts.forEach { artifact: ResolvedArtifactResult ->
-            val id = artifact.id.componentIdentifier
-            if (id is ProjectComponentIdentifier) {
-                dependsOn("${id.projectPath}:jar")
-            }
-        }
-
-        from(artifactView.files)
-        into(layout.buildDirectory.dir("data/lib"))
-    }
-
-val copyTestFixturesApp =
-    tasks.register<Sync>("copyTestFixturesApp") {
-        from(tasks.named("testFixturesJar"))
-        into(layout.buildDirectory.dir("data/apps"))
-        rename { "DockerApp.jar" }
-        shouldRunAfter(copyTestFixturesLib)
-    }
+tasks.register<Sync>("copyTestFixturesApp") {
+    from(tasks.testFixturesJar)
+    into(layout.buildDirectory.dir("data/apps"))
+    rename { "DockerApp.jar" }
+}
 
 tasks.assemble {
-    dependsOn(copyTestFixturesLib)
-    dependsOn(copyTestFixturesApp)
+    dependsOn("copyTestFixturesLib")
+    dependsOn("copyTestFixturesApp")
 }
