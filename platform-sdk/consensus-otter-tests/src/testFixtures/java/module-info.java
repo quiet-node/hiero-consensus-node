@@ -2,12 +2,8 @@
 module org.hiero.otter.fixtures {
     requires transitive com.hedera.node.hapi;
     requires transitive com.swirlds.logging;
-    requires transitive com.swirlds.metrics.api;
-    requires transitive com.swirlds.platform.core.test.fixtures;
     requires transitive com.swirlds.platform.core;
     requires transitive com.swirlds.state.impl;
-    requires transitive com.swirlds.virtualmap;
-    requires transitive org.hiero.base.utility;
     requires transitive org.hiero.consensus.model;
     requires transitive com.google.protobuf;
     requires transitive org.apache.logging.log4j.core;
@@ -28,6 +24,7 @@ module org.hiero.otter.fixtures {
     requires com.swirlds.metrics.api;
     requires com.swirlds.platform.core.test.fixtures;
     requires com.swirlds.state.api;
+    requires com.swirlds.virtualmap;
     requires org.hiero.base.utility;
     requires org.hiero.consensus.utility;
     requires awaitility;
