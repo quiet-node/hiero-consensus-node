@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.fixtures;
 
+import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STATE_KEY;
+import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
+import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ACCOUNTS_KEY;
+import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.ALIASES_KEY;
 import static com.swirlds.platform.system.address.AddressBookUtils.endpointFor;
 import static com.swirlds.state.test.fixtures.merkle.TestSchema.CURRENT_VERSION;
 import static java.util.Objects.requireNonNull;
@@ -96,8 +100,6 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
 
     public static final Configuration DEFAULT_CONFIG = HederaTestConfigBuilder.createConfig();
 
-    private static final String ACCOUNTS_KEY = "ACCOUNTS";
-    private static final String ALIASES_KEY = "ALIASES";
     protected MapWritableKVState<AccountID, Account> accountsState;
     protected MapWritableKVState<ProtoBytes, AccountID> aliasesState;
     protected WritableSingletonState<EntityCounts> entityCountsState;
@@ -114,9 +116,10 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
         accountsState.commit();
         aliasesState = new MapWritableKVState<>(TokenService.NAME, ALIASES_KEY);
 
-        entityIdState = new FunctionWritableSingletonState<>(EntityIdService.NAME, "ENTITY_ID", () -> null, (a) -> {});
+        entityIdState =
+                new FunctionWritableSingletonState<>(EntityIdService.NAME, ENTITY_ID_STATE_KEY, () -> null, (a) -> {});
         entityCountsState = new FunctionWritableSingletonState<>(
-                EntityIdService.NAME, "ENTITY_COUNTS", () -> EntityCounts.DEFAULT, (a) -> {});
+                EntityIdService.NAME, ENTITY_COUNTS_KEY, () -> EntityCounts.DEFAULT, (a) -> {});
         final var writableStates = MapWritableStates.builder()
                 .state(accountsState)
                 .state(aliasesState)

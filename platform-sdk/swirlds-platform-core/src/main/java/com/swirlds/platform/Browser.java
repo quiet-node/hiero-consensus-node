@@ -78,6 +78,7 @@ import org.hiero.consensus.crypto.CryptoConstants;
 import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.roster.AddressBook;
+import org.hiero.consensus.roster.RosterHistory;
 import org.hiero.consensus.roster.RosterUtils;
 
 /**
@@ -288,7 +289,8 @@ public class Browser {
             final StateLifecycleManager stateLifecycleManager = appMain.newStateLifecycleManager();
             // Build the platform with the given values
             final State state = initialState.get().getState();
-            final long round = platformStateFacade.roundOf(state);
+            final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state);
+
             final PlatformBuilder<?> builder = PlatformBuilder.create(
                     appMain.getClass().getName(),
                     appDefinition.getSwirldName(),
@@ -297,7 +299,7 @@ public class Browser {
                     consensusStateEventHandler,
                     nodeId,
                     AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
-                    RosterUtils.buildRosterHistory(state, round),
+                    rosterHistory,
                     platformStateFacade,
                     stateRootFromVirtualMap(appMain),
                     stateLifecycleManager);

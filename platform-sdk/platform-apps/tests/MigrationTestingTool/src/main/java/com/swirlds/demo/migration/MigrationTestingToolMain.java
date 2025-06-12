@@ -23,6 +23,7 @@ import com.swirlds.state.merkle.StateLifecycleManagerImpl;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.SignatureException;
+import java.util.List;
 import java.util.function.Function;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -197,6 +198,15 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
     @Override
     public StateLifecycleManager newStateLifecycleManager() {
         return new StateLifecycleManagerImpl(new NoOpMetrics());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @NonNull
+    @Override
+    public List<Class<? extends Record>> getConfigDataTypes() {
+        return List.of(MigrationTestingToolConfig.class);
     }
 
     /**
