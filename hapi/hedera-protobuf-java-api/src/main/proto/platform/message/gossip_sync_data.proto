@@ -18,12 +18,12 @@ message GossipEventWindow {
   int64 latestConsensusRound = 1;
 
   /**
-   * the minimum ancient indicator value for an event to be considered non-ancient
+   * the minimum birth round for an event to be considered non-ancient
    */
   int64 ancientThreshold = 2;
 
   /**
-   * the minimum ancient indicator value for an event to be considered not expired
+   * the minimum birth round value for an event to be considered not expired
    */
   int64 expiredThreshold = 3;
 }

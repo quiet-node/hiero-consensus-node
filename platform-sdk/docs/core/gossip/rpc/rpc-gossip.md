@@ -6,12 +6,12 @@ Network communication based on dynamic negotiation of one of 3 protocols (Heartb
 
 <img src="rpc-gossip-OldNetwork.drawio.png"/>
 
-Negotiator selects one of the protocols and it is holding socket until it gives it back or disconnection happens.
+The negotiator selects one of the protocols and monopolizes the socket until it completes the protocol or is disconnected.
 
 ## Current Implementation
 
-- We need to stay compatible with the reconnect protocol as much as possible
-- We don’t want to mess with connection creation/teardown
+- Remains compatible with the reconnect protocol as much as possible
+- Does not modify the existing connection creation/teardown process
 
 Decision was to piggyback message based protocol on top of existing network. This means that instead of 3 protocols (Heartbeat/Ping, Sync, Reconnect) we have different 3 protocols (Heartbeat/Ping, Rpc and Reconnect). Rpc takes over the socket and handles everything (ping, sync, broadcast), releasing the connection only in case of falling behind, when reconnect will take over the responsibilities.
 

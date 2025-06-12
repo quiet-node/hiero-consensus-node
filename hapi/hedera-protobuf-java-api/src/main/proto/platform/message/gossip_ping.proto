@@ -8,7 +8,7 @@ option java_package = "com.hedera.hapi.platform.message.legacy";
 option java_multiple_files = true;
 
 /**
- * Message exchanged by rpc sync protocol to measure ping time between the nodes in context of rpc communication. Same message is used by both sender and as a reply.
+ * Message exchanged by rpc sync protocol to measure ping time between the nodes in context of rpc communication. Same message is used by both the sender and receiver as a reply.
  */
 message GossipPing {
   /**
