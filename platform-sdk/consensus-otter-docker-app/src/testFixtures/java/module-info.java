@@ -13,4 +13,5 @@ module org.hiero.consensus.otter.docker.app {
     requires com.swirlds.merkledb;
     requires com.swirlds.config.extensions;
     requires com.swirlds.platform.core.test.fixtures;
+    requires org.hiero.otter.fixtures;
 }
