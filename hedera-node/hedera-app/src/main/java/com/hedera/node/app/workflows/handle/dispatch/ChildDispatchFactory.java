@@ -18,7 +18,6 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.base.Key;
-import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.SignatureMap;
 import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.base.TransactionID;
@@ -53,7 +52,6 @@ import com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.PreCheckException;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
-import com.hedera.node.app.state.DeduplicationCache;
 import com.hedera.node.app.store.ReadableStoreFactory;
 import com.hedera.node.app.store.ServiceApiFactory;
 import com.hedera.node.app.store.StoreFactoryImpl;
@@ -74,7 +72,6 @@ import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -85,7 +82,6 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -108,7 +104,6 @@ public class ChildDispatchFactory {
     private final DispatchProcessor dispatchProcessor;
     private final ServiceScopeLookup serviceScopeLookup;
     private final ExchangeRateManager exchangeRateManager;
-    private final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory;
     private final TransactionChecker transactionChecker;
 
     @Inject
@@ -120,9 +115,7 @@ public class ChildDispatchFactory {
             @NonNull final DispatchProcessor dispatchProcessor,
             @NonNull final ServiceScopeLookup serviceScopeLookup,
             @NonNull final ExchangeRateManager exchangeRateManager,
-            @NonNull final TransactionChecker transactionChecker,
-            @NonNull final DeduplicationCache deduplicationCache,
-            @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory) {
+            @NonNull final TransactionChecker transactionChecker) {
         this.dispatcher = requireNonNull(dispatcher);
         this.authorizer = requireNonNull(authorizer);
         this.networkInfo = requireNonNull(networkInfo);
@@ -130,7 +123,6 @@ public class ChildDispatchFactory {
         this.dispatchProcessor = requireNonNull(dispatchProcessor);
         this.serviceScopeLookup = requireNonNull(serviceScopeLookup);
         this.exchangeRateManager = requireNonNull(exchangeRateManager);
-        this.softwareVersionFactory = requireNonNull(softwareVersionFactory);
         this.transactionChecker = requireNonNull(transactionChecker);
     }
 
@@ -178,7 +170,7 @@ public class ChildDispatchFactory {
                 : preHandleChild(options.body(), options.payerId(), config, readableStoreFactory, creatorInfo);
         final var childVerifier = overridePreHandleResult != null
                 ? new DefaultKeyVerifier(
-                        0, config.getConfigData(HederaConfig.class), overridePreHandleResult.getVerificationResults())
+                        config.getConfigData(HederaConfig.class), overridePreHandleResult.getVerificationResults())
                 : getKeyVerifier(options.effectiveKeyVerifier(), config, options.authorizingKeys());
         boolean isLastAllowedPreset = false;
         if (options.body().hasScheduleCreate()) {
@@ -195,11 +187,14 @@ public class ChildDispatchFactory {
                         .copyBuilder()
                         .transactionID(stack.nextPresetTxnId(isLastAllowedPreset))
                         .build();
-        final var childTxnInfo = getTxnInfoFrom(options.payerId(), body);
+        final var childTxnInfo = overridePreHandleResult != null
+                ? overridePreHandleResult.txInfo()
+                : getTxnInfoFrom(options.payerId(), body);
         final var streamMode = config.getConfigData(BlockStreamConfig.class).streamMode();
         final var childStack = SavepointStackImpl.newChildStack(
                 stack, options.reversingBehavior(), options.category(), options.transactionCustomizer(), streamMode);
-        final var streamBuilder = initializedForChild(childStack.getBaseBuilder(StreamBuilder.class), childTxnInfo);
+        final var streamBuilder =
+                initializedForChild(childStack.getBaseBuilder(StreamBuilder.class), requireNonNull(childTxnInfo));
         return newChildDispatch(
                 streamBuilder,
                 childTxnInfo,
@@ -262,8 +257,8 @@ public class ChildDispatchFactory {
         final var priceCalculator =
                 new ResourcePriceCalculatorImpl(consensusNow, txnInfo, feeManager, readableStoreFactory);
         final var storeFactory = new StoreFactoryImpl(readableStoreFactory, writableStoreFactory, serviceApiFactory);
-        final var childFeeAccumulator =
-                new FeeAccumulator(serviceApiFactory.getApi(TokenServiceApi.class), (FeeStreamBuilder) builder);
+        final var childFeeAccumulator = new FeeAccumulator(
+                serviceApiFactory.getApi(TokenServiceApi.class), (FeeStreamBuilder) builder, childStack);
         final var dispatchHandleContext = new DispatchHandleContext(
                 consensusNow,
                 creatorInfo,
@@ -289,7 +284,8 @@ public class ChildDispatchFactory {
                 childFeeAccumulator,
                 dispatchMetadata,
                 transactionChecker,
-                null);
+                null,
+                category);
         final var childFees = dispatchHandleContext.dispatchComputeFees(txnInfo.txBody(), payerId);
         final var congestionMultiplier = feeManager.congestionMultiplierFor(
                 txnInfo.txBody(), txnInfo.functionality(), storeFactory.asReadOnly());
@@ -440,7 +436,7 @@ public class ChildDispatchFactory {
                         }
                 : new AppKeyVerifier() {
                     private final AppKeyVerifier verifier =
-                            new DefaultKeyVerifier(0, config.getConfigData(HederaConfig.class), emptyMap());
+                            new DefaultKeyVerifier(config.getConfigData(HederaConfig.class), emptyMap());
 
                     @NonNull
                     @Override
@@ -500,7 +496,7 @@ public class ChildDispatchFactory {
                 txBody.transactionIDOrElse(TransactionID.DEFAULT),
                 payerId,
                 SignatureMap.DEFAULT,
-                signedTransactionBytes,
+                bodyBytes,
                 functionOfTxn(txBody),
                 null);
     }
@@ -529,7 +525,7 @@ public class ChildDispatchFactory {
             @NonNull final StreamBuilder builder, @NonNull final TransactionInfo txnInfo) {
         builder.transaction(txnInfo.transaction())
                 .functionality(txnInfo.functionality())
-                .transactionBytes(txnInfo.signedBytes())
+                .transactionBytes(txnInfo.transaction().signedTransactionBytes())
                 .memo(txnInfo.txBody().memo());
         final var transactionID = txnInfo.txBody().transactionID();
         if (transactionID != null) {

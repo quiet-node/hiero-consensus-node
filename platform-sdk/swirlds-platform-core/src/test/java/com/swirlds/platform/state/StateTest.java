@@ -9,15 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.swirlds.common.Reservable;
 import com.swirlds.common.merkle.interfaces.HasMerkleRoute;
-import com.swirlds.common.test.fixtures.RandomUtils;
-import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import java.util.Random;
+import org.hiero.base.crypto.test.fixtures.CryptoRandomUtils;
+import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -43,6 +45,8 @@ class StateTest {
         assertFalse(state.isDestroyed(), "copy should not have been deleted");
         assertEquals(0, ((Reservable) copy).getReservationCount(), "copy should have no references");
         assertSame(((HasMerkleRoute) state).getRoute(), ((HasMerkleRoute) copy).getRoute(), "route should be recycled");
+        state.release();
+        copy.release();
     }
 
     /**
@@ -81,7 +85,12 @@ class StateTest {
                 false,
                 false,
                 new PlatformStateFacade());
-        signedState.getState().setHash(RandomUtils.randomHash(random));
+        signedState.getState().setHash(CryptoRandomUtils.randomHash(random));
         return signedState;
+    }
+
+    @AfterEach
+    void tearDown() {
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }

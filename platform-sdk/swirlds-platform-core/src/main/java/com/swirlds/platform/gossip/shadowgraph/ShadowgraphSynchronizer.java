@@ -14,9 +14,10 @@ import static com.swirlds.platform.gossip.shadowgraph.SyncUtils.writeTheirTipsIH
 
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.threading.framework.Stoppable;
+import com.swirlds.common.threading.framework.Stoppable.StopBehavior;
 import com.swirlds.common.threading.pool.ParallelExecutionException;
 import com.swirlds.common.threading.pool.ParallelExecutor;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.SyncException;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
@@ -40,7 +41,6 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.gossip.FallenBehindManager;
-import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.NodeId;
@@ -114,11 +114,6 @@ public class ShadowgraphSynchronizer {
     private final int maximumEventsPerSync;
 
     /**
-     * The current ancient mode.
-     */
-    private final AncientMode ancientMode;
-
-    /**
      * Constructs a new ShadowgraphSynchronizer.
      *
      * @param platformContext      the platform context
@@ -156,11 +151,6 @@ public class ShadowgraphSynchronizer {
 
         this.filterLikelyDuplicates = syncConfig.filterLikelyDuplicates();
         this.maximumEventsPerSync = syncConfig.maxSyncEventCount();
-
-        this.ancientMode = platformContext
-                .getConfiguration()
-                .getConfigData(EventConfig.class)
-                .getAncientMode();
     }
 
     /**
@@ -207,7 +197,7 @@ public class ShadowgraphSynchronizer {
             final List<ShadowEvent> myTips = getTips();
             // READ and WRITE event windows numbers & tip hashes
             final TheirTipsAndEventWindow theirTipsAndEventWindow = readWriteParallel(
-                    readTheirTipsAndEventWindow(connection, numberOfNodes, ancientMode),
+                    readTheirTipsAndEventWindow(connection, numberOfNodes),
                     writeMyTipsAndEventWindow(connection, myWindow, myTips),
                     connection);
             timing.setTimePoint(1);
@@ -281,6 +271,8 @@ public class ShadowgraphSynchronizer {
         final SyncFallenBehindStatus status = SyncFallenBehindStatus.getStatus(self, other);
         if (status == SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
             fallenBehindManager.reportFallenBehind(connection.getOtherId());
+        } else {
+            fallenBehindManager.clearFallenBehind(connection.getOtherId());
         }
 
         if (status != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
@@ -314,7 +306,7 @@ public class ShadowgraphSynchronizer {
 
         // add to knownSet all the ancestors of each known event
         final Set<ShadowEvent> knownAncestors = shadowGraph.findAncestors(
-                knownSet, SyncUtils.unknownNonAncient(knownSet, myEventWindow, theirEventWindow, ancientMode));
+                knownSet, SyncUtils.unknownNonAncient(knownSet, myEventWindow, theirEventWindow));
 
         // since knownAncestors is a lot bigger than knownSet, it is a lot cheaper to add knownSet to knownAncestors
         // then vice versa
@@ -324,7 +316,7 @@ public class ShadowgraphSynchronizer {
 
         // predicate used to search for events to send
         final Predicate<ShadowEvent> knownAncestorsPredicate =
-                SyncUtils.unknownNonAncient(knownAncestors, myEventWindow, theirEventWindow, ancientMode);
+                SyncUtils.unknownNonAncient(knownAncestors, myEventWindow, theirEventWindow);
 
         // in order to get the peer the latest events, we get a new set of tips to search from
         final List<ShadowEvent> myNewTips = shadowGraph.getTips();
@@ -450,5 +442,48 @@ public class ShadowgraphSynchronizer {
         Objects.requireNonNull(connection);
 
         return executor.doParallel(readTask, writeTask, connection::disconnect);
+    }
+
+    /**
+     * Clear the internal state of the gossip engine.
+     */
+    public void clear() {
+        this.shadowGraph.clear();
+    }
+
+    /**
+     * Events sent here should be gossiped to the network
+     * @param platformEvent event to be sent outside
+     */
+    public void addEvent(@NonNull final PlatformEvent platformEvent) {
+        this.shadowGraph.addEvent(platformEvent);
+    }
+
+    /**
+     * Updates the current event window (mostly ancient thresholds)
+     * @param eventWindow new event window to apply
+     */
+    public void updateEventWindow(@NonNull final EventWindow eventWindow) {
+        this.shadowGraph.updateEventWindow(eventWindow);
+    }
+
+    /**
+     * Starts helper threads needed for synchronizing shadowgraph
+     */
+    public void start() {
+        executor.start();
+    }
+
+    /**
+     * Stops helper threads needed for synchronizing shadowgraph
+     */
+    public void stop() {
+        // this part is pretty horrible - there is no real production reason for executor to be passed and managed
+        // from outside of this class; unfortunately, a lot of testing code around SyncNode misuses the executor
+        // to inject network behaviour in various places; refactoring that is a huge task, so for now, we need to live
+        // with test-specific limitations in production code
+        if (executor instanceof Stoppable stoppable) {
+            stoppable.stop(StopBehavior.INTERRUPTABLE);
+        }
     }
 }

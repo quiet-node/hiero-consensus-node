@@ -14,19 +14,18 @@ import static org.mockito.Mockito.when;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.platform.consensus.SyntheticSnapshot;
-import com.swirlds.platform.roster.RosterRetriever;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.system.status.actions.FreezePeriodEnteredAction;
 import com.swirlds.platform.system.status.actions.SelfEventReachedConsensusAction;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
-import com.swirlds.platform.test.fixtures.event.TestingEventBuilder;
 import java.util.List;
-import org.hiero.consensus.model.crypto.Hash;
-import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.event.ConsensusEvent;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.roster.AddressBook;
+import org.hiero.consensus.model.test.fixtures.event.TestingEventBuilder;
+import org.hiero.consensus.roster.RosterRetriever;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -81,8 +80,8 @@ class DefaultTransactionHandlerTests {
         final ConsensusRound round = new ConsensusRound(
                 roster,
                 events,
-                EventWindow.getGenesisEventWindow(AncientMode.GENERATION_THRESHOLD),
-                SyntheticSnapshot.getGenesisSnapshot(AncientMode.GENERATION_THRESHOLD),
+                EventWindow.getGenesisEventWindow(),
+                SyntheticSnapshot.getGenesisSnapshot(),
                 pcesRound,
                 random.nextInstant());
 

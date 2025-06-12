@@ -14,7 +14,6 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.IOIterator;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningHashCalculatorForStream;
-import com.swirlds.common.utility.CompareTo;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.ApplicationDefinition;
@@ -25,10 +24,10 @@ import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.consensus.ConsensusConfig;
 import com.swirlds.platform.consensus.SyntheticSnapshot;
 import com.swirlds.platform.crypto.CryptoStatic;
-import com.swirlds.platform.event.hashing.DefaultEventHasher;
+import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFile;
+import com.swirlds.platform.event.preconsensus.PcesFileWriterType;
 import com.swirlds.platform.event.preconsensus.PcesMutableFile;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.recovery.emergencyfile.EmergencyRecoveryFile;
 import com.swirlds.platform.recovery.internal.EventStreamRoundIterator;
 import com.swirlds.platform.recovery.internal.RecoveredState;
@@ -57,7 +56,9 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.base.CompareTo;
+import org.hiero.base.crypto.Hash;
+import org.hiero.consensus.crypto.DefaultEventHasher;
 import org.hiero.consensus.model.event.CesEvent;
 import org.hiero.consensus.model.event.ConsensusEvent;
 import org.hiero.consensus.model.event.PlatformEvent;
@@ -185,17 +186,17 @@ public final class EventRecoveryWorkflow {
             logger.info(STARTUP.getMarker(), "Signed state written to disk");
 
             final PcesFile preconsensusEventFile = PcesFile.of(
-                    platformContext
-                            .getConfiguration()
-                            .getConfigData(EventConfig.class)
-                            .getAncientMode(),
                     Instant.now(),
                     0,
                     recoveredState.judge().getGeneration(),
                     recoveredState.judge().getGeneration(),
                     recoveredState.state().get().getRound(),
                     resultingStateDirectory);
-            final PcesMutableFile mutableFile = preconsensusEventFile.getMutableFile();
+            final PcesFileWriterType type = platformContext
+                    .getConfiguration()
+                    .getConfigData(PcesConfig.class)
+                    .pcesFileWriterType();
+            final PcesMutableFile mutableFile = preconsensusEventFile.getMutableFile(type);
             mutableFile.writeEvent(recoveredState.judge());
             mutableFile.close();
 
@@ -377,15 +378,7 @@ public final class EventRecoveryWorkflow {
                     getHashEventsCons(platformStateFacade.legacyRunningEventHashOf(newState), round));
             v.setConsensusTimestamp(currentRoundTimestamp);
             v.setSnapshot(SyntheticSnapshot.generateSyntheticSnapshot(
-                    round.getRoundNum(),
-                    lastEvent.getConsensusOrder(),
-                    currentRoundTimestamp,
-                    config,
-                    platformContext
-                            .getConfiguration()
-                            .getConfigData(EventConfig.class)
-                            .getAncientMode(),
-                    lastEvent));
+                    round.getRoundNum(), lastEvent.getConsensusOrder(), currentRoundTimestamp, config, lastEvent));
             v.setCreationSoftwareVersion(platformStateFacade.creationSoftwareVersionOf(previousState.getState()));
         });
 

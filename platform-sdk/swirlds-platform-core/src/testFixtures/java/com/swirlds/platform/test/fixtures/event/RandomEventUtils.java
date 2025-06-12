@@ -2,11 +2,7 @@
 package com.swirlds.platform.test.fixtures.event;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.hedera.hapi.platform.event.EventDescriptor;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.crypto.SignatureType;
-import com.swirlds.common.test.fixtures.RandomUtils;
-import com.swirlds.platform.event.hashing.PbjStreamHasher;
 import com.swirlds.platform.internal.EventImpl;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -16,6 +12,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
+import org.hiero.base.crypto.SignatureType;
+import org.hiero.base.crypto.test.fixtures.CryptoRandomUtils;
+import org.hiero.consensus.crypto.PbjStreamHasher;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.event.UnsignedEvent;
@@ -64,18 +63,10 @@ public class RandomEventUtils {
 
         final EventDescriptorWrapper selfDescriptor = (selfParent == null || selfParent.getBaseHash() == null)
                 ? null
-                : new EventDescriptorWrapper(new EventDescriptor(
-                        selfParent.getBaseHash().getBytes(),
-                        selfParent.getCreatorId().id(),
-                        selfParent.getBaseEvent().getBirthRound(),
-                        selfParent.getGeneration()));
+                : selfParent.getBaseEvent().getDescriptor();
         final EventDescriptorWrapper otherDescriptor = (otherParent == null || otherParent.getBaseHash() == null)
                 ? null
-                : new EventDescriptorWrapper(new EventDescriptor(
-                        otherParent.getBaseHash().getBytes(),
-                        otherParent.getCreatorId().id(),
-                        otherParent.getBaseEvent().getBirthRound(),
-                        otherParent.getGeneration()));
+                : otherParent.getBaseEvent().getDescriptor();
 
         final List<Bytes> convertedTransactions = new ArrayList<>();
         if (transactions != null) {
@@ -93,7 +84,7 @@ public class RandomEventUtils {
                 convertedTransactions);
 
         if (fakeHash) {
-            unsignedEvent.setHash(RandomUtils.randomHash(random));
+            unsignedEvent.setHash(CryptoRandomUtils.randomHash(random));
         } else {
             new PbjStreamHasher().hashUnsignedEvent(unsignedEvent);
         }

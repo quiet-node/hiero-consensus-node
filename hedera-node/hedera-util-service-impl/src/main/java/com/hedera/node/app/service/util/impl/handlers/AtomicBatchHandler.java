@@ -108,7 +108,7 @@ public class AtomicBatchHandler implements TransactionHandler {
             // throw if more than one tx has the same transactionID
             validateTruePreCheck(txIds.add(txBody.transactionID()), BATCH_LIST_CONTAINS_DUPLICATES);
 
-            // validate batch key exists on each inner transaction
+            // validates a batch key exists on each inner transaction
             validateTruePreCheck(txBody.hasBatchKey(), MISSING_BATCH_KEY);
 
             if (!txBody.hasNodeAccountID() || !txBody.nodeAccountIDOrThrow().equals(ATOMIC_BATCH_NODE_ACCOUNT_ID)) {
@@ -127,7 +127,7 @@ public class AtomicBatchHandler implements TransactionHandler {
         final var atomicBatchConfig = config.getConfigData(AtomicBatchConfig.class);
 
         final var txns = atomicBatchTransactionBody.transactions();
-        // not using stream below as throwing exception from middle of functional pipeline is a terrible idea
+        // not using a stream below as throwing exception in the middle of a functional pipeline is a terrible idea
         for (final var txnBytes : txns) {
             final var innerTxBody = innerTxnCache.computeIfAbsent(txnBytes);
             validateFalsePreCheck(isNotAllowedFunction(innerTxBody, atomicBatchConfig), BATCH_TRANSACTION_IN_BLACKLIST);
@@ -155,7 +155,7 @@ public class AtomicBatchHandler implements TransactionHandler {
         // Timebox, and duplication checks are done on dispatch. So, no need to repeat here
         final var recordedFeeCharging = new RecordedFeeCharging(appFeeCharging.get());
         for (final var txnBytes : txns) {
-            // Use the unchecked get because if the transaction is correct it should be in the cache by now
+            // Use the unchecked get because if the transaction is correct, it should be in the cache by now
             final TransactionBody innerTxnBody;
             innerTxnBody = innerTxnCache.computeIfAbsentUnchecked(txnBytes);
             final var payerId = innerTxnBody.transactionIDOrThrow().accountIDOrThrow();
@@ -281,9 +281,14 @@ public class AtomicBatchHandler implements TransactionHandler {
         }
 
         @Override
-        public void charge(@NonNull final Context ctx, @NonNull final Validation validation, @NonNull final Fees fees) {
+        public Fees charge(@NonNull final Context ctx, @NonNull final Validation validation, @NonNull final Fees fees) {
             final var recordingContext = new RecordingContext(ctx, charge -> this.finalCharge = charge);
-            delegate.charge(recordingContext, validation, fees);
+            return delegate.charge(recordingContext, validation, fees);
+        }
+
+        @Override
+        public void refund(@NonNull final Context ctx, @NonNull final Fees fees) {
+            delegate.refund(ctx, fees);
         }
 
         /**
@@ -293,28 +298,53 @@ public class AtomicBatchHandler implements TransactionHandler {
             private final Context delegate;
             private final Consumer<Charge> chargeCb;
 
+            @Override
+            public AccountID payerId() {
+                return delegate.payerId();
+            }
+
+            @Override
+            public AccountID nodeAccountId() {
+                return delegate.nodeAccountId();
+            }
+
             public RecordingContext(@NonNull final Context delegate, @NonNull final Consumer<Charge> chargeCb) {
                 this.delegate = requireNonNull(delegate);
                 this.chargeCb = requireNonNull(chargeCb);
             }
 
             @Override
-            public void charge(
+            public Fees charge(
                     @NonNull final AccountID payerId,
                     @NonNull final Fees fees,
                     @Nullable final ObjLongConsumer<AccountID> cb) {
-                delegate.charge(payerId, fees, cb);
+                final var chargedFees = delegate.charge(payerId, fees, cb);
                 chargeCb.accept(new Charge(payerId, fees, null));
+                return chargedFees;
             }
 
             @Override
-            public void charge(
+            public void refund(
+                    @NonNull final AccountID payerId,
+                    @NonNull final Fees fees,
+                    @NonNull final AccountID nodeAccountId) {
+                delegate.refund(payerId, fees, nodeAccountId);
+            }
+
+            @Override
+            public void refund(@NonNull final AccountID receiverId, @NonNull final Fees fees) {
+                delegate.refund(receiverId, fees);
+            }
+
+            @Override
+            public Fees charge(
                     @NonNull final AccountID payerId,
                     @NonNull final Fees fees,
                     @NonNull final AccountID nodeAccountId,
                     @Nullable final ObjLongConsumer<AccountID> cb) {
-                delegate.charge(payerId, fees, nodeAccountId, cb);
+                final var chargedFees = delegate.charge(payerId, fees, nodeAccountId, cb);
                 chargeCb.accept(new Charge(payerId, fees, nodeAccountId));
+                return chargedFees;
             }
 
             @Override

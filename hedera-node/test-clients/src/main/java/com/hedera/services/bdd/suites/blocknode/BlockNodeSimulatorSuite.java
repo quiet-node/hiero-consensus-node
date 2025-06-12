@@ -9,7 +9,6 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogConta
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlock;
 
-import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.OrderedInIsolation;
 import java.time.Duration;
@@ -17,7 +16,7 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Disabled;
+import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream.Code;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Tag;
 
@@ -33,7 +32,6 @@ import org.junit.jupiter.api.Tag;
 public class BlockNodeSimulatorSuite {
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> nominalStreamingBlocksNoErrors() {
         return hapiTest(
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -49,7 +47,6 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> node0BlockInternalError() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
@@ -60,7 +57,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> startTime.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_INTERNAL_ERROR)
+                        .sendEndOfStreamImmediately(Code.INTERNAL_ERROR)
                         .withBlockNumber(Long.MAX_VALUE)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -81,7 +78,6 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> node0BlockTimeout() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
@@ -92,7 +88,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> startTime.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_TIMEOUT)
+                        .sendEndOfStreamImmediately(Code.TIMEOUT)
                         .withBlockNumber(Long.MAX_VALUE)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -113,7 +109,6 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> node0BlockOutOfOrder() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
@@ -124,7 +119,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> startTime.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_OUT_OF_ORDER)
+                        .sendEndOfStreamImmediately(Code.OUT_OF_ORDER)
                         .withBlockNumber(Long.MAX_VALUE)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -145,7 +140,6 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> node0BlockBadStateProof() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
@@ -156,7 +150,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> startTime.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_BAD_STATE_PROOF)
+                        .sendEndOfStreamImmediately(Code.BAD_STATE_PROOF)
                         .withBlockNumber(Long.MAX_VALUE)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -177,7 +171,6 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> node0BlockBehind() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
@@ -188,7 +181,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> startTime.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_BEHIND)
+                        .sendEndOfStreamImmediately(Code.BEHIND)
                         .withBlockNumber(Long.MAX_VALUE)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -209,7 +202,6 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> node0BlockPersistenceFailed() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
@@ -220,7 +212,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> startTime.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_PERSISTENCE_FAILED)
+                        .sendEndOfStreamImmediately(Code.PERSISTENCE_FAILED)
                         .withBlockNumber(Long.MAX_VALUE)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 waitUntilNextBlock().withBackgroundTraffic(true),
@@ -241,7 +233,6 @@ public class BlockNodeSimulatorSuite {
     }
 
     @HapiTest
-    @Disabled
     final Stream<DynamicTest> node0BlockSuccess() {
         AtomicLong lastVerifiedBlockNumber = new AtomicLong(0);
         AtomicReference<Instant> startTime = new AtomicReference<>();
@@ -252,7 +243,7 @@ public class BlockNodeSimulatorSuite {
                 waitUntilNextBlock().withBackgroundTraffic(true),
                 doingContextual(spec -> startTime.set(Instant.now())),
                 blockNodeSimulator(0)
-                        .sendEndOfStreamImmediately(PublishStreamResponseCode.STREAM_ITEMS_SUCCESS)
+                        .sendEndOfStreamImmediately(Code.SUCCESS)
                         .withBlockNumber(Long.MAX_VALUE)
                         .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber),
                 waitUntilNextBlock().withBackgroundTraffic(true),

@@ -24,7 +24,6 @@ import com.hedera.node.config.converter.SemanticVersionConverter;
 import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.ApiPermissionConfig;
 import com.hedera.node.config.data.AtomicBatchConfig;
-import com.hedera.node.config.data.AutoCreationConfig;
 import com.hedera.node.config.data.AutoRenew2Config;
 import com.hedera.node.config.data.AutoRenewConfig;
 import com.hedera.node.config.data.BalancesConfig;
@@ -34,19 +33,19 @@ import com.hedera.node.config.data.BootstrapConfig;
 import com.hedera.node.config.data.CacheConfig;
 import com.hedera.node.config.data.ConsensusConfig;
 import com.hedera.node.config.data.ContractsConfig;
-import com.hedera.node.config.data.CryptoCreateWithAliasConfig;
 import com.hedera.node.config.data.EntitiesConfig;
 import com.hedera.node.config.data.ExpiryConfig;
 import com.hedera.node.config.data.FeesConfig;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.GrpcConfig;
+import com.hedera.node.config.data.GrpcUsageTrackerConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.JumboTransactionsConfig;
-import com.hedera.node.config.data.LazyCreationConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NettyConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
 import com.hedera.node.config.data.NodesConfig;
+import com.hedera.node.config.data.OpsDurationConfig;
 import com.hedera.node.config.data.RatesConfig;
 import com.hedera.node.config.data.SchedulingConfig;
 import com.hedera.node.config.data.StakingConfig;
@@ -55,7 +54,6 @@ import com.hedera.node.config.data.TokensConfig;
 import com.hedera.node.config.data.TopicsConfig;
 import com.hedera.node.config.data.TraceabilityConfig;
 import com.hedera.node.config.data.TssConfig;
-import com.hedera.node.config.data.UtilPrngConfig;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.node.config.types.CongestionMultipliers;
 import com.hedera.node.config.types.EntityScaleFactors;
@@ -85,7 +83,6 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 AddressBookConfig.class,
                 NodesConfig.class,
                 ApiPermissionConfig.class,
-                AutoCreationConfig.class,
                 AutoRenew2Config.class,
                 AutoRenewConfig.class,
                 BalancesConfig.class,
@@ -95,14 +92,12 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 CacheConfig.class,
                 ConsensusConfig.class,
                 ContractsConfig.class,
-                CryptoCreateWithAliasConfig.class,
                 EntitiesConfig.class,
                 ExpiryConfig.class,
                 FeesConfig.class,
                 FilesConfig.class,
                 GrpcConfig.class,
                 HederaConfig.class,
-                LazyCreationConfig.class,
                 LedgerConfig.class,
                 NettyConfig.class,
                 NetworkAdminConfig.class,
@@ -113,11 +108,12 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 TokensConfig.class,
                 TopicsConfig.class,
                 TraceabilityConfig.class,
-                UtilPrngConfig.class,
                 AtomicBatchConfig.class,
                 VersionConfig.class,
                 TssConfig.class,
-                JumboTransactionsConfig.class);
+                JumboTransactionsConfig.class,
+                GrpcUsageTrackerConfig.class,
+                OpsDurationConfig.class);
     }
 
     @NonNull

@@ -2,12 +2,12 @@
 package com.swirlds.merkledb.collections;
 
 import static com.swirlds.base.units.UnitConstants.BYTES_TO_MEBIBYTES;
-import static com.swirlds.common.test.fixtures.RandomUtils.nextInt;
 import static com.swirlds.merkledb.collections.AbstractLongList.FILE_HEADER_SIZE_V3;
 import static com.swirlds.merkledb.collections.LongList.IMPERMISSIBLE_VALUE;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.CONFIGURATION;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.checkDirectMemoryIsCleanedUpToLessThanBaseUsage;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.getDirectMemoryUsedBytes;
+import static org.hiero.base.utility.test.fixtures.RandomUtils.nextInt;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -510,12 +510,14 @@ abstract class AbstractLongListTest<T extends AbstractLongList<?>> {
             // Count valid entries and collect their indices
             final AtomicLong count = new AtomicLong(0);
             final Set<Long> keysInForEach = new HashSet<>();
-            longList.forEach((path, location) -> {
-                count.incrementAndGet();
-                keysInForEach.add(path);
+            longList.forEach(
+                    (path, location) -> {
+                        count.incrementAndGet();
+                        keysInForEach.add(path);
 
-                assertEquals(path + 100, location, "Mismatch in value for index " + path);
-            });
+                        assertEquals(path + 100, location, "Mismatch in value for index " + path);
+                    },
+                    null);
 
             // Ensure the number of valid indices matches the expected range
             assertEquals(
@@ -622,6 +624,40 @@ abstract class AbstractLongListTest<T extends AbstractLongList<?>> {
                 Files.delete(tmpFile);
                 Files.delete(tmpDir);
             }
+        }
+    }
+
+    @Test
+    void forEachWhileTest() throws Exception {
+        try (final LongList list = createLongList(10, 100, 0)) {
+            list.updateValidRange(0, 99);
+            for (int i = 0; i < 100; i++) {
+                list.put(i, i + 1000);
+            }
+            final AtomicInteger counter = new AtomicInteger(0);
+            list.forEach(
+                    (l, v) -> {
+                        counter.incrementAndGet();
+                    },
+                    () -> counter.get() < 42);
+            assertEquals(42, counter.get());
+        }
+    }
+
+    @Test
+    void forEachWhileNullCondTest() throws Exception {
+        try (final LongList list = createLongList(10, 100, 0)) {
+            list.updateValidRange(0, 99);
+            for (int i = 0; i < 100; i++) {
+                list.put(i, i + 1000);
+            }
+            final AtomicInteger counter = new AtomicInteger(0);
+            list.forEach(
+                    (l, v) -> {
+                        counter.incrementAndGet();
+                    },
+                    null);
+            assertEquals(100, counter.get());
         }
     }
 

@@ -105,15 +105,14 @@ public class ContractCallLocalHandler extends PaidQueryHandler {
                     op.contractID().evmAddressOrThrow().length() == EVM_ADDRESS_LENGTH_AS_INT, INVALID_CONTRACT_ID);
         }
         // A contract or token contract corresponding to that contract ID must exist in state (otherwise we have
-        // nothing
-        // to call)
+        // nothing to call)
         final var contract = context.createStore(ReadableAccountStore.class).getContractById(contractID);
         if (contract == null) {
             var tokenNum = contractID.contractNumOrElse(0L);
             // For convenience also translate a long-zero address to a token ID
             if (contractID.hasEvmAddress()) {
                 final var evmAddress = contractID.evmAddressOrThrow().toByteArray();
-                if (isLongZeroAddress(entityIdFactory, evmAddress)) {
+                if (isLongZeroAddress(evmAddress)) {
                     tokenNum = numberOfLongZero(evmAddress);
                 }
             }

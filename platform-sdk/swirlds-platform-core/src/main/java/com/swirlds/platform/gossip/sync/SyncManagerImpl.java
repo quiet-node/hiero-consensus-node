@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.gossip.sync;
 
-import static com.swirlds.logging.legacy.LogMarker.FREEZE;
 import static com.swirlds.metrics.api.Metrics.INTERNAL_CATEGORY;
 
 import com.swirlds.common.context.PlatformContext;
@@ -9,8 +8,6 @@ import com.swirlds.common.metrics.FunctionGauge;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
 import java.util.Set;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.gossip.FallenBehindManager;
 import org.hiero.consensus.model.node.NodeId;
 
@@ -19,16 +16,14 @@ import org.hiero.consensus.model.node.NodeId;
  */
 public class SyncManagerImpl implements FallenBehindManager {
 
-    private static final Logger logger = LogManager.getLogger(SyncManagerImpl.class);
-
     /** This object holds data on how nodes are connected to each other. */
     private final FallenBehindManager fallenBehindManager;
 
     /**
      * Creates a new SyncManager
      *
-     * @param platformContext         the platform context
-     * @param fallenBehindManager     the fallen behind manager
+     * @param platformContext     the platform context
+     * @param fallenBehindManager the fallen behind manager
      */
     public SyncManagerImpl(
             @NonNull final PlatformContext platformContext, @NonNull final FallenBehindManager fallenBehindManager) {
@@ -52,20 +47,19 @@ public class SyncManagerImpl implements FallenBehindManager {
     }
 
     /**
-     * Observers halt requested dispatches. Causes gossip to permanently stop (until node reboot).
-     *
-     * @param reason the reason why gossip is being stopped
+     * {@inheritDoc}
      */
-    public void haltRequestedObserver(final String reason) {
-        logger.info(FREEZE.getMarker(), "Gossip frozen, reason: {}", reason);
+    @Override
+    public void reportFallenBehind(@NonNull final NodeId id) {
+        fallenBehindManager.reportFallenBehind(id);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void reportFallenBehind(final NodeId id) {
-        fallenBehindManager.reportFallenBehind(id);
+    public void clearFallenBehind(@NonNull final NodeId id) {
+        fallenBehindManager.clearFallenBehind(id);
     }
 
     /**
@@ -84,11 +78,17 @@ public class SyncManagerImpl implements FallenBehindManager {
         return fallenBehindManager.hasFallenBehind();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public boolean shouldReconnectFrom(final NodeId peerId) {
+    public boolean shouldReconnectFrom(@NonNull final NodeId peerId) {
         return fallenBehindManager.shouldReconnectFrom(peerId);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int numReportedFallenBehind() {
         return fallenBehindManager.numReportedFallenBehind();

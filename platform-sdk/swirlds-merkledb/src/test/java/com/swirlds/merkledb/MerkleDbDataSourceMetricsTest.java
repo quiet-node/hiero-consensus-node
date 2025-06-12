@@ -8,10 +8,9 @@ import static com.swirlds.merkledb.test.fixtures.TestType.fixed_fixed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.swirlds.base.units.UnitConstants;
-import com.swirlds.common.constructable.ConstructableRegistry;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
-import com.swirlds.common.test.fixtures.junit.tags.TestComponentTags;
 import com.swirlds.merkledb.config.MerkleDbConfig;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.merkledb.test.fixtures.TestType;
 import com.swirlds.metrics.api.Metric;
 import com.swirlds.metrics.api.Metrics;
@@ -24,7 +23,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.hiero.consensus.model.crypto.DigestType;
+import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.base.crypto.DigestType;
+import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +51,7 @@ class MerkleDbDataSourceMetricsTest {
     @BeforeEach
     public void beforeEach() throws IOException {
         // check db count
+        MerkleDbTestUtils.assertAllDatabasesClosed();
         assertEventuallyEquals(
                 0L, MerkleDbDataSource::getCountOfOpenDatabases, Duration.ofSeconds(1), "Expected no open dbs");
         // create db
@@ -59,8 +61,7 @@ class MerkleDbDataSourceMetricsTest {
         dataSource.registerMetrics(metrics);
 
         // check db count
-        assertEventuallyEquals(
-                1L, MerkleDbDataSource::getCountOfOpenDatabases, Duration.ofSeconds(1), "Expected only 1 db");
+        MerkleDbTestUtils.assertSomeDatabasesStillOpen(1L);
     }
 
     @Tag(TestComponentTags.VMAP)
@@ -168,8 +169,7 @@ class MerkleDbDataSourceMetricsTest {
     @AfterEach
     public void afterEach() throws IOException {
         dataSource.close();
-        assertEventuallyEquals(
-                0L, MerkleDbDataSource::getCountOfOpenDatabases, Duration.ofSeconds(1), "Expected no open dbs");
+        MerkleDbTestUtils.assertAllDatabasesClosed();
         // check the database was deleted
         assertEventuallyFalse(
                 () -> Files.exists(testDirectory.resolve(TABLE_NAME)),

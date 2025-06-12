@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.spec.utilops;
 
-import com.hedera.hapi.block.protoc.PublishStreamResponseCode;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream;
 
 /**
  * Utility verbs for interacting with block node simulators.
@@ -54,8 +54,7 @@ public class BlockNodeSimulatorVerbs {
          * @param responseCode the response code to send
          * @return a builder for configuring the operation
          */
-        public BlockNodeSimulatorOp.SendEndOfStreamBuilder sendEndOfStreamImmediately(
-                PublishStreamResponseCode responseCode) {
+        public BlockNodeSimulatorOp.SendEndOfStreamBuilder sendEndOfStreamImmediately(EndOfStream.Code responseCode) {
             return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode);
         }
 
@@ -91,12 +90,12 @@ public class BlockNodeSimulatorVerbs {
         }
 
         /**
-         * Restarts the block node simulator immediately.
+         * Starts the block node simulator immediately.
          *
          * @return the operation
          */
         public BlockNodeSimulatorOp startImmediately() {
-            return BlockNodeSimulatorOp.restartImmediately(nodeIndex).build();
+            return BlockNodeSimulatorOp.startImmediately(nodeIndex).build();
         }
 
         /**
@@ -126,7 +125,7 @@ public class BlockNodeSimulatorVerbs {
          * @param blockNumber the block number to include in the response
          * @return the operation
          */
-        public BlockNodeSimulatorOp sendEndOfStreamWithBlock(PublishStreamResponseCode responseCode, long blockNumber) {
+        public BlockNodeSimulatorOp sendEndOfStreamWithBlock(EndOfStream.Code responseCode, long blockNumber) {
             return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode)
                     .withBlockNumber(blockNumber)
                     .build();
@@ -142,7 +141,7 @@ public class BlockNodeSimulatorVerbs {
          * @return the operation
          */
         public BlockNodeSimulatorOp sendEndOfStreamWithBlock(
-                PublishStreamResponseCode responseCode, long blockNumber, AtomicLong lastVerifiedBlockNumber) {
+                EndOfStream.Code responseCode, long blockNumber, AtomicLong lastVerifiedBlockNumber) {
             return BlockNodeSimulatorOp.sendEndOfStreamImmediately(nodeIndex, responseCode)
                     .withBlockNumber(blockNumber)
                     .exposingLastVerifiedBlockNumber(lastVerifiedBlockNumber)
@@ -188,12 +187,12 @@ public class BlockNodeSimulatorVerbs {
         }
 
         /**
-         * Restarts all previously shutdown block node simulators.
+         * Starts all previously shutdown block node simulators.
          *
          * @return the operation
          */
-        public BlockNodeSimulatorOp restartAll() {
-            return BlockNodeSimulatorOp.restartAll().build();
+        public BlockNodeSimulatorOp startAll() {
+            return BlockNodeSimulatorOp.startAll().build();
         }
     }
 }

@@ -3,7 +3,6 @@ package com.swirlds.platform.test.fixtures.event.generator;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.platform.internal.EventImpl;
-import com.swirlds.platform.system.address.AddressBook;
 import com.swirlds.platform.test.fixtures.event.DynamicValue;
 import com.swirlds.platform.test.fixtures.event.source.EventSource;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -11,6 +10,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.roster.AddressBook;
 
 /**
  * Generates a hashgraph of events.
@@ -109,15 +109,6 @@ public interface GraphGenerator {
     Roster getRoster();
 
     /**
-     * Returns the maximum generation of this event generator.
-     *
-     * @param creatorId
-     * 		the event creator
-     * @return the maximum event generation for the supplied creator
-     */
-    long getMaxGeneration(@Nullable final NodeId creatorId);
-
-    /**
      * Returns the maximum birth round of this event generator.
      *
      * @param creatorId
@@ -125,11 +116,6 @@ public interface GraphGenerator {
      * @return the maximum event birth round for the supplied creator
      */
     long getMaxBirthRound(@Nullable final NodeId creatorId);
-
-    /**
-     * Returns the maximum generation of all events created by this generator
-     */
-    long getMaxGeneration();
 
     /**
      * Set the affinity of each node for choosing the parents of its events.

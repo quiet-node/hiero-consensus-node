@@ -46,14 +46,24 @@ public interface HashgraphPictureOptions {
     boolean writeConsensusTimeStamp();
 
     /**
-     * @return should the generation be written for every event
+     * @return should the non-deterministic generation be written for every event
      */
-    boolean writeGeneration();
+    boolean writeNGen();
 
     /**
      * @return should the birth round be written for every event
      */
     boolean writeBirthRound();
+
+    /**
+     * @return should branch numbers be written for every branched event (if any)
+     */
+    boolean writeBranches();
+
+    /**
+     * @return should the DeGen be written for every event
+     */
+    boolean writeDeGen();
 
     /**
      * @return should simple colors be used in the picture

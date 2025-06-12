@@ -25,13 +25,13 @@ import com.hedera.node.app.info.CurrentPlatformStatus;
 import com.hedera.node.app.info.InfoInjectionModule;
 import com.hedera.node.app.metrics.MetricsInjectionModule;
 import com.hedera.node.app.platform.PlatformModule;
-import com.hedera.node.app.platform.PlatformStateModule;
 import com.hedera.node.app.records.BlockRecordInjectionModule;
 import com.hedera.node.app.records.BlockRecordManager;
 import com.hedera.node.app.service.contract.impl.ContractServiceImpl;
 import com.hedera.node.app.service.file.impl.FileServiceImpl;
 import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.util.impl.UtilServiceImpl;
+import com.hedera.node.app.services.NodeRewardManager;
 import com.hedera.node.app.services.ServicesInjectionModule;
 import com.hedera.node.app.services.ServicesRegistry;
 import com.hedera.node.app.spi.AppContext;
@@ -58,7 +58,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.state.notifications.AsyncFatalIssListener;
-import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
@@ -69,7 +68,6 @@ import java.nio.charset.Charset;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -91,8 +89,7 @@ import javax.inject.Singleton;
             BlockStreamModule.class,
             PlatformModule.class,
             ThrottleServiceModule.class,
-            FacilityInitModule.class,
-            PlatformStateModule.class
+            FacilityInitModule.class
         })
 public interface HederaInjectionComponent {
     InitTrigger initTrigger();
@@ -101,7 +98,7 @@ public interface HederaInjectionComponent {
 
     WorkingStateAccessor workingStateAccessor();
 
-    Consumer<State> initializer();
+    FacilityInitModule.FacilityInitializer initializer();
 
     RecordCache recordCache();
 
@@ -135,6 +132,8 @@ public interface HederaInjectionComponent {
     BlockNodeConnectionManager blockNodeConnectionManager();
 
     BlockStreamManager blockStreamManager();
+
+    NodeRewardManager nodeRewardManager();
 
     FeeManager feeManager();
 

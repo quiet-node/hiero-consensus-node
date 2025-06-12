@@ -16,6 +16,7 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import java.io.IOException;
@@ -23,8 +24,9 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import org.hiero.consensus.model.crypto.DigestType;
-import org.hiero.consensus.model.crypto.Hash;
+import org.hiero.base.crypto.DigestType;
+import org.hiero.base.crypto.Hash;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -199,5 +201,10 @@ class VirtualMerkleLeafHasherTest {
         bb.put(valueInput);
 
         return hashOf(Arrays.copyOf(bb.array(), bb.position()));
+    }
+
+    @AfterEach
+    void tearDown() {
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.file;
 
+import static com.hedera.services.bdd.spec.HapiPropertySource.asAccount;
 import static com.hedera.services.bdd.spec.HapiSpec.defaultHapiSpec;
-import static com.hedera.services.bdd.spec.PropertySource.asAccount;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.changeFromSnapshot;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getAccountBalance;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getFileContents;
@@ -41,7 +41,7 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.model.utility.CommonUtils;
+import org.hiero.base.utility.CommonUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DynamicTest;
 

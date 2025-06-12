@@ -45,10 +45,14 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
     private final Checkbox labelConsOrderCheckbox;
     /** the consensus time stamp for the event */
     private final Checkbox labelConsTimestampCheckbox;
-    /** the generation number for the event */
-    private final Checkbox labelGenerationCheckbox;
+    /** the Ngen number for the event */
+    private final Checkbox labelNGenCheckbox;
     /** the birth round number for the event */
     private final Checkbox labelBirthroundCheckbox;
+    /** the branch number for the event */
+    private final Checkbox labelBranchNumberCheckbox;
+    /** the DeGen value for the event */
+    private final Checkbox labelDeGenCheckbox;
     /** check to display the latest events available */
     private final Checkbox displayLatestEvents;
 
@@ -69,8 +73,10 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
         labelRoundRecCheckbox = new Checkbox("Labels: Round received (consensus)");
         labelConsOrderCheckbox = new Checkbox("Labels: Order (consensus)");
         labelConsTimestampCheckbox = new Checkbox("Labels: Timestamp (consensus)");
-        labelGenerationCheckbox = new Checkbox("Labels: Generation");
+        labelNGenCheckbox = new Checkbox("Labels: NGen (non-deterministic generation)");
         labelBirthroundCheckbox = new Checkbox("Labels: Birth round");
+        labelBranchNumberCheckbox = new Checkbox("Labels: Branch number");
+        labelDeGenCheckbox = new Checkbox("Labels: DeGen");
         displayLatestEvents = new Checkbox("Display latest events");
         displayLatestEvents.setState(true);
 
@@ -107,8 +113,10 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
             labelRoundRecCheckbox,
             labelConsOrderCheckbox,
             labelConsTimestampCheckbox,
-            labelGenerationCheckbox,
+            labelNGenCheckbox,
             labelBirthroundCheckbox,
+            labelBranchNumberCheckbox,
+            labelDeGenCheckbox,
             displayLatestEvents
         };
     }
@@ -196,7 +204,8 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
                                 - Non-famous witnesses are yellow\s
                                 - Famous witnesses are green\s
                                 - Undecided witnesses are red\s
-                                - The selected event is magenta\s
+                                - The selected event is magenta with green border\s
+                                - The parents of the selected event have magenta borders\s
                                 - The events the selected event can strongly see are cyan\s""")),
                 constr);
         constr.gridy++;
@@ -247,13 +256,18 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
     }
 
     @Override
-    public boolean writeGeneration() {
-        return labelGenerationCheckbox.getState();
+    public boolean writeNGen() {
+        return labelNGenCheckbox.getState();
     }
 
     @Override
     public boolean writeBirthRound() {
         return labelBirthroundCheckbox.getState();
+    }
+
+    @Override
+    public boolean writeDeGen() {
+        return labelDeGenCheckbox.getState();
     }
 
     @Override
@@ -280,6 +294,11 @@ public class HashgraphGuiControls implements HashgraphPictureOptions {
     @Override
     public boolean displayLatestEvents() {
         return displayLatestEvents.getState();
+    }
+
+    @Override
+    public boolean writeBranches() {
+        return labelBranchNumberCheckbox.getState();
     }
 
     @Override

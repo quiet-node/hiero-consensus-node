@@ -2,7 +2,6 @@
 package com.hedera.node.app.workflows.query;
 
 import com.hedera.hapi.node.base.ResponseType;
-import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.transaction.Query;
 import com.hedera.node.app.components.QueryInjectionComponent;
 import com.hedera.node.app.fees.ExchangeRateManager;
@@ -26,7 +25,6 @@ import com.hedera.node.app.workflows.query.annotations.UserQueries;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.pbj.runtime.Codec;
 import com.swirlds.common.utility.AutoCloseableWrapper;
-import com.swirlds.platform.system.SoftwareVersion;
 import com.swirlds.state.State;
 import dagger.Module;
 import dagger.Provides;
@@ -60,8 +58,7 @@ public interface QueryWorkflowInjectionModule {
             @NonNull final FeeManager feeManager,
             @NonNull final SynchronizedThrottleAccumulator synchronizedThrottleAccumulator,
             @NonNull final InstantSource instantSource,
-            @NonNull final OpWorkflowMetrics opWorkflowMetrics,
-            @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory) {
+            @NonNull final OpWorkflowMetrics opWorkflowMetrics) {
         return new QueryWorkflowImpl(
                 stateAccessor,
                 submissionManager,
@@ -77,8 +74,7 @@ public interface QueryWorkflowInjectionModule {
                 synchronizedThrottleAccumulator,
                 instantSource,
                 opWorkflowMetrics,
-                true,
-                softwareVersionFactory);
+                true);
     }
 
     @Provides
@@ -98,8 +94,7 @@ public interface QueryWorkflowInjectionModule {
             @NonNull final FeeManager feeManager,
             @NonNull final SynchronizedThrottleAccumulator synchronizedThrottleAccumulator,
             @NonNull final InstantSource instantSource,
-            @NonNull final OpWorkflowMetrics opWorkflowMetrics,
-            @NonNull final Function<SemanticVersion, SoftwareVersion> softwareVersionFactory) {
+            @NonNull final OpWorkflowMetrics opWorkflowMetrics) {
         return new QueryWorkflowImpl(
                 stateAccessor,
                 submissionManager,
@@ -115,8 +110,7 @@ public interface QueryWorkflowInjectionModule {
                 synchronizedThrottleAccumulator,
                 instantSource,
                 opWorkflowMetrics,
-                false,
-                softwareVersionFactory);
+                false);
     }
 
     @Provides

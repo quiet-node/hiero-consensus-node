@@ -2,9 +2,6 @@
 package com.hedera.services.bdd.suites.contract.precompile.airdrops;
 
 import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
-import static com.hedera.services.bdd.spec.HapiPropertySource.asHexedSolidityAddress;
-import static com.hedera.services.bdd.spec.HapiPropertySource.realm;
-import static com.hedera.services.bdd.spec.HapiPropertySource.shard;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.ContractInfoAsserts.*;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.includingFungiblePendingAirdrop;
@@ -40,6 +37,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.validateChargedUsdW
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HBAR;
+import static com.hedera.services.bdd.suites.contract.Utils.asHexedSolidityAddress;
 import static com.hedera.services.bdd.suites.contract.opcodes.Create2OperationSuite.CREATE_2_TXN;
 import static com.hedera.services.bdd.suites.contract.opcodes.Create2OperationSuite.CREATION;
 import static com.hedera.services.bdd.suites.contract.opcodes.Create2OperationSuite.DEPLOY;
@@ -60,7 +58,6 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONTRACT_REVER
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
 
 import com.esaulpaugh.headlong.abi.Address;
-import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.HapiTestLifecycle;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
@@ -99,7 +96,7 @@ import org.junit.jupiter.api.Tag;
 @Tag(SMART_CONTRACT)
 public class AirdropToContractSystemContractTest {
 
-    @Contract(contract = "Airdrop", maxAutoAssociations = -1)
+    @Contract(contract = "Airdrop", maxAutoAssociations = -1, creationGas = 3_000_000)
     static SpecContract airdropContract;
 
     @Account(tinybarBalance = 100_000_000_000_000_000L)
@@ -117,7 +114,8 @@ public class AirdropToContractSystemContractTest {
         @HapiTest
         @DisplayName("Can airdrop fungible token to a contract that is already associated to it")
         public Stream<DynamicTest> airdropToContract(
-                @Contract(contract = "AssociateContract", isImmutable = true) SpecContract receiverContract,
+                @Contract(contract = "AssociateContract", isImmutable = true, creationGas = 3_000_000)
+                        SpecContract receiverContract,
                 @FungibleToken(initialSupply = 1000L) SpecFungibleToken token) {
             return hapiTest(
                     receiverContract.call("associateTokenToThisContract", token).gas(1_000_000L),
@@ -133,7 +131,8 @@ public class AirdropToContractSystemContractTest {
         @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
         @DisplayName("Can airdrop multiple tokens to contract that is already associated with them")
         public Stream<DynamicTest> airdropTokensToContract(
-                @Contract(contract = "AssociateContract", isImmutable = true) SpecContract receiverContract,
+                @Contract(contract = "AssociateContract", isImmutable = true, creationGas = 3_000_000)
+                        SpecContract receiverContract,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token1,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token2,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token3,
@@ -185,7 +184,11 @@ public class AirdropToContractSystemContractTest {
         @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
         @DisplayName("Can airdrop multiple tokens to a contract that is already associated to some of them")
         public Stream<DynamicTest> canAirdropTokensToContractWithSomeAssociations(
-                @Contract(contract = "AssociateContract", isImmutable = true, maxAutoAssociations = 2)
+                @Contract(
+                                contract = "AssociateContract",
+                                isImmutable = true,
+                                maxAutoAssociations = 2,
+                                creationGas = 3_000_000)
                         SpecContract receiverContract,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token1,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token2,
@@ -231,7 +234,11 @@ public class AirdropToContractSystemContractTest {
         @DisplayName(
                 "Can airdrop two tokens to contract with no remaining auto assoc slot and already associated to one of the tokens")
         public Stream<DynamicTest> canAirdropTwoTokensToContractWithNoAutoAssocSlots(
-                @Contract(contract = "AssociateContract", isImmutable = true, maxAutoAssociations = 0)
+                @Contract(
+                                contract = "AssociateContract",
+                                isImmutable = true,
+                                maxAutoAssociations = 0,
+                                creationGas = 3_000_000)
                         SpecContract receiverContract,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token1,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token2) {
@@ -276,7 +283,8 @@ public class AirdropToContractSystemContractTest {
         @DisplayName(
                 "Airdropped token with custom fees to be paid by the contract receiver should be paid by the sender")
         public Stream<DynamicTest> airdropWithCustomFees(
-                @Contract(contract = "AssociateContract", isImmutable = true) SpecContract receiverContract,
+                @Contract(contract = "AssociateContract", isImmutable = true, creationGas = 3_000_000)
+                        SpecContract receiverContract,
                 @NonNull
                         @FungibleToken(
                                 initialSupply = 1_000_000L,
@@ -311,7 +319,8 @@ public class AirdropToContractSystemContractTest {
         @DisplayName(
                 "Airdropped token with custom fees (net of transfers = true) to be paid by the contract receiver should be paid by the sender")
         public Stream<DynamicTest> airdropWithCustomFeesNetOfTransfersTrue(
-                @Contract(contract = "AssociateContract", isImmutable = true) SpecContract receiverContract,
+                @Contract(contract = "AssociateContract", isImmutable = true, creationGas = 3_000_000)
+                        SpecContract receiverContract,
                 @NonNull
                         @FungibleToken(
                                 initialSupply = 1_000_000L,
@@ -349,7 +358,8 @@ public class AirdropToContractSystemContractTest {
         @DisplayName(
                 "Airdropped token with custom fees to be paid by the contract receiver that is a fee collector for another fee would not be paid")
         public Stream<DynamicTest> airdropWithCustomFeeWhereReceiverIsCollectorForAnotherFee(
-                @Contract(contract = "AssociateContract", isImmutable = true) SpecContract receiverContract,
+                @Contract(contract = "AssociateContract", isImmutable = true, creationGas = 3_000_000)
+                        SpecContract receiverContract,
                 @NonNull
                         @FungibleToken(
                                 initialSupply = 1_000_000L,
@@ -398,8 +408,7 @@ public class AirdropToContractSystemContractTest {
                         contractCreate(receiverContract)
                                 .bytecode("AssociateContract")
                                 .gas(5_000_000L)
-                                .exposingNumTo(
-                                        num -> receiverContractAddress.set(asHexedSolidityAddress(shard, realm, num))),
+                                .exposingContractIdTo(id -> receiverContractAddress.set(asHexedSolidityAddress(id))),
                         newKeyNamed("adminKey"),
                         newKeyNamed("feeScheduleKey"),
                         tokenCreate(token)
@@ -480,7 +489,7 @@ public class AirdropToContractSystemContractTest {
             final AtomicReference<String> factoryEvmAddress = new AtomicReference<>();
             final AtomicReference<byte[]> testContractInitcode = new AtomicReference<>();
             final AtomicReference<String> expectedCreate2Address = new AtomicReference<>();
-            final AtomicReference<ByteString> partyAlias = new AtomicReference<>();
+            final AtomicReference<byte[]> partyAlias = new AtomicReference<>();
             final AtomicReference<String> hollowCreationAddress = new AtomicReference<>();
 
             final var salt = BigInteger.valueOf(42);
@@ -493,10 +502,10 @@ public class AirdropToContractSystemContractTest {
                     sender.associateTokens(token, nft),
                     airdropContract.associateTokens(token, nft),
                     uploadInitCode(contract),
-                    sourcing(() -> contractCreate(contract)
+                    contractCreate(contract)
                             .payingWith(GENESIS)
                             .via(CREATE_2_TXN)
-                            .exposingNumTo(num -> factoryEvmAddress.set(asHexedSolidityAddress(0, 0, num)))),
+                            .exposingContractIdTo(id -> factoryEvmAddress.set(asHexedSolidityAddress(id))),
                     // GET BYTECODE OF THE CREATE2 CONTRACT
                     sourcing(() -> contractCallLocal(
                                     contract, GET_BYTECODE, asHeadlongAddress(factoryEvmAddress.get()), salt)
@@ -657,7 +666,11 @@ public class AirdropToContractSystemContractTest {
         @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
         @DisplayName("Can airdrop multiple tokens to contract that has free auto association slots")
         public Stream<DynamicTest> airdropTokensToContractWithFreeSlots(
-                @Contract(contract = "AssociateContract", isImmutable = true, maxAutoAssociations = -1)
+                @Contract(
+                                contract = "AssociateContract",
+                                isImmutable = true,
+                                maxAutoAssociations = -1,
+                                creationGas = 3_000_000L)
                         SpecContract receiverContract,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token1,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token2,
@@ -707,7 +720,11 @@ public class AirdropToContractSystemContractTest {
         @RepeatableHapiTest(RepeatableReason.NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
         @DisplayName("Can airdrop multiple tokens to contract that has no free auto association slots")
         public Stream<DynamicTest> airdropTokensToContractWithoutFreeSlots(
-                @Contract(contract = "AssociateContract", isImmutable = true, maxAutoAssociations = 0)
+                @Contract(
+                                contract = "AssociateContract",
+                                isImmutable = true,
+                                maxAutoAssociations = 0,
+                                creationGas = 3_000_000L)
                         SpecContract receiverContract,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token1,
                 @NonNull @FungibleToken(initialSupply = 1_000_000L) final SpecFungibleToken token2,
@@ -1029,7 +1046,8 @@ public class AirdropToContractSystemContractTest {
         @DisplayName(
                 "Airdrop frozen token that is already associated to the receiving contract should result in failed airdrop")
         public Stream<DynamicTest> airdropFrozenToken(
-                @Contract(contract = "AssociateContract", isImmutable = true) SpecContract receiverContract,
+                @Contract(contract = "AssociateContract", isImmutable = true, creationGas = 3_000_000)
+                        SpecContract receiverContract,
                 @FungibleToken(
                                 initialSupply = 1_000_000L,
                                 keys = {ADMIN_KEY, FREEZE_KEY})
@@ -1134,10 +1152,10 @@ public class AirdropToContractSystemContractTest {
                         sender.associateTokens(token),
                         uploadInitCode(create2Contract),
                         token.treasury().transferUnitsTo(sender, 1_000L, token),
-                        sourcing(() -> contractCreate(create2Contract)
+                        contractCreate(create2Contract)
                                 .payingWith(GENESIS)
                                 .via(CREATE_2_TXN)
-                                .exposingNumTo(num -> factoryEvmAddress.set(asHexedSolidityAddress(0, 0, num)))),
+                                .exposingContractIdTo(id -> factoryEvmAddress.set(asHexedSolidityAddress(id))),
                         // GET BYTECODE OF THE CREATE2 CONTRACT
                         sourcing(() -> contractCallLocal(
                                         create2Contract, GET_BYTECODE, asHeadlongAddress(factoryEvmAddress.get()), salt)

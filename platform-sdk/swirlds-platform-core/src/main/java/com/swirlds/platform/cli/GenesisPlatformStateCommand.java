@@ -8,16 +8,13 @@ import static com.swirlds.platform.state.snapshot.SignedStateFileWriter.writeSig
 import com.swirlds.cli.commands.StateCommand;
 import com.swirlds.cli.utility.AbstractCommand;
 import com.swirlds.cli.utility.SubcommandOf;
-import com.swirlds.common.RosterStateId;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.config.DefaultConfiguration;
 import com.swirlds.platform.consensus.SyntheticSnapshot;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
-import com.swirlds.platform.state.service.WritableRosterStore;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.state.snapshot.SignedStateFileReader;
@@ -28,6 +25,8 @@ import com.swirlds.state.spi.WritableStates;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
+import org.hiero.consensus.roster.RosterStateId;
+import org.hiero.consensus.roster.WritableRosterStore;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -70,8 +69,7 @@ public class GenesisPlatformStateCommand extends AbstractCommand {
             stateFacade.bulkUpdateOf(reservedSignedState.get().getState(), v -> {
                 System.out.printf("Replacing platform data %n");
                 v.setRound(PlatformStateAccessor.GENESIS_ROUND);
-                v.setSnapshot(SyntheticSnapshot.getGenesisSnapshot(
-                        configuration.getConfigData(EventConfig.class).getAncientMode()));
+                v.setSnapshot(SyntheticSnapshot.getGenesisSnapshot());
             });
             {
                 System.out.printf("Resetting the RosterService state %n");

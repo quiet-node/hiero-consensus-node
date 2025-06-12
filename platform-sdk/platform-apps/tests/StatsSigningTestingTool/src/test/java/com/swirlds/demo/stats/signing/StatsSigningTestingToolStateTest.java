@@ -22,12 +22,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import org.hiero.consensus.model.event.AncientMode;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
-import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.test.fixtures.hashgraph.EventWindowBuilder;
 import org.hiero.consensus.model.transaction.ConsensusTransaction;
 import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
 import org.hiero.consensus.model.transaction.TransactionWrapper;
@@ -61,7 +60,11 @@ class StatsSigningTestingToolStateTest {
         random = new Random();
         event = mock(PlatformEvent.class);
 
-        final var eventWindow = new EventWindow(10, 5, 20, AncientMode.BIRTH_ROUND_THRESHOLD);
+        final var eventWindow = EventWindowBuilder.builder()
+                .setLatestConsensusRound(10)
+                .setAncientThreshold(5)
+                .setExpiredThreshold(20)
+                .build();
         final var roster = new Roster(Collections.EMPTY_LIST);
         when(event.transactionIterator()).thenReturn(Collections.emptyIterator());
         round = new ConsensusRound(
@@ -149,7 +152,11 @@ class StatsSigningTestingToolStateTest {
         final var bytes = signedTransaction ? getSignedApplicationTransaction() : getUnsignedApplicationTransaction();
 
         final var eventCore = mock(EventCore.class);
-        final var gossipEvent = new GossipEvent(eventCore, null, List.of(bytes));
+        final var gossipEvent = GossipEvent.newBuilder()
+                .eventCore(eventCore)
+                .transactions(bytes)
+                .build();
+
         when(eventCore.timeCreated()).thenReturn(Timestamp.DEFAULT);
         event = new PlatformEvent(gossipEvent);
 
@@ -167,7 +174,10 @@ class StatsSigningTestingToolStateTest {
 
         final var stateSignatureTransactionBytes = main.encodeSystemTransaction(stateSignatureTransaction);
         final var eventCore = mock(EventCore.class);
-        final var gossipEvent = new GossipEvent(eventCore, null, List.of(stateSignatureTransactionBytes));
+        final var gossipEvent = GossipEvent.newBuilder()
+                .eventCore(eventCore)
+                .transactions(stateSignatureTransactionBytes)
+                .build();
         when(eventCore.timeCreated()).thenReturn(Timestamp.DEFAULT);
         event = new PlatformEvent(gossipEvent);
 
@@ -186,13 +196,11 @@ class StatsSigningTestingToolStateTest {
         final var stateSignatureTransactionBytes = main.encodeSystemTransaction(stateSignatureTransaction);
 
         final var eventCore = mock(EventCore.class);
-        final var gossipEvent = new GossipEvent(
-                eventCore,
-                null,
-                List.of(
-                        stateSignatureTransactionBytes,
-                        stateSignatureTransactionBytes,
-                        stateSignatureTransactionBytes));
+        final var gossipEvent = GossipEvent.newBuilder()
+                .eventCore(eventCore)
+                .transactions(List.of(
+                        stateSignatureTransactionBytes, stateSignatureTransactionBytes, stateSignatureTransactionBytes))
+                .build();
         when(eventCore.timeCreated()).thenReturn(Timestamp.DEFAULT);
         event = new PlatformEvent(gossipEvent);
 
@@ -211,7 +219,10 @@ class StatsSigningTestingToolStateTest {
         final var stateSignatureTransactionBytes =
                 StateSignatureTransaction.PROTOBUF.toBytes(stateSignatureTransaction);
         final var eventCore = mock(EventCore.class);
-        final var gossipEvent = new GossipEvent(eventCore, null, List.of(stateSignatureTransactionBytes));
+        final var gossipEvent = GossipEvent.newBuilder()
+                .eventCore(eventCore)
+                .transactions(stateSignatureTransactionBytes)
+                .build();
         when(eventCore.timeCreated()).thenReturn(Timestamp.DEFAULT);
         event = new PlatformEvent(gossipEvent);
 

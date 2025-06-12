@@ -6,10 +6,7 @@ import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.throttle.RateLimitedLogger;
 import com.swirlds.platform.event.EventCounter;
-import com.swirlds.platform.eventhandling.EventConfig;
 import com.swirlds.platform.internal.EventImpl;
-import com.swirlds.platform.sequence.map.SequenceMap;
-import com.swirlds.platform.sequence.map.StandardSequenceMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
@@ -20,11 +17,12 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.model.crypto.Hash;
-import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.event.EventDescriptorWrapper;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.sequence.map.SequenceMap;
+import org.hiero.consensus.model.sequence.map.StandardSequenceMap;
 
 /**
  * Links events to their parents. Expects events to be provided in topological order.
@@ -91,18 +89,9 @@ abstract class AbstractInOrderLinker implements InOrderLinker {
         this.birthRoundMismatchLogger = new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
         this.timeCreatedMismatchLogger = new RateLimitedLogger(logger, platformContext.getTime(), MINIMUM_LOG_PERIOD);
 
-        final AncientMode ancientMode = platformContext
-                .getConfiguration()
-                .getConfigData(EventConfig.class)
-                .getAncientMode();
-        this.eventWindow = EventWindow.getGenesisEventWindow(ancientMode);
-        if (ancientMode == AncientMode.BIRTH_ROUND_THRESHOLD) {
-            this.parentDescriptorMap = new StandardSequenceMap<>(
-                    0, INITIAL_CAPACITY, true, ed -> ed.eventDescriptor().birthRound());
-        } else {
-            this.parentDescriptorMap = new StandardSequenceMap<>(
-                    0, INITIAL_CAPACITY, true, ed -> ed.eventDescriptor().generation());
-        }
+        this.eventWindow = EventWindow.getGenesisEventWindow();
+        this.parentDescriptorMap =
+                new StandardSequenceMap<>(0, INITIAL_CAPACITY, true, EventDescriptorWrapper::birthRound);
     }
 
     /**
@@ -144,7 +133,7 @@ abstract class AbstractInOrderLinker implements InOrderLinker {
     public void setEventWindow(@NonNull final EventWindow eventWindow) {
         this.eventWindow = Objects.requireNonNull(eventWindow);
 
-        parentDescriptorMap.shiftWindow(eventWindow.getAncientThreshold(), (descriptor, event) -> {
+        parentDescriptorMap.shiftWindow(eventWindow.ancientThreshold(), (descriptor, event) -> {
             parentHashMap.remove(descriptor.hash());
             eventHasBecomeAncient(event);
         });
