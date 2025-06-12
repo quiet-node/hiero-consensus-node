@@ -1,4 +1,4 @@
-package org.hiero.consensus.otter.docker.app;
+package org.hiero.consensus.otter.docker.app.platform;
 
 import static com.swirlds.common.io.utility.FileUtils.getAbsolutePath;
 import static com.swirlds.common.io.utility.FileUtils.rethrowIO;
@@ -57,7 +57,7 @@ import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
 public record DockerApp(Platform platform) {
     private final static Logger LOGGER = LogManager.getLogger(DockerApp.class);
 
-    private static final String APP_NAME = "org.hiero.consensus.otter.docker.app.DockerApp";
+    private static final String APP_NAME = "org.hiero.consensus.otter.docker.app.platform.DockerApp";
     private static final String SWIRLD_NAME = "123";
     private static final byte[] EMPTY = new byte[0];
 

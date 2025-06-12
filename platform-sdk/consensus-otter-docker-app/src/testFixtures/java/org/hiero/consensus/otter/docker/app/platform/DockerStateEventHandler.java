@@ -1,4 +1,4 @@
-package org.hiero.consensus.otter.docker.app;
+package org.hiero.consensus.otter.docker.app.platform;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;

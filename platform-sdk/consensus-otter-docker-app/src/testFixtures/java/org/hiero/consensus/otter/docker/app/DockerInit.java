@@ -13,13 +13,12 @@ public class DockerInit {
 
     public static void main(String[] args) throws Exception {
 
-        final var app = DockerApp.create();
-        app.platform().start();
+        final NettyRestServer server = new NettyRestServer(8080);
 
-        while (true) {
-            Thread.sleep(2000);
-            LOGGER.info("Alive");
-        }
+        server.get("/hello", ctx -> ctx.ok("Hello, World!"));
+        server.get("/ping", ctx -> ctx.ok("pong"));
+
+        server.start();
 
     }
 
