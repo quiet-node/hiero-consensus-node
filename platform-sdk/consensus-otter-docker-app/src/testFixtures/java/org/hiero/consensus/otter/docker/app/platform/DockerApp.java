@@ -46,42 +46,41 @@ import java.util.Random;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.constructable.ConstructableRegistryException;
-import org.hiero.base.crypto.Cryptography;
-import org.hiero.base.crypto.CryptographyProvider;
 import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.roster.RosterHistory;
 import org.hiero.consensus.roster.RosterUtils;
 import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
 
-public record DockerApp(Platform platform) {
+public class DockerApp {
     private final static Logger LOGGER = LogManager.getLogger(DockerApp.class);
 
     private static final String APP_NAME = "org.hiero.consensus.otter.docker.app.platform.DockerApp";
     private static final String SWIRLD_NAME = "123";
     private static final byte[] EMPTY = new byte[0];
 
-    public static DockerApp create()
+    private final Platform platform;
+
+    public DockerApp()
             throws KeyStoreException, KeyGeneratingException, NoSuchAlgorithmException, NoSuchProviderException, ConstructableRegistryException {
         // --- Configure platform infrastructure and derive node id from the command line and environment ---
         initLogging();
         BootstrapUtils.setupConstructableRegistry();
-        final Configuration platformConfig = buildPlatformConfig();
+        final Configuration platformConfig = buildPlatformConfig(); // TODO From CLI/Config/Rest?
 
         // Immediately initialize the cryptography and merkle cryptography factories
         // to avoid using default behavior instead of that defined in platformConfig
-        final Cryptography cryptography = CryptographyProvider.getInstance();
         final MerkleCryptography merkleCryptography = MerkleCryptographyFactory.create(platformConfig);
 
-        final Random random = new Random(); // TODO
-        final Roster genesisRoster = RandomRosterBuilder.create(random).withSize(4).build(); // TODO
-        final NodeId selfId = NodeId.of(genesisRoster.rosterEntries().getFirst().nodeId());
+        final Random random = new Random(); // TODO Should we do seeded random?
+        final Roster genesisRoster = RandomRosterBuilder.create(random).withSize(4).build(); // TODO From CLI/Config/Rest?
+        final NodeId selfId = NodeId.of(genesisRoster.rosterEntries().getFirst().nodeId()); // TODO From CLI/Config/Rest?
 
         // --- Initialize the platform metrics and the Hedera instance ---
         setupGlobalMetrics(platformConfig);
         final Metrics metrics = getMetricsProvider().createPlatformMetrics(selfId);
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
-        final SemanticVersion version = SemanticVersion.DEFAULT; // TODO: From CLI/Config
+        final SemanticVersion version = SemanticVersion.DEFAULT; // TODO: From CLI/Config/Rest?
 
         LOGGER.info("Starting node {} with version {}", selfId, version);
 
@@ -135,9 +134,12 @@ public record DockerApp(Platform platform) {
                 .withKeysAndCerts(keysAndCerts)
                 .withSystemTransactionEncoderCallback(DockerApp::encodeSystemTransaction);
 
-        return new DockerApp(platformBuilder.build());
+        platform = platformBuilder.build();
     }
 
+    public Platform get() {
+        return platform;
+    }
 
     private static Bytes encodeSystemTransaction(@NonNull final StateSignatureTransaction stateSignatureTransaction) {
         return Bytes.EMPTY; // FIXME
