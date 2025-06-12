@@ -6,7 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 
 import com.hedera.hapi.node.base.AccountID;
-import com.hedera.node.app.service.contract.impl.exec.metrics.TransactionDurationMetrics;
+import com.hedera.node.app.service.contract.impl.exec.metrics.OpsDurationPerTransactionMetrics;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.common.metrics.config.MetricsConfig;
@@ -23,11 +23,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class TransactionDurationMetricsTest {
+class OpsDurationPerTransactionMetricsTest {
 
     private static final long DEFAULT_NODE_ID = 3;
     private Metrics metrics;
-    private TransactionDurationMetrics subject;
+    private OpsDurationPerTransactionMetrics subject;
 
     @Mock
     private HederaEvmTransaction transaction1;
@@ -53,7 +53,7 @@ class TransactionDurationMetricsTest {
                 new PlatformMetricsFactoryImpl(metricsConfig),
                 metricsConfig);
 
-        subject = new TransactionDurationMetrics(metrics);
+        subject = new OpsDurationPerTransactionMetrics(metrics);
     }
 
     @Test
@@ -65,7 +65,7 @@ class TransactionDurationMetricsTest {
         subject.recordTransactionDuration(transaction1, duration);
 
         // Then
-        assertThat(subject.getDuration(transaction1)).isEqualTo(duration);
+        assertThat(subject.getOpsDuration(transaction1)).isEqualTo(duration);
     }
 
     @Test
@@ -73,7 +73,7 @@ class TransactionDurationMetricsTest {
         // Given
         final HederaEvmTransaction nonExistentTransaction = transaction2;
         // When
-        final long duration = subject.getDuration(nonExistentTransaction);
+        final long duration = subject.getOpsDuration(nonExistentTransaction);
 
         // Then
         assertThat(duration).isZero();
@@ -90,8 +90,8 @@ class TransactionDurationMetricsTest {
         subject.recordTransactionDuration(transaction2, duration2);
 
         // Then
-        assertThat(subject.getDuration(transaction1)).isEqualTo(duration1);
-        assertThat(subject.getDuration(transaction2)).isEqualTo(duration2);
+        assertThat(subject.getOpsDuration(transaction1)).isEqualTo(duration1);
+        assertThat(subject.getOpsDuration(transaction2)).isEqualTo(duration2);
     }
 
     @Test
@@ -105,7 +105,7 @@ class TransactionDurationMetricsTest {
         subject.recordTransactionDuration(transaction1, updatedDuration);
 
         // Then
-        assertThat(subject.getDuration(transaction1)).isEqualTo(updatedDuration);
+        assertThat(subject.getOpsDuration(transaction1)).isEqualTo(updatedDuration);
     }
 
     private void prepareTransactionMocks() {

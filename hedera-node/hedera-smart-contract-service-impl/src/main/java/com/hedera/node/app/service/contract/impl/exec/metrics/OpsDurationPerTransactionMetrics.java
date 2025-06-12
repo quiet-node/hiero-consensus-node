@@ -18,9 +18,9 @@ import javax.inject.Singleton;
  * Tracks the duration of transactions in nanoseconds.
  */
 @Singleton
-public class TransactionDurationMetrics {
-    private static final String TRANSACTION_DURATION_CATEGORY = "transaction";
-    private static final String TRANSACTION_DURATION_SUFFIX = "_duration_ns";
+public class OpsDurationPerTransactionMetrics {
+    private static final String OPS_DURATION_TRANSACTION_CATEGORY = "transaction";
+    private static final String OPS_DURATION_TRANSACTION_SUFFIX = "_duration_ns";
 
     private final Metrics metrics;
     private final Map<TransactionMetricKey, LongGauge> txnDuration = new HashMap<>();
@@ -28,7 +28,7 @@ public class TransactionDurationMetrics {
     record TransactionMetricKey(AccountID sender, long nonce) {}
 
     @Inject
-    public TransactionDurationMetrics(@NonNull final Metrics metrics) {
+    public OpsDurationPerTransactionMetrics(@NonNull final Metrics metrics) {
         this.metrics = requireNonNull(metrics);
     }
 
@@ -36,7 +36,7 @@ public class TransactionDurationMetrics {
      * Records the duration of a transaction in nanoseconds
      *
      * @param transaction the transaction that was executed
-     * @param durationNanos the duration in nanoseconds
+     * @param durationNanos the ops duration in nanoseconds
      */
     public void recordTransactionDuration(@NonNull final HederaEvmTransaction transaction, final long durationNanos) {
         final var key = new TransactionMetricKey(transaction.senderId(), transaction.nonce());
@@ -46,20 +46,20 @@ public class TransactionDurationMetrics {
 
     private LongGauge createTransactionDurationMetric(@NonNull final TransactionMetricKey transactionKey) {
         final var config = new LongGauge.Config(
-                        TRANSACTION_DURATION_CATEGORY,
-                        transactionKey.sender.toString() + " " + transactionKey.nonce + TRANSACTION_DURATION_SUFFIX)
+                        OPS_DURATION_TRANSACTION_CATEGORY,
+                        transactionKey.sender.toString() + " " + transactionKey.nonce + OPS_DURATION_TRANSACTION_SUFFIX)
                 .withDescription("Duration of " + transactionKey.sender.toString() + " " + transactionKey.nonce
                         + " transaction in nanoseconds");
         return metrics.getOrCreate(config);
     }
 
     /**
-     * Gets the current duration for a specific transaction
+     * Gets the current ops duration for a specific transaction
      *
      * @param transaction the transaction to get duration for
-     * @return the duration in nanoseconds
+     * @return the ops duration in nanoseconds
      */
-    public long getDuration(@NonNull final HederaEvmTransaction transaction) {
+    public long getOpsDuration(@NonNull final HederaEvmTransaction transaction) {
         final var key = new TransactionMetricKey(transaction.senderId(), transaction.nonce());
         final var metric = txnDuration.get(key);
         return metric != null ? metric.get() : 0;

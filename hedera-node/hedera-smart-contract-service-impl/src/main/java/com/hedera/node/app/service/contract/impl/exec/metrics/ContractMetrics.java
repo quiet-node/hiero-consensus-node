@@ -53,7 +53,7 @@ public class ContractMetrics {
     private final ContractOperationMetrics operationMetrics;
     private final EvmOperationMetrics evmOperationMetrics;
     private final PrecompileMetrics precompileMetrics;
-    private final TransactionDurationMetrics transactionDurationMetrics;
+    private final OpsDurationPerTransactionMetrics opsDurationPerTransactionMetrics;
 
     // Counters that are the P1 metrics
 
@@ -144,7 +144,7 @@ public class ContractMetrics {
         this.operationMetrics = new ContractOperationMetrics(metrics);
         this.evmOperationMetrics = new EvmOperationMetrics(metrics);
         this.precompileMetrics = new PrecompileMetrics(metrics);
-        this.transactionDurationMetrics = new TransactionDurationMetrics(metrics);
+        this.opsDurationPerTransactionMetrics = new OpsDurationPerTransactionMetrics(metrics);
     }
 
     // --------------------
@@ -423,7 +423,7 @@ public class ContractMetrics {
      * @param durationNanos the duration in nanoseconds
      */
     public void recordTransactionDuration(@NonNull final HederaEvmTransaction transaction, final long durationNanos) {
-        transactionDurationMetrics.recordTransactionDuration(transaction, durationNanos);
+        opsDurationPerTransactionMetrics.recordTransactionDuration(transaction, durationNanos);
     }
 
     /**
@@ -432,7 +432,7 @@ public class ContractMetrics {
      * @return the duration in nanoseconds
      */
     public long getTransactionDuration(@NonNull final HederaEvmTransaction transaction) {
-        return transactionDurationMetrics.getDuration(transaction);
+        return opsDurationPerTransactionMetrics.getOpsDuration(transaction);
     }
 
     private final ConcurrentHashMap<SystemContractMethod, SystemContractMethod> methodsThatHaveCallsWithNullMethod =
