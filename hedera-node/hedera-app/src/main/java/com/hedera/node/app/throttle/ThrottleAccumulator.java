@@ -205,14 +205,8 @@ public class ThrottleAccumulator {
         }
         contractOpsDurationThrottle.resetLastAllowedUse();
 
-        final boolean shouldThrottleByOpsDuration =
-                configSupplier.get().getConfigData(ContractsConfig.class).throttleThrottleByOpsDuration();
-        if (shouldThrottleByOpsDuration && !contractOpsDurationThrottle.allow(now, currentOpsDuration)) {
-            contractOpsDurationThrottle.reclaimLastAllowedUse();
-            return true;
-        }
-
-        return false;
+        //  The feature flag for ops duration throttling is checked in the smart contract service
+        return !contractOpsDurationThrottle.allow(now, currentOpsDuration);
     }
 
     /**

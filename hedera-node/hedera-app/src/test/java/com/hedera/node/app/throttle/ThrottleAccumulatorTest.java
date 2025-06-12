@@ -1501,7 +1501,6 @@ class ThrottleAccumulatorTest {
             given(contractsConfig.maxGasPerSec()).willReturn(t);
         } else {
             given(contractsConfig.maxGasPerSecBackend()).willReturn(t);
-            given(contractsConfig.opsDurationThrottleBurstSeconds()).willReturn(1);
         }
     }
 
