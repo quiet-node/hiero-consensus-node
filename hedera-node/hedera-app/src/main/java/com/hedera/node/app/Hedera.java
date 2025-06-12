@@ -1401,7 +1401,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
 
         try {
             daggerApp.blockNodeConnectionManager().start();
-        } catch (final NoBlockNodesAvailableException e) {
+        } catch (final NoBlockNodesAvailableException | IllegalStateException e) {
             if (blockNodeConnectionConfig.shutdownNodeOnNoBlockNodes()) {
                 logger.fatal("No block nodes available to connect to; shutting down");
                 shutdown();
