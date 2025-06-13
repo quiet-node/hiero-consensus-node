@@ -52,8 +52,7 @@ interface StreamWriter {
 }
 
 /**
- * Message based implementation of gossip; currently supporting sync Responsible for
- * communication with a single peer
+ * Message based implementation of gossip; currently supporting sync Responsible for communication with a single peer
  */
 public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
 
@@ -324,7 +323,13 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                     }
                     message.run();
                 }
-                rpcPeerHandler.checkForPeriodicActions();
+
+                // permitProvider health indicates that system is overloaded, and we are getting backpressure; we need
+                // to give up on spamming network and/or reading new messages and let things settle down
+                if (!rpcPeerHandler.checkForPeriodicActions(permitProvider.isHealthy())) {
+                    // handler told us we are ok to stop processing messages right now due to platform not being healthy
+                    processMessages = false;
+                }
             }
         } catch (RuntimeException exc) {
             logger.error(NETWORK.getMarker(), "Error while dispatching messages", exc);
@@ -383,20 +388,17 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
     }
 
     /**
-     * Why 3 different rules for exiting?
+     * Why 2 different rules for exiting?
      * <p>
      * <b>processMessagesToSend</b> means remote side said to us they want to end conversation and we should behave
      * <p>
      * <b>gossipHalted</b> means there is reconnect happening very soon, so we need to exit ASAP and free the permits
      * and connection
-     * <p>
-     * <b>permitProvider health</b> indicates that system is overloaded and we are getting backpressure; we need to
-     * give up on spamming network and/or reading new messages and let things settle down
      *
      * @return true if sending messages loop should continue
      */
     private boolean shouldContinueProcessingMessages() {
-        return processMessages && !gossipHalted.get() && permitProvider.isHealthy();
+        return processMessages && !gossipHalted.get();
     }
 
     /**

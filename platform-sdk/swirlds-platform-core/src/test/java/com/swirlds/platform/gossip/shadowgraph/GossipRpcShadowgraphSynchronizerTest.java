@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.gossip.shadowgraph;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -101,7 +103,7 @@ class GossipRpcShadowgraphSynchronizerTest {
     void createPeerHandlerStartSync() {
         var otherNodeId = NodeId.of(5);
         var conversation = synchronizer.createPeerHandler(gossipSender, otherNodeId);
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         Mockito.verify(gossipSender).sendSyncData(any());
     }
 
@@ -109,7 +111,7 @@ class GossipRpcShadowgraphSynchronizerTest {
     void fullEmptySync() {
         var otherNodeId = NodeId.of(5);
         var conversation = synchronizer.createPeerHandler(gossipSender, otherNodeId);
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         Mockito.verify(gossipSender).sendSyncData(any());
         conversation.receiveSyncData(EMPTY_SYNC_MESSAGE);
         Mockito.verify(gossipSender).sendTips(List.of());
@@ -123,7 +125,7 @@ class GossipRpcShadowgraphSynchronizerTest {
     void testFallenBehind() {
         var otherNodeId = NodeId.of(5);
         var conversation = synchronizer.createPeerHandler(gossipSender, otherNodeId);
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         Mockito.verify(gossipSender).sendSyncData(any());
         conversation.receiveSyncData(new SyncData(new EventWindow(100, 101, 1000, 800), List.of()));
         Mockito.verify(gossipSender).breakConversation();
@@ -132,25 +134,48 @@ class GossipRpcShadowgraphSynchronizerTest {
     }
 
     @Test
+    void testUnhealthyExit() {
+        var otherNodeId = NodeId.of(5);
+        var conversation = synchronizer.createPeerHandler(gossipSender, otherNodeId);
+        // we don't want to start sync in unhealthy state
+        assertFalse(conversation.checkForPeriodicActions(false));
+        Mockito.verifyNoMoreInteractions(gossipSender);
+
+        // we are now healthy, so start sync
+        assertTrue(conversation.checkForPeriodicActions(true));
+        Mockito.verify(gossipSender).sendSyncData(any());
+
+        // event if system is unhealthy, we need to finish sync
+        assertTrue(conversation.checkForPeriodicActions(false));
+        conversation.receiveSyncData(new SyncData(new EventWindow(100, 101, 1000, 800), List.of()));
+        Mockito.verify(gossipSender).breakConversation();
+        Mockito.verify(statusSubmitter).submitStatusAction(new FallenBehindAction());
+
+        // if sync is finished, we shouldn't be starting new one if system is unhealthy
+        assertFalse(conversation.checkForPeriodicActions(false));
+        Mockito.verifyNoMoreInteractions(gossipSender);
+    }
+
+    @Test
     void removeFallenBehind() {
         var otherNodeId = NodeId.of(5);
         var conversation = synchronizer.createPeerHandler(gossipSender, otherNodeId);
         shadowgraph.updateEventWindow(new EventWindow(100, 101, 1000, 800));
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         Mockito.verify(gossipSender).sendSyncData(any());
         conversation.receiveSyncData(EMPTY_SYNC_MESSAGE);
         ((FakeTime) this.platformContext.getTime()).tick(Duration.ofSeconds(10));
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         ((FakeTime) this.platformContext.getTime()).tick(Duration.ofSeconds(10));
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         ((FakeTime) this.platformContext.getTime()).tick(Duration.ofSeconds(10));
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         ((FakeTime) this.platformContext.getTime()).tick(Duration.ofSeconds(10));
         Mockito.verifyNoMoreInteractions(gossipSender);
         Mockito.clearInvocations(gossipSender);
         conversation.receiveSyncData(new SyncData(new EventWindow(100, 101, 1000, 800), List.of()));
         ((FakeTime) this.platformContext.getTime()).tick(Duration.ofSeconds(10));
-        conversation.checkForPeriodicActions();
+        conversation.checkForPeriodicActions(true);
         Mockito.verify(gossipSender).sendSyncData(any());
     }
 }

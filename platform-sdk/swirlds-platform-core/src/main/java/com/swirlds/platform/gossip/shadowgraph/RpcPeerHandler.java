@@ -131,33 +131,42 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     /**
      * Start synchronization with remote side, if all checks are successful (things like enough time has passed since
      * last synchronization, remote side has not fallen behind etc
+     *
+     * @param systemHealthy health of the system
+     *
+     * @return true if we should continue dispatching messages, false if system is unhealthy and we are in proper place
+     * to break rpc conversation
      */
     // dispatch thread
-    public void checkForPeriodicActions() {
+    public boolean checkForPeriodicActions(final boolean systemHealthy) {
         if (!isSyncCooldownComplete()) {
             this.syncMetrics.doNotSyncCooldown();
-            return;
+            return systemHealthy;
         }
 
         if (state.remoteFallenBehind) {
             this.syncMetrics.doNotSyncRemoteFallenBehind();
-            return;
+            return systemHealthy;
         }
 
         if (state.remoteStillSendingEvents) {
             this.syncMetrics.setDoNotSyncRemoteProcessingEvents();
-            return;
+            return true;
         }
 
         if (this.intakeEventCounter.hasUnprocessedEvents(otherNodeId)) {
             this.syncMetrics.doNotSyncIntakeCounter();
-            return;
+            return true;
         }
 
         if (state.mySyncData == null) {
-            sendSyncData();
+            if (systemHealthy) {
+                sendSyncData();
+            }
+            return systemHealthy;
         } else {
             this.syncMetrics.setDoNotSyncAlreadyStarted();
+            return true;
         }
     }
 
