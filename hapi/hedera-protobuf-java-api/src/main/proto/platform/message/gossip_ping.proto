@@ -18,6 +18,8 @@ message GossipPing {
 
   /**
    * Correlation id assigned by sender, to be repeated in reply
+   * MUST be unique for given sender->receiver pair
+   * MAY be duplicated with correlation ids against different receivers or with correlation ids sent in pings from given receiver
    */
   int64 correlationId = 2;
 }

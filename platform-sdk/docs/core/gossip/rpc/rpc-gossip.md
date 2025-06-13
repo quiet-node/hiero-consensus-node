@@ -13,13 +13,21 @@ The negotiator selects one of the protocols and monopolizes the socket until it 
 - Remains compatible with the reconnect protocol as much as possible
 - Does not modify the existing connection creation/teardown process
 
-Decision was to piggyback message based protocol on top of existing network. This means that instead of 3 protocols (Heartbeat/Ping, Sync, Reconnect) we have different 3 protocols (Heartbeat/Ping, Rpc and Reconnect). Rpc takes over the socket and handles everything (ping, sync, broadcast), releasing the connection only in case of falling behind, when reconnect will take over the responsibilities.
+The decision was to piggyback a message based protocol on top of the existing network. This means that instead of 3 protocols (Heartbeat/Ping, Sync, Reconnect) we have 3 different protocols (Heartbeat/Ping, Rpc and Reconnect). Rpc takes over the socket and handles everything (ping, sync, broadcast), releasing the connection only in case of falling behind, when reconnect will take over the responsibilities.
 
 After the reconnect is done, RPC again grabs the connection forever.
 
+Please note that we have two ping mechanisms here. Original one (protocol Heartbeat) is used when Reconnect is in control on one connection - it makes sure that other connections are not timing out due to no traffic. The other is hidden inside the RPC protocol and performs a similar role when the RPC protocol is in control of the connection (it is needed, as the RPC protocol doesn't periodically give the connection back to other protocols, like it was done in the older sync implementation)
+
 <img src="rpc-gossip-NewNetwork.drawio.png">
 
-This way, RPC can interlace messages between various RPC services, without handing over entire connection to different protocol, which allows interlacing future messages like broadcast or chatter while Sync is running.
+The RPC protocol can interlace messages between various RPC services, without handing over the entire connection to a different protocol, which allows interlacing future messages like broadcast or chatter while Sync is running.
+
+In this context, "Protocol" is legacy protocol logic, handled by negotiator, where there is a protocol negotiation at first, and then the connection is fully assigned to the given protocol. There are 3 Protocols currently, as mentioned above - Heartbeat/Ping, Reconnect, and RPC.
+
+"RPC service" is a loose term to indicate a piece of self-contained logic that can run over the RPC protocol in parallel with each other (as opposed to old protocols, which were able to run only one at a time). Currently, we have logic for sync and ping in those services, but later we will add broadcast and possibly others.
+
+At this moment, these RPC services are more logical concepts than actual code constructs. If we move to gRPC, they will most probably become real, explicit gRPC services.
 
 In diagram above, grey boxes indicate future extensions, which are not implemented yet, but considered, but it is not a limit - we can have other services living on the same connection, exchanging messaged independent from each other, at the same time, having full benefit of connected session logic and detection of disconnections.
 
@@ -92,7 +100,7 @@ Left side of the diagram is responsible for interaction with legacy network inte
 
 Top classes are singletons in the application, middle layer is 1-per-peer, bottom classes are internal helper classes of middle tier, there just to reduce the code complexity of the big class.
 
-<img src="rpc-gossip-RuntimeRelationship.png"/>
+<img src="rpc-gossip-RuntimeRelationships.drawio.png"/>
 
 # Creation dependencies
 
