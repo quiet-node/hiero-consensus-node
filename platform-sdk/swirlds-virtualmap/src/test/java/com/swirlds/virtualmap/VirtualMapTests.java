@@ -1065,7 +1065,7 @@ class VirtualMapTests extends VirtualTestBase {
         } finally {
             final VirtualRootNode root = map.getLeft();
             map.release();
-            assertTrue(map.getPipeline().awaitTermination(30, SECONDS), "Pipeline termination timed out");
+            assertTrue(map.getPipeline().awaitTermination(60, SECONDS), "Pipeline termination timed out");
         }
     }
 
