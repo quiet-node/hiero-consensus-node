@@ -11,7 +11,6 @@ import com.hedera.statevalidation.parameterresolver.ReportResolver;
 import com.hedera.statevalidation.parameterresolver.StateResolver;
 import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
-import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -41,7 +40,11 @@ public class Rehash {
         final Hash originalHash = deserializedSignedState.originalHash();
         final Hash calculatedHash = rehashTree(
                 merkleCryptography,
-                ((MerkleNodeState) deserializedSignedState.reservedSignedState().get().getState()).getRoot());
+                ((MerkleNodeState) deserializedSignedState
+                                .reservedSignedState()
+                                .get()
+                                .getState())
+                        .getRoot());
 
         // Add data to the report, adding it before the assertion so that the report is written even if the test fails
         var stateReport = report.getStateReport();
