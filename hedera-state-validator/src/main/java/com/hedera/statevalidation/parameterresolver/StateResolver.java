@@ -86,9 +86,7 @@ public class StateResolver implements ParameterResolver {
                 new RosterService(roster -> true, (r, b) -> {}, StateResolver::getState, platformStateFacade));
         final PlatformContext platformContext = createPlatformContext();
         deserializedSignedState = readStateFile(
-                Path.of(Constants.STATE_DIR, "SignedState.swh").toAbsolutePath(),
-                platformStateFacade,
-                platformContext);
+                Path.of(Constants.STATE_DIR, "SignedState.swh").toAbsolutePath(), platformStateFacade, platformContext);
         final MerkleStateRoot servicesState = (MerkleStateRoot)
                 deserializedSignedState.reservedSignedState().get().getState();
 
