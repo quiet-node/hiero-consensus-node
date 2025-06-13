@@ -20,6 +20,7 @@ module com.swirlds.state.impl {
     requires transitive com.swirlds.virtualmap;
     requires transitive org.hiero.base.crypto;
     requires transitive org.hiero.base.utility;
+    requires com.hedera.node.hapi;
     requires com.swirlds.fcqueue;
     requires com.swirlds.logging;
     requires com.swirlds.merkledb;
