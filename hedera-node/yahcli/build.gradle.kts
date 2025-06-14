@@ -18,31 +18,32 @@ tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("-Xlint:-
 
 tasks.compileJava { dependsOn(":test-clients:assemble") }
 
-val yahCliJar = tasks.register<ShadowJar>("yahCliJar") {
-    archiveClassifier.set("shadow")
+val yahCliJar =
+    tasks.register<ShadowJar>("yahCliJar") {
+        archiveClassifier.set("shadow")
 
-    manifest { attributes("Main-Class" to "com.hedera.services.yahcli.Yahcli") }
+        manifest { attributes("Main-Class" to "com.hedera.services.yahcli.Yahcli") }
 
-    // Required test-clients files:
-    from({ zipTree(project(":test-clients").tasks.named("jar").get().outputs.files.singleFile) }) {
-        include("**/*.class", "**/log4j2-test.xml")
-        includeEmptyDirs = false
+        // Required test-clients files:
+        from({
+            zipTree(project(":test-clients").tasks.named("jar").get().outputs.files.singleFile)
+        }) {
+            include("**/*.class", "**/log4j2-test.xml")
+            includeEmptyDirs = false
+        }
+        // Required yahcli files:
+        from(sourceSets["main"].output) {
+            exclude("**/genesis.pem")
+            includeEmptyDirs = false
+        }
+
+        // allow shadow Jar files to have more than 64k entries
+        isZip64 = true
+
+        dependsOn(tasks.compileJava, tasks.classes, tasks.processResources)
     }
-    // Required yahcli files:
-    from(sourceSets["main"].output) {
-        exclude("**/genesis.pem")
-        includeEmptyDirs = false
-    }
 
-    // allow shadow Jar files to have more than 64k entries
-    isZip64 = true
-
-    dependsOn(tasks.compileJava, tasks.classes, tasks.processResources)
-}
-
-tasks.assemble {
-    dependsOn(yahCliJar)
-}
+tasks.assemble { dependsOn(yahCliJar) }
 
 tasks.register<Copy>("copyYahCli") {
     group = "copy"
@@ -54,9 +55,7 @@ tasks.register<Copy>("copyYahCli") {
     mustRunAfter(tasks.jar, yahCliJar, tasks.named("startShadowScripts"), tasks.javadoc)
 }
 
-tasks.named("compileTestJava") {
-    mustRunAfter(tasks.named("copyYahCli"))
-}
+tasks.named("compileTestJava") { mustRunAfter(tasks.named("copyYahCli")) }
 
 tasks.test {
     useJUnitPlatform {}
@@ -70,10 +69,7 @@ tasks.test {
 }
 
 // Disable `shadowJar` so it doesn't conflict with `yahCliJar`
-tasks.named("shadowJar") {
-    enabled = false
-}
+tasks.named("shadowJar") { enabled = false }
+
 // Disable unneeded tasks
-tasks.matching { it.group == "distribution" }.configureEach {
-    enabled = false
-}
+tasks.matching { it.group == "distribution" }.configureEach { enabled = false }
