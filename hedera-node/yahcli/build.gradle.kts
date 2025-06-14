@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.kotlin.dsl.get
 
 plugins {
     id("org.hiero.gradle.module.application")
     id("org.hiero.gradle.feature.shadow")
 }
 
-description = "Hedera Services Test Clients for YahCli"
+description = "Hedera Services YahCli Tool"
 
 mainModuleInfo {
     runtimeOnly("org.junit.jupiter.engine")
@@ -16,6 +17,32 @@ mainModuleInfo {
 tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("-Xlint:-exports") }
 
 tasks.compileJava { dependsOn(":test-clients:assemble") }
+
+tasks.register<ShadowJar>("yahcliJar") {
+    archiveClassifier.set("shadow")
+
+    manifest { attributes("Main-Class" to "com.hedera.services.yahcli.Yahcli") }
+
+    // Required test-clients files:
+    from({ zipTree(project(":test-clients").tasks.named("jar").get().outputs.files.singleFile) }) {
+        include("**/*.class", "**/log4j2-test.xml")
+        includeEmptyDirs = false
+    }
+    // Required yahcli files:
+    from(sourceSets["main"].output) {
+        exclude("**/genesis.pem")
+        includeEmptyDirs = false
+    }
+
+    // allow shadow Jar files to have more than 64k entries
+    isZip64 = true
+
+    dependsOn(tasks.named("compileJava"), tasks.named("classes"), tasks.named("processResources"))
+}
+
+tasks.assemble {
+    dependsOn(tasks.named("yahcliJar"))
+}
 
 tasks.test {
     useJUnitPlatform {}
@@ -28,22 +55,11 @@ tasks.test {
     jvmArgs("-XX:ActiveProcessorCount=6")
 }
 
-tasks.register<ShadowJar>("yahCliJar") {
-    exclude(listOf("META-INF/*.DSA", "META-INF/*.RSA", "META-INF/*.SF", "META-INF/INDEX.LIST"))
-    archiveClassifier.set("yahcli-shadow")
-
-    manifest { attributes("Main-Class" to "com.hedera.services.yahcli.Yahcli") }
-    from(sourceSets["main"].output)
-    from(project(":test-clients").tasks.named("jar").get().outputs.files)
-
-    // allow shadow Jar files to have more than 64k entries
-    isZip64 = true
+// Disable `shadowJar` so it doesn't conflict with `yahcliJar`
+tasks.named("shadowJar") {
+    enabled = false
 }
-
-val cleanYahCli =
-    tasks.register<Delete>("cleanYahCli") {
-        group = "copy"
-        delete(File(project.file("yahcli"), "yahcli.jar"))
-    }
-
-tasks.clean { dependsOn(cleanYahCli) }
+// Disable unneeded tasks
+tasks.matching { it.group == "distribution" }.configureEach {
+    enabled = false
+}
