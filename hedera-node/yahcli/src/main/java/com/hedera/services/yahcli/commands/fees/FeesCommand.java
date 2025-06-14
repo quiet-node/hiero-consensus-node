@@ -7,7 +7,7 @@ import picocli.CommandLine;
 
 @CommandLine.Command(
         name = "fees",
-        subcommands = {picocli.CommandLine.HelpCommand.class, FeeBasePriceCommand.class},
+        subcommands = {CommandLine.HelpCommand.class, FeeBasePriceCommand.class},
         description = "Reports network fees")
 public class FeesCommand implements Callable<Integer> {
     @CommandLine.ParentCommand
@@ -15,8 +15,7 @@ public class FeesCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        throw new picocli.CommandLine.ParameterException(
-                yahcli.getSpec().commandLine(), "Please specify a fee subcommand!");
+        throw new CommandLine.ParameterException(yahcli.getSpec().commandLine(), "Please specify a fee subcommand!");
     }
 
     public Yahcli getYahcli() {

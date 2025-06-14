@@ -13,13 +13,9 @@ mainModuleInfo {
     runtimeOnly("org.junit.platform.launcher")
 }
 
-tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.add("-Xlint:-exports")
-}
+tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("-Xlint:-exports") }
 
-tasks.compileJava {
-    dependsOn(":test-clients:assemble")
-}
+tasks.compileJava { dependsOn(":test-clients:assemble") }
 
 tasks.test {
     useJUnitPlatform {}
@@ -50,6 +46,4 @@ val cleanYahCli =
         delete(File(project.file("yahcli"), "yahcli.jar"))
     }
 
-tasks.clean {
-    dependsOn(cleanYahCli)
-}
+tasks.clean { dependsOn(cleanYahCli) }

@@ -13,13 +13,9 @@ mainModuleInfo {
     runtimeOnly("org.junit.platform.launcher")
 }
 
-sourceSets {
-    create("rcdiff")
-}
+sourceSets { create("rcdiff") }
 
-tasks.withType<JavaCompile>().configureEach {
-    options.compilerArgs.add("-Xlint:-exports")
-}
+tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("-Xlint:-exports") }
 
 tasks.register<JavaExec>("runTestClient") {
     group = "build"
@@ -502,6 +498,4 @@ val cleanValidation =
         delete(File(project.file("validation-scenarios"), "ValidationScenarios.jar"))
     }
 
-tasks.clean {
-    dependsOn(cleanValidation)
-}
+tasks.clean { dependsOn(cleanValidation) }

@@ -13,7 +13,7 @@ import picocli.CommandLine;
 
 @CommandLine.Command(
         name = "upload",
-        subcommands = {picocli.CommandLine.HelpCommand.class},
+        subcommands = {CommandLine.HelpCommand.class},
         description = "Uploads a system file")
 public class SysFileUploadCommand implements Callable<Integer> {
     private static final int DEFAULT_BYTES_PER_APPEND = TxnUtils.BYTES_4K;
@@ -106,7 +106,7 @@ public class SysFileUploadCommand implements Callable<Integer> {
 
         final var finalSpecs = delegate.getFinalSpecs();
         if (!finalSpecs.isEmpty()) {
-            if (finalSpecs.get(0).getStatus() == HapiSpec.SpecStatus.PASSED) {
+            if (finalSpecs.getFirst().getStatus() == HapiSpec.SpecStatus.PASSED) {
                 COMMON_MESSAGES.info("SUCCESS - Uploaded all requested system files");
             } else {
                 COMMON_MESSAGES.warn("FAILED Uploading requested system files");
