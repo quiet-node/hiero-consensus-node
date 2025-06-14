@@ -18,7 +18,7 @@ tasks.withType<JavaCompile>().configureEach { options.compilerArgs.add("-Xlint:-
 
 tasks.compileJava { dependsOn(":test-clients:assemble") }
 
-tasks.register<ShadowJar>("yahcliJar") {
+val yahCliJar = tasks.register<ShadowJar>("yahCliJar") {
     archiveClassifier.set("shadow")
 
     manifest { attributes("Main-Class" to "com.hedera.services.yahcli.Yahcli") }
@@ -37,11 +37,25 @@ tasks.register<ShadowJar>("yahcliJar") {
     // allow shadow Jar files to have more than 64k entries
     isZip64 = true
 
-    dependsOn(tasks.named("compileJava"), tasks.named("classes"), tasks.named("processResources"))
+    dependsOn(tasks.compileJava, tasks.classes, tasks.processResources)
 }
 
 tasks.assemble {
-    dependsOn(tasks.named("yahcliJar"))
+    dependsOn(yahCliJar)
+}
+
+tasks.register<Copy>("copyYahCli") {
+    group = "copy"
+    from(yahCliJar.get().archiveFile)
+    into(project.projectDir)
+    rename { "yahcli.jar" }
+
+    dependsOn(yahCliJar)
+    mustRunAfter(tasks.jar, yahCliJar, tasks.named("startShadowScripts"), tasks.javadoc)
+}
+
+tasks.named("compileTestJava") {
+    mustRunAfter(tasks.named("copyYahCli"))
 }
 
 tasks.test {
@@ -55,7 +69,7 @@ tasks.test {
     jvmArgs("-XX:ActiveProcessorCount=6")
 }
 
-// Disable `shadowJar` so it doesn't conflict with `yahcliJar`
+// Disable `shadowJar` so it doesn't conflict with `yahCliJar`
 tasks.named("shadowJar") {
     enabled = false
 }
