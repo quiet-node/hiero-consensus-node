@@ -41,8 +41,15 @@ import org.hiero.base.constructable.ConstructableRegistryException;
 public final class StateUtils {
 
     private static final int UNKNOWN_STATE_ID = -1;
+
     private static final IntFunction<String> UPGRADE_DATA_FILE_FORMAT =
             n -> String.format("UPGRADE_DATA\\[FileID\\[shardNum=\\d+, realmNum=\\d+, fileNum=%s]]", n);
+
+    /** Cache for pre-computed virtual map keys for singleton states. */
+    private static final Bytes[] VIRTUAL_MAP_KEY_CACHE = new Bytes[65536];
+
+    /** Cache to store and retrieve pre-computed labels for specific service states. */
+    private static final Map<String, String> LABEL_CACHE = new ConcurrentHashMap<>();
 
     /** Prevent instantiation */
     private StateUtils() {}
@@ -348,9 +355,20 @@ public final class StateUtils {
     }
 
     /**
-     * A static cache to store and retrieve pre-computed labels for specific service states.
+     * Validates that the state ID for the given service name and state key is within valid range.
+     *
+     * @param serviceName the service name
+     * @param stateKey the state key
+     * @return the validated state ID (between 0 and 65535 inclusive)
+     * @throws IllegalArgumentException if the state ID is outside the valid range
      */
-    private static final Map<String, String> LABEL_CACHE = new ConcurrentHashMap<>();
+    private static int getValidatedStateId(@NonNull final String serviceName, @NonNull final String stateKey) {
+        final int stateId = stateIdFor(serviceName, stateKey);
+        if (stateId < 0 || stateId > 65535) {
+            throw new IllegalArgumentException("State ID " + stateId + " must fit in [0..65535]");
+        }
+        return stateId;
+    }
 
     /**
      * Computes the label for a Merkle node given the service name and state key.
@@ -393,16 +411,6 @@ public final class StateUtils {
         return Pair.of(serviceName, stateKey);
     }
 
-    private static final Bytes[] VIRTUAL_MAP_KEY_CACHE = new Bytes[65536];
-
-    private static int getValidatedStateId(@NonNull final String serviceName, @NonNull final String stateKey) {
-        final int stateId = stateIdFor(serviceName, stateKey);
-        if (stateId < 0 || stateId > 65535) {
-            throw new IllegalArgumentException("State ID " + stateId + " must fit in [0..65535]");
-        }
-        return stateId;
-    }
-
     /**
      * Creates an instance of {@link VirtualMapKey} for a singleton state, serializes into a {@link Bytes} object
      * and returns it.
@@ -426,18 +434,13 @@ public final class StateUtils {
     }
 
     /**
-     * Generates a 10 bytes key for a Virtual Map. Used for queue states.
-     * <p>
-     * The key structure is:
-     * <ul>
-     *   <li>2 bytes: the state ID (big‑endian)</li>
-     *   <li>8 bytes: the index (big‑endian)</li>
-     * </ul>
+     * Creates an instance of {@link VirtualMapKey} for a queue element, serializes into a {@link Bytes} object
+     * and returns it.
      *
      * @param serviceName the service name
      * @param stateKey    the state key
      * @param index       the queue element index
-     * @return a {@link Bytes} object containing exactly 10 bytes in big‑endian order
+     * @return a {@link VirtualMapKey} for a queue element serialized into {@link Bytes} object
      * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
      */
     public static Bytes getVirtualMapKeyForQueue(
@@ -447,22 +450,15 @@ public final class StateUtils {
     }
 
     /**
-     * Generates a key for a Virtual Map.
-     * <p>
-     * The key structure is:
-     * <ul>
-     *   <li>2 bytes: the state ID (big‑endian)</li>
-     *   <li>N bytes: the key bytes (serialized form of the provided key)</li>
-     * </ul>
-     * If an {@link IOException} occurs during serialization, it is wrapped in a {@link RuntimeException}.
+     * Creates an instance of {@link VirtualMapKey} for a k/v state, serializes into a {@link Bytes} object
+     * and returns it.
      *
      * @param <K>         the type of the key
      * @param serviceName the service name
      * @param stateKey    the state key
-     * @param key         the key to be serialized and appended
-     * @return a {@link Bytes} object consisting of the 2‑byte state ID (big‑endian) followed by the serialized key bytes
+     * @param key         the key object
+     * @return a {@link VirtualMapKey} for a k/v state, serialized into {@link Bytes} object
      * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
-     * @throws RuntimeException         if an {@link IOException} occurs during key serialization
      */
     public static <K> Bytes getVirtualMapKeyForKv(
             @NonNull final String serviceName, @NonNull final String stateKey, final K key) {
@@ -471,8 +467,14 @@ public final class StateUtils {
     }
 
     /**
-     * Creates Protocol Buffer encoded byte array for a field in VirtualMapKey.
-     * @return Protocol Buffer encoded byte array with tag, length, and value
+     * Creates Protocol Buffer encoded byte array for a VirtualMapKey field.
+     * Follows protobuf encoding format: tag (field number + wire type), length, and value.
+     *
+     * @param serviceName       the service name
+     * @param stateKey          the state key
+     * @param keyObjectBytes    the serialized key object
+     * @return Properly encoded Protocol Buffer byte array
+     * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
      */
     public static byte[] createVirtualMapKeyBytesForKV(
             @NonNull final String serviceName, @NonNull final String stateKey, byte[] keyObjectBytes) {
@@ -496,6 +498,12 @@ public final class StateUtils {
         return result;
     }
 
+    /**
+     * Encodes an integer value as a Protocol Buffer varint.
+     *
+     * @param value The integer to encode
+     * @return Byte array containing the varint representation
+     */
     private static byte[] encodeVarInt(int value) {
         if (value < 0x80) {
             return new byte[] {(byte) value};
