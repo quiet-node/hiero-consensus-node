@@ -15,6 +15,9 @@ import java.util.Set;
 /**
  * Tracks performance metrics for systems that operate in phases.
  *
+ * Please note that this class is NOT thread safe and will fail in non-deterministic manner if methods are called
+ * from different threads in parallel (or even without ensuring proper visibility between the threads).
+ *
  * @param <T> the type of the phase, must be an enum
  */
 public class PhaseTimer<T extends Enum<T>> {
