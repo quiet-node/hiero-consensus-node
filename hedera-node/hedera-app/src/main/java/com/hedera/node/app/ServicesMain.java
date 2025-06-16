@@ -155,7 +155,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
 
     /**
      * {@inheritDoc}
-     * Specifically, {@link HederaNewStateRoot}.
+     * Specifically, {@link HederaVirtualMapState}.
      */
     @Override
     public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap() {

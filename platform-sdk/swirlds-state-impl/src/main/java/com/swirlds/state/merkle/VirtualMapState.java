@@ -72,11 +72,11 @@ import org.hiero.base.crypto.Hash;
 import org.json.JSONObject;
 
 /**
- * An implementation of {@code MerkleNodeState} backed by a single Virtual Map.
+ * An implementation of {@link State} backed by a single Virtual Map.
  */
-public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
+public abstract class VirtualMapState<T extends VirtualMapState<T>> implements State {
 
-    private static final Logger logger = LogManager.getLogger(NewStateRoot.class);
+    private static final Logger logger = LogManager.getLogger(VirtualMapState.class);
 
     private MerkleCryptography merkleCryptography;
 
@@ -122,7 +122,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
      */
     private boolean startupMode = true;
 
-    public NewStateRoot(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
+    public VirtualMapState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
         final String virtualMapLabel = "VirtualMap"; // TODO: discuss how it should be renamed
         final MerkleDbDataSourceBuilder dsBuilder;
         final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
@@ -139,11 +139,11 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     }
 
     /**
-     * Initializes a {@link NewStateRoot} with the specified {@link VirtualMap}.
+     * Initializes a {@link VirtualMapState} with the specified {@link VirtualMap}.
      *
      * @param virtualMap the virtual map with pre-registered metrics
      */
-    public NewStateRoot(VirtualMap virtualMap) {
+    public VirtualMapState(VirtualMap virtualMap) {
         this.virtualMap = virtualMap;
     }
 
@@ -152,7 +152,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
      *
      * @param from The other state to fast-copy from. Cannot be null.
      */
-    protected NewStateRoot(@NonNull final NewStateRoot<T> from) {
+    protected VirtualMapState(@NonNull final VirtualMapState<T> from) {
         this.virtualMap = from.virtualMap.copy();
         this.configuration = from.configuration;
         this.roundSupplier = from.roundSupplier;
@@ -246,7 +246,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     public void computeHash() {
         requireNonNull(
                 merkleCryptography,
-                "NewStateRoot has to be initialized before hashing. merkleCryptography is not set.");
+                "VirtualMapState has to be initialized before hashing. merkleCryptography is not set.");
         virtualMap.throwIfMutable("Hashing should only be done on immutable states");
         virtualMap.throwIfDestroyed("Hashing should not be done on destroyed states");
         if (getHash() != null) {
@@ -409,7 +409,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
     }
 
     /**
-     * Get the virtual map behind {@link NewStateRoot}.
+     * Get the virtual map behind {@link VirtualMapState}.
      * For more detailed docs, see {@code MerkleNodeState#getRoot()}.
      */
     public MerkleNode getRoot() {
@@ -481,7 +481,7 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
      * To be called ONLY at node shutdown. Attempts to gracefully close the Virtual Map.
      */
     public void close() {
-        logger.info("Closing NewStateRoot");
+        logger.info("Closing VirtualMapState");
         try {
             virtualMap.getDataSource().close();
         } catch (IOException e) {

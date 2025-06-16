@@ -27,7 +27,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
 import com.hedera.hapi.platform.state.PlatformState;
-import com.hedera.node.app.HederaNewStateRoot;
+import com.hedera.node.app.HederaVirtualMapState;
 import com.hedera.node.app.HederaStateRoot;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockItemWriter;
@@ -398,7 +398,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock);
         if (closesBlock) {
             lifecycle.onCloseBlock(state);
-            if (state instanceof HederaNewStateRoot hederaNewStateRoot) {
+            if (state instanceof HederaVirtualMapState hederaNewStateRoot) {
                 hederaNewStateRoot.commitSingletons();
             } else if (state instanceof HederaStateRoot hederaStateRoot) {
                 // Non production case (testing tools)

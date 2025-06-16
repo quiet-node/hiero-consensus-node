@@ -9,7 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.hedera.hapi.node.state.roster.Roster;
-import com.hedera.node.app.HederaNewStateRoot;
+import com.hedera.node.app.HederaVirtualMapState;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.context.PlatformContext;
@@ -119,7 +119,7 @@ final class ReconnectTest {
                     .setRoster(roster)
                     .setSigningNodeIds(nodeIds)
                     .setCalculateHash(true)
-                    .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestNewMerkleStateRoot
+                    .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestVirtualMapMerkleNodeState
                     .buildWithFacade();
             final SignedState signedState = signedStateFacadePair.left();
             final PlatformStateFacade platformStateFacade = signedStateFacadePair.right();
@@ -196,6 +196,6 @@ final class ReconnectTest {
                 RECONNECT_SOCKET_TIMEOUT,
                 reconnectMetrics,
                 platformStateFacade,
-                HederaNewStateRoot::new);
+                HederaVirtualMapState::new);
     }
 }
