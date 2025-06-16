@@ -59,9 +59,9 @@ public class V0640FreezeSchemaTest {
         assertThat(statesToCreate.size()).isEqualTo(3);
         final var iter =
                 statesToCreate.stream().map(StateDefinition::stateKey).sorted().iterator();
+        assertEquals(FREEZE_INFO_KEY, iter.next());
         assertEquals(FREEZE_TIME_KEY, iter.next());
         assertEquals(UPGRADE_FILE_HASH_KEY, iter.next());
-        assertEquals(FREEZE_INFO_KEY, iter.next());
     }
 
     @Test
