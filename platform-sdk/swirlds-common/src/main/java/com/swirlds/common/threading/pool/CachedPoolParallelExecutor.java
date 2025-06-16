@@ -125,17 +125,7 @@ public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
     }
 
     /**
-     * Run two tasks in parallel, the first one in the current thread, and the second in a background thread.
-     * <p>
-     * This method returns only after both have finished.
-     *
-     * @param foregroundTask a task to execute in parallel
-     * @param backgroundTask a task to execute in parallel
-     * @param onThrow        a cleanup task to be executed if an exception gets thrown. if the foreground task throws an
-     *                       exception, this could be used to stop the background task, but not vice versa
-     * @throws ParallelExecutionException if either of the invoked tasks throws an exception. if both throw an
-     *                                    exception, then the foregroundTask exception will be the cause and the
-     *                                    backgroundTask exception will be the suppressed exception
+     * {@inheritDoc}
      */
     @Override
     public <T> T doParallel(
@@ -179,15 +169,18 @@ public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
         return result;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void doParallel(
-            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... tasks)
+            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... backgroundTasks)
             throws ParallelExecutionException {
 
         throwIfMutable("must be started first");
 
         final List<Future<Void>> futures =
-                Arrays.stream(tasks).map(threadPool::submit).toList();
+                Arrays.stream(backgroundTasks).map(threadPool::submit).toList();
 
         // exception to throw, if any of the tasks throw
         ParallelExecutionException toThrow = null;
@@ -202,7 +195,7 @@ public class CachedPoolParallelExecutor implements ParallelExecutor, Stoppable {
         for (final Future<Void> future : futures) {
             try {
                 future.get();
-            } catch (InterruptedException | ExecutionException e) {
+            } catch (final InterruptedException | ExecutionException e) {
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                 }

@@ -20,9 +20,10 @@ public class ExceptionSuppressingParallelExecutor implements ParallelExecutor {
     }
 
     @Override
-    public <T> T doParallel(final Callable<T> task1, final Callable<Void> task2) throws ParallelExecutionException {
+    public <T> T doParallel(final Callable<T> task1, final Callable<Void> backgroundTask)
+            throws ParallelExecutionException {
         try {
-            return executor.doParallel(task1, task2);
+            return executor.doParallel(task1, backgroundTask);
         } catch (final ParallelExecutionException e) {
             // suppress exceptions
             return null;
@@ -34,10 +35,10 @@ public class ExceptionSuppressingParallelExecutor implements ParallelExecutor {
      */
     @Override
     public void doParallel(
-            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... tasks)
+            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... backgroundTasks)
             throws ParallelExecutionException {
         try {
-            executor.doParallel(onThrow, foregroundTask, tasks);
+            executor.doParallel(onThrow, foregroundTask, backgroundTasks);
         } catch (final ParallelExecutionException e) {
             // suppress exceptions
         }

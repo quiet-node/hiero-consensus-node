@@ -77,9 +77,9 @@ public class SyncPhaseParallelExecutor implements ParallelExecutor {
     }
 
     @Override
-    public <T> T doParallel(final Callable<T> task1, final Callable<Void> task2, final Runnable onThrow)
+    public <T> T doParallel(final Callable<T> task1, final Callable<Void> backgroundTask, final Runnable onThrow)
             throws ParallelExecutionException {
-        return doParallel(task1, task2);
+        return doParallel(task1, backgroundTask);
     }
 
     /**
@@ -91,13 +91,14 @@ public class SyncPhaseParallelExecutor implements ParallelExecutor {
      *
      * @param task1
      * 		a task to execute in parallel
-     * @param task2
+     * @param backgroundTask
      * 		a task to execute in parallel
      * @throws ParallelExecutionException
      * 		if anything goes wrong
      */
     @Override
-    public <T> T doParallel(final Callable<T> task1, final Callable<Void> task2) throws ParallelExecutionException {
+    public <T> T doParallel(final Callable<T> task1, final Callable<Void> backgroundTask)
+            throws ParallelExecutionException {
 
         if (phase == PHASE_3) {
             beforePhase3.run();
@@ -107,7 +108,7 @@ public class SyncPhaseParallelExecutor implements ParallelExecutor {
         T result = null;
         try {
             final Future<T> future1 = executor.submit(task1);
-            task2.call();
+            backgroundTask.call();
             result = future1.get();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -166,7 +167,7 @@ public class SyncPhaseParallelExecutor implements ParallelExecutor {
      */
     @Override
     public void doParallel(
-            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... tasks)
+            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... backgroundTasks)
             throws ParallelExecutionException {
         throw new UnsupportedOperationException();
     }

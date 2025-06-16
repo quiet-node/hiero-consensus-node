@@ -4,6 +4,7 @@ package com.swirlds.platform.gossip;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static org.hiero.consensus.model.hashgraph.ConsensusConstants.ROUND_UNDEFINED;
 
+import com.google.common.collect.ImmutableList;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
@@ -51,7 +52,6 @@ import com.swirlds.platform.wiring.components.Gossip;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -78,7 +78,7 @@ public class SyncGossipModular implements Gossip {
     private static final Logger logger = LogManager.getLogger(SyncGossipModular.class);
 
     private final PeerCommunication network;
-    private final List<Protocol> protocols;
+    private final ImmutableList<Protocol> protocols;
     private final AbstractSyncProtocol<?> syncProtocol;
     private final SyncManagerImpl syncManager;
     private final AbstractShadowgraphSynchronizer synchronizer;
@@ -197,23 +197,21 @@ public class SyncGossipModular implements Gossip {
                     syncMetrics);
         }
 
-        this.protocols = new ArrayList<>();
-
-        this.protocols.add(HeartbeatProtocol.create(platformContext, this.network.getNetworkMetrics()));
-
-        this.protocols.add(createReconnectProtocol(
-                platformContext,
-                syncManager,
-                threadManager,
-                latestCompleteState,
-                roster,
-                loadReconnectState,
-                clearAllPipelinesForReconnect,
-                swirldStateManager,
-                selfId,
-                this.syncProtocol,
-                platformStateFacade));
-        this.protocols.add(syncProtocol);
+        this.protocols = ImmutableList.of(
+                HeartbeatProtocol.create(platformContext, this.network.getNetworkMetrics()),
+                createReconnectProtocol(
+                        platformContext,
+                        syncManager,
+                        threadManager,
+                        latestCompleteState,
+                        roster,
+                        loadReconnectState,
+                        clearAllPipelinesForReconnect,
+                        swirldStateManager,
+                        selfId,
+                        this.syncProtocol,
+                        platformStateFacade),
+                syncProtocol);
 
         final VersionCompareHandshake versionCompareHandshake =
                 new VersionCompareHandshake(appVersion, !protocolConfig.tolerateMismatchedVersion());

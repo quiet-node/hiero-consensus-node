@@ -49,21 +49,22 @@ public class ReplaceSyncPhaseParallelExecutor implements ParallelExecutor {
      *
      * @param task1
      * 		a task to execute in parallel
-     * @param task2
+     * @param backgroundTask
      * 		a task to execute in parallel
      */
     @Override
-    public <T> T doParallel(final Callable<T> task1, final Callable<Void> task2) throws ParallelExecutionException {
+    public <T> T doParallel(final Callable<T> task1, final Callable<Void> backgroundTask)
+            throws ParallelExecutionException {
         try {
             if (phase == phaseToReplace) {
                 if (taskNumToReplace == 1) {
-                    executor.doParallel(replacementTask, task2);
+                    executor.doParallel(replacementTask, backgroundTask);
                     return null;
                 } else {
                     return executor.doParallel(task1, replacementTask);
                 }
             } else {
-                return executor.doParallel(task1, task2);
+                return executor.doParallel(task1, backgroundTask);
             }
         } finally {
             incPhase();
@@ -76,7 +77,7 @@ public class ReplaceSyncPhaseParallelExecutor implements ParallelExecutor {
      */
     @Override
     public void doParallel(
-            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... tasks)
+            final Runnable onThrow, final ThrowingRunnable foregroundTask, final ThrowingRunnable... backgroundTasks)
             throws ParallelExecutionException {
         throw new UnsupportedOperationException();
     }
