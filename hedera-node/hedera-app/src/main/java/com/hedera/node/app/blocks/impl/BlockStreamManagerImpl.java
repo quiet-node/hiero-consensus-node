@@ -389,7 +389,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     @Override
     public boolean endRound(@NonNull final State state, final long roundNum) {
         final var lastFreezeRoundKeyState =
-                state.getWritableStates(FreezeServiceImpl.NAME).<FreezeInfo>getSingleton(FREEZE_INFO_KEY);
+                state.getReadableStates(FreezeServiceImpl.NAME).<FreezeInfo>getSingleton(FREEZE_INFO_KEY);
         final FreezeInfo freezeInfo = lastFreezeRoundKeyState.get();
         final long freezeRoundNumber = requireNonNull(freezeInfo).lastFreezeRound();
         final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock, freezeRoundNumber);
