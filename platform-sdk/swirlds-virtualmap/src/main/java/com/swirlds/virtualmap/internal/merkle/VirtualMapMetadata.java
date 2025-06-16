@@ -12,7 +12,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
  * Contains state for a {@link VirtualMap}. This state is stored in memory. When an instance of {@link VirtualMap}
  * is serialized, it's stored as one of the key-value pairs.
  */
-public class VirtualMapState {
+public class VirtualMapMetadata {
 
     public static final int MAX_LABEL_CHARS = 512;
 
@@ -32,9 +32,9 @@ public class VirtualMapState {
     private String label;
 
     /**
-     * Create a new {@link VirtualMapState}.
+     * Create a new {@link VirtualMapMetadata}.
      */
-    public VirtualMapState(@NonNull final String label) {
+    public VirtualMapMetadata(@NonNull final String label) {
         requireNonNull(label);
         firstLeafPath = -1;
         lastLeafPath = -1;
@@ -42,9 +42,9 @@ public class VirtualMapState {
     }
 
     /**
-     * Create a new {@link VirtualMapState}.
+     * Create a new {@link VirtualMapMetadata}.
      */
-    public VirtualMapState(@NonNull final String label, final long stateSize) {
+    public VirtualMapMetadata(@NonNull final String label, final long stateSize) {
         requireNonNull(label);
         if (stateSize == 1) {
             firstLeafPath = 1;
@@ -57,26 +57,26 @@ public class VirtualMapState {
     }
 
     /**
-     * Create a new {@link VirtualMapState} base on an {@link ExternalVirtualMapState} instance.
-     * To be removed with ExternalVirtualMapState.
+     * Create a new {@link VirtualMapMetadata} base on an {@link ExternalVirtualMapMetadata} instance.
+     * To be removed with ExternalVirtualMapMetadata.
      *
-     * @param virtualMapState The map state to copy. Cannot be null.
+     * @param virtualMapMetadata The map state to copy. Cannot be null.
      */
     @Deprecated(forRemoval = true)
-    public VirtualMapState(@NonNull final ExternalVirtualMapState virtualMapState) {
-        requireNonNull(virtualMapState);
-        firstLeafPath = virtualMapState.getFirstLeafPath();
-        lastLeafPath = virtualMapState.getLastLeafPath();
-        label = virtualMapState.getLabel();
+    public VirtualMapMetadata(@NonNull final ExternalVirtualMapMetadata virtualMapMetadata) {
+        requireNonNull(virtualMapMetadata);
+        firstLeafPath = virtualMapMetadata.getFirstLeafPath();
+        lastLeafPath = virtualMapMetadata.getLastLeafPath();
+        label = virtualMapMetadata.getLabel();
     }
 
     /**
      * Copy constructor.
      */
-    private VirtualMapState(final VirtualMapState virtualMapState) {
-        firstLeafPath = virtualMapState.getFirstLeafPath();
-        lastLeafPath = virtualMapState.getLastLeafPath();
-        label = virtualMapState.getLabel();
+    private VirtualMapMetadata(final VirtualMapMetadata virtualMapMetadata) {
+        firstLeafPath = virtualMapMetadata.getFirstLeafPath();
+        lastLeafPath = virtualMapMetadata.getLastLeafPath();
+        label = virtualMapMetadata.getLabel();
     }
 
     /**
@@ -162,8 +162,8 @@ public class VirtualMapState {
         this.label = label;
     }
 
-    public VirtualMapState copy() {
-        return new VirtualMapState(this);
+    public VirtualMapMetadata copy() {
+        return new VirtualMapMetadata(this);
     }
 
     @Override

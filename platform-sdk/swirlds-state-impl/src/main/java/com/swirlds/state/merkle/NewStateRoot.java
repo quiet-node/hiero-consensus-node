@@ -49,7 +49,7 @@ import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.merkle.RecordAccessorImpl;
-import com.swirlds.virtualmap.internal.merkle.VirtualMapState;
+import com.swirlds.virtualmap.internal.merkle.VirtualMapMetadata;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -837,13 +837,13 @@ public abstract class NewStateRoot<T extends NewStateRoot<T>> implements State {
         final JSONObject rootJson = new JSONObject();
 
         final RecordAccessorImpl recordAccessor = (RecordAccessorImpl) virtualMap.getRecords();
-        final VirtualMapState virtualMapState = virtualMap.getState();
+        final VirtualMapMetadata virtualMapMetadata = virtualMap.getState();
 
-        final JSONObject virtualMapStateJson = new JSONObject();
-        virtualMapStateJson.put("firstLeafPath", virtualMapState.getFirstLeafPath());
-        virtualMapStateJson.put("lastLeafPath", virtualMapState.getLastLeafPath());
+        final JSONObject virtualMapMetadataJson = new JSONObject();
+        virtualMapMetadataJson.put("firstLeafPath", virtualMapMetadata.getFirstLeafPath());
+        virtualMapMetadataJson.put("lastLeafPath", virtualMapMetadata.getLastLeafPath());
 
-        rootJson.put("VirtualMapState", virtualMapStateJson);
+        rootJson.put("VirtualMapMetadata", virtualMapMetadataJson);
 
         final JSONObject singletons = new JSONObject();
         final JSONObject queues = new JSONObject();
