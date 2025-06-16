@@ -8,7 +8,6 @@ import com.hedera.hapi.platform.state.VirtualMapKey;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.OneOf;
 import com.hedera.pbj.runtime.ParseException;
-import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
@@ -396,6 +395,14 @@ public final class StateUtils {
 
     private static final Bytes[] VIRTUAL_MAP_KEY_CACHE = new Bytes[65536];
 
+    private static int getValidatedStateId(@NonNull final String serviceName, @NonNull final String stateKey) {
+        final int stateId = stateIdFor(serviceName, stateKey);
+        if (stateId < 0 || stateId > 65535) {
+            throw new IllegalArgumentException("State ID " + stateId + " must fit in [0..65535]");
+        }
+        return stateId;
+    }
+
     /**
      * Creates an instance of {@link VirtualMapKey} for a singleton state, serializes into a {@link Bytes} object
      * and returns it.
@@ -435,17 +442,8 @@ public final class StateUtils {
      */
     public static Bytes getVirtualMapKeyForQueue(
             @NonNull final String serviceName, @NonNull final String stateKey, final long index) {
-
         return VirtualMapKey.PROTOBUF.toBytes(new VirtualMapKey(new OneOf<>(
                 VirtualMapKey.KeyOneOfType.fromProtobufOrdinal(getValidatedStateId(serviceName, stateKey)), index)));
-    }
-
-    private static int getValidatedStateId(String serviceName, String stateKey) {
-        final int stateId = stateIdFor(serviceName, stateKey);
-        if (stateId < 0 || stateId > 65535) {
-            throw new IllegalArgumentException("State ID " + stateId + " must fit in [0..65535]");
-        }
-        return stateId;
     }
 
     /**
@@ -473,13 +471,43 @@ public final class StateUtils {
     }
 
     /**
-     * Writes an unsigned 2‑byte value (a short) in big‑endian order into the given BufferedData.
-     *
-     * @param writer the BufferedData to write into
-     * @param value  the unsigned 2‑byte value to write (must be in [0..65535])
+     * Creates Protocol Buffer encoded byte array for a field in VirtualMapKey.
+     * @return Protocol Buffer encoded byte array with tag, length, and value
      */
-    private static void writeUnsignedShort(@NonNull final BufferedData writer, final int value) {
-        writer.writeByte((byte) (value >>> 8)); // extract high-order 8 bits
-        writer.writeByte((byte) value); // extract low-order 8 bits
+    public static byte[] createVirtualMapKeyBytesForKV(
+            @NonNull final String serviceName, @NonNull final String stateKey, byte[] keyObjectBytes) {
+        final int stateId = getValidatedStateId(serviceName, stateKey);
+        int wireType = 2; // length-delimited
+
+        // This matches the Protocol Buffer tag format: (field_number << TAG_TYPE_BITS) | wire_type
+        int tag = (stateId << 3) | wireType;
+
+        // Should encode tag as varint
+        byte[] tagBytes = encodeVarInt(tag);
+        byte[] lengthPrefix = encodeVarInt(keyObjectBytes.length);
+
+        // Final byte array: tag + length + value
+        byte[] result = new byte[tagBytes.length + lengthPrefix.length + keyObjectBytes.length];
+        System.arraycopy(tagBytes, 0, result, 0, tagBytes.length);
+
+        System.arraycopy(lengthPrefix, 0, result, tagBytes.length, lengthPrefix.length);
+        System.arraycopy(keyObjectBytes, 0, result, tagBytes.length + lengthPrefix.length, keyObjectBytes.length);
+
+        return result;
+    }
+
+    private static byte[] encodeVarInt(int value) {
+        if (value < 0x80) {
+            return new byte[] {(byte) value};
+        } else {
+            // full varint encoding for completeness
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            while ((value & 0xFFFFFF80) != 0L) {
+                out.write((value & 0x7F) | 0x80);
+                value >>>= 7;
+            }
+            out.write(value & 0x7F);
+            return out.toByteArray();
+        }
     }
 }
