@@ -57,24 +57,6 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
     private final ParallelExecutor executor;
 
     /**
-     * If true then we do not send all events during a sync that the peer says we need. Instead, we send events that we
-     * know are unlikely to be duplicates (e.g. self events), and only send other events if we have had them for a long
-     * time and the peer still needs them.
-     */
-    private final boolean filterLikelyDuplicates;
-
-    /**
-     * For events that are neither self events nor ancestors of self events, we must have had this event for at least
-     * this amount of time before it is eligible to be sent. Ignored if {@link #filterLikelyDuplicates} is false.
-     */
-    private final Duration nonAncestorFilterThreshold;
-
-    /**
-     * The maximum number of events to send in a single sync, or 0 if there is no limit.
-     */
-    private final int maximumEventsPerSync;
-
-    /**
      * Constructs a new ShadowgraphSynchronizer.
      *
      * @param platformContext      the platform context
@@ -107,10 +89,6 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
         this.executor = Objects.requireNonNull(executor);
 
         final SyncConfig syncConfig = platformContext.getConfiguration().getConfigData(SyncConfig.class);
-        this.nonAncestorFilterThreshold = syncConfig.nonAncestorFilterThreshold();
-
-        this.filterLikelyDuplicates = syncConfig.filterLikelyDuplicates();
-        this.maximumEventsPerSync = syncConfig.maxSyncEventCount();
     }
 
     /**
