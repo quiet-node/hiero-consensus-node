@@ -2,7 +2,7 @@
 
 ## Previous solution
 
-Network communication based on dynamic negotiation of one of 3 protocols (Heartbeat/Ping, Sync, Reconnect), each of them hogging socket till it is finished with current task. Implemented using ad-hoc byte sequences.
+The previous network communication strategy was based on dynamic negotiation of one of 3 protocols (Heartbeat/Ping, Sync, Reconnect). Each of them hogged the socket until it was finished with current task. It was implemented using ad-hoc byte sequences.
 
 <img src="rpc-gossip-OldNetwork.drawio.png"/>
 
