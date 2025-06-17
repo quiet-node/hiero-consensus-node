@@ -59,12 +59,12 @@ class FreezeServiceImplTest {
         final var schema = schemaCaptor.getValue();
 
         final var statesToCreate = schema.statesToCreate();
-        assertEquals(3, statesToCreate.size());
+        assertEquals(3, statesToCreate.size(), "There should be 3 states created by the FreezeServiceImpl");
         final var iter =
                 statesToCreate.stream().map(StateDefinition::stateKey).sorted().iterator();
-        assertEquals(FREEZE_INFO_KEY, iter.next());
-        assertEquals(FREEZE_TIME_KEY, iter.next());
-        assertEquals(UPGRADE_FILE_HASH_KEY, iter.next());
+        assertEquals(FREEZE_INFO_KEY, iter.next(), "The first state should be the freeze info key");
+        assertEquals(FREEZE_TIME_KEY, iter.next(), "The second state should be the freeze time key");
+        assertEquals(UPGRADE_FILE_HASH_KEY, iter.next(), "The third state should be the upgrade file hash key");
     }
 
     @Test

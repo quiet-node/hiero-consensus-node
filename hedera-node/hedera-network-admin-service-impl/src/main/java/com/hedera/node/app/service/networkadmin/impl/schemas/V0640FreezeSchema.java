@@ -18,7 +18,7 @@ import org.apache.logging.log4j.Logger;
  * Initial mod-service schema for the {@link FreezeService}.
  */
 public class V0640FreezeSchema extends Schema {
-    private static final Logger log = LogManager.getLogger(V0640FreezeSchema.class);
+    private static final Logger LOGGER = LogManager.getLogger(V0640FreezeSchema.class);
 
     public static final String UPGRADE_FILE_HASH_KEY = "UPGRADE_FILE_HASH";
     public static final String FREEZE_TIME_KEY = "FREEZE_TIME";
@@ -60,8 +60,9 @@ public class V0640FreezeSchema extends Schema {
             lastFreezeRoundKeyState.put(
                     FreezeInfo.newBuilder().lastFreezeRound(0L).build());
         } else {
-            log.info(
-                    "V0640FreezeSchema is being applied during an upgrade and FreezeInfo is not set. Setting last freeze round to the current round number: {}.",
+            LOGGER.info(
+                    "V0640FreezeSchema is being applied during an upgrade and FreezeInfo is not set. "
+                            + "Setting last freeze round to the current round number: {}.",
                     ctx.roundNumber());
             lastFreezeRoundKeyState.put(
                     FreezeInfo.newBuilder().lastFreezeRound(ctx.roundNumber()).build());

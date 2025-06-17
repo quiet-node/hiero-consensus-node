@@ -266,7 +266,7 @@ public class HandleWorkflow {
         if (platformStateFacade.isFreezeRound(state, round)) {
             // If this is a freeze round, we need to update the freeze info state
             final var writableFreezeService = state.getWritableStates(FreezeServiceImpl.NAME);
-            WritableSingletonState<Object> writableFreezeServiceSingleton =
+            final WritableSingletonState<Object> writableFreezeServiceSingleton =
                     writableFreezeService.getSingleton(FREEZE_INFO_KEY);
             final FreezeInfo freezeInfoState = (FreezeInfo) writableFreezeServiceSingleton.get();
             final FreezeInfo newFreezeInfo = requireNonNull(freezeInfoState)
