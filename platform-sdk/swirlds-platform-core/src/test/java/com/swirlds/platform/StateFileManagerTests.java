@@ -151,7 +151,10 @@ class StateFileManagerTests {
         Configuration configuration =
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
-                stateFile, HederaVirtualMapState::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
+                stateFile,
+                HederaVirtualMapState::new,
+                TEST_PLATFORM_STATE_FACADE,
+                PlatformContext.create(configuration));
         SignedState signedState = deserializedSignedState.reservedSignedState().get();
         TestMerkleCryptoFactory.getInstance()
                 .digestTreeSync(signedState.getState().getRoot());

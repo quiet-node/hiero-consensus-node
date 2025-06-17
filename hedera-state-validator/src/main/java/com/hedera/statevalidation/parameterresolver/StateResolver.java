@@ -8,8 +8,8 @@ import static com.hedera.statevalidation.parameterresolver.InitUtils.initService
 import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStateFile;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.hedera.node.app.HederaVirtualMapState;
 import com.hedera.node.app.HederaStateRoot;
+import com.hedera.node.app.HederaVirtualMapState;
 import com.hedera.node.app.roster.RosterService;
 import com.hedera.node.app.services.ServicesRegistryImpl;
 import com.hedera.statevalidation.validators.Constants;

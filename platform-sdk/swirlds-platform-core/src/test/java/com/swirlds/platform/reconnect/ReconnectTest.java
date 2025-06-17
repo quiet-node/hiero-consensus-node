@@ -119,7 +119,8 @@ final class ReconnectTest {
                     .setRoster(roster)
                     .setSigningNodeIds(nodeIds)
                     .setCalculateHash(true)
-                    .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestVirtualMapMerkleNodeState
+                    .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use
+                    // TestVirtualMapMerkleNodeState
                     .buildWithFacade();
             final SignedState signedState = signedStateFacadePair.left();
             final PlatformStateFacade platformStateFacade = signedStateFacadePair.right();

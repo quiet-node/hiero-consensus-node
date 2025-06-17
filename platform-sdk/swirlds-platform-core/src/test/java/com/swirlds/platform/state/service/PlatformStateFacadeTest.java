@@ -18,8 +18,8 @@ import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateModifier;
-import com.swirlds.platform.test.fixtures.state.TestVirtualMapMerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
+import com.swirlds.platform.test.fixtures.state.TestVirtualMapMerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.EmptyReadableStates;
@@ -203,7 +203,8 @@ class PlatformStateFacadeTest {
     void testSetSnapshotTo() {
         final String virtualMapLabel =
                 "vm-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        TestVirtualMapMerkleNodeState randomState = TestVirtualMapMerkleNodeState.createInstanceWithVirtualMapLabel(virtualMapLabel);
+        TestVirtualMapMerkleNodeState randomState =
+                TestVirtualMapMerkleNodeState.createInstanceWithVirtualMapLabel(virtualMapLabel);
         TestingAppStateInitializer.DEFAULT.initPlatformState(randomState);
         PlatformStateModifier randomPlatformState = randomPlatformState(randomState, platformStateFacade);
         final var newSnapshot = randomPlatformState.getSnapshot();

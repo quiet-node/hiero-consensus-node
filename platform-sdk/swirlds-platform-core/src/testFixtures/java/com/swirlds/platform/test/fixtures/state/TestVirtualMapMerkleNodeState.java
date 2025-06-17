@@ -9,7 +9,8 @@ import com.swirlds.state.merkle.VirtualMapState;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
-public class TestVirtualMapMerkleNodeState extends VirtualMapState<TestVirtualMapMerkleNodeState> implements MerkleNodeState {
+public class TestVirtualMapMerkleNodeState extends VirtualMapState<TestVirtualMapMerkleNodeState>
+        implements MerkleNodeState {
 
     public TestVirtualMapMerkleNodeState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
         super(configuration, metrics);
@@ -35,7 +36,8 @@ public class TestVirtualMapMerkleNodeState extends VirtualMapState<TestVirtualMa
         return new TestVirtualMapMerkleNodeState(virtualMap);
     }
 
-    public static TestVirtualMapMerkleNodeState createInstanceWithVirtualMapLabel(@NonNull final String virtualMapLabel) {
+    public static TestVirtualMapMerkleNodeState createInstanceWithVirtualMapLabel(
+            @NonNull final String virtualMapLabel) {
         final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
         return new TestVirtualMapMerkleNodeState(virtualMap);
     }

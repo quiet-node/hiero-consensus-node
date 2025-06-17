@@ -143,7 +143,10 @@ class SignedStateFileReadWriteTest {
         Configuration configuration =
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
-                stateFile, HederaVirtualMapState::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
+                stateFile,
+                HederaVirtualMapState::new,
+                TEST_PLATFORM_STATE_FACADE,
+                PlatformContext.create(configuration));
         TestMerkleCryptoFactory.getInstance()
                 .digestTreeSync(deserializedSignedState
                         .reservedSignedState()
