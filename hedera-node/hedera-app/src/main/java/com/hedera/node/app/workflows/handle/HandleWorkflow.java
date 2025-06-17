@@ -269,11 +269,12 @@ public class HandleWorkflow {
             WritableSingletonState<Object> writableFreezeServiceSingleton =
                     writableFreezeService.getSingleton(FREEZE_INFO_KEY);
             final FreezeInfo freezeInfoState = (FreezeInfo) writableFreezeServiceSingleton.get();
-
-            writableFreezeServiceSingleton.put(requireNonNull(freezeInfoState)
+            final FreezeInfo newFreezeInfo = requireNonNull(freezeInfoState)
                     .copyBuilder()
                     .lastFreezeRound(round.getRoundNum())
-                    .build());
+                    .build();
+            writableFreezeServiceSingleton.put(newFreezeInfo);
+            ((CommittableWritableStates) writableFreezeService).commit();
         }
 
         configureTssCallbacks(state);

@@ -6,8 +6,6 @@ import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockstream.FreezeInfo;
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.node.app.service.networkadmin.FreezeService;
-import com.hedera.node.config.data.HederaConfig;
-import com.hedera.node.config.data.VersionConfig;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.StateDefinition;
@@ -50,9 +48,8 @@ public class V0640FreezeSchema extends Schema {
     }
 
     @Override
-    public void restart(@NonNull final MigrationContext ctx) {
+    public void migrate(@NonNull final MigrationContext ctx) {
         final var lastFreezeRoundKeyState = ctx.newStates().<FreezeInfo>getSingleton(FREEZE_INFO_KEY);
-        final FreezeInfo freezeInfo = lastFreezeRoundKeyState.get();
         if (ctx.isGenesis()) {
             final var upgradeFileHashKeyState = ctx.newStates().<ProtoBytes>getSingleton(UPGRADE_FILE_HASH_KEY);
             upgradeFileHashKeyState.put(ProtoBytes.DEFAULT);
@@ -62,16 +59,7 @@ public class V0640FreezeSchema extends Schema {
 
             lastFreezeRoundKeyState.put(
                     FreezeInfo.newBuilder().lastFreezeRound(0L).build());
-        } else if (ctx.isUpgrade(ctx.appConfig()
-                        .getConfigData(VersionConfig.class)
-                        .servicesVersion()
-                        .copyBuilder()
-                        .build(""
-                                + ctx.appConfig()
-                                        .getConfigData(HederaConfig.class)
-                                        .configVersion())
-                        .build())
-                && freezeInfo == null) {
+        } else {
             log.info(
                     "V0640FreezeSchema is being applied during an upgrade and FreezeInfo is not set. Setting last freeze round to the current round number: {}.",
                     ctx.roundNumber());
