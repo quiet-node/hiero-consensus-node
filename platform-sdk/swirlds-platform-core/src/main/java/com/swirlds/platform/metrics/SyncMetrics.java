@@ -45,16 +45,6 @@ public class SyncMetrics {
             .withDescription("average number of bytes per second transferred during a sync");
     private final RunningAverageMetric avgBytesPerSecSync;
 
-    private static final CountPerSecond.Config CALL_SYNCS_PER_SECOND_CONFIG = new CountPerSecond.Config(
-                    PLATFORM_CATEGORY, "sync_per_secC")
-            .withDescription("(call syncs) syncs completed per second initiated by this member");
-    private final CountPerSecond callSyncsPerSecond;
-
-    private static final CountPerSecond.Config REC_SYNCS_PER_SECOND_CONFIG = new CountPerSecond.Config(
-                    PLATFORM_CATEGORY, "sync_per_secR")
-            .withDescription("(receive syncs) syncs completed per second initiated by other member");
-    private final CountPerSecond recSyncsPerSecond;
-
     private static final RunningAverageMetric.Config TIPS_PER_SYNC_CONFIG = new RunningAverageMetric.Config(
                     INTERNAL_CATEGORY, PlatformStatNames.TIPS_PER_SYNC)
             .withDescription("the average number of tips per sync at the start of each sync")
@@ -193,8 +183,6 @@ public class SyncMetrics {
         this.metrics = Objects.requireNonNull(metrics);
         this.time = Objects.requireNonNull(time);
         avgBytesPerSecSync = metrics.getOrCreate(AVG_BYTES_PER_SEC_SYNC_CONFIG);
-        callSyncsPerSecond = new CountPerSecond(metrics, CALL_SYNCS_PER_SECOND_CONFIG);
-        recSyncsPerSecond = new CountPerSecond(metrics, REC_SYNCS_PER_SECOND_CONFIG);
         tipsPerSync = metrics.getOrCreate(TIPS_PER_SYNC_CONFIG);
 
         incomingSyncRequestsPerSec = new CountPerSecond(metrics, INCOMING_SYNC_REQUESTS_CONFIG);
@@ -368,11 +356,6 @@ public class SyncMetrics {
      * @param info information about the sync that occurred
      */
     public void syncDone(final SyncResult info) {
-        if (info.isCaller()) {
-            callSyncsPerSecond.count();
-        } else {
-            recSyncsPerSecond.count();
-        }
         syncsPerSec.count();
 
         avgEventsPerSyncSent.update(info.getEventsWritten());

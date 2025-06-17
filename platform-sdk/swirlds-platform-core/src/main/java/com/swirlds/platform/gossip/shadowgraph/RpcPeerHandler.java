@@ -349,7 +349,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     }
 
     private void reportSyncFinished() {
-        this.syncMetrics.syncDone(new SyncResult(false, otherNodeId, incomingEventsCounter, outgoingEventsCounter));
+        this.syncMetrics.syncDone(new SyncResult(otherNodeId, incomingEventsCounter, outgoingEventsCounter));
         incomingEventsCounter = 0;
         outgoingEventsCounter = 0;
         this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.IDLE);
