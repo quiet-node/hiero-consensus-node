@@ -19,11 +19,22 @@ public abstract class AbstractStatsMetric extends AbstractMetric {
      */
     protected final double halfLife;
 
-    AbstractStatsMetric(@NonNull final MetricConfig<?, ?> config, final double halfLife) {
+    /**
+     * Constructs a new {@code AbstractStatsMetric} with the specified configuration and half-life.
+     *
+     * @param config   the metric configuration
+     * @param halfLife the half-life of the metric
+     */
+    protected AbstractStatsMetric(@NonNull final MetricConfig<?, ?> config, final double halfLife) {
         super(config);
         this.halfLife = halfLife;
     }
 
+    /**
+     * Returns the {@link StatsBuffered} instance that holds the statistics for this metric.
+     *
+     * @return the {@link StatsBuffered} instance
+     */
     @NonNull
     public abstract StatsBuffered getStatsBuffered();
 
