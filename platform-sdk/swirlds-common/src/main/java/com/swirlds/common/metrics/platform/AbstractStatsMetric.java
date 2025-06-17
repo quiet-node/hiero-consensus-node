@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.common.metrics.platform;
 
-import com.swirlds.common.metrics.PlatformMetric;
 import com.swirlds.common.metrics.statistics.StatsBuffered;
 import com.swirlds.metrics.api.MetricConfig;
 import com.swirlds.metrics.api.snapshot.Snapshot.SnapshotEntry;
@@ -13,17 +12,20 @@ import java.util.Objects;
 /**
  * Represents a metric computed over a distribution function
  */
-public abstract class AbstractDistributionMetric extends AbstractMetric implements PlatformMetric {
+public abstract class AbstractStatsMetric extends AbstractMetric {
 
     /**
      * Half-life of the metric
      */
     protected final double halfLife;
 
-    AbstractDistributionMetric(@NonNull final MetricConfig<?, ?> config, final double halfLife) {
+    AbstractStatsMetric(@NonNull final MetricConfig<?, ?> config, final double halfLife) {
         super(config);
         this.halfLife = halfLife;
     }
+
+    @NonNull
+    public abstract StatsBuffered getStatsBuffered();
 
     /**
      * Returns the mean value of this {@code Metric}.
