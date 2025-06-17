@@ -41,7 +41,6 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doWithStartupConfig
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.newKeyNamed;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overriding;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingAllOf;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.overridingTwo;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepFor;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.specOps;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.submitModified;
@@ -66,7 +65,6 @@ import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CONSENSUS_GAS_
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.CUSTOM_FEES_LIST_TOO_LONG;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_TOKEN_ID;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.INVALID_ZERO_BYTE_IN_STRING;
-import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.MAX_CONTRACT_STORAGE_EXCEEDED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.MAX_ENTITIES_IN_PRICE_REGIME_HAVE_BEEN_CREATED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.MAX_GAS_LIMIT_EXCEEDED;
 import static com.hederahashgraph.api.proto.java.ResponseCodeEnum.MAX_STORAGE_IN_PRICE_REGIME_HAS_BEEN_USED;
@@ -345,16 +343,14 @@ public class FileUpdateSuite {
                 /* Confirm the storage size didn't change */
                 getContractInfo(contract).has(contractWith().numKvPairs(11)),
                 /* Now we update the per-contract limit to 1B mappings, but the aggregate limit to just 1 */
-                overriding(
-                        "contracts.maxKvPairs.aggregate", "1"),
+                overriding("contracts.maxKvPairs.aggregate", "1"),
                 contractCall(contract, INSERT_ABI, BigInteger.valueOf(3), BigInteger.valueOf(9))
                         .payingWith(GENESIS)
                         .hasKnownStatus(MAX_STORAGE_IN_PRICE_REGIME_HAS_BEEN_USED)
                         .gas(gasToOffer),
                 getContractInfo(contract).has(contractWith().numKvPairs(11)),
                 /* Now raise the limits and confirm we can use more storage */
-                overriding(
-                        "contracts.maxKvPairs.aggregate", "10000000000"),
+                overriding("contracts.maxKvPairs.aggregate", "10000000000"),
                 contractCall(contract, INSERT_ABI, BigInteger.valueOf(3), BigInteger.valueOf(9))
                         .payingWith(GENESIS)
                         .gas(gasToOffer),
