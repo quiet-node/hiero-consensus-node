@@ -229,7 +229,6 @@ class ReconnectPeerProtocolTests {
                 mock(Supplier.class),
                 mock(LongSupplier.class),
                 mock(ReconnectLearnerFactory.class),
-                mock(StateConfig.class),
                 mock(PlatformStateFacade.class));
 
         final Configuration configuration = new TestConfigBuilder().getOrCreateConfig();

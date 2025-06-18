@@ -22,7 +22,7 @@ public class SignedStateUtils {
         MerkleNodeState root = new TestVirtualMapState(platformContext);
         TestingAppStateInitializer.DEFAULT.initPlatformState(root);
         TestPlatformStateFacade platformStateFacade = new TestPlatformStateFacade();
-        randomPlatformState(random, root, platformStateFacade);
+        randomPlatformState(random, root.getBinaryState(), platformStateFacade);
         boolean shouldSaveToDisk = random.nextBoolean();
         SignedState signedState = new SignedState(
                 platformContext.getConfiguration(),
@@ -33,7 +33,6 @@ public class SignedStateUtils {
                 false,
                 false,
                 platformStateFacade);
-        signedState.getState().setHash(CryptoRandomUtils.randomHash(random));
         return signedState;
     }
 }

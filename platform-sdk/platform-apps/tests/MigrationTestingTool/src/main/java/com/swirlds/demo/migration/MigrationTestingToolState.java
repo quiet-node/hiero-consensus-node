@@ -12,6 +12,7 @@ import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.datasource.VirtualDataSourceBuilder;
@@ -229,5 +230,11 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
     @Override
     protected MigrationTestingToolState copyingConstructor(PlatformContext platformContext) {
         return new MigrationTestingToolState(this);
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
+
     }
 }

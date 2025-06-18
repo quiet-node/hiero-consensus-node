@@ -52,7 +52,7 @@ public final class StateInitializer {
             previousSoftwareVersion = null;
             trigger = GENESIS;
         } else {
-            previousSoftwareVersion = platformStateFacade.creationSoftwareVersionOf(signedState.getState());
+            previousSoftwareVersion = platformStateFacade.creationSoftwareVersionOf(signedState.getState().getBinaryState());
             trigger = RESTART;
         }
 
@@ -61,7 +61,7 @@ public final class StateInitializer {
         // Although the state from disk / genesis state is initially hashed, we are actually dealing with a copy
         // of that state here. That copy should have caused the hash to be cleared.
 
-        if (initialState.isHashed()) {
+        if (initialState.getBinaryState().isHashed()) {
             throw new IllegalStateException("Expected initial state to be unhashed");
         }
 
@@ -91,6 +91,6 @@ public final class StateInitializer {
                 """
                         The platform is using the following initial state:
                         {}""",
-                platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
+                platformStateFacade.getInfoString(signedState.getState()));
     }
 }

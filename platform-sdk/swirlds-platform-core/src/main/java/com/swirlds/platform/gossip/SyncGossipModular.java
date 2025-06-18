@@ -238,7 +238,6 @@ public class SyncGossipModular implements Gossip {
                         reconnectMetrics,
                         platformStateFacade,
                         stateRootFunction),
-                stateConfig,
                 platformStateFacade);
 
         final ReconnectPlatformHelper reconnectPlatformHelper = new ReconnectPlatformHelperImpl(

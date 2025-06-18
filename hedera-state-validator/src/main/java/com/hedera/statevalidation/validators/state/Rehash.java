@@ -63,7 +63,7 @@ public class Rehash {
 
         var platformStateFacade = PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
         var infoStringFromState = platformStateFacade.getInfoString(
-                deserializedSignedState.reservedSignedState().get().getState(), HASH_DEPTH);
+                deserializedSignedState.reservedSignedState().get().getState());
 
         final var originalLines = Arrays.asList(hashInfo.content().split("\n"));
         final var fullList = Arrays.asList(infoStringFromState.split("\n"));

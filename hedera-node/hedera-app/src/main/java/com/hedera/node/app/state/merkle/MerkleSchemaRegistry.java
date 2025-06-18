@@ -15,6 +15,7 @@ import com.hedera.node.app.services.MigrationStateChanges;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
@@ -129,7 +130,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
     // too many parameters, commented out code
     @SuppressWarnings({"java:S107", "java:S125"})
     public void migrate(
-            @NonNull final MerkleNodeState stateRoot,
+            @NonNull final State stateRoot,
             @Nullable final SemanticVersion previousVersion,
             @NonNull final SemanticVersion currentVersion,
             @NonNull final Configuration appConfig,
@@ -147,7 +148,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
         if (isSoOrdered(currentVersion, previousVersion)) {
             throw new IllegalArgumentException("The currentVersion must be at least the previousVersion");
         }
-        final long roundNumber = platformStateFacade.roundOf(stateRoot);
+        final long roundNumber = platformStateFacade.roundOf(stateRoot.getBinaryState());
         if (schemas.isEmpty()) {
             logger.info("Service {} does not use state", serviceName);
             return;
@@ -203,7 +204,8 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                     previousVersion,
                     roundNumber,
                     sharedValues,
-                    startupNetworks);
+                    startupNetworks,
+                    stateRoot.getBinaryState());
             if (applications.contains(MIGRATION)) {
                 schema.migrate(migrationContext);
             }
@@ -216,7 +218,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                 migrationStateChanges.trackCommit();
             }
             // And finally we can remove any states we need to remove
-            schema.statesToRemove().forEach(stateKey -> stateRoot.removeServiceState(serviceName, stateKey));
+            schema.statesToRemove().forEach(stateKey ->((MerkleNodeState) stateRoot).removeServiceState(serviceName, stateKey));
         }
     }
 
@@ -224,7 +226,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
             @NonNull final Schema schema,
             @NonNull final List<Schema> schemasAlreadyInState,
             @NonNull final Configuration nodeConfiguration,
-            @NonNull final MerkleNodeState stateRoot) {
+            @NonNull final State stateRoot) {
         // Create the new states (based on the schema) which, thanks to the above, does not
         // expand the set of states that the migration code will see
         schema.statesToCreate(nodeConfiguration).stream()
@@ -238,7 +240,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                     }
                     logger.info("  Ensuring {} has state {}", serviceName, stateKey);
                     final var md = new StateMetadata<>(serviceName, schema, def);
-                    stateRoot.initializeState(md);
+                    ((MerkleNodeState)stateRoot).initializeState(md);
                 });
 
         // Create the "before" and "after" writable states (we won't commit anything

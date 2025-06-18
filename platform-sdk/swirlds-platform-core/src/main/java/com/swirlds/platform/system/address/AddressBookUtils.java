@@ -13,7 +13,7 @@ import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.address.AddressBookInitializer;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.text.ParseException;
@@ -247,7 +247,7 @@ public class AddressBookUtils {
                 platformContext,
                 consensusStateEventHandler,
                 platformStateFacade);
-        final State state = initialState.get().getState();
+        final BinaryState state = initialState.get().getState().getBinaryState();
 
         if (addressBookInitializer.hasAddressBookChanged()) {
             if (addressBookInitializer.getPreviousAddressBook() != null) {

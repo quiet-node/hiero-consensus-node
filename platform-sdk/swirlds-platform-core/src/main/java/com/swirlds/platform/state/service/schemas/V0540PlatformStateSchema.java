@@ -61,7 +61,7 @@ public class V0540PlatformStateSchema extends Schema {
         final var stateSingleton = ctx.newStates().<PlatformState>getSingleton(PLATFORM_STATE_KEY);
         if (ctx.isGenesis()) {
             stateSingleton.put(UNINITIALIZED_PLATFORM_STATE);
-            final var platformStateStore = new WritablePlatformStateStore(ctx.newStates());
+            final var platformStateStore = new WritablePlatformStateStore(ctx.binaryState());
             platformStateStore.bulkUpdate(genesisStateSpec(ctx));
         } else {
             // (FUTURE) Delete this code path, it is only reached through the Browser entrypoint

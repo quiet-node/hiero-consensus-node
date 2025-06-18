@@ -119,8 +119,8 @@ public class AddressBookInitializer {
                 platformContext.getConfiguration().getConfigData(AddressBookConfig.class);
         this.initialState = Objects.requireNonNull(initialState, "The initialState must not be null.");
 
-        final long round = platformStateFacade.roundOf(initialState.getState());
-        final var book = buildAddressBook(retrieveActive(initialState.getState(), round));
+        final long round = platformStateFacade.roundOf(initialState.getState().getBinaryState());
+        final var book = buildAddressBook(retrieveActive(initialState.getState().getBinaryState(), round));
         this.stateAddressBook = (book == null || book.getSize() == 0) ? null : book;
         if (stateAddressBook == null && !initialState.isGenesisState()) {
             throw new IllegalStateException("Only genesis states can have null address books.");

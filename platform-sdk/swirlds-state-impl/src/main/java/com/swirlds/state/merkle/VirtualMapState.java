@@ -18,6 +18,7 @@ import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.BinaryStateUtils;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
@@ -228,6 +229,10 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
 
         // this call will result in synchronous hash computation
         binaryState.getHash();
+    }
+
+    public BinaryState getBinaryState() {
+        return binaryState;
     }
 
     /**
@@ -801,7 +806,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
         return binaryState.isHashed();
     }
 
-    @Override
     public String getInfoJson() {
         final JSONObject rootJson = new JSONObject();
 

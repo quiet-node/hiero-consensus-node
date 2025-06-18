@@ -188,7 +188,7 @@ public class SignedState implements SignedStateInfo {
         this.platformStateFacade = platformStateFacade;
         this.signatureVerifier = requireNonNull(signatureVerifier);
         this.state = requireNonNull(state);
-        state.getRoot().reserve();
+        state.getBinaryState().reserve();
 
         final StateConfig stateConfig = configuration.getConfigData(StateConfig.class);
         if (stateConfig.stateHistoryEnabled()) {
@@ -209,7 +209,8 @@ public class SignedState implements SignedStateInfo {
     public void setRoundSupplier() {
         if (state instanceof VirtualMapState<?> virtualMapState) {
             virtualMapState.setRoundSupplier(() -> {
-                final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(state);
+                final ConsensusSnapshot consensusSnapshot =
+                            platformStateFacade.consensusSnapshotOf(state.getBinaryState());
                 return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
             });
         }
@@ -220,7 +221,7 @@ public class SignedState implements SignedStateInfo {
      */
     @Override
     public long getRound() {
-        return platformStateFacade.roundOf(state);
+        return platformStateFacade.roundOf(state.getBinaryState());
     }
 
     /**
@@ -229,7 +230,7 @@ public class SignedState implements SignedStateInfo {
      * @return true if this is the genesis state
      */
     public boolean isGenesisState() {
-        return platformStateFacade.isGenesisStateOf(state);
+        return platformStateFacade.isGenesisStateOf(state.getBinaryState());
     }
 
     /**
@@ -270,7 +271,7 @@ public class SignedState implements SignedStateInfo {
         Ideally the roster would be captured in the constructor but due to the mutable underlying state, the roster
         can change from underneath us. Therefore, the roster must be regenerated on each access.
          */
-        final Roster roster = RosterRetriever.retrieveActive(state, getRound());
+        final Roster roster = RosterRetriever.retrieveActive(state.getBinaryState(), getRound());
         return requireNonNull(roster, "Roster stored in signed state is null (this should never happen)");
     }
 
@@ -414,7 +415,7 @@ public class SignedState implements SignedStateInfo {
                         history.recordAction(SignedStateAction.DESTROY, getReservationCount(), null, null);
                     }
                     registryRecord.release();
-                    state.release();
+                    state.getBinaryState().release();
                 } catch (final Throwable ex) {
                     logger.error(EXCEPTION.getMarker(), "exception while attempting to delete signed state", ex);
                 }
@@ -462,7 +463,7 @@ public class SignedState implements SignedStateInfo {
                         getRound(),
                         signingWeight,
                         RosterUtils.computeTotalWeight(getRoster()),
-                        state.isHashed() ? state.getHash() : "not hashed");
+                        state.getBinaryState().isHashed() ? state.getBinaryState().getHash() : "not hashed");
     }
 
     /**
@@ -471,7 +472,7 @@ public class SignedState implements SignedStateInfo {
      * @return the consensus timestamp for this signed state.
      */
     public @NonNull Instant getConsensusTimestamp() {
-        return platformStateFacade.consensusTimestampOf(state);
+        return platformStateFacade.consensusTimestampOf(state.getBinaryState());
     }
 
     /**
@@ -648,7 +649,7 @@ public class SignedState implements SignedStateInfo {
         }
 
         return signatureVerifier.verifySignature(
-                state.getHash().getBytes(), signature.getBytes(), address.getSigPublicKey());
+                state.getBinaryState().getHash().getBytes(), signature.getBytes(), address.getSigPublicKey());
     }
 
     /**
@@ -678,7 +679,7 @@ public class SignedState implements SignedStateInfo {
             return false;
         }
 
-        return signatureVerifier.verifySignature(state.getHash().getBytes(), signature.getBytes(), cert.getPublicKey());
+        return signatureVerifier.verifySignature(state.getBinaryState().getHash().getBytes(), signature.getBytes(), cert.getPublicKey());
     }
 
     /**

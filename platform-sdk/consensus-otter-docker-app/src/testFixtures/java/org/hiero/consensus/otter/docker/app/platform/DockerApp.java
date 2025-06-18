@@ -119,7 +119,7 @@ public class DockerApp {
         final ReservedSignedState initialState = reservedState.state();
 
         final MerkleNodeState state = initialState.get().getState();
-        final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state);
+        final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state.getBinaryState());
 
         final PlatformBuilder builder = PlatformBuilder.create(
                         APP_NAME,

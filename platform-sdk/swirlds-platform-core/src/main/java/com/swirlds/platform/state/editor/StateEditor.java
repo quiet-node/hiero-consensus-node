@@ -73,7 +73,7 @@ public class StateEditor {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("problem encountered while hashing state", e);
             }
-            System.out.println("Hash = " + reservedSignedState.get().getState().getHash());
+            System.out.println("Hash = " + reservedSignedState.get().getState().getBinaryState().getHash());
         }
     }
 

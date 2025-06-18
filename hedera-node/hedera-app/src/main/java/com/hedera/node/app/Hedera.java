@@ -133,6 +133,7 @@ import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.system.state.notifications.AsyncFatalIssListener;
 import com.swirlds.platform.system.state.notifications.StateHashedListener;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StartupNetworks;
@@ -659,7 +660,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         requireNonNull(platformConfig);
         this.configProvider = new ConfigProviderImpl(trigger == GENESIS, metrics);
         this.genesisNetworkSupplier = () -> startupNetworks().genesisNetworkOrThrow(platformConfig);
-        final var deserializedVersion = platformStateFacade.creationSemanticVersionOf(state);
+        BinaryState binaryState = state.getBinaryState();
+        final var deserializedVersion = platformStateFacade.creationSemanticVersionOf(binaryState);
         logger.info(
                 "Initializing Hedera state version {} in {} mode with trigger {} and previous version {}",
                 version,
@@ -689,8 +691,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         }
         logger.info(
                 "Platform state includes freeze time={} and last frozen={}",
-                platformStateFacade.freezeTimeOf(state),
-                platformStateFacade.lastFrozenTimeOf(state));
+                platformStateFacade.freezeTimeOf(binaryState),
+                platformStateFacade.lastFrozenTimeOf(binaryState));
     }
 
     /**

@@ -69,13 +69,13 @@ class StateGarbageCollectorTests {
 
             // Make sure all of the deleted states are actually destroyed.
             for (final SignedState releasedState : releasedStates) {
-                assertTrue(releasedState.getState().isDestroyed());
+                assertTrue(releasedState.getState().getBinaryState().isDestroyed());
             }
             releasedStates.clear();
 
             // Make sure that none of the unreleased states are destroyed.
             for (final ReservedSignedState unreleasedState : unreleasedStates) {
-                assertFalse(unreleasedState.get().getState().isDestroyed());
+                assertFalse(unreleasedState.get().getState().getBinaryState().isDestroyed());
             }
         }
     }

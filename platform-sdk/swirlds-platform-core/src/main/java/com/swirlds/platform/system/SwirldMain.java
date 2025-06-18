@@ -7,7 +7,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
@@ -38,7 +37,7 @@ public interface SwirldMain<T extends MerkleNodeState> extends Runnable {
      * </p>
      *
      * <p>
-     * Any changes necessary to initialize {@link State} should be made in
+     * Any changes necessary to initialize {@link MerkleNodeState} should be made in
      * {@link ConsensusStateEventHandler#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SemanticVersion)}
      * </p>
      *

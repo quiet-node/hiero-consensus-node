@@ -18,7 +18,6 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.config.legacy.ConfigurationException;
 import com.swirlds.platform.config.legacy.LegacyConfigProperties;
 import com.swirlds.platform.config.legacy.LegacyConfigPropertiesLoader;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.SystemExitUtils;
 import com.swirlds.virtualmap.VirtualMap;
 import java.util.function.Function;
@@ -45,7 +44,7 @@ final class ServicesMainTest {
     private Hedera hedera;
 
     @Mock
-    private MerkleNodeState state;
+    private HederaVirtualMapState state;
 
     private final ServicesMain subject = new ServicesMain();
 
@@ -101,7 +100,7 @@ final class ServicesMainTest {
         ServicesMain.initGlobal(hedera, metrics);
         final VirtualMap virtualMapMock = mock(VirtualMap.class);
         final PlatformContext platformContext = mock(PlatformContext.class);
-        final Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMapMock = mock(Function.class);
+        final Function<VirtualMap, HederaVirtualMapState> stateRootFromVirtualMapMock = mock(Function.class);
 
         when(hedera.stateRootFromVirtualMap(platformContext)).thenReturn(stateRootFromVirtualMapMock);
         when(stateRootFromVirtualMapMock.apply(virtualMapMock)).thenReturn(state);

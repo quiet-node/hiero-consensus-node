@@ -32,6 +32,7 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.spi.WritableSingletonState;
+import com.swirlds.state.test.fixtures.FakeBinaryState;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
@@ -104,7 +105,7 @@ class V0530TokenSchemaTest {
 
         final var schema = new V0530TokenSchema();
         schema.migrate(new MigrationContextImpl(
-                previousStates, newStates, config, config, null, 0L, new HashMap<>(), startupNetworks));
+                previousStates, newStates, config, config, null, 0L, new HashMap<>(), startupNetworks, new FakeBinaryState()));
 
         final var updatedStates = newStates.get(STAKING_INFO_KEY);
         // sets minStake on all nodes to 0

@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.consensus.roster;
 
-import static java.util.Objects.requireNonNull;
-
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterState;
 import com.hedera.hapi.node.state.roster.RoundRosterPair;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.state.spi.ReadableKVState;
-import com.swirlds.state.spi.ReadableSingletonState;
-import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.util.List;
 import java.util.Optional;
+
+import static com.swirlds.state.BinaryStateUtils.getValidatedStateId;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provides read-only methods for interacting with the underlying data storage mechanisms for
@@ -22,26 +22,22 @@ import java.util.Optional;
  */
 public class ReadableRosterStoreImpl implements ReadableRosterStore {
 
-    /**
-     * The roster state singleton. This is the state that holds the candidate roster hash and the list of pairs of round
-     * and active roster hashes.
-     */
-    private final ReadableSingletonState<RosterState> rosterState;
+    protected final BinaryState binaryState;
 
-    /**
-     * The key-value map of roster hashes and rosters.
-     */
-    private final ReadableKVState<ProtoBytes, Roster> rosterMap;
+    protected final int rosterStateStateId;
+
+    protected final int rosterMapStateId;
 
     /**
      * Create a new {@link ReadableRosterStore} instance.
      *
-     * @param readableStates The state to use.
+     * @param binaryState The state to use.
      */
-    public ReadableRosterStoreImpl(@NonNull final ReadableStates readableStates) {
-        requireNonNull(readableStates);
-        this.rosterState = readableStates.getSingleton(WritableRosterStore.ROSTER_STATES_KEY);
-        this.rosterMap = readableStates.get(WritableRosterStore.ROSTER_KEY);
+    public ReadableRosterStoreImpl(@NonNull final BinaryState binaryState) {
+        requireNonNull(binaryState);
+        this.binaryState = binaryState;
+        this.rosterStateStateId = getValidatedStateId(RosterStateId.NAME, WritableRosterStore.ROSTER_STATES_KEY);
+        this.rosterMapStateId = getValidatedStateId(RosterStateId.NAME, WritableRosterStore.ROSTER_KEY);
     }
 
     /**
@@ -50,12 +46,22 @@ public class ReadableRosterStoreImpl implements ReadableRosterStore {
     @Nullable
     @Override
     public Roster getCandidateRoster() {
-        final RosterState rosterStateSingleton = rosterState.get();
-        if (rosterStateSingleton == null) {
+        final RosterState rosterState = getRosterState();
+        if (rosterState == null) {
             return null;
         }
-        final Bytes candidateRosterHash = rosterStateSingleton.candidateRosterHash();
-        return rosterMap.get(ProtoBytes.newBuilder().value(candidateRosterHash).build());
+        final Bytes candidateRosterHash = rosterState.candidateRosterHash();
+        return getRosterByHash(candidateRosterHash);
+    }
+
+    protected RosterState getRosterState() {
+        return binaryState.getSingleton(rosterStateStateId, RosterState.PROTOBUF);
+    }
+
+    protected Roster getRosterByHash(Bytes candidateRosterHash) {
+        return binaryState.getValueByKey(rosterMapStateId, ProtoBytes.PROTOBUF, ProtoBytes.newBuilder()
+                .value(candidateRosterHash)
+                .build(), Roster.PROTOBUF);
     }
 
     /**
@@ -68,7 +74,7 @@ public class ReadableRosterStoreImpl implements ReadableRosterStore {
         if (activeRosterHash == null) {
             return null;
         }
-        return rosterMap.get(ProtoBytes.newBuilder().value(activeRosterHash).build());
+        return getRosterByHash(activeRosterHash);
     }
 
     /**
@@ -77,7 +83,7 @@ public class ReadableRosterStoreImpl implements ReadableRosterStore {
     @Nullable
     @Override
     public Roster get(@NonNull final Bytes rosterHash) {
-        return rosterMap.get(ProtoBytes.newBuilder().value(rosterHash).build());
+        return getRosterByHash(rosterHash);
     }
 
     /**
@@ -86,7 +92,7 @@ public class ReadableRosterStoreImpl implements ReadableRosterStore {
     @Nullable
     @Override
     public Bytes getCurrentRosterHash() {
-        final RosterState rosterStateSingleton = rosterState.get();
+        final RosterState rosterStateSingleton = getRosterState();
         if (rosterStateSingleton == null) {
             return null;
         }
@@ -110,14 +116,14 @@ public class ReadableRosterStoreImpl implements ReadableRosterStore {
     /** {@inheritDoc} */
     @Override
     public @NonNull List<RoundRosterPair> getRosterHistory() {
-        return requireNonNull(rosterState.get()).roundRosterPairs().stream()
-                .filter(pair -> rosterMap.contains(new ProtoBytes(pair.activeRosterHash())))
+        return requireNonNull(getRosterState()).roundRosterPairs().stream()
+                .filter(pair -> getRosterByHash(pair.activeRosterHash()) != null)
                 .toList();
     }
 
     @Override
     public @Nullable Bytes getCandidateRosterHash() {
-        return Optional.ofNullable(rosterState.get())
+        return Optional.ofNullable(getRosterState())
                 .map(RosterState::candidateRosterHash)
                 .filter(bytes -> bytes.length() > 0)
                 .orElse(null);

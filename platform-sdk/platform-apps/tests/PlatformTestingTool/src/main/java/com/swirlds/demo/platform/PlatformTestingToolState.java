@@ -22,6 +22,7 @@ import com.swirlds.demo.platform.nft.NftLedger;
 import com.swirlds.demo.platform.nft.ReferenceNftLedger;
 import com.swirlds.merkle.test.fixtures.map.pta.MapKey;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -545,5 +546,10 @@ public class PlatformTestingToolState extends MerkleStateRoot<PlatformTestingToo
         public static final int QUORUM_RESULT = 12;
 
         public static final int CHILD_COUNT = 13;
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
     }
 }

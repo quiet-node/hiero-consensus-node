@@ -13,6 +13,7 @@ import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.swirlds.platform.state.PlatformStateModifier;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.State;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,7 +27,7 @@ public final class PlatformStateUtils {
     /**
      * Generate a randomized PlatformState object. Values contained internally may be nonsensical.
      */
-    public static PlatformStateModifier randomPlatformState(State state, TestPlatformStateFacade platformState) {
+    public static PlatformStateModifier randomPlatformState(BinaryState state, TestPlatformStateFacade platformState) {
         return randomPlatformState(new Random(), state, platformState);
     }
 
@@ -34,7 +35,7 @@ public final class PlatformStateUtils {
      * Generate a randomized PlatformState object. Values contained internally may be nonsensical.
      */
     public static PlatformStateModifier randomPlatformState(
-            final Random random, State state, TestPlatformStateFacade platformStateFacade) {
+            final Random random, BinaryState state, TestPlatformStateFacade platformStateFacade) {
 
         platformStateFacade.bulkUpdateOf(state, v -> {
             v.setLegacyRunningEventHash(randomHash(random));

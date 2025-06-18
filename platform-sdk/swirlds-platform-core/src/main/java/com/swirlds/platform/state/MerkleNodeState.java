@@ -1,18 +1,38 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.state;
 
+import com.swirlds.base.time.Time;
 import com.swirlds.common.merkle.MerkleNode;
-import com.swirlds.state.State;
-import com.swirlds.state.lifecycle.StateMetadata;
+import com.swirlds.common.merkle.crypto.MerkleCryptography;
+import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.Metrics;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.function.LongSupplier;
 
 /**
- * Represent a state backed up by the Merkle tree. It's a {@link State} implementation that is backed by a Merkle tree.
+ * Represent a state backed up by the Merkle tree. It's a state implementation that is backed by a Merkle tree.
  * It provides methods to manage the service states in the merkle tree.
  */
-public interface MerkleNodeState extends State {
+public interface MerkleNodeState {
+
+    /**
+     * Initializes the state with the given parameters.
+     * @param time The time provider.
+     * @param configuration The platform configuration.
+     * @param metrics The metrics provider.
+     * @param merkleCryptography The merkle cryptography provider.
+     * @param roundSupplier The round supplier.
+     */
+    void init(
+            Time time,
+            Configuration configuration,
+            Metrics metrics,
+            MerkleCryptography merkleCryptography,
+            LongSupplier roundSupplier);
+
 
     /**
      * @return an instance representing a root of the Merkle tree. For the most of the implementations
@@ -27,17 +47,7 @@ public interface MerkleNodeState extends State {
      * {@inheritDoc}
      */
     @NonNull
-    @Override
     MerkleNodeState copy();
-
-    /**
-     * Initializes the defined service state.
-     *
-     * @param md The metadata associated with the state.
-     */
-    default void initializeState(@NonNull final StateMetadata<?, ?> md) {
-        throw new UnsupportedOperationException();
-    }
 
     /**
      * Unregister a service without removing its nodes from the state.
@@ -75,10 +85,27 @@ public interface MerkleNodeState extends State {
     void removeServiceState(@NonNull final String serviceName, @NonNull final String stateKey);
 
     /**
+     * Creates a snapshot for the state. The state has to be hashed and immutable before calling this method.
+     * @param targetPath The path to save the snapshot.
+     */
+    default void createSnapshot(final @NonNull Path targetPath) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * Loads a snapshot of a state.
      * @param targetPath The path to load the snapshot from.
      */
     default MerkleNodeState loadSnapshot(final @NonNull Path targetPath) throws IOException {
         throw new UnsupportedOperationException();
     }
+    /**
+     * Returns a JSON string containing information about the current state.
+     * @return A JSON representation of the state information, or an empty string if no information is available.
+     */
+    default String getInfoJson() {
+        return "";
+    }
+
+    BinaryState getBinaryState();
 }

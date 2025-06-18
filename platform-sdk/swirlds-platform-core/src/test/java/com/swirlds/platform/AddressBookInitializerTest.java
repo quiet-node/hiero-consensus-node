@@ -24,6 +24,7 @@ import static org.mockito.MockitoAnnotations.openMocks;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.test.fixtures.Randotron;
@@ -39,6 +40,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.addressbook.RandomAddressBookBuilder;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.roster.RosterServiceStateMock;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -404,10 +406,11 @@ class AddressBookInitializerTest {
         final SemanticVersion softwareVersion = getMockSoftwareVersion(2);
         configureUpdateWeightForStateEventHandler(weightValue);
         final MerkleNodeState state = mock(MerkleNodeState.class);
-        final ReadableStates readableStates = mock(ReadableStates.class);
+        final BinaryState binaryState = mock(BinaryState.class);
         final PlatformStateAccessor platformState = mock(PlatformStateAccessor.class);
         when(platformState.getCreationSoftwareVersion()).thenReturn(softwareVersion);
-        when(state.getReadableStates(PlatformStateService.NAME)).thenReturn(readableStates);
+        when(state.getBinaryState()).thenReturn(binaryState);
+        when(binaryState.getSingleton(26, PlatformState.PROTOBUF)).thenReturn(readableStates);
         RosterServiceStateMock.setup(state, currentRoster, 1L, RosterRetriever.buildRoster(previousAddressBook));
 
         when(signedState.getState()).thenReturn(state);

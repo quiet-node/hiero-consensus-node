@@ -4,9 +4,13 @@ package com.swirlds.demo.migration;
 import static com.swirlds.demo.migration.MigrationTestingToolMain.PREVIOUS_SOFTWARE_VERSION;
 import static com.swirlds.demo.migration.TransactionUtils.isSystemTransaction;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
+import static com.swirlds.platform.state.service.PlatformStateService.NAME;
+import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
+import static org.hiero.base.utility.CommonUtils.toPbjTimestamp;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.merkle.map.MerkleMap;
@@ -15,6 +19,11 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.state.lifecycle.HapiUtils;
+import com.swirlds.state.spi.ReadableSingletonState;
+import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.spi.WritableSingletonState;
+import com.swirlds.state.spi.WritableSingletonStateBase;
+import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -99,9 +108,10 @@ public class MigrationTestToolConsensusStateEventHandler
                     DURATION.getSeconds(),
                     round.getConsensusTimestamp(),
                     freezeTime);
-            PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE.bulkUpdateOf(state, v -> {
-                v.setFreezeTime(freezeTime);
-            });
+            final WritableStates platformStates = state.getWritableStates(NAME);
+            final WritableSingletonState<PlatformState> writablePlatformState = platformStates.getSingleton(PLATFORM_STATE_KEY);
+            writablePlatformState.put(writablePlatformState.get().copyBuilder().freezeTime(toPbjTimestamp(freezeTime)).build());
+            ((WritableSingletonStateBase<?>)writablePlatformState).commit();
         }
 
         for (final ConsensusEvent event : round) {

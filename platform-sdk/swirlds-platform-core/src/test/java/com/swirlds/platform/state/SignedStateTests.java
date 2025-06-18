@@ -71,7 +71,7 @@ class SignedStateTests {
         final var real = TestVirtualMapState.createInstanceWithVirtualMapLabel(
                 virtualMapLabel, TestPlatformContextBuilder.create().build());
         TestingAppStateInitializer.DEFAULT.initStates(real);
-        RosterUtils.setActiveRoster(real, RandomRosterBuilder.create(random).build(), 0L);
+        RosterUtils.setActiveRoster(real.getBinaryState(), RandomRosterBuilder.create(random).build(), 0L);
         final TestVirtualMapState state = spy(real);
         final MerkleNode realRoot = state.getRoot();
         final MerkleNode rootSpy = spy(realRoot);

@@ -766,7 +766,7 @@ public class PlatformWiring {
      * @param signedState the state to forward
      */
     public void sendStateToHashLogger(@NonNull final SignedState signedState) {
-        if (signedState.getState().getHash() != null) {
+        if (signedState.getState().getBinaryState().getHash() != null) {
             final ReservedSignedState stateReservedForHasher = signedState.reserve("logging state hash");
 
             final boolean offerResult = getHashLoggerInput().offer(stateReservedForHasher);

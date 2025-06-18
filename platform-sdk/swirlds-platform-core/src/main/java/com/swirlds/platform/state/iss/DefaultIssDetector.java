@@ -274,7 +274,7 @@ public class DefaultIssDetector implements IssDetector {
             issNotifications.addAll(applySignaturesAndShiftWindow(roundNumber));
 
             final IssNotification selfHashCheckResult =
-                    checkSelfStateHash(roundNumber, state.getState().getHash());
+                    checkSelfStateHash(roundNumber, state.getState().getBinaryState().getHash());
             if (selfHashCheckResult != null) {
                 issNotifications.add(selfHashCheckResult);
             }
@@ -456,7 +456,7 @@ public class DefaultIssDetector implements IssDetector {
             // applying any that exist since we are now tracking this state.
             final List<IssNotification> issNotifications = applySignaturesAndShiftWindow(roundNumber);
 
-            final Hash stateHash = state.get().getState().getHash();
+            final Hash stateHash = state.get().getState().getBinaryState().getHash();
             final IssNotification issNotification = checkSelfStateHash(roundNumber, stateHash);
             if (issNotification != null) {
                 issNotifications.add(issNotification);

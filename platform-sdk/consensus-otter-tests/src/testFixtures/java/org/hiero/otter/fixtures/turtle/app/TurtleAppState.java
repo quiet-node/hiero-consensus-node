@@ -52,8 +52,8 @@ public class TurtleAppState extends VirtualMapState<TurtleAppState> implements M
                 new TestingAppStateInitializer(platformContext.getConfiguration());
         final TurtleAppState state = new TurtleAppState(platformContext);
         initializer.initStates(state);
-        RosterUtils.setActiveRoster(state, roster, 0L);
-        DEFAULT_PLATFORM_STATE_FACADE.setCreationSoftwareVersionTo(state, version);
+        RosterUtils.setActiveRoster(state.getBinaryState(), roster, 0L);
+        DEFAULT_PLATFORM_STATE_FACADE.setCreationSoftwareVersionTo(state.getBinaryState(), version);
         return state;
     }
 

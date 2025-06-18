@@ -13,6 +13,7 @@ package com.swirlds.demo.stats.signing;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hiero.base.constructable.ConstructableIgnored;
@@ -85,6 +86,11 @@ public class StatsSigningTestingToolState extends MerkleStateRoot<StatsSigningTe
     @Override
     protected StatsSigningTestingToolState copyingConstructor(PlatformContext platformContext) {
         return new StatsSigningTestingToolState(platformContext);
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
     }
 
     /**

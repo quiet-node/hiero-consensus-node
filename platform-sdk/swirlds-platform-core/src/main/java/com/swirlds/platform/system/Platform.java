@@ -5,7 +5,7 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.utility.AutoCloseableWrapper;
-import com.swirlds.state.State;
+import com.swirlds.platform.state.MerkleNodeState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hiero.base.crypto.Signature;
 import org.hiero.consensus.model.node.NodeId;
@@ -57,7 +57,7 @@ public interface Platform {
      * @return a wrapper around the most recent immutable state
      */
     @NonNull
-    <T extends State> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull final String reason);
+    <T extends MerkleNodeState> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull final String reason);
 
     /**
      * This method can be called to create a new transaction. If accepted by this method, the newly-created transaction

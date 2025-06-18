@@ -13,6 +13,7 @@ package com.swirlds.demo.hello;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
@@ -108,4 +109,10 @@ public class HelloSwirldDemoState extends MerkleStateRoot<HelloSwirldDemoState> 
     protected HelloSwirldDemoState copyingConstructor(PlatformContext platformContext) {
         return new HelloSwirldDemoState(this);
     }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
 }

@@ -149,10 +149,9 @@ public class TestingAppStateInitializer {
                     }
                 });
         final var mockMigrationContext = mock(MigrationContext.class);
-        final var writableStates = state.getWritableStates(PlatformStateService.NAME);
-        given(mockMigrationContext.newStates()).willReturn(writableStates);
+        given(mockMigrationContext.binaryState()).willReturn(state.getBinaryState());
         schema.migrate(mockMigrationContext);
-        ((CommittableWritableStates) writableStates).commit();
+
         return Collections.emptyList();
     }
 
@@ -197,10 +196,8 @@ public class TestingAppStateInitializer {
                     }
                 });
         final var mockMigrationContext = mock(MigrationContext.class);
-        final var writableStates = state.getWritableStates(RosterStateId.NAME);
-        given(mockMigrationContext.newStates()).willReturn(writableStates);
+        given(mockMigrationContext.binaryState()).willReturn(state.getBinaryState());
         schema.migrate(mockMigrationContext);
-        ((CommittableWritableStates) writableStates).commit();
         return Collections.emptyList();
     }
 

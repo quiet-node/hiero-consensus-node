@@ -70,7 +70,7 @@ public class PlatformStateUpdates {
         if (txBody.hasFreeze()) {
             final var freezeType = txBody.freezeOrThrow().freezeType();
             final var platformStateStore =
-                    new WritablePlatformStateStore(state.getWritableStates(PlatformStateService.NAME));
+                    new WritablePlatformStateStore(state.getBinaryState());
             switch (freezeType) {
                 case UNKNOWN_FREEZE_TYPE, TELEMETRY_UPGRADE -> {
                     // No-op
@@ -99,7 +99,7 @@ public class PlatformStateUpdates {
                     if (addressBookConfig.createCandidateRosterOnPrepareUpgrade()) {
                         final var nodeStore = new ReadableNodeStoreImpl(
                                 state.getReadableStates(AddressBookService.NAME), entityIdStore);
-                        final var rosterStore = new WritableRosterStore(state.getWritableStates(RosterService.NAME));
+                        final var rosterStore = new WritableRosterStore(state.getBinaryState());
                         final var entityCounters =
                                 new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME));
                         final var stakingInfoStore = new ReadableStakingInfoStoreImpl(

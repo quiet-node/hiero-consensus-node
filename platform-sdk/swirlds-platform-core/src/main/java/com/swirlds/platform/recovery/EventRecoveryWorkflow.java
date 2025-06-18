@@ -44,7 +44,7 @@ import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.system.state.notifications.NewRecoveredStateListener;
 import com.swirlds.platform.system.state.notifications.NewRecoveredStateNotification;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -176,8 +176,8 @@ public final class EventRecoveryWorkflow {
                     resultingStateDirectory);
 
             // Make one more copy to force the state in recoveredState to be immutable.
-            final State mutableStateCopy =
-                    recoveredState.state().get().getState().copy();
+            final BinaryState mutableStateCopy =
+                    recoveredState.state().get().getState().getBinaryState().copy();
 
             SignedStateFileWriter.writeSignedStateFilesToDirectory(
                     platformContext,
@@ -295,7 +295,7 @@ public final class EventRecoveryWorkflow {
 
         final Configuration configuration = platformContext.getConfiguration();
 
-        initialState.get().getState().throwIfImmutable("initial state must be mutable");
+        initialState.get().getState().getBinaryState().throwIfImmutable("initial state must be mutable");
 
         logger.info(STARTUP.getMarker(), "Initializing application state");
 
@@ -304,7 +304,7 @@ public final class EventRecoveryWorkflow {
 
         ConsensusStateEventHandler consensusStateEventHandler = appMain.newConsensusStateEvenHandler();
         SemanticVersion softwareVersion =
-                platformStateFacade.creationSoftwareVersionOf(initialState.get().getState());
+                platformStateFacade.creationSoftwareVersionOf(initialState.get().getState().getBinaryState());
         initialState.get().setRoundSupplier();
         final var notificationEngine = platform.getNotificationEngine();
         notificationEngine.register(
@@ -372,20 +372,21 @@ public final class EventRecoveryWorkflow {
 
         final Instant currentRoundTimestamp = getRoundTimestamp(round);
         final SignedState previousState = previousSignedState.get();
-        previousState.getState().throwIfImmutable();
+        previousState.getState().getBinaryState().throwIfImmutable();
         final MerkleNodeState newState = previousState.getState().copy();
         final PlatformEvent lastEvent = ((CesEvent) getLastEvent(round)).getPlatformEvent();
         final ConsensusConfig config = platformContext.getConfiguration().getConfigData(ConsensusConfig.class);
         new DefaultEventHasher().hashEvent(lastEvent);
 
-        platformStateFacade.bulkUpdateOf(newState, v -> {
+        BinaryState newBinaryState = newState.getBinaryState();
+        platformStateFacade.bulkUpdateOf(newBinaryState, v -> {
             v.setRound(round.getRoundNum());
             v.setLegacyRunningEventHash(
-                    getHashEventsCons(platformStateFacade.legacyRunningEventHashOf(newState), round));
+                    getHashEventsCons(platformStateFacade.legacyRunningEventHashOf(newBinaryState), round));
             v.setConsensusTimestamp(currentRoundTimestamp);
             v.setSnapshot(SyntheticSnapshot.generateSyntheticSnapshot(
                     round.getRoundNum(), lastEvent.getConsensusOrder(), currentRoundTimestamp, config, lastEvent));
-            v.setCreationSoftwareVersion(platformStateFacade.creationSoftwareVersionOf(previousState.getState()));
+            v.setCreationSoftwareVersion(platformStateFacade.creationSoftwareVersionOf(previousState.getState().getBinaryState()));
         });
 
         applyTransactions(consensusStateEventHandler, previousState.getState(), newState, round);
@@ -393,9 +394,9 @@ public final class EventRecoveryWorkflow {
         final boolean isFreezeState = isFreezeState(
                 previousState.getConsensusTimestamp(),
                 currentRoundTimestamp,
-                platformStateFacade.freezeTimeOf(newState));
+                platformStateFacade.freezeTimeOf(newBinaryState));
         if (isFreezeState) {
-            platformStateFacade.updateLastFrozenTime(newState);
+            platformStateFacade.updateLastFrozenTime(newBinaryState);
         }
 
         final SignedState signedState = new SignedState(
@@ -472,7 +473,7 @@ public final class EventRecoveryWorkflow {
             final MerkleNodeState mutableState,
             final Round round) {
 
-        mutableState.throwIfImmutable();
+        mutableState.getBinaryState().throwIfImmutable();
 
         for (final ConsensusEvent event : round) {
             consensusStateEventHandler.onPreHandle(event, immutableState, NO_OP_CONSUMER);

@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.merkle.VirtualMapState.MerkleWritableStates;
@@ -31,13 +32,15 @@ public record MigrationContextImpl(
         @Nullable SemanticVersion previousVersion,
         long roundNumber,
         @NonNull Map<String, Object> sharedValues,
-        @NonNull StartupNetworks startupNetworks)
+        @NonNull StartupNetworks startupNetworks,
+        @NonNull BinaryState binaryState)
         implements MigrationContext {
     public MigrationContextImpl {
         requireNonNull(previousStates);
         requireNonNull(newStates);
         requireNonNull(appConfig);
         requireNonNull(platformConfig);
+        requireNonNull(binaryState);
     }
 
     @Override

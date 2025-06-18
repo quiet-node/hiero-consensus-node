@@ -3,6 +3,7 @@ package org.hiero.consensus.roster;
 
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
@@ -15,7 +16,7 @@ import com.hedera.hapi.node.state.roster.RoundRosterPair;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
@@ -44,25 +45,13 @@ public class RosterRetrieverTests {
     private static final Roster ROSTER_777 = mock(Roster.class);
 
     @Mock
-    private State state;
-
-    @Mock
-    private ReadableStates platfromReadableStates;
-
-    @Mock
-    private ReadableSingletonState<PlatformState> readablePlatformState;
+    private BinaryState binaryState;
 
     @Mock
     private PlatformState platformState;
 
     @Mock
     private ConsensusSnapshot consensusSnapshot;
-
-    @Mock
-    private ReadableStates rosterReadableStates;
-
-    @Mock
-    private ReadableSingletonState<RosterState> readableRosterState;
 
     @Mock
     private RosterState rosterState;
@@ -73,14 +62,10 @@ public class RosterRetrieverTests {
     @BeforeEach
     public void setup() {
         // Mock all the happy cases at once.  Use lenient() so that Mockito allows unused stubbing.
-        lenient().doReturn(platfromReadableStates).when(state).getReadableStates("PlatformStateService");
-        lenient().doReturn(readablePlatformState).when(platfromReadableStates).getSingleton("PLATFORM_STATE");
-        lenient().doReturn(platformState).when(readablePlatformState).get();
+        lenient().doReturn(platformState).when(binaryState).getSingleton(26, PlatformState.PROTOBUF);
         lenient().doReturn(consensusSnapshot).when(platformState).consensusSnapshot();
         lenient().doReturn(666L).when(consensusSnapshot).round();
-        lenient().doReturn(rosterReadableStates).when(state).getReadableStates("RosterService");
-        lenient().doReturn(readableRosterState).when(rosterReadableStates).getSingleton("ROSTER_STATE");
-        lenient().doReturn(rosterState).when(readableRosterState).get();
+        lenient().doReturn(rosterState).when(binaryState).getSingleton(27, RosterState.PROTOBUF);
         lenient()
                 .doReturn(List.of(
                         RoundRosterPair.newBuilder()
@@ -97,7 +82,6 @@ public class RosterRetrieverTests {
                                 .build()))
                 .when(rosterState)
                 .roundRosterPairs();
-        lenient().doReturn(rosterMap).when(rosterReadableStates).get("ROSTERS");
         lenient()
                 .doReturn(ROSTER_555)
                 .when(rosterMap)
@@ -114,7 +98,7 @@ public class RosterRetrieverTests {
 
     @Test
     void testGetRound() {
-        assertEquals(666L, TEST_PLATFORM_STATE_FACADE.roundOf(state));
+        assertEquals(666L, TEST_PLATFORM_STATE_FACADE.roundOf(binaryState));
     }
 
     private static Stream<Arguments> provideArgumentsForGetActiveRosterHash() {
@@ -133,12 +117,12 @@ public class RosterRetrieverTests {
     @ParameterizedTest
     @MethodSource("provideArgumentsForGetActiveRosterHash")
     void testGetActiveRosterHashForRound(final long round, final Bytes activeRosterHash) {
-        assertEquals(activeRosterHash, RosterRetriever.getActiveRosterHash(state, round));
+        assertEquals(activeRosterHash, RosterRetriever.getActiveRosterHash(binaryState, round));
     }
 
     @Test
     void testRetrieveActiveOrGenesisActiveRoster() {
-        assertEquals(ROSTER_666, RosterRetriever.retrieveActive(state, TEST_PLATFORM_STATE_FACADE.roundOf(state)));
+        assertEquals(ROSTER_666, RosterRetriever.retrieveActive(binaryState, TEST_PLATFORM_STATE_FACADE.roundOf(binaryState)));
     }
 
     private static Stream<Arguments> provideArgumentsForRetrieveActiveOrGenesisActiveParametrizedRoster() {
@@ -158,7 +142,7 @@ public class RosterRetrieverTests {
     @MethodSource("provideArgumentsForRetrieveActiveOrGenesisActiveParametrizedRoster")
     void testRetrieveActiveOrGenesisActiveParametrizedRoster(final long round, final Roster roster) {
         doReturn(round).when(consensusSnapshot).round();
-        assertEquals(roster, RosterRetriever.retrieveActive(state, TEST_PLATFORM_STATE_FACADE.roundOf(state)));
+        assertEquals(roster, RosterRetriever.retrieveActive(binaryState, TEST_PLATFORM_STATE_FACADE.roundOf(binaryState)));
     }
 
     private static Stream<Arguments> provideArgumentsForRetrieveActiveOrGenesisActiveForRoundRoster() {
@@ -177,21 +161,21 @@ public class RosterRetrieverTests {
     @ParameterizedTest
     @MethodSource("provideArgumentsForRetrieveActiveOrGenesisActiveForRoundRoster")
     void testRetrieveActiveOrGenesisActiveForRoundRoster(final long round, final Roster roster) {
-        assertEquals(roster, RosterRetriever.retrieveActive(state, round));
+        assertEquals(roster, RosterRetriever.retrieveActive(binaryState, round));
     }
 
     @Test
     void testRetrieveActiveOrGenesisActiveAddressBookRoster() {
         // First try a very old round for which there's not a roster
         doReturn(554L).when(consensusSnapshot).round();
-        assertEquals(null, RosterRetriever.retrieveActive(state, TEST_PLATFORM_STATE_FACADE.roundOf(state)));
+        assertNull(RosterRetriever.retrieveActive(binaryState, TEST_PLATFORM_STATE_FACADE.roundOf(binaryState)));
 
         // Then try a newer round, but remove the roster from the RosterMap
         doReturn(666L).when(consensusSnapshot).round();
         doReturn(null)
                 .when(rosterMap)
                 .get(eq(ProtoBytes.newBuilder().value(HASH_666).build()));
-        assertEquals(null, RosterRetriever.retrieveActive(state, TEST_PLATFORM_STATE_FACADE.roundOf(state)));
+        assertNull(RosterRetriever.retrieveActive(binaryState, TEST_PLATFORM_STATE_FACADE.roundOf(binaryState)));
     }
 
     private static Bytes getCertBytes(X509Certificate certificate) {

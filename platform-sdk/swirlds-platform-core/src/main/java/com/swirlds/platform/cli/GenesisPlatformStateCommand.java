@@ -19,13 +19,10 @@ import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.state.snapshot.SignedStateFileReader;
 import com.swirlds.platform.util.BootstrapUtils;
-import com.swirlds.state.State;
-import com.swirlds.state.spi.CommittableWritableStates;
-import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.BinaryState;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
-import org.hiero.consensus.roster.RosterStateId;
 import org.hiero.consensus.roster.WritableRosterStore;
 import picocli.CommandLine;
 
@@ -72,18 +69,16 @@ public class GenesisPlatformStateCommand extends AbstractCommand {
                 stateFacade,
                 platformContext);
         try (final ReservedSignedState reservedSignedState = deserializedSignedState.reservedSignedState()) {
-            stateFacade.bulkUpdateOf(reservedSignedState.get().getState(), v -> {
+            stateFacade.bulkUpdateOf(reservedSignedState.get().getState().getBinaryState(), v -> {
                 System.out.printf("Replacing platform data %n");
                 v.setRound(PlatformStateAccessor.GENESIS_ROUND);
                 v.setSnapshot(SyntheticSnapshot.getGenesisSnapshot());
             });
             {
                 System.out.printf("Resetting the RosterService state %n");
-                final State state = reservedSignedState.get().getState();
-                final WritableStates writableStates = state.getWritableStates(RosterStateId.NAME);
-                final WritableRosterStore writableRosterStore = new WritableRosterStore(writableStates);
+                final BinaryState state = reservedSignedState.get().getState().getBinaryState();
+                final WritableRosterStore writableRosterStore = new WritableRosterStore(state);
                 writableRosterStore.resetRosters();
-                ((CommittableWritableStates) writableStates).commit();
             }
             System.out.printf("Hashing state %n");
             platformContext

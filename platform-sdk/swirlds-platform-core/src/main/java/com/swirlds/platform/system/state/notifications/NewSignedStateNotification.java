@@ -2,7 +2,6 @@
 package com.swirlds.platform.system.state.notifications;
 
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.state.State;
 import java.time.Instant;
 import org.hiero.consensus.model.notification.AbstractNotification;
 import org.hiero.consensus.model.notification.Notification;
@@ -36,7 +35,7 @@ public class NewSignedStateNotification extends AbstractNotification {
      * this notification.
      */
     @SuppressWarnings("unchecked")
-    public <T extends State> T getState() {
+    public <T extends MerkleNodeState> T getState() {
         return (T) state;
     }
 

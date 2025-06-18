@@ -12,7 +12,6 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.records.ReadableBlockRecordStore;
-import com.hedera.node.app.roster.RosterService;
 import com.hedera.node.app.service.token.ReadableStakingInfoStore;
 import com.hedera.node.app.service.token.impl.handlers.staking.EndOfStakingPeriodUpdater;
 import com.hedera.node.app.service.token.records.TokenContext;
@@ -101,7 +100,7 @@ public class StakePeriodChanges {
                 stack.rollbackFullStack();
             }
             try {
-                final var rosterStore = new WritableRosterStore(stack.getWritableStates(RosterService.NAME));
+                final var rosterStore = new WritableRosterStore(stack.getBinaryState());
                 // Unless the candidate roster is for a pending upgrade, we set a new one with the latest weights
                 if (rosterStore.getCandidateRosterHash() == null || rosterStore.candidateIsWeightRotation()) {
                     final var weightFunction = dispatch.readableStoreFactory()

@@ -53,6 +53,7 @@ import com.hedera.node.app.spi.ids.ReadableEntityCounters;
 import com.hedera.node.app.spi.ids.ReadableEntityIdStore;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.ReadablePlatformStateStore;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -61,6 +62,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Function;
+
 import org.hiero.consensus.roster.ReadableRosterStore;
 import org.hiero.consensus.roster.ReadableRosterStoreImpl;
 
@@ -117,10 +120,10 @@ public class ReadableStoreFactory {
         newMap.put(
                 ReadablePlatformStateStore.class,
                 new StoreEntry(
-                        PlatformStateService.NAME, (states, entityCounters) -> new ReadablePlatformStateStore(states)));
+                        PlatformStateService.NAME, ReadablePlatformStateStore::new));
         newMap.put(
                 ReadableRosterStore.class,
-                new StoreEntry(RosterService.NAME, (states, entityCounters) -> new ReadableRosterStoreImpl(states)));
+                new StoreEntry(RosterService.NAME, ReadableRosterStoreImpl::new));
         // Entity ids
         newMap.put(
                 ReadableEntityIdStore.class,
@@ -177,11 +180,21 @@ public class ReadableStoreFactory {
         throw new IllegalArgumentException("No store of class " + storeInterface + " is available");
     }
 
-    private record StoreEntry(
-            @NonNull String name, @Nullable BiFunction<ReadableStates, ReadableEntityCounters, ?> fromStates) {
-        private StoreEntry {
-            requireNonNull(name);
-            requireNonNull(fromStates);
+    private static class StoreEntry {
+        private final String name;
+        private final BiFunction<ReadableStates, ReadableEntityCounters, ?> fromStates;
+        private final Function<BinaryState, ?> fromBinaryState;
+
+        StoreEntry(@NonNull String name, @NonNull BiFunction<ReadableStates, ReadableEntityCounters, ?> fromStates) {
+            this.name = requireNonNull(name);
+            this.fromStates = requireNonNull(fromStates);
+            this.fromBinaryState = null;
+        }
+
+        StoreEntry(@NonNull String name, @NonNull Function<BinaryState, ?> fromBinaryState) {
+            this.name = requireNonNull(name);
+            this.fromBinaryState = requireNonNull(fromBinaryState);
+            this.fromStates = null;
         }
 
         @SuppressWarnings("unchecked")
@@ -189,6 +202,11 @@ public class ReadableStoreFactory {
                 @NonNull final ReadableStates readableStates, @NonNull ReadableEntityCounters entityCounters) {
             requireNonNull(readableStates);
             return (T) fromStates.apply(readableStates, entityCounters);
+        }
+
+        public <T> T createFrom(@NonNull final BinaryState binaryState) {
+            requireNonNull(binaryState);
+            return (T) fromBinaryState.apply(binaryState);
         }
     }
 }

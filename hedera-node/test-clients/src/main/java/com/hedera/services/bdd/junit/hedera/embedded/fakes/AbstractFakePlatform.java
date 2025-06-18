@@ -9,6 +9,7 @@ import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.listeners.PlatformStatusChangeNotification;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -77,7 +78,7 @@ public abstract class AbstractFakePlatform implements Platform {
     }
 
     @Override
-    public @NonNull <T extends State> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull String reason) {
+    public @NonNull <T extends MerkleNodeState> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull String reason) {
         throw new UnsupportedOperationException("Not used by Hedera");
     }
 

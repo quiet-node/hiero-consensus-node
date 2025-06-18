@@ -749,7 +749,7 @@ public class PlatformTestingToolConsensusStateEventHandler
         updateTransactionCounters(state);
         round.forEachEventTransaction((event, transaction) ->
                 handleConsensusTransaction(event, transaction, state, stateSignatureTransactionCallback));
-        if (platformStateFacade.isFreezeRound(state, round)) {
+        if (platformStateFacade.isFreezeRound(state.getBinaryState(), round)) {
             freezeRound.set(round.getRoundNum());
         }
     }

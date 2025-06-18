@@ -2,7 +2,6 @@
 package com.swirlds.platform.listeners;
 
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.state.State;
 import java.time.Instant;
 import org.hiero.consensus.model.notification.AbstractNotification;
 import org.hiero.consensus.model.notification.Notification;
@@ -24,7 +23,7 @@ public class ReconnectCompleteNotification extends AbstractNotification {
     }
 
     /**
-     * get round number from the {@link State}
+     * get round number from the state
      *
      * @return round number
      */
@@ -42,11 +41,11 @@ public class ReconnectCompleteNotification extends AbstractNotification {
     }
 
     /**
-     * get the {@link State} instance
+     * get the {@link MerkleNodeState} instance
      *
      * @return State
      */
-    public State getState() {
+    public MerkleNodeState getState() {
         return state;
     }
 }

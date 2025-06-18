@@ -766,7 +766,7 @@ public class PlatformComponentBuilder {
                     ? DO_NOT_IGNORE_ROUNDS
                     : initialStateRound;
             final long latestFreezeRound = blocks.platformStateFacade()
-                    .latestFreezeRoundOf(blocks.initialState().get().getState());
+                    .latestFreezeRoundOf(blocks.initialState().get().getState().getBinaryState());
 
             issDetector = new DefaultIssDetector(
                     blocks.platformContext(),

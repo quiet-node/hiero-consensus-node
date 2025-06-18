@@ -5,9 +5,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.state.service.schemas.V0640PlatformStateSchema;
-import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import com.swirlds.state.lifecycle.Service;
@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 /**
- * A service that provides the schema for the platform state, used by {@link State}
+ * A service that provides the schema for the platform state, used by {@link MerkleNodeState}
  * to implement accessors to the platform state.
  */
 public enum PlatformStateService implements Service {

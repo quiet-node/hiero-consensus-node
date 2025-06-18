@@ -3,7 +3,7 @@ package com.swirlds.platform.state.signed;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.platform.state.service.PlatformStateFacade;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
@@ -29,7 +29,7 @@ public record SignedStateValidationData(
         @NonNull Hash consensusEventsRunningHash) {
 
     public SignedStateValidationData(
-            @NonNull final State that,
+            @NonNull final BinaryState that,
             @Nullable final Roster roster,
             @NonNull final PlatformStateFacade platformStateFacade) {
         this(

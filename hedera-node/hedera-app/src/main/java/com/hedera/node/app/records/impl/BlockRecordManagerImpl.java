@@ -188,7 +188,7 @@ public final class BlockRecordManagerImpl implements BlockRecordManager {
         final var isFirstTransactionAfterFreezeRestart = platformState.freezeTime() != null
                 && platformState.freezeTimeOrThrow().equals(platformState.lastFrozenTime());
         if (isFirstTransactionAfterFreezeRestart) {
-            new WritablePlatformStateStore(state.getWritableStates(PlatformStateService.NAME)).setFreezeTime(null);
+            new WritablePlatformStateStore(state.getBinaryState()).setFreezeTime(null);
         }
         // Now we test if we need to start a new block. If so, create the new block
         if (newBlockPeriod > currentBlockPeriod || isFirstTransactionAfterFreezeRestart) {

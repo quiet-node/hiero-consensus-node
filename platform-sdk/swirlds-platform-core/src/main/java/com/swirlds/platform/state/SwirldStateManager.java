@@ -14,7 +14,7 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.uptime.UptimeTracker;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
 import java.util.Queue;
@@ -106,8 +106,8 @@ public class SwirldStateManager implements FreezePeriodChecker {
     public void setInitialState(@NonNull final MerkleNodeState state) {
         requireNonNull(state);
 
-        state.throwIfDestroyed("state must not be destroyed");
-        state.throwIfImmutable("state must be mutable");
+        state.getBinaryState().throwIfDestroyed("state must not be destroyed");
+        state.getBinaryState().throwIfImmutable("state must be mutable");
 
         if (stateRef.get() != null) {
             throw new IllegalStateException("Attempt to set initial state when there is already a state reference.");
@@ -158,7 +158,7 @@ public class SwirldStateManager implements FreezePeriodChecker {
      */
     public void savedStateInFreezePeriod() {
         // set current DualState's lastFrozenTime to be current freezeTime
-        platformStateFacade.updateLastFrozenTime(stateRef.get());
+        platformStateFacade.updateLastFrozenTime(stateRef.get().getBinaryState());
     }
 
     /**
@@ -169,8 +169,8 @@ public class SwirldStateManager implements FreezePeriodChecker {
     public void loadFromSignedState(@NonNull final SignedState signedState) {
         MerkleNodeState state = signedState.getState();
 
-        state.throwIfDestroyed("state must not be destroyed");
-        state.throwIfImmutable("state must be mutable");
+        state.getBinaryState().throwIfDestroyed("state must not be destroyed");
+        state.getBinaryState().throwIfImmutable("state must be mutable");
 
         fastCopyAndUpdateRefs(state);
     }
@@ -192,7 +192,7 @@ public class SwirldStateManager implements FreezePeriodChecker {
     private void setState(final MerkleNodeState state) {
         final var currVal = stateRef.get();
         if (currVal != null) {
-            currVal.release();
+            currVal.getBinaryState().release();
         }
         // Do not increment the reference count because the state provided already has a reference count of at least
         // one to represent this reference and to prevent it from being deleted before this reference is set.
@@ -200,9 +200,9 @@ public class SwirldStateManager implements FreezePeriodChecker {
     }
 
     private void setLatestImmutableState(final MerkleNodeState immutableState) {
-        final State currVal = latestImmutableState.get();
+        final MerkleNodeState currVal = latestImmutableState.get();
         if (currVal != null) {
-            currVal.release();
+            currVal.getBinaryState().release();
         }
         immutableState.getRoot().reserve();
         latestImmutableState.set(immutableState);
@@ -215,8 +215,8 @@ public class SwirldStateManager implements FreezePeriodChecker {
     public boolean isInFreezePeriod(final Instant timestamp) {
         return PlatformStateFacade.isInFreezePeriod(
                 timestamp,
-                platformStateFacade.freezeTimeOf(getConsensusState()),
-                platformStateFacade.lastFrozenTimeOf(getConsensusState()));
+                platformStateFacade.freezeTimeOf(getConsensusState().getBinaryState()),
+                platformStateFacade.lastFrozenTimeOf(getConsensusState().getBinaryState()));
     }
 
     /**
@@ -229,7 +229,7 @@ public class SwirldStateManager implements FreezePeriodChecker {
      * event handling may or may not be blocked depending on the implementation.</p>
      *
      * @return a copy of the state to use for the next signed state
-     * @see State#copy()
+     * @see BinaryState#copy()
      */
     public MerkleNodeState getStateForSigning() {
         fastCopyAndUpdateRefs(stateRef.get());

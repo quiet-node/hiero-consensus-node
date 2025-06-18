@@ -311,7 +311,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var header = BlockHeader.newBuilder()
                     .number(blockNumber)
                     .hashAlgorithm(SHA2_384)
-                    .softwareVersion(platformStateFacade.creationSemanticVersionOf(state))
+                    .softwareVersion(platformStateFacade.creationSemanticVersionOf(state.getBinaryState()))
                     .blockTimestamp(asTimestamp(blockTimestamp))
                     .hapiProtoVersion(hapiVersion);
             worker.addItem(BlockItem.newBuilder().blockHeader(header).build());

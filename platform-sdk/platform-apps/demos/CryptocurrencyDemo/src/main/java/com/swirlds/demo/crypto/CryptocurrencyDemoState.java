@@ -15,6 +15,7 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.Platform;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
@@ -315,5 +316,10 @@ public class CryptocurrencyDemoState extends MerkleStateRoot<CryptocurrencyDemoS
     @Override
     protected CryptocurrencyDemoState copyingConstructor(PlatformContext platformContext) {
         return new CryptocurrencyDemoState(this);
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
     }
 }

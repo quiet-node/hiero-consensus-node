@@ -52,7 +52,7 @@ public class TransactionHandlers {
             @NonNull final TurtleAppState state, @NonNull final TurtleFreezeTransaction freezeTransaction) {
         final Timestamp freezeTime = CommonPbjConverters.toPbj(freezeTransaction.getFreezeTime());
         WritablePlatformStateStore store =
-                new WritablePlatformStateStore(state.getWritableStates("PlatformStateService"));
+                new WritablePlatformStateStore(state.getBinaryState());
         store.setFreezeTime(CommonUtils.fromPbjTimestamp(freezeTime));
     }
 

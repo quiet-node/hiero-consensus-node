@@ -197,7 +197,7 @@ public class NodeRewardManager {
         // Don't try to pay rewards in the genesis edge case when LastNodeRewardsPaymentTime.NEVER
         if (lastNodeRewardsPaymentTime == LastNodeRewardsPaymentTime.PREVIOUS_PERIOD) {
             // Identify the nodes active in the last staking period
-            final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+            final var rosterStore = new ReadableRosterStoreImpl(state.getBinaryState());
             final var currentRoster =
                     requireNonNull(rosterStore.getActiveRoster()).rosterEntries();
             final var activeNodeIds =
@@ -316,7 +316,7 @@ public class NodeRewardManager {
     private List<Long> missingJudgesInLastRoundOf(@NonNull final State state) {
         final var readablePlatformState =
                 state.getReadableStates(PlatformStateService.NAME).<PlatformState>getSingleton(PLATFORM_STATE_KEY);
-        final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+        final var rosterStore = new ReadableRosterStoreImpl(state.getBinaryState());
         final var judges = requireNonNull(readablePlatformState.get()).consensusSnapshot().judgeIds().stream()
                 .map(JudgeId::creatorId)
                 .collect(toCollection(HashSet::new));

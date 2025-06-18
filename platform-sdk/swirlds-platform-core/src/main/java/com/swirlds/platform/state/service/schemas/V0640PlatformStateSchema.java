@@ -31,7 +31,7 @@ public class V0640PlatformStateSchema extends Schema {
                                 + "last freeze round to the migration round number: {}",
                         ctx.roundNumber());
             }
-            final var platformStateStore = new WritablePlatformStateStore(ctx.newStates());
+            final var platformStateStore = new WritablePlatformStateStore(ctx.binaryState());
             platformStateStore.setLatestFreezeRound(ctx.roundNumber());
         }
     }

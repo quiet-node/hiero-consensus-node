@@ -57,7 +57,6 @@ import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.util.BootstrapUtils;
-import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.awt.GraphicsEnvironment;
@@ -286,8 +285,8 @@ public class Browser {
                     platformStateFacade);
 
             // Build the platform with the given values
-            final State state = initialState.get().getState();
-            final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state);
+            final MerkleNodeState state = initialState.get().getState();
+            final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state.getBinaryState());
 
             final PlatformBuilder builder = PlatformBuilder.create(
                     appMain.getClass().getName(),

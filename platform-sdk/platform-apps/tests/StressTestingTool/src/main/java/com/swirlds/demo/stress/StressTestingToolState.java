@@ -13,6 +13,7 @@ package com.swirlds.demo.stress;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hiero.base.constructable.ConstructableIgnored;
@@ -88,5 +89,10 @@ public class StressTestingToolState extends MerkleStateRoot<StressTestingToolSta
      */
     private static class ClassVersion {
         public static final int NO_ADDRESS_BOOK_IN_STATE = 4;
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
     }
 }

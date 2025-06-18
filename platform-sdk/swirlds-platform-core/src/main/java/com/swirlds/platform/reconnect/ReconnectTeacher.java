@@ -183,7 +183,7 @@ public class ReconnectTeacher {
                 """
                         The following state will be sent to the learner:
                         {}""",
-                () -> platformStateFacade.getInfoString(signedState.getState(), stateConfig.debugHashDepth()));
+                () -> platformStateFacade.getInfoString(signedState.getState()));
     }
 
     private void logReconnectFinish() {
@@ -241,7 +241,7 @@ public class ReconnectTeacher {
                 .append("/")
                 .append(RosterUtils.computeTotalWeight(signedState.getRoster()))
                 .append(") for state hash ")
-                .append(signedState.getState().getHash());
+                .append(signedState.getState().getBinaryState().getHash());
 
         logger.info(RECONNECT.getMarker(), sb);
         connection.getDos().writeSerializable(signedState.getSigSet(), true);

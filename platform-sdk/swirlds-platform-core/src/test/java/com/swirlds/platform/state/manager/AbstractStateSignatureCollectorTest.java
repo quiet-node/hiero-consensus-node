@@ -88,7 +88,7 @@ public class AbstractStateSignatureCollectorTest {
         assertNotNull(rosterEntry);
         final PublicKey publicKey =
                 RosterUtils.fetchGossipCaCertificate(rosterEntry).getPublicKey();
-        final Hash hash = signedState.getState().getHash();
+        final Hash hash = signedState.getState().getBinaryState().getHash();
 
         final StateSignatureTransaction transaction = StateSignatureTransaction.newBuilder()
                 .round(round)

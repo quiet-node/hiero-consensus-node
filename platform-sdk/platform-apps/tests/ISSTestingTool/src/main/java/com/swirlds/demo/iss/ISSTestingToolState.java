@@ -12,12 +12,21 @@ package com.swirlds.demo.iss;
  */
 
 import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
+import static com.swirlds.platform.state.service.PlatformStateService.NAME;
+import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
+import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.UNINITIALIZED_PLATFORM_STATE;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 
+import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.service.ReadablePlatformStateStore;
+import com.swirlds.platform.state.service.SnapshotPlatformStateAccessor;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
+import com.swirlds.state.BinaryState;
+import com.swirlds.state.spi.ReadableSingletonState;
+import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.state.test.fixtures.merkle.singleton.StringLeaf;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -85,7 +94,11 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
     public void initState(InitTrigger trigger, Platform platform) {
         throwIfImmutable();
 
-        super.setRoundSupplier(() -> DEFAULT_PLATFORM_STATE_FACADE.roundOf(this));
+        super.setRoundSupplier(() -> {
+                    final ReadableStates platformStates = getReadableStates(NAME);
+                    final ReadableSingletonState<PlatformState> state = platformStates.getSingleton(PLATFORM_STATE_KEY);
+                    return state.get().consensusSnapshot().round();
+                });
 
         // since the test occurrences are relative to the genesis timestamp, the data only needs to be parsed at genesis
         if (trigger == InitTrigger.GENESIS) {
@@ -209,5 +222,10 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
     @Override
     protected ISSTestingToolState copyingConstructor(PlatformContext platformContext) {
         return new ISSTestingToolState(this);
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
     }
 }

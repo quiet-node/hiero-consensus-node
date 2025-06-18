@@ -12,6 +12,7 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.state.test.fixtures.merkle.singleton.StringLeaf;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -270,5 +271,10 @@ public class ConsistencyTestingToolState extends MerkleStateRoot<ConsistencyTest
     @Override
     public MerkleNode migrate(@NonNull final Configuration configuration, int version) {
         return this;
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
     }
 }

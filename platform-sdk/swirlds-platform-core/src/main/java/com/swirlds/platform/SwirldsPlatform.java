@@ -37,6 +37,7 @@ import com.swirlds.platform.metrics.RuntimeMetrics;
 import com.swirlds.platform.publisher.DefaultPlatformPublisher;
 import com.swirlds.platform.publisher.PlatformPublisher;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.nexus.DefaultLatestCompleteStateNexus;
 import com.swirlds.platform.state.nexus.LatestCompleteStateNexus;
@@ -56,7 +57,6 @@ import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.status.actions.DoneReplayingEventsAction;
 import com.swirlds.platform.system.status.actions.StartedReplayingEventsAction;
 import com.swirlds.platform.wiring.PlatformWiring;
-import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.List;
@@ -166,7 +166,7 @@ public class SwirldsPlatform implements Platform {
 
         // Set these fields to zero so they can be removed in a future version.
         // These fields were required for birth round migration which has taken place.
-        blocks.platformStateFacade().bulkUpdateOf(initialState.getState(), v -> {
+        blocks.platformStateFacade().bulkUpdateOf(initialState.getState().getBinaryState(), v -> {
             v.setFirstVersionInBirthRoundMode(SemanticVersion.newBuilder().build());
             v.setLastRoundBeforeBirthRoundMode(0);
             v.setLowestJudgeGenerationBeforeBirthRoundMode(0);
@@ -249,9 +249,9 @@ public class SwirldsPlatform implements Platform {
                 publisher);
 
         final Hash legacyRunningEventHash =
-                platformStateFacade.legacyRunningEventHashOf(initialState.getState()) == null
+                platformStateFacade.legacyRunningEventHashOf(initialState.getState().getBinaryState()) == null
                         ? Cryptography.NULL_HASH
-                        : platformStateFacade.legacyRunningEventHashOf((initialState.getState()));
+                        : platformStateFacade.legacyRunningEventHashOf((initialState.getState().getBinaryState()));
         final RunningEventHashOverride runningEventHashOverride =
                 new RunningEventHashOverride(legacyRunningEventHash, false);
         platformWiring.updateRunningHash(runningEventHashOverride);
@@ -283,7 +283,7 @@ public class SwirldsPlatform implements Platform {
             startingRound = 0;
             platformWiring.updateEventWindow(EventWindow.getGenesisEventWindow());
         } else {
-            initialAncientThreshold = platformStateFacade.ancientThresholdOf(initialState.getState());
+            initialAncientThreshold = platformStateFacade.ancientThresholdOf(initialState.getState().getBinaryState());
             startingRound = initialState.getRound();
 
             platformWiring.sendStateToHashLogger(initialState);
@@ -294,7 +294,7 @@ public class SwirldsPlatform implements Platform {
             savedStateController.registerSignedStateFromDisk(initialState);
 
             final ConsensusSnapshot consensusSnapshot =
-                    Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(initialState.getState()));
+                    Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(initialState.getState().getBinaryState()));
             platformWiring.consensusSnapshotOverride(consensusSnapshot);
 
             // We only load non-ancient events during start up, so the initial expired threshold will be
@@ -471,7 +471,7 @@ public class SwirldsPlatform implements Platform {
     @SuppressWarnings("unchecked")
     @Override
     @NonNull
-    public <T extends State> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull final String reason) {
+    public <T extends MerkleNodeState> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull final String reason) {
         final ReservedSignedState wrapper = latestImmutableStateNexus.getState(reason);
         return wrapper == null
                 ? AutoCloseableWrapper.empty()

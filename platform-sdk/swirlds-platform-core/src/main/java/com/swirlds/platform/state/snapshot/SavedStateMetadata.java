@@ -23,9 +23,10 @@ import static org.hiero.base.utility.CommonUtils.unhex;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.formatting.TextTable;
 import com.swirlds.common.utility.Mnemonics;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.BufferedReader;
@@ -176,26 +177,27 @@ public record SavedStateMetadata(
             @NonNull final Instant now,
             @NonNull final PlatformStateFacade platformStateFacade) {
         Objects.requireNonNull(signedState, "signedState must not be null");
-        final State state = signedState.getState();
-        Objects.requireNonNull(state.getHash(), "state must be hashed");
+        final MerkleNodeState state = signedState.getState();
+        BinaryState binaryState = state.getBinaryState();
+        Objects.requireNonNull(binaryState.getHash(), "state must be hashed");
         Objects.requireNonNull(now, "now must not be null");
 
-        final long round = platformStateFacade.roundOf(state);
-        final Roster roster = RosterRetriever.retrieveActive(state, round);
+        final long round = platformStateFacade.roundOf(binaryState);
+        final Roster roster = RosterRetriever.retrieveActive(binaryState, round);
 
         final List<NodeId> signingNodes = signedState.getSigSet().getSigningNodes();
         Collections.sort(signingNodes);
 
         return new SavedStateMetadata(
                 signedState.getRound(),
-                state.getHash(),
-                Mnemonics.generateMnemonic(state.getHash()),
-                platformStateFacade.consensusSnapshotOf(state).nextConsensusNumber(),
+                binaryState.getHash(),
+                Mnemonics.generateMnemonic(binaryState.getHash()),
+                platformStateFacade.consensusSnapshotOf(binaryState).nextConsensusNumber(),
                 signedState.getConsensusTimestamp(),
-                platformStateFacade.legacyRunningEventHashOf(state),
-                Mnemonics.generateMnemonic(platformStateFacade.legacyRunningEventHashOf(state)),
-                platformStateFacade.ancientThresholdOf(state),
-                convertToString(platformStateFacade.creationSoftwareVersionOf(state)),
+                platformStateFacade.legacyRunningEventHashOf(binaryState),
+                Mnemonics.generateMnemonic(platformStateFacade.legacyRunningEventHashOf(binaryState)),
+                platformStateFacade.ancientThresholdOf(binaryState),
+                convertToString(platformStateFacade.creationSoftwareVersionOf(binaryState)),
                 now,
                 selfId,
                 signingNodes,

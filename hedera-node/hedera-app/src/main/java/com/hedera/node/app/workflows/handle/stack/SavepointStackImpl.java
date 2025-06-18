@@ -47,6 +47,7 @@ import com.hedera.node.app.workflows.handle.stack.savepoints.FirstChildSavepoint
 import com.hedera.node.app.workflows.handle.stack.savepoints.FirstRootSavepoint;
 import com.hedera.node.app.workflows.handle.stack.savepoints.FollowingSavepoint;
 import com.hedera.node.config.types.StreamMode;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
@@ -631,5 +632,10 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
     @Override
     public boolean isStartUpMode() {
         return state.isStartUpMode();
+    }
+
+    @Override
+    public BinaryState getBinaryState() {
+        return state.getBinaryState();
     }
 }

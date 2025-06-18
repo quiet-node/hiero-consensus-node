@@ -23,7 +23,7 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.state.snapshot.SavedStateInfo;
 import com.swirlds.platform.state.snapshot.SignedStateFilePath;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.lifecycle.HapiUtils;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -293,7 +293,7 @@ public final class StartupStateUtils {
         final Hash oldHash = deserializedSignedState.originalHash();
         final Hash newHash = rehashTree(platformContext.getMerkleCryptography(), state.getRoot());
 
-        final SemanticVersion loadedVersion = platformStateFacade.creationSoftwareVersionOf(state);
+        final SemanticVersion loadedVersion = platformStateFacade.creationSoftwareVersionOf(state.getBinaryState());
 
         if (oldHash.equals(newHash)) {
             logger.info(STARTUP.getMarker(), "Loaded state's hash is the same as when it was saved.");
@@ -349,7 +349,7 @@ public final class StartupStateUtils {
             @NonNull final MerkleNodeState stateRoot,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final PlatformContext platformContext) {
-        initGenesisState(platformContext.getConfiguration(), stateRoot, platformStateFacade, addressBook, appVersion);
+        initGenesisState(platformContext.getConfiguration(), stateRoot.getBinaryState(), platformStateFacade, addressBook, appVersion);
 
         final SignedState signedState = new SignedState(
                 platformContext.getConfiguration(),
@@ -374,7 +374,7 @@ public final class StartupStateUtils {
      */
     private static void initGenesisState(
             final Configuration configuration,
-            final State state,
+            final BinaryState state,
             final PlatformStateFacade platformStateFacade,
             final AddressBook addressBook,
             final SemanticVersion appVersion) {
@@ -410,7 +410,7 @@ public final class StartupStateUtils {
     public static HashedReservedSignedState loadInitialState(
             @NonNull final RecycleBin recycleBin,
             @NonNull final SemanticVersion softwareVersion,
-            @NonNull final Supplier<MerkleNodeState> stateRootSupplier,
+            @NonNull final Supplier<? extends MerkleNodeState> stateRootSupplier,
             @NonNull final String mainClassName,
             @NonNull final String swirldName,
             @NonNull final NodeId selfId,

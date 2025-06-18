@@ -195,8 +195,8 @@ public class DiskStartupNetworks implements StartupNetworks {
         final var entityIdStore = new ReadableEntityIdStoreImpl(state.getReadableStates(EntityIdService.NAME));
         final var nodeStore =
                 new ReadableNodeStoreImpl(state.getReadableStates(AddressBookService.NAME), entityIdStore);
-        final long round = platformStateFacade.roundOf(state);
-        Optional.ofNullable(RosterRetriever.retrieveActive(state, round)).ifPresent(activeRoster -> {
+        final long round = platformStateFacade.roundOf(state.getBinaryState());
+        Optional.ofNullable(RosterRetriever.retrieveActive(state.getBinaryState(), round)).ifPresent(activeRoster -> {
             final var network = Network.newBuilder();
             final List<NodeMetadata> nodeMetadata = new ArrayList<>();
             activeRoster.rosterEntries().forEach(entry -> {

@@ -97,23 +97,23 @@ public class ReconnectStateLoader {
 
             // It's important to call init() before loading the signed state. The loading process makes copies
             // of the state, and we want to be sure that the first state in the chain of copies has been initialized.
-            final Hash reconnectHash = signedState.getState().getHash();
+            final Hash reconnectHash = signedState.getState().getBinaryState().getHash();
             final MerkleNodeState state = signedState.getState();
-            final SemanticVersion creationSoftwareVersion = platformStateFacade.creationSoftwareVersionOf(state);
+            final SemanticVersion creationSoftwareVersion = platformStateFacade.creationSoftwareVersionOf(state.getBinaryState());
             signedState.setRoundSupplier();
             consensusStateEventHandler.onStateInitialized(
                     state, platform, InitTrigger.RECONNECT, creationSoftwareVersion);
 
-            if (!Objects.equals(signedState.getState().getHash(), reconnectHash)) {
+            if (!Objects.equals(signedState.getState().getBinaryState().getHash(), reconnectHash)) {
                 throw new IllegalStateException(
                         "State hash is not permitted to change during a reconnect init() call. Previous hash was "
                                 + reconnectHash + ", new hash is "
-                                + signedState.getState().getHash());
+                                + signedState.getState().getBinaryState().getHash());
             }
 
             // Before attempting to load the state, verify that the platform roster matches the state roster.
-            final long round = platformStateFacade.roundOf(state);
-            final Roster stateRoster = RosterRetriever.retrieveActive(state, round);
+            final long round = platformStateFacade.roundOf(state.getBinaryState());
+            final Roster stateRoster = RosterRetriever.retrieveActive(state.getBinaryState(), round);
             if (!roster.equals(stateRoster)) {
                 throw new IllegalStateException("Current roster and state-based roster do not contain the same nodes "
                         + " (currentRoster=" + Roster.JSON.toJSON(roster) + ") (stateRoster="
@@ -138,17 +138,17 @@ public class ReconnectStateLoader {
                     .getSignatureCollectorStateInput()
                     .put(signedState.reserve("loading reconnect state into sig collector"));
             final ConsensusSnapshot consensusSnapshot =
-                    Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(state));
+                    Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(state.getBinaryState()));
             platformWiring.consensusSnapshotOverride(consensusSnapshot);
 
-            final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state);
+            final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state.getBinaryState());
             platformWiring.getRosterHistoryInput().inject(rosterHistory);
 
             platformWiring.updateEventWindow(
                     EventWindowUtils.createEventWindow(consensusSnapshot, platformContext.getConfiguration()));
 
             final RunningEventHashOverride runningEventHashOverride =
-                    new RunningEventHashOverride(platformStateFacade.legacyRunningEventHashOf(state), true);
+                    new RunningEventHashOverride(platformStateFacade.legacyRunningEventHashOf(state.getBinaryState()), true);
             platformWiring.updateRunningHash(runningEventHashOverride);
             platformWiring.getPcesWriterRegisterDiscontinuityInput().inject(signedState.getRound());
 

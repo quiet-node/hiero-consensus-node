@@ -38,6 +38,7 @@ import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -337,7 +338,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
                 virtualMap -> new TurtleAppState(virtualMap, platformContext));
         final ReservedSignedState initialState = reservedState.state();
 
-        final State state = initialState.get().getState();
+        final BinaryState state = initialState.get().getState().getBinaryState();
         final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state);
         final String eventStreamLoc = selfId.toString();
 

@@ -57,7 +57,8 @@ public class BoundaryStateChangeListener implements StateChangeListener {
     private static final Set<StateType> TARGET_DATA_TYPES = EnumSet.of(SINGLETON);
 
     private final SortedMap<Integer, StateChange> singletonUpdates = new TreeMap<>();
-    private static final int ENTITY_COUNTS_STATE_ID = getValidatedStateId(EntityIdService.NAME, ENTITY_COUNTS_KEY);
+    private static final int ENTITY_COUNTS_STATE_ID =
+            BinaryStateUtils.getValidatedStateId(EntityIdService.NAME, ENTITY_COUNTS_KEY);
 
     @NonNull
     private final StoreMetricsService storeMetricsService;

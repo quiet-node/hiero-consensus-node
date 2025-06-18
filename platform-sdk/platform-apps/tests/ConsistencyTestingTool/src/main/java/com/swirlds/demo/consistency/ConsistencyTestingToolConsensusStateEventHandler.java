@@ -102,7 +102,7 @@ public class ConsistencyTestingToolConsensusStateEventHandler
                     STARTUP.getMarker(),
                     "Setting freeze time to {} seconds after genesis.",
                     freezeAfterGenesis.getSeconds());
-            platformStateFacade.bulkUpdateOf(state, v -> {
+            platformStateFacade.bulkUpdateOf(state.getBinaryState(), v -> {
                 v.setFreezeTime(round.getConsensusTimestamp().plus(freezeAfterGenesis));
             });
         }

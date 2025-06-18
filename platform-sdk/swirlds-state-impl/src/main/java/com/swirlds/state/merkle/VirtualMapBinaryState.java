@@ -301,10 +301,9 @@ public class VirtualMapBinaryState implements BinaryState {
     }
 
     /**
-     * Determines if an object is immutable or not.
-     *
-     * @return Whether is immutable or not
+     * {@inheritDoc}
      */
+    @Override
     public boolean isImmutable() {
         return virtualMap.isImmutable();
     }
@@ -326,10 +325,9 @@ public class VirtualMapBinaryState implements BinaryState {
     }
 
     /**
-     * Determines if an object has been fully released and garbage collected.
-     *
-     * @return Whether is has been released or not
+     * {@inheritDoc}
      */
+    @Override
     public boolean isDestroyed() {
         return virtualMap.isDestroyed();
     }

@@ -93,8 +93,8 @@ public class ReconnectLearner {
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
         this.stateRootFunction = Objects.requireNonNull(stateRootFunction);
 
-        currentState.throwIfImmutable("Can not perform reconnect with immutable state");
-        currentState.throwIfDestroyed("Can not perform reconnect with destroyed state");
+        currentState.getBinaryState().throwIfImmutable("Can not perform reconnect with immutable state");
+        currentState.getBinaryState().throwIfDestroyed("Can not perform reconnect with destroyed state");
 
         this.platformContext = Objects.requireNonNull(platformContext);
         this.threadManager = Objects.requireNonNull(threadManager);
@@ -105,7 +105,7 @@ public class ReconnectLearner {
         this.statistics = Objects.requireNonNull(statistics);
 
         // Save some of the current state data for validation
-        this.stateValidationData = new SignedStateValidationData(currentState, roster, platformStateFacade);
+        this.stateValidationData = new SignedStateValidationData(currentState.getBinaryState(), roster, platformStateFacade);
     }
 
     /**

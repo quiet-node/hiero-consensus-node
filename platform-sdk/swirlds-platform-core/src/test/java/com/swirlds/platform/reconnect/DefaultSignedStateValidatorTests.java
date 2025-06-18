@@ -265,7 +265,7 @@ class DefaultSignedStateValidatorTests {
 
         final SignedState signedState = stateSignedByNodes(signingNodes);
         final SignedStateValidationData originalData =
-                new SignedStateValidationData(signedState.getState(), roster, TEST_PLATFORM_STATE_FACADE);
+                new SignedStateValidationData(signedState.getState().getBinaryState(), roster, TEST_PLATFORM_STATE_FACADE);
 
         final boolean shouldSucceed = stateHasEnoughWeight(nodes, signingNodes);
         if (shouldSucceed) {

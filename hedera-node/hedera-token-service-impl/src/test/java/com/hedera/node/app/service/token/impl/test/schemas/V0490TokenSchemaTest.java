@@ -28,6 +28,7 @@ import com.swirlds.state.lifecycle.info.NodeInfo;
 import com.swirlds.state.spi.EmptyReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.test.fixtures.FakeBinaryState;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import com.swirlds.state.test.fixtures.MapWritableKVState;
 import com.swirlds.state.test.fixtures.MapWritableStates;
@@ -79,7 +80,7 @@ final class V0490TokenSchemaTest {
     void initializesStakingDataOnGenesisStart() {
         final var schema = newSubjectWithAllExpected();
         final var migrationContext = new MigrationContextImpl(
-                EmptyReadableStates.INSTANCE, newStates, config, config, null, 0L, new HashMap<>(), startupNetworks);
+                EmptyReadableStates.INSTANCE, newStates, config, config, null, 0L, new HashMap<>(), startupNetworks, new FakeBinaryState());
 
         schema.migrate(migrationContext);
 

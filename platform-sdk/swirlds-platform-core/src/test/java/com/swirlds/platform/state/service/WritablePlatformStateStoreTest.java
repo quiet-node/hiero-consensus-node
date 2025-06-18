@@ -58,7 +58,7 @@ class WritablePlatformStateStoreTest {
         when(writableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
                 .thenReturn(new OnDiskWritableSingletonState<>(
                         PlatformStateService.NAME, PLATFORM_STATE_KEY, PlatformState.PROTOBUF, binaryState));
-        store = new WritablePlatformStateStore(writableStates);
+        store = new WritablePlatformStateStore(binaryState);
     }
 
     @Test

@@ -23,7 +23,6 @@ import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SigSet;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.BufferedWriter;
@@ -61,7 +60,7 @@ public final class SignedStateFileWriter {
             @NonNull final PlatformStateFacade platformStateFacade)
             throws IOException {
         final StateConfig stateConfig = platformContext.getConfiguration().getConfigData(StateConfig.class);
-        final String platformInfo = platformStateFacade.getInfoString(state, stateConfig.debugHashDepth());
+        final String platformInfo = platformStateFacade.getInfoString(state);
 
         logger.info(
                 STATE_TO_DISK.getMarker(),
@@ -144,7 +143,7 @@ public final class SignedStateFileWriter {
         Objects.requireNonNull(directory);
         Objects.requireNonNull(signedState);
 
-        final State state = signedState.getState();
+        final MerkleNodeState state = signedState.getState();
 
         state.createSnapshot(directory);
         writeSignatureSetFile(directory, signedState);
@@ -162,7 +161,7 @@ public final class SignedStateFileWriter {
                     platformContext,
                     selfId,
                     directory,
-                    platformStateFacade.ancientThresholdOf(signedState.getState()),
+                    platformStateFacade.ancientThresholdOf(signedState.getState().getBinaryState()),
                     signedState.getRound());
         }
     }
@@ -238,7 +237,7 @@ public final class SignedStateFileWriter {
     private static void writeEmergencyRecoveryFile(final Path savedStateDirectory, final SignedState signedState)
             throws IOException {
         new EmergencyRecoveryFile(
-                        signedState.getRound(), signedState.getState().getHash(), signedState.getConsensusTimestamp())
+                        signedState.getRound(), signedState.getState().getBinaryState().getHash(), signedState.getConsensusTimestamp())
                 .write(savedStateDirectory);
     }
 }

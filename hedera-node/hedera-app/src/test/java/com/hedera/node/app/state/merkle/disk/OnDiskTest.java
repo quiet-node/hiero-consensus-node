@@ -134,7 +134,7 @@ class OnDiskTest extends MerkleTestBase {
         binaryState.release();
 
         // read it back now as our map and validate the data come back fine
-        binaryState = new TestVirtualMapBinaryState((VirtualMap) parseTree(serializedBytes, snapshotDir));
+        binaryState = parseTree(serializedBytes, snapshotDir);
         final var rs = new OnDiskReadableKVState<>(
                 TokenService.NAME, ACCOUNTS_KEY, AccountID.PROTOBUF, Account.PROTOBUF, binaryState);
         for (int i = 0; i < 10; i++) {

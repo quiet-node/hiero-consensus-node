@@ -150,7 +150,7 @@ public class RandomSignedStateGenerator {
                     "vm-" + RandomSignedStateGenerator.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
             stateInstance = TestVirtualMapState.createInstanceWithVirtualMapLabel(
                     virtualMapLabel, TestPlatformContextBuilder.create().build());
-            stateInstance.setRoundSupplier(() -> platformStateFacade.roundOf(stateInstance));
+            stateInstance.setRoundSupplier(() -> platformStateFacade.roundOf(stateInstance.getBinaryState()));
         } else {
             stateInstance = state;
         }
@@ -202,7 +202,7 @@ public class RandomSignedStateGenerator {
         }
         TestingAppStateInitializer.DEFAULT.initPlatformState(stateInstance);
 
-        platformStateFacade.bulkUpdateOf(stateInstance, v -> {
+        platformStateFacade.bulkUpdateOf(stateInstance.getBinaryState(), v -> {
             v.setSnapshot(consensusSnapshotInstance);
             v.setLegacyRunningEventHash(legacyRunningEventHashInstance);
             v.setCreationSoftwareVersion(softwareVersionInstance);
@@ -211,7 +211,7 @@ public class RandomSignedStateGenerator {
         });
 
         TestingAppStateInitializer.DEFAULT.initRosterState(stateInstance);
-        RosterUtils.setActiveRoster(stateInstance, rosterInstance, roundInstance);
+        RosterUtils.setActiveRoster(stateInstance.getBinaryState(), rosterInstance, roundInstance);
 
         if (signatureVerifier == null) {
             signatureVerifier = SignatureVerificationTestUtils::verifySignature;

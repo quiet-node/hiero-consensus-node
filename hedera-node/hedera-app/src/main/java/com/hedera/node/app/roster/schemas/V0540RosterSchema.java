@@ -99,8 +99,8 @@ public class V0540RosterSchema extends Schema implements RosterTransplantSchema 
             } else if (rosterStore.getActiveRoster() == null) {
                 // (FUTURE) Once there are no production states without a roster, we can remove this branch
                 final State state = stateSupplier.get();
-                final long round = platformStateFacade.roundOf(state);
-                final var previousRoster = requireNonNull(RosterRetriever.retrieveActive(state, round));
+                final long round = platformStateFacade.roundOf(state.getBinaryState());
+                final var previousRoster = requireNonNull(RosterRetriever.retrieveActive(state.getBinaryState(), round));
                 rosterStore.putActiveRoster(previousRoster, 0);
                 final var currentRoster =
                         RosterUtils.rosterFrom(startupNetworks.migrationNetworkOrThrow(ctx.platformConfig()));

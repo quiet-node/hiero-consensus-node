@@ -13,6 +13,7 @@ package com.swirlds.demo.stats;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hiero.base.constructable.ConstructableIgnored;
@@ -94,4 +95,10 @@ public class StatsDemoState extends MerkleStateRoot<StatsDemoState> implements M
     protected StatsDemoState copyingConstructor(PlatformContext platformContext) {
         return new StatsDemoState(this);
     }
+
+    @Override
+    public BinaryState getBinaryState() {
+        throw new UnsupportedOperationException("Not supported.");
+    }
+
 }

@@ -29,7 +29,7 @@ import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.system.status.actions.FreezePeriodEnteredAction;
 import com.swirlds.platform.wiring.PlatformSchedulersConfig;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Objects;
@@ -231,7 +231,7 @@ public class DefaultTransactionHandler implements TransactionHandler {
      * @param round the consensus round
      */
     private void updatePlatformState(@NonNull final ConsensusRound round) {
-        platformStateFacade.bulkUpdateOf(swirldStateManager.getConsensusState(), v -> {
+        platformStateFacade.bulkUpdateOf(swirldStateManager.getConsensusState().getBinaryState(), v -> {
             v.setRound(round.getRoundNum());
             v.setConsensusTimestamp(round.getConsensusTimestamp());
             v.setCreationSoftwareVersion(softwareVersion);
@@ -247,7 +247,7 @@ public class DefaultTransactionHandler implements TransactionHandler {
      * @throws InterruptedException if this thread is interrupted
      */
     private void updateRunningEventHash(@NonNull final ConsensusRound round) throws InterruptedException {
-        final State consensusState = swirldStateManager.getConsensusState();
+        final BinaryState consensusState = swirldStateManager.getConsensusState().getBinaryState();
 
         if (writeLegacyRunningEventHash) {
             final CesEvent last = round.getStreamedEvents().getLast();

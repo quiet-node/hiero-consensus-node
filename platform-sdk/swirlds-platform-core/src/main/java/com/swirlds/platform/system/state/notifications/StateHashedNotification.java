@@ -25,7 +25,7 @@ public class StateHashedNotification extends AbstractNotification {
         try (state) {
             return new StateHashedNotification(
                     state.get().getRound(),
-                    requireNonNull(state.get().getState().getHash()));
+                    requireNonNull(state.get().getState().getBinaryState().getHash()));
         }
     }
 

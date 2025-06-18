@@ -7,14 +7,15 @@ import static org.hiero.base.utility.CommonUtils.fromPbjTimestamp;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
+import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.platform.state.PlatformStateAccessor;
-import com.swirlds.state.State;
-import com.swirlds.state.spi.ReadableSingletonState;
-import com.swirlds.state.spi.ReadableStates;
+import com.swirlds.state.BinaryState;
+import com.swirlds.state.BinaryStateUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
+import java.util.List;
 import org.hiero.base.crypto.Hash;
 
 /**
@@ -23,15 +24,15 @@ import org.hiero.base.crypto.Hash;
  */
 public class ReadablePlatformStateStore implements PlatformStateAccessor {
 
-    private final ReadableSingletonState<PlatformState> state;
+    protected final  BinaryState binaryState;
 
     /**
      * Constructor
-     * Must be used from within {@link State}.
-     * @param readableStates the readable states
+     * Must be used from within {@link BinaryState}.
+     * @param binaryState binary state containing the platform state
      */
-    public ReadablePlatformStateStore(@NonNull final ReadableStates readableStates) {
-        this.state = requireNonNull(readableStates).getSingleton(PLATFORM_STATE_KEY);
+    public ReadablePlatformStateStore(@NonNull final BinaryState binaryState) {
+        this.binaryState = requireNonNull(binaryState);
     }
 
     /**
@@ -84,9 +85,9 @@ public class ReadablePlatformStateStore implements PlatformStateAccessor {
      */
     @Override
     public long getAncientThreshold() {
-        final var consensusSnapshot = stateOrThrow().consensusSnapshot();
+        final ConsensusSnapshot consensusSnapshot = stateOrThrow().consensusSnapshot();
         requireNonNull(consensusSnapshot, "No minimum judge info found in state for round, snapshot is null");
-        final var minimumJudgeInfos = consensusSnapshot.minimumJudgeInfoList();
+        final List<MinimumJudgeInfo> minimumJudgeInfos = consensusSnapshot.minimumJudgeInfoList();
         if (minimumJudgeInfos.isEmpty()) {
             throw new IllegalStateException(
                     "No minimum judge info found in state for round " + consensusSnapshot.round() + ", list is empty");
@@ -159,7 +160,15 @@ public class ReadablePlatformStateStore implements PlatformStateAccessor {
         return stateOrThrow().lowestJudgeGenerationBeforeBirthRoundMode();
     }
 
-    private @NonNull PlatformState stateOrThrow() {
-        return requireNonNull(state.get());
+    protected @NonNull PlatformState stateOrThrow() {
+        return requireNonNull(binaryState
+                .getSingleton(
+                        platformStateId(),
+                        PlatformState.PROTOBUF));
     }
+
+    protected static int platformStateId() {
+        return BinaryStateUtils.getValidatedStateId(PlatformStateService.NAME, PLATFORM_STATE_KEY);
+    }
+
 }

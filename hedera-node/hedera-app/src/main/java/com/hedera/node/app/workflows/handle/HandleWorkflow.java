@@ -287,11 +287,11 @@ public class HandleWorkflow {
             }
 
             // Update the latest freeze round after everything is handled
-            if (platformStateFacade.isFreezeRound(state, round)) {
+            if (platformStateFacade.isFreezeRound(state.getBinaryState(), round)) {
                 // If this is a freeze round, we need to update the freeze info state
-                final var platformStateStore =
-                        new WritablePlatformStateStore(state.getWritableStates(PlatformStateService.NAME));
-                platformStateStore.setLatestFreezeRound(round.getRoundNum());
+                platformStateFacade.bulkUpdateOf(state.getBinaryState(), updater -> {
+                    updater.setLatestFreezeRound(round.getRoundNum());
+                });
             }
         } finally {
             // Even if there is an exception somewhere, we need to commit the receipts of any handled transactions
@@ -678,7 +678,7 @@ public class HandleWorkflow {
             @NonNull final ParentTxn parentTxn, final long eventBirthRound, @NonNull final State state) {
         try {
             final var platformStateStore =
-                    new ReadablePlatformStateStore(state.getReadableStates(PlatformStateService.NAME));
+                    new ReadablePlatformStateStore(state.getBinaryState());
             if (this.initTrigger != EVENT_STREAM_RECOVERY
                     && eventBirthRound <= platformStateStore.getLatestFreezeRound()) {
                 if (streamMode != BLOCKS) {
@@ -881,7 +881,7 @@ public class HandleWorkflow {
                     context.setConstruction(construction);
                 } else if (!tssConfig.historyEnabled()) {
                     // When not using history proofs, completing a weight rotation is also immediately actionable
-                    final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+                    final var rosterStore = new ReadableRosterStoreImpl(state.getBinaryState());
                     if (rosterStore.candidateIsWeightRotation()) {
                         hintsService.manageRosterAdoption(
                                 hintsStore,
@@ -899,7 +899,7 @@ public class HandleWorkflow {
                     // History service has no other action to take on finishing the genesis construction
                     return;
                 }
-                final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+                final var rosterStore = new ReadableRosterStoreImpl(state.getBinaryState());
                 if (rosterStore.candidateIsWeightRotation()) {
                     historyStore.handoff(
                             requireNonNull(rosterStore.getActiveRoster()),
@@ -933,7 +933,7 @@ public class HandleWorkflow {
     private void reconcileTssState(@NonNull final State state, @NonNull final Instant roundTimestamp) {
         final var tssConfig = configProvider.getConfiguration().getConfigData(TssConfig.class);
         if (tssConfig.hintsEnabled() || tssConfig.historyEnabled()) {
-            final var rosterStore = new ReadableRosterStoreImpl(state.getReadableStates(RosterService.NAME));
+            final var rosterStore = new ReadableRosterStoreImpl(state.getBinaryState());
             final var entityCounters = new WritableEntityIdStore(state.getWritableStates(EntityIdService.NAME));
             final var activeRosters = ActiveRosters.from(rosterStore);
             final var isActive = currentPlatformStatus.get() == ACTIVE;

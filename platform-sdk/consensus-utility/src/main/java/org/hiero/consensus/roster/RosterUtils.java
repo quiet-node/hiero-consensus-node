@@ -10,9 +10,7 @@ import com.hedera.hapi.node.state.roster.RoundRosterPair;
 import com.hedera.node.internal.network.Network;
 import com.hedera.node.internal.network.NodeMetadata;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.state.State;
-import com.swirlds.state.spi.CommittableWritableStates;
-import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.security.cert.X509Certificate;
@@ -292,9 +290,9 @@ public final class RosterUtils {
      * @return the roster history if roster store contains active rosters, otherwise NullPointerException is thrown.
      */
     @NonNull
-    public static RosterHistory createRosterHistory(@NonNull final State state) {
+    public static RosterHistory createRosterHistory(@NonNull final BinaryState state) {
         final ReadableRosterStore rosterStore =
-                new ReadableRosterStoreImpl(state.getReadableStates(RosterStateId.NAME));
+                new ReadableRosterStoreImpl(state);
         final List<RoundRosterPair> roundRosterPairs = rosterStore.getRosterHistory();
         final Map<Bytes, Roster> rosterMap = new HashMap<>();
         for (final RoundRosterPair pair : roundRosterPairs) {
@@ -310,11 +308,10 @@ public final class RosterUtils {
      * @param roster a Roster to set as active
      * @param round a round number since which the roster is considered active
      */
-    public static void setActiveRoster(@NonNull final State state, @NonNull final Roster roster, final long round) {
-        final WritableStates writableStates = state.getWritableStates(RosterStateId.NAME);
-        final WritableRosterStore writableRosterStore = new WritableRosterStore(writableStates);
+    public static void setActiveRoster(
+            @NonNull final BinaryState state, @NonNull final Roster roster, final long round) {
+        final WritableRosterStore writableRosterStore = new WritableRosterStore(state);
         writableRosterStore.putActiveRoster(roster, round);
-        ((CommittableWritableStates) writableStates).commit();
     }
 
     /**

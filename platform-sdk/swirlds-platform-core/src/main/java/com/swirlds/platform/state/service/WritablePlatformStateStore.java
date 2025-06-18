@@ -2,6 +2,7 @@
 package com.swirlds.platform.state.service;
 
 import static com.swirlds.platform.state.service.PbjConverter.toPbjPlatformState;
+import static com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema.PLATFORM_STATE_KEY;
 import static java.util.Objects.requireNonNull;
 import static org.hiero.base.utility.CommonUtils.toPbjTimestamp;
 
@@ -10,10 +11,9 @@ import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.platform.state.PlatformStateModifier;
-import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
+import com.swirlds.state.BinaryState;
+import com.swirlds.state.BinaryStateUtils;
 import com.swirlds.state.spi.CommittableWritableStates;
-import com.swirlds.state.spi.WritableSingletonState;
-import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
@@ -24,17 +24,13 @@ import org.hiero.base.crypto.Hash;
  * Extends the read-only platform state store to provide write access to the platform state.
  */
 public class WritablePlatformStateStore extends ReadablePlatformStateStore implements PlatformStateModifier {
-    private final WritableStates writableStates;
-    private final WritableSingletonState<PlatformState> state;
 
     /**
      * Constructor that can be used to change and access any part of state.
-     * @param writableStates the writable states
+     * @param binaryState the writable states
      */
-    public WritablePlatformStateStore(@NonNull final WritableStates writableStates) {
-        super(writableStates);
-        this.writableStates = writableStates;
-        this.state = writableStates.getSingleton(V0540PlatformStateSchema.PLATFORM_STATE_KEY);
+    public WritablePlatformStateStore(@NonNull final BinaryState binaryState) {
+        super(binaryState);
     }
 
     /**
@@ -188,18 +184,12 @@ public class WritablePlatformStateStore extends ReadablePlatformStateStore imple
         setAllFrom(accumulator);
     }
 
-    private @NonNull PlatformState stateOrThrow() {
-        return requireNonNull(state.get());
-    }
 
     private void update(@NonNull final PlatformState.Builder stateBuilder) {
         update(stateBuilder.build());
     }
 
     private void update(@NonNull final PlatformState stateBuilder) {
-        this.state.put(stateBuilder);
-        if (writableStates instanceof CommittableWritableStates committableWritableStates) {
-            committableWritableStates.commit();
-        }
+        this.binaryState.putSingleton(platformStateId(), PlatformState.PROTOBUF, stateBuilder);
     }
 }

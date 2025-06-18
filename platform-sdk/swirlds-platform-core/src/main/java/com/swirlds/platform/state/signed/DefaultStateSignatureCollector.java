@@ -78,7 +78,7 @@ public class DefaultStateSignatureCollector implements StateSignatureCollector {
         Objects.requireNonNull(reservedSignedState, "reservedSignedState");
         final SignedState signedState = reservedSignedState.get();
 
-        if (signedState.getState().getHash() == null) {
+        if (signedState.getState().getBinaryState().getHash() == null) {
             throw new IllegalArgumentException(
                     "Unhashed state for round " + signedState.getRound() + " added to the signed state manager");
         }

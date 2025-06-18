@@ -6,7 +6,6 @@ import static com.swirlds.base.units.UnitConstants.NANOSECONDS_TO_MICROSECONDS;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.platform.metrics.StateMetrics;
 import com.swirlds.platform.state.service.PlatformStateFacade;
-import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
 
@@ -19,7 +18,7 @@ public final class SwirldStateManagerUtils {
     private SwirldStateManagerUtils() {}
 
     /**
-     * Performs a fast copy on a {@link State}. The {@code state} must not be modified during execution of this method.
+     * Performs a fast copy on a {@link MerkleNodeState}. The {@code state} must not be modified during execution of this method.
      *
      * @param state           the state object to fast copy
      * @param stats           object to record stats in
@@ -38,7 +37,7 @@ public final class SwirldStateManagerUtils {
 
         // Create a fast copy
         final MerkleNodeState copy = state.copy();
-        platformStateFacade.setCreationSoftwareVersionTo(copy, softwareVersion);
+        platformStateFacade.setCreationSoftwareVersionTo(copy.getBinaryState(), softwareVersion);
 
         // Increment the reference count because this reference becomes the new value
         copy.getRoot().reserve();

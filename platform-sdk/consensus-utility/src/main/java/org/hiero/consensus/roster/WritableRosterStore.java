@@ -9,9 +9,7 @@ import com.hedera.hapi.node.state.roster.RosterState;
 import com.hedera.hapi.node.state.roster.RosterState.Builder;
 import com.hedera.hapi.node.state.roster.RoundRosterPair;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.state.spi.WritableKVState;
-import com.swirlds.state.spi.WritableSingletonState;
-import com.swirlds.state.spi.WritableStates;
+import com.swirlds.state.BinaryState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,23 +27,12 @@ public class WritableRosterStore extends ReadableRosterStoreImpl {
     public static final int MAXIMUM_ROSTER_HISTORY_SIZE = 2;
 
     /**
-     * The roster state singleton. This is the state that holds the candidate roster hash and the list of pairs of
-     * active roster hashes and the round number in which those rosters became active.
-     */
-    private final WritableSingletonState<RosterState> rosterState;
-
-    private final WritableKVState<ProtoBytes, Roster> rosterMap;
-
-    /**
      * Constructs a new {@link WritableRosterStore} instance.
      *
-     * @param writableStates the readable states
+     * @param binaryState the readable states
      */
-    public WritableRosterStore(@NonNull final WritableStates writableStates) {
-        super(writableStates);
-        requireNonNull(writableStates);
-        this.rosterState = writableStates.getSingleton(ROSTER_STATES_KEY);
-        this.rosterMap = writableStates.get(ROSTER_KEY);
+    public WritableRosterStore(@NonNull final BinaryState binaryState) {
+        super(binaryState);
     }
 
     /**
@@ -76,9 +63,13 @@ public class WritableRosterStore extends ReadableRosterStoreImpl {
         final Builder newRosterStateBuilder =
                 previousRosterState.copyBuilder().candidateRosterHash(incomingCandidateRosterHash);
         removeRoster(previousCandidateRosterHash);
+        binaryState.putSingleton(rosterStateStateId, RosterState.PROTOBUF, newRosterStateBuilder.build());
+        registerRosterByHash(incomingCandidateRosterHash, candidateRoster);
+    }
 
-        rosterState.put(newRosterStateBuilder.build());
-        rosterMap.put(ProtoBytes.newBuilder().value(incomingCandidateRosterHash).build(), candidateRoster);
+    private void registerRosterByHash(Bytes hashBytes, Roster roster) {
+        binaryState.putKeyValuePair(rosterMapStateId,
+                ProtoBytes.PROTOBUF, ProtoBytes.newBuilder().value(hashBytes).build(), Roster.PROTOBUF, roster);
     }
 
     /**
@@ -139,8 +130,8 @@ public class WritableRosterStore extends ReadableRosterStoreImpl {
         // since a new active roster is being set, the existing candidate roster is no longer valid
         // so we remove it if it meets removal criteria.
         removeRoster(previousRosterState.candidateRosterHash());
-        rosterState.put(newRosterStateBuilder.build());
-        rosterMap.put(ProtoBytes.newBuilder().value(rosterHash).build(), roster);
+        binaryState.putSingleton(rosterStateStateId, RosterState.PROTOBUF, newRosterStateBuilder.build());
+        registerRosterByHash(rosterHash, roster);
     }
 
     /**
@@ -149,12 +140,17 @@ public class WritableRosterStore extends ReadableRosterStoreImpl {
      * the RosterService states to a vanilla state, for example to reproduce the genesis state.
      */
     public void resetRosters() {
+        RosterState rosterState = getRosterState();
         for (final RoundRosterPair roundRosterPair :
-                requireNonNull(rosterState.get()).roundRosterPairs()) {
-            rosterMap.remove(new ProtoBytes(roundRosterPair.activeRosterHash()));
+                requireNonNull(rosterState).roundRosterPairs()) {
+            removeRosterByHash(roundRosterPair.activeRosterHash());
         }
-        rosterMap.remove(new ProtoBytes(requireNonNull(rosterState.get()).candidateRosterHash()));
-        rosterState.put(RosterState.DEFAULT);
+        removeRosterByHash(rosterState.candidateRosterHash());
+        binaryState.putSingleton(rosterStateStateId, RosterState.PROTOBUF, RosterState.DEFAULT);
+    }
+
+    private void removeRosterByHash(Bytes rosterHashBytes) {
+        binaryState.removeKeyValuePair(rosterMapStateId, ProtoBytes.PROTOBUF.toBytes(new ProtoBytes(rosterHashBytes)));
     }
 
     /**
@@ -165,7 +161,7 @@ public class WritableRosterStore extends ReadableRosterStoreImpl {
     @NonNull
     private RosterState rosterStateOrDefault() {
         RosterState state;
-        return (state = rosterState.get()) == null ? RosterState.DEFAULT : state;
+        return (state = getRosterState()) == null ? RosterState.DEFAULT : state;
     }
 
     /**
@@ -181,7 +177,7 @@ public class WritableRosterStore extends ReadableRosterStoreImpl {
         final List<RoundRosterPair> activeRosterHistory = rosterStateOrDefault().roundRosterPairs();
         if (activeRosterHistory.stream()
                 .noneMatch(rosterPair -> rosterPair.activeRosterHash().equals(rosterHash))) {
-            this.rosterMap.remove(ProtoBytes.newBuilder().value(rosterHash).build());
+            removeRosterByHash(rosterHash);
         }
     }
 }

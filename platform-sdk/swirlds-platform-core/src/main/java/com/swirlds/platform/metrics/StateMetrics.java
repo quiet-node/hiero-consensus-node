@@ -12,7 +12,7 @@ import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.system.PlatformStatNames;
-import com.swirlds.state.State;
+import com.swirlds.state.BinaryState;
 
 /**
  * Collection of metrics related to the state lifecycle
@@ -63,7 +63,7 @@ public class StateMetrics {
     }
 
     /**
-     * Records the amount of time to handle a consensus transaction in {@link State}.
+     * Records the amount of time to handle a consensus transaction in {@link BinaryState}.
      *
      * @param seconds
      * 		the amount of time in seconds
@@ -73,7 +73,7 @@ public class StateMetrics {
     }
 
     /**
-     * Records the amount of time between a transaction reaching consensus and being handled in {@link State}.
+     * Records the amount of time between a transaction reaching consensus and being handled in {@link BinaryState}.
      *
      * @param seconds
      * 		the amount of time in seconds
@@ -83,14 +83,14 @@ public class StateMetrics {
     }
 
     /**
-     * Records the fact that consensus transactions were handled by {@link State}.
+     * Records the fact that consensus transactions were handled by {@link BinaryState}.
      */
     public void consensusTransHandled(final int numTrans) {
         transHandledPerSecond.update(numTrans);
     }
 
     /**
-     * Records the time it takes {@link State#copy()} to finish (in microseconds)
+     * Records the time it takes {@link BinaryState#copy()} to finish (in microseconds)
      *
      * @param micros
      * 		the amount of time in microseconds

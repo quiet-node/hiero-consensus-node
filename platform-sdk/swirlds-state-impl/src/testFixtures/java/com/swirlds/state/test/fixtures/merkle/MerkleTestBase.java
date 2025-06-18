@@ -11,6 +11,8 @@ import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyDo
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.assertAllDatabasesClosed;
 import static com.swirlds.state.BinaryStateUtils.createVirtualMapKeyBytesForKv;
 import static com.swirlds.state.BinaryStateUtils.getVirtualMapKeyForSingleton;
+import static com.swirlds.state.BinaryStateUtils.createVirtualMapKeyBytesForKv;
+import static com.swirlds.state.BinaryStateUtils.getVirtualMapKeyForSingleton;
 import static com.swirlds.state.lifecycle.StateMetadata.computeClassId;
 import static com.swirlds.virtualmap.constructable.ConstructableUtils.registerVirtualMapConstructables;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,7 +44,9 @@ import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.state.BinaryStateUtils;
+import com.swirlds.state.BinaryStateUtils;
 import com.swirlds.state.lifecycle.StateMetadata;
+import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.merkle.VirtualMapBinaryState;
 import com.swirlds.state.test.fixtures.StateTestBase;
 import com.swirlds.state.test.fixtures.TestArgumentUtils;

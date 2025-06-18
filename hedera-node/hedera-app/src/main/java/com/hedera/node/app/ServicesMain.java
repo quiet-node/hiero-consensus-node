@@ -97,7 +97,7 @@ import org.hiero.consensus.roster.RosterUtils;
  *
  * <p>This class simply delegates to {@link Hedera}.
  */
-public class ServicesMain implements SwirldMain<MerkleNodeState> {
+public class ServicesMain implements SwirldMain<HederaVirtualMapState> {
     private static final Logger logger = LogManager.getLogger(ServicesMain.class);
 
     /**
@@ -157,7 +157,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * Specifically, {@link HederaVirtualMapState}.
      */
     @Override
-    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(
+    public Function<VirtualMap, HederaVirtualMapState> stateRootFromVirtualMap(
             @NonNull final PlatformContext platformContext) {
         return hederaOrThrow().stateRootFromVirtualMap(platformContext);
     }

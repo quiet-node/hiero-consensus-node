@@ -10,11 +10,11 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateReference;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collections;
 import java.util.Objects;
@@ -140,7 +140,7 @@ public class RecoveryPlatform implements Platform, AutoCloseableNonThrowing {
     @SuppressWarnings("unchecked")
     @Override
     @NonNull
-    public <T extends State> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull String reason) {
+    public <T extends MerkleNodeState> AutoCloseableWrapper<T> getLatestImmutableState(@NonNull String reason) {
         final ReservedSignedState reservedSignedState = immutableState.getAndReserve(reason);
         return new AutoCloseableWrapper<>(
                 reservedSignedState.isNull()

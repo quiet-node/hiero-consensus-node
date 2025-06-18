@@ -5,6 +5,7 @@ import static com.swirlds.state.lifecycle.HapiUtils.SEMANTIC_VERSION_COMPARATOR;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.state.BinaryState;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -87,6 +88,12 @@ public interface MigrationContext {
      * @return the shared values map
      */
     Map<String, Object> sharedValues();
+
+    /**
+     * Returns the binary state that is used to store the on-disk state.
+     * @return the binary state
+     */
+    BinaryState binaryState();
 
     /**
      * Returns whether this is a genesis migration.
