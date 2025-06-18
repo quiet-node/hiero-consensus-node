@@ -249,17 +249,9 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                 "VirtualMapState has to be initialized before hashing. merkleCryptography is not set.");
         virtualMap.throwIfMutable("Hashing should only be done on immutable states");
         virtualMap.throwIfDestroyed("Hashing should not be done on destroyed states");
-        if (getHash() != null) {
-            return;
-        }
-        try {
-            merkleCryptography.digestTreeAsync(virtualMap).get();
-        } catch (final ExecutionException e) {
-            logger.error(EXCEPTION.getMarker(), "Exception occurred during hashing", e);
-        } catch (final InterruptedException e) {
-            logger.error(EXCEPTION.getMarker(), "Interrupted while hashing state. Expect buggy behavior.");
-            Thread.currentThread().interrupt();
-        }
+
+        // this call will result in synchronous hash computation
+        virtualMap.getHash();
     }
 
     /**
