@@ -4,7 +4,7 @@ package com.hedera.node.app.service.contract.impl.test.exec.metrics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.within;
 
-import com.hedera.node.app.service.contract.impl.exec.metrics.EvmOperationMetrics;
+import com.hedera.node.app.service.contract.impl.exec.metrics.OpCodeOpsDurationMetric;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
@@ -16,11 +16,11 @@ import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class EvmOperationMetricsTest {
+class OpCodeOpsDurationMetricTest {
 
     private static final long DEFAULT_NODE_ID = 3;
     private Metrics metrics;
-    private EvmOperationMetrics subject;
+    private OpCodeOpsDurationMetric subject;
 
     @BeforeEach
     void setUp() {
@@ -34,7 +34,7 @@ class EvmOperationMetricsTest {
                 new PlatformMetricsFactoryImpl(metricsConfig),
                 metricsConfig);
 
-        subject = new EvmOperationMetrics(metrics);
+        subject = new OpCodeOpsDurationMetric(metrics);
     }
 
     @Test

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.within;
 import static org.mockito.BDDMockito.given;
 
-import com.hedera.node.app.service.contract.impl.exec.metrics.ContractOperationMetrics;
+import com.hedera.node.app.service.contract.impl.exec.metrics.SystemContractOpsDurationMetric;
 import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethod;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.common.metrics.config.MetricsConfig;
@@ -22,11 +22,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ContractOperationMetricsTest {
+class SystemContractOpsDurationMetricTest {
 
     private static final long DEFAULT_NODE_ID = 3;
     private Metrics metrics;
-    private ContractOperationMetrics subject;
+    private SystemContractOpsDurationMetric subject;
 
     @Mock
     private SystemContractMethod method1;
@@ -46,7 +46,7 @@ class ContractOperationMetricsTest {
                 new PlatformMetricsFactoryImpl(metricsConfig),
                 metricsConfig);
 
-        subject = new ContractOperationMetrics(metrics);
+        subject = new SystemContractOpsDurationMetric(metrics);
     }
 
     @Test
