@@ -220,7 +220,6 @@ public class SyncNode {
         // Lazy initialize this in case the parallel executor changes after construction
         return new ShadowgraphSynchronizer(
                 platformContext,
-                shadowGraph,
                 numNodes,
                 mock(SyncMetrics.class),
                 eventHandler,

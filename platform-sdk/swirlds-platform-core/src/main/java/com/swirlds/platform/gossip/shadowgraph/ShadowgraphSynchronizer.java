@@ -60,7 +60,6 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
      * Constructs a new ShadowgraphSynchronizer.
      *
      * @param platformContext      the platform context
-     * @param shadowGraph          stores events to sync
      * @param numberOfNodes        number of nodes in the network
      * @param syncMetrics          metrics for sync
      * @param receivedEventHandler events that are received are passed here
@@ -70,7 +69,6 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
      */
     public ShadowgraphSynchronizer(
             @NonNull final PlatformContext platformContext,
-            @NonNull final Shadowgraph shadowGraph,
             final int numberOfNodes,
             @NonNull final SyncMetrics syncMetrics,
             @NonNull final Consumer<PlatformEvent> receivedEventHandler,
@@ -80,7 +78,7 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
 
         super(
                 platformContext,
-                shadowGraph,
+                new Shadowgraph(platformContext, numberOfNodes, intakeEventCounter),
                 numberOfNodes,
                 syncMetrics,
                 receivedEventHandler,

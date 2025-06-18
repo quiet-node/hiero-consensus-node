@@ -19,7 +19,6 @@ import com.swirlds.platform.Utilities;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.gossip.shadowgraph.AbstractShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.shadowgraph.GossipRpcShadowgraphSynchronizer;
-import com.swirlds.platform.gossip.shadowgraph.Shadowgraph;
 import com.swirlds.platform.gossip.shadowgraph.ShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.sync.SyncManagerImpl;
 import com.swirlds.platform.metrics.ReconnectMetrics;
@@ -149,13 +148,11 @@ public class SyncGossipModular implements Gossip {
 
         final int rosterSize = peers.size() + 1;
         final SyncMetrics syncMetrics = new SyncMetrics(platformContext.getMetrics(), platformContext.getTime());
-        final Shadowgraph shadowgraph = new Shadowgraph(platformContext, rosterSize, intakeEventCounter);
 
         if (protocolConfig.rpcGossip()) {
 
             final GossipRpcShadowgraphSynchronizer rpcSynchronizer = new GossipRpcShadowgraphSynchronizer(
                     platformContext,
-                    shadowgraph,
                     rosterSize,
                     syncMetrics,
                     event -> receivedEventHandler.accept(event),
@@ -178,7 +175,6 @@ public class SyncGossipModular implements Gossip {
 
             final ShadowgraphSynchronizer shadowgraphSynchronizer = new ShadowgraphSynchronizer(
                     platformContext,
-                    shadowgraph,
                     rosterSize,
                     syncMetrics,
                     event -> receivedEventHandler.accept(event),

@@ -43,7 +43,6 @@ class GossipRpcShadowgraphSynchronizerTest {
     static final int NUM_NODES = 10;
     public static final SyncData EMPTY_SYNC_MESSAGE = new SyncData(EventWindow.getGenesisEventWindow(), List.of());
     private PlatformContext platformContext;
-    private Shadowgraph shadowgraph;
     private SyncMetrics syncMetrics;
     private FallenBehindManagerImpl fallenBehindManager;
     private NodeId selfId;
@@ -76,9 +75,6 @@ class GossipRpcShadowgraphSynchronizerTest {
                 new NoOpRecycleBin(),
                 merkleCryptography);
 
-        this.shadowgraph = new Shadowgraph(platformContext, NUM_NODES, new NoOpIntakeEventCounter());
-        this.shadowgraph.updateEventWindow(EventWindow.getGenesisEventWindow());
-
         this.syncMetrics = mock(SyncMetrics.class);
         this.selfId = NodeId.of(1);
         this.statusSubmitter = mock(StatusActionSubmitter.class);
@@ -90,13 +86,14 @@ class GossipRpcShadowgraphSynchronizerTest {
         when(gossipSender.sendEndOfEvents()).thenReturn(CompletableFuture.completedFuture(null));
         this.synchronizer = new GossipRpcShadowgraphSynchronizer(
                 platformContext,
-                shadowgraph,
                 NUM_NODES,
                 syncMetrics,
                 eventHandler,
                 fallenBehindManager,
                 new NoOpIntakeEventCounter(),
                 selfId);
+
+        this.synchronizer.updateEventWindow(EventWindow.getGenesisEventWindow());
     }
 
     @Test
@@ -160,7 +157,7 @@ class GossipRpcShadowgraphSynchronizerTest {
     void removeFallenBehind() {
         var otherNodeId = NodeId.of(5);
         var conversation = synchronizer.createPeerHandler(gossipSender, otherNodeId);
-        shadowgraph.updateEventWindow(new EventWindow(100, 101, 1000, 800));
+        synchronizer.updateEventWindow(new EventWindow(100, 101, 1000, 800));
         conversation.checkForPeriodicActions(true);
         Mockito.verify(gossipSender).sendSyncData(any());
         conversation.receiveSyncData(EMPTY_SYNC_MESSAGE);
