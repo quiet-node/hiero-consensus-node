@@ -45,12 +45,16 @@ class OpCodeOpsDurationMetricTest {
         final long duration2 = 200L;
 
         // When
-        subject.recordOperationDuration(opcode, duration1);
         subject.recordOperationDuration(opcode, duration2);
+        subject.recordOperationDuration(opcode, duration1);
 
         // Then
         final double average = subject.getAverageOperationDuration(opcode);
+        final long total = subject.getTotalOperationDuration(opcode);
+        final long count = subject.getOperationCount(opcode);
         assertThat(average).isCloseTo(150.0, within(0.5)); // (100 + 200) / 2
+        assertThat(total).isEqualTo(300L); // 100 + 200
+        assertThat(count).isEqualTo(2L); // Two durations recorded
     }
 
     @Test
@@ -60,9 +64,13 @@ class OpCodeOpsDurationMetricTest {
 
         // When
         final double duration = subject.getAverageOperationDuration(nonExistentOpcode);
+        final long total = subject.getTotalOperationDuration(nonExistentOpcode);
+        final long count = subject.getOperationCount(nonExistentOpcode);
 
         // Then
         assertThat(duration).isZero();
+        assertThat(total).isZero();
+        assertThat(count).isZero();
     }
 
     @Test
@@ -79,6 +87,10 @@ class OpCodeOpsDurationMetricTest {
 
         // Then
         assertThat(subject.getAverageOperationDuration(opcode1)).isEqualTo(100.0);
+        assertThat(subject.getOperationCount(opcode1)).isEqualTo(1);
+        assertThat(subject.getTotalOperationDuration(opcode1)).isEqualTo(100L);
         assertThat(subject.getAverageOperationDuration(opcode2)).isEqualTo(200.0);
+        assertThat(subject.getOperationCount(opcode2)).isEqualTo(1);
+        assertThat(subject.getTotalOperationDuration(opcode2)).isEqualTo(200L);
     }
 }

@@ -48,7 +48,8 @@ public class OpCodeOpsDurationMetric {
         final var counterConfig = new Counter.Config(EVM_CATEGORY, "op_" + opcode + "_count")
                 .withDescription("Count of EVM operation " + opcode);
         final var accumulatorConfig = new LongAccumulator.Config(EVM_CATEGORY, "op_" + opcode + "_total_ns")
-                .withDescription("Total duration of EVM operation " + opcode + " in nanoseconds");
+                .withDescription("Total duration of EVM operation " + opcode + " in nanoseconds")
+                .withAccumulator(Long::sum);
         return new OpsDurationMetricTriple(
                 metrics.getOrCreate(averageConfig),
                 metrics.getOrCreate(counterConfig),

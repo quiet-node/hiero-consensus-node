@@ -54,7 +54,8 @@ public class SystemContractOpsDurationMetric {
                 .withDescription("Count of " + methodName + " operations");
 
         final var accumulatorConfig = new LongAccumulator.Config(CONTRACT_CATEGORY, methodName + TOTAL_SUFFIX)
-                .withDescription("Total duration of " + methodName + " operation in nanoseconds");
+                .withDescription("Total duration of " + methodName + " operation in nanoseconds")
+                .withAccumulator(Long::sum);
 
         return new OpsDurationMetricTriple(
                 metrics.getOrCreate(averageConfig),
@@ -85,12 +86,12 @@ public class SystemContractOpsDurationMetric {
     }
 
     /**
-     * Gets the total duration of operations for a specific system contract method.
+     * Gets the total duration for a specific system contract method.
      *
      * @param method the system contract method to get total duration for
      * @return the total duration in nanoseconds
      */
-    public long getOperationTotalDuration(@NonNull final SystemContractMethod method) {
+    public long getSystemContractOpsTotalDuration(@NonNull final SystemContractMethod method) {
         final var metric = operationDurations.get(method);
         return metric != null ? metric.accumulator().get() : 0L;
     }

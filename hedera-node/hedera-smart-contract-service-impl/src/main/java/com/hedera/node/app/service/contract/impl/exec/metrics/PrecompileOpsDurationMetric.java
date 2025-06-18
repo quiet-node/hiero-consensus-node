@@ -49,7 +49,8 @@ public class PrecompileOpsDurationMetric {
         final var counterConfig = new Counter.Config(PRECOMPILE_CATEGORY, "precompile_" + precompileName + "_count");
         final var accumulatorConfig = new LongAccumulator.Config(
                         PRECOMPILE_CATEGORY, "precompile_" + precompileName + "_total_ns")
-                .withDescription("Total duration of precompile " + precompileName + " in nanoseconds");
+                .withDescription("Total duration of precompile " + precompileName + " in nanoseconds")
+                .withAccumulator(Long::sum);
         return new OpsDurationMetricTriple(
                 metrics.getOrCreate(averageConfig),
                 metrics.getOrCreate(counterConfig),

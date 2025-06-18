@@ -27,7 +27,8 @@ public class OpsDurationPerTransactionMetrics {
     private static final LongAccumulator.Config ACCUMULATOR_TOTAL_TXN_DURATION_METRIC_CONFIG =
             new LongAccumulator.Config("transaction", "ops_duration_total_ns")
                     .withDescription("A total ops duration (i.e. a synthetic duration based on "
-                            + "predefined OpCode timing) of EVM transactions in nanoseconds.");
+                            + "predefined OpCode timing) of EVM transactions in nanoseconds.")
+                    .withAccumulator(Long::sum);
 
     private final RunningAverageMetric averageMetric;
     private final Counter counterMetric;

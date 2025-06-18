@@ -50,7 +50,11 @@ class PrecompileOpsDurationMetricTest {
 
         // Then
         final double average = subject.getAveragePrecompileDuration(precompileName);
+        final double count = subject.getPrecompileOpsDurationCount(precompileName);
+        final double total = subject.getPrecompileOpsTotalDuration(precompileName);
         assertThat(average).isCloseTo(150.0, within(0.5)); // (100 + 200) / 2
+        assertThat(count).isEqualTo(2.0); // Two durations recorded
+        assertThat(total).isEqualTo(300.0); // 100 + 200
     }
 
     @Test
@@ -60,9 +64,13 @@ class PrecompileOpsDurationMetricTest {
 
         // When
         final double duration = subject.getAveragePrecompileDuration(nonExistentPrecompile);
+        final double ccount = subject.getPrecompileOpsDurationCount(nonExistentPrecompile);
+        final double total = subject.getPrecompileOpsTotalDuration(nonExistentPrecompile);
 
         // Then
         assertThat(duration).isZero();
+        assertThat(ccount).isZero();
+        assertThat(total).isZero();
     }
 
     @Test
@@ -79,6 +87,10 @@ class PrecompileOpsDurationMetricTest {
 
         // Then
         assertThat(subject.getAveragePrecompileDuration(precompile1)).isEqualTo(100.0);
+        assertThat(subject.getPrecompileOpsDurationCount(precompile1)).isEqualTo(1);
+        assertThat(subject.getPrecompileOpsTotalDuration(precompile1)).isEqualTo(100L);
         assertThat(subject.getAveragePrecompileDuration(precompile2)).isEqualTo(200.0);
+        assertThat(subject.getPrecompileOpsDurationCount(precompile2)).isEqualTo(1);
+        assertThat(subject.getPrecompileOpsTotalDuration(precompile2)).isEqualTo(200L);
     }
 }
