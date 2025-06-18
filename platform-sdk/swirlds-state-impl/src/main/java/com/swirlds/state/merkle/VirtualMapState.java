@@ -78,8 +78,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
 
     private static final Logger logger = LogManager.getLogger(VirtualMapState.class);
 
-    private MerkleCryptography merkleCryptography;
-
     private Time time;
 
     private Metrics metrics;
@@ -142,7 +140,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      *
      * @param virtualMap the virtual map with pre-registered metrics
      */
-    public VirtualMapState(VirtualMap virtualMap) {
+    public VirtualMapState(@NonNull final VirtualMap virtualMap) {
         this.virtualMap = virtualMap;
     }
 
@@ -173,7 +171,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
         this.time = time;
         this.configuration = configuration;
         this.metrics = metrics;
-        this.merkleCryptography = merkleCryptography;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
         this.roundSupplier = roundSupplier;
     }
@@ -243,9 +240,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     @Override
     public void computeHash() {
-        requireNonNull(
-                merkleCryptography,
-                "VirtualMapState has to be initialized before hashing. merkleCryptography is not set.");
         virtualMap.throwIfMutable("Hashing should only be done on immutable states");
         virtualMap.throwIfDestroyed("Hashing should not be done on destroyed states");
 
