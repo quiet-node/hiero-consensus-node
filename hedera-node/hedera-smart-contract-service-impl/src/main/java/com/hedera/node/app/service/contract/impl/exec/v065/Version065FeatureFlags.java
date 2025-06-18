@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.hedera.node.app.service.contract.impl.exec.v063;
+package com.hedera.node.app.service.contract.impl.exec.v065;
 
 import static java.util.Objects.requireNonNull;
 
@@ -11,10 +11,10 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 @Singleton
-public class Version063FeatureFlags extends Version062FeatureFlags {
+public class Version065FeatureFlags extends Version062FeatureFlags {
 
     @Inject
-    public Version063FeatureFlags() {
+    public Version065FeatureFlags() {
         // Dagger2
     }
 
