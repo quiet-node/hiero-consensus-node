@@ -34,7 +34,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -523,14 +522,11 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
      * {@inheritDoc}
      */
     @Override
-    public CompletableFuture<Void> sendEndOfEvents() {
-        final CompletableFuture<Void> future = new CompletableFuture<>();
+    public void sendEndOfEvents() {
         outputQueue.add(out -> {
             out.writeShort(1);
             out.write(EVENTS_FINISHED);
-            future.complete(null);
         });
-        return future;
     }
 
     void sendPingReply(final GossipPing reply) {

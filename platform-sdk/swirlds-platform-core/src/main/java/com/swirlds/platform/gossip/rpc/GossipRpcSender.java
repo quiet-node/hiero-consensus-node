@@ -4,7 +4,6 @@ package com.swirlds.platform.gossip.rpc;
 import com.hedera.hapi.platform.event.GossipEvent;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Stub interface for sending sync and broadcast messages to remote peer
@@ -33,11 +32,8 @@ public interface GossipRpcSender {
     /**
      * Send marker indicating that all events were already provided to the channel
      *
-     * @return future, indicating when the previous messages have been finally processed by the channel output and end
-     * of events message was pushed; it does NOT indicate that remote side has processed everything, as there is no way
-     * of knowing that
      */
-    CompletableFuture<Void> sendEndOfEvents();
+    void sendEndOfEvents();
 
     /**
      * Mark the end of conversation. Used because we are still in the compatibility mode with old protocols, so we need

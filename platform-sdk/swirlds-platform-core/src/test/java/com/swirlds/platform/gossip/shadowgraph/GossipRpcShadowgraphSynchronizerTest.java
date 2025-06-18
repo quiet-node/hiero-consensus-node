@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.common.context.PlatformContext;
@@ -29,7 +28,6 @@ import com.swirlds.platform.system.status.actions.FallenBehindAction;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.consensus.model.hashgraph.EventWindow;
@@ -83,7 +81,6 @@ class GossipRpcShadowgraphSynchronizerTest {
 
         this.eventHandler = mock(Consumer.class);
         this.gossipSender = mock(GossipRpcSender.class);
-        when(gossipSender.sendEndOfEvents()).thenReturn(CompletableFuture.completedFuture(null));
         this.synchronizer = new GossipRpcShadowgraphSynchronizer(
                 platformContext,
                 NUM_NODES,

@@ -216,7 +216,8 @@ public class RpcPeerHandler implements GossipRpcReceiver {
                 selfId, state.eventsTheyHave, state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow());
         sender.sendEvents(sendList.stream().map(PlatformEvent::getGossipEvent).collect(Collectors.toList()));
         outgoingEventsCounter += sendList.size();
-        sender.sendEndOfEvents().thenRun(this::finishedSendingEvents);
+        sender.sendEndOfEvents();
+        finishedSendingEvents();
     }
 
     /**
