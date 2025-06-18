@@ -44,15 +44,9 @@ public class GossipRpcShadowgraphSynchronizer extends AbstractShadowgraphSynchro
     private final Duration syncPeriod;
 
     /**
-     * Configuration for various sync parameters
-     */
-    private final SyncConfig syncConfig;
-
-    /**
      * Constructs a new ShadowgraphSynchronizer.
      *
      * @param platformContext      the platform context
-     * @param shadowGraph          stores events to sync
      * @param numberOfNodes        number of nodes in the network
      * @param syncMetrics          metrics for sync
      * @param receivedEventHandler events that are received are passed here
@@ -62,7 +56,6 @@ public class GossipRpcShadowgraphSynchronizer extends AbstractShadowgraphSynchro
      */
     public GossipRpcShadowgraphSynchronizer(
             @NonNull final PlatformContext platformContext,
-            @NonNull final Shadowgraph shadowGraph,
             final int numberOfNodes,
             @NonNull final SyncMetrics syncMetrics,
             @NonNull final Consumer<PlatformEvent> receivedEventHandler,
@@ -72,13 +65,13 @@ public class GossipRpcShadowgraphSynchronizer extends AbstractShadowgraphSynchro
 
         super(
                 platformContext,
-                shadowGraph,
+                new Shadowgraph(platformContext, numberOfNodes, intakeEventCounter),
                 numberOfNodes,
                 syncMetrics,
                 receivedEventHandler,
                 fallenBehindManager,
                 intakeEventCounter);
-        this.syncConfig = platformContext.getConfiguration().getConfigData(SyncConfig.class);
+        final SyncConfig syncConfig = platformContext.getConfiguration().getConfigData(SyncConfig.class);
 
         this.selfId = selfId;
         this.syncPeriod = syncConfig.syncPeriod();
