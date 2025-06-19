@@ -103,9 +103,9 @@ class OpsDurationMetricsTest {
     @Test
     void throttledTransactionMetricsAreRecordedAndRetrieved() {
         assertThat(subject.getTransactionsThrottledByOpsDurationCount()).isZero();
-        subject.recordTxnThrottledByOpsDuration();
+        subject.recordTransactionsThrottledByOpsDuration();
         assertThat(subject.getTransactionsThrottledByOpsDurationCount()).isEqualTo(1);
-        subject.recordTxnThrottledByOpsDuration();
+        subject.recordTransactionsThrottledByOpsDuration();
         assertThat(subject.getTransactionsThrottledByOpsDurationCount()).isEqualTo(2);
     }
 }

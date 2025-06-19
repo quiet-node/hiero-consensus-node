@@ -182,7 +182,7 @@ public class OpsDurationMetrics {
     /**
      * Records the count of transactions that were throttled due to exceeding the maximum allowed
      */
-    public void recordTxnThrottledByOpsDuration() {
+    public void recordTransactionsThrottledByOpsDuration() {
         transactionThrottledByOpsDurationMetric.increment();
     }
 
