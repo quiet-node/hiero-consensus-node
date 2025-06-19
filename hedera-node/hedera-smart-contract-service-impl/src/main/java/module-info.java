@@ -25,7 +25,6 @@ module com.hedera.node.app.service.contract.impl {
     requires transitive tuweni.bytes;
     requires transitive tuweni.units;
     requires com.swirlds.base;
-    requires com.swirlds.common;
     requires org.hiero.base.crypto;
     requires org.hiero.base.utility;
     requires com.github.benmanes.caffeine;
