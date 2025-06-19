@@ -307,7 +307,6 @@ public class StateLogger {
      *
      * @param virtualMap The map that was iterated
      * @param <K> The type of the key
-     * @param <V> The type of the value
      */
     public static <K> void logMapIterate(
             @NonNull final String label, @NonNull final VirtualMap virtualMap, @NonNull final Codec<K> keyCodec) {
