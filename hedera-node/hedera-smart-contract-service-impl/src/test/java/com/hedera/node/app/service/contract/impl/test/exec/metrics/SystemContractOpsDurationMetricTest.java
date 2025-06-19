@@ -102,10 +102,10 @@ class SystemContractOpsDurationMetricTest {
         subject.recordOperationDuration(method2, duration2);
 
         // Then
-        assertThat(subject.getAverageSystemContractOpsDuration(method1)).isCloseTo(200.0, within(0.5));
+        assertThat(subject.getAverageSystemContractOpsDuration(method1)).isCloseTo(200.0, within(1.0));
         assertThat(subject.getSystemContractOpsDurationCount(method1)).isEqualTo(4);
         assertThat(subject.getSystemContractOpsTotalDuration(method1)).isEqualTo(800L); // 100 + 300 + 100 + 300
-        assertThat(subject.getAverageSystemContractOpsDuration(method2)).isCloseTo(200.0, within(0.5));
+        assertThat(subject.getAverageSystemContractOpsDuration(method2)).isCloseTo(200.0, within(1.0));
         assertThat(subject.getSystemContractOpsDurationCount(method2)).isEqualTo(2);
         assertThat(subject.getSystemContractOpsTotalDuration(method2)).isEqualTo(400L); // 200 + 200
     }

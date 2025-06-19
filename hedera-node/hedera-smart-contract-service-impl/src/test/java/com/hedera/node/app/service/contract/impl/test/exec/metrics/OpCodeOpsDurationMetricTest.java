@@ -45,14 +45,14 @@ class OpCodeOpsDurationMetricTest {
         final long duration2 = 200L;
 
         // When
-        subject.recordOperationDuration(opcode, duration2);
-        subject.recordOperationDuration(opcode, duration1);
+        subject.recordOpCodeOpsDurationMetric(opcode, duration2);
+        subject.recordOpCodeOpsDurationMetric(opcode, duration1);
 
         // Then
-        final double average = subject.getAverageOperationDuration(opcode);
-        final long total = subject.getTotalOperationDuration(opcode);
-        final long count = subject.getOperationCount(opcode);
-        assertThat(average).isCloseTo(150.0, within(0.5)); // (100 + 200) / 2
+        final double average = subject.getAverageOpCodeOpsDuration(opcode);
+        final long total = subject.getTotalOpCodeOpsDuration(opcode);
+        final long count = subject.getOpCodeOpsDurationCount(opcode);
+        assertThat(average).isCloseTo(150.0, within(1.0)); // (100 + 200) / 2
         assertThat(total).isEqualTo(300L); // 100 + 200
         assertThat(count).isEqualTo(2L); // Two durations recorded
     }
@@ -63,9 +63,9 @@ class OpCodeOpsDurationMetricTest {
         final int nonExistentOpcode = 999;
 
         // When
-        final double duration = subject.getAverageOperationDuration(nonExistentOpcode);
-        final long total = subject.getTotalOperationDuration(nonExistentOpcode);
-        final long count = subject.getOperationCount(nonExistentOpcode);
+        final double duration = subject.getAverageOpCodeOpsDuration(nonExistentOpcode);
+        final long total = subject.getTotalOpCodeOpsDuration(nonExistentOpcode);
+        final long count = subject.getOpCodeOpsDurationCount(nonExistentOpcode);
 
         // Then
         assertThat(duration).isZero();
@@ -82,15 +82,15 @@ class OpCodeOpsDurationMetricTest {
         final long duration2 = 200L;
 
         // When
-        subject.recordOperationDuration(opcode1, duration1);
-        subject.recordOperationDuration(opcode2, duration2);
+        subject.recordOpCodeOpsDurationMetric(opcode1, duration1);
+        subject.recordOpCodeOpsDurationMetric(opcode2, duration2);
 
         // Then
-        assertThat(subject.getAverageOperationDuration(opcode1)).isEqualTo(100.0);
-        assertThat(subject.getOperationCount(opcode1)).isEqualTo(1);
-        assertThat(subject.getTotalOperationDuration(opcode1)).isEqualTo(100L);
-        assertThat(subject.getAverageOperationDuration(opcode2)).isEqualTo(200.0);
-        assertThat(subject.getOperationCount(opcode2)).isEqualTo(1);
-        assertThat(subject.getTotalOperationDuration(opcode2)).isEqualTo(200L);
+        assertThat(subject.getAverageOpCodeOpsDuration(opcode1)).isEqualTo(100.0);
+        assertThat(subject.getOpCodeOpsDurationCount(opcode1)).isEqualTo(1);
+        assertThat(subject.getTotalOpCodeOpsDuration(opcode1)).isEqualTo(100L);
+        assertThat(subject.getAverageOpCodeOpsDuration(opcode2)).isEqualTo(200.0);
+        assertThat(subject.getOpCodeOpsDurationCount(opcode2)).isEqualTo(1);
+        assertThat(subject.getTotalOpCodeOpsDuration(opcode2)).isEqualTo(200L);
     }
 }

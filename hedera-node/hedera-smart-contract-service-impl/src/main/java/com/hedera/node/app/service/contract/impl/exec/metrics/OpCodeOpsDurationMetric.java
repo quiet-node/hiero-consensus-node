@@ -22,7 +22,7 @@ import javax.inject.Singleton;
 public class OpCodeOpsDurationMetric {
     private static final String EVM_CATEGORY = "ops";
     private static final String OPERATION_DURATION_SUFFIX = "_duration_ns";
-    private final Map<Integer, OpsDurationMetricTriple> operationDurations = new HashMap<>();
+    private final Map<Integer, OpsDurationMetricTriple> opCodeOpsDuration = new HashMap<>();
     private final Metrics metrics;
 
     public OpCodeOpsDurationMetric(@NonNull final Metrics metrics) {
@@ -35,12 +35,12 @@ public class OpCodeOpsDurationMetric {
      * @param opcode the opcode of the operation
      * @param durationNanos the duration in nanoseconds
      */
-    public void recordOperationDuration(final int opcode, final long durationNanos) {
-        final var metric = operationDurations.computeIfAbsent(opcode, this::createOperationDurationMetric);
+    public void recordOpCodeOpsDurationMetric(final int opcode, final long durationNanos) {
+        final var metric = opCodeOpsDuration.computeIfAbsent(opcode, this::createOpCodeOpsDurationMetric);
         metric.update(durationNanos);
     }
 
-    private OpsDurationMetricTriple createOperationDurationMetric(final int opcode) {
+    private OpsDurationMetricTriple createOpCodeOpsDurationMetric(final int opcode) {
         final var averageConfig = new RunningAverageMetric.Config(
                         EVM_CATEGORY, "op_" + opcode + OPERATION_DURATION_SUFFIX)
                 .withDescription("Average duration of EVM operation " + opcode + " in nanoseconds")
@@ -62,8 +62,8 @@ public class OpCodeOpsDurationMetric {
      * @param opcode the opcode to get duration for
      * @return the average duration in nanoseconds
      */
-    public double getAverageOperationDuration(final int opcode) {
-        final var metric = operationDurations.get(opcode);
+    public double getAverageOpCodeOpsDuration(final int opcode) {
+        final var metric = opCodeOpsDuration.get(opcode);
         return metric != null ? metric.averageMetric().get() : 0.0;
     }
 
@@ -73,8 +73,8 @@ public class OpCodeOpsDurationMetric {
      * @param opcode the opcode to get count for
      * @return the count of operations
      */
-    public long getOperationCount(final int opcode) {
-        final var metric = operationDurations.get(opcode);
+    public long getOpCodeOpsDurationCount(final int opcode) {
+        final var metric = opCodeOpsDuration.get(opcode);
         return metric != null ? metric.counter().get() : 0L;
     }
 
@@ -84,8 +84,8 @@ public class OpCodeOpsDurationMetric {
      * @param opcode the opcode to get total duration for
      * @return the total duration in nanoseconds
      */
-    public long getTotalOperationDuration(final int opcode) {
-        final var metric = operationDurations.get(opcode);
+    public long getTotalOpCodeOpsDuration(final int opcode) {
+        final var metric = opCodeOpsDuration.get(opcode);
         return metric != null ? metric.accumulator().get() : 0L;
     }
 }

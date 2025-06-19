@@ -31,7 +31,7 @@ public class OpsDurationMetrics {
      * @param method the system contract method that was executed
      * @param durationNanos the duration in nanoseconds
      */
-    public void recordSystemContractDuration(@NonNull final SystemContractMethod method, final long durationNanos) {
+    public void recordSystemContractOpsDuration(@NonNull final SystemContractMethod method, final long durationNanos) {
         systemContractOpsDurationMetric.recordOperationDuration(method, durationNanos);
     }
 
@@ -41,8 +41,28 @@ public class OpsDurationMetrics {
      * @param method the system contract method to get duration for
      * @return the average duration in nanoseconds
      */
-    public double getAverageSystemContractDuration(@NonNull final SystemContractMethod method) {
+    public double getAverageSystemContractOpsDuration(@NonNull final SystemContractMethod method) {
         return systemContractOpsDurationMetric.getAverageSystemContractOpsDuration(method);
+    }
+
+    /**
+     * Gets the current count for a specific system contract operation
+     *
+     * @param method the system contract method to get count for
+     * @return the count of operations executed
+     */
+    public long getSystemContractOpsDurationCount(@NonNull final SystemContractMethod method) {
+        return systemContractOpsDurationMetric.getSystemContractOpsDurationCount(method);
+    }
+
+    /**
+     * Gets the total duration for a specific system contract operation
+     *
+     * @param method the system contract method to get total duration for
+     * @return the total duration in nanoseconds
+     */
+    public long getTotalSystemContractOpsDuration(@NonNull final SystemContractMethod method) {
+        return systemContractOpsDurationMetric.getSystemContractOpsTotalDuration(method);
     }
 
     /**
@@ -52,26 +72,45 @@ public class OpsDurationMetrics {
      * @param durationNanos the duration in nanoseconds
      */
     public void recordOpCodeOpsDuration(@NonNull final int opCode, final long durationNanos) {
-        opCodeOpsDurationMetric.recordOperationDuration(opCode, durationNanos);
+        opCodeOpsDurationMetric.recordOpCodeOpsDurationMetric(opCode, durationNanos);
     }
 
     /**
-     * Gets the current average duration for a specific operation
+     * Gets the current average duration for a specific op code
      *
      * @param opCode the EVM op code to get duration for
      * @return the average duration in nanoseconds
      */
-    public double getAverageEVMOperationDuration(@NonNull final int opCode) {
-        return opCodeOpsDurationMetric.getAverageOperationDuration(opCode);
+    public double getAverageOpCodeOpsDuration(@NonNull final int opCode) {
+        return opCodeOpsDurationMetric.getAverageOpCodeOpsDuration(opCode);
     }
 
     /**
-     * Records the duration of an EVM operation in nanoseconds
+     * Gets the total count of operations for a specific EVM op code
+     *
+     * @param opCode the EVM op code to get count for
+     * @return the count of operations executed
+     */
+    public long getOpCodeOpsDurationCount(@NonNull final int opCode) {
+        return opCodeOpsDurationMetric.getOpCodeOpsDurationCount(opCode);
+    }
+
+    /**
+     * Gets the total duration for a specific EVM op code
+     * @param opCode the EVM op code to get total duration for
+     * @return the total duration in nanoseconds
+     */
+    public long getTotalOpCodeOpsDuration(@NonNull final int opCode) {
+        return opCodeOpsDurationMetric.getTotalOpCodeOpsDuration(opCode);
+    }
+
+    /**
+     * Records the duration of an EVM precompile in nanoseconds
      *
      * @param precompile the precompile op that was executed
      * @param durationNanos the duration in nanoseconds
      */
-    public void recordPrecompileDuration(@NonNull final String precompile, final long durationNanos) {
+    public void recordPrecompileOpsDuration(@NonNull final String precompile, final long durationNanos) {
         precompileOpsDurationMetric.recordPrecompileDuration(precompile, durationNanos);
     }
 
@@ -81,8 +120,28 @@ public class OpsDurationMetrics {
      * @param precompile the precompile op to get duration for
      * @return the average duration in nanoseconds
      */
-    public double getAveragePrecompileDuration(@NonNull final String precompile) {
+    public double getAveragePrecompileOpsDuration(@NonNull final String precompile) {
         return precompileOpsDurationMetric.getAveragePrecompileDuration(precompile);
+    }
+
+    /**
+     * Gets the total count of operations for a specific precompile
+     *
+     * @param precompile the precompile op to get count for
+     * @return the count of operations executed
+     */
+    public long getPrecompileOpsDurationCount(@NonNull final String precompile) {
+        return precompileOpsDurationMetric.getPrecompileOpsDurationCount(precompile);
+    }
+
+    /**
+     * Gets the total duration for a specific precompile
+     *
+     * @param precompile the precompile op to get total duration for
+     * @return the total duration in nanoseconds
+     */
+    public long getTotalPrecompileOpsDuration(@NonNull final String precompile) {
+        return precompileOpsDurationMetric.getPrecompileOpsTotalDuration(precompile);
     }
 
     /**
@@ -94,9 +153,45 @@ public class OpsDurationMetrics {
     }
 
     /**
+     * Get the average duration of operations per transaction
+     *
+     * @return the average duration in nanoseconds
+     */
+    public double getAverageTransactionOpsDuration() {
+        return opsDurationPerTransactionMetrics.getAverage();
+    }
+
+    /**
+     * Get the total count of transactions recorded
+     *
+     * @return the count of transactions
+     */
+    public long getTransactionOpsDurationCount() {
+        return opsDurationPerTransactionMetrics.getCount();
+    }
+
+    /**
+     * Get the total duration of operations across all transactions
+     *
+     * @return the total duration in nanoseconds
+     */
+    public long getTotalTransactionOpsDuration() {
+        return opsDurationPerTransactionMetrics.getTotalOpsDuration();
+    }
+
+    /**
      * Records the count of transactions that were throttled due to exceeding the maximum allowed
      */
     public void recordTxnThrottledByOpsDuration() {
         transactionThrottledByOpsDurationMetric.increment();
+    }
+
+    /**
+     * Gets the count of transactions that were throttled due to exceeding the maximum allowed
+     *
+     * @return the count of throttled transactions
+     */
+    public long getTransactionsThrottledByOpsDurationCount() {
+        return transactionThrottledByOpsDurationMetric.getCount();
     }
 }

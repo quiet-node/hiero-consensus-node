@@ -226,7 +226,7 @@ public class CustomMessageCallProcessor extends MessageCallProcessor {
             frame.decrementRemainingGas(gasRequirement);
             final var duration = gasRequirement * hederaOpsDuration.precompileDurationMultiplier() / MULTIPLIER_FACTOR;
             incrementOpsDuration(frame, duration);
-            opsDurationMetrics.recordPrecompileDuration(precompile.getName(), duration);
+            opsDurationMetrics.recordPrecompileOpsDuration(precompile.getName(), duration);
             result = precompile.computePrecompile(frame.getInputData(), frame);
             if (result.isRefundGas()) {
                 frame.incrementRemainingGas(gasRequirement);

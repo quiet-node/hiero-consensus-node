@@ -190,7 +190,7 @@ public abstract class AbstractNativeSystemContract extends AbstractFullContract 
     private void reportToMetrics(@NonNull final Call call, @NonNull final FullResult fullResult) {
         contractMetrics.incrementSystemMethodCall(
                 call.getSystemContractMethod(), fullResult.result().getState());
-        opsDurationMetrics.recordSystemContractDuration(
+        opsDurationMetrics.recordSystemContractOpsDuration(
                 call.getSystemContractMethod(),
                 Math.round(fullResult.gasRequirement() * duration.systemContractDurationMultiplier()));
     }
