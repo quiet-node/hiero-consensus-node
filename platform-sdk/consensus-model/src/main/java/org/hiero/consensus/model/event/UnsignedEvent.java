@@ -65,7 +65,7 @@ public class UnsignedEvent implements Hashable {
                 creatorId.id(),
                 birthRound,
                 HapiUtils.asTimestamp(timeCreated),
-                SemanticVersion.newBuilder().build());
+                null);
     }
 
     /**
