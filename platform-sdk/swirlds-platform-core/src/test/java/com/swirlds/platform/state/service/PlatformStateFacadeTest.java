@@ -18,8 +18,8 @@ import com.hedera.hapi.platform.state.PlatformState;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateModifier;
+import com.swirlds.platform.test.fixtures.state.HederaVirtualMapStateTest;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
-import com.swirlds.platform.test.fixtures.state.TestVirtualMapMerkleNodeState;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.State;
 import com.swirlds.state.spi.EmptyReadableStates;
@@ -41,11 +41,11 @@ class PlatformStateFacadeTest {
     void beforeEach() {
         final String virtualMapLabelForState =
                 "vm-state-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        state = TestVirtualMapMerkleNodeState.createInstanceWithVirtualMapLabel(virtualMapLabelForState);
+        state = HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabelForState);
         TestingAppStateInitializer.DEFAULT.initPlatformState(state);
         final String virtualMapLabelForEmptyState =
                 "vm-state-empty-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        emptyState = TestVirtualMapMerkleNodeState.createInstanceWithVirtualMapLabel(virtualMapLabelForEmptyState);
+        emptyState = HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabelForEmptyState);
         platformStateFacade = new TestPlatformStateFacade();
         platformStateModifier = randomPlatformState(state, platformStateFacade);
     }
@@ -109,8 +109,8 @@ class PlatformStateFacadeTest {
     void testPlatformStateOf_noPlatformState() {
         final var virtualMapLabel =
                 "vm-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        final TestVirtualMapMerkleNodeState noPlatformState =
-                TestVirtualMapMerkleNodeState.createInstanceWithVirtualMapLabel(virtualMapLabel);
+        final HederaVirtualMapStateTest noPlatformState =
+                HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabel);
         noPlatformState.getReadableStates(PlatformStateService.NAME);
         assertSame(UNINITIALIZED_PLATFORM_STATE, platformStateFacade.platformStateOf(noPlatformState));
         noPlatformState.release();
@@ -203,8 +203,8 @@ class PlatformStateFacadeTest {
     void testSetSnapshotTo() {
         final String virtualMapLabel =
                 "vm-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        TestVirtualMapMerkleNodeState randomState =
-                TestVirtualMapMerkleNodeState.createInstanceWithVirtualMapLabel(virtualMapLabel);
+        HederaVirtualMapStateTest randomState =
+                HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabel);
         TestingAppStateInitializer.DEFAULT.initPlatformState(randomState);
         PlatformStateModifier randomPlatformState = randomPlatformState(randomState, platformStateFacade);
         final var newSnapshot = randomPlatformState.getSnapshot();

@@ -9,6 +9,7 @@ import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.SINGLETO
 import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.TOKENSERVICE__ALIASES;
 import static com.swirlds.state.lifecycle.StateMetadata.computeClassId;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForKv;
+import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForSingleton;
 import static com.swirlds.virtualmap.constructable.ConstructableUtils.registerVirtualMapConstructables;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -389,7 +390,7 @@ public class MerkleTestBase extends StateTestBase {
     }
 
     /** A convenience method for adding a k/v pair to a merkle map */
-    protected void add(
+    protected void addKvState(
             MerkleMap<InMemoryKey<ProtoBytes>, InMemoryValue<ProtoBytes, String>> map,
             long inMemoryValueClassId,
             Codec<ProtoBytes> keyCodec,
@@ -400,8 +401,14 @@ public class MerkleTestBase extends StateTestBase {
         map.put(k, new InMemoryValue<>(inMemoryValueClassId, keyCodec, valueCodec, k, value));
     }
 
-    /** A convenience method for adding a k/v pair to a virtual map */
-    protected void add(
+    /** A convenience method for adding a singleton state to a virtual map */
+    protected void addSingletonState(
+            VirtualMap map, String serviceName, String stateKey, Codec<String> valueCodec, String value) {
+        map.put(getVirtualMapKeyForSingleton(serviceName, stateKey), value, valueCodec);
+    }
+
+    /** A convenience method for adding a k/v state to a virtual map */
+    protected void addKvState(
             VirtualMap map,
             String serviceName,
             String stateKey,

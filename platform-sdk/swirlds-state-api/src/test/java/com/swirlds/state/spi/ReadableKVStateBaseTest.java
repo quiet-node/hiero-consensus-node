@@ -45,6 +45,13 @@ public class ReadableKVStateBaseTest extends StateTestBase {
         return new MapReadableKVState<>(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, backingMap);
     }
 
+    /** Make sure the constructor is holding onto the service name properly */
+    @Test
+    @DisplayName("The service name must match what was provided in the constructor")
+    void testServiceName() {
+        assertThat(state.getServiceName()).isEqualTo(FRUIT_SERVICE_NAME);
+    }
+
     /** Make sure the constructor is holding onto the state key properly */
     @Test
     @DisplayName("The state key must match what was provided in the constructor")

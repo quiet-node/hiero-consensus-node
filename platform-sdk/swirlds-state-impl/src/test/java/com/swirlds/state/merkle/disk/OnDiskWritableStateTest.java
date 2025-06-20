@@ -85,7 +85,7 @@ class OnDiskWritableStateTest extends MerkleTestBase {
     }
 
     private void add(String serviceName, String stateKey, ProtoBytes key, String value) {
-        add(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, key, value);
+        addKvState(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, key, value);
     }
 
     @Nested

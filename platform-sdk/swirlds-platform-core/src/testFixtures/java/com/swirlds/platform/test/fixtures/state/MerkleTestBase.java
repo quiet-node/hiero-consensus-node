@@ -46,8 +46,8 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
     protected StateMetadata<ProtoBytes, String> fruitVirtualMetadata;
     protected StateMetadata<ProtoBytes, String> animalMetadata;
     protected StateMetadata<ProtoBytes, String> spaceMetadata;
-    protected StateMetadata<String, String> steamMetadata;
-    protected StateMetadata<String, String> countryMetadata;
+    protected StateMetadata<ProtoBytes, String> steamMetadata;
+    protected StateMetadata<ProtoBytes, String> countryMetadata;
 
     /** Sets up the "Fruit" merkle map, label, and metadata. */
     @Override
@@ -123,19 +123,29 @@ public class MerkleTestBase extends com.swirlds.state.test.fixtures.merkle.Merkl
         return null;
     }
 
-    /** A convenience method for adding a k/v pair to a merkle map */
-    protected void add(
+    /** A convenience method for adding a k/v state to a merkle map */
+    protected void addKvState(
             MerkleMap<InMemoryKey<ProtoBytes>, InMemoryValue<ProtoBytes, String>> map,
             StateMetadata<ProtoBytes, String> md,
             ProtoBytes key,
             String value) {
         final var def = md.stateDefinition();
-        super.add(map, md.inMemoryValueClassId(), def.keyCodec(), def.valueCodec(), key, value);
+        super.addKvState(map, md.inMemoryValueClassId(), def.keyCodec(), def.valueCodec(), key, value);
     }
 
-    /** A convenience method for adding a k/v pair to a virtual map */
-    protected void add(VirtualMap map, StateMetadata<ProtoBytes, String> md, ProtoBytes key, String value) {
-        super.add(
+    /** A convenience method for adding a singleton state to a virtual map */
+    protected void addSingletonState(VirtualMap map, StateMetadata<ProtoBytes, String> md, String value) {
+        super.addSingletonState(
+                map,
+                md.serviceName(),
+                md.stateDefinition().stateKey(),
+                md.stateDefinition().valueCodec(),
+                value);
+    }
+
+    /** A convenience method for adding a k/v state to a virtual map */
+    protected void addKvState(VirtualMap map, StateMetadata<ProtoBytes, String> md, ProtoBytes key, String value) {
+        super.addKvState(
                 map,
                 md.serviceName(),
                 md.stateDefinition().stateKey(),

@@ -157,7 +157,7 @@ public class RandomSignedStateGenerator {
             } else {
                 final String virtualMapLabel =
                         "vm-" + RandomSignedStateGenerator.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-                stateInstance = TestVirtualMapMerkleNodeState.createInstanceWithVirtualMapLabel(virtualMapLabel);
+                stateInstance = HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabel);
             }
             stateInstance.init(
                     Time.getCurrent(),

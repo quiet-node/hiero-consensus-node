@@ -84,7 +84,8 @@ class InMemoryWritableStateTest extends MerkleTestBase {
     }
 
     private void add(ProtoBytes key, String value) {
-        add(fruitMerkleMap, inMemoryValueClassId(FRUIT_STATE_KEY), ProtoBytes.PROTOBUF, STRING_CODEC, key, value);
+        addKvState(
+                fruitMerkleMap, inMemoryValueClassId(FRUIT_STATE_KEY), ProtoBytes.PROTOBUF, STRING_CODEC, key, value);
     }
 
     @Nested

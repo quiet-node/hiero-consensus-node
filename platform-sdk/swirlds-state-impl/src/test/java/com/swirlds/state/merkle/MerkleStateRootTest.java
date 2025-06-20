@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package com.swirlds.platform.state;
+package com.swirlds.state.merkle;
 
 import static com.swirlds.platform.state.PlatformStateAccessor.GENESIS_ROUND;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
@@ -225,7 +225,7 @@ class MerkleStateRootTest extends MerkleTestBase {
         }
 
         @Test
-        @DisplayName("Adding the same service node twice with two different metadata replaces the" + " metadata")
+        @DisplayName("Adding the same service node twice with two different metadata replaces the metadata")
         void addingServiceTwiceWithDifferentMetadata() {
             // Given an empty merkle tree, when I add the same node twice but with different
             // metadata,
@@ -368,11 +368,11 @@ class MerkleStateRootTest extends MerkleTestBase {
             setupSingletonCountry();
             setupSteamQueue();
 
-            add(fruitMerkleMap, fruitMetadata, A_KEY, APPLE);
-            add(fruitMerkleMap, fruitMetadata, B_KEY, BANANA);
-            add(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
-            add(animalMerkleMap, animalMetadata, D_KEY, DOG);
-            add(animalMerkleMap, animalMetadata, F_KEY, FOX);
+            addKvState(fruitMerkleMap, fruitMetadata, A_KEY, APPLE);
+            addKvState(fruitMerkleMap, fruitMetadata, B_KEY, BANANA);
+            addKvState(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
+            addKvState(animalMerkleMap, animalMetadata, D_KEY, DOG);
+            addKvState(animalMerkleMap, animalMetadata, F_KEY, FOX);
             countrySingleton.setValue(GHANA);
             steamQueue.add(ART);
         }
@@ -570,11 +570,11 @@ class MerkleStateRootTest extends MerkleTestBase {
             setupSingletonCountry();
             setupSteamQueue();
 
-            add(fruitMerkleMap, fruitMetadata, A_KEY, APPLE);
-            add(fruitMerkleMap, fruitMetadata, B_KEY, BANANA);
-            add(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
-            add(animalMerkleMap, animalMetadata, D_KEY, DOG);
-            add(animalMerkleMap, animalMetadata, F_KEY, FOX);
+            addKvState(fruitMerkleMap, fruitMetadata, A_KEY, APPLE);
+            addKvState(fruitMerkleMap, fruitMetadata, B_KEY, BANANA);
+            addKvState(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
+            addKvState(animalMerkleMap, animalMetadata, D_KEY, DOG);
+            addKvState(animalMerkleMap, animalMetadata, F_KEY, FOX);
             countrySingleton.setValue(FRANCE);
             steamQueue.add(ART);
         }
@@ -777,8 +777,8 @@ class MerkleStateRootTest extends MerkleTestBase {
             setupSingletonCountry();
             setupSteamQueue();
 
-            add(fruitVirtualMap, fruitVirtualMetadata, C_KEY, CHERRY);
-            add(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
+            addKvState(fruitVirtualMap, fruitVirtualMetadata, C_KEY, CHERRY);
+            addKvState(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
             countrySingleton.setValue(FRANCE);
             steamQueue.add(ART);
         }
@@ -868,11 +868,11 @@ class MerkleStateRootTest extends MerkleTestBase {
             setupSteamQueue();
             setupFruitMerkleMap();
 
-            add(fruitMerkleMap, fruitMetadata, A_KEY, APPLE);
-            add(fruitMerkleMap, fruitMetadata, B_KEY, BANANA);
-            add(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
-            add(animalMerkleMap, animalMetadata, D_KEY, DOG);
-            add(animalMerkleMap, animalMetadata, F_KEY, FOX);
+            addKvState(fruitMerkleMap, fruitMetadata, A_KEY, APPLE);
+            addKvState(fruitMerkleMap, fruitMetadata, B_KEY, BANANA);
+            addKvState(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
+            addKvState(animalMerkleMap, animalMetadata, D_KEY, DOG);
+            addKvState(animalMerkleMap, animalMetadata, F_KEY, FOX);
             countrySingleton.setValue(GHANA);
             steamQueue.add(ART);
 
