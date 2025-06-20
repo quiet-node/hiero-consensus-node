@@ -21,8 +21,8 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
-import com.swirlds.platform.test.fixtures.state.HederaVirtualMapStateTest;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.node.NodeId;
@@ -145,7 +145,7 @@ class SwirldsStateManagerTests {
     private static MerkleNodeState newState(PlatformStateFacade platformStateFacade) {
         final String virtualMapLabel =
                 SwirldsStateManagerTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        final MerkleNodeState state = HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabel);
+        final MerkleNodeState state = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel);
         TestingAppStateInitializer.DEFAULT.initPlatformState(state);
 
         platformStateFacade.setCreationSoftwareVersionTo(

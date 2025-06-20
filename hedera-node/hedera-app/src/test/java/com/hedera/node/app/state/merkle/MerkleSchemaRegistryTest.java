@@ -18,8 +18,8 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.test.fixtures.state.HederaVirtualMapStateTest;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
+import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
@@ -187,7 +187,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
             SemanticVersion latestVersion = version(10, 0, 0);
             schemaRegistry.migrate(
-                    new HederaVirtualMapStateTest(virtualMap),
+                    new TestHederaVirtualMapState(virtualMap),
                     version(9, 0, 0),
                     latestVersion,
                     config,
@@ -216,7 +216,7 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             }
             final var virtualMapLabel =
                     "vm-" + MerkleSchemaRegistryTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-            merkleTree = HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabel);
+            merkleTree = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel);
         }
 
         @AfterEach

@@ -22,9 +22,9 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.test.fixtures.state.HederaVirtualMapStateTest;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.MigrationContext;
 import com.swirlds.state.lifecycle.Schema;
@@ -186,7 +186,7 @@ class SerializationTest extends MerkleTestBase {
             serializedBytes = writeTree(originalTree.getRoot(), dir);
         }
 
-        final HederaVirtualMapStateTest loadedTree = loadedMerkleTree(schemaV1, serializedBytes);
+        final TestHederaVirtualMapState loadedTree = loadedMerkleTree(schemaV1, serializedBytes);
 
         assertTree(loadedTree);
         try {
@@ -255,7 +255,7 @@ class SerializationTest extends MerkleTestBase {
         CRYPTO.digestTreeSync(copy.getRoot());
         final byte[] serializedBytes = writeTree(copy.getRoot(), dir);
 
-        HederaVirtualMapStateTest loadedTree = loadedMerkleTree(schemaV1, serializedBytes);
+        TestHederaVirtualMapState loadedTree = loadedMerkleTree(schemaV1, serializedBytes);
         ((OnDiskReadableKVState) originalTree.getReadableStates(FIRST_SERVICE).get(ANIMAL_STATE_KEY)).reset();
         populateVmCache(loadedTree);
 
@@ -267,7 +267,7 @@ class SerializationTest extends MerkleTestBase {
         final byte[] serializedBytesWithCache = writeTree(loadedTree.getRoot(), dir);
 
         // let's load it again and see if it works
-        HederaVirtualMapStateTest loadedTreeWithCache = loadedMerkleTree(schemaV1, serializedBytesWithCache);
+        TestHederaVirtualMapState loadedTreeWithCache = loadedMerkleTree(schemaV1, serializedBytesWithCache);
         ((OnDiskReadableKVState)
                         loadedTreeWithCache.getReadableStates(FIRST_SERVICE).get(ANIMAL_STATE_KEY))
                 .reset();
@@ -283,9 +283,9 @@ class SerializationTest extends MerkleTestBase {
         copy.release();
     }
 
-    private HederaVirtualMapStateTest loadedMerkleTree(Schema schemaV1, byte[] serializedBytes) throws IOException {
+    private TestHederaVirtualMapState loadedMerkleTree(Schema schemaV1, byte[] serializedBytes) throws IOException {
         final VirtualMap virtualMap = parseTree(serializedBytes, dir);
-        final HederaVirtualMapStateTest loadedTree = new HederaVirtualMapStateTest(virtualMap);
+        final TestHederaVirtualMapState loadedTree = new TestHederaVirtualMapState(virtualMap);
         initServices(schemaV1, loadedTree);
 
         return loadedTree;

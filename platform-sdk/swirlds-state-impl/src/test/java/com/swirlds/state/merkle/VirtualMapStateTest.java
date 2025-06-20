@@ -25,8 +25,8 @@ import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.PlatformStateAccessor;
-import com.swirlds.platform.test.fixtures.state.HederaVirtualMapStateTest;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
+import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StateDefinition;
 import com.swirlds.state.lifecycle.StateMetadata;
@@ -55,7 +55,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class VirtualMapStateTest extends MerkleTestBase {
 
-    private HederaVirtualMapStateTest virtualMapState;
+    private TestHederaVirtualMapState virtualMapState;
 
     /**
      * Start with an empty Virtual Map State, but with the "fruit" map and metadata created and ready to
@@ -64,7 +64,7 @@ public class VirtualMapStateTest extends MerkleTestBase {
     @BeforeEach
     void setUp() {
         setupFruitMerkleMap();
-        virtualMapState = new HederaVirtualMapStateTest(CONFIGURATION, new NoOpMetrics());
+        virtualMapState = new TestHederaVirtualMapState(CONFIGURATION, new NoOpMetrics());
         virtualMapState.init(
                 new FakeTime(),
                 CONFIGURATION,

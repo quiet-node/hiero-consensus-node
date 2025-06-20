@@ -12,7 +12,7 @@ import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.crypto.CryptoStatic;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.test.fixtures.state.HederaVirtualMapStateTest;
+import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
 import java.util.Random;
 import org.hiero.base.utility.test.fixtures.tags.TestComponentTags;
 import org.junit.jupiter.api.AfterEach;
@@ -66,7 +66,7 @@ class StateTest {
     private static SignedState randomSignedState(boolean isSupposedToBeHashed) {
         Random random = new Random(0);
         final String virtualMapLabel = "vm-" + StateTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        MerkleNodeState merkleStateRoot = HederaVirtualMapStateTest.createInstanceWithVirtualMapLabel(virtualMapLabel);
+        MerkleNodeState merkleStateRoot = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel);
         boolean shouldSaveToDisk = random.nextBoolean();
         SignedState signedState = new SignedState(
                 TestPlatformContextBuilder.create().build().getConfiguration(),
