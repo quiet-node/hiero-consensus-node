@@ -40,7 +40,6 @@ public interface MerkleNodeState extends State {
      * which were specifically used with {@code MerkleStateRoot}. This method will be utilized instead with {@code NewStateRoot}.
      *
      * @param md The metadata associated with the state.
-     * @throws IllegalArgumentException if md doesn't have a label, or if the label isn't right.
      */
     default void initializeState(@NonNull final StateMetadata<?, ?> md) {
         throw new UnsupportedOperationException();

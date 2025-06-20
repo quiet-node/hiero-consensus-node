@@ -12,6 +12,7 @@ import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Iterator;
+import java.util.Objects;
 
 /**
  * An implementation of {@link ReadableQueueState} backed by a {@link VirtualMap}, resulting in a state
@@ -45,6 +46,7 @@ public class OnDiskReadableQueueState<E> extends ReadableQueueStateBase<E> {
     @Override
     protected E peekOnDataSource() {
         final QueueState state = onDiskQueueHelper.getState();
+        Objects.requireNonNull(state);
         final E value = state.isEmpty() ? null : onDiskQueueHelper.getFromStore(state.getHead());
         // Log to transaction state log, what was peeked
         logQueuePeek(computeLabel(serviceName, stateKey), value);

@@ -300,7 +300,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      * Initializes the defined service state.
      *
      * @param md The metadata associated with the state.
-     * @throws IllegalArgumentException if md doesn't have a label, or if the label isn't right.
      */
     public void initializeState(@NonNull final StateMetadata<?, ?> md) {
         // Validate the inputs
