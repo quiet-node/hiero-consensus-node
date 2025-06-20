@@ -11,6 +11,7 @@ import static com.swirlds.state.merkle.StateUtils.createVirtualMapKeyBytesForKV;
 import static com.swirlds.state.merkle.StateUtils.decomposeLabel;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForQueue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForSingleton;
+import static com.swirlds.state.merkle.VirtualMapState.LABEL;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -993,9 +994,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     // from VirtualMapConfig.size instead
                     merkleDbConfig.maxNumOfKeys(),
                     merkleDbConfig.hashesRamToDiskThreshold());
-            final var virtualMapLabel = "VirtualMap"; // TODO: discuss how it should be renamed
             final var dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
-            final var virtualMap = new VirtualMap(virtualMapLabel, dsBuilder, configuration);
+            final var virtualMap = new VirtualMap(LABEL, dsBuilder, configuration);
 
             // Initialize migration metrics
 
