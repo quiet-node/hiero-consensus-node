@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl;
 
-import static com.hedera.hapi.util.HapiUtils.asTimestamp;
 import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.output.SingletonUpdateChange;
 import com.hedera.hapi.block.stream.output.StateChange;
-import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.state.blockrecords.RunningHashes;
@@ -42,8 +39,6 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.merkle.StateUtils;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.Nullable;
-import java.time.Instant;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -68,12 +63,6 @@ public class BoundaryStateChangeListener implements StateChangeListener {
 
     @NonNull
     private final Supplier<Configuration> configurationSupplier;
-
-    @Nullable
-    private Instant lastConsensusTime;
-
-    @Nullable
-    private Timestamp boundaryTimestamp;
 
     private long nodeFeesCollected;
 
@@ -112,46 +101,10 @@ public class BoundaryStateChangeListener implements StateChangeListener {
     }
 
     /**
-     * Returns the boundary timestamp.
-     *
-     * @return the boundary timestamp
-     */
-    public @NonNull Timestamp boundaryTimestampOrThrow() {
-        return requireNonNull(boundaryTimestamp);
-    }
-
-    /**
-     * Returns the last consensus time used for a transaction.
-     */
-    public @NonNull Instant lastConsensusTimeOrThrow() {
-        return requireNonNull(lastConsensusTime);
-    }
-
-    /**
-     * Returns the last consensus time used for a transaction.
-     */
-    public @Nullable Instant lastConsensusTime() {
-        return lastConsensusTime;
-    }
-
-    /**
      * Resets the state of the listener.
      */
     public void reset() {
-        boundaryTimestamp = null;
-        lastConsensusTime = null;
         singletonUpdates.clear();
-    }
-
-    /**
-     * Returns a {@link BlockItem} containing all the state changes that have been accumulated.
-     * @return the block item
-     */
-    public BlockItem flushChanges() {
-        requireNonNull(boundaryTimestamp);
-        final var stateChanges = new StateChanges(boundaryTimestamp, allStateChanges());
-        singletonUpdates.clear();
-        return BlockItem.newBuilder().stateChanges(stateChanges).build();
     }
 
     /**
@@ -164,15 +117,6 @@ public class BoundaryStateChangeListener implements StateChangeListener {
             allStateChanges.add(entry.getValue());
         }
         return allStateChanges;
-    }
-
-    /**
-     * Sets the last used consensus time in the round.
-     * @param lastUsedConsensusTime the last used consensus time
-     */
-    public void setBoundaryTimestamp(@NonNull final Instant lastUsedConsensusTime) {
-        this.lastConsensusTime = requireNonNull(lastUsedConsensusTime);
-        boundaryTimestamp = asTimestamp(lastUsedConsensusTime.plusNanos(1));
     }
 
     @Override

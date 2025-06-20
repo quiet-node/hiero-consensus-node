@@ -573,7 +573,14 @@ public class StateChangesValidator implements BlockStreamValidator {
     }
 
     private void applyStateChanges(@NonNull final StateChanges stateChanges) {
-        for (final var stateChange : stateChanges.stateChanges()) {
+        String lastService = null;
+        CommittableWritableStates lastWritableStates = null;
+
+        final int n = stateChanges.stateChanges().size();
+
+        for (int i = 0; i < n; i++) {
+            final var stateChange = stateChanges.stateChanges().get(i);
+
             final var stateName = stateNameOf(stateChange.stateId(), shard, realm);
             final var delimIndex = stateName.indexOf('.');
             if (delimIndex == -1) {
@@ -637,6 +644,14 @@ public class StateChangesValidator implements BlockStreamValidator {
                     stateChangesSummary.countQueuePop(serviceName, stateKey);
                 }
             }
+            if ((lastService != null && !lastService.equals(serviceName))) {
+                lastWritableStates.commit();
+            }
+            if (i == n - 1) {
+                ((CommittableWritableStates) writableStates).commit();
+            }
+            lastService = serviceName;
+            lastWritableStates = (CommittableWritableStates) writableStates;
         }
     }
 

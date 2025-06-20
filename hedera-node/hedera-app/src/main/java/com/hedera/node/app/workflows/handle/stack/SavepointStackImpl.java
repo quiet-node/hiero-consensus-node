@@ -619,7 +619,6 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
         }
         BlockRecordSource blockRecordSource = null;
         if (streamMode != RECORDS) {
-            requireNonNull(boundaryStateChangeListener).setBoundaryTimestamp(lastAssignedConsenusTime);
             blockRecordSource = new BlockRecordSource(outputs);
         }
         final var recordSource = streamMode != BLOCKS ? new LegacyListRecordSource(records, receipts) : null;
