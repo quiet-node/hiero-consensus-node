@@ -24,7 +24,7 @@ import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
-import com.hedera.node.app.blocks.impl.KVStateChangeListener;
+import com.hedera.node.app.blocks.impl.ImmediateStateChangeListener;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.fees.FeeAccumulator;
 import com.hedera.node.app.fees.FeeManager;
@@ -90,7 +90,7 @@ public class ParentTxnFactory {
     private static final Logger log = LogManager.getLogger(ParentTxnFactory.class);
 
     private final ConfigProvider configProvider;
-    private final KVStateChangeListener kvStateChangeListener;
+    private final ImmediateStateChangeListener immediateStateChangeListener;
     private final BoundaryStateChangeListener boundaryStateChangeListener;
     private final PreHandleWorkflow preHandleWorkflow;
     private final Authorizer authorizer;
@@ -111,7 +111,7 @@ public class ParentTxnFactory {
     @Inject
     public ParentTxnFactory(
             @NonNull final ConfigProvider configProvider,
-            @NonNull final KVStateChangeListener kvStateChangeListener,
+            @NonNull final ImmediateStateChangeListener immediateStateChangeListener,
             @NonNull final BoundaryStateChangeListener boundaryStateChangeListener,
             @NonNull final PreHandleWorkflow preHandleWorkflow,
             @NonNull final Authorizer authorizer,
@@ -128,7 +128,7 @@ public class ParentTxnFactory {
             @NonNull final SemanticVersion softwareVersionFactory,
             @NonNull final TransactionChecker transactionChecker) {
         this.configProvider = requireNonNull(configProvider);
-        this.kvStateChangeListener = requireNonNull(kvStateChangeListener);
+        this.immediateStateChangeListener = requireNonNull(immediateStateChangeListener);
         this.boundaryStateChangeListener = requireNonNull(boundaryStateChangeListener);
         this.preHandleWorkflow = requireNonNull(preHandleWorkflow);
         this.authorizer = requireNonNull(authorizer);
@@ -398,7 +398,7 @@ public class ParentTxnFactory {
                 consensusConfig.handleMaxPrecedingRecords(),
                 consensusConfig.handleMaxFollowingRecords(),
                 boundaryStateChangeListener,
-                kvStateChangeListener,
+                immediateStateChangeListener,
                 blockStreamConfig.streamMode());
     }
 
