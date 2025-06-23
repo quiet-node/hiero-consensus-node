@@ -4,7 +4,7 @@ package com.swirlds.platform.gui.internal;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.platform.gui.GuiUtils.wrap;
 
-import com.swirlds.common.metrics.platform.AbstractStatsMetric;
+import com.swirlds.common.metrics.platform.AbstractDistributionMetric;
 import com.swirlds.metrics.api.Metric;
 import com.swirlds.metrics.api.Metric.ValueType;
 import com.swirlds.metrics.api.Metrics;
@@ -184,7 +184,7 @@ class WinTab2Stats extends PrePaintableJPanel implements ChartLabelModel {
                 c.gridwidth = GridBagConstraints.REMAINDER; // end of row
                 boxesPanel.add(spacer2, c);
             }
-            if (metric instanceof AbstractStatsMetric statMetric
+            if (metric instanceof AbstractDistributionMetric statMetric
                     && statMetric.getStatsBuffered().getAllHistory() == null) {
                 // if no history, then box is gray, and not clickable
                 statBoxes[i].setBackground(LIGHT_GRAY);

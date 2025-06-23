@@ -12,7 +12,7 @@ import java.util.Objects;
 /**
  * Represents a metric computed over a distribution function
  */
-public abstract class AbstractStatsMetric extends AbstractMetric {
+public abstract class AbstractDistributionMetric extends AbstractMetric {
 
     /**
      * Half-life of the metric
@@ -25,7 +25,7 @@ public abstract class AbstractStatsMetric extends AbstractMetric {
      * @param config   the metric configuration
      * @param halfLife the half-life of the metric
      */
-    protected AbstractStatsMetric(@NonNull final MetricConfig<?, ?> config, final double halfLife) {
+    protected AbstractDistributionMetric(@NonNull final MetricConfig<?, ?> config, final double halfLife) {
         super(config);
         this.halfLife = halfLife;
     }
