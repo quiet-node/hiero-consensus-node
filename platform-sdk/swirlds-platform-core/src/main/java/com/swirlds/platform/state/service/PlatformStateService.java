@@ -35,8 +35,7 @@ public enum PlatformStateService implements Service {
     private static final Collection<Schema> SCHEMAS = List.of(
             new V0540PlatformStateSchema(
                     config -> requireNonNull(APP_VERSION_FN.get()).apply(config)),
-            new V0640PlatformStateSchema(
-                    config -> requireNonNull(APP_VERSION_FN.get()).apply(config)));
+            new V0640PlatformStateSchema());
 
     public static final String NAME = "PlatformStateService";
 

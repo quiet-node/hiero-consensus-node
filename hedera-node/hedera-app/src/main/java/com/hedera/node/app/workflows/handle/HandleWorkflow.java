@@ -31,7 +31,6 @@ import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
-import com.hedera.hapi.util.HapiUtils;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
@@ -331,15 +330,15 @@ public class HandleWorkflow {
                 final var platformStateStore = storeFactory.getStore(ReadablePlatformStateStore.class);
                 if (event.getEventCore().birthRound() > platformStateStore.getLastFreezeRound()) {
                     // We were given an event for a node that does not exist in the address book and was not from
-                    // a strictly earlier software upgrade. This will be logged as a warning, as this should never
-                    // happen, and we will skip the event. The platform should guarantee that we never receive an event
-                    // that isn't associated with the address book, and every node in the address book must have an
-                    // account ID, since you cannot delete an account belonging to a node, and you cannot change the
-                    // address book non-deterministically.
+                    // a strictly earlier birth round number prior to the last freeze round number. This will be logged
+                    // as a warning, as this should never happen, and we will skip the event. The platform should
+                    // guarantee that we never receive an event that isn't associated with the address book, and every
+                    // node in the address book must have an account ID, since you cannot delete an account belonging
+                    // to a node, and you cannot change the address book non-deterministically.
                     logger.warn(
-                            "Received event (version {} vs current {}) from node {} which is not in the address book",
-                            HapiUtils.toString(event.getSoftwareVersion()),
-                            HapiUtils.toString(version),
+                            "Received event with birth round {}, last freeze round is {}, from node {} which is not in the address book",
+                            event.getEventCore().birthRound(),
+                            platformStateStore.getLastFreezeRound(),
                             event.getCreatorId());
                 }
                 continue;
