@@ -6,14 +6,18 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.assertj.core.api.AbstractAssert;
+import org.assertj.core.api.Condition;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Assertion class for {@link SingleNodeLogResult}.
@@ -124,5 +128,22 @@ public class SingleNodeLogResultAssert extends AbstractAssert<SingleNodeLogResul
         logStatements.append("****************\n");
 
         failWithMessage(logStatements.toString());
+    }
+
+    /**
+     * Returns a {@link Condition} that fails if there are no messages matching the regex and log-level.
+     *
+     * @param level the log level
+     * @param regex the regex any message should match
+     * @return the condition object to validate
+     */
+    static Condition<SingleNodeLogResult> matchesLevelAndRegexCondition(
+            final @NotNull Level level, final String regex) {
+        Objects.requireNonNull(level);
+        Objects.requireNonNull(regex);
+        final Predicate<SingleNodeLogResult> predicate = r -> r.logs().stream()
+                .anyMatch(log -> log.level().equals(level) && log.message().matches(regex));
+        return new Condition<>(
+                predicate, "Node log result contains any message matching level:" + level + " and regex:" + regex);
     }
 }
