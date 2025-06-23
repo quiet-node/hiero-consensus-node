@@ -19,8 +19,6 @@ import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
 import static com.swirlds.platform.consensus.ConsensusUtils.coin;
-import static com.swirlds.platform.system.InitTrigger.EVENT_STREAM_RECOVERY;
-import static com.swirlds.state.lifecycle.HapiUtils.SEMANTIC_VERSION_COMPARATOR;
 import static java.util.Objects.requireNonNull;
 import static org.hiero.consensus.model.status.PlatformStatus.ACTIVE;
 
@@ -839,16 +837,6 @@ public class HandleWorkflow {
                 blockStreamManager.writeItem(stateChangesItem);
             }
         }
-    }
-
-    /**
-     * Returns true if the software event is older than the current software version.
-     *
-     * @return true if the software event is older than the current software version
-     */
-    private boolean isOlderSoftwareEvent(@NonNull final SemanticVersion txnVersion) {
-        return this.initTrigger != EVENT_STREAM_RECOVERY
-                && SEMANTIC_VERSION_COMPARATOR.compare(version, txnVersion) > 0;
     }
 
     /**

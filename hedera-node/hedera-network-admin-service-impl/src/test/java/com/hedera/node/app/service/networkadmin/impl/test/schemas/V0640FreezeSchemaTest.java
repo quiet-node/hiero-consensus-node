@@ -2,8 +2,6 @@
 package com.hedera.node.app.service.networkadmin.impl.test.schemas;
 
 import static com.hedera.node.app.service.networkadmin.impl.schemas.V0640FreezeSchema.FREEZE_INFO_KEY;
-import static com.hedera.node.app.service.networkadmin.impl.schemas.V0640FreezeSchema.FREEZE_TIME_KEY;
-import static com.hedera.node.app.service.networkadmin.impl.schemas.V0640FreezeSchema.UPGRADE_FILE_HASH_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.BDDMockito.given;
@@ -54,27 +52,21 @@ public class V0640FreezeSchemaTest {
     @Test
     void registersExpectedSchema() {
         final var statesToCreate = subject.statesToCreate();
-        assertThat(statesToCreate.size()).isEqualTo(3);
+        assertThat(statesToCreate.size()).isEqualTo(1);
         final var iter =
                 statesToCreate.stream().map(StateDefinition::stateKey).sorted().iterator();
         assertEquals(FREEZE_INFO_KEY, iter.next());
-        assertEquals(FREEZE_TIME_KEY, iter.next());
-        assertEquals(UPGRADE_FILE_HASH_KEY, iter.next());
     }
 
     @Test
     void genesisFreezeInfoIsPopulatedInState() {
         given(migrationContext.newStates()).willReturn(writableStates);
         given(writableStates.<FreezeInfo>getSingleton(FREEZE_INFO_KEY)).willReturn(freezeInfoState);
-        given(writableStates.<Timestamp>getSingleton(FREEZE_TIME_KEY)).willReturn(freezeTimeState);
-        given(writableStates.<ProtoBytes>getSingleton(UPGRADE_FILE_HASH_KEY)).willReturn(upgradeFileHashState);
         given(migrationContext.isGenesis()).willReturn(true);
 
         subject.migrate(migrationContext);
 
         verify(freezeInfoState).put(FreezeInfo.newBuilder().lastFreezeRound(0L).build());
-        verify(freezeTimeState).put(Timestamp.DEFAULT);
-        verify(upgradeFileHashState).put(ProtoBytes.DEFAULT);
     }
 
     @Test
