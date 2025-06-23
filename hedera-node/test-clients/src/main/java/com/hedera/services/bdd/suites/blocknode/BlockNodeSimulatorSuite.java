@@ -109,28 +109,28 @@ public class BlockNodeSimulatorSuite {
     @HapiTest
     @HapiBlockNode(
             blockNodeConfigs = {
-                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.REAL),
-                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.REAL),
-                @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.REAL),
-                @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.REAL),
+                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.REAL),
+                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.REAL),
+                    @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.REAL),
+                    @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.REAL),
             },
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 1,
-                        blockNodeIds = {1},
-                        blockNodePriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 2,
-                        blockNodeIds = {2},
-                        blockNodePriorities = {0}),
-                @SubProcessNodeConfig(
-                        nodeId = 3,
-                        blockNodeIds = {3},
-                        blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0},
+                            blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 1,
+                            blockNodeIds = {1},
+                            blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 2,
+                            blockNodeIds = {2},
+                            blockNodePriorities = {0}),
+                    @SubProcessNodeConfig(
+                            nodeId = 3,
+                            blockNodeIds = {3},
+                            blockNodePriorities = {0}),
             })
     @Order(3)
     final Stream<DynamicTest> allNodesStreamingHappyPathWithTestContainers() {
@@ -282,16 +282,16 @@ public class BlockNodeSimulatorSuite {
     @HapiBlockNode(
             networkSize = 1,
             blockNodeConfigs = {
-                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.REAL),
-                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.REAL),
-                @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.REAL),
-                @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.REAL)
+                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.REAL),
+                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.REAL),
+                    @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.REAL),
+                    @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.REAL)
             },
             subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0, 1, 2, 3},
-                        blockNodePriorities = {0, 1, 2, 3})
+                    @SubProcessNodeConfig(
+                            nodeId = 0,
+                            blockNodeIds = {0, 1, 2, 3},
+                            blockNodePriorities = {0, 1, 2, 3})
             })
     @Order(6)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickleWithContainers() {
