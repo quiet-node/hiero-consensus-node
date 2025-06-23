@@ -122,12 +122,4 @@ public interface State extends FastCopyable, Hashable {
     default State loadSnapshot(final @NonNull Path targetPath) throws IOException {
         throw new UnsupportedOperationException();
     }
-
-    /**
-     * Used to track the status of the Platform.
-     * @return {@code true} if Platform status is not {@code PlatformStatus.ACTIVE}.
-     */
-    default boolean isStartUpMode() {
-        return true;
-    }
 }

@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -27,7 +26,7 @@ import com.hedera.hapi.platform.event.EventDescriptor;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
-import com.hedera.node.app.blocks.impl.ImmediateStateChangeListener;
+import com.hedera.node.app.blocks.impl.KVStateChangeListener;
 import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.hints.HintsService;
@@ -116,7 +115,7 @@ class HandleWorkflowTest {
     private ScheduleService scheduleService;
 
     @Mock
-    private ImmediateStateChangeListener immediateStateChangeListener;
+    private KVStateChangeListener kvStateChangeListener;
 
     @Mock
     private BoundaryStateChangeListener boundaryStateChangeListener;
@@ -194,9 +193,7 @@ class HandleWorkflowTest {
 
         verify(eventFromPresentCreator).consensusTransactionIterator();
         verify(recordCache).resetRoundReceipts();
-        verify(recordCache)
-                .commitRoundReceipts(
-                        any(), any(), any(), same(immediateStateChangeListener), same(blockStreamManager), any());
+        verify(recordCache).commitRoundReceipts(any(), any());
     }
 
     @Test
@@ -477,7 +474,7 @@ class HandleWorkflowTest {
                 stakePeriodManager,
                 migrationStateChanges,
                 parentTxnFactory,
-                immediateStateChangeListener,
+                kvStateChangeListener,
                 boundaryStateChangeListener,
                 scheduleService,
                 hintsService,
