@@ -36,6 +36,7 @@ import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
 import com.hedera.node.app.blocks.impl.KVStateChangeListener;
+import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.hints.HintsService;
 import com.hedera.node.app.hints.impl.ReadableHintsStoreImpl;
@@ -149,6 +150,7 @@ public class HandleWorkflow {
     private final CongestionMetrics congestionMetrics;
     private final CurrentPlatformStatus currentPlatformStatus;
     private final BlockHashSigner blockHashSigner;
+    private final BlockBufferService blockBufferService;
 
     @Nullable
     private final AtomicBoolean systemEntitiesCreatedFlag;
@@ -191,7 +193,8 @@ public class HandleWorkflow {
             @NonNull final BlockHashSigner blockHashSigner,
             @Nullable final AtomicBoolean systemEntitiesCreatedFlag,
             @NonNull final NodeRewardManager nodeRewardManager,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final BlockBufferService blockBufferService) {
         this.networkInfo = requireNonNull(networkInfo);
         this.stakePeriodChanges = requireNonNull(stakePeriodChanges);
         this.dispatchProcessor = requireNonNull(dispatchProcessor);
@@ -226,6 +229,7 @@ public class HandleWorkflow {
         this.nodeRewardManager = requireNonNull(nodeRewardManager);
         this.systemEntitiesCreatedFlag = systemEntitiesCreatedFlag;
         this.platformStateFacade = requireNonNull(platformStateFacade);
+        this.blockBufferService = requireNonNull(blockBufferService);
     }
 
     /**
@@ -240,6 +244,7 @@ public class HandleWorkflow {
             @NonNull final Round round,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
         logStartRound(round);
+        blockBufferService.ensureNewBlocksPermitted();
         cacheWarmer.warm(state, round);
         if (streamMode != RECORDS) {
             blockStreamManager.startRound(round, state);
