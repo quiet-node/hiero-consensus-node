@@ -566,14 +566,16 @@ public final class SyncUtils {
      */
     @NonNull
     static List<ShadowEvent> getMyTipsTheyKnow(
-            NodeId otherNodeId, @NonNull final List<ShadowEvent> myTips, @NonNull final List<Boolean> myTipsTheyHave) {
+            @NonNull final NodeId peerId,
+            @NonNull final List<ShadowEvent> myTips,
+            @NonNull final List<Boolean> myTipsTheyHave) {
 
-        Objects.requireNonNull(otherNodeId);
+        Objects.requireNonNull(peerId);
 
         if (myTipsTheyHave.size() != myTips.size()) {
             throw new RuntimeException(String.format(
                     "during sync with %s, peer booleans list is wrong size. Expected: %d Actual: %d,",
-                    otherNodeId, myTips.size(), myTipsTheyHave.size()));
+                    peerId, myTips.size(), myTipsTheyHave.size()));
         }
         return getMyTipsTheyKnow(myTips, myTipsTheyHave);
     }
