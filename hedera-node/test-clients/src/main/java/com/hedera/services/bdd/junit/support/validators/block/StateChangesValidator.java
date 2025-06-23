@@ -847,7 +847,6 @@ public class StateChangesValidator implements BlockStreamValidator {
             case ENTITY_COUNTS_VALUE -> singletonUpdateChange.entityCountsValueOrThrow();
             case HISTORY_PROOF_CONSTRUCTION_VALUE -> singletonUpdateChange.historyProofConstructionValueOrThrow();
             case CRS_STATE_VALUE -> singletonUpdateChange.crsStateValueOrThrow();
-            case FREEZE_INFO_VALUE -> singletonUpdateChange.freezeInfoValueOrThrow();
         };
     }
 

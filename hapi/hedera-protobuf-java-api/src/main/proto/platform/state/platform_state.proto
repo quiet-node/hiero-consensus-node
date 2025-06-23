@@ -67,10 +67,9 @@ message PlatformState {
     proto.Timestamp last_frozen_time = 5;
 
     /**
-     * The number of the last round that was a freeze round.<br/>
-     * If not set, there has never been a freeze round.<br/>
+     * The number of the last round that was a freeze round.
      */
-    uint32 last_freeze_round = 6;
+    uint64 last_freeze_round = 6;
 
     // Fields below are to be deprecated in the foreseeable future.
 

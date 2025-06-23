@@ -17,7 +17,6 @@ import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.state.blockrecords.RunningHashes;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
-import com.hedera.hapi.node.state.blockstream.FreezeInfo;
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.congestion.CongestionLevelStarts;
 import com.hedera.hapi.node.state.entity.EntityCounts;
@@ -363,9 +362,6 @@ public class BoundaryStateChangeListener implements StateChangeListener {
             }
             case CRSState crsState -> {
                 return new OneOf<>(SingletonUpdateChange.NewValueOneOfType.CRS_STATE_VALUE, crsState);
-            }
-            case FreezeInfo freezeInfo -> {
-                return new OneOf<>(SingletonUpdateChange.NewValueOneOfType.FREEZE_INFO_VALUE, freezeInfo);
             }
             default ->
                 throw new IllegalArgumentException(

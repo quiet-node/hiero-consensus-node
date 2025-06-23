@@ -5,14 +5,12 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.BUSY;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
 import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.GENESIS_WORK;
 import static com.hedera.node.app.records.schemas.V0490BlockRecordSchema.BLOCK_INFO_STATE_KEY;
-import static com.hedera.node.app.service.networkadmin.impl.schemas.V0640FreezeSchema.FREEZE_INFO_KEY;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.SCHEDULED;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartEvent;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartRound;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransaction;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP2;
 import static com.hedera.node.app.state.logging.TransactionStateLogger.logStartUserTransactionPreHandleResultP3;
-import static com.hedera.node.app.state.merkle.VersionUtils.isSoOrdered;
 import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRANSACTION;
 import static com.hedera.node.app.workflows.handle.TransactionType.POST_UPGRADE_TRANSACTION;
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
@@ -31,7 +29,6 @@ import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
-import com.hedera.hapi.node.state.blockstream.FreezeInfo;
 import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.hapi.util.HapiUtils;
@@ -52,7 +49,6 @@ import com.hedera.node.app.records.BlockRecordManager;
 import com.hedera.node.app.records.BlockRecordService;
 import com.hedera.node.app.roster.ActiveRosters;
 import com.hedera.node.app.roster.RosterService;
-import com.hedera.node.app.service.networkadmin.impl.FreezeServiceImpl;
 import com.hedera.node.app.service.schedule.ExecutableTxn;
 import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.schedule.impl.WritableScheduleStoreImpl;
@@ -66,6 +62,7 @@ import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.state.HederaRecordCache;
 import com.hedera.node.app.state.HederaRecordCache.DueDiligenceFailure;
 import com.hedera.node.app.state.recordcache.LegacyListRecordSource;
+import com.hedera.node.app.store.ReadableStoreFactory;
 import com.hedera.node.app.store.StoreFactoryImpl;
 import com.hedera.node.app.throttle.CongestionMetrics;
 import com.hedera.node.app.throttle.ThrottleServiceManager;
@@ -85,12 +82,14 @@ import com.hedera.node.config.data.TssConfig;
 import com.hedera.node.config.types.StreamMode;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.platform.state.service.PlatformStateFacade;
+import com.swirlds.platform.state.service.PlatformStateService;
+import com.swirlds.platform.state.service.ReadablePlatformStateStore;
+import com.swirlds.platform.state.service.WritablePlatformStateStore;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
 import com.swirlds.state.spi.CommittableWritableStates;
-import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -263,16 +262,9 @@ public class HandleWorkflow {
 
         if (platformStateFacade.isFreezeRound(state, round)) {
             // If this is a freeze round, we need to update the freeze info state
-            final var writableFreezeService = state.getWritableStates(FreezeServiceImpl.NAME);
-            final WritableSingletonState<Object> writableFreezeServiceSingleton =
-                    writableFreezeService.getSingleton(FREEZE_INFO_KEY);
-            final FreezeInfo freezeInfoState = (FreezeInfo) writableFreezeServiceSingleton.get();
-            final FreezeInfo newFreezeInfo = requireNonNull(freezeInfoState)
-                    .copyBuilder()
-                    .lastFreezeRound(round.getRoundNum())
-                    .build();
-            writableFreezeServiceSingleton.put(newFreezeInfo);
-            ((CommittableWritableStates) writableFreezeService).commit();
+            final var platformStateStore =
+                    new WritablePlatformStateStore(state.getWritableStates(PlatformStateService.NAME));
+            platformStateStore.setLastFreezeRound(round.getRoundNum());
         }
 
         configureTssCallbacks(state);
@@ -330,7 +322,9 @@ public class HandleWorkflow {
             }
             final var creator = networkInfo.nodeInfo(event.getCreatorId().id());
             if (creator == null) {
-                if (!isSoOrdered(event.getSoftwareVersion(), version)) {
+                final var storeFactory = new ReadableStoreFactory(state);
+                final var platformStateStore = storeFactory.getStore(ReadablePlatformStateStore.class);
+                if (event.getEventCore().birthRound() > platformStateStore.getLastFreezeRound()) {
                     // We were given an event for a node that does not exist in the address book and was not from
                     // a strictly earlier software upgrade. This will be logged as a warning, as this should never
                     // happen, and we will skip the event. The platform should guarantee that we never receive an event
@@ -669,11 +663,9 @@ public class HandleWorkflow {
     private HandleOutput executeSubmittedParent(
             @NonNull final ParentTxn parentTxn, final long eventBirthRound, @NonNull final State state) {
         try {
-            final var writableFreezeService = state.getWritableStates(FreezeServiceImpl.NAME);
-            final FreezeInfo freezeInfoState = writableFreezeService
-                    .<FreezeInfo>getSingleton(FREEZE_INFO_KEY)
-                    .get();
-            if (eventBirthRound <= requireNonNull(freezeInfoState).lastFreezeRound()) {
+            final var platformStateStore =
+                    new ReadablePlatformStateStore(state.getReadableStates(PlatformStateService.NAME));
+            if (eventBirthRound <= platformStateStore.getLastFreezeRound()) {
                 if (streamMode != BLOCKS) {
                     // This updates consTimeOfLastHandledTxn as a side effect
                     blockRecordManager.advanceConsensusClock(parentTxn.consensusNow(), parentTxn.state());

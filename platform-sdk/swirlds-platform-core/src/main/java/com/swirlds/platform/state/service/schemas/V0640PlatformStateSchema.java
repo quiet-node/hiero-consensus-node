@@ -19,11 +19,14 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Defines the {@link PlatformState} singleton and initializes it at genesis.
  */
-public class V0540PlatformStateSchema extends Schema {
+public class V0640PlatformStateSchema extends Schema {
+    private static final Logger LOGGER = LogManager.getLogger(V0640PlatformStateSchema.class);
     private static final Function<Configuration, SemanticVersion> UNAVAILABLE_VERSION_FN = config -> {
         throw new IllegalStateException("No version information available");
     };
@@ -37,15 +40,15 @@ public class V0540PlatformStateSchema extends Schema {
             new PlatformState(null, 0, ConsensusSnapshot.DEFAULT, null, null, 0L, Bytes.EMPTY, 0L, 0L, null);
 
     private static final SemanticVersion VERSION =
-            SemanticVersion.newBuilder().major(0).minor(54).patch(0).build();
+            SemanticVersion.newBuilder().major(0).minor(64).patch(0).build();
 
     private final Function<Configuration, SemanticVersion> versionFn;
 
-    public V0540PlatformStateSchema() {
+    public V0640PlatformStateSchema() {
         this(UNAVAILABLE_VERSION_FN);
     }
 
-    public V0540PlatformStateSchema(@NonNull final Function<Configuration, SemanticVersion> versionFn) {
+    public V0640PlatformStateSchema(@NonNull final Function<Configuration, SemanticVersion> versionFn) {
         super(VERSION);
         this.versionFn = requireNonNull(versionFn);
     }
@@ -64,10 +67,12 @@ public class V0540PlatformStateSchema extends Schema {
             final var platformStateStore = new WritablePlatformStateStore(ctx.newStates());
             platformStateStore.bulkUpdate(genesisStateSpec(ctx));
         } else {
-            // (FUTURE) Delete this code path, it is only reached through the Browser entrypoint
-            if (stateSingleton.get() == null) {
-                stateSingleton.put(UNINITIALIZED_PLATFORM_STATE);
-            }
+            LOGGER.info(
+                    "V0640PlatformStateSchema - migrate() called during non-genesis state migration. Setting the "
+                            + "last freeze round to the migration round number: {}",
+                    ctx.roundNumber());
+            final var platformStateStore = new WritablePlatformStateStore(ctx.newStates());
+            platformStateStore.setLastFreezeRound(ctx.roundNumber());
         }
     }
 

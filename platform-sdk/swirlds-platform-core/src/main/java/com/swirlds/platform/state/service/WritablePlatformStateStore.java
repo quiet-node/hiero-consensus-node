@@ -136,6 +136,12 @@ public class WritablePlatformStateStore extends ReadablePlatformStateStore imple
         update(previousState.copyBuilder().lastFrozenTime(toPbjTimestamp(lastFrozenTime)));
     }
 
+    @Override
+    public void setLastFreezeRound(long lastFreezeRound) {
+        final var previousState = stateOrThrow();
+        update(previousState.copyBuilder().lastFreezeRound(lastFreezeRound));
+    }
+
     /**
      * {@inheritDoc}
      */

@@ -126,6 +126,14 @@ public class SnapshotPlatformStateAccessor implements PlatformStateAccessor {
     /**
      * {@inheritDoc}
      */
+    @Override
+    public long getLastFreezeRound() {
+        return stateOrThrow().lastFreezeRound();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Nullable
     @Override
     public SemanticVersion getFirstVersionInBirthRoundMode() {
