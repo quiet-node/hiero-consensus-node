@@ -108,8 +108,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
         } else {
             final var nodeId = nodeIds.getOrDefault(nodeAccountId, MISSING_NODE_ID);
             warnOfSkippedIngestChecks(nodeAccountId, nodeId);
-            platform.lastCreatedEvent =
-                    new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload));
+            platform.lastCreatedEvent = new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload));
         }
         if (response.getNodeTransactionPrecheckCode() == OK) {
             handleNextRoundIfPresent();
@@ -212,21 +211,16 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
                     roundNo.getAndIncrement(),
                     requireNonNull(roster),
                     List.of(new FakeConsensusEvent(
-                            new FakeEvent(
-                                    defaultNodeId, firstRoundTime, createAppPayloadWrapper(serializedTxn)),
+                            new FakeEvent(defaultNodeId, firstRoundTime, createAppPayloadWrapper(serializedTxn)),
                             consensusOrder.getAndIncrement(),
-                            firstRoundTime,
-                            version)));
+                            firstRoundTime)));
         }
 
         private Round nextConsensusRound() {
             time.tick(roundDuration);
             final var firstRoundTime = time.now();
             final var consensusEvents = List.<ConsensusEvent>of(new FakeConsensusEvent(
-                    requireNonNull(lastCreatedEvent),
-                    consensusOrder.getAndIncrement(),
-                    firstRoundTime,
-                    lastCreatedEvent.getSoftwareVersion()));
+                    requireNonNull(lastCreatedEvent), consensusOrder.getAndIncrement(), firstRoundTime));
             return new FakeRound(roundNo.getAndIncrement(), requireNonNull(roster), consensusEvents);
         }
     }

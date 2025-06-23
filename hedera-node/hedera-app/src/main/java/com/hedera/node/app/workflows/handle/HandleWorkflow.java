@@ -341,8 +341,7 @@ public class HandleWorkflow {
             }
 
             final Consumer<StateSignatureTransaction> simplifiedStateSignatureTxnCallback = txn -> {
-                final var scopedTxn =
-                        new ScopedSystemTransaction<>(event.getCreatorId(), event.getSoftwareVersion(), txn);
+                final var scopedTxn = new ScopedSystemTransaction<>(event.getCreatorId(), event.getBirthRound(), txn);
                 stateSignatureTxnCallback.accept(scopedTxn);
             };
 

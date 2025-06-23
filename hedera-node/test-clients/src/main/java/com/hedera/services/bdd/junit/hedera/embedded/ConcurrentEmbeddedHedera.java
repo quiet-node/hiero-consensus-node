@@ -100,8 +100,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
             final var nodeId = nodeIds.getOrDefault(nodeAccountId, MISSING_NODE_ID);
             warnOfSkippedIngestChecks(nodeAccountId, nodeId);
             platform.ingestQueue()
-                    .add(new FakeEvent(
-                            nodeId, now(), createAppPayloadWrapper(transaction.toByteArray())));
+                    .add(new FakeEvent(nodeId, now(), createAppPayloadWrapper(transaction.toByteArray())));
             return OK_RESPONSE;
         }
     }
@@ -165,8 +164,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
                                 return new FakeConsensusEvent(
                                         event,
                                         consensusOrder.getAndIncrement(),
-                                        firstRoundTime.plusNanos(i * NANOS_BETWEEN_CONS_EVENTS),
-                                        event.getSoftwareVersion());
+                                        firstRoundTime.plusNanos(i * NANOS_BETWEEN_CONS_EVENTS));
                             })
                             .toList();
                     final var round = new FakeRound(roundNo.getAndIncrement(), requireNonNull(roster), consensusEvents);
@@ -194,11 +192,9 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
                     roundNo.getAndIncrement(),
                     requireNonNull(roster),
                     List.of(new FakeConsensusEvent(
-                            new FakeEvent(
-                                    defaultNodeId, firstRoundTime, createAppPayloadWrapper(serializedTxn)),
+                            new FakeEvent(defaultNodeId, firstRoundTime, createAppPayloadWrapper(serializedTxn)),
                             consensusOrder.getAndIncrement(),
-                            firstRoundTime,
-                            version)));
+                            firstRoundTime)));
         }
     }
 }
