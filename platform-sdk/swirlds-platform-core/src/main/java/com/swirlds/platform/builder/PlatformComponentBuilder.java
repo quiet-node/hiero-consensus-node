@@ -767,7 +767,8 @@ public class PlatformComponentBuilder {
                     : initialStateRound;
             long lastFreezeRound = 0L;
             try (final ReservedSignedState initialState = blocks.initialState()) {
-                lastFreezeRound = blocks.platformStateFacade().lastFreezeRoundOf(initialState.get().getState());
+                lastFreezeRound = blocks.platformStateFacade()
+                        .lastFreezeRoundOf(initialState.get().getState());
             }
             issDetector = new DefaultIssDetector(
                     blocks.platformContext(),

@@ -31,16 +31,13 @@ public class FakeEvent implements Event {
 
     private final NodeId creatorId;
     private final Instant timeCreated;
-    private final SemanticVersion version;
     private final EventCore eventCore;
     public final TransactionWrapper transaction;
 
     public FakeEvent(
             @NonNull final NodeId creatorId,
             @NonNull final Instant timeCreated,
-            @NonNull final SemanticVersion version,
             @NonNull final TransactionWrapper transaction) {
-        this.version = requireNonNull(version);
         this.creatorId = requireNonNull(creatorId);
         this.timeCreated = requireNonNull(timeCreated);
         this.transaction = requireNonNull(transaction);
@@ -48,7 +45,6 @@ public class FakeEvent implements Event {
                 .creatorNodeId(creatorId.id())
                 .timeCreated(HapiUtils.asTimestamp(timeCreated))
                 .birthRound(1L)
-                .version(version)
                 .build();
     }
 
@@ -71,7 +67,12 @@ public class FakeEvent implements Event {
     @NonNull
     @Override
     public SemanticVersion getSoftwareVersion() {
-        return version;
+        return null;
+    }
+
+    @Override
+    public long getBirthRound() {
+        return eventCore.birthRound();
     }
 
     @NonNull

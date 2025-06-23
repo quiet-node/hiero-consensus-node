@@ -109,7 +109,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
             final var nodeId = nodeIds.getOrDefault(nodeAccountId, MISSING_NODE_ID);
             warnOfSkippedIngestChecks(nodeAccountId, nodeId);
             platform.lastCreatedEvent =
-                    new FakeEvent(nodeId, time.now(), semanticVersion, createAppPayloadWrapper(payload));
+                    new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload));
         }
         if (response.getNodeTransactionPrecheckCode() == OK) {
             handleNextRoundIfPresent();
@@ -191,7 +191,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
 
         @Override
         public boolean createTransaction(@NonNull final byte[] transaction) {
-            lastCreatedEvent = new FakeEvent(defaultNodeId, time.now(), version, createAppPayloadWrapper(transaction));
+            lastCreatedEvent = new FakeEvent(defaultNodeId, time.now(), createAppPayloadWrapper(transaction));
             return true;
         }
 
@@ -213,7 +213,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
                     requireNonNull(roster),
                     List.of(new FakeConsensusEvent(
                             new FakeEvent(
-                                    defaultNodeId, firstRoundTime, version, createAppPayloadWrapper(serializedTxn)),
+                                    defaultNodeId, firstRoundTime, createAppPayloadWrapper(serializedTxn)),
                             consensusOrder.getAndIncrement(),
                             firstRoundTime,
                             version)));

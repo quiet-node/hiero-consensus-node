@@ -70,9 +70,8 @@ class IssDetectorTests extends PlatformTest {
                 "The state should have a single reservation before being passed to the ISS Detector");
 
         final PlatformContext platformContext = createDefaultPlatformContext();
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, mock(Roster.class), false, DO_NOT_IGNORE_ROUNDS,
-                        GENESIS_LAST_FREEZE_ROUND);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, mock(Roster.class), false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND);
 
         issDetector.handleState(stateWrapperForIssDetector);
         assertTrue(stateWrapperForIssDetector.isClosed(), "State passed to the ISS Detector should be closed");
@@ -114,7 +113,7 @@ class IssDetectorTests extends PlatformTest {
                     constructHashGenerationData(roster, currentRound, roundHash);
             final Map<NodeId, ScopedSystemTransaction<StateSignatureTransaction>>
                     nodeIdToStateSignatureMapForCurrentRound =
-                    generateSystemTransactions(currentRound, hashGenerationData);
+                            generateSystemTransactions(currentRound, hashGenerationData);
 
             // Add all the generated signatures for this round to the list of all signatures for all rounds
             unsubmittedSignatures.addAll(nodeIdToStateSignatureMapForCurrentRound.values());
@@ -244,7 +243,7 @@ class IssDetectorTests extends PlatformTest {
             // create signature transactions for each node for this round
             final Map<NodeId, ScopedSystemTransaction<StateSignatureTransaction>>
                     nodeIdToStateSignatureMapForCurrentRound =
-                    generateSystemTransactions(currentRound, roundData.get((int) currentRound));
+                            generateSystemTransactions(currentRound, roundData.get((int) currentRound));
 
             unsubmittedSignatures.addAll(nodeIdToStateSignatureMapForCurrentRound.values());
 
@@ -285,8 +284,9 @@ class IssDetectorTests extends PlatformTest {
                         case CATASTROPHIC_ISS -> IssNotification.IssType.CATASTROPHIC_ISS;
                         // if there was an other-ISS, then the round should still be valid
                         case VALID -> IssNotification.IssType.OTHER_ISS;
-                        default -> throw new IllegalStateException(
-                                "Unexpected value: " + expectedRoundStatus.get((int) notification.getRound()));
+                        default ->
+                            throw new IllegalStateException(
+                                    "Unexpected value: " + expectedRoundStatus.get((int) notification.getRound()));
                     };
             assertEquals(
                     expectedType,
@@ -600,8 +600,8 @@ class IssDetectorTests extends PlatformTest {
                 .getConfigData(ConsensusConfig.class)
                 .roundsNonAncient();
 
-        final IssDetector issDetector = new DefaultIssDetector(platformContext, roster, false, 1,
-                GENESIS_LAST_FREEZE_ROUND);
+        final IssDetector issDetector =
+                new DefaultIssDetector(platformContext, roster, false, 1, GENESIS_LAST_FREEZE_ROUND);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;

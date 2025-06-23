@@ -101,7 +101,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
             warnOfSkippedIngestChecks(nodeAccountId, nodeId);
             platform.ingestQueue()
                     .add(new FakeEvent(
-                            nodeId, now(), semanticVersion, createAppPayloadWrapper(transaction.toByteArray())));
+                            nodeId, now(), createAppPayloadWrapper(transaction.toByteArray())));
             return OK_RESPONSE;
         }
     }
@@ -142,7 +142,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
 
         @Override
         public boolean createTransaction(@NonNull byte[] transaction) {
-            return queue.add(new FakeEvent(defaultNodeId, now(), version, createAppPayloadWrapper(transaction)));
+            return queue.add(new FakeEvent(defaultNodeId, now(), createAppPayloadWrapper(transaction)));
         }
 
         /**
@@ -195,7 +195,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
                     requireNonNull(roster),
                     List.of(new FakeConsensusEvent(
                             new FakeEvent(
-                                    defaultNodeId, firstRoundTime, version, createAppPayloadWrapper(serializedTxn)),
+                                    defaultNodeId, firstRoundTime, createAppPayloadWrapper(serializedTxn)),
                             consensusOrder.getAndIncrement(),
                             firstRoundTime,
                             version)));
