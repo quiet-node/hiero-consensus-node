@@ -2,12 +2,16 @@
 package com.swirlds.state.merkle;
 
 import static com.hedera.hapi.block.stream.output.StateIdentifier.*;
+import static com.hedera.pbj.runtime.ProtoConstants.WIRE_TYPE_DELIMITED;
+import static com.hedera.pbj.runtime.ProtoParserTools.TAG_FIELD_OFFSET;
+import static com.hedera.pbj.runtime.ProtoWriterTools.sizeOfVarInt32;
 
 import com.hedera.hapi.platform.state.SingletonType;
 import com.hedera.hapi.platform.state.VirtualMapKey;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.OneOf;
 import com.hedera.pbj.runtime.ParseException;
+import com.hedera.pbj.runtime.io.buffer.BufferedData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
@@ -29,6 +33,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -479,43 +484,18 @@ public final class StateUtils {
     public static byte[] createVirtualMapKeyBytesForKV(
             @NonNull final String serviceName, @NonNull final String stateKey, byte[] keyObjectBytes) {
         final int stateId = getValidatedStateId(serviceName, stateKey);
-        int wireType = 2; // length-delimited
-
         // This matches the Protocol Buffer tag format: (field_number << TAG_TYPE_BITS) | wire_type
-        int tag = (stateId << 3) | wireType;
+        int tag = (stateId << TAG_FIELD_OFFSET) | WIRE_TYPE_DELIMITED.ordinal();
 
-        // Should encode tag as varint
-        byte[] tagBytes = encodeVarInt(tag);
-        byte[] lengthPrefix = encodeVarInt(keyObjectBytes.length);
+        ByteBuffer byteBuffer = ByteBuffer.allocate(sizeOfVarInt32(tag)
+                + sizeOfVarInt32(keyObjectBytes.length) /* length */
+                + keyObjectBytes.length /* key bytes */);
+        BufferedData bufferedData = BufferedData.wrap(byteBuffer);
 
-        // Final byte array: tag + length + value
-        byte[] result = new byte[tagBytes.length + lengthPrefix.length + keyObjectBytes.length];
-        System.arraycopy(tagBytes, 0, result, 0, tagBytes.length);
+        bufferedData.writeVarInt(tag, false);
+        bufferedData.writeVarInt(keyObjectBytes.length, false);
+        bufferedData.writeBytes(keyObjectBytes);
 
-        System.arraycopy(lengthPrefix, 0, result, tagBytes.length, lengthPrefix.length);
-        System.arraycopy(keyObjectBytes, 0, result, tagBytes.length + lengthPrefix.length, keyObjectBytes.length);
-
-        return result;
-    }
-
-    /**
-     * Encodes an integer value as a Protocol Buffer varint.
-     *
-     * @param value The integer to encode
-     * @return Byte array containing the varint representation
-     */
-    private static byte[] encodeVarInt(int value) {
-        if (value < 0x80) {
-            return new byte[] {(byte) value};
-        } else {
-            // full varint encoding for completeness
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            while ((value & 0xFFFFFF80) != 0L) {
-                out.write((value & 0x7F) | 0x80);
-                value >>>= 7;
-            }
-            out.write(value & 0x7F);
-            return out.toByteArray();
-        }
+        return byteBuffer.array();
     }
 }
