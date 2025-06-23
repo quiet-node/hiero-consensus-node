@@ -97,7 +97,7 @@ public class WrappedState implements State, Hashable {
      */
     public void commit() {
         for (final var writableStates : writableStatesMap.values()) {
-            writableStates.commit(delegate.isStartUpMode());
+            writableStates.commit();
         }
     }
 
@@ -107,13 +107,5 @@ public class WrappedState implements State, Hashable {
     @Override
     public void setHash(Hash hash) {
         delegate.setHash(hash);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isStartUpMode() {
-        return delegate.isStartUpMode();
     }
 }

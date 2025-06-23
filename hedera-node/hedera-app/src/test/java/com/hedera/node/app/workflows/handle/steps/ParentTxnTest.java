@@ -27,7 +27,7 @@ import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.impl.BlockStreamBuilder;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
-import com.hedera.node.app.blocks.impl.ImmediateStateChangeListener;
+import com.hedera.node.app.blocks.impl.KVStateChangeListener;
 import com.hedera.node.app.blocks.impl.PairedStreamBuilder;
 import com.hedera.node.app.fees.ExchangeRateManager;
 import com.hedera.node.app.fees.FeeManager;
@@ -93,7 +93,7 @@ class ParentTxnTest {
     private TransactionInfo txnInfo;
 
     @Mock
-    private ImmediateStateChangeListener immediateStateChangeListener;
+    private KVStateChangeListener kvStateChangeListener;
 
     @Mock
     private BoundaryStateChangeListener boundaryStateChangeListener;
@@ -255,7 +255,7 @@ class ParentTxnTest {
     private ParentTxnFactory createUserTxnFactory() {
         return new ParentTxnFactory(
                 configProvider,
-                immediateStateChangeListener,
+                kvStateChangeListener,
                 boundaryStateChangeListener,
                 preHandleWorkflow,
                 authorizer,
