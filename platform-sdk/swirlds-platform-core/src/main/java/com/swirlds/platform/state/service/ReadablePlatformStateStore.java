@@ -154,6 +154,11 @@ public class ReadablePlatformStateStore implements PlatformStateAccessor {
         return stateOrThrow().lowestJudgeGenerationBeforeBirthRoundMode();
     }
 
+    @Override
+    public Long getLastFreezeRound() {
+        return stateOrThrow().lastFreezeRound();
+    }
+
     private @NonNull PlatformState stateOrThrow() {
         return requireNonNull(state.get());
     }

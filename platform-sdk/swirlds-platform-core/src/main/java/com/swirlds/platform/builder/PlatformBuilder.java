@@ -208,6 +208,7 @@ public final class PlatformBuilder {
         this.consensusEventStreamName = Objects.requireNonNull(consensusEventStreamName);
         this.rosterHistory = Objects.requireNonNull(rosterHistory);
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
+        ;
     }
 
     /**
