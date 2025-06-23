@@ -67,7 +67,7 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
 
     /**
      * All pending messages to be sent; instead of just messages, it is holding references to lambdas writing to network
-     * (in most cases, putting number of messages, type of message and serialized PBJ on the wire)
+     * (in most cases, writing the number of messages, the type of message, then finally the serialized PBJ on the wire)
      */
     private final BlockingQueue<StreamWriter> outputQueue = new LinkedBlockingQueue<>();
 
