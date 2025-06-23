@@ -104,7 +104,7 @@ public class DefaultIssDetector implements IssDetector {
      * The last round that was frozen. This is used to ignore signatures from previous software versions.
      * If null, then no signatures are ignored.
      */
-    private final Long lastFreezeRound;
+    private final long lastFreezeRound;
 
     /**
      * Create an object that tracks reported hashes and detects ISS events.
@@ -121,7 +121,7 @@ public class DefaultIssDetector implements IssDetector {
             @NonNull final Roster roster,
             final boolean ignorePreconsensusSignatures,
             final long ignoredRound,
-            @Nullable final Long lastFreezeRound) {
+            final long lastFreezeRound) {
         Objects.requireNonNull(platformContext);
         markerFileWriter = new MarkerFileWriter(platformContext);
 

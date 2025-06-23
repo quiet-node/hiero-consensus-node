@@ -246,8 +246,8 @@ public class PlatformStateFacade {
         return readablePlatformStateStore(state).getLastFrozenTime();
     }
 
-    @Nullable
-    public Long lastFreezeRoundOf(@NonNull final State state) {
+    @NonNull
+    public long lastFreezeRoundOf(@NonNull final State state) {
         return readablePlatformStateStore(state).getLastFreezeRound();
     }
 

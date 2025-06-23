@@ -117,9 +117,9 @@ public interface PlatformStateAccessor {
     long getLowestJudgeGenerationBeforeBirthRoundMode();
 
     /**
-     * Gets the last freeze round number. If there has never been a freeze, this will return null.
+     * Gets the last freeze round number. If there has never been a freeze, this will return zero.
      *
      * @return the round number of the last freeze round
      */
-    Long getLastFreezeRound();
+    long getLastFreezeRound();
 }
