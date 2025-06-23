@@ -515,8 +515,6 @@ enum StateIdentifier {
      * A state for the `159` upgrade file data. Queue state.
      */
     STATE_ID_UPGRADE_DATA_159 = 10010;
-
-    // DO NOT USE 65535, IT IS RESERVED FOR THE STATE METADATA
 }
 
 /**
