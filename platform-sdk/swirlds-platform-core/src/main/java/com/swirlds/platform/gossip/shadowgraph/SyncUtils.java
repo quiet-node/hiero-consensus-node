@@ -558,7 +558,7 @@ public final class SyncUtils {
      * For each tip sent to the peer, determine if they have that event. If they have it, add it to the list that is
      * returned.
      *
-     * @param otherNodeId    other node id
+     * @param peerId    the peer node id
      * @param myTips         the tips we sent them
      * @param myTipsTheyHave a list of booleans corresponding to our tips in the order they were sent. True if they have
      *                       the event, false if they don't

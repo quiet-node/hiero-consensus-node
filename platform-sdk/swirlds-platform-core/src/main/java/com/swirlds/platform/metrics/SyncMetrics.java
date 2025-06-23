@@ -533,15 +533,15 @@ public class SyncMetrics {
     }
 
     /**
-     * Report current rpc sync phase going against specific node
+     * Report the current rpc sync phase with specific node
      *
-     * @param node      node id for which this is report
-     * @param syncPhase phase we are in
-     * @return previously reported phase ({@link SyncPhase#OUTSIDE_OF_RPC} initially)
+     * @param node      node id of the peer this sync phase applies to
+     * @param syncPhase the current rpc sync phase we are in with the peer
+     * @return the previously reported phase. This will be {@link SyncPhase#OUTSIDE_OF_RPC} when invoked at the beginning of a new rypc sync.
      */
     public SyncPhase reportSyncPhase(@NonNull final NodeId node, @NonNull final SyncPhase syncPhase) {
         PhaseTimer<SyncPhase> phaseMetric = syncPhasePerNode.computeIfAbsent(
-                node, nodeId -> new PhaseTimerBuilder<SyncPhase>(metrics, time, "platform", SyncPhase.class)
+                node, nodeId -> new PhaseTimerBuilder<>(metrics, time, "platform", SyncPhase.class)
                         .enableFractionalMetrics()
                         .setInitialPhase(SyncPhase.OUTSIDE_OF_RPC)
                         .setMetricsNamePrefix(String.format("sync_phase_%02d", nodeId.id()))
@@ -556,7 +556,7 @@ public class SyncMetrics {
     /**
      * Update amount of rpc read threads running concurrently
      *
-     * @param change +1 or -1 depending if thread is started or stopped
+     * @param change The amount of change in the number of threads running (negative numbers mean that many fewer threads running, positive numbers mean that many more thread running).
      */
     public void rpcReadThreadRunning(final int change) {
         rpcReadThreadRunning.add(change);

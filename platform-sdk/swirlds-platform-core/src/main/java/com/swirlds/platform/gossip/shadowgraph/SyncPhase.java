@@ -5,7 +5,7 @@ import com.swirlds.platform.gossip.sync.protocol.SyncStatusChecker;
 import org.hiero.consensus.model.status.PlatformStatus;
 
 /**
- * Described what phases rpc sync can be in
+ * Describes what phases rpc sync can be in
  */
 public enum SyncPhase {
     /**

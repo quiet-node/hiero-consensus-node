@@ -41,7 +41,7 @@ class RpcPeerState {
     boolean remoteFallenBehind;
 
     /**
-     * What was the time we have finished sync last
+     * The time at which the last sync finished
      */
     Instant lastSyncTime = Instant.MIN;
 

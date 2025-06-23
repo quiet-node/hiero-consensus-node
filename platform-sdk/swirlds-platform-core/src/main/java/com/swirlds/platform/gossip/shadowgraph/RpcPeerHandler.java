@@ -94,7 +94,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     private int incomingEventsCounter = 0;
 
     /**
-     * Create new state class for a RPC peer
+     * Create new state class for an RPC peer
      *
      * @param sharedShadowgraph  shared logic reference for actions which have to work against global state (mostly
      *                           shadowgraph)
@@ -190,7 +190,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
         this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.EXCHANGING_WINDOWS);
         this.syncMetrics.acceptedSyncRequest();
 
-        // if they are sending us sync data, they are no longer falling behind, nor sending events
+        // if they are sending us sync data, they are no longer behind compared to the self node
         state.remoteFallenBehind = false;
         state.remoteStillSendingEvents = false;
 

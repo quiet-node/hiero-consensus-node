@@ -10,7 +10,7 @@ import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 
 /**
- * Wrapper class for representing combination of event window and tip hashes used in sync protocol
+ * Wrapper class for representing combination of event window and tip hashes used in the rpc sync protocol
  * @param eventWindow event window we see
  * @param tipHashes tips of our hashgraph
  */
