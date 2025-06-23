@@ -145,7 +145,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             return systemHealthy;
         }
 
-        if (state.peerFallenBehind) {
+        if (state.peerIsBehind) {
             this.syncMetrics.doNotSyncPeerFallenBehind();
             return systemHealthy;
         }
@@ -191,11 +191,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
         this.syncMetrics.reportSyncPhase(peerId, SyncPhase.EXCHANGING_WINDOWS);
         this.syncMetrics.acceptedSyncRequest();
 
-        // if they are sending us sync data, they are no longer behind compared to the self node
-        state.peerFallenBehind = false;
-        state.peerStillSendingEvents = false;
-
-        state.remoteSyncData = syncMessage;
+        state.syncInitiated(syncMessage);
 
         maybeBothSentSyncData();
     }
@@ -271,7 +267,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             clearInternalState();
             if (behindStatus == SyncFallenBehindStatus.OTHER_FALLEN_BEHIND) {
                 this.syncMetrics.reportSyncPhase(peerId, SyncPhase.OTHER_FALLEN_BEHIND);
-                state.peerFallenBehind = true;
+                state.peerIsBehind = true;
             } else {
                 if (tryFixSelfFallBehind(remoteEventWindow)) {
                     this.syncMetrics.reportSyncPhase(peerId, SyncPhase.IDLE);

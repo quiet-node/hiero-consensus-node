@@ -41,9 +41,9 @@ class RpcPeerState {
     List<ShadowEvent> myTips;
 
     /**
-     * Has the peer node reported it has fallen behind
+     * Has the peer node reported it is falling behind
      */
-    boolean peerFallenBehind;
+    boolean peerIsBehind;
 
     /**
      * The time at which the last sync finished
@@ -72,5 +72,16 @@ class RpcPeerState {
         myTips = null;
         eventsTheyHave.clear();
         lastSyncFinishedTime = lastSyncTime;
+    }
+
+    /**
+     * Peer told us that he is ready to sync
+     * @param syncMessage synchronization data peer has passed to us
+     */
+    public void syncInitiated(final SyncData syncMessage) {
+        // if they are sending us sync data, they are no longer behind compared to the self node
+        peerIsBehind = false;
+        peerStillSendingEvents = false;
+        remoteSyncData = syncMessage;
     }
 }
