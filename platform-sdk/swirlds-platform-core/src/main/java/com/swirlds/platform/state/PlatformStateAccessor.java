@@ -93,12 +93,6 @@ public interface PlatformStateAccessor {
     Instant getLastFrozenTime();
 
     /**
-     * Gets the last freeze round number.
-     * @return the last freeze round number
-     */
-    long getLastFreezeRound();
-
-    /**
      * Get the first software version where the birth round migration happened, or null if birth round migration has not
      * yet happened.
      *
