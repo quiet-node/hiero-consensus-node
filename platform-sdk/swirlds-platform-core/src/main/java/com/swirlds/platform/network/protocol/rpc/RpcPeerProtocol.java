@@ -2,6 +2,12 @@
 package com.swirlds.platform.network.protocol.rpc;
 
 import static com.swirlds.logging.legacy.LogMarker.NETWORK;
+import static com.swirlds.platform.network.protocol.rpc.RpcMessageId.EVENT;
+import static com.swirlds.platform.network.protocol.rpc.RpcMessageId.EVENTS_FINISHED;
+import static com.swirlds.platform.network.protocol.rpc.RpcMessageId.KNOWN_TIPS;
+import static com.swirlds.platform.network.protocol.rpc.RpcMessageId.PING;
+import static com.swirlds.platform.network.protocol.rpc.RpcMessageId.PING_REPLY;
+import static com.swirlds.platform.network.protocol.rpc.RpcMessageId.SYNC_DATA;
 
 import com.google.common.collect.Lists;
 import com.hedera.hapi.platform.event.GossipEvent;
@@ -43,14 +49,6 @@ import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
 
 /**
- * Internal interface for encompassing piece of code writing bytes to network stream
- */
-@FunctionalInterface
-interface StreamWriter {
-    void write(SyncOutputStream syncOutputStream) throws IOException;
-}
-
-/**
  * Message based implementation of gossip; currently supporting sync Responsible for communication with a single peer
  */
 public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
@@ -60,15 +58,7 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
     /**
      * Send in place of batch size, to indicate that we are switching the protocol to something else
      */
-    private static final short END_OF_CONVERSATION = -1;
-
-    // bytes for representing various messages
-    private static final int SYNC_DATA = 1;
-    private static final int KNOWN_TIPS = 2;
-    private static final int EVENT = 3;
-    private static final int EVENTS_FINISHED = 4;
-    private static final int PING = 5;
-    private static final int PING_REPLY = 6;
+    static final short END_OF_CONVERSATION = -1;
 
     /**
      * Maximum amount of events in a single message batch
@@ -171,12 +161,7 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
     /**
      * Special marker to indicate that dispatch thread should exit its loop
      */
-    private static final Runnable POISON_PILL = new Runnable() {
-        @Override
-        public void run() {
-            logger.error("Poison pill should never be executed");
-        }
-    };
+    private static final Runnable POISON_PILL = () -> logger.error("Poison pill should never be executed");
 
     /**
      * Constructs a new rpc protocol
@@ -240,7 +225,7 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
 
         if (!SyncStatusChecker.doesStatusPermitSync(platformStatus.get())) {
             syncMetrics.doNotSyncPlatformStatus();
-            syncMetrics.reportSyncPhase(remotePeerId, SyncPhase.WRONG_STATUS);
+            syncMetrics.reportSyncPhase(remotePeerId, SyncPhase.PLATFORM_STATUS_PREVENTING_SYNC);
             return false;
         }
 
@@ -330,7 +315,7 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                     processMessages = false;
                 }
             }
-        } catch (RuntimeException exc) {
+        } catch (final RuntimeException exc) {
             logger.error(NETWORK.getMarker(), "Error while dispatching messages", exc);
             throw exc;
         } finally {
@@ -360,13 +345,13 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                     final long startNanos = System.nanoTime();
                     message = outputQueue.poll(idleWritePollTimeoutMs, TimeUnit.MILLISECONDS);
                     syncMetrics.outputQueuePollTime(System.nanoTime() - startNanos);
-                } catch (InterruptedException e) {
+                } catch (final InterruptedException e) {
                     processMessages = false;
                     logger.warn("Interrupted while waiting for message", e);
                     break;
                 }
                 if (message == null) {
-                    var ping = pingHandler.possiblyInitiatePing();
+                    final GossipPing ping = pingHandler.possiblyInitiatePing();
                     if (ping != null) {
                         sendPingSameThread(ping, output);
                     }
@@ -564,4 +549,12 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
         this.rpcPeerHandler = rpcPeerHandler;
         this.receiver = rpcPeerHandler;
     }
+}
+
+/**
+ * Internal interface for encompassing piece of code writing bytes to network stream
+ */
+@FunctionalInterface
+interface StreamWriter {
+    void write(SyncOutputStream syncOutputStream) throws IOException;
 }

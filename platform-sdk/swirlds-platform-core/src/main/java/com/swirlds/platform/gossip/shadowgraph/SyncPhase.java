@@ -48,7 +48,7 @@ public enum SyncPhase {
      * We are in the system state which does not allow synchronization - see
      * {@link SyncStatusChecker#doesStatusPermitSync(PlatformStatus)}
      */
-    WRONG_STATUS,
+    PLATFORM_STATUS_PREVENTING_SYNC,
     /**
      * There are no permits available for us to consume
      */

@@ -8,48 +8,60 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Internal state class for {@link RpcPeerHandler}, extracted to separate object for having clarity what is a
+ * sync-specific mutable state.
+ * Shouldn't be really used by any other parties, it is very specific to current RpcPeerHandler implementation.
+ */
 class RpcPeerState {
     /**
-     * Events they for sure have based on the tips they have sent, to be merged with known tips they respond for out
+     * Events they for sure have based on the tips they have sent, to be merged with known tips they respond for our
      * tipset
      */
     final Set<ShadowEvent> eventsTheyHave = new HashSet<>();
 
     /**
-     * Event window we have reserved during start of sync process with remote node
+     * Event window we have reserved during start of sync process with the peer
      */
     ReservedEventWindow shadowWindow;
 
     /**
-     * Sync data we have sent to remote party
+     * Sync data we have sent to the peer
      */
     SyncData mySyncData;
 
     /**
-     * Sync data we have received from remote party
+     * Sync data we have received from the peer
      */
     SyncData remoteSyncData;
 
     /**
-     * List of tips we have sent to remote party
+     * List of tips we have sent to the peer
      */
     List<ShadowEvent> myTips;
 
     /**
-     * Has remote node reported it has fallen behind
+     * Has the peer node reported it has fallen behind
      */
-    boolean remoteFallenBehind;
+    boolean peerFallenBehind;
 
     /**
      * The time at which the last sync finished
      */
-    Instant lastSyncTime = Instant.MIN;
+    Instant lastSyncFinishedTime = Instant.MIN;
 
     /**
-     * Remote party is still sending us events, so we shouldn't bother it with another sync request
+     * The peer is still sending us events, so we shouldn't bother it with another sync request
      */
-    boolean remoteStillSendingEvents = false;
+    boolean peerStillSendingEvents = false;
 
+    /**
+     * Clear internal state in preparation for a new sync in the future. In particular, this method closes
+     * {@link #shadowWindow} if one was allocated previously.
+     *
+     * @param lastSyncTime time when synchronization has finished, in most cases same as time when this method is
+     *                     called
+     */
     public void clear(@NonNull final Instant lastSyncTime) {
         if (shadowWindow != null) {
             shadowWindow.close();
@@ -59,6 +71,6 @@ class RpcPeerState {
         mySyncData = null;
         myTips = null;
         eventsTheyHave.clear();
-        this.lastSyncTime = lastSyncTime;
+        lastSyncFinishedTime = lastSyncTime;
     }
 }

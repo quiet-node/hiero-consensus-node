@@ -36,7 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-class GossipRpcShadowgraphSynchronizerTest {
+class RpcShadowgraphSynchronizerTest {
 
     static final int NUM_NODES = 10;
     public static final SyncData EMPTY_SYNC_MESSAGE = new SyncData(EventWindow.getGenesisEventWindow(), List.of());
@@ -46,7 +46,7 @@ class GossipRpcShadowgraphSynchronizerTest {
     private NodeId selfId;
     private Consumer eventHandler;
     private GossipRpcSender gossipSender;
-    private GossipRpcShadowgraphSynchronizer synchronizer;
+    private RpcShadowgraphSynchronizer synchronizer;
     private StatusActionSubmitter statusSubmitter;
 
     @BeforeEach
@@ -81,7 +81,7 @@ class GossipRpcShadowgraphSynchronizerTest {
 
         this.eventHandler = mock(Consumer.class);
         this.gossipSender = mock(GossipRpcSender.class);
-        this.synchronizer = new GossipRpcShadowgraphSynchronizer(
+        this.synchronizer = new RpcShadowgraphSynchronizer(
                 platformContext,
                 NUM_NODES,
                 syncMetrics,

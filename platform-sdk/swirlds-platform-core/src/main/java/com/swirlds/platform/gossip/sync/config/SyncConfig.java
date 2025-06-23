@@ -35,7 +35,7 @@ import java.time.Duration;
  * @param minimumHealthyUnrevokedPermitCount the minimum number of permits that must be unrevoked when the system is in
  *                                           a healthy state. If non-zero, this means that this number of permits is
  *                                           immediately returned as soon as the system becomes healthy.
- * @param syncPeriod                         period between successful syncs; currently ignored and assumed 0 for old
+ * @param sleepAfterSync                     time between successful syncs; currently ignored and assumed 0 for old
  *                                           style network sync, used only for rpc sync; current implementation is
  *                                           limited by {@link #idleDispatchPollTimeout} regarding worst-case frequency
  *                                           of synchronizations
@@ -60,6 +60,6 @@ public record SyncConfig(
         @ConfigProperty(defaultValue = "5") double permitsRevokedPerSecond,
         @ConfigProperty(defaultValue = "0.1") double permitsReturnedPerSecond,
         @ConfigProperty(defaultValue = "1") int minimumHealthyUnrevokedPermitCount,
-        @ConfigProperty(defaultValue = "0ms") Duration syncPeriod,
+        @ConfigProperty(defaultValue = "0ms") Duration sleepAfterSync,
         @ConfigProperty(defaultValue = "5ms") Duration idleWritePollTimeout,
         @ConfigProperty(defaultValue = "5ms") Duration idleDispatchPollTimeout) {}

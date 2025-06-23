@@ -18,7 +18,7 @@ import com.swirlds.component.framework.wires.output.StandardOutputWire;
 import com.swirlds.platform.Utilities;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.gossip.shadowgraph.AbstractShadowgraphSynchronizer;
-import com.swirlds.platform.gossip.shadowgraph.GossipRpcShadowgraphSynchronizer;
+import com.swirlds.platform.gossip.shadowgraph.RpcShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.shadowgraph.Shadowgraph;
 import com.swirlds.platform.gossip.shadowgraph.ShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.sync.SyncManagerImpl;
@@ -152,7 +152,7 @@ public class SyncGossipModular implements Gossip {
 
         if (protocolConfig.rpcGossip()) {
 
-            final GossipRpcShadowgraphSynchronizer rpcSynchronizer = new GossipRpcShadowgraphSynchronizer(
+            final RpcShadowgraphSynchronizer rpcSynchronizer = new RpcShadowgraphSynchronizer(
                     platformContext,
                     rosterSize,
                     syncMetrics,
@@ -168,7 +168,7 @@ public class SyncGossipModular implements Gossip {
                     rpcSynchronizer,
                     intakeEventCounter,
                     threadManager,
-                    peers.size() + 1,
+                    rosterSize,
                     this.network.getNetworkMetrics(),
                     syncMetrics);
 
@@ -188,12 +188,7 @@ public class SyncGossipModular implements Gossip {
             this.synchronizer = shadowgraphSynchronizer;
 
             this.syncProtocol = SyncProtocol.create(
-                    platformContext,
-                    shadowgraphSynchronizer,
-                    syncManager,
-                    intakeEventCounter,
-                    peers.size() + 1,
-                    syncMetrics);
+                    platformContext, shadowgraphSynchronizer, syncManager, intakeEventCounter, rosterSize, syncMetrics);
         }
 
         this.protocols = ImmutableList.of(

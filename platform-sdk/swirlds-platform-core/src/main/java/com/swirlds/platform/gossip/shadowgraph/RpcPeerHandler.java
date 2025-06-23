@@ -27,7 +27,9 @@ import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.NodeId;
 
 /**
- * State class for an RPC exchange between two nodes.
+ * Conversation logic for an RPC exchange between two nodes. At this moment mostly concerned with performing a sync,
+ * using {@link RpcShadowgraphSynchronizer}, but in the future, it can extend to handle more responsibilities.
+ * Most of its internal state was externalized to {@link RpcPeerState} for clarity.
  */
 public class RpcPeerHandler implements GossipRpcReceiver {
 
@@ -36,7 +38,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     /**
      * Shared logic reference for actions which have to work against global state (mostly shadowgraph)
      */
-    private final GossipRpcShadowgraphSynchronizer sharedShadowgraph;
+    private final RpcShadowgraphSynchronizer sharedShadowgraphSynchronizer;
 
     /**
      * Materics for sync related numbers
@@ -53,19 +55,19 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     private final IntakeEventCounter intakeEventCounter;
 
     /**
-     * Node id of current node
+     * Node id of self node
      */
     private final NodeId selfId;
 
     /**
-     * Endpoint for queuing messages to be sent to the other side
+     * Endpoint for sending messages to peer endpoint asynchronously
      */
     private final GossipRpcSender sender;
 
     /**
-     * Node id of the remote side
+     * Node id of the peer
      */
-    private final NodeId otherNodeId;
+    private final NodeId peerId;
 
     /**
      * Amount of time to sleep between sync attempts
@@ -73,7 +75,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     private final Duration sleepAfterSync;
 
     /**
-     * Platform callback to be executed when protocol receives event from remote node
+     * Platform callback to be executed when protocol receives event from peer node
      */
     private final Consumer<PlatformEvent> eventHandler;
 
@@ -84,43 +86,43 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     private final RpcPeerState state = new RpcPeerState();
 
     /**
-     * How many events were sent out to remote node during latest sync
+     * How many events were sent out to peer node during latest sync
      */
     private int outgoingEventsCounter = 0;
 
     /**
-     * How many events were received from remote node during latest sync
+     * How many events were received from peer node during latest sync
      */
     private int incomingEventsCounter = 0;
 
     /**
      * Create new state class for an RPC peer
      *
-     * @param sharedShadowgraph  shared logic reference for actions which have to work against global state (mostly
-     *                           shadowgraph)
-     * @param sender             endpoint for sending messages to remote endpoint asynchronously
-     * @param selfId             id of current node
-     * @param otherNodeId        id of the remote node
-     * @param sleepAfterSync     amount of time to sleep between sync attempts
-     * @param syncMetrics        metrics for sync
-     * @param time               platform time
-     * @param intakeEventCounter used for tracking events in the intake pipeline per peer
-     * @param eventHandler       events that are received are passed here
+     * @param sharedShadowgraphSynchronizer shared logic reference for actions which have to work against global state
+     *                                      (mostly shadowgraph)
+     * @param sender                        endpoint for sending messages to peer endpoint asynchronously
+     * @param selfId                        id of current node
+     * @param peerId                   id of the peer node
+     * @param sleepAfterSync                amount of time to sleep between sync attempts
+     * @param syncMetrics                   metrics for sync
+     * @param time                          platform time
+     * @param intakeEventCounter            used for tracking events in the intake pipeline per peer
+     * @param eventHandler                  events that are received are passed here
      */
     public RpcPeerHandler(
-            @NonNull final GossipRpcShadowgraphSynchronizer sharedShadowgraph,
+            @NonNull final RpcShadowgraphSynchronizer sharedShadowgraphSynchronizer,
             @NonNull final GossipRpcSender sender,
             @NonNull final NodeId selfId,
-            @NonNull final NodeId otherNodeId,
+            @NonNull final NodeId peerId,
             @NonNull final Duration sleepAfterSync,
             @NonNull final SyncMetrics syncMetrics,
             @NonNull final Time time,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final Consumer<PlatformEvent> eventHandler) {
-        this.sharedShadowgraph = Objects.requireNonNull(sharedShadowgraph);
+        this.sharedShadowgraphSynchronizer = Objects.requireNonNull(sharedShadowgraphSynchronizer);
         this.sender = Objects.requireNonNull(sender);
         this.selfId = Objects.requireNonNull(selfId);
-        this.otherNodeId = Objects.requireNonNull(otherNodeId);
+        this.peerId = Objects.requireNonNull(peerId);
         this.sleepAfterSync = Objects.requireNonNull(sleepAfterSync);
         this.syncMetrics = Objects.requireNonNull(syncMetrics);
         this.time = Objects.requireNonNull(time);
@@ -133,7 +135,6 @@ public class RpcPeerHandler implements GossipRpcReceiver {
      * last synchronization, remote side has not fallen behind etc
      *
      * @param systemHealthy health of the system
-     *
      * @return true if we should continue dispatching messages, false if system is unhealthy and we are in proper place
      * to break rpc conversation
      */
@@ -144,17 +145,17 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             return systemHealthy;
         }
 
-        if (state.remoteFallenBehind) {
-            this.syncMetrics.doNotSyncRemoteFallenBehind();
+        if (state.peerFallenBehind) {
+            this.syncMetrics.doNotSyncPeerFallenBehind();
             return systemHealthy;
         }
 
-        if (state.remoteStillSendingEvents) {
-            this.syncMetrics.setDoNotSyncRemoteProcessingEvents();
+        if (state.peerStillSendingEvents) {
+            this.syncMetrics.doNotSyncPeerProcessingEvents();
             return true;
         }
 
-        if (this.intakeEventCounter.hasUnprocessedEvents(otherNodeId)) {
+        if (this.intakeEventCounter.hasUnprocessedEvents(peerId)) {
             this.syncMetrics.doNotSyncIntakeCounter();
             return true;
         }
@@ -165,7 +166,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             }
             return systemHealthy;
         } else {
-            this.syncMetrics.setDoNotSyncAlreadyStarted();
+            this.syncMetrics.doNotSyncAlreadyStarted();
             return true;
         }
     }
@@ -176,7 +177,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     // protocol thread (which is equivalent to read-thread)
     public void cleanup() {
         clearInternalState();
-        sharedShadowgraph.deregisterPeerHandler(this);
+        sharedShadowgraphSynchronizer.deregisterPeerHandler(this);
     }
 
     // HANDLE INCOMING MESSAGES - all done on dispatch thread
@@ -187,12 +188,12 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     @Override
     public void receiveSyncData(@NonNull final SyncData syncMessage) {
 
-        this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.EXCHANGING_WINDOWS);
+        this.syncMetrics.reportSyncPhase(peerId, SyncPhase.EXCHANGING_WINDOWS);
         this.syncMetrics.acceptedSyncRequest();
 
         // if they are sending us sync data, they are no longer behind compared to the self node
-        state.remoteFallenBehind = false;
-        state.remoteStillSendingEvents = false;
+        state.peerFallenBehind = false;
+        state.peerStillSendingEvents = false;
 
         state.remoteSyncData = syncMessage;
 
@@ -206,13 +207,13 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     public void receiveTips(@NonNull final List<Boolean> remoteTipKnowledge) {
 
         // Add each tip they know to the known set
-        final List<ShadowEvent> knownTips = getMyTipsTheyKnow(otherNodeId, state.myTips, remoteTipKnowledge);
+        final List<ShadowEvent> knownTips = getMyTipsTheyKnow(peerId, state.myTips, remoteTipKnowledge);
 
         state.eventsTheyHave.addAll(knownTips);
-        this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.EXCHANGING_EVENTS);
+        this.syncMetrics.reportSyncPhase(peerId, SyncPhase.EXCHANGING_EVENTS);
 
         // create a send list based on the known set
-        final List<PlatformEvent> sendList = sharedShadowgraph.createSendList(
+        final List<PlatformEvent> sendList = sharedShadowgraphSynchronizer.createSendList(
                 selfId, state.eventsTheyHave, state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow());
         sender.sendEvents(sendList.stream().map(PlatformEvent::getGossipEvent).collect(Collectors.toList()));
         outgoingEventsCounter += sendList.size();
@@ -241,9 +242,9 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             // have we already finished sending out events? if yes, mark the sync as finished
             reportSyncFinished();
         } else {
-            this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.SENDING_EVENTS);
+            this.syncMetrics.reportSyncPhase(peerId, SyncPhase.SENDING_EVENTS);
         }
-        state.remoteStillSendingEvents = false;
+        state.peerStillSendingEvents = false;
     }
 
     // UTILITY METHODS
@@ -257,8 +258,8 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
         this.syncMetrics.eventWindow(state.mySyncData.eventWindow(), remoteEventWindow);
 
-        final SyncFallenBehindStatus behindStatus = sharedShadowgraph.hasFallenBehind(
-                state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow(), otherNodeId);
+        final SyncFallenBehindStatus behindStatus = sharedShadowgraphSynchronizer.hasFallenBehind(
+                state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow(), peerId);
         if (behindStatus != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
             logger.info(
                     LogMarker.RECONNECT.getMarker(),
@@ -269,30 +270,29 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
             clearInternalState();
             if (behindStatus == SyncFallenBehindStatus.OTHER_FALLEN_BEHIND) {
-                this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.OTHER_FALLEN_BEHIND);
-                state.remoteFallenBehind = true;
+                this.syncMetrics.reportSyncPhase(peerId, SyncPhase.OTHER_FALLEN_BEHIND);
+                state.peerFallenBehind = true;
             } else {
                 if (tryFixSelfFallBehind(remoteEventWindow)) {
-                    this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.IDLE);
+                    this.syncMetrics.reportSyncPhase(peerId, SyncPhase.IDLE);
                     return;
                 }
-                this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.SELF_FALLEN_BEHIND);
+                this.syncMetrics.reportSyncPhase(peerId, SyncPhase.SELF_FALLEN_BEHIND);
                 sender.breakConversation();
             }
 
             return;
         }
 
-        this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.EXCHANGING_TIPS);
+        this.syncMetrics.reportSyncPhase(peerId, SyncPhase.EXCHANGING_TIPS);
 
         sendKnownTips();
     }
 
     private boolean tryFixSelfFallBehind(final EventWindow remoteEventWindow) {
-        final ReservedEventWindow latestShadowWindow = sharedShadowgraph.reserveEventWindow();
-        try {
-            final SyncFallenBehindStatus behindStatus = sharedShadowgraph.hasFallenBehind(
-                    latestShadowWindow.getEventWindow(), remoteEventWindow, otherNodeId);
+        try (final ReservedEventWindow latestShadowWindow = sharedShadowgraphSynchronizer.reserveEventWindow()) {
+            final SyncFallenBehindStatus behindStatus = sharedShadowgraphSynchronizer.hasFallenBehind(
+                    latestShadowWindow.getEventWindow(), remoteEventWindow, peerId);
             if (behindStatus != SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
                 // we seem to be ok after all, let's wait for another sync to happen
                 logger.info(
@@ -304,15 +304,13 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             }
 
             return false;
-        } finally {
-            latestShadowWindow.close();
         }
     }
 
     private void sendSyncData() {
-        this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.EXCHANGING_WINDOWS);
-        state.shadowWindow = sharedShadowgraph.reserveEventWindow();
-        state.myTips = sharedShadowgraph.getTips();
+        this.syncMetrics.reportSyncPhase(peerId, SyncPhase.EXCHANGING_WINDOWS);
+        state.shadowWindow = sharedShadowgraphSynchronizer.reserveEventWindow();
+        state.myTips = sharedShadowgraphSynchronizer.getTips();
         final List<Hash> tipHashes =
                 state.myTips.stream().map(ShadowEvent::getEventBaseHash).collect(Collectors.toList());
         state.mySyncData = new SyncData(state.shadowWindow.getEventWindow(), tipHashes);
@@ -325,7 +323,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     private void sendKnownTips() {
 
         // process the hashes received
-        final List<ShadowEvent> theirTips = sharedShadowgraph.shadows(state.remoteSyncData.tipHashes());
+        final List<ShadowEvent> theirTips = sharedShadowgraphSynchronizer.shadows(state.remoteSyncData.tipHashes());
 
         // For each tip they send us, determine if we have that event.
         // For each tip, send true if we have the event and false if we don't.
@@ -334,26 +332,26 @@ public class RpcPeerHandler implements GossipRpcReceiver {
         // Add their tips to the set of events they are known to have
         theirTips.stream().filter(Objects::nonNull).forEach(state.eventsTheyHave::add);
 
-        state.remoteStillSendingEvents = true;
+        state.peerStillSendingEvents = true;
 
         sender.sendTips(theirTipsIHave);
     }
 
     private void finishedSendingEvents() {
-        if (!state.remoteStillSendingEvents) {
+        if (!state.peerStillSendingEvents) {
             // have they already finished sending their events ? if yes, mark the sync as finished
             reportSyncFinished();
         } else {
-            this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.RECEIVING_EVENTS);
+            this.syncMetrics.reportSyncPhase(peerId, SyncPhase.RECEIVING_EVENTS);
         }
         clearInternalState();
     }
 
     private void reportSyncFinished() {
-        this.syncMetrics.syncDone(new SyncResult(otherNodeId, incomingEventsCounter, outgoingEventsCounter));
+        this.syncMetrics.syncDone(new SyncResult(peerId, incomingEventsCounter, outgoingEventsCounter));
         incomingEventsCounter = 0;
         outgoingEventsCounter = 0;
-        this.syncMetrics.reportSyncPhase(otherNodeId, SyncPhase.IDLE);
+        this.syncMetrics.reportSyncPhase(peerId, SyncPhase.IDLE);
     }
 
     private void clearInternalState() {
@@ -364,7 +362,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
      * @return true if the cooldown period after a sync has elapsed, else false
      */
     private boolean isSyncCooldownComplete() {
-        final Duration elapsed = Duration.between(state.lastSyncTime, this.time.now());
+        final Duration elapsed = Duration.between(state.lastSyncFinishedTime, this.time.now());
         return isGreaterThanOrEqualTo(elapsed, sleepAfterSync);
     }
 
@@ -375,8 +373,8 @@ public class RpcPeerHandler implements GossipRpcReceiver {
      */
     private void handleIncomingSyncEvent(@NonNull final GossipEvent gossipEvent) {
         final PlatformEvent platformEvent = new PlatformEvent(gossipEvent);
-        platformEvent.setSenderId(otherNodeId);
-        this.intakeEventCounter.eventEnteredIntakePipeline(otherNodeId);
+        platformEvent.setSenderId(peerId);
+        this.intakeEventCounter.eventEnteredIntakePipeline(peerId);
         eventHandler.accept(platformEvent);
     }
 }

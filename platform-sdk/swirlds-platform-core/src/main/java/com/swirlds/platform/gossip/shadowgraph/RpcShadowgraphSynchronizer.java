@@ -24,9 +24,9 @@ import org.hiero.consensus.model.node.NodeId;
  * This class is designed to use message based protocol (as a precursor to RPC communication) instead of stealing entire
  * socket (unlike {@link ShadowgraphSynchronizer}
  */
-public class GossipRpcShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
+public class RpcShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
 
-    private static final Logger logger = LogManager.getLogger(GossipRpcShadowgraphSynchronizer.class);
+    private static final Logger logger = LogManager.getLogger(RpcShadowgraphSynchronizer.class);
 
     /**
      * List of all started sync exchanges with remote peers
@@ -41,7 +41,7 @@ public class GossipRpcShadowgraphSynchronizer extends AbstractShadowgraphSynchro
     /**
      * How long should we wait between sync attempts
      */
-    private final Duration syncPeriod;
+    private final Duration sleepAfterSync;
 
     /**
      * Constructs a new ShadowgraphSynchronizer.
@@ -54,7 +54,7 @@ public class GossipRpcShadowgraphSynchronizer extends AbstractShadowgraphSynchro
      * @param intakeEventCounter   used for tracking events in the intake pipeline per peer
      * @param selfId               id of current node
      */
-    public GossipRpcShadowgraphSynchronizer(
+    public RpcShadowgraphSynchronizer(
             @NonNull final PlatformContext platformContext,
             final int numberOfNodes,
             @NonNull final SyncMetrics syncMetrics,
@@ -74,32 +74,24 @@ public class GossipRpcShadowgraphSynchronizer extends AbstractShadowgraphSynchro
         final SyncConfig syncConfig = platformContext.getConfiguration().getConfigData(SyncConfig.class);
 
         this.selfId = selfId;
-        this.syncPeriod = syncConfig.syncPeriod();
+        this.sleepAfterSync = syncConfig.sleepAfterSync();
     }
 
     /**
      * Create new state class for the RPC peer
      *
-     * @param sender      endpoint for sending messages to remote endpoint asynchronously
+     * @param sender      endpoint for sending messages to peer endpoint asynchronously
      * @param otherNodeId id of the remote node
      * @return rpc peer state object
      */
     public RpcPeerHandler createPeerHandler(@NonNull final GossipRpcSender sender, @NonNull final NodeId otherNodeId) {
-        final RpcPeerHandler rpcPeerState = new RpcPeerHandler(
-                this, sender, selfId, otherNodeId, syncPeriod, syncMetrics, time, intakeEventCounter, eventHandler);
-        allRpcPeers.add(rpcPeerState);
-        return rpcPeerState;
+        final RpcPeerHandler rpcPeerHandler = new RpcPeerHandler(
+                this, sender, selfId, otherNodeId, sleepAfterSync, syncMetrics, time, intakeEventCounter, eventHandler);
+        allRpcPeers.add(rpcPeerHandler);
+        return rpcPeerHandler;
     }
 
-    public void deregisterPeerHandler(final RpcPeerHandler rpcPeerState) {
-        this.allRpcPeers.remove(rpcPeerState);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void addEvent(@NonNull final PlatformEvent platformEvent) {
-        super.addEvent(platformEvent);
+    public void deregisterPeerHandler(final RpcPeerHandler rpcPeerHandler) {
+        this.allRpcPeers.remove(rpcPeerHandler);
     }
 }

@@ -6,8 +6,8 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.threading.manager.ThreadManager;
 import com.swirlds.common.threading.pool.CachedPoolParallelExecutor;
 import com.swirlds.platform.gossip.IntakeEventCounter;
-import com.swirlds.platform.gossip.shadowgraph.GossipRpcShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.shadowgraph.RpcPeerHandler;
+import com.swirlds.platform.gossip.shadowgraph.RpcShadowgraphSynchronizer;
 import com.swirlds.platform.metrics.SyncMetrics;
 import com.swirlds.platform.network.NetworkMetrics;
 import com.swirlds.platform.network.protocol.AbstractSyncProtocol;
@@ -21,7 +21,7 @@ import org.hiero.consensus.model.status.PlatformStatus;
 /**
  * Implementation of a factory for rpc protocol, encompassing new sync
  */
-public class RpcProtocol extends AbstractSyncProtocol<GossipRpcShadowgraphSynchronizer> {
+public class RpcProtocol extends AbstractSyncProtocol<RpcShadowgraphSynchronizer> {
 
     private final CachedPoolParallelExecutor executor;
     private final AtomicReference<PlatformStatus> platformStatus = new AtomicReference<>(PlatformStatus.STARTING_UP);
@@ -42,7 +42,7 @@ public class RpcProtocol extends AbstractSyncProtocol<GossipRpcShadowgraphSynchr
      * @param syncMetrics        metrics tracking syncing platform
      */
     protected RpcProtocol(
-            @NonNull final GossipRpcShadowgraphSynchronizer synchronizer,
+            @NonNull final RpcShadowgraphSynchronizer synchronizer,
             @NonNull final CachedPoolParallelExecutor executor,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final PlatformContext platformContext,
@@ -67,7 +67,7 @@ public class RpcProtocol extends AbstractSyncProtocol<GossipRpcShadowgraphSynchr
      */
     public static RpcProtocol create(
             @NonNull final PlatformContext platformContext,
-            @NonNull final GossipRpcShadowgraphSynchronizer synchronizer,
+            @NonNull final RpcShadowgraphSynchronizer synchronizer,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final ThreadManager threadManager,
             final int rosterSize,

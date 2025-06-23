@@ -112,7 +112,7 @@ public class NegotiationProtocols {
      * Perform optional cleanup on all peer protocols
      */
     public void cleanup() {
-        for (PeerProtocol peerProtocol : allPeerProtocols) {
+        for (final PeerProtocol peerProtocol : allPeerProtocols) {
             peerProtocol.cleanup();
         }
     }
