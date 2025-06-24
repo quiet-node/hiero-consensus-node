@@ -246,7 +246,11 @@ public class PlatformStateFacade {
         return readablePlatformStateStore(state).getLastFrozenTime();
     }
 
-    @NonNull
+    /**
+     * Returns the last freeze round of the state.
+     * @param state the state to extract the last freeze round from
+     * @return the last freeze round
+     */
     public long lastFreezeRoundOf(@NonNull final State state) {
         return readablePlatformStateStore(state).getLastFreezeRound();
     }

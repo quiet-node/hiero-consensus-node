@@ -21,7 +21,7 @@ public class FakeConsensusEvent extends FakeEvent implements ConsensusEvent {
 
     public FakeConsensusEvent(
             @NonNull final FakeEvent event, final long consensusOrder, @NonNull final Instant consensusTimestamp) {
-        super(event.getCreatorId(), event.getTimeCreated(), event.transaction);
+        super(event.getCreatorId(), event.getTimeCreated(), event.transaction, event.getBirthRound());
         this.consensusOrder = consensusOrder;
         this.consensusTimestamp = requireNonNull(consensusTimestamp);
         this.hash = event.getHash();

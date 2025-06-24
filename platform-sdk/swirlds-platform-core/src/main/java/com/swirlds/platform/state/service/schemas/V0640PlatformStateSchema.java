@@ -25,10 +25,12 @@ public class V0640PlatformStateSchema extends Schema {
     @Override
     public void migrate(@NonNull final MigrationContext ctx) {
         if (!ctx.isGenesis()) {
-            LOGGER.info(
-                    "V0640PlatformStateSchema - migrate() called during non-genesis state migration. Setting the "
-                            + "last freeze round to the migration round number: {}",
-                    ctx.roundNumber());
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info(
+                        "V0640PlatformStateSchema - migrate() called during non-genesis state migration. Setting the "
+                                + "last freeze round to the migration round number: {}",
+                        ctx.roundNumber());
+            }
             final var platformStateStore = new WritablePlatformStateStore(ctx.newStates());
             platformStateStore.setLastFreezeRound(ctx.roundNumber());
         }

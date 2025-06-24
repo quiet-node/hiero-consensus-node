@@ -765,7 +765,7 @@ public class PlatformComponentBuilder {
                             .validateInitialState()
                     ? DO_NOT_IGNORE_ROUNDS
                     : initialStateRound;
-            long lastFreezeRound = blocks.platformStateFacade()
+            final long lastFreezeRound = blocks.platformStateFacade()
                     .lastFreezeRoundOf(blocks.initialState().get().getState());
 
             issDetector = new DefaultIssDetector(

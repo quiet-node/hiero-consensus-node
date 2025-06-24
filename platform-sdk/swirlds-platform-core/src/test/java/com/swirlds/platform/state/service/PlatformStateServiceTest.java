@@ -27,7 +27,7 @@ class PlatformStateServiceTest {
         given(registry.register(captor.capture())).willReturn(registry);
         PLATFORM_STATE_SERVICE.registerSchemas(registry);
         final var schemas = captor.getAllValues();
-        assertEquals(2, schemas.size());
+        assertEquals(2, schemas.size(), "Expected two schemas to be registered, but found: " + schemas.size());
         assertInstanceOf(V0540PlatformStateSchema.class, schemas.getFirst());
         assertInstanceOf(V0640PlatformStateSchema.class, schemas.getLast());
     }

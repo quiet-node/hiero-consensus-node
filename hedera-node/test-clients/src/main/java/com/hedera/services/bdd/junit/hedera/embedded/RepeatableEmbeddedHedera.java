@@ -92,6 +92,23 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
     }
 
     @Override
+    public TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, final long eventBirthRound) {
+        var response = OK_RESPONSE;
+        final Bytes payload = Bytes.wrap(transaction.toByteArray());
+        if (defaultNodeAccountId.equals(nodeAccountId)) {
+            final var responseBuffer = BufferedData.allocate(MAX_PLATFORM_TXN_SIZE);
+            hedera.ingestWorkflow().submitTransaction(payload, responseBuffer);
+            response = parseTransactionResponse(responseBuffer);
+        } else {
+            final var nodeId = nodeIds.getOrDefault(nodeAccountId, MISSING_NODE_ID);
+            warnOfSkippedIngestChecks(nodeAccountId, nodeId);
+            platform.lastCreatedEvent =
+                    new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload), eventBirthRound);
+        }
+        return handleNextRounds(response);
+    }
+
+    @Override
     public TransactionResponse submit(
             @NonNull final Transaction transaction,
             @NonNull final AccountID nodeAccountId,
@@ -110,18 +127,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
             warnOfSkippedIngestChecks(nodeAccountId, nodeId);
             platform.lastCreatedEvent = new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload));
         }
-        if (response.getNodeTransactionPrecheckCode() == OK) {
-            handleNextRoundIfPresent();
-            // If handling this transaction scheduled node transactions, handle them now
-            while (!pendingNodeSubmissions.isEmpty()) {
-                platform.lastCreatedEvent = null;
-                pendingNodeSubmissions.poll().run();
-                if (platform.lastCreatedEvent != null) {
-                    handleNextRoundIfPresent();
-                }
-            }
-        }
-        return response;
+        return handleNextRounds(response);
     }
 
     @Override
@@ -223,5 +229,21 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
                     requireNonNull(lastCreatedEvent), consensusOrder.getAndIncrement(), firstRoundTime));
             return new FakeRound(roundNo.getAndIncrement(), requireNonNull(roster), consensusEvents);
         }
+    }
+
+    @NonNull
+    private TransactionResponse handleNextRounds(final TransactionResponse response) {
+        if (response.getNodeTransactionPrecheckCode() == OK) {
+            handleNextRoundIfPresent();
+            // If handling this transaction scheduled node transactions, handle them now
+            while (!pendingNodeSubmissions.isEmpty()) {
+                platform.lastCreatedEvent = null;
+                pendingNodeSubmissions.poll().run();
+                if (platform.lastCreatedEvent != null) {
+                    handleNextRoundIfPresent();
+                }
+            }
+        }
+        return response;
     }
 }

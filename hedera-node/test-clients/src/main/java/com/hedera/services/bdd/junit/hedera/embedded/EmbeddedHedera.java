@@ -129,4 +129,13 @@ public interface EmbeddedHedera {
      * @return the response to the query
      */
     Response send(@NonNull Query query, @NonNull AccountID nodeAccountId, final boolean asNodeOperator);
+
+    /**
+     * Submits a transaction to the embedded node.
+     * @param transaction the transaction to submit
+     * @param nodeAccountId the account ID of the node to submit the transaction to
+     * @param eventBirthRound the round in which the event was born, used for event processing
+     * @return the response to the transaction
+     */
+    TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, long eventBirthRound);
 }
