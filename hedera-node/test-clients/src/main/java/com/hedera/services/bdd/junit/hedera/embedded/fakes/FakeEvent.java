@@ -48,6 +48,21 @@ public class FakeEvent implements Event {
                 .build();
     }
 
+    public FakeEvent(
+            @NonNull final NodeId creatorId,
+            @NonNull final Instant timeCreated,
+            @NonNull final TransactionWrapper transaction,
+            long eventBirthRound) {
+        this.creatorId = requireNonNull(creatorId);
+        this.timeCreated = requireNonNull(timeCreated);
+        this.transaction = requireNonNull(transaction);
+        this.eventCore = EventCore.newBuilder()
+                .creatorNodeId(creatorId.id())
+                .timeCreated(HapiUtils.asTimestamp(timeCreated))
+                .birthRound(eventBirthRound)
+                .build();
+    }
+
     @Override
     public Iterator<Transaction> transactionIterator() {
         return Collections.singleton((Transaction) transaction).iterator();

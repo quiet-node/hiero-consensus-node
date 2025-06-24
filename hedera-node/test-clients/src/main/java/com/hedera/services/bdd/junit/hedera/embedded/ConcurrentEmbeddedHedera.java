@@ -85,6 +85,24 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
     }
 
     @Override
+    public TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, long eventBirthRound) {
+        requireNonNull(transaction);
+        requireNonNull(nodeAccountId);
+        if (defaultNodeAccountId.equals(nodeAccountId)) {
+            final var responseBuffer = BufferedData.allocate(MAX_PLATFORM_TXN_SIZE);
+            hedera.ingestWorkflow().submitTransaction(Bytes.wrap(transaction.toByteArray()), responseBuffer);
+            return parseTransactionResponse(responseBuffer);
+        } else {
+            final var nodeId = nodeIds.getOrDefault(nodeAccountId, MISSING_NODE_ID);
+            warnOfSkippedIngestChecks(nodeAccountId, nodeId);
+            platform.ingestQueue()
+                    .add(new FakeEvent(
+                            nodeId, now(), createAppPayloadWrapper(transaction.toByteArray()), eventBirthRound));
+            return OK_RESPONSE;
+        }
+    }
+
+    @Override
     public TransactionResponse submit(
             @NonNull final Transaction transaction,
             @NonNull final AccountID nodeAccountId,

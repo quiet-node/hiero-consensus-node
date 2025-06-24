@@ -584,6 +584,15 @@ public class UtilVerbs {
         };
     }
 
+    public static HapiTxnOp.SubmissionStrategy usingEventBirthRound(long eventBirthRound) {
+        return (network, transaction, functionality, target, nodeAccountId) -> {
+            if (!(network instanceof EmbeddedNetwork embeddedNetwork)) {
+                throw new IllegalArgumentException("Expected an EmbeddedNetwork");
+            }
+            return embeddedNetwork.embeddedHederaOrThrow().submit(transaction, nodeAccountId, eventBirthRound);
+        };
+    }
+
     /**
      * Returns a submission strategy that requires an embedded network and given one submits a transaction with
      * the given {@link StateSignatureTransaction}-callback.

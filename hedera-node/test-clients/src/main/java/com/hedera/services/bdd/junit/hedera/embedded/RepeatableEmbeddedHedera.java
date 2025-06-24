@@ -32,6 +32,7 @@ import org.hiero.consensus.model.event.ConsensusEvent;
 import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * An embedded Hedera node that handles transactions synchronously on ingest and thus
@@ -92,6 +93,39 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
     }
 
     @Override
+    public TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, long eventBirthRound) {
+        var response = OK_RESPONSE;
+        final Bytes payload = Bytes.wrap(transaction.toByteArray());
+        if (defaultNodeAccountId.equals(nodeAccountId)) {
+            final var responseBuffer = BufferedData.allocate(MAX_PLATFORM_TXN_SIZE);
+            hedera.ingestWorkflow().submitTransaction(payload, responseBuffer);
+            response = parseTransactionResponse(responseBuffer);
+        } else {
+            final var nodeId = nodeIds.getOrDefault(nodeAccountId, MISSING_NODE_ID);
+            warnOfSkippedIngestChecks(nodeAccountId, nodeId);
+            platform.lastCreatedEvent =
+                    new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload), eventBirthRound);
+        }
+        return handleNextRounds(response);
+    }
+
+    @NotNull
+    private TransactionResponse handleNextRounds(TransactionResponse response) {
+        if (response.getNodeTransactionPrecheckCode() == OK) {
+            handleNextRoundIfPresent();
+            // If handling this transaction scheduled node transactions, handle them now
+            while (!pendingNodeSubmissions.isEmpty()) {
+                platform.lastCreatedEvent = null;
+                pendingNodeSubmissions.poll().run();
+                if (platform.lastCreatedEvent != null) {
+                    handleNextRoundIfPresent();
+                }
+            }
+        }
+        return response;
+    }
+
+    @Override
     public TransactionResponse submit(
             @NonNull final Transaction transaction,
             @NonNull final AccountID nodeAccountId,
@@ -110,18 +144,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
             warnOfSkippedIngestChecks(nodeAccountId, nodeId);
             platform.lastCreatedEvent = new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload));
         }
-        if (response.getNodeTransactionPrecheckCode() == OK) {
-            handleNextRoundIfPresent();
-            // If handling this transaction scheduled node transactions, handle them now
-            while (!pendingNodeSubmissions.isEmpty()) {
-                platform.lastCreatedEvent = null;
-                pendingNodeSubmissions.poll().run();
-                if (platform.lastCreatedEvent != null) {
-                    handleNextRoundIfPresent();
-                }
-            }
-        }
-        return response;
+        return handleNextRounds(response);
     }
 
     @Override
