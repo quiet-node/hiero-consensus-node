@@ -23,6 +23,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.platform.event.EventCore;
 import com.hedera.hapi.platform.event.EventDescriptor;
+import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.blocks.BlockHashSigner;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
@@ -56,6 +57,8 @@ import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.lifecycle.info.NodeInfo;
+import com.swirlds.state.spi.ReadableSingletonState;
+import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Instant;
 import java.util.List;
@@ -172,6 +175,15 @@ class HandleWorkflowTest {
     @Mock
     private BlockBufferService blockBufferService;
 
+    @Mock
+    private ReadableStates readableStates;
+
+    @Mock
+    private EventCore eventCore;
+
+    @Mock
+    private ReadableSingletonState<Object> platformStateReadableSingletonState;
+
     private HandleWorkflow subject;
 
     @Test
@@ -180,6 +192,11 @@ class HandleWorkflowTest {
         final var missingCreatorId = NodeId.of(2L);
         final var eventFromPresentCreator = mock(ConsensusEvent.class);
         final var eventFromMissingCreator = mock(ConsensusEvent.class);
+        given(state.getReadableStates(any())).willReturn(readableStates);
+        given(readableStates.getSingleton(any())).willReturn(platformStateReadableSingletonState);
+        given(platformStateReadableSingletonState.get())
+                .willReturn(PlatformState.newBuilder().lastFreezeRound(0L).build());
+        given(eventFromMissingCreator.getEventCore()).willReturn(eventCore);
         given(round.iterator())
                 .willReturn(List.of(eventFromMissingCreator, eventFromPresentCreator)
                         .iterator());
