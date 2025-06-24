@@ -809,10 +809,10 @@ public class VirtualMapStateTest extends MerkleTestBase {
 
     @AfterEach
     void tearDown() {
-        if(virtualMapState.getRoot().getReservationCount() >= 0) {
+        if (virtualMapState.getRoot().getReservationCount() >= 0) {
             virtualMapState.release();
         }
-        if(fruitVirtualMap != null && fruitVirtualMap.getReservationCount() >= 0) {
+        if (fruitVirtualMap != null && fruitVirtualMap.getReservationCount() >= 0) {
             fruitVirtualMap.release();
         }
         assertAllDatabasesClosed();
