@@ -197,8 +197,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * This version number should be used to handle compatibility issues that may arise from any future changes
      */
     public static class ClassVersion {
-        public static final int ORIGINAL = 1;
-        public static final int MERKLE_SERIALIZATION_CLEANUP = 2;
         public static final int REHASH_LEAVES = 3;
         public static final int NO_VIRTUAL_ROOT_NODE = 4;
     }
@@ -652,15 +650,24 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * @param value
      * 		the value, may be null.
      */
-    public <V> void put(final Bytes key, final V value, final Codec<V> valueCodec) {
+    public <V> void put(@NonNull final Bytes key, @Nullable final V value, @Nullable final Codec<V> valueCodec) {
         put(key, value, valueCodec, null);
     }
 
-    public void putBytes(final Bytes key, final Bytes valueBytes) {
-        put(key, null, null, valueBytes);
+    /**
+     * Puts the key/value pair represented as bytes into the map. The key must not be null, but the value
+     * may be null. If the entry was already in the map, the value is replaced. If the mapping was not in the map, then a new entry is made.
+     *
+     * @param keyBytes
+     * 		the key bytes, cannot be null.
+     * @param valueBytes
+     * 		the value bytes, may be null.
+     */
+    public void putBytes(@NonNull final Bytes keyBytes, @Nullable final Bytes valueBytes) {
+        put(keyBytes, null, null, valueBytes);
     }
 
-    public <V> void put(final Bytes key, final V value, final Codec<V> valueCodec, final Bytes valueBytes) {
+    private <V> void put(final Bytes key, final V value, final Codec<V> valueCodec, final Bytes valueBytes) {
         throwIfImmutable();
         assert !isHashed() : "Cannot modify already hashed node";
         assert currentModifyingThreadRef.compareAndSet(null, Thread.currentThread());
@@ -1179,7 +1186,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * {@inheritDoc}
      */
     @Override
-    public void snapshot(final Path destination) throws IOException {
+    public void snapshot(@NonNull final Path destination) throws IOException {
+        requireNonNull(destination);
         if (isDestroyed()) {
             throw new IllegalStateException("snapshot is illegal on already destroyed copies");
         }
@@ -1221,7 +1229,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * {@inheritDoc}
      */
     @Override
-    public TeacherTreeView<Long> buildTeacherView(final ReconnectConfig reconnectConfig) {
+    public TeacherTreeView<Long> buildTeacherView(@NonNull final ReconnectConfig reconnectConfig) {
         return switch (virtualMapConfig.reconnectMode()) {
             case VirtualMapReconnectMode.PUSH ->
                 new TeacherPushVirtualTreeView(getStaticThreadManager(), reconnectConfig, this, state, pipeline);
@@ -1238,7 +1246,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * {@inheritDoc}
      */
     @Override
-    public void setupWithOriginalNode(final MerkleNode originalNode) {
+    public void setupWithOriginalNode(@NonNull final MerkleNode originalNode) {
         assert originalNode instanceof VirtualMap : "The original node was not a VirtualMap!";
 
         // NOTE: If we're reconnecting, then the old tree is toast. We hold onto the originalMap to
@@ -1308,7 +1316,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     @Override
     public LearnerTreeView<Long> buildLearnerView(
-            final ReconnectConfig reconnectConfig, @NonNull final ReconnectMapStats mapStats) {
+            @NonNull final ReconnectConfig reconnectConfig, @NonNull final ReconnectMapStats mapStats) {
         assert originalMap != null;
         // During reconnect we want to look up state from the original records
         final VirtualMapMetadata originalState = originalMap.getState();
@@ -1364,7 +1372,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * @param metrics
      * 		reference to the metrics system
      */
-    public void registerMetrics(final Metrics metrics) {
+    public void registerMetrics(@NonNull final Metrics metrics) {
         statistics.registerMetrics(metrics);
         pipeline.registerMetrics(metrics);
         dataSource.registerMetrics(metrics);
@@ -1376,7 +1384,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * @param leafRecord
      * 		describes a leaf
      */
-    public void handleReconnectLeaf(final VirtualLeafBytes leafRecord) {
+    public void handleReconnectLeaf(@NonNull final VirtualLeafBytes<?> leafRecord) {
         try {
             reconnectIterator.supply(leafRecord);
         } catch (final MerkleSynchronizationException e) {
@@ -1462,7 +1470,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      *
      *  @param key The key of the leaf to warm, must not be null
      */
-    public void warm(final Bytes key) {
+    public void warm(@NonNull final Bytes key) {
         records.findLeafRecord(key);
     }
 
@@ -1478,7 +1486,11 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * @param value
      * 		The value to add. May be null.
      */
-    private <V> void add(final Bytes key, final V value, final Codec<V> valueCodec, final Bytes valueBytes) {
+    private <V> void add(
+            @NonNull final Bytes key,
+            @Nullable final V value,
+            @Nullable final Codec<V> valueCodec,
+            @Nullable final Bytes valueBytes) {
         throwIfImmutable();
         assert !isHashed() : "Cannot modify already hashed node";
 
@@ -1602,7 +1614,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * {@inheritDoc}
      */
     @Override
-    public void serialize(final SerializableDataOutputStream out, final Path outputDirectory) throws IOException {
+    public void serialize(@NonNull final SerializableDataOutputStream out, @NonNull final Path outputDirectory)
+            throws IOException {
 
         // Create and write to state the name of the file we will expect later on deserialization
         final String outputFileName = state.getLabel() + ".vmap";
@@ -1630,7 +1643,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * {@inheritDoc}
      */
     @Override
-    public void deserialize(final SerializableDataInputStream in, final Path inputDirectory, final int version)
+    public void deserialize(
+            @NonNull final SerializableDataInputStream in, @NonNull final Path inputDirectory, final int version)
             throws IOException {
 
         if (version < ClassVersion.REHASH_LEAVES) {
@@ -1652,7 +1666,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * @param vmStateExternal        true for versions prior to version 4, the state is not a leaf for the VirtualMap
      * @throws IOException For problems.
      */
-    public void loadFromFile(final Path inputFile, boolean vmStateExternal) throws IOException {
+    public void loadFromFile(@NonNull final Path inputFile, boolean vmStateExternal) throws IOException {
         deserializeAndDebugOnFailure(
                 () -> new SerializableDataInputStream(new BufferedInputStream(new FileInputStream(inputFile.toFile()))),
                 (final MerkleDataInputStream stream) -> {
