@@ -8,8 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.Level;
@@ -129,25 +127,5 @@ public class SingleNodeLogResultAssert extends AbstractAssert<SingleNodeLogResul
         logStatements.append("****************\n");
 
         failWithMessage(logStatements.toString());
-    }
-
-    /**
-     * Returns a {@link Condition} that fails if there are no messages matching the regex and log-level.
-     *
-     * @param level the log level
-     * @param regex the regex any message should match
-     * @return the condition object to validate
-     */
-    static Condition<SingleNodeLogResult> matchesLevelAndRegexCondition(
-            final @NotNull Level level, final @NotNull String regex) {
-        Objects.requireNonNull(level);
-        Objects.requireNonNull(regex);
-        final Predicate<String> logMatches = Pattern.compile(regex).asPredicate();
-        return new Condition<>("Node log result contains any message matching level:" + level + " and regex:" + regex) {
-            @Override
-            public boolean matches(final SingleNodeLogResult value) {
-                return value.logs().stream().anyMatch(log -> level == log.level() && logMatches.test(log.message()));
-            }
-        };
     }
 }
