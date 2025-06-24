@@ -13,18 +13,23 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
-import jdk.jfr.Description;
 import org.apache.logging.log4j.Level;
+import org.assertj.core.api.Assertions;
 import org.hiero.otter.fixtures.Network;
 import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.OtterTest;
 import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
 
 /**
  * Test class for verifying the behavior of
  */
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class PcesMigrationNonFreezeTest {
 
     private static final Duration DURATION = Duration.ofMinutes(5);
@@ -51,8 +56,9 @@ public class PcesMigrationNonFreezeTest {
      * @throws InterruptedException if an operation times out
      */
     @OtterTest
-    @Description("First step of the testing process, will generate a state to reload")
-    void testA(final TestEnvironment env) throws InterruptedException {
+    @Order(0)
+    @DisplayName("First step of the testing process, will generate a state to reload")
+    void generateState(final TestEnvironment env) throws InterruptedException {
 
         final Network network = env.network();
         network.withDeterministicKeyGeneration(true);
@@ -75,21 +81,21 @@ public class PcesMigrationNonFreezeTest {
     }
 
     @OtterTest
-    @Description("Test that reloading a non freeze existing state into a new network with more nodes does fail")
-    void testB(final TestEnvironment env) throws InterruptedException {
+    @DisplayName("Test that reloading a non freeze existing state into a new network with more nodes does fail")
+    @Order(1)
+    void testLoadStateSnapshotWithNonFilteredPces(final TestEnvironment env) throws InterruptedException {
         final Network network = env.network();
         network.withDeterministicKeyGeneration(true);
         syncTimeline(env);
         // Setup simulation
         network.addNodes(6);
         network.useInitialSnapshot(stateSnapshotTmpDir);
-        try {
-            network.start(); // todo: we should find another way of testing that a node could not start
-        } catch (AssertionError e) {
-            // todo: we should find another way of performing this assert
-            assertThat(network.getLogResults())
-                    .hasLogThatMatchesLevelAndMessage(Level.ERROR, ".*Node \\d+ is branching");
-        }
+
+        Assertions.assertThatThrownBy(network::start)
+                .isInstanceOf(AssertionError.class);
+
+        env.timeManager().waitFor(DURATION);
+        assertThat(network.getLogResults()).hasLogThatMatchesLevelAndMessage(Level.ERROR, ".*Node \\d+ is branching");
 
         network.shutdown();
     }
@@ -105,9 +111,10 @@ public class PcesMigrationNonFreezeTest {
      * @throws InterruptedException if an operation times out
      */
     @OtterTest
-    @Description(
+    @DisplayName(
             "Test that reloading a non freeze existing state into a new network with more nodes does not fail after filtering the events in pces")
-    void testC(final TestEnvironment env) throws InterruptedException {
+    @Order(2)
+    void testLoadStateSnapshotWithFilteredPces(final TestEnvironment env) throws InterruptedException {
         final Network network = env.network();
         syncTimeline(env);
         network.withDeterministicKeyGeneration(true);
