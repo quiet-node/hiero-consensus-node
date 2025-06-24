@@ -114,7 +114,7 @@ When RpcPeerProtocol gets hold of the specific connection, it enters a loop proc
 
 Three threads are created - 'reader', 'writer' and 'dispatch'.
 * Reader thread does blocking reads from the socket and puts deserialized messages on the inputQueue.
-* Dispatch thread polls messages from inputQueue and executes business logic for them; important simplification is that all logic on the right side of the diagram is done from that single thread. GossipRpcShadowgraphSynchronizer is shared resource between connections and it is thread-safe. All outgoing messages are pushed to the outputQueue. It also handles periodic wakeups to see if synchronization should be initiated.
+* Dispatch thread polls messages from inputQueue and executes business logic for them; important simplification is that all logic on the right side of the diagram is done from that single thread. RpcShadowgraphSynchronizer is shared resource between connections and it is thread-safe. All outgoing messages are pushed to the outputQueue. It also handles periodic wakeups to see if synchronization should be initiated.
 * Writer thread polls messages from outputQueue and writes them to the socket in blocking way. It flushes messages if there is nothing else on outputQueue (otherwise, they will get autoflushed by the system or when output buffer gets full). It also handles sending periodic ping messages.
 
 <img src="rpc-gossip-SyncCommunication.drawio.png"/>
