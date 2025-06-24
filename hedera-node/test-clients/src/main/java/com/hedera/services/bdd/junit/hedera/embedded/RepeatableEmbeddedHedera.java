@@ -32,7 +32,6 @@ import org.hiero.consensus.model.event.ConsensusEvent;
 import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * An embedded Hedera node that handles transactions synchronously on ingest and thus
@@ -93,7 +92,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
     }
 
     @Override
-    public TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, long eventBirthRound) {
+    public TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, final long eventBirthRound) {
         var response = OK_RESPONSE;
         final Bytes payload = Bytes.wrap(transaction.toByteArray());
         if (defaultNodeAccountId.equals(nodeAccountId)) {
@@ -107,22 +106,6 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
                     new FakeEvent(nodeId, time.now(), createAppPayloadWrapper(payload), eventBirthRound);
         }
         return handleNextRounds(response);
-    }
-
-    @NotNull
-    private TransactionResponse handleNextRounds(TransactionResponse response) {
-        if (response.getNodeTransactionPrecheckCode() == OK) {
-            handleNextRoundIfPresent();
-            // If handling this transaction scheduled node transactions, handle them now
-            while (!pendingNodeSubmissions.isEmpty()) {
-                platform.lastCreatedEvent = null;
-                pendingNodeSubmissions.poll().run();
-                if (platform.lastCreatedEvent != null) {
-                    handleNextRoundIfPresent();
-                }
-            }
-        }
-        return response;
     }
 
     @Override
@@ -246,5 +229,21 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
                     requireNonNull(lastCreatedEvent), consensusOrder.getAndIncrement(), firstRoundTime));
             return new FakeRound(roundNo.getAndIncrement(), requireNonNull(roster), consensusEvents);
         }
+    }
+
+    @NonNull
+    private TransactionResponse handleNextRounds(final TransactionResponse response) {
+        if (response.getNodeTransactionPrecheckCode() == OK) {
+            handleNextRoundIfPresent();
+            // If handling this transaction scheduled node transactions, handle them now
+            while (!pendingNodeSubmissions.isEmpty()) {
+                platform.lastCreatedEvent = null;
+                pendingNodeSubmissions.poll().run();
+                if (platform.lastCreatedEvent != null) {
+                    handleNextRoundIfPresent();
+                }
+            }
+        }
+        return response;
     }
 }

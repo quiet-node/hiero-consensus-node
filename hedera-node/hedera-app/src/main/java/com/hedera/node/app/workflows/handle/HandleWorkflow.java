@@ -320,14 +320,14 @@ public class HandleWorkflow {
             @NonNull final Round round,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
         boolean transactionsDispatched = false;
+        final var storeFactory = new ReadableStoreFactory(state);
+        final var platformStateStore = storeFactory.getStore(ReadablePlatformStateStore.class);
         for (final var event : round) {
             if (streamMode != RECORDS) {
                 writeEventHeader(event);
             }
             final var creator = networkInfo.nodeInfo(event.getCreatorId().id());
             if (creator == null) {
-                final var storeFactory = new ReadableStoreFactory(state);
-                final var platformStateStore = storeFactory.getStore(ReadablePlatformStateStore.class);
                 if (event.getEventCore().birthRound() > platformStateStore.getLastFreezeRound()) {
                     // We were given an event for a node that does not exist in the address book and was not from
                     // a strictly earlier birth round number prior to the last freeze round number. This will be logged
@@ -336,7 +336,8 @@ public class HandleWorkflow {
                     // node in the address book must have an account ID, since you cannot delete an account belonging
                     // to a node, and you cannot change the address book non-deterministically.
                     logger.warn(
-                            "Received event with birth round {}, last freeze round is {}, from node {} which is not in the address book",
+                            "Received event with birth round {}, last freeze round is {}, from node {} "
+                                    + "which is not in the address book",
                             event.getEventCore().birthRound(),
                             platformStateStore.getLastFreezeRound(),
                             event.getCreatorId());

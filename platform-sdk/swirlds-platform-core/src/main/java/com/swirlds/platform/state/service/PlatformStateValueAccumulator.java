@@ -304,7 +304,7 @@ public class PlatformStateValueAccumulator implements PlatformStateModifier {
     }
 
     @Override
-    public void setLastFreezeRound(long lastFreezeRound) {
+    public void setLastFreezeRound(final long lastFreezeRound) {
         this.lastFreezeRound = lastFreezeRound;
         lastFreezeRoundUpdated = true;
     }

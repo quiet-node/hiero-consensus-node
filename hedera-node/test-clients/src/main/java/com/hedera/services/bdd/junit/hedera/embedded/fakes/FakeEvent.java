@@ -52,7 +52,7 @@ public class FakeEvent implements Event {
             @NonNull final NodeId creatorId,
             @NonNull final Instant timeCreated,
             @NonNull final TransactionWrapper transaction,
-            long eventBirthRound) {
+            final long eventBirthRound) {
         this.creatorId = requireNonNull(creatorId);
         this.timeCreated = requireNonNull(timeCreated);
         this.transaction = requireNonNull(transaction);

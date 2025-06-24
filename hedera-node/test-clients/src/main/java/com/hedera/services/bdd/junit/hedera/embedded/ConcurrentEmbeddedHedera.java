@@ -85,7 +85,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
     }
 
     @Override
-    public TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, long eventBirthRound) {
+    public TransactionResponse submit(Transaction transaction, AccountID nodeAccountId, final long eventBirthRound) {
         requireNonNull(transaction);
         requireNonNull(nodeAccountId);
         if (defaultNodeAccountId.equals(nodeAccountId)) {

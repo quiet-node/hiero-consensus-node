@@ -390,7 +390,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         final var storeFactory = new ReadableStoreFactory(state);
         final var platformStateStore = storeFactory.getStore(ReadablePlatformStateStore.class);
         final long freezeRoundNumber = platformStateStore.getLastFreezeRound();
-        final boolean closesBlock = shouldCloseBlock(roundNum, roundsPerBlock, freezeRoundNumber);
+        final boolean closesBlock = shouldCloseBlock(roundNum, freezeRoundNumber);
         if (closesBlock) {
             lifecycle.onCloseBlock(state);
             // Flush all boundary state changes besides the BlockStreamInfo
@@ -633,7 +633,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         return requireNonNull(blockStreamInfoState.get());
     }
 
-    private boolean shouldCloseBlock(final long roundNumber, final int roundsPerBlock, final long freezeRoundNumber) {
+    private boolean shouldCloseBlock(final long roundNumber, final long freezeRoundNumber) {
         if (fatalShutdownFuture != null) {
             return true;
         }

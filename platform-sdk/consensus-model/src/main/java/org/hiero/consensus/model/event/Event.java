@@ -57,7 +57,7 @@ public interface Event {
 
     /**
      * Returns the software version of the node that created this event.
-     *
+     * @deprecated This method is deprecated and will be removed in a future release.
      * @return the software version
      */
     @Deprecated(forRemoval = true)
