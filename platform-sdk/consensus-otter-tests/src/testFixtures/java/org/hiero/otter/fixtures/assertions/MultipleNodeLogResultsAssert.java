@@ -7,6 +7,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.Level;
 import org.assertj.core.api.AbstractAssert;
 import org.hiero.otter.fixtures.OtterAssertions;
@@ -108,9 +109,13 @@ public class MultipleNodeLogResultsAssert extends AbstractAssert<MultipleNodeLog
                     .findFirst()
                     .orElse(null);
             if (Objects.nonNull(structuredLog)) {
+                final var logs = result.logs().stream().map(StructuredLog::toString)
+                        .limit(1000)
+                        .collect(Collectors.joining(""));
+                //seems to have concurrency issues?
                 failWithMessage(
-                        "Expected no log message to match level [%s] regex [%s] but found [%s]",
-                        level, regex, structuredLog.message());
+                        "Expected no log message to match level [%s] regex [%s] but found [%s] in NodeId:%s log[%s]",
+                        level, regex, structuredLog.message(),result.nodeId(), logs );
             }
         }
 

@@ -125,6 +125,7 @@ public class PcesMigrationNonFreezeTest {
         env.timeManager().waitFor(DURATION);
 
         // todo: we should find another way of performing this assert
+        // review: seems to be retrieving old info from the previous test
         assertThat(network.getLogResults()).hasNoLogThatMatchesLevelAndMessage(Level.ERROR, ".*Node \\d+ is branching");
         network.shutdown();
     }
