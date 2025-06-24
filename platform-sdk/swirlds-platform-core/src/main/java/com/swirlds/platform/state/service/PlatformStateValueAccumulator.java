@@ -72,9 +72,9 @@ public class PlatformStateValueAccumulator implements PlatformStateModifier {
 
     private boolean freezeTimeUpdated;
 
-    private long lastFreezeRound;
+    private long latestFreezeRound;
 
-    private boolean lastFreezeRoundUpdated;
+    private boolean latestFreezeRoundUpdated;
 
     /**
      * the last time when a freeze was performed
@@ -288,8 +288,8 @@ public class PlatformStateValueAccumulator implements PlatformStateModifier {
     }
 
     @Override
-    public long getLastFreezeRound() {
-        return lastFreezeRound;
+    public long getLatestFreezeRound() {
+        return latestFreezeRound;
     }
 
     /**
@@ -304,9 +304,9 @@ public class PlatformStateValueAccumulator implements PlatformStateModifier {
     }
 
     @Override
-    public void setLastFreezeRound(final long lastFreezeRound) {
-        this.lastFreezeRound = lastFreezeRound;
-        lastFreezeRoundUpdated = true;
+    public void setLatestFreezeRound(final long latestFreezeRound) {
+        this.latestFreezeRound = latestFreezeRound;
+        latestFreezeRoundUpdated = true;
     }
 
     /**
@@ -408,8 +408,8 @@ public class PlatformStateValueAccumulator implements PlatformStateModifier {
         return lastFrozenTimeUpdated;
     }
 
-    public boolean isLastFreezeRoundUpdated() {
-        return lastFreezeRoundUpdated;
+    public boolean isLatestFreezeRoundUpdated() {
+        return latestFreezeRoundUpdated;
     }
 
     public boolean isFirstVersionInBirthRoundModeUpdated() {

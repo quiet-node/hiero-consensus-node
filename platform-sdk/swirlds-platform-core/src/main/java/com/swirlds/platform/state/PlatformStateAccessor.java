@@ -121,5 +121,5 @@ public interface PlatformStateAccessor {
      *
      * @return the round number of the last freeze round
      */
-    long getLastFreezeRound();
+    long getLatestFreezeRound();
 }

@@ -657,8 +657,8 @@ class IssDetectorTests extends PlatformTest {
                 .getConfigData(ConsensusConfig.class)
                 .roundsNonAncient();
 
-        final long lastFreezeRound = 5L;
-        final IssDetector issDetector = new DefaultIssDetector(platformContext, roster, false, 1, lastFreezeRound);
+        final long latestFreezeRound = 5L;
+        final IssDetector issDetector = new DefaultIssDetector(platformContext, roster, false, 1, latestFreezeRound);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 5;
@@ -672,7 +672,7 @@ class IssDetectorTests extends PlatformTest {
         final RoundHashValidatorTests.HashGenerationData hashGenerationData =
                 new RoundHashValidatorTests.HashGenerationData(catastrophicData, null);
         final Map<NodeId, ScopedSystemTransaction<StateSignatureTransaction>> nodeIdStateSignatureTransactionMap =
-                generateSystemTransactions(currentRound, lastFreezeRound, hashGenerationData);
+                generateSystemTransactions(currentRound, latestFreezeRound, hashGenerationData);
         final List<ScopedSystemTransaction<StateSignatureTransaction>> signaturesOnCatastrophicRound =
                 new LinkedList<>(nodeIdStateSignatureTransactionMap.values());
 

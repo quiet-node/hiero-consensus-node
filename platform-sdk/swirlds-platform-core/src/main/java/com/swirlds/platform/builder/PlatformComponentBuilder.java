@@ -765,15 +765,15 @@ public class PlatformComponentBuilder {
                             .validateInitialState()
                     ? DO_NOT_IGNORE_ROUNDS
                     : initialStateRound;
-            final long lastFreezeRound = blocks.platformStateFacade()
-                    .lastFreezeRoundOf(blocks.initialState().get().getState());
+            final long latestFreezeRound = blocks.platformStateFacade()
+                    .latestFreezeRoundOf(blocks.initialState().get().getState());
 
             issDetector = new DefaultIssDetector(
                     blocks.platformContext(),
                     blocks.rosterHistory().getCurrentRoster(),
                     ignorePreconsensusSignatures,
                     roundToIgnore,
-                    lastFreezeRound);
+                    latestFreezeRound);
         }
         return issDetector;
     }

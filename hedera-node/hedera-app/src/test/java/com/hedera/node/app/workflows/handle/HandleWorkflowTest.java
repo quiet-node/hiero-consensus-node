@@ -195,7 +195,7 @@ class HandleWorkflowTest {
         given(state.getReadableStates(any())).willReturn(readableStates);
         given(readableStates.getSingleton(any())).willReturn(platformStateReadableSingletonState);
         given(platformStateReadableSingletonState.get())
-                .willReturn(PlatformState.newBuilder().lastFreezeRound(0L).build());
+                .willReturn(PlatformState.newBuilder().latestFreezeRound(0L).build());
         given(eventFromMissingCreator.getEventCore()).willReturn(eventCore);
         given(round.iterator())
                 .willReturn(List.of(eventFromMissingCreator, eventFromPresentCreator)

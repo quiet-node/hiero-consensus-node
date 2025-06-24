@@ -32,7 +32,7 @@ public final class PbjConverter {
                 accessor.getSnapshot(),
                 toPbjTimestamp(accessor.getFreezeTime()),
                 toPbjTimestamp(accessor.getLastFrozenTime()),
-                accessor.getLastFreezeRound(),
+                accessor.getLatestFreezeRound(),
                 Optional.ofNullable(accessor.getLegacyRunningEventHash())
                         .map(Hash::getBytes)
                         .orElse(null),
@@ -88,8 +88,8 @@ public final class PbjConverter {
             builder.lastFrozenTime(toPbjTimestamp(accumulator.getLastFrozenTime()));
         }
 
-        if (accumulator.isLastFreezeRoundUpdated()) {
-            builder.lastFreezeRound(accumulator.getLastFreezeRound());
+        if (accumulator.isLatestFreezeRoundUpdated()) {
+            builder.latestFreezeRound(accumulator.getLatestFreezeRound());
         }
 
         if (accumulator.isLegacyRunningEventHashUpdated()) {

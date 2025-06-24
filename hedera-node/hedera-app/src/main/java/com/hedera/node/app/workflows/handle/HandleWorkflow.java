@@ -264,13 +264,6 @@ public class HandleWorkflow {
         recordCache.resetRoundReceipts();
         boolean transactionsDispatched = false;
 
-        if (platformStateFacade.isFreezeRound(state, round)) {
-            // If this is a freeze round, we need to update the freeze info state
-            final var platformStateStore =
-                    new WritablePlatformStateStore(state.getWritableStates(PlatformStateService.NAME));
-            platformStateStore.setLastFreezeRound(round.getRoundNum());
-        }
-
         configureTssCallbacks(state);
         try {
             reconcileTssState(state, round.getConsensusTimestamp());
@@ -300,6 +293,14 @@ public class HandleWorkflow {
             if (transactionsDispatched && streamMode != BLOCKS) {
                 blockRecordManager.endRound(state);
             }
+
+            // Update the latest freeze round after everything is handled
+            if (platformStateFacade.isFreezeRound(state, round)) {
+                // If this is a freeze round, we need to update the freeze info state
+                final var platformStateStore =
+                        new WritablePlatformStateStore(state.getWritableStates(PlatformStateService.NAME));
+                platformStateStore.setLatestFreezeRound(round.getRoundNum());
+            }
         } finally {
             // Even if there is an exception somewhere, we need to commit the receipts of any handled transactions
             // to the state so these transactions cannot be replayed in future rounds
@@ -328,7 +329,7 @@ public class HandleWorkflow {
             }
             final var creator = networkInfo.nodeInfo(event.getCreatorId().id());
             if (creator == null) {
-                if (event.getEventCore().birthRound() > platformStateStore.getLastFreezeRound()) {
+                if (event.getEventCore().birthRound() > platformStateStore.getLatestFreezeRound()) {
                     // We were given an event for a node that does not exist in the address book and was not from
                     // a strictly earlier birth round number prior to the last freeze round number. This will be logged
                     // as a warning, as this should never happen, and we will skip the event. The platform should
@@ -339,7 +340,7 @@ public class HandleWorkflow {
                             "Received event with birth round {}, last freeze round is {}, from node {} "
                                     + "which is not in the address book",
                             event.getEventCore().birthRound(),
-                            platformStateStore.getLastFreezeRound(),
+                            platformStateStore.getLatestFreezeRound(),
                             event.getCreatorId());
                 }
                 continue;
@@ -669,7 +670,7 @@ public class HandleWorkflow {
         try {
             final var platformStateStore =
                     new ReadablePlatformStateStore(state.getReadableStates(PlatformStateService.NAME));
-            if (eventBirthRound <= platformStateStore.getLastFreezeRound()) {
+            if (eventBirthRound <= platformStateStore.getLatestFreezeRound()) {
                 if (streamMode != BLOCKS) {
                     // This updates consTimeOfLastHandledTxn as a side effect
                     blockRecordManager.advanceConsensusClock(parentTxn.consensusNow(), parentTxn.state());

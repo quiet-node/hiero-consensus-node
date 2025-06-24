@@ -389,7 +389,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     public boolean endRound(@NonNull final State state, final long roundNum) {
         final var storeFactory = new ReadableStoreFactory(state);
         final var platformStateStore = storeFactory.getStore(ReadablePlatformStateStore.class);
-        final long freezeRoundNumber = platformStateStore.getLastFreezeRound();
+        final long freezeRoundNumber = platformStateStore.getLatestFreezeRound();
         final boolean closesBlock = shouldCloseBlock(roundNum, freezeRoundNumber);
         if (closesBlock) {
             lifecycle.onCloseBlock(state);

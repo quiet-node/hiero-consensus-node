@@ -104,7 +104,7 @@ public class DefaultIssDetector implements IssDetector {
      * The last round that was frozen. This is used to ignore signatures from previous software versions.
      * If null, then no signatures are ignored.
      */
-    private final long lastFreezeRound;
+    private final long latestFreezeRound;
 
     /**
      * Create an object that tracks reported hashes and detects ISS events.
@@ -121,7 +121,7 @@ public class DefaultIssDetector implements IssDetector {
             @NonNull final Roster roster,
             final boolean ignorePreconsensusSignatures,
             final long ignoredRound,
-            final long lastFreezeRound) {
+            final long latestFreezeRound) {
         Objects.requireNonNull(platformContext);
         markerFileWriter = new MarkerFileWriter(platformContext);
 
@@ -151,7 +151,7 @@ public class DefaultIssDetector implements IssDetector {
             logger.warn(STARTUP.getMarker(), "No ISS detection will be performed for round {}", ignoredRound);
         }
         this.issMetrics = new IssMetrics(platformContext.getMetrics(), roster);
-        this.lastFreezeRound = lastFreezeRound;
+        this.latestFreezeRound = latestFreezeRound;
     }
 
     /**
@@ -370,7 +370,7 @@ public class DefaultIssDetector implements IssDetector {
             return null;
         }
 
-        if (transaction.eventBirthRound() <= lastFreezeRound) {
+        if (transaction.eventBirthRound() <= latestFreezeRound) {
             // this is a signature from a different software version, ignore it
             return null;
         }

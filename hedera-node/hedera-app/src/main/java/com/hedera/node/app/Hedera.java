@@ -927,12 +927,12 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             // It's normal immediately post-upgrade to still see events from a node removed from the address book
             final var storeFactory = new ReadableStoreFactory(state);
             final var platformStateStore = storeFactory.getStore(ReadablePlatformStateStore.class);
-            if (event.getEventCore().birthRound() > platformStateStore.getLastFreezeRound()) {
+            if (event.getEventCore().birthRound() > platformStateStore.getLatestFreezeRound()) {
                 logger.warn(
                         "Received event with birth round {}, last freeze round is {}, from node {} "
                                 + "which is not in the address book",
                         event.getEventCore().birthRound(),
-                        platformStateStore.getLastFreezeRound(),
+                        platformStateStore.getLatestFreezeRound(),
                         event.getCreatorId());
             }
             return;

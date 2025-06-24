@@ -516,7 +516,8 @@ class BlockStreamManagerImplTest {
         given(state.getReadableStates(any())).willReturn(readableStates);
         given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
         given(platformStateReadableSingletonState.get())
-                .willReturn(PlatformState.newBuilder().lastFreezeRound(ROUND_NO).build());
+                .willReturn(
+                        PlatformState.newBuilder().latestFreezeRound(ROUND_NO).build());
         given(round.getRoundNum()).willReturn(ROUND_NO);
         given(round.getConsensusTimestamp()).willReturn(CONSENSUS_NOW);
         given(boundaryStateChangeListener.boundaryTimestampOrThrow()).willReturn(Timestamp.DEFAULT);
@@ -775,7 +776,8 @@ class BlockStreamManagerImplTest {
         given(state.getReadableStates(any())).willReturn(readableStates);
         given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
         given(platformStateReadableSingletonState.get())
-                .willReturn(PlatformState.newBuilder().lastFreezeRound(ROUND_NO).build());
+                .willReturn(
+                        PlatformState.newBuilder().latestFreezeRound(ROUND_NO).build());
 
         // Set up the signature future to complete immediately and run the callback synchronously
         given(blockHashSigner.signFuture(any())).willReturn(mockSigningFuture);

@@ -130,8 +130,8 @@ public class ReadablePlatformStateStore implements PlatformStateAccessor {
     }
 
     @Override
-    public long getLastFreezeRound() {
-        return stateOrThrow().lastFreezeRound();
+    public long getLatestFreezeRound() {
+        return stateOrThrow().latestFreezeRound();
     }
 
     /**

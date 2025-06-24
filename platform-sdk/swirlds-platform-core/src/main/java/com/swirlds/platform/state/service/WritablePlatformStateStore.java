@@ -137,9 +137,9 @@ public class WritablePlatformStateStore extends ReadablePlatformStateStore imple
     }
 
     @Override
-    public void setLastFreezeRound(final long lastFreezeRound) {
+    public void setLatestFreezeRound(final long latestFreezeRound) {
         final var previousState = stateOrThrow();
-        update(previousState.copyBuilder().lastFreezeRound(lastFreezeRound));
+        update(previousState.copyBuilder().latestFreezeRound(latestFreezeRound));
     }
 
     /**

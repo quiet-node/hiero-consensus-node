@@ -32,7 +32,7 @@ public class V0640PlatformStateSchema extends Schema {
                         ctx.roundNumber());
             }
             final var platformStateStore = new WritablePlatformStateStore(ctx.newStates());
-            platformStateStore.setLastFreezeRound(ctx.roundNumber());
+            platformStateStore.setLatestFreezeRound(ctx.roundNumber());
         }
     }
 }
