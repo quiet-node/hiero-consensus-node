@@ -109,13 +109,14 @@ public class MultipleNodeLogResultsAssert extends AbstractAssert<MultipleNodeLog
                     .findFirst()
                     .orElse(null);
             if (Objects.nonNull(structuredLog)) {
-                final var logs = result.logs().stream().map(StructuredLog::toString)
+                final var logs = result.logs().stream()
+                        .map(StructuredLog::toString)
                         .limit(1000)
                         .collect(Collectors.joining(""));
-                //seems to have concurrency issues?
+                // seems to have concurrency issues?
                 failWithMessage(
                         "Expected no log message to match level [%s] regex [%s] but found [%s] in NodeId:%s log[%s]",
-                        level, regex, structuredLog.message(),result.nodeId(), logs );
+                        level, regex, structuredLog.message(), result.nodeId(), logs);
             }
         }
 

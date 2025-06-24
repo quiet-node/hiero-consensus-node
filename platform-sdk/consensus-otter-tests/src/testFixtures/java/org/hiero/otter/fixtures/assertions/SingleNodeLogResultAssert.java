@@ -6,17 +6,14 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.assertj.core.api.AbstractAssert;
-import org.assertj.core.api.Condition;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * Assertion class for {@link SingleNodeLogResult}.
