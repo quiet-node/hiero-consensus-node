@@ -8,7 +8,7 @@ import static com.hedera.node.app.service.contract.impl.hevm.HederaEvmVersion.VE
 import static com.hedera.node.app.service.contract.impl.hevm.HederaEvmVersion.VERSION_050;
 import static com.hedera.node.app.service.contract.impl.hevm.HederaEvmVersion.VERSION_051;
 import static com.hedera.node.app.service.contract.impl.hevm.HederaEvmVersion.VERSION_062;
-import static com.hedera.node.app.service.contract.impl.hevm.HederaEvmVersion.VERSION_063;
+import static com.hedera.node.app.service.contract.impl.hevm.HederaEvmVersion.VERSION_065;
 import static org.hyperledger.besu.evm.internal.EvmConfiguration.WorldUpdaterMode.JOURNALED;
 
 import com.hedera.node.app.service.contract.impl.annotations.ServicesV030;
@@ -161,11 +161,11 @@ public interface ContractServiceModule {
 
     /**
      * @param processor the transaction processor
-     * @return the bound transaction processor for version 0.63
+     * @return the bound transaction processor for version 0.65
      */
     @Binds
     @IntoMap
     @Singleton
-    @ServicesVersionKey(VERSION_063)
-    TransactionProcessor bindV063Processor(@ServicesV065 @NonNull final TransactionProcessor processor);
+    @ServicesVersionKey(VERSION_065)
+    TransactionProcessor bindV065Processor(@ServicesV065 @NonNull final TransactionProcessor processor);
 }
