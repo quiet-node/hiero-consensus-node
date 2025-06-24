@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 module org.hiero.otter.fixtures {
     requires transitive com.hedera.node.hapi;
+    requires transitive com.swirlds.base.test.fixtures;
     requires transitive com.swirlds.logging;
     requires transitive com.swirlds.platform.core;
     requires transitive com.swirlds.state.impl;
@@ -13,7 +14,6 @@ module org.hiero.otter.fixtures {
     requires com.hedera.node.app.hapi.utils;
     requires com.hedera.node.config;
     requires com.hedera.pbj.runtime;
-    requires com.swirlds.base.test.fixtures;
     requires com.swirlds.base;
     requires com.swirlds.common.test.fixtures;
     requires com.swirlds.common;

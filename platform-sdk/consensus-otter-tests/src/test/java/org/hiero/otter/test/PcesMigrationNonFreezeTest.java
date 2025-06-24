@@ -4,6 +4,7 @@ package org.hiero.otter.test;
 import static org.assertj.core.api.Assertions.fail;
 import static org.hiero.otter.fixtures.OtterAssertions.assertThat;
 
+import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.platform.event.preconsensus.PcesEventFilter;
@@ -26,9 +27,10 @@ import org.junit.jupiter.api.BeforeAll;
  */
 public class PcesMigrationNonFreezeTest {
 
-    private static final Duration DURATION = Duration.ofMinutes(10);
+    private static final Duration DURATION = Duration.ofMinutes(5);
 
     static Path stateSnapshotTmpDir;
+    static Time stateGeneratedTime;
 
     @BeforeAll
     static void setup() throws IOException {
@@ -55,6 +57,7 @@ public class PcesMigrationNonFreezeTest {
         final Network network = env.network();
         network.withDeterministicKeyGeneration(true);
         final TimeManager timeManager = env.timeManager();
+
         // Setup simulation
         network.addNodes(4);
         for (final Node node : network.getNodes()) {
@@ -68,8 +71,28 @@ public class PcesMigrationNonFreezeTest {
         network.shutdown();
 
         network.copyStateSnapshotTo(stateSnapshotTmpDir);
+        stateGeneratedTime = env.timeManager().time();
     }
 
+    @OtterTest
+    @Description("Test that reloading a non freeze existing state into a new network with more nodes does fail")
+    void testB(final TestEnvironment env) throws InterruptedException {
+        final Network network = env.network();
+        network.withDeterministicKeyGeneration(true);
+        syncTimeline(env);
+        // Setup simulation
+        network.addNodes(6);
+        network.useInitialSnapshot(stateSnapshotTmpDir);
+        try {
+            network.start(); // todo: we should find another way of testing that a node could not start
+        } catch (AssertionError e) {
+            // todo: we should find another way of performing this assert
+            assertThat(network.getLogResults())
+                    .hasLogThatMatchesLevelAndMessage(Level.ERROR, ".*Node \\d+ is branching");
+        }
+
+        network.shutdown();
+    }
     /**
      * Tests steps
      * <pre>
@@ -86,6 +109,7 @@ public class PcesMigrationNonFreezeTest {
             "Test that reloading a non freeze existing state into a new network with more nodes does not fail after filtering the events in pces")
     void testC(final TestEnvironment env) throws InterruptedException {
         final Network network = env.network();
+        syncTimeline(env);
         network.withDeterministicKeyGeneration(true);
         doFilterPcesFileEvents(env.timeManager().time());
 
@@ -97,28 +121,16 @@ public class PcesMigrationNonFreezeTest {
 
         // todo: we should find another way of performing this assert
         assertThat(network.getLogResults()).hasNoLogThatMatchesLevelAndMessage(Level.ERROR, ".*Node \\d+ is branching");
-        // Initiate the migration
         network.shutdown();
     }
 
-    @OtterTest
-    @Description("Test that reloading a non freeze existing state into a new network with more nodes does fail")
-    void testB(final TestEnvironment env) throws InterruptedException {
-        final Network network = env.network();
-        network.withDeterministicKeyGeneration(true);
-        // Setup simulation
-        network.addNodes(6);
-        network.useInitialSnapshot(stateSnapshotTmpDir);
-        try {
-            network.start();
-        } catch (AssertionError e) {
-            // todo: we should find another way of performing this assert
-            assertThat(network.getLogResults())
-                    .hasLogThatMatchesLevelAndMessage(Level.ERROR, ".*Node \\d+ is branching");
+    // todo: we should find another way of making two tests share a timeline
+    private static void syncTimeline(final TestEnvironment env) {
+        if (env.timeManager().time().currentTimeMillis() < stateGeneratedTime.currentTimeMillis()) {
+            ((FakeTime) env.timeManager().time())
+                    .tick(Duration.ofMillis(stateGeneratedTime.currentTimeMillis()
+                            - env.timeManager().time().currentTimeMillis()));
         }
-
-        // Initiate the migration
-        network.shutdown();
     }
 
     private static void doFilterPcesFileEvents(final Time time) {
@@ -128,7 +140,7 @@ public class PcesMigrationNonFreezeTest {
             final Path pcesDir = stateDir.resolve("preconsensus-events");
             final Path pcesOutput = Files.createTempDirectory("pcesOutput");
             final Path output = pcesOutput.resolve("filtered");
-            PcesEventFilter.create(stateDir).filter(pcesDir, output);
+            PcesEventFilter.create(stateDir).with(time).filter(pcesDir, output);
             Files.move(pcesDir, pcesOutput.resolve("original"));
             Files.move(output, pcesDir, StandardCopyOption.REPLACE_EXISTING);
 

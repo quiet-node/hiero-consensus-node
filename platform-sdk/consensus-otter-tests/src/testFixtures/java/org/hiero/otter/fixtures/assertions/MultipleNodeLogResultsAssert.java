@@ -111,8 +111,9 @@ public class MultipleNodeLogResultsAssert extends AbstractAssert<MultipleNodeLog
      * @param level the log level
      * @param regex the regex any message should match
      * @return this assertion object for method chaining
+     * @deprecated We should find a way to test without checking for specific messages in the log
      */
-    @Deprecated // We should find a way to test without checking for specific messages in the log
+    @Deprecated //
     @NonNull
     public MultipleNodeLogResultsAssert hasLogThatMatchesLevelAndMessage(
             @NonNull final Level level, @NonNull final String regex) {
