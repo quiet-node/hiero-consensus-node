@@ -666,7 +666,8 @@ class IssDetectorTests extends PlatformTest {
         issDetectorTestHelper.overridingState(mockState(currentRound, randomHash()));
         currentRound++;
 
-        final List<RoundHashValidatorTests.NodeHashInfo> catastrophicData = generateCatastrophicTimeoutIss(random, roster, currentRound);
+        final List<RoundHashValidatorTests.NodeHashInfo> catastrophicData =
+                generateCatastrophicTimeoutIss(random, roster, currentRound);
 
         final RoundHashValidatorTests.HashGenerationData hashGenerationData =
                 new RoundHashValidatorTests.HashGenerationData(catastrophicData, null);
