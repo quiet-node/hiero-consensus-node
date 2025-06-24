@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import org.apache.logging.log4j.Level;
-import org.assertj.core.api.Assertions;
 import org.hiero.otter.fixtures.Network;
 import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.OtterTest;
@@ -32,7 +31,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class PcesMigrationNonFreezeTest {
 
-    private static final Duration DURATION = Duration.ofMinutes(5);
+    private static final Duration DURATION = Duration.ofMinutes(4);
 
     static Path stateSnapshotTmpDir;
     static Time stateGeneratedTime;
@@ -91,8 +90,7 @@ public class PcesMigrationNonFreezeTest {
         network.addNodes(6);
         network.useInitialSnapshot(stateSnapshotTmpDir);
 
-        Assertions.assertThatThrownBy(network::start)
-                .isInstanceOf(AssertionError.class);
+        network.start();
 
         env.timeManager().waitFor(DURATION);
         assertThat(network.getLogResults()).hasLogThatMatchesLevelAndMessage(Level.ERROR, ".*Node \\d+ is branching");
