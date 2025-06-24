@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle;
 
+import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.assertAllDatabasesClosed;
 import static com.swirlds.platform.state.PlatformStateAccessor.GENESIS_ROUND;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
@@ -808,6 +809,12 @@ public class VirtualMapStateTest extends MerkleTestBase {
 
     @AfterEach
     void tearDown() {
-        virtualMapState.release();
+        if(virtualMapState.getRoot().getReservationCount() >= 0) {
+            virtualMapState.release();
+        }
+        if(fruitVirtualMap != null && fruitVirtualMap.getReservationCount() >= 0) {
+            fruitVirtualMap.release();
+        }
+        assertAllDatabasesClosed();
     }
 }
