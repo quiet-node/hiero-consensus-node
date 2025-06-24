@@ -25,6 +25,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.hiero.base.utility.CommonUtils.getNormalisedStringBytes;
 
 import com.hedera.pbj.runtime.Codec;
+import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.io.ExternalSelfSerializable;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
@@ -694,18 +695,29 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      *                   always returns null
      * @return The removed value. May return null if there was no value to remove or if the value was null.
      */
-    public <V> V remove(@NonNull final Bytes key, @Nullable final Codec<V> valueCodec) {
-        return remove(key, valueCodec, false);
+    public <V> V remove(@NonNull final Bytes key, @NonNull final Codec<V> valueCodec) {
+        requireNonNull(valueCodec);
+        Bytes removedValueBytes = remove(key);
+        try {
+            return removedValueBytes == null ? null : valueCodec.parse(removedValueBytes);
+        } catch (final ParseException e) {
+            throw new RuntimeException("Failed to deserialize a value from bytes", e);
+        }
     }
 
-    private <V> V remove(
-            @NonNull final Bytes key, @Nullable final Codec<V> valueCodec, final boolean allowStateRemoval) {
+    /**
+     * Removes the key/value pair denoted by the given key from the map. Has no effect
+     * if the key didn't exist.
+     * @param key The key to remove, must not be null
+     * @return The removed value represented as {@link Bytes}. May return null if there was no value to remove or if the value was null.
+     */
+    public Bytes remove(@NonNull final Bytes key) {
         throwIfImmutable();
         requireNonNull(key);
         assert currentModifyingThreadRef.compareAndSet(null, Thread.currentThread());
         try {
             // Verify whether the current leaf exists. If not, we can just return null.
-            VirtualLeafBytes<V> leafToDelete = records.findLeafRecord(key);
+            VirtualLeafBytes<?> leafToDelete = records.findLeafRecord(key);
             if (leafToDelete == null) {
                 return null;
             }
@@ -766,7 +778,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             }
 
             // Get the value and return it, if requested
-            return valueCodec != null ? leafToDelete.value(valueCodec) : null;
+            return leafToDelete.valueBytes();
         } finally {
             assert currentModifyingThreadRef.compareAndSet(Thread.currentThread(), null);
         }
@@ -1712,9 +1724,5 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     public boolean isEmpty() {
         return size() == 0;
-    }
-
-    public void remove(@NonNull final Bytes key) {
-        remove(key, null);
     }
 }
