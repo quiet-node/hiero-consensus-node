@@ -666,18 +666,17 @@ class IssDetectorTests extends PlatformTest {
         issDetectorTestHelper.overridingState(mockState(currentRound, randomHash()));
         currentRound++;
 
-        final List<RoundHashValidatorTests.NodeHashInfo> catastrophicData =
-                generateCatastrophicTimeoutIss(random, roster, currentRound);
+        final List<RoundHashValidatorTests.NodeHashInfo> catastrophicData = generateCatastrophicTimeoutIss(random, roster, currentRound);
 
         final RoundHashValidatorTests.HashGenerationData hashGenerationData =
                 new RoundHashValidatorTests.HashGenerationData(catastrophicData, null);
         final Map<NodeId, ScopedSystemTransaction<StateSignatureTransaction>> nodeIdStateSignatureTransactionMap =
-                generateSystemTransactions(currentRound, hashGenerationData);
+                generateSystemTransactions(currentRound, lastFreezeRound, hashGenerationData);
         final List<ScopedSystemTransaction<StateSignatureTransaction>> signaturesOnCatastrophicRound =
                 new LinkedList<>(nodeIdStateSignatureTransactionMap.values());
 
         // handle the round and all signatures.
-        // The round has a catastrophic ISS, but should be ignored
+        // The round has a catastrophic ISS, but should be discarded because they are in events with an old birth round
         issDetectorTestHelper.handleState(mockState(currentRound, randomHash()));
         issDetectorTestHelper.handleStateSignatureTransactions(signaturesOnCatastrophicRound);
 
