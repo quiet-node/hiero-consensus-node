@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.merkle;
 
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyDoesNotThrow;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.assertAllDatabasesClosed;
 import static com.swirlds.platform.state.PlatformStateAccessor.GENESIS_ROUND;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
@@ -21,10 +22,12 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.swirlds.base.state.MutabilityException;
 import com.swirlds.base.test.fixtures.time.FakeTime;
+import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.ConfigurationBuilder;
+import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
@@ -41,6 +44,9 @@ import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.test.fixtures.StateTestBase;
 import com.swirlds.state.test.fixtures.merkle.TestSchema;
 import com.swirlds.virtualmap.VirtualMap;
+import java.io.IOException;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.config.CryptoConfig;
@@ -64,6 +70,7 @@ public class VirtualMapStateTest extends MerkleTestBase {
      */
     @BeforeEach
     void setUp() {
+        MerkleDb.resetDefaultInstancePath();
         setupFruitMerkleMap();
         virtualMapState = new TestHederaVirtualMapState(CONFIGURATION, new NoOpMetrics());
         virtualMapState.init(
@@ -816,5 +823,15 @@ public class VirtualMapStateTest extends MerkleTestBase {
             fruitVirtualMap.release();
         }
         assertAllDatabasesClosed();
+        assertEventuallyDoesNotThrow(
+                () -> {
+                    try {
+                        FileUtils.deleteDirectory(virtualDbPath);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                },
+                Duration.of(1, ChronoUnit.SECONDS),
+                "Unable to delete virtual map directory");
     }
 }

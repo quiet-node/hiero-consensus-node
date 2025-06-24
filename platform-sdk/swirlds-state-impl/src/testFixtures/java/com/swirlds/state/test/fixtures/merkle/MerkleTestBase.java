@@ -130,7 +130,7 @@ public class MerkleTestBase extends StateTestBase {
     protected ConstructableRegistry registry;
 
     @TempDir
-    private Path virtualDbPath;
+    protected Path virtualDbPath;
 
     // The "FRUIT" Map is part of FIRST_SERVICE
     protected String fruitLabel;
