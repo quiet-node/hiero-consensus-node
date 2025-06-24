@@ -16,7 +16,7 @@ dependencies {
 }
 
 val autoService = "1.1.1"
-val besu = "25.3.0"
+val besu = "25.2.2"
 val bouncycastle = "1.81"
 val dagger = "2.56.2"
 val eclipseCollections = "11.1.0"
