@@ -7,17 +7,17 @@ package com.swirlds.platform.network.protocol.rpc;
 class RpcMessageId {
 
     /**
-     * Indicates GossipSyncData from send/receiveSyncData
+     * Indicates {@link com.hedera.hapi.platform.message.GossipSyncData} from send/receiveSyncData
      */
     static final int SYNC_DATA = 1;
 
     /**
-     * Indicates GossipKnowTips from send/receiveTips
+     * Indicates {@link com.hedera.hapi.platform.message.GossipKnownTips} from send/receiveTips
      */
     static final int KNOWN_TIPS = 2;
 
     /**
-     * Indicates single GossipEvent from send/receiveEvents
+     * Indicates single {@link com.hedera.hapi.platform.event.GossipEvent} from send/receiveEvents
      */
     static final int EVENT = 3;
 
@@ -27,12 +27,12 @@ class RpcMessageId {
     static final int EVENTS_FINISHED = 4;
 
     /**
-     * Indicates GossipPing ping request
+     * Indicates {@link com.hedera.hapi.platform.message.GossipPing} ping request
      */
     static final int PING = 5;
 
     /**
-     * Indicates GossipPing ping reply
+     * Indicates {@link com.hedera.hapi.platform.message.GossipPing} ping reply
      */
     static final int PING_REPLY = 6;
 }

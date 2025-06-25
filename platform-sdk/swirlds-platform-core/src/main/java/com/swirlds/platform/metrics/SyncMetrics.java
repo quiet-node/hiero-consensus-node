@@ -114,7 +114,7 @@ public class SyncMetrics {
                     PLATFORM_CATEGORY, "doNotSyncRemoteProcessingEvents")
             .withUnit("hz")
             .withDescription(
-                    "Number of times per second we do not sync because peer node is still processing our events");
+                    "Number of times per second we do not initiate sync because peer node is still processing our events");
     private final CountPerSecond doNotSyncPeerProcessingEvents;
 
     private static final CountPerSecond.Config DO_NOT_SYNC_ALREADY_STARTED_CONFIG = new CountPerSecond.Config(
