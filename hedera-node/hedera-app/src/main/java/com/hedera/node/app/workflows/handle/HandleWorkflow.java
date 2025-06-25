@@ -17,6 +17,7 @@ import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.BOTH;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
 import static com.swirlds.platform.consensus.ConsensusUtils.coin;
+import static com.swirlds.platform.system.InitTrigger.EVENT_STREAM_RECOVERY;
 import static java.util.Objects.requireNonNull;
 import static org.hiero.consensus.model.status.PlatformStatus.ACTIVE;
 
@@ -670,7 +671,8 @@ public class HandleWorkflow {
         try {
             final var platformStateStore =
                     new ReadablePlatformStateStore(state.getReadableStates(PlatformStateService.NAME));
-            if (eventBirthRound <= platformStateStore.getLatestFreezeRound()) {
+            if (this.initTrigger != EVENT_STREAM_RECOVERY
+                    && eventBirthRound <= platformStateStore.getLatestFreezeRound()) {
                 if (streamMode != BLOCKS) {
                     // This updates consTimeOfLastHandledTxn as a side effect
                     blockRecordManager.advanceConsensusClock(parentTxn.consensusNow(), parentTxn.state());
