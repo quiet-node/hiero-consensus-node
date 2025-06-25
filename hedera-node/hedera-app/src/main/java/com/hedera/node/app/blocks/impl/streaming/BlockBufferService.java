@@ -91,9 +91,18 @@ public class BlockBufferService {
      * Flag that indicates if streaming to block nodes is enabled. This flag is set once upon startup and cannot change.
      */
     private final AtomicBoolean isStreamingEnabled = new AtomicBoolean(false);
-
+    /**
+     * The timestamp of the most recent attempt at proactive buffer recovery.
+     */
     private Instant lastRecoveryActionTimestamp = Instant.MIN;
+    /**
+     * The most recent buffer pruning result.
+     */
     private PruneResult lastPruningResult = PruneResult.NIL;
+    /**
+     * Flag indicating whether the buffer transitioned from fully saturated to not, but we are still waiting to reach
+     * the recovery threshold.
+     */
     private boolean awaitingRecovery = false;
 
     /**
