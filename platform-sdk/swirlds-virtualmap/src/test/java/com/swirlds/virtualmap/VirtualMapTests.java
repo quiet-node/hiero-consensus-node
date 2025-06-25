@@ -1332,7 +1332,7 @@ class VirtualMapTests extends VirtualTestBase {
         }
 
         for (Bytes key : keysToRemove) {
-            root.remove(key, null);
+            root.remove(key);
         }
         root.computeHash();
         root.setImmutable(true);
@@ -1369,7 +1369,7 @@ class VirtualMapTests extends VirtualTestBase {
 
         for (int index = 0; index < totalSize; index++) {
             final Bytes key = TestKey.longToKey(index);
-            root1.remove(key, null);
+            root1.remove(key);
         }
 
         assertEquals(0, root1.size(), "All elements should have been removed");
