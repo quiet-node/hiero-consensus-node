@@ -459,17 +459,6 @@ public class BlockBufferService {
                         .doubleValue();
             }
         }
-
-        @Override
-        public String toString() {
-            return "PruneResult{" + "idealMaxBufferSize="
-                    + idealMaxBufferSize + ", numBlocksChecked="
-                    + numBlocksChecked + ", numBlocksPendingAck="
-                    + numBlocksPendingAck + ", numBlocksPruned="
-                    + numBlocksPruned + ", saturationPercent="
-                    + saturationPercent + ", isSaturated="
-                    + isSaturated + '}';
-        }
     }
 
     /**
@@ -580,8 +569,6 @@ public class BlockBufferService {
         if (awaitingRecovery && !pruningResult.isSaturated) {
             disableBackPressureIfRecovered(pruningResult);
         }
-
-        logger.debug("Buffer check complete");
     }
 
     /**
@@ -592,16 +579,15 @@ public class BlockBufferService {
      */
     private void switchBlockNodeIfPermitted() {
         final Duration actionGracePeriod = actionGracePeriod();
-        final Duration periodSinceLastAction = lastRecoveryActionTimestamp == null
-                ? Duration.between(Instant.MIN, Instant.now())
-                : Duration.between(lastRecoveryActionTimestamp, Instant.now());
+        final Instant now = Instant.now();
+        final Duration periodSinceLastAction = Duration.between(lastRecoveryActionTimestamp, now);
 
         if (periodSinceLastAction.compareTo(actionGracePeriod) <= 0) {
             // not enough time has elapsed since the last action
             return;
         }
 
-        lastRecoveryActionTimestamp = Instant.now();
+        lastRecoveryActionTimestamp = now;
         blockNodeConnectionManager.selectNewBlockNodeForStreaming(true);
     }
 
