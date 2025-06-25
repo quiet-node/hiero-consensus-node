@@ -241,7 +241,8 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
                 connection.getDescription(),
                 eventsRead);
 
-        syncMetrics.syncDone(new SyncResult(connection.getOtherId(), eventsRead, sendList.size()));
+        syncMetrics.syncDone(
+                new SyncResult(connection.getOtherId(), eventsRead, sendList.size()), connection.isOutbound());
 
         timing.setTimePoint(5);
         syncMetrics.recordSyncTiming(timing, connection);

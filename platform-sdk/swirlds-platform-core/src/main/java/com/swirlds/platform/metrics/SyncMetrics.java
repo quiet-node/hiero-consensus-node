@@ -29,6 +29,7 @@ import com.swirlds.platform.stats.AverageTimeStat;
 import com.swirlds.platform.stats.MaxStat;
 import com.swirlds.platform.system.PlatformStatNames;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -74,6 +75,16 @@ public class SyncMetrics {
                     PLATFORM_CATEGORY, "syncs_per_sec")
             .withDescription("Total number of syncs completed per second");
     private final CountPerSecond syncsPerSec;
+
+    private static final CountPerSecond.Config CALL_SYNCS_PER_SECOND_CONFIG = new CountPerSecond.Config(
+                    PLATFORM_CATEGORY, "sync_per_secC")
+            .withDescription("(call syncs) syncs completed per second initiated by this member");
+    private final CountPerSecond callSyncsPerSecond;
+
+    private static final CountPerSecond.Config REC_SYNCS_PER_SECOND_CONFIG = new CountPerSecond.Config(
+                    PLATFORM_CATEGORY, "sync_per_secR")
+            .withDescription("(receive syncs) syncs completed per second initiated by other member");
+    private final CountPerSecond recSyncsPerSecond;
 
     private static final RunningAverageMetric.Config SYNC_FILTER_TIME_CONFIG = new RunningAverageMetric.Config(
                     PLATFORM_CATEGORY, "syncFilterTime")
@@ -183,6 +194,8 @@ public class SyncMetrics {
         this.metrics = Objects.requireNonNull(metrics);
         this.time = Objects.requireNonNull(time);
         avgBytesPerSecSync = metrics.getOrCreate(AVG_BYTES_PER_SEC_SYNC_CONFIG);
+        callSyncsPerSecond = new CountPerSecond(metrics, CALL_SYNCS_PER_SECOND_CONFIG);
+        recSyncsPerSecond = new CountPerSecond(metrics, REC_SYNCS_PER_SECOND_CONFIG);
         tipsPerSync = metrics.getOrCreate(TIPS_PER_SYNC_CONFIG);
 
         incomingSyncRequestsPerSec = new CountPerSecond(metrics, INCOMING_SYNC_REQUESTS_CONFIG);
@@ -353,10 +366,20 @@ public class SyncMetrics {
     /**
      * Notifies the stats that a sync is done
      *
-     * @param info information about the sync that occurred
+     * @param info                   information about the sync that occurred
+     * @param usedOutgoingConnection optional boolean which indicates if we have used outgoing connection (true),
+     *                               incoming connection (false), or we don't know (null)
      */
-    public void syncDone(final SyncResult info) {
+    public void syncDone(final SyncResult info, final @Nullable Boolean usedOutgoingConnection) {
         syncsPerSec.count();
+
+        if (usedOutgoingConnection != null) {
+            if (usedOutgoingConnection) {
+                callSyncsPerSecond.count();
+            } else {
+                recSyncsPerSecond.count();
+            }
+        }
 
         avgEventsPerSyncSent.update(info.getEventsWritten());
         avgEventsPerSyncRec.update(info.getEventsRead());
@@ -537,7 +560,8 @@ public class SyncMetrics {
      *
      * @param node      node id of the peer this sync phase applies to
      * @param syncPhase the current rpc sync phase we are in with the peer
-     * @return the previously reported phase. This will be {@link SyncPhase#OUTSIDE_OF_RPC} when invoked at the beginning of a new rypc sync.
+     * @return the previously reported phase. This will be {@link SyncPhase#OUTSIDE_OF_RPC} when invoked at the
+     * beginning of a new rypc sync.
      */
     public SyncPhase reportSyncPhase(@NonNull final NodeId node, @NonNull final SyncPhase syncPhase) {
         final PhaseTimer<SyncPhase> phaseMetric = syncPhasePerNode.computeIfAbsent(

@@ -28,8 +28,8 @@ import org.hiero.consensus.model.node.NodeId;
 
 /**
  * Conversation logic for an RPC exchange between two nodes. At this moment mostly concerned with performing a sync,
- * using {@link RpcShadowgraphSynchronizer}, but in the future, it can extend to handle more responsibilities.
- * Most of its internal state was externalized to {@link RpcPeerState} for clarity.
+ * using {@link RpcShadowgraphSynchronizer}, but in the future, it can extend to handle more responsibilities. Most of
+ * its internal state was externalized to {@link RpcPeerState} for clarity.
  */
 public class RpcPeerHandler implements GossipRpcReceiver {
 
@@ -102,7 +102,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
      *                                      (mostly shadowgraph)
      * @param sender                        endpoint for sending messages to peer endpoint asynchronously
      * @param selfId                        id of current node
-     * @param peerId                   id of the peer node
+     * @param peerId                        id of the peer node
      * @param sleepAfterSync                amount of time to sleep between sync attempts
      * @param syncMetrics                   metrics for sync
      * @param time                          platform time
@@ -344,7 +344,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     }
 
     private void reportSyncFinished() {
-        this.syncMetrics.syncDone(new SyncResult(peerId, incomingEventsCounter, outgoingEventsCounter));
+        this.syncMetrics.syncDone(new SyncResult(peerId, incomingEventsCounter, outgoingEventsCounter), null);
         incomingEventsCounter = 0;
         outgoingEventsCounter = 0;
         this.syncMetrics.reportSyncPhase(peerId, SyncPhase.IDLE);
