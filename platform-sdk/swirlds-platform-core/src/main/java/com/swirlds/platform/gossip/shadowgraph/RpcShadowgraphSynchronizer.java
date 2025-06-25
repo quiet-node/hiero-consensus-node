@@ -8,8 +8,6 @@ import com.swirlds.platform.gossip.sync.config.SyncConfig;
 import com.swirlds.platform.metrics.SyncMetrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,11 +25,6 @@ import org.hiero.consensus.model.node.NodeId;
 public class RpcShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
 
     private static final Logger logger = LogManager.getLogger(RpcShadowgraphSynchronizer.class);
-
-    /**
-     * List of all started sync exchanges with remote peers
-     */
-    private final List<RpcPeerHandler> allRpcPeers = new CopyOnWriteArrayList<>();
 
     /**
      * Our own node id
@@ -87,11 +80,15 @@ public class RpcShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer 
     public RpcPeerHandler createPeerHandler(@NonNull final GossipRpcSender sender, @NonNull final NodeId otherNodeId) {
         final RpcPeerHandler rpcPeerHandler = new RpcPeerHandler(
                 this, sender, selfId, otherNodeId, sleepAfterSync, syncMetrics, time, intakeEventCounter, eventHandler);
-        allRpcPeers.add(rpcPeerHandler);
         return rpcPeerHandler;
     }
 
+    /**
+     * Called when given handler is being destroyed due to connection collapsing or other similar event.
+     *
+     * @param rpcPeerHandler handler which should be removed from internal structures
+     */
     public void deregisterPeerHandler(final RpcPeerHandler rpcPeerHandler) {
-        this.allRpcPeers.remove(rpcPeerHandler);
+        // no-op for now
     }
 }
