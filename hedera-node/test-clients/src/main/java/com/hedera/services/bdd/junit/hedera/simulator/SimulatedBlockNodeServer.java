@@ -20,8 +20,8 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 import org.hiero.block.api.protoc.BlockNodeServiceGrpc;
+import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 import org.hiero.block.api.protoc.PublishStreamRequest;
 import org.hiero.block.api.protoc.PublishStreamResponse;
 import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream;
@@ -95,9 +95,9 @@ public class SimulatedBlockNodeServer {
         this.serviceImpl = new MockBlockStreamServiceImpl();
         this.serverStatusService = new MockServerStatusServiceImpl();
         this.server = ServerBuilder.forPort(port)
-            .addService(serviceImpl)
-            .addService(serverStatusService)
-            .build();
+                .addService(serviceImpl)
+                .addService(serverStatusService)
+                .build();
     }
 
     /**
@@ -695,9 +695,9 @@ public class SimulatedBlockNodeServer {
             final long lastAvailableBlock = lastVerifiedBlockNumber.get();
             final long firstAvailableBlock = lastAvailableBlock > 0 ? 0 : -1;
             ServerStatusResponse response = ServerStatusResponse.newBuilder()
-                .setFirstAvailableBlock(firstAvailableBlock)
-                .setLastAvailableBlock(lastAvailableBlock)
-                .build();
+                    .setFirstAvailableBlock(firstAvailableBlock)
+                    .setLastAvailableBlock(lastAvailableBlock)
+                    .build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         }

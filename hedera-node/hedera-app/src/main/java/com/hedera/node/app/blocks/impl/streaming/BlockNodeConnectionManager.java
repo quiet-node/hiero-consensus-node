@@ -18,7 +18,6 @@ import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import io.grpc.stub.StreamObserver;
 import io.helidon.common.tls.Tls;
 import io.helidon.webclient.grpc.GrpcClient;
 import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
@@ -36,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -92,7 +90,7 @@ public class BlockNodeConnectionManager {
     private final String grpcEndpoint;
     /**
      * The gRPC endpoint used to get the block node server status.
-    */
+     */
     private final String blockNodeStatusEndpoint;
     /**
      * Tracks what the last verified block for each connection is. Note: The data maintained here is based on what the
@@ -285,8 +283,7 @@ public class BlockNodeConnectionManager {
                                 .build())
                 .putMethod(
                         blockNodeStatusEndpoint,
-                        GrpcClientMethodDescriptor.unary(
-                                        BlockNodeServiceGrpc.SERVICE_NAME, blockNodeStatusEndpoint)
+                        GrpcClientMethodDescriptor.unary(BlockNodeServiceGrpc.SERVICE_NAME, blockNodeStatusEndpoint)
                                 .requestType(ServerStatusRequest.class)
                                 .responseType(ServerStatusResponse.class)
                                 .marshallerSupplier(new RequestResponseMarshaller.Supplier())
@@ -513,17 +510,22 @@ public class BlockNodeConnectionManager {
         // Call serverStatus endpoint before establishing the BlockNodeConnection
         try {
             ServerStatusRequest statusRequest = ServerStatusRequest.newBuilder().build();
-            ServerStatusResponse statusResponse = grpcClient
-                .unary(BlockNodeServiceGrpc.getServerStatusMethod().getBareMethodName(), statusRequest);
+            ServerStatusResponse statusResponse = grpcClient.unary(
+                    BlockNodeServiceGrpc.getServerStatusMethod().getBareMethodName(), statusRequest);
 
-            logger.info("Server status for node {}:{}: firstAvailableBlock={}, lastAvailableBlock={}",
-                nodeConfig.address(),
-                nodeConfig.port(),
-                statusResponse.firstAvailableBlock(),
-                statusResponse.lastAvailableBlock()
-            );
+            logger.info(
+                    "Server status for node {}:{}: firstAvailableBlock={}, lastAvailableBlock={}",
+                    nodeConfig.address(),
+                    nodeConfig.port(),
+                    statusResponse.firstAvailableBlock(),
+                    statusResponse.lastAvailableBlock());
         } catch (Exception e) {
-            logger.error("Failed to get server status from block node {}:{}: {}", nodeConfig.address(), nodeConfig.port(), e.getMessage(), e);
+            logger.error(
+                    "Failed to get server status from block node {}:{}: {}",
+                    nodeConfig.address(),
+                    nodeConfig.port(),
+                    e.getMessage(),
+                    e);
             return;
         }
 
