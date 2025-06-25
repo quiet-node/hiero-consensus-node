@@ -53,6 +53,8 @@ jobs:
 
       - name: Verify Workflow Parameters
         id: parameters
+        env:
+          BUILD_INDEX: ${{ vars.XTS_BUILD_PROMOTION_INDEX }}
         run: |
           BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
           BRANCH_NAME="${BRANCH_NAME##origin/}"
@@ -61,7 +63,8 @@ jobs:
 
           echo "branch-name-lower=${BRANCH_NAME_LOWER}" >>"${GITHUB_OUTPUT}"
 
-          LATEST_BUILD_TAG=$(git tag --sort=-creatordate | grep -E '^build-[0-9]+$' | head -n 1)
+          LATEST_BUILD_INDEX=$(( $BUILD_INDEX - 1 ))
+          LATEST_BUILD_TAG=$(printf "build-%05d" "$LATEST_BUILD_INDEX")
           TAG_COMMIT_SHA=$(git rev-list -n 1 $LATEST_BUILD_TAG)
           TAG_COMMIT_SHORT=$(echo $TAG_COMMIT_SHA | cut -c1-8)
 
