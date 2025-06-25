@@ -67,7 +67,8 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
 
     /**
      * All pending messages to be sent; instead of just messages, it is holding references to lambdas writing to network
-     * (in most cases, writing the number of messages, the type of message, then finally the serialized PBJ on the wire)
+     * (in most cases, writing the number of messages, the type of message, then finally the serialized PBJ on the
+     * wire)
      */
     private final BlockingQueue<StreamWriter> outputQueue = new LinkedBlockingQueue<>();
 
@@ -324,9 +325,12 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
     }
 
     /**
-     * Write all the messages pending in queue, until: - gossip is halted (due to pending reconnect on another
-     * connection) - permits indicate that system is unhealthy (due to backpressure) - we have just detected that this
-     * connection is falling behind
+     * Write all the messages pending in queue, until:
+     * <ul>
+     * <li>gossip is halted (due to pending reconnect on another connection)</li>
+     * <li>permits indicate that system is unhealthy (due to backpressure)</li>
+     * <li>we have just detected that this connection is falling behind</li>
+     * </ul>
      *
      * @param connection connection over which data should be sent
      */
@@ -342,9 +346,9 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                 syncMetrics.rpcOutputQueueSize(remotePeerId, outputQueue.size());
                 final StreamWriter message;
                 try {
-                    final long startNanos = System.nanoTime();
+                    final long startNanos = time.nanoTime();
                     message = outputQueue.poll(idleWritePollTimeoutMs, TimeUnit.MILLISECONDS);
-                    syncMetrics.outputQueuePollTime(System.nanoTime() - startNanos);
+                    syncMetrics.outputQueuePollTime(time.nanoTime() - startNanos);
                 } catch (final InterruptedException e) {
                     processMessages = false;
                     logger.warn("Interrupted while waiting for message", e);
