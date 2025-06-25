@@ -157,11 +157,12 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
         if (this.intakeEventCounter.hasUnprocessedEvents(peerId)) {
             this.syncMetrics.doNotSyncIntakeCounter();
-            return true;
+            return systemHealthy;
         }
 
         if (state.mySyncData == null) {
             if (systemHealthy) {
+                // WE ARE DOING INTERESTING THING HERE!
                 sendSyncData();
             }
             return systemHealthy;
