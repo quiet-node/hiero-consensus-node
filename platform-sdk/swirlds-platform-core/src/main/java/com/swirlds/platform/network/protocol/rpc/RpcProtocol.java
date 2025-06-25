@@ -90,6 +90,8 @@ public class RpcProtocol extends AbstractSyncProtocol<RpcShadowgraphSynchronizer
      */
     @Override
     public PeerProtocol createPeerInstance(@NonNull final NodeId peerId) {
+        final MagicQueueSystem queueSystem = new MagicQueueSystem();
+        final RpcPeerHandler handler = synchronizer.createPeerHandler(queueSystem, peerId);
         final RpcPeerProtocol peerProtocol = new RpcPeerProtocol(
                 peerId,
                 executor,
@@ -99,9 +101,10 @@ public class RpcProtocol extends AbstractSyncProtocol<RpcShadowgraphSynchronizer
                 networkMetrics,
                 time,
                 syncMetrics,
-                syncConfig);
-        final RpcPeerHandler handler = synchronizer.createPeerHandler(peerProtocol, peerId);
-        peerProtocol.setRpcPeerHandler(handler);
+                syncConfig,
+                queueSystem,
+                handler);
+
         return peerProtocol;
     }
 

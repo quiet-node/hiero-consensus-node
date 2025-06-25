@@ -19,7 +19,6 @@ import com.swirlds.common.threading.pool.ParallelExecutionException;
 import com.swirlds.common.threading.pool.ParallelExecutor;
 import com.swirlds.platform.gossip.permits.SyncPermitProvider;
 import com.swirlds.platform.gossip.rpc.GossipRpcReceiver;
-import com.swirlds.platform.gossip.rpc.GossipRpcSender;
 import com.swirlds.platform.gossip.rpc.SyncData;
 import com.swirlds.platform.gossip.shadowgraph.RpcPeerHandler;
 import com.swirlds.platform.gossip.shadowgraph.SyncPhase;
@@ -39,8 +38,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
@@ -51,7 +48,7 @@ import org.hiero.consensus.model.status.PlatformStatus;
 /**
  * Message based implementation of gossip; currently supporting sync Responsible for communication with a single peer
  */
-public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
+public class RpcPeerProtocol implements PeerProtocol {
 
     private static final Logger logger = LogManager.getLogger(RpcPeerProtocol.class);
 
@@ -66,21 +63,11 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
     private static final int EVENT_BATCH_SIZE = 512;
 
     /**
-     * All pending messages to be sent; instead of just messages, it is holding references to lambdas writing to network
-     * (in most cases, writing the number of messages, the type of message, then finally the serialized PBJ on the
-     * wire)
-     */
-    private final BlockingQueue<StreamWriter> outputQueue = new LinkedBlockingQueue<>();
-
-    /**
-     * All incoming messages from remote node to be passed to dispatch thread
-     */
-    private final BlockingQueue<Runnable> inputQueue = new LinkedBlockingQueue<>();
-
-    /**
-     * Helper class to handle ping logic
+     * 7 Helper class to handle ping logic
      */
     private final RpcPingHandler pingHandler;
+
+    private final MagicQueueSystem queues;
 
     /**
      * State machine for rpc exchange process (mostly sync process)
@@ -187,7 +174,9 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
             @NonNull final NetworkMetrics networkMetrics,
             @NonNull final Time time,
             @NonNull final SyncMetrics syncMetrics,
-            @NonNull final SyncConfig syncConfig) {
+            @NonNull final SyncConfig syncConfig,
+            @NonNull final MagicQueueSystem queues,
+            final RpcPeerHandler handler) {
         this.executor = Objects.requireNonNull(executor);
         this.remotePeerId = Objects.requireNonNull(peerId);
         this.gossipHalted = Objects.requireNonNull(gossipHalted);
@@ -198,7 +187,10 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
         this.maxWaitForConversationFinishMs = syncConfig.maxSyncTime().toMillis();
         this.idleDispatchPollTimeoutMs = syncConfig.idleDispatchPollTimeout().toMillis();
         this.idleWritePollTimeoutMs = syncConfig.idleWritePollTimeout().toMillis();
-        this.pingHandler = new RpcPingHandler(time, networkMetrics, remotePeerId, this);
+        this.pingHandler = new RpcPingHandler(time, networkMetrics, remotePeerId, queues);
+        this.queues = queues;
+        this.rpcPeerHandler = handler;
+        this.receiver = handler;
     }
 
     /**
@@ -300,8 +292,8 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
         syncMetrics.rpcDispatchThreadRunning(+1);
         try {
             while (true) {
-                syncMetrics.rpcInputQueueSize(remotePeerId, inputQueue.size());
-                final Runnable message = inputQueue.poll(idleDispatchPollTimeoutMs, TimeUnit.MILLISECONDS);
+                syncMetrics.rpcInputQueueSize(remotePeerId, queues.inputQueue.size());
+                final Runnable message = queues.inputQueue.poll(idleDispatchPollTimeoutMs, TimeUnit.MILLISECONDS);
                 if (message != null) {
                     if (message == POISON_PILL) {
                         break;
@@ -343,11 +335,11 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
         syncMetrics.rpcWriteThreadRunning(+1);
         try {
             while (shouldContinueProcessingMessages()) {
-                syncMetrics.rpcOutputQueueSize(remotePeerId, outputQueue.size());
-                final StreamWriter message;
+                syncMetrics.rpcOutputQueueSize(remotePeerId, queues.outputQueue.size());
+                final SenderCall message;
                 try {
                     final long startNanos = time.nanoTime();
-                    message = outputQueue.poll(idleWritePollTimeoutMs, TimeUnit.MILLISECONDS);
+                    message = queues.outputQueue.poll(idleWritePollTimeoutMs, TimeUnit.MILLISECONDS);
                     syncMetrics.outputQueuePollTime(time.nanoTime() - startNanos);
                 } catch (final InterruptedException e) {
                     processMessages = false;
@@ -360,9 +352,30 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                         sendPingSameThread(ping, output);
                     }
                 } else {
-                    message.write(output);
+                    switch (message) {
+                        case SyncDataCall sdc:
+                            sendSyncData(sdc.syncMessage(), output);
+                            break;
+                        case BreakConversationCall bcc:
+                            breakConversation();
+                            break;
+                        case EndOfEventsCall eoec:
+                            sendEndOfEvents(output);
+                            break;
+                        case EventsCall ec:
+                            sendEvents(ec.gossipEvents(), output);
+                            break;
+                        case TipsCall tc:
+                            sendTips(tc.tips(), output);
+                            break;
+                        case PingReplyCall prc:
+                            sendPingReply(prc.ping(), output);
+                            break;
+                        default:
+                            throw new IllegalStateException();
+                    }
                 }
-                if (outputQueue.isEmpty()) {
+                if (queues.outputQueue.isEmpty()) {
                     // otherwise we will keep pushing messages to output, and they will get autoflushed, or we will
                     // reach the end of the queue and do explicit flush
                     output.flush();
@@ -407,7 +420,7 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                 // and they haven't for long enough, break the connection, they might be malicious
                 if (conversationFinishPending > 0
                         && time.currentTimeMillis() - conversationFinishPending > maxWaitForConversationFinishMs) {
-                    inputQueue.clear();
+                    queues.inputQueue.clear();
                     throw new SyncTimeoutException(
                             Duration.ofMillis(time.currentTimeMillis() - conversationFinishPending),
                             Duration.ofMillis(maxWaitForConversationFinishMs));
@@ -427,19 +440,20 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                         switch (messageType) {
                             case SYNC_DATA:
                                 final GossipSyncData gossipSyncData = input.readPbjRecord(GossipSyncData.PROTOBUF);
-                                inputQueue.add(() -> receiver.receiveSyncData(SyncData.fromProtobuf(gossipSyncData)));
+                                queues.inputQueue.add(
+                                        () -> receiver.receiveSyncData(SyncData.fromProtobuf(gossipSyncData)));
                                 break;
                             case KNOWN_TIPS:
                                 final GossipKnownTips knownTips = input.readPbjRecord(GossipKnownTips.PROTOBUF);
-                                inputQueue.add(() -> receiver.receiveTips(knownTips.knownTips()));
+                                queues.inputQueue.add(() -> receiver.receiveTips(knownTips.knownTips()));
                                 break;
                             case EVENT:
                                 final List<GossipEvent> events =
                                         Collections.singletonList(input.readPbjRecord(GossipEvent.PROTOBUF));
-                                inputQueue.add(() -> receiver.receiveEvents(events));
+                                queues.inputQueue.add(() -> receiver.receiveEvents(events));
                                 break;
                             case EVENTS_FINISHED:
-                                inputQueue.add(receiver::receiveEventsFinished);
+                                queues.inputQueue.add(receiver::receiveEventsFinished);
                                 break;
                             case PING:
                                 pingHandler.handleIncomingPing(input.readPbjRecord(GossipPing.PROTOBUF));
@@ -456,74 +470,51 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
                 }
             }
         } finally {
-            inputQueue.add(POISON_PILL);
+            queues.inputQueue.add(POISON_PILL);
             processMessages = false;
             syncMetrics.rpcReadThreadRunning(-1);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void sendSyncData(@NonNull final SyncData syncMessage) {
-        outputQueue.add(out -> {
-            out.writeShort(1); // single message
-            out.write(SYNC_DATA);
-            out.writePbjRecord(syncMessage.toProtobuf(), GossipSyncData.PROTOBUF);
-        });
+    public void sendSyncData(@NonNull final SyncData syncMessage, SyncOutputStream out) throws IOException {
+
+        out.writeShort(1); // single message
+        out.write(SYNC_DATA);
+        out.writePbjRecord(syncMessage.toProtobuf(), GossipSyncData.PROTOBUF);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void sendTips(@NonNull final List<Boolean> tips) {
-        outputQueue.add(out -> {
-            out.writeShort(1); // single message
-            out.write(KNOWN_TIPS);
-            out.writePbjRecord(GossipKnownTips.newBuilder().knownTips(tips).build(), GossipKnownTips.PROTOBUF);
-        });
+    public void sendTips(@NonNull final List<Boolean> tips, SyncOutputStream out) throws IOException {
+
+        out.writeShort(1); // single message
+        out.write(KNOWN_TIPS);
+        out.writePbjRecord(GossipKnownTips.newBuilder().knownTips(tips).build(), GossipKnownTips.PROTOBUF);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void sendEvents(@NonNull final List<GossipEvent> gossipEvents) {
-        outputQueue.add(out -> {
-            final List<List<GossipEvent>> batches = Lists.partition(gossipEvents, EVENT_BATCH_SIZE);
-            {
-                for (final List<GossipEvent> batch : batches) {
-                    if (!batch.isEmpty()) {
-                        out.writeShort(batch.size());
-                        for (final GossipEvent gossipEvent : batch) {
-                            out.write(EVENT);
-                            out.writePbjRecord(gossipEvent, GossipEvent.PROTOBUF);
-                        }
+    public void sendEvents(@NonNull final List<GossipEvent> gossipEvents, SyncOutputStream out) throws IOException {
+
+        final List<List<GossipEvent>> batches = Lists.partition(gossipEvents, EVENT_BATCH_SIZE);
+        {
+            for (final List<GossipEvent> batch : batches) {
+                if (!batch.isEmpty()) {
+                    out.writeShort(batch.size());
+                    for (final GossipEvent gossipEvent : batch) {
+                        out.write(EVENT);
+                        out.writePbjRecord(gossipEvent, GossipEvent.PROTOBUF);
                     }
                 }
             }
-        });
+        }
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void sendEndOfEvents() {
-        outputQueue.add(out -> {
-            out.writeShort(1);
-            out.write(EVENTS_FINISHED);
-        });
+    public void sendEndOfEvents(SyncOutputStream out) throws IOException {
+        out.writeShort(1);
+        out.write(EVENTS_FINISHED);
     }
 
-    void sendPingReply(final GossipPing reply) {
-        outputQueue.add(out -> {
-            out.writeShort(1); // single message
-            out.write(PING_REPLY);
-            out.writePbjRecord(reply, GossipPing.PROTOBUF);
-        });
+    void sendPingReply(final GossipPing reply, SyncOutputStream out) throws IOException {
+        out.writeShort(1); // single message
+        out.write(PING_REPLY);
+        out.writePbjRecord(reply, GossipPing.PROTOBUF);
     }
 
     private void sendPingSameThread(final GossipPing ping, final SyncOutputStream output) throws IOException {
@@ -532,10 +523,6 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
         output.writePbjRecord(ping, GossipPing.PROTOBUF);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void breakConversation() {
         this.conversationFinishPending = time.currentTimeMillis();
         this.processMessages = false;
@@ -547,11 +534,6 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
     @Override
     public void cleanup() {
         this.rpcPeerHandler.cleanup();
-    }
-
-    public void setRpcPeerHandler(final RpcPeerHandler rpcPeerHandler) {
-        this.rpcPeerHandler = rpcPeerHandler;
-        this.receiver = rpcPeerHandler;
     }
 }
 

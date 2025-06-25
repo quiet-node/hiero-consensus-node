@@ -43,24 +43,23 @@ final class RpcPingHandler {
     /**
      * Peer protocol which is handling ping communication
      */
-    private final RpcPeerProtocol rpcPeerProtocol;
+    private final MagicQueueSystem queueSystem;
 
     /**
      * @param time            the {@link Time} instance for the platformeturns the {@link Time} instance for the
      *                        platform
      * @param networkMetrics  network metrics to register data about communication traffic and latencies
      * @param remotePeerId    the id of the peer being synced with in this protocol
-     * @param rpcPeerProtocol peer protocol which is handling ping communication
      */
     RpcPingHandler(
             final @NonNull Time time,
             final NetworkMetrics networkMetrics,
             final NodeId remotePeerId,
-            final RpcPeerProtocol rpcPeerProtocol) {
+            final MagicQueueSystem queueSystem) {
         this.time = Objects.requireNonNull(time);
         this.networkMetrics = Objects.requireNonNull(networkMetrics);
         this.remotePeerId = Objects.requireNonNull(remotePeerId);
-        this.rpcPeerProtocol = Objects.requireNonNull(rpcPeerProtocol);
+        this.queueSystem = Objects.requireNonNull(queueSystem);
     }
 
     /**
@@ -75,7 +74,7 @@ final class RpcPingHandler {
 
     void handleIncomingPing(final GossipPing ping) {
         final GossipPing reply = new GossipPing(time.currentTimeMillis(), ping.correlationId());
-        rpcPeerProtocol.sendPingReply(reply);
+        queueSystem.sendPingReply(reply);
     }
 
     /**
