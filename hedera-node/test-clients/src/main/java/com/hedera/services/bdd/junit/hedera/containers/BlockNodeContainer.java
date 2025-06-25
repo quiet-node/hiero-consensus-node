@@ -11,8 +11,8 @@ import org.testcontainers.utility.DockerImageName;
  */
 public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
     private static final DockerImageName DEFAULT_IMAGE_NAME =
-            DockerImageName.parse("ghcr.io/hiero-ledger/hiero-block-node:0.12.0-SNAPSHOT");
-    private static final String blockNodeVersion = "0.12.0-SNAPSHOT";
+            DockerImageName.parse("ghcr.io/hiero-ledger/hiero-block-node:0.14.0-SNAPSHOT");
+    private static final String blockNodeVersion = "0.14.0-SNAPSHOT";
     private final int port;
 
     /**
@@ -41,12 +41,12 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
     public void start() {
         if (!isRunning()) {
             super.start();
-            // Add an additional wait to ensure gRPC service is fully ready
+            /*// Add a wait to ensure gRPC service is fully ready
             try {
                 Thread.sleep(2000); // Give the service 2 more seconds after container is healthy
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-            }
+            }*/
         }
         waitForHealthy(Duration.ofMinutes(2));
     }

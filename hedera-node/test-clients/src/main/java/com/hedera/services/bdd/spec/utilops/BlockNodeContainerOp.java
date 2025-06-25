@@ -47,8 +47,6 @@ public class BlockNodeContainerOp extends UtilOp {
 
                     blockNodeContainer.start();
 
-                    // Wait for container to be fully ready and network to stabilize
-                    Thread.sleep(5000);
                     log.info("Started container {} and waited for readiness", nodeIndex);
                     blockNodeContainerMap.put(nodeIndex, blockNodeContainer);
                     shutdownContainerPorts.remove(nodeIndex);
@@ -61,11 +59,9 @@ public class BlockNodeContainerOp extends UtilOp {
                 log.info("Shutting down container {}", nodeIndex);
                 final BlockNodeContainer shutdownContainer = blockNodeContainerMap.get(nodeIndex);
 
-                shutdownContainer.stop();
                 shutdownContainerPorts.put(nodeIndex, shutdownContainer.getPort());
+                shutdownContainer.stop();
 
-                // Wait for container to fully stop and network to recognize it
-                Thread.sleep(3000);
                 log.info("Container {} shutdown complete", nodeIndex);
                 blockNodeContainerMap.remove(nodeIndex, shutdownContainer);
                 break;

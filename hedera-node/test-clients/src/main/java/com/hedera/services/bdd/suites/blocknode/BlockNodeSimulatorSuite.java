@@ -312,9 +312,15 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
-                        "Error on stream from block node localhost:" + portNumbers.getFirst(),
-                        "Selected block node localhost:" + portNumbers.get(1) + " for connection attempt.",
-                        "Connection task for block node localhost:" + portNumbers.get(1) + " ConnectionState: ACTIVE")),
+                        String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.getFirst()),
+                        String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(1)),
+                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(1)),
+                        String.format(
+                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                portNumbers.get(1)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.get(1)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeContainer(1).shutDownImmediately(), // Pri 1
@@ -323,9 +329,15 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
-                        "Error on stream from block node localhost:" + portNumbers.get(1),
-                        "Selected block node localhost:" + portNumbers.get(2) + " for connection attempt.",
-                        "Connection task for block node localhost:" + portNumbers.get(2) + " ConnectionState: ACTIVE")),
+                        String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(1)),
+                        String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(2)),
+                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(2)),
+                        String.format(
+                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                portNumbers.get(2)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.get(2)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeContainer(2).shutDownImmediately(), // Pri 2
@@ -334,9 +346,15 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
-                        "Error on stream from block node localhost:" + portNumbers.get(2),
-                        "Selected block node localhost:" + portNumbers.get(3) + " for connection attempt.",
-                        "Connection task for block node localhost:" + portNumbers.get(3) + " ConnectionState: ACTIVE")),
+                        String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(2)),
+                        String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(3)),
+                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(3)),
+                        String.format(
+                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                portNumbers.get(3)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.get(3)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeContainer(1).startImmediately(),
@@ -345,11 +363,24 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.of(15, SECONDS),
                         Duration.of(45, SECONDS),
-                        "Connection task for block node localhost:" + portNumbers.get(1) + " ConnectionState: PENDING",
-                        "Connection task for block node localhost:" + portNumbers.get(2)
-                                + " is stopping due to active connection with higher priority",
-                        "Transitioning higher priority pending connection: localhost:" + portNumbers.get(1)
-                                + " Priority: 1 to ACTIVE")),
+                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(1)),
+                        String.format(
+                                "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
+                                portNumbers.get(1)),
+                        String.format(
+                                "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
+                                portNumbers.get(1)),
+                        String.format("[localhost:%s/ACTIVE] Closing connection...", portNumbers.get(3)),
+                        String.format(
+                                "[localhost:%s/UNINITIALIZED] Connection state transitioned from ACTIVE to UNINITIALIZED",
+                                portNumbers.get(3)),
+                        String.format(
+                                "[localhost:%s/UNINITIALIZED] Connection successfully closed", portNumbers.get(3)),
+                        String.format(
+                                "The existing active connection (localhost:%s/ACTIVE) has an equal or higher priority"
+                                        + " than the connection (localhost:%s/CONNECTING) we are attempting to connect to"
+                                        + " and this new connection attempt will be ignored",
+                                portNumbers.get(1), portNumbers.get(2)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true));
     }
 
