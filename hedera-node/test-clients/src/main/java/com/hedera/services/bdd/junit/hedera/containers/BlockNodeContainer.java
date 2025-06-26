@@ -10,13 +10,15 @@ import org.testcontainers.utility.DockerImageName;
  * A test container for running a block node server instance.
  */
 public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
+    private static final String BLOCK_NODE_VERSION = "0.14.0-SNAPSHOT";
     private static final DockerImageName DEFAULT_IMAGE_NAME =
-            DockerImageName.parse("ghcr.io/hiero-ledger/hiero-block-node:0.14.0-SNAPSHOT");
-    private static final String blockNodeVersion = "0.14.0-SNAPSHOT";
-    private final int port;
+            DockerImageName.parse("ghcr.io/hiero-ledger/hiero-block-node:" + BLOCK_NODE_VERSION);
+    private static final int CONTAINER_PORT = 8080;
 
     /**
      * Creates a new block node container with the default image.
+     * @param blockNodeId the id of the block node
+     * @param port the internal port of the block node container to expose
      */
     public BlockNodeContainer(final long blockNodeId, final int port) {
         this(DEFAULT_IMAGE_NAME, blockNodeId, port);
@@ -29,10 +31,10 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
      */
     private BlockNodeContainer(DockerImageName dockerImageName, final long blockNodeId, final int port) {
         super(dockerImageName);
-        this.port = port;
-        this.withExposedPorts(port)
-                .withNetworkAliases("block-node-" + blockNodeId)
-                .withEnv("VERSION", blockNodeVersion)
+
+        this.addFixedExposedPort(port, CONTAINER_PORT);
+        this.withNetworkAliases("block-node-" + blockNodeId)
+                .withEnv("VERSION", BLOCK_NODE_VERSION)
                 .waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)))
                 .waitingFor(Wait.forHealthcheck());
     }
@@ -58,7 +60,7 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
      * @return the host port mapped to the container's internal port
      */
     public int getPort() {
-        return getMappedPort(port);
+        return getMappedPort(CONTAINER_PORT);
     }
 
     /**
