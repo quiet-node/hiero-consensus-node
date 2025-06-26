@@ -20,6 +20,13 @@ import org.hiero.consensus.model.transaction.Transaction;
 import org.hiero.consensus.model.transaction.TransactionWrapper;
 
 public class FakeEvent implements Event {
+
+    /**
+     * The default event birth round used for fake events, it is greater than zero to ensure that
+     * it's greater than the default latest freeze round in state at genesis.
+     */
+    public static final long FAKE_EVENT_BIRTH_ROUND = 1L;
+
     private static final Bytes FAKE_SHA_384_SIGNATURE = Bytes.wrap(new byte[] {
         (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04, (byte) 0x05, (byte) 0x06, (byte) 0x07, (byte) 0x08,
         (byte) 0x01, (byte) 0x02, (byte) 0x03, (byte) 0x04, (byte) 0x05, (byte) 0x06, (byte) 0x07, (byte) 0x08,
@@ -44,7 +51,7 @@ public class FakeEvent implements Event {
         this.eventCore = EventCore.newBuilder()
                 .creatorNodeId(creatorId.id())
                 .timeCreated(HapiUtils.asTimestamp(timeCreated))
-                .birthRound(1L)
+                .birthRound(FAKE_EVENT_BIRTH_ROUND)
                 .build();
     }
 
