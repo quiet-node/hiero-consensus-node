@@ -43,8 +43,7 @@ public class EvmHookDispatchHandler implements TransactionHandler {
             case CREATION -> {
                 final var store = context.storeFactory().writableStore(WritableEvmHookStore.class);
                 final var creation = op.creationOrThrow();
-                store.createEvmHook(
-                        creation.entityIdOrThrow(), creation, creation.nextHookId());
+                store.createEvmHook(creation.entityIdOrThrow(), creation, creation.nextHookId());
             }
             case EXECUTION -> {}
         }

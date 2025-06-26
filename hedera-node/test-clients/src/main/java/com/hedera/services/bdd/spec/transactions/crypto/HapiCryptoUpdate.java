@@ -244,7 +244,8 @@ public class HapiCryptoUpdate extends HapiTxnOp<HapiCryptoUpdate> {
                             isDeclinedReward.ifPresent(b -> builder.setDeclineReward(BoolValue.of(b)));
                             hookCreators.forEach(creator -> {
                                 allRunFor(spec, creator.specSetupOp());
-                                builder.addHookCreationDetails(CommonPbjConverters.fromPbj(creator.getCreationDetails()));
+                                builder.addHookCreationDetails(
+                                        CommonPbjConverters.fromPbj(creator.getCreationDetails()));
                             });
                         });
         if (logUpdateDetailsToSysout) {

@@ -71,8 +71,10 @@ public class HapiLambdaSStore extends HapiTxnOp<HapiLambdaSStore> {
 
     @Override
     protected Consumer<TransactionBody.Builder> opBodyDef(HapiSpec spec) throws Throwable {
-        final var updates = Stream.concat(Stream.empty(), slots.stream()
-                .map(slot -> LambdaStorageUpdate.newBuilder().setStorageSlot(slot).build())).toList();
+        final var updates = Stream.concat(Stream.empty(), slots.stream().map(slot -> LambdaStorageUpdate.newBuilder()
+                        .setStorageSlot(slot)
+                        .build()))
+                .toList();
         final var op = spec.txns()
                 .<LambdaSStoreTransactionBody, LambdaSStoreTransactionBody.Builder>body(
                         LambdaSStoreTransactionBody.class, b -> b.addAllStorageUpdates(updates));

@@ -60,9 +60,7 @@ public class WritableEvmHookStore extends ReadableEvmHookStore {
      * @param updates the slot updates
      * @throws HandleException if the lambda ID is not found
      */
-    public void updateSlots(
-            @NonNull final CreatedHookId hookId,
-            @NonNull final List<LambdaStorageUpdate> updates)
+    public void updateSlots(@NonNull final CreatedHookId hookId, @NonNull final List<LambdaStorageUpdate> updates)
             throws HandleException {
         final List<Bytes> keys = new ArrayList<>(updates.size());
         for (final var update : updates) {
@@ -128,9 +126,7 @@ public class WritableEvmHookStore extends ReadableEvmHookStore {
      * @throws HandleException if the creation fails
      */
     public void createEvmHook(
-            @NonNull final HookEntityId entityId,
-            @NonNull final HookCreation creation,
-            final long nextHookId)
+            @NonNull final HookEntityId entityId, @NonNull final HookCreation creation, final long nextHookId)
             throws HandleException {
         final var details = creation.detailsOrThrow();
         final var hookId = new CreatedHookId(entityId, details.hookId());

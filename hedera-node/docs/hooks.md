@@ -1,4 +1,5 @@
 ---
+
 hip: 1195
 title: Hiero hooks and an application to allowances
 author: Michael Tinker <@tinker-michaelj>
@@ -12,53 +13,53 @@ status: Approved
 last-call-date-time: 2025-06-06T07:00:00Z
 created: 2025-02-19
 discussions-to: https://github.com/hiero-ledger/hiero-improvement-proposals/discussions/1172
-updated: 2025-06-11
----
+updated: 2025-06-12
+-------------------
 
 ## Abstract
 
 We propose **hooks**, programmable Hiero extension points that let users customize the behavior of their entities.
 In principle, hooks could be programmed in any language, but we begin with **EVM hooks**. Users program EVM hooks by
 writing contracts in a language like Solidity that compiles to EVM bytecode. EVM hooks are either **pure** (using
-neither storage nor external contracts); or **lambdas** (like code running in a cloud's event-driven compute offering,
-which may access a database to use state or call other external services). For any given entity, the owning
-user can create multiple hooks for that entity with different 64-bit **hook ids**. There is no limit on the number of
-hook ids than an entity can use; but its storage footprint, and hence rent, will increase proportionally.
+neither storage nor external contracts); or **lambdas** (like event-driven code running in the cloud, that may keep
+state in a database to use state or call other external services). For any given entity, its user can create many hooks
+for that entity with different 64-bit **hook ids**. There is no limit on the number of hook ids than an entity can use;
+but its storage footprint, and hence rent, will increase proportionally.
 
 As a first Hiero extension point, we propose **account allowance hooks**. Users can create these hooks on their
-accounts, and a Hiero API (HAPI) `CryptoTransfer` transaction can then reference a hook allowance just as it does an
-ERC-style allowance defined in [HIP-376](https://hips.hedera.com/hip/hip-376). The network uses the hook by calling its
-EVM bytecode at a well-known function signature, passing in the context of the triggering `CryptoTransfer`. If the hook
-returns `true`, the network continues executing the transfer; otherwise the network rejects the transfer. Creating an
-account hook is analogous to adding a function to a smart contract: That is, the hook executes with the account's
-privileges when calling Hedera system contracts, just as a smart contract's functions do.
+accounts, and a Hiero API (HAPI) `CryptoTransfer` transaction can then reference an allowance hook just as it does an
+ERC-style allowance defined in [HIP-376](https://hips.hedera.com/hip/hip-376). The network uses the allowance hook by
+calling its EVM bytecode at a well-known function signature, passing in the context of the triggering `CryptoTransfer`.
+If the hook function returns `true`, the network continues executing the transfer; otherwise the network rejects the
+transfer. Creating an account hook is analogous to adding a function to a smart contract: That is, the hook executes
+with the account's privileges when calling Hedera system contracts, just as a smart contract's functions do.
 
 Unlike smart contracts, which must encapsulate trust guarantees for multiple parties, lambda hooks belong to a single
-owner who can directly update their storage via a new `LambdaSStore` transaction that acts on EVM key-value pairs. This
-permits fast, inexpensive, arbitrary adjustments to a lambda's behavior with less overhead than a typical
-`ConsensusSubmitMessage`; and far less overhead than a `ContractCall`.
+owner who can directly update their storage via a new `LambdaSStore` transaction that acts on EVM storage slots. This
+permits fast, heap adjustments to a lambda's behavior with less overhead than a typical `ConsensusSubmitMessage`; and
+far less overhead than a `ContractCall`.
 
 ## Motivation
 
-Hedera users often want to customize native entities instead of migrating their decentralized applications (dApps) to
-purely EVM-based smart contracts. Consider the following examples:
+Hedera users often want to customize native entities instead of migrating their decentralized applications (dApps)
+exclusively to EVM smart contracts. Consider the following examples:
 - [HIP-18: Custom Hedera Token Service Fees](https://hips.hedera.com/hip/hip-18) introduced custom fee
-  payments for HTS transfers.
+payments for HTS transfers.
 - [HIP-904: Frictionless Airdrops](https://hips.hedera.com/hip/hip-904) enabled more permissive token association
-  policies.
+policies.
 - [HIP-991: Permissionless revenue-generating Topic Ids for Topic Operators](https://hips.hedera.com/hip/hip-991)
-  proposed fee-based access control for message submissions to topics.
+proposed fee-based access control for message submissions to topics.
 
 Hooks provide a more general solution to the problem of users needing custom business logic for their entities. For
 example, a token issuer might need to enforce rules on every transaction involving their token for regulatory or
 business reasons. A **transfer hook** for token entities could enforce these rules without requiring the issuer to take
-a full design proposal through the HIP process. It would also preserve the performance and simplicity of the native 
+a full design proposal through the HIP process. It would also preserve the performance and simplicity of the native
 APIs, unlike moving everything into custom ERC-20 smart contracts.
 
 In short, by avoiding protocol-level changes for every important customization, hooks can greatly streamline innovation
 on a Hiero network while maintaining the performance and integrity of the native services.
 
-## Specification
+## EVM hook specification
 
 First we specify how a Hiero network will charge, throttle, and execute EVM hooks. The execution section details how
 the EVM transaction for a hook differs from the EVM transaction of a top-level contract call. (Non-EVM hook programming
@@ -79,6 +80,7 @@ We propose the same gas price for EVM hook execution as for other contract opera
 which are charged purely in gas, hook executions are already "gated" by the fee of their triggering transaction.
 So it makes sense to reduce the intrinsic gas cost of their execution. We propose adding two more properties to give
 this effect while keeping it customizable for Hiero network operators.
+
 ```
 hooks.evm.pureIntrinsicGasCost=1000
 hooks.evm.lambdaIntrinsicGasCost=1000
@@ -218,7 +220,7 @@ object with at least a subset of the information in the example below.
     {
       /* The entity that owns the hook */
       "owner_id": "0.0.123",
-      
+
       /* May be composed with owner id: {owner_id}/{hook_id} */
       "hook_id": "1",
 
@@ -443,7 +445,7 @@ If the called hook does not match the provided specification, the network will f
  * Specifies a call to a hook from within a transaction where the hook owner is implied by the point of use.
  * <p>
  * For example, if the hook is an account allowance hook, then it is clear from the balance adjustment being
- * attempted which account must own the referenced hook. 
+ * attempted which account must own the referenced hook.
  */
 message HookCall {
   /**
@@ -565,7 +567,7 @@ Executing an EVM hook produces `ContractCall` block items (`SignedTransation`, `
 and possibly `TraceData`) as following synthetic children of the triggering transaction, in the order of each executed
 hook.
 
-When an EVM hook is created, its representation in `ContractService` state is as below. (Note the `previous_hook_id` 
+When an EVM hook is created, its representation in `ContractService` state is as below. (Note the `previous_hook_id`
 and `next_hook_id` pointers are an implementation detail transparent to the user. The protocol uses them to efficiently
 traverse the list of hooks when archiving the account.)
 
@@ -608,13 +610,13 @@ message EvmHookState {
    * If set, the id of the hook preceding this one in the owner's
    * doubly-linked list of hooks.
    */
-  google.protobuf.UInt64Value previous_hook_id = 7;
+  google.protobuf.Int64Value previous_hook_id = 7;
 
   /**
    * If set, the id of the hook following this one in the owner's
    * doubly-linked list of hooks.
    */
-  google.protobuf.UInt64Value next_hook_id = 8;
+  google.protobuf.Int64Value next_hook_id = 8;
 
   /**
    * The number of storage slots a lambda is using.
@@ -638,6 +640,7 @@ enum EvmHookType {
 ```
 
 And its storage is keyed by the following type,
+
 ```protobuf
 /**
  * The key of a lambda's storage slot.
@@ -660,6 +663,7 @@ message LambdaSlotKey {
 
 After an entity has a lambda, a new `LambdaSStore` transaction supports efficiently updating the lambda's storage. It
 must be signed by either the entity's controlling key or the admin key set in the lambda's `HookCreationDetails`.
+
 ```protobuf
 /**
  * Adds or removes key/value pairs in the storage of a lambda.
@@ -683,12 +687,12 @@ message LambdaSStoreTransactionBody {
 
 The account allowance extension point is the only extension point defined in this HIP. Hooks of this type are
 created for an account via either a `CryptoCreate` or `CryptoUpdate` transaction; and for a contract account via
-either a `ContractCreate` or `ContractUpdate` transaction (the latter, assuming the contract has an admin key). 
-A future HIP might add Hiero system contracts to let a contract manage its hooks programmatically, but that is outside
-our scope here.
+either a `ContractCreate` or `ContractUpdate` transaction.  A future HIP might add Hiero system contracts to let
+a contract manage its hooks programmatically, but that is outside our scope here. (Note this also means hooks
+cannot be managed via a JSON-RPC relay; only through native HAPI transactions.)
 
 Here we simply extend the `CryptoCreateTransactionBody` and `ContractCreateTransactionBody` messages with a field to
-create initial hooks along with an account or contract; and the `CryptoUpdateTransactionBody` and 
+create initial hooks along with an account or contract; and the `CryptoUpdateTransactionBody` and
 `ContractUpdateTransactionBody` messages with fields to create and delete hooks from existing accounts and contracts.
 
 ```protobuf
@@ -703,7 +707,7 @@ message CryptoCreateTransactionBody {
 
 message ContractCreateTransactionBody {
   // ...
-  
+
   /**
    * Details of hooks to add immediately after creating this contract.
    */
@@ -726,7 +730,7 @@ message CryptoUpdateTransactionBody {
 
 message ContractUpdateTransactionBody {
   // ...
-  
+
   /**
    * The hooks to create for the contract.
    */
@@ -740,9 +744,9 @@ message ContractUpdateTransactionBody {
 ```
 
 If any transaction repeats a hook id in its `hook_creation_details` list, it will fail with status
-`HOOK_ID_REPEATED_IN_CREATION_DETAILS`. If the `CryptoUpdateTransactionBody` or `ContractUpdateTransactionBody` tries 
+`HOOK_ID_REPEATED_IN_CREATION_DETAILS`. If the `CryptoUpdateTransactionBody` or `ContractUpdateTransactionBody` tries
 to create a hook with an id that is already occupied, it will fail with status `INDEX_IN_USE`. Similarly, if either
-update transaction tries to delete a hook with an id not in use, it will fail with status `HOOK_NOT_FOUND`. To support 
+update transaction tries to delete a hook with an id not in use, it will fail with status `HOOK_NOT_FOUND`. To support
 atomic hook updates for compliance reasons, we **do** support deleting and recreating a hook with the same id in a
 single update transaction. (That is, the `hook_ids_to_delete` list is processed first; then the `hook_creation_details`
 list.)
@@ -996,7 +1000,7 @@ contract CreditSansCustomFeesTokenAllowance is IHieroAccountAllowanceHook {
 ## Backwards Compatibility
 
 This HIP adds a net new feature to the protocol. Any account that does not use hooks will see identical behavior
-in all circumstances. Any payer account that does not explicitly set a gas limit to cover a hook's execution will 
+in all circumstances. Any payer account that does not explicitly set a gas limit to cover a hook's execution will
 be at no risk of paying for a hook's execution.
 
 ## Security Implications
@@ -1013,6 +1017,10 @@ Hook authors must mitigate the risk of bugs by rigorous testing and code review.
 signing transactions from dApps of questionable integrity. As reiterated above, we recommend and expect that hooks with
 broad usage will be published as application HIPs, and that users will adopt them only as wallets and block explorers
 give full support and visibility into their semantics.
+
+## How to Teach This
+
+Hooks let users customize a Hiero network with their own metaprotocols without needing to change the L1 itself.
 
 ## Reference Implementation
 

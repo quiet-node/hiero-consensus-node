@@ -75,7 +75,8 @@ public class ReadableEvmHookStore {
      * @return a list of slots
      * @throws HandleException if the hook
      */
-    public EvmHookView getView(@NonNull final CreatedHookId hookId, @NonNull final List<Bytes> keys) throws HandleException {
+    public EvmHookView getView(@NonNull final CreatedHookId hookId, @NonNull final List<Bytes> keys)
+            throws HandleException {
         requireNonNull(hookId);
         requireNonNull(keys);
         final var state = hookStates.get(hookId);

@@ -29,9 +29,7 @@ public class HookCreator {
         return new HookCreator(EvmHookType.LAMBDA, hookId);
     }
 
-    private HookCreator(
-            @NonNull final EvmHookType type,
-            final long hookId) {
+    private HookCreator(@NonNull final EvmHookType type, final long hookId) {
         this.type = requireNonNull(type);
         this.hookId = hookId;
     }
@@ -44,9 +42,7 @@ public class HookCreator {
      * Returns the {@link com.hedera.hapi.node.hooks.HookCreation}.
      */
     public HookCreationDetails getCreationDetails() {
-        final var builder = HookCreationDetails.newBuilder()
-                .hookId(hookId)
-                .extensionPoint(ACCOUNT_ALLOWANCE_HOOK);
+        final var builder = HookCreationDetails.newBuilder().hookId(hookId).extensionPoint(ACCOUNT_ALLOWANCE_HOOK);
         final var specBuilder = EvmHookSpec.newBuilder();
         switch (type) {
             case PURE -> builder.pureEvmHook(new PureEvmHook(specBuilder.build()));
