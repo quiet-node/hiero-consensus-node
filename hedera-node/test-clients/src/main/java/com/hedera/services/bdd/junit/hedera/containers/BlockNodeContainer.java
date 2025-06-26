@@ -41,12 +41,6 @@ public class BlockNodeContainer extends GenericContainer<BlockNodeContainer> {
     public void start() {
         if (!isRunning()) {
             super.start();
-            /*// Add a wait to ensure gRPC service is fully ready
-            try {
-                Thread.sleep(2000); // Give the service 2 more seconds after container is healthy
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }*/
         }
         waitForHealthy(Duration.ofMinutes(2));
     }
