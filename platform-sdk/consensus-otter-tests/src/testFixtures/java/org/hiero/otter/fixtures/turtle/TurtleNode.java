@@ -32,8 +32,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
-import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedNetwork;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
 import com.swirlds.state.State;
@@ -42,7 +40,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
+import java.util.Collections;
 import org.apache.logging.log4j.ThreadContext;
 import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
@@ -55,14 +53,14 @@ import org.hiero.otter.fixtures.NodeConfiguration;
 import org.hiero.otter.fixtures.internal.result.NodeResultsCollector;
 import org.hiero.otter.fixtures.internal.result.SingleNodeLogResultImpl;
 import org.hiero.otter.fixtures.internal.result.SingleNodePcesResultImpl;
-import org.hiero.otter.fixtures.logging.StructuredLog;
-import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
 import org.hiero.otter.fixtures.result.SingleNodePcesResult;
-import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
+import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResults;
 import org.hiero.otter.fixtures.turtle.app.TurtleApp;
 import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
+import org.hiero.otter.fixtures.turtle.gossip.SimulatedGossip;
+import org.hiero.otter.fixtures.turtle.gossip.SimulatedNetwork;
 
 /**
  * A node in the turtle network.
@@ -221,24 +219,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * {@inheritDoc}
      */
     @Override
-    public void shutdownGracefully() throws InterruptedException {
-        try {
-            ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
-
-            if (platformWiring != null) {
-                platformWiring.flushIntakePipeline();
-            }
-            doShutdownNode();
-
-        } finally {
-            ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void start() {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
@@ -306,8 +286,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @NonNull
     @Override
     public SingleNodeLogResult getLogResult() {
-        final List<StructuredLog> logs = InMemoryAppender.getLogs(selfId.id());
-        return new SingleNodeLogResultImpl(selfId, logs);
+        return new SingleNodeLogResultImpl(selfId, Collections.emptySet());
     }
 
     /**
@@ -315,7 +294,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      */
     @Override
     @NonNull
-    public SingleNodeStatusProgression getStatusProgression() {
+    public SingleNodePlatformStatusResults getPlatformStatusResults() {
         return resultsCollector.getStatusProgression();
     }
 
@@ -478,14 +457,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         @Override
         public void killImmediately() throws InterruptedException {
             TurtleNode.this.killImmediately();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void shutdownGracefully() throws InterruptedException {
-            TurtleNode.this.shutdownGracefully();
         }
 
         /**
