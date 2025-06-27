@@ -602,6 +602,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     }
 
     //  FUTURE WORK: Uncomment this once migration from the existing VirtualMap is done
+    //  See https://github.com/hiero-ledger/hiero-consensus-node/issues/19690
     //    /**
     //     * This is never called for a {@link VirtualMap}.
     //     *
