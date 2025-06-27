@@ -4,12 +4,12 @@ package org.hiero.otter.fixtures.assertions;
 import static java.util.Comparator.comparingInt;
 
 import com.hedera.hapi.platform.state.NodeId;
+import com.swirlds.platform.test.fixtures.consensus.framework.validation.ConsensusRoundValidator;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.List;
 import java.util.Optional;
 import org.assertj.core.api.AbstractAssert;
-import org.assertj.core.api.Assertions;
 import org.assertj.core.data.Percentage;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.otter.fixtures.OtterAssertions;
@@ -53,11 +53,9 @@ public class MultipleNodeConsensusResultsAssert
     @NonNull
     public MultipleNodeConsensusResultsAssert haveLastRoundNum(final long expected) {
         isNotNull();
-
         for (final SingleNodeConsensusResult result : actual.results()) {
             OtterAssertions.assertThat(result).hasLastRoundNum(expected);
         }
-
         return this;
     }
 
@@ -70,11 +68,9 @@ public class MultipleNodeConsensusResultsAssert
     @NonNull
     public MultipleNodeConsensusResultsAssert haveAdvancedSinceRound(final long expected) {
         isNotNull();
-
         for (final SingleNodeConsensusResult result : actual.results()) {
             OtterAssertions.assertThat(result).hasAdvancedSinceRound(expected);
         }
-
         return this;
     }
 
@@ -111,14 +107,8 @@ public class MultipleNodeConsensusResultsAssert
             final List<ConsensusRound> roundsToAssert = roundsFromNodeToAssert.rounds();
             final List<ConsensusRound> expectedRounds =
                     longestNodeRoundsResult.rounds().subList(0, roundsToAssert.size());
-            Assertions.assertThat(roundsToAssert)
-                    .withFailMessage(
-                            "Expected node %s to have the same consensus rounds as node %s, but the former had %s while the later had %s",
-                            longestNodeRoundsResult.nodeId(),
-                            roundsFromNodeToAssert.nodeId(),
-                            roundsToAssert,
-                            longestNodeRoundsResult.rounds())
-                    .containsExactlyElementsOf(expectedRounds);
+
+            ConsensusRoundValidator.validate(roundsToAssert, expectedRounds);
         }
 
         return this;
@@ -164,6 +154,22 @@ public class MultipleNodeConsensusResultsAssert
                     expectedDifference, actualDifference);
         }
 
+        return this;
+    }
+
+    /**
+     * Verifies that the created consensus rounds are consistent.
+     *
+     * <p>This includes checking if the ancient thresholds are increasing and the timestamps of
+     * events are strictly increasing.
+     *
+     * @return this assertion object for method chaining
+     */
+    public MultipleNodeConsensusResultsAssert haveConsistentRounds() {
+        isNotNull();
+        for (final SingleNodeConsensusResult result : actual.results()) {
+            OtterAssertions.assertThat(result).hasConsistentRounds();
+        }
         return this;
     }
 
