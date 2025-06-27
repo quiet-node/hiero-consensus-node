@@ -237,6 +237,10 @@ public class BlockNodeConnectionManager {
         }
     }
 
+    private boolean isOnlyOneBlockNodeConfigured() {
+        return availableBlockNodes.size() == 1;
+    }
+
     private @NonNull ManagedChannel createNewManagedChannel(@NonNull final BlockNodeConfig nodeConfig) {
         return ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
                 .usePlaintext()
@@ -261,10 +265,16 @@ public class BlockNodeConnectionManager {
 
         logger.warn("[{}] Rescheduling connection for reconnect attempt", connection);
 
-        // Schedule retry for the failed connection after a delay (initialDelay)
-        scheduleConnectionAttempt(connection, initialDelay, null);
-        // Immediately try to find and connect to the next available node
-        selectNewBlockNodeForStreaming();
+        if (isOnlyOneBlockNodeConfigured()) {
+            // If there is only one block node configured, we will not try to select a new node
+            // Immediately schedule a retry for the failed connection
+            scheduleConnectionAttempt(connection, Duration.ofSeconds(1), null);
+        } else {
+            // Schedule retry for the failed connection after a delay (initialDelay)
+            scheduleConnectionAttempt(connection, initialDelay, null);
+            // Immediately try to find and connect to the next available node
+            selectNewBlockNodeForStreaming();
+        }
     }
 
     /**
