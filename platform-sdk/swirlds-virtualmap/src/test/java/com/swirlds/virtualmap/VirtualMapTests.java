@@ -1502,7 +1502,6 @@ class VirtualMapTests extends VirtualTestBase {
 
         final VirtualDataSourceBuilder builder = new InMemoryBuilder();
         VirtualMap map = new VirtualMap(VM_LABEL, builder, configuration);
-        ;
         assertEquals(0, map.getFlushCandidateThreshold());
         final int flushInterval =
                 configuration.getConfigData(VirtualMapConfig.class).flushInterval();

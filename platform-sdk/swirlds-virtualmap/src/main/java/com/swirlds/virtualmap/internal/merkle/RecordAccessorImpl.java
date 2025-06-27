@@ -9,6 +9,7 @@ import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.RecordAccessor;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
@@ -37,7 +38,9 @@ public class RecordAccessorImpl implements RecordAccessor {
      * 		The data source. Can be null.
      */
     public RecordAccessorImpl(
-            final VirtualMapState state, final VirtualNodeCache cache, final VirtualDataSource dataSource) {
+            @NonNull final VirtualMapState state,
+            @NonNull final VirtualNodeCache cache,
+            @NonNull final VirtualDataSource dataSource) {
         this.state = Objects.requireNonNull(state);
         this.cache = Objects.requireNonNull(cache);
         this.dataSource = dataSource;
@@ -108,7 +111,7 @@ public class RecordAccessorImpl implements RecordAccessor {
      * {@inheritDoc}
      */
     @Override
-    public VirtualLeafBytes findLeafRecord(final Bytes key) {
+    public VirtualLeafBytes findLeafRecord(final @NonNull Bytes key) {
         VirtualLeafBytes rec = cache.lookupLeafByKey(key);
         if (rec == null) {
             try {
