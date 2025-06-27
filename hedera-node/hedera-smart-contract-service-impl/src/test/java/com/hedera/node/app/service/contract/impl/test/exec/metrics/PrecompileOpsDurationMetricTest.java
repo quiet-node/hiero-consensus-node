@@ -4,7 +4,7 @@ package com.hedera.node.app.service.contract.impl.test.exec.metrics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.within;
 
-import com.hedera.node.app.service.contract.impl.exec.metrics.PrecompileMetrics;
+import com.hedera.node.app.service.contract.impl.exec.metrics.PrecompileOpsDurationMetric;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
@@ -16,11 +16,11 @@ import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class PrecompileMetricsTest {
+class PrecompileOpsDurationMetricTest {
 
     private static final long DEFAULT_NODE_ID = 3;
     private Metrics metrics;
-    private PrecompileMetrics subject;
+    private PrecompileOpsDurationMetric subject;
 
     @BeforeEach
     void setUp() {
@@ -34,7 +34,7 @@ class PrecompileMetricsTest {
                 new PlatformMetricsFactoryImpl(metricsConfig),
                 metricsConfig);
 
-        subject = new PrecompileMetrics(metrics);
+        subject = new PrecompileOpsDurationMetric(metrics);
     }
 
     @Test
@@ -50,7 +50,11 @@ class PrecompileMetricsTest {
 
         // Then
         final double average = subject.getAveragePrecompileDuration(precompileName);
+        final double count = subject.getPrecompileOpsDurationCount(precompileName);
+        final double total = subject.getPrecompileOpsTotalDuration(precompileName);
         assertThat(average).isCloseTo(150.0, within(0.5)); // (100 + 200) / 2
+        assertThat(count).isEqualTo(2.0); // Two durations recorded
+        assertThat(total).isEqualTo(300.0); // 100 + 200
     }
 
     @Test
@@ -60,9 +64,13 @@ class PrecompileMetricsTest {
 
         // When
         final double duration = subject.getAveragePrecompileDuration(nonExistentPrecompile);
+        final double ccount = subject.getPrecompileOpsDurationCount(nonExistentPrecompile);
+        final double total = subject.getPrecompileOpsTotalDuration(nonExistentPrecompile);
 
         // Then
         assertThat(duration).isZero();
+        assertThat(ccount).isZero();
+        assertThat(total).isZero();
     }
 
     @Test
@@ -79,6 +87,10 @@ class PrecompileMetricsTest {
 
         // Then
         assertThat(subject.getAveragePrecompileDuration(precompile1)).isEqualTo(100.0);
+        assertThat(subject.getPrecompileOpsDurationCount(precompile1)).isEqualTo(1);
+        assertThat(subject.getPrecompileOpsTotalDuration(precompile1)).isEqualTo(100L);
         assertThat(subject.getAveragePrecompileDuration(precompile2)).isEqualTo(200.0);
+        assertThat(subject.getPrecompileOpsDurationCount(precompile2)).isEqualTo(1);
+        assertThat(subject.getPrecompileOpsTotalDuration(precompile2)).isEqualTo(200L);
     }
 }

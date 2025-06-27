@@ -117,6 +117,7 @@ public class OpsDurationThrottleTest {
         final AtomicDouble duration = new AtomicDouble(0.0);
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
+                overriding(MAX_OPS_DURATION, DURATION_PERIOD),
                 cryptoCreate(SENDER).balance(1_000_000_000L),
                 cryptoCreate(RECEIVER).balance(1_000_000_000L),
                 tokenCreate(TOKEN)
@@ -138,7 +139,7 @@ public class OpsDurationThrottleTest {
                             asAddress(spec.registry().getAccountID(RECEIVER)));
                     allRunFor(
                             spec,
-                            inParallel(IntStream.range(0, 4_000)
+                            inParallel(IntStream.range(0, 400)
                                     .mapToObj(i -> sourcing(() -> contractCall(
                                                     SYSTEM_CONTRACT_TRANSFER,
                                                     "htsTransferFrom",
@@ -152,7 +153,8 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(duration)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, throttleUsagePercentageMoreThanThreshold(duration.get(), 98.0));
-                }));
+                }),
+                restoreDefault(MAX_OPS_DURATION));
     }
 
     @HapiTest

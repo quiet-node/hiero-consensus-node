@@ -49,7 +49,9 @@ class OpsDurationPerTransactionMetricsTest {
         subject.recordTxnTotalOpsDuration(duration);
 
         // Then
-        assertThat(subject.get()).isEqualTo(duration);
+        assertThat(subject.getAverage()).isEqualTo(duration);
+        assertThat(subject.getCount()).isEqualTo(1);
+        assertThat(subject.getTotalOpsDuration()).isEqualTo(duration);
     }
 
     @Test
@@ -63,6 +65,8 @@ class OpsDurationPerTransactionMetricsTest {
         subject.recordTxnTotalOpsDuration(duration2);
 
         // Then
-        assertThat(subject.get()).isCloseTo(150, Percentage.withPercentage(1)); // Allow some slack for half-life
+        assertThat(subject.getAverage()).isCloseTo(150, Percentage.withPercentage(1)); // Allow some slack for half-life
+        assertThat(subject.getCount()).isEqualTo(2);
+        assertThat(subject.getTotalOpsDuration()).isEqualTo(duration1 + duration2);
     }
 }

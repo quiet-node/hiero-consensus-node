@@ -8,6 +8,7 @@ import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.nu
 
 import com.hedera.hapi.node.base.ContractID;
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
+import com.hedera.node.app.service.contract.impl.exec.metrics.OpsDurationMetrics;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.AbstractNativeSystemContract;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.HtsCallFactory;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
@@ -39,8 +40,15 @@ public class HtsSystemContract extends AbstractNativeSystemContract implements H
             @NonNull final GasCalculator gasCalculator,
             @NonNull final HtsCallFactory callFactory,
             @NonNull final ContractMetrics contractMetrics,
+            @NonNull final OpsDurationMetrics opsDurationMetrics,
             @NonNull final HederaOpsDuration hederaOpsDuration) {
-        super(HTS_SYSTEM_CONTRACT_NAME, callFactory, gasCalculator, contractMetrics, hederaOpsDuration);
+        super(
+                HTS_SYSTEM_CONTRACT_NAME,
+                callFactory,
+                gasCalculator,
+                contractMetrics,
+                opsDurationMetrics,
+                hederaOpsDuration);
     }
 
     @Override

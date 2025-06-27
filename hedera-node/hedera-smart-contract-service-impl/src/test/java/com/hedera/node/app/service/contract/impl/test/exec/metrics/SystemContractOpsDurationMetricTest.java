@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.within;
 import static org.mockito.BDDMockito.given;
 
-import com.hedera.node.app.service.contract.impl.exec.metrics.ContractOperationMetrics;
+import com.hedera.node.app.service.contract.impl.exec.metrics.SystemContractOpsDurationMetric;
 import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethod;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.common.metrics.config.MetricsConfig;
@@ -22,11 +22,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ContractOperationMetricsTest {
+class SystemContractOpsDurationMetricTest {
 
     private static final long DEFAULT_NODE_ID = 3;
     private Metrics metrics;
-    private ContractOperationMetrics subject;
+    private SystemContractOpsDurationMetric subject;
 
     @Mock
     private SystemContractMethod method1;
@@ -46,7 +46,7 @@ class ContractOperationMetricsTest {
                 new PlatformMetricsFactoryImpl(metricsConfig),
                 metricsConfig);
 
-        subject = new ContractOperationMetrics(metrics);
+        subject = new SystemContractOpsDurationMetric(metrics);
     }
 
     @Test
@@ -60,8 +60,12 @@ class ContractOperationMetricsTest {
         subject.recordOperationDuration(method1, duration2);
 
         // Then
-        final double average = subject.getAverageSystemContractDuration(method1);
+        final double average = subject.getAverageSystemContractOpsDuration(method1);
+        final double count = subject.getSystemContractOpsDurationCount(method1);
+        final double total = subject.getSystemContractOpsTotalDuration(method1);
         assertThat(average).isCloseTo(150.0, within(0.5)); // (100 + 200) / 2
+        assertThat(count).isEqualTo(2.0); // Two durations recorded
+        assertThat(total).isEqualTo(300.0); // 100 + 200
     }
 
     @Test
@@ -70,10 +74,14 @@ class ContractOperationMetricsTest {
         final SystemContractMethod nonExistentMethod = method2;
 
         // When
-        final double duration = subject.getAverageSystemContractDuration(nonExistentMethod);
+        final double duration = subject.getAverageSystemContractOpsDuration(nonExistentMethod);
+        final double count = subject.getSystemContractOpsDurationCount(nonExistentMethod);
+        final double total = subject.getSystemContractOpsTotalDuration(nonExistentMethod);
 
         // Then
         assertThat(duration).isZero();
+        assertThat(count).isZero();
+        assertThat(total).isZero();
     }
 
     @Test
@@ -94,7 +102,11 @@ class ContractOperationMetricsTest {
         subject.recordOperationDuration(method2, duration2);
 
         // Then
-        assertThat(subject.getAverageSystemContractDuration(method1)).isCloseTo(200.0, within(0.5));
-        assertThat(subject.getAverageSystemContractDuration(method2)).isCloseTo(200.0, within(0.5));
+        assertThat(subject.getAverageSystemContractOpsDuration(method1)).isCloseTo(200.0, within(1.0));
+        assertThat(subject.getSystemContractOpsDurationCount(method1)).isEqualTo(4);
+        assertThat(subject.getSystemContractOpsTotalDuration(method1)).isEqualTo(800L); // 100 + 300 + 100 + 300
+        assertThat(subject.getAverageSystemContractOpsDuration(method2)).isCloseTo(200.0, within(1.0));
+        assertThat(subject.getSystemContractOpsDurationCount(method2)).isEqualTo(2);
+        assertThat(subject.getSystemContractOpsTotalDuration(method2)).isEqualTo(400L); // 200 + 200
     }
 }
