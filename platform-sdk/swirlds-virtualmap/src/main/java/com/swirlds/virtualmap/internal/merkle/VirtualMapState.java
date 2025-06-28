@@ -46,7 +46,10 @@ public class VirtualMapState {
      */
     public VirtualMapState(@NonNull final String label, final long stateSize) {
         requireNonNull(label);
-        if (stateSize == 1) {
+        if (stateSize == 0) {
+            firstLeafPath = -1;
+            lastLeafPath = -1;
+        } else if (stateSize == 1) {
             firstLeafPath = 1;
             lastLeafPath = 1;
         } else {
