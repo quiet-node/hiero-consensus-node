@@ -154,8 +154,8 @@ class VirtualMapHashingTest {
         root0.put(TestKey.longToKey(4), new TestValue(4), TestValueCodec.INSTANCE);
         root0.put(TestKey.longToKey(5), new TestValue(5), TestValueCodec.INSTANCE);
 
-        root0.remove(TestKey.longToKey(delete1), null);
-        root0.remove(TestKey.longToKey(delete2), null);
+        root0.remove(TestKey.longToKey(delete1));
+        root0.remove(TestKey.longToKey(delete2));
 
         final VirtualMap root1 = root0.copy();
         final Hash hash0 = root0.getHash();
