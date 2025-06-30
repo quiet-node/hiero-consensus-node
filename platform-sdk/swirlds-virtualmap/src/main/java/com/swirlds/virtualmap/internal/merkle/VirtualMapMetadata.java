@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.internal.merkle;
 
+import static com.swirlds.virtualmap.datasource.VirtualDataSource.INVALID_PATH;
 import static java.util.Objects.requireNonNull;
 
 import com.swirlds.base.utility.ToStringBuilder;
@@ -36,8 +37,8 @@ public class VirtualMapMetadata {
      */
     public VirtualMapMetadata(@NonNull final String label) {
         requireNonNull(label);
-        firstLeafPath = -1;
-        lastLeafPath = -1;
+        firstLeafPath = INVALID_PATH;
+        lastLeafPath = INVALID_PATH;
         this.label = label;
     }
 
@@ -46,6 +47,10 @@ public class VirtualMapMetadata {
      */
     public VirtualMapMetadata(@NonNull final String label, final long stateSize) {
         requireNonNull(label);
+        if (stateSize == 0) {
+            firstLeafPath = INVALID_PATH;
+            lastLeafPath = INVALID_PATH;
+        }
         if (stateSize == 1) {
             firstLeafPath = 1;
             lastLeafPath = 1;
