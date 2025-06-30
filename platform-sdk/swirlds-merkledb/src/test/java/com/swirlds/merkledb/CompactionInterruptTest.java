@@ -161,6 +161,19 @@ class CompactionInterruptTest {
             objectKeyToPathFuture = compactor.compactorsByName.get("keyToPath");
         }
 
+        assertEventuallyTrue(
+                hashStoreDiskFuture::isCompactionRunning,
+                Duration.ofMillis(10),
+                "hashStoreDiskFuture should be running");
+        assertEventuallyTrue(
+                pathToKeyValueFuture::isCompactionRunning,
+                Duration.ofMillis(10),
+                "pathToKeyValueFuture should be running");
+        assertEventuallyTrue(
+                objectKeyToPathFuture::isCompactionRunning,
+                Duration.ofMillis(10),
+                "objectKeyToPathFuture should be running");
+
         // stopping the compaction
         compactor.stopAndDisableBackgroundCompaction();
 
