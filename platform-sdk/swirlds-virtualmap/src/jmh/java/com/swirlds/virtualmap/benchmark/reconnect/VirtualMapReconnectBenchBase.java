@@ -16,7 +16,6 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.datasource.VirtualDataSourceBuilder;
 import com.swirlds.virtualmap.internal.merkle.ExternalVirtualMapMetadata;
 import com.swirlds.virtualmap.internal.merkle.VirtualRootNode;
-import com.swirlds.virtualmap.internal.pipeline.VirtualRoot;
 import com.swirlds.virtualmap.test.fixtures.InMemoryBuilder;
 import java.io.FileNotFoundException;
 import org.hiero.base.constructable.ClassConstructorPair;
@@ -86,8 +85,7 @@ public abstract class VirtualMapReconnectBenchBase {
         try {
             final var node = MerkleTestUtils.hashAndTestSynchronization(learnerTree, teacherTree, reconnectConfig);
             node.release();
-            final VirtualRoot root = learnerMap.getLeft();
-            Assertions.assertTrue(root.isHashed(), "Learner root node must be hashed");
+            Assertions.assertTrue(learnerMap.isHashed(), "Learner root node must be hashed");
         } finally {
             teacherTree.release();
             learnerTree.release();

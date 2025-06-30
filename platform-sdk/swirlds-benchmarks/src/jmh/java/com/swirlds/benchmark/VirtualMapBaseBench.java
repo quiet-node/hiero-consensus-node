@@ -9,8 +9,7 @@ import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.virtualmap.VirtualMap;
-import com.swirlds.virtualmap.internal.merkle.ExternalVirtualMapMetadata;
-import com.swirlds.virtualmap.internal.pipeline.VirtualRoot;
+import com.swirlds.virtualmap.internal.merkle.VirtualMapMetadata;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -140,9 +139,8 @@ public abstract class VirtualMapBaseBench extends BaseBench {
     }
 
     protected VirtualMap copyMap(final VirtualMap virtualMap) {
-        final VirtualRoot root = virtualMap.getLeft();
         final VirtualMap newCopy = virtualMap.copy();
-        hasher.execute(root::getHash);
+        hasher.execute(virtualMap::getHash);
 
         if (doSnapshots && System.currentTimeMillis() > snapshotTime.get()) {
             snapshotTime.set(Long.MAX_VALUE);
@@ -152,7 +150,7 @@ public abstract class VirtualMapBaseBench extends BaseBench {
                             if (!Files.exists(savedDir)) {
                                 Files.createDirectory(savedDir);
                             }
-                            virtualMap.getLeft().getHash();
+                            virtualMap.getHash();
                             try (final SerializableDataOutputStream out = new SerializableDataOutputStream(
                                     Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
                                 virtualMap.serialize(out, savedDir);
@@ -255,11 +253,11 @@ public abstract class VirtualMapBaseBench extends BaseBench {
             return virtualMaps.stream()
                     .map(virtualMap -> {
                         final long start = System.currentTimeMillis();
-                        final ExternalVirtualMapMetadata state = virtualMap.getLeft();
-                        final String label = state.getLabel();
+                        final VirtualMapMetadata virtualMapMetadata = virtualMap.getState();
+                        final String label = virtualMapMetadata.getLabel();
                         final VirtualMap curMap = virtualMap.copy();
 
-                        virtualMap.getLeft().getHash();
+                        virtualMap.getHash();
                         try (final SerializableDataOutputStream out = new SerializableDataOutputStream(
                                 Files.newOutputStream(finalSavedDir.resolve(label + SERDE_SUFFIX)))) {
                             virtualMap.serialize(out, finalSavedDir);
@@ -294,7 +292,7 @@ public abstract class VirtualMapBaseBench extends BaseBench {
                 }
             }
             Files.createDirectories(savedDir);
-            virtualMap.getLeft().getHash();
+            virtualMap.getHash();
             try (final SerializableDataOutputStream out =
                     new SerializableDataOutputStream(Files.newOutputStream(savedDir.resolve(LABEL + SERDE_SUFFIX)))) {
                 virtualMap.serialize(out, savedDir);
