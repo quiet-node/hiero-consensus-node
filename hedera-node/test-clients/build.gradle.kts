@@ -113,7 +113,7 @@ val prCheckNetSizeOverrides =
         "hapiTestAdhoc" to "3",
         "hapiTestCrypto" to "3",
         "hapiTestToken" to "3",
-        "hapiTestSmartContract" to "3",
+        "hapiTestSmartContract" to "4",
     )
 
 tasks {
