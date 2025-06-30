@@ -484,6 +484,7 @@ public class RandomSignedStateGenerator {
     }
 
     /**
+     * FUTURE WORK: <a href="https://github.com/hiero-ledger/hiero-consensus-node/issues/19905">See GitHub Issue</a>
      * @param calculateHash  Set true if the state needs root hash calculated
      * @return this object
      */
