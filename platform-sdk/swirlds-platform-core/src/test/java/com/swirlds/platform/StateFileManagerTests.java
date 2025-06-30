@@ -471,6 +471,7 @@ class StateFileManagerTests {
         }
     }
 
+    // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19905
     private static void hashState(MerkleNodeState state) {
         TestMerkleCryptoFactory.getInstance().digestTreeSync(state.getRoot());
     }

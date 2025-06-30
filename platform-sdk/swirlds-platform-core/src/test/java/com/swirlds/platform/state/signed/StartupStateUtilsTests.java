@@ -133,6 +133,7 @@ public class StartupStateUtilsTests {
 
         // make the state immutable
         signedState.getState().copy().release();
+        // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19905
         TestMerkleCryptoFactory.getInstance()
                 .digestTreeSync(signedState.getState().getRoot());
 
