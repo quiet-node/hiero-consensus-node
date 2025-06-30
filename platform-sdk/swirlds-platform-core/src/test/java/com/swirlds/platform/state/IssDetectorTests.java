@@ -84,11 +84,11 @@ class IssDetectorTests extends PlatformTest {
         final PlatformContext platformContext = createDefaultPlatformContext();
         final IssDetector issDetector = new DefaultIssDetector(
                 platformContext,
-                swirldStateManager,
                 mock(Roster.class),
-
                 false,
-                DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND);
+                DO_NOT_IGNORE_ROUNDS,
+                GENESIS_LAST_FREEZE_ROUND,
+                swirldStateManager);
 
         issDetector.handleState(stateWrapperForIssDetector);
         assertTrue(stateWrapperForIssDetector.isClosed(), "State passed to the ISS Detector should be closed");
@@ -112,7 +112,7 @@ class IssDetectorTests extends PlatformTest {
         final PlatformContext platformContext = createDefaultPlatformContext();
 
         final IssDetector issDetector = new DefaultIssDetector(
-                platformContext, swirldStateManager, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND);
+                platformContext, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND, swirldStateManager);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -240,7 +240,7 @@ class IssDetectorTests extends PlatformTest {
         }
 
         final IssDetector issDetector = new DefaultIssDetector(
-                platformContext, swirldStateManager, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND);
+                platformContext, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND, swirldStateManager);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -337,7 +337,7 @@ class IssDetectorTests extends PlatformTest {
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
         final IssDetector issDetector = new DefaultIssDetector(
-                platformContext, swirldStateManager, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND);
+                platformContext, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND, swirldStateManager);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -453,7 +453,7 @@ class IssDetectorTests extends PlatformTest {
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
         final IssDetector issDetector = new DefaultIssDetector(
-                platformContext, swirldStateManager, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND);
+                platformContext, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND, swirldStateManager);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -539,7 +539,7 @@ class IssDetectorTests extends PlatformTest {
         final NodeId selfId = NodeId.of(roster.rosterEntries().getFirst().nodeId());
 
         final IssDetector issDetector = new DefaultIssDetector(
-                platformContext, swirldStateManager, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND);
+                platformContext, roster, false, DO_NOT_IGNORE_ROUNDS, GENESIS_LAST_FREEZE_ROUND, swirldStateManager);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -617,8 +617,8 @@ class IssDetectorTests extends PlatformTest {
                 .getConfigData(ConsensusConfig.class)
                 .roundsNonAncient();
 
-        final IssDetector issDetector =
-                new DefaultIssDetector(platformContext, swirldStateManager, roster, false, 1, GENESIS_LAST_FREEZE_ROUND);
+        final IssDetector issDetector = new DefaultIssDetector(
+                platformContext, roster, false, 1, GENESIS_LAST_FREEZE_ROUND, swirldStateManager);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 0;
@@ -675,7 +675,8 @@ class IssDetectorTests extends PlatformTest {
                 .roundsNonAncient();
 
         final long latestFreezeRound = 5L;
-        final IssDetector issDetector = new DefaultIssDetector(platformContext, roster, false, 1, latestFreezeRound);
+        final IssDetector issDetector =
+                new DefaultIssDetector(platformContext, roster, false, 1, latestFreezeRound, swirldStateManager);
         final IssDetectorTestHelper issDetectorTestHelper = new IssDetectorTestHelper(issDetector);
 
         long currentRound = 5;

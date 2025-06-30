@@ -321,7 +321,8 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 Hedera.SWIRLD_NAME,
                 selfId,
                 platformStateFacade,
-                platformContext);
+                platformContext,
+                hedera.stateRootFromVirtualMap());
         final ReservedSignedState initialState = reservedState.state();
         final MerkleNodeState state = initialState.get().getState();
         if (genesisNetwork.get() == null) {
@@ -355,7 +356,8 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                                 // Otherwise derive if from the node's id in state or
                                 .orElseGet(() -> canonicalEventStreamLoc(selfId.id(), state)),
                         rosterHistory,
-                        platformStateFacade)
+                        platformStateFacade,
+                        hedera.stateRootFromVirtualMap())
                 .withPlatformContext(platformContext)
                 .withConfiguration(platformConfig)
                 .withKeysAndCerts(keysAndCerts)
