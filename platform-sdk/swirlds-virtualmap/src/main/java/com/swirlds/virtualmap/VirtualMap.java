@@ -31,7 +31,6 @@ import com.swirlds.common.io.ExternalSelfSerializable;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
-import com.swirlds.common.merkle.exceptions.IllegalChildIndexException;
 import com.swirlds.common.merkle.impl.PartialBinaryMerkleInternal;
 import com.swirlds.common.merkle.route.MerkleRoute;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
@@ -554,25 +553,24 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     @Override
     protected void destroyNode() {
+        registryRecord.release();
         if (pipeline != null) {
             pipeline.destroyCopy(this);
         } else {
             logger.info(
                     VIRTUAL_MERKLE_STATS.getMarker(),
-                    "Destroying virtual root node at route {}, but its pipeline is null. It may happen during failed reconnect",
-                    getRoute());
+                    "Destroying the virtual map, but its pipeline is null. It may happen during failed reconnect");
             closeDataSource();
         }
     }
 
     /**
-     * We always have *potentially* two children.
-     *
-     * {@inheritDoc}
+     * The current virtual map implementation does not support children.
+     * Even though it is a {@link MerkleInternal} node, the data stored differently, in the child leaf nodes.
      */
     @Override
     public int getNumberOfChildren() {
-        return 2;
+        return 0;
     }
 
     //  FUTURE WORK: Uncomment this once migration from the existing VirtualMap is done
@@ -601,9 +599,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     @Override
     protected void checkChildIndexIsValid(final int index) {
-        if (index < 0 || index > 1) {
-            throw new IllegalChildIndexException(0, 1, index);
-        }
+        throw new UnsupportedOperationException(
+                "VirtualMap does not support children, so this method is not applicable");
     }
 
     /**
