@@ -122,7 +122,6 @@ public class ImmediateStateChangeListener implements StateChangeListener {
     public <K, V> void mapUpdateChange(final int stateId, @NonNull final K key, @NonNull final V value) {
         Objects.requireNonNull(key, "key must not be null");
         Objects.requireNonNull(value, "value must not be null");
-
         final var change = MapUpdateChange.newBuilder()
                 .key(mapChangeKeyFor(key))
                 .value(mapChangeValueFor(value))

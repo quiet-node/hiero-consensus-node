@@ -56,7 +56,6 @@ import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.system.SystemExitCode;
-import com.swirlds.platform.system.address.AddressBookUtils;
 import com.swirlds.platform.util.BootstrapUtils;
 import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
@@ -277,7 +276,7 @@ public class Browser {
             final ReservedSignedState initialState = reservedState.state();
 
             // Initialize the address book
-            final AddressBook addressBook = initializeAddressBook(
+            initializeAddressBook(
                     nodeId,
                     appMain.getSemanticVersion(),
                     initialState,
@@ -297,7 +296,7 @@ public class Browser {
                     initialState,
                     consensusStateEventHandler,
                     nodeId,
-                    AddressBookUtils.formatConsensusEventStreamName(addressBook, nodeId),
+                    String.valueOf(nodeId),
                     rosterHistory,
                     platformStateFacade,
                     stateRootFromVirtualMap(appMain));

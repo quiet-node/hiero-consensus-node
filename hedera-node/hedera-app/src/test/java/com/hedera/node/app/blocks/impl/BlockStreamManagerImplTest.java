@@ -48,6 +48,7 @@ import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
+import com.hedera.node.app.service.networkadmin.impl.FreezeServiceImpl;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.data.BlockStreamConfig;
@@ -60,6 +61,7 @@ import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.CommittableWritableStates;
+import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
@@ -163,6 +165,9 @@ class BlockStreamManagerImplTest {
 
     @Mock
     private Counter indirectProofsCounter;
+
+    @Mock
+    private ReadableSingletonState<Object> platformStateReadableSingletonState;
 
     private final AtomicReference<Bytes> lastAItem = new AtomicReference<>();
     private final AtomicReference<Bytes> lastBItem = new AtomicReference<>();
@@ -505,6 +510,11 @@ class BlockStreamManagerImplTest {
                 platformStateWithFreezeTime(CONSENSUS_NOW),
                 aWriter);
         givenEndOfRoundSetup();
+        given(state.getReadableStates(any())).willReturn(readableStates);
+        given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
+        given(platformStateReadableSingletonState.get())
+                .willReturn(
+                        PlatformState.newBuilder().latestFreezeRound(ROUND_NO).build());
         given(round.getRoundNum()).willReturn(ROUND_NO);
         given(round.getConsensusTimestamp()).willReturn(CONSENSUS_NOW);
 
@@ -569,7 +579,7 @@ class BlockStreamManagerImplTest {
                 Bytes.fromHex(
                         "38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b"),
                 Bytes.fromHex(
-                        "bf99e1dfd15ffe551ae4bc0953f396639755f0419522f323875806a55a57dca6a4df61ea6dee28bec0c37ed54881d392"));
+                        "7ed1db9962a90bab1b343b74c9b85c1b8c9ecbed41fa717d8f342ce3d0140bb403d2a99f0ef25391e290f23f4246dcef"));
         final var actualBlockInfo = infoRef.get();
         assertEquals(expectedBlockInfo, actualBlockInfo);
 
@@ -742,7 +752,7 @@ class BlockStreamManagerImplTest {
     }
 
     @Test
-    void alwaysEndsBlockOnFreezeRoundEvenIfPeriodNotElapsed() throws ParseException {
+    void alwaysEndsBlockOnFreezeRoundEvenIfPeriodNotElapsed() {
         // Given a 2 second block period
         givenSubjectWith(
                 1,
@@ -755,6 +765,11 @@ class BlockStreamManagerImplTest {
         given(round.getRoundNum()).willReturn(ROUND_NO);
         given(blockHashSigner.isReady()).willReturn(true);
         given(blockHashSigner.schemeId()).willReturn(1L);
+        given(state.getReadableStates(any())).willReturn(readableStates);
+        given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
+        given(platformStateReadableSingletonState.get())
+                .willReturn(
+                        PlatformState.newBuilder().latestFreezeRound(ROUND_NO).build());
 
         // Set up the signature future to complete immediately and run the callback synchronously
         given(blockHashSigner.signFuture(any())).willReturn(mockSigningFuture);
@@ -937,8 +952,9 @@ class BlockStreamManagerImplTest {
                 TEST_PLATFORM_STATE_FACADE,
                 lifecycle,
                 metrics);
-        given(state.getReadableStates(BlockStreamService.NAME)).willReturn(readableStates);
-        given(state.getReadableStates(PlatformStateService.NAME)).willReturn(readableStates);
+        given(state.getReadableStates(any())).willReturn(readableStates);
+        given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
+        lenient().when(state.getReadableStates(FreezeServiceImpl.NAME)).thenReturn(readableStates);
         infoRef.set(blockStreamInfo);
         stateRef.set(platformState);
         blockStreamInfoState = new FunctionWritableSingletonState<>(

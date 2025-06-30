@@ -482,7 +482,6 @@ public class PlatformComponentBuilder {
                     data -> new PlatformSigner(blocks.keysAndCerts()).sign(data),
                     blocks.rosterHistory().getCurrentRoster(),
                     blocks.selfId(),
-                    blocks.appVersion(),
                     blocks.transactionPoolNexus());
 
             eventCreationManager = new DefaultEventCreationManager(
@@ -766,14 +765,16 @@ public class PlatformComponentBuilder {
                             .validateInitialState()
                     ? DO_NOT_IGNORE_ROUNDS
                     : initialStateRound;
+            final long latestFreezeRound = blocks.platformStateFacade()
+                    .latestFreezeRoundOf(blocks.initialState().get().getState());
 
             issDetector = new DefaultIssDetector(
                     blocks.platformContext(),
                     blocks.swirldStateManager(),
                     blocks.rosterHistory().getCurrentRoster(),
-                    blocks.appVersion(),
                     ignorePreconsensusSignatures,
-                    roundToIgnore);
+                    roundToIgnore,
+                    latestFreezeRound);
         }
         return issDetector;
     }
