@@ -6,6 +6,7 @@ import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import com.swirlds.virtualmap.internal.merkle.VirtualMapMetadata;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import org.hiero.base.crypto.Hash;
@@ -58,7 +59,7 @@ public interface RecordAccessor {
      * 		If we fail to access the data store, then a catastrophic error occurred and
      * 		an UncheckedIOException is thrown.
      */
-    VirtualLeafBytes findLeafRecord(final Bytes key);
+    VirtualLeafBytes findLeafRecord(final @NonNull Bytes key);
 
     /**
      * Locates and returns a leaf node based on the path. If the leaf

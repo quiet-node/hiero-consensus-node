@@ -143,6 +143,13 @@ public class HashBuilder {
         return this;
     }
 
+    /**
+     * hash the given Bytes object, including its length
+     *
+     * @param bytes
+     *      the Bytes object to be hashed
+     * @return the HashBuilder object after digesting this Bytes object
+     */
     public HashBuilder update(final Bytes bytes) {
         if (bytes == null) {
             update(0);

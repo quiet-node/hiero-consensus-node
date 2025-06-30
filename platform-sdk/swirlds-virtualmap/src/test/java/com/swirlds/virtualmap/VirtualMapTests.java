@@ -233,7 +233,6 @@ class VirtualMapTests extends VirtualTestBase {
         final VirtualMap vm = createMap();
         assertEquals(0, vm.size(), "Unexpected size");
 
-        // Add an element, count is 2 becuase of the VM state
         vm.put(A_KEY, APPLE, TestValueCodec.INSTANCE);
         assertEquals(1, vm.size(), "Unexpected size");
 

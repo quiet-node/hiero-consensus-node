@@ -52,8 +52,6 @@ public class StateAnalyzer {
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForPathToKeyValueStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
         MerkleDbDataSource vds = labelAndDs.dataSource();
-        final var keySerializer = labelAndDs.keySerializer();
-        final var valueSerializer = labelAndDs.valueSerializer();
         updateReport(
                 labelAndDs,
                 report,
