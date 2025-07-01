@@ -447,7 +447,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 TssBlockHashSigner::new,
                 metrics,
                 platformStateFacade,
-                HederaStateRoot::new);
+                (platformConfig) -> new HederaVirtualMapState(platformConfig, metrics));
     }
 
     /**

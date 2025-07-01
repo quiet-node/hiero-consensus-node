@@ -358,7 +358,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     /**
      * The state root supplier to use for creating a new state root.
      */
-    private final Supplier<MerkleNodeState> stateRootSupplier;
+    private final Function<Configuration, MerkleNodeState> stateRootSupplier;
 
     /**
      * The action to take, if any, when a consensus round is sealed.
@@ -448,7 +448,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             @NonNull final BlockHashSignerFactory blockHashSignerFactory,
             @NonNull final Metrics metrics,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final Supplier<MerkleNodeState> baseSupplier) {
+            @NonNull final Function<Configuration, MerkleNodeState> baseSupplier) {
         requireNonNull(registryFactory);
         requireNonNull(constructableRegistry);
         requireNonNull(hintsServiceFactory);
@@ -546,7 +546,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         try {
             consensusStateEventHandler = new ConsensusStateEventHandlerImpl(this);
             final var blockStreamsEnabled = isBlockStreamEnabled();
-            stateRootSupplier = blockStreamsEnabled ? () -> withListeners(baseSupplier.get()) : baseSupplier;
+            stateRootSupplier = blockStreamsEnabled ? (config) -> withListeners(baseSupplier.apply(config)) : baseSupplier;
             onSealConsensusRound = blockStreamsEnabled ? this::manageBlockEndRound : (round, state) -> true;
             // And the factory for the MerkleStateRoot class id must be ours
             constructableRegistry.registerConstructable(
@@ -581,7 +581,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     @Override
     @NonNull
     public MerkleNodeState newStateRoot() {
-        return stateRootSupplier.get();
+        return stateRootSupplier.apply(configProvider.getConfiguration());
     }
 
     /**
