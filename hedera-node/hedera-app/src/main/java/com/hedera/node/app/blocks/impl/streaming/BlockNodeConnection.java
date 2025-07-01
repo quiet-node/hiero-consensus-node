@@ -259,14 +259,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
         logger.debug("[{}] Received EndOfStream response (block={}, responseCode={})", this, blockNumber, responseCode);
 
-        // Always end the stream when we receive an end of stream message
-        close();
-
         // Include this new EoS response in our set that tracks the occurrences of EoS responses
         endOfStreamTimestamps.add(Instant.now());
 
         // Check if we've exceeded the EndOfStream rate limit
         if (hasExceededEndOfStreamLimit()) {
+            close();
             logger.warn(
                     "[{}] Block node has exceeded the allowed number of EndOfStream responses (received={}, "
                             + "permitted={}, timeWindow={}); reconnection scheduled for {}",
@@ -283,6 +281,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
         switch (responseCode) {
             case Code.INTERNAL_ERROR, Code.PERSISTENCE_FAILED -> {
+                close();
                 // The block node had an end of stream error and cannot continue processing.
                 // We should wait for a short period before attempting to retry
                 // to avoid overwhelming the node if it's having issues
@@ -290,9 +289,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                         "[{}] Block node reported an error at block {}. Will attempt to reestablish the stream later.",
                         this,
                         blockNumber);
+
                 blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
             }
             case Code.TIMEOUT, Code.OUT_OF_ORDER, Code.BAD_STATE_PROOF -> {
+                close();
                 // We should restart the stream at the block immediately
                 // following the block where the node fell behind.
                 final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
@@ -305,6 +306,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 restartStreamAtBlock(restartBlockNumber);
             }
             case Code.SUCCESS -> {
+                close();
                 // The block node orderly ended the stream. In this case, no errors occurred.
                 // We should wait for a longer period before attempting to retry.
                 logger.warn("[{}] Block node orderly ended the stream at block {}", this, blockNumber);
@@ -315,6 +317,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 // restart the stream from there
                 final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
                 if (blockBufferService.getBlockState(restartBlockNumber) != null) {
+                    close();
                     logger.warn(
                             "[{}] Block node reported it is behind. Will restart stream at block {}.",
                             this,
@@ -326,10 +329,25 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     // with different block node
                     logger.warn("[{}] Block node is behind and block state is not available.", this);
 
+                    final var earliestBlockNumber = blockBufferService.getEarliestAvailableBlockNumber();
+                    final var highestAckedBlockNumber = blockBufferService.getHighestAckedBlockNumber();
+
+                    // Indicate that the block node should recover and catch up from another trustworthy block node
+                    final org.hiero.block.api.PublishStreamRequest endStream = org.hiero.block.api.PublishStreamRequest.newBuilder()
+                            .endStream(org.hiero.block.api.PublishStreamRequest.EndStream.newBuilder()
+                                    .endCode(org.hiero.block.api.PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
+                                    .earliestBlockNumber(earliestBlockNumber)
+                                    .latestBlockNumber(highestAckedBlockNumber))
+                            .build();
+
+                    sendRequest(endStream);
+                    close();
+
                     blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
                 }
             }
             case Code.UNKNOWN -> {
+                close();
                 // This should never happen, but if it does, schedule this connection for a retry attempt and in the
                 // meantime select a new node to stream to
                 logger.error("[{}] Block node reported an unknown error at block {}.", this, blockNumber);
