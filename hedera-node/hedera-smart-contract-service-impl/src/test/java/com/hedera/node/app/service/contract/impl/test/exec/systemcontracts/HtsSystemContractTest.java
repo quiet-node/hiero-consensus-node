@@ -17,7 +17,7 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SENDER_
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.assertSamePrecompileResult;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.*;
 
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.metrics.OpsDurationMetrics;
@@ -76,9 +76,6 @@ class HtsSystemContractTest {
     private ContractMetrics contractMetrics;
 
     @Mock
-    private OpsDurationMetrics opsDurationMetrics;
-
-    @Mock
     private HederaOpsDuration hederaOpsDuration;
 
     private MockedStatic<FrameUtils> frameUtils;
@@ -89,8 +86,7 @@ class HtsSystemContractTest {
     @BeforeEach
     void setUp() {
         frameUtils = Mockito.mockStatic(FrameUtils.class);
-        subject = new HtsSystemContract(
-                gasCalculator, attemptFactory, contractMetrics, opsDurationMetrics, hederaOpsDuration);
+        subject = new HtsSystemContract(gasCalculator, attemptFactory, contractMetrics, hederaOpsDuration);
     }
 
     @AfterEach
@@ -105,6 +101,7 @@ class HtsSystemContractTest {
                 .when(() -> callTypeOf(frame, EntityType.TOKEN))
                 .thenReturn(FrameUtils.CallType.DIRECT_OR_PROXY_REDIRECT);
         frameUtils.when(() -> contractsConfigOf(frame)).thenReturn(DEFAULT_CONTRACTS_CONFIG);
+        when(contractMetrics.opsDurationMetrics()).thenReturn(mock(OpsDurationMetrics.class));
 
         final var pricedResult = gasOnly(successResult(ByteBuffer.allocate(1), 123L), SUCCESS, true);
         given(call.execute(frame)).willReturn(pricedResult);
@@ -132,6 +129,7 @@ class HtsSystemContractTest {
                 .thenReturn(FrameUtils.CallType.DIRECT_OR_PROXY_REDIRECT);
         frameUtils.when(() -> contractsConfigOf(frame)).thenReturn(DEFAULT_CONTRACTS_CONFIG);
         given(call.execute(frame)).willThrow(RuntimeException.class);
+        when(contractMetrics.opsDurationMetrics()).thenReturn(mock(OpsDurationMetrics.class));
 
         final var expected = haltResult(ExceptionalHaltReason.PRECOMPILE_ERROR, frame.getRemainingGas());
         final var result = subject.computeFully(HTS_167_CONTRACT_ID, validInput, frame);

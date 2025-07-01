@@ -16,15 +16,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.hedera.node.app.service.contract.impl.exec.ActionSidecarContentTracer;
 import com.hedera.node.app.service.contract.impl.exec.AddressChecks;
 import com.hedera.node.app.service.contract.impl.exec.FeatureFlags;
 import com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason;
+import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.metrics.OpsDurationMetrics;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.FullResult;
@@ -113,7 +111,7 @@ class CustomMessageCallProcessorTest {
     private HederaOpsDuration hederaOpsDuration;
 
     @Mock
-    private OpsDurationMetrics opsDurationMetrics;
+    private ContractMetrics contractMetrics;
 
     private CustomMessageCallProcessor subject;
 
@@ -126,7 +124,7 @@ class CustomMessageCallProcessorTest {
                 addressChecks,
                 Map.of(TestHelpers.PRNG_SYSTEM_CONTRACT_ADDRESS, prngPrecompile),
                 hederaOpsDuration,
-                opsDurationMetrics);
+                contractMetrics);
     }
 
     @Test
@@ -229,6 +227,7 @@ class CustomMessageCallProcessorTest {
     @Test
     void updatesFrameBySuccessfulPrecompileResultWithGasRefund() {
         givenEvmPrecompileCall();
+        when(contractMetrics.opsDurationMetrics()).thenReturn(mock(OpsDurationMetrics.class));
         final var result = new PrecompiledContract.PrecompileContractResult(
                 OUTPUT_DATA, true, MessageFrame.State.CODE_SUCCESS, Optional.empty());
         given(nativePrecompile.computePrecompile(INPUT_DATA, frame)).willReturn(result);
@@ -251,6 +250,7 @@ class CustomMessageCallProcessorTest {
     @Test
     void revertsFrameFromPrecompileResult() {
         givenEvmPrecompileCall();
+        when(contractMetrics.opsDurationMetrics()).thenReturn(mock(OpsDurationMetrics.class));
         final var result = new PrecompiledContract.PrecompileContractResult(
                 OUTPUT_DATA, false, MessageFrame.State.REVERT, Optional.empty());
         given(nativePrecompile.computePrecompile(INPUT_DATA, frame)).willReturn(result);
