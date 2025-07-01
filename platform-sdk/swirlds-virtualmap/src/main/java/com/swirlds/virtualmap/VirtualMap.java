@@ -31,6 +31,7 @@ import com.swirlds.common.io.ExternalSelfSerializable;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
+import com.swirlds.common.merkle.exceptions.IllegalChildIndexException;
 import com.swirlds.common.merkle.impl.PartialBinaryMerkleInternal;
 import com.swirlds.common.merkle.route.MerkleRoute;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
@@ -42,8 +43,6 @@ import com.swirlds.common.merkle.synchronization.views.TeacherTreeView;
 import com.swirlds.common.merkle.utility.DebugIterationEndpoint;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.common.utility.Labeled;
-import com.swirlds.common.utility.RuntimeObjectRecord;
-import com.swirlds.common.utility.RuntimeObjectRegistry;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
@@ -201,11 +200,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     }
 
     public static final int MAX_LABEL_CHARS = 512;
-
-    /**
-     * Used to track the lifespan of this virtual map. The record is released when the map is destroyed.
-     */
-    private final RuntimeObjectRecord registryRecord;
 
     /** Platform configuration */
     @NonNull
@@ -371,7 +365,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
     public VirtualMap(final @NonNull Configuration configuration) {
         requireNonNull(configuration);
         this.configuration = configuration;
-        registryRecord = RuntimeObjectRegistry.createRecord(getClass());
 
         this.fastCopyVersion = 0;
         // Hasher is required during reconnects
@@ -395,7 +388,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             final @NonNull Configuration configuration) {
         requireNonNull(configuration);
         this.configuration = configuration;
-        registryRecord = RuntimeObjectRegistry.createRecord(getClass());
 
         if (label.length() > MAX_LABEL_CHARS) {
             throw new IllegalArgumentException("Label cannot be greater than 512 characters");
@@ -417,9 +409,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * 		must not be null.
      */
     private VirtualMap(final VirtualMap source) {
-        registryRecord = RuntimeObjectRegistry.createRecord(getClass());
-
         configuration = source.configuration;
+
         state = source.state.copy();
         fastCopyVersion = source.fastCopyVersion + 1;
         dataSourceBuilder = source.dataSourceBuilder;
@@ -552,7 +543,6 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     @Override
     protected void destroyNode() {
-        registryRecord.release();
         if (pipeline != null) {
             pipeline.destroyCopy(this);
         } else {
@@ -569,7 +559,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     @Override
     public int getNumberOfChildren() {
-        return 0;
+        // FUTURE WORK: This should return 0 once the VirtualMap is migrated
+        return 2;
     }
 
     //  FUTURE WORK: Uncomment this once migration from the existing VirtualMap is done
@@ -598,8 +589,10 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      */
     @Override
     protected void checkChildIndexIsValid(final int index) {
-        throw new UnsupportedOperationException(
-                "VirtualMap does not support children, so this method is not applicable");
+        // FUTURE WORK: This should throw an UnsupportedOperationException once the VirtualMap is migrated
+        if (index < 0 || index > 1) {
+            throw new IllegalChildIndexException(0, 1, index);
+        }
     }
 
     /**
