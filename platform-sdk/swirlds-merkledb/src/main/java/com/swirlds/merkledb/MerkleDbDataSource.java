@@ -909,24 +909,12 @@ public final class MerkleDbDataSource implements VirtualDataSource {
         return tableName;
     }
 
-    // For testing purpose
-    Path getStorageDir() {
-        return dbPaths.storageDir;
-    }
-
-    // For testing purpose
     long getInitialCapacity() {
         return initialCapacity;
     }
 
-    // For testing purpose
     long getHashesRamToDiskThreshold() {
         return hashesRamToDiskThreshold;
-    }
-
-    // For testing purpose
-    boolean isPreferDiskBasedIndexes() {
-        return preferDiskBasedIndices;
     }
 
     // For testing purpose
