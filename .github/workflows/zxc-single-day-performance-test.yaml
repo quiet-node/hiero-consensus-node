@@ -51,9 +51,6 @@ on:
         description: "Test params"
         type: string
     secrets:
-      perf-analysis-access-token:
-        required: true
-        description: "GitHub token for performance-analysis-automation repo"
       slack-report-webhook:
         required: true
         description: "Slack webhook for SDPT outputs notifications"
@@ -108,13 +105,6 @@ jobs:
           repository: hiero-ledger/solo
           path: solo
           ref: ${{ env.run_soloversion }}
-
-      - name: Checkout performance-analysis-automation repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: swirldslabs/performance-analysis-automation
-          path: paa_scripts
-          token: ${{ secrets.perf-analysis-access-token }}
 
       - name: Install KubeCtl
         uses: step-security/setup-kubectl@2edbf6aff97d814e9dc52827498ac51fe972e6d0 # v4.0.0
@@ -308,7 +298,7 @@ jobs:
 
           mkdir solo_deploy
           cp -r "${HOME}"/.solo/logs solo_deploy/
-          sh "${{ github.workspace }}"/paa_scripts/performance_analysis_scripts/getClusterErrors.sh "${{ env.namespace }}"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
           cp -r podlog_"${{ env.namespace }}" solo_deploy/
           gcloud --no-user-output-enabled storage cp --recursive solo_deploy "${{ env.GS_ROOT_DIR }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}"/solo_deploy
           exit "${task_code}"
@@ -505,7 +495,7 @@ jobs:
           fi
 
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
-          sh "${{ github.workspace }}"/paa_scripts/performance_analysis_scripts/getClusterErrors.sh "${{ env.namespace }}"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
           cp -r podlog_"${{ env.namespace }}" "${{ github.workspace }}"/report/
 
@@ -601,13 +591,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.ref }}
-
-      - name: Checkout performance-analysis-automation repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: swirldslabs/performance-analysis-automation
-          path: paa_scripts
-          token: ${{ secrets.perf-analysis-access-token }}
 
       - name: Set namespace
         run: |
@@ -761,7 +744,7 @@ jobs:
           fi
 
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
-          sh "${{ github.workspace }}"/paa_scripts/performance_analysis_scripts/getClusterErrors.sh "${{ env.namespace }}"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
           cp -r podlog_"${{ env.namespace }}" "${{ github.workspace }}"/report/
 
@@ -804,13 +787,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.ref }}
-
-      - name: Checkout performance-analysis-automation repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: swirldslabs/performance-analysis-automation
-          path: paa_scripts
-          token: ${{ secrets.perf-analysis-access-token }}
 
       - name: Set namespace
         run: |
@@ -959,7 +935,7 @@ jobs:
           fi
 
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
-          sh "${{ github.workspace }}"/paa_scripts/performance_analysis_scripts/getClusterErrors.sh "${{ env.namespace }}"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
           cp -r podlog_"${{ env.namespace }}" "${{ github.workspace }}"/report/
 
@@ -1072,8 +1048,6 @@ jobs:
       workspace: "${{ github.workspace }}"
       gs-root-dir: "gs://performance-engineering-reports/ephemeral/test_runs"
       gs-root-https: "https://perf.analytics.eng.hashgraph.io/ephemeral/test_runs"
-    secrets:
-      perf-analysis-access-token: ${{ secrets.perf-analysis-access-token }}
 
   performance-CryptoTransferLoadTest:
     needs:
@@ -1089,8 +1063,6 @@ jobs:
       workspace: "${{ github.workspace }}"
       gs-root-dir: "gs://performance-engineering-reports/ephemeral/test_runs"
       gs-root-https: "https://perf.analytics.eng.hashgraph.io/ephemeral/test_runs"
-    secrets:
-      perf-analysis-access-token: ${{ secrets.perf-analysis-access-token }}
 
   performance-HeliSwapLoadTest:
     needs:
@@ -1106,8 +1078,6 @@ jobs:
       workspace: "${{ github.workspace }}"
       gs-root-dir: "gs://performance-engineering-reports/ephemeral/test_runs"
       gs-root-https: "https://perf.analytics.eng.hashgraph.io/ephemeral/test_runs"
-    secrets:
-      perf-analysis-access-token: ${{ secrets.perf-analysis-access-token }}
 
   performance-SmartContractLoadTest:
     needs:
@@ -1123,8 +1093,6 @@ jobs:
       workspace: "${{ github.workspace }}"
       gs-root-dir: "gs://performance-engineering-reports/ephemeral/test_runs"
       gs-root-https: "https://perf.analytics.eng.hashgraph.io/ephemeral/test_runs"
-    secrets:
-      perf-analysis-access-token: ${{ secrets.perf-analysis-access-token }}
 
   # Send this output back to the caller workflow
   single-day-performance-test-result:
