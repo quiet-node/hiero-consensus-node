@@ -229,7 +229,7 @@ tasks.register<Test>("testSubprocess") {
     maxHeapSize = "8g"
     jvmArgs("-XX:ActiveProcessorCount=6")
     maxParallelForks = 1
-    modularity.inferModulePath.set(false)
+    //    modularity.inferModulePath.set(false)
 }
 
 tasks.register<Test>("testRemote") {
