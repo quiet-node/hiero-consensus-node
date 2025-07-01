@@ -25,6 +25,7 @@ public record ContractsConfig(
         @ConfigProperty(value = "nonces.externalization.enabled", defaultValue = "true") @NetworkProperty
                 boolean noncesExternalizationEnabled,
         @ConfigProperty(defaultValue = "false") @NetworkProperty boolean enforceCreationThrottle,
+        @ConfigProperty(defaultValue = "15000000") @NetworkProperty long maxGasPerTransaction,
         @ConfigProperty(defaultValue = "15000000") @NetworkProperty long maxGasPerSec,
         @ConfigProperty(defaultValue = "15000000") @NetworkProperty long maxGasPerSecBackend,
         @ConfigProperty(defaultValue = "500000000") @NetworkProperty long maxOpsDuration,
