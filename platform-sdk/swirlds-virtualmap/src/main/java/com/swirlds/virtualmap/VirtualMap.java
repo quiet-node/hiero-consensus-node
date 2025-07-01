@@ -1434,9 +1434,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             }
             logger.info(RECONNECT.getMarker(), "call postInit()");
             nodeRemover = null;
-            VirtualMapState originalMapState = originalMap.getState();
             originalMap = null;
-            state = new VirtualMapState(originalMapState.getLabel(), reconnectState.getSize());
+            state = new VirtualMapState(reconnectState.getLabel(), reconnectState.getSize());
             postInit();
         } catch (ExecutionException e) {
             final var message = "VirtualMap@" + getRoute() + " failed to get hash during learner reconnect";
