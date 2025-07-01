@@ -25,6 +25,7 @@ import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.common.threading.framework.StoppableThread;
 import com.swirlds.common.threading.framework.config.StoppableThreadConfiguration;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Browser;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -240,7 +241,7 @@ public class StressTestingToolMain implements SwirldMain<StressTestingToolState>
     }
 
     @Override
-    public StressTestingToolState newStateRoot() {
+    public StressTestingToolState newStateRoot(Configuration platformConfig) {
         final StressTestingToolState state = new StressTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;

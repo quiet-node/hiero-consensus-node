@@ -22,6 +22,7 @@ import com.swirlds.common.Console;
 import com.swirlds.common.threading.framework.StoppableThread;
 import com.swirlds.common.threading.framework.config.StoppableThreadConfiguration;
 import com.swirlds.common.utility.AutoCloseableWrapper;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Browser;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -193,7 +194,7 @@ public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoStat
      */
     @Override
     @NonNull
-    public CryptocurrencyDemoState newStateRoot() {
+    public CryptocurrencyDemoState newStateRoot(Configuration platformConfig) {
         final CryptocurrencyDemoState state = new CryptocurrencyDemoState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;

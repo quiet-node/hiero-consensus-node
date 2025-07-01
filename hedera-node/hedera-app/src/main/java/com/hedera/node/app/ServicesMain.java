@@ -148,8 +148,8 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * {@inheritDoc}
      */
     @Override
-    public @NonNull MerkleNodeState newStateRoot() {
-        return hederaOrThrow().newStateRoot();
+    public @NonNull MerkleNodeState newStateRoot(Configuration platformConfig) {
+        return hederaOrThrow().newStateRoot(platformConfig);
     }
 
     /**
@@ -192,14 +192,14 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      *     <li>Create the application's {@link Hedera} singleton, which overrides
      *     the default factory for the stable {@literal 0x8e300b0dfdafbb1a} class
      *     id of the Services Merkle tree root with a reference to its
-     *     {@link Hedera#newStateRoot()} method.</li>
+     *     {@link Hedera#newStateRoot(Configuration)} method.</li>
      *     <li>Determine this node's <b>self id</b> by searching the <i>config.txt</i>
      *     in the working directory for any address book entries with IP addresses
      *     local to this machine; if there is more than one such entry, fail unless
      *     the command line args include a {@literal -local N} arg.</li>
      *     <li>Build a {@link Platform} instance from Services application metadata
      *     and the working directory <i>settings.txt</i>, providing the same
-     *     {@link Hedera#newStateRoot()} method reference as the genesis state
+     *     {@link Hedera#newStateRoot(Configuration)} method reference as the genesis state
      *     factory. (<b>IMPORTANT:</b> This step instantiates and invokes
      *     {@link ConsensusStateEventHandler#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SemanticVersion)}
      *     on a {@link MerkleNodeState} instance that delegates the call back to our
@@ -221,18 +221,18 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      *      <li>Create a genesis state; or,</li>
      *      <li>Deserialize a saved state.</li>
      * </ol>
-     * In both cases the state object will be created by the {@link Hedera#newStateRoot()}
+     * In both cases the state object will be created by the {@link Hedera#newStateRoot(Configuration)}
      * method reference bound to our Hedera instance. Because,
      * <ol>
      *      <li>We provided this method as the genesis state factory right above; and,</li>
-     *      <li>Our Hedera instance's constructor registered its {@link Hedera#newStateRoot()}
+     *      <li>Our Hedera instance's constructor registered its {@link Hedera#newStateRoot(Configuration)}
      *      method with the {@link ConstructableRegistry} as the factory for the Services state root
      *      class id.</li>
      * </ol>
-     *  Now, note that {@link Hedera#newStateRoot()} returns {@link MerkleNodeState}
+     *  Now, note that {@link Hedera#newStateRoot(Configuration)} returns {@link MerkleNodeState}
      *  instances that delegate their lifecycle methods to an injected instance of
      *  {@link ConsensusStateEventHandler}---and the implementation of that
-     *  injected by {@link Hedera#newStateRoot()} delegates these calls back to the Hedera
+     *  injected by {@link Hedera#newStateRoot(Configuration)} delegates these calls back to the Hedera
      *  instance itself.
      * <p>
      *  Thus, the Hedera instance centralizes nearly all the setup and runtime logic for the
@@ -313,7 +313,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                                 hedera.bootstrapConfigProvider().getConfiguration());
                     }
                     genesisNetwork.set(network);
-                    final var genesisState = hedera.newStateRoot();
+                    final var genesisState = hedera.newStateRoot(platformConfig);
                     hedera.initializeStatesApi(genesisState, GENESIS, platformConfig);
                     return genesisState;
                 },

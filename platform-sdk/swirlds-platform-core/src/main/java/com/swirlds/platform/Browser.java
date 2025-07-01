@@ -265,7 +265,7 @@ public class Browser {
             final HashedReservedSignedState reservedState = getInitialState(
                     recycleBin,
                     appMain.getSemanticVersion(),
-                    appMain::newStateRoot,
+                    platformConfig -> appMain.newStateRoot(platformConfig),
                     stateRootFromVirtualMap(appMain),
                     appMain.getClass().getName(),
                     appDefinition.getSwirldName(),

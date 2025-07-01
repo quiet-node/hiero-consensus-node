@@ -19,6 +19,7 @@ import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.Console;
 import com.swirlds.common.utility.AutoCloseableWrapper;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.Browser;
 import com.swirlds.platform.SwirldsPlatform;
 import com.swirlds.platform.listeners.PlatformStatusChangeListener;
@@ -118,7 +119,7 @@ public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
 
     @NonNull
     @Override
-    public HelloSwirldDemoState newStateRoot() {
+    public HelloSwirldDemoState newStateRoot(Configuration platformConfig) {
         final HelloSwirldDemoState state = new HelloSwirldDemoState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;

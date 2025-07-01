@@ -7,6 +7,7 @@ import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitialize
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.Platform;
@@ -99,7 +100,7 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
      */
     @Override
     @NonNull
-    public ConsistencyTestingToolState newStateRoot() {
+    public ConsistencyTestingToolState newStateRoot(Configuration platformConfig) {
         final ConsistencyTestingToolState state = new ConsistencyTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
 
