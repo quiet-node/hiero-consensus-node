@@ -333,12 +333,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     final var highestAckedBlockNumber = blockBufferService.getHighestAckedBlockNumber();
 
                     // Indicate that the block node should recover and catch up from another trustworthy block node
-                    final org.hiero.block.api.PublishStreamRequest endStream = org.hiero.block.api.PublishStreamRequest.newBuilder()
-                            .endStream(org.hiero.block.api.PublishStreamRequest.EndStream.newBuilder()
-                                    .endCode(org.hiero.block.api.PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
-                                    .earliestBlockNumber(earliestBlockNumber)
-                                    .latestBlockNumber(highestAckedBlockNumber))
-                            .build();
+                    final org.hiero.block.api.PublishStreamRequest endStream =
+                            org.hiero.block.api.PublishStreamRequest.newBuilder()
+                                    .endStream(org.hiero.block.api.PublishStreamRequest.EndStream.newBuilder()
+                                            .endCode(
+                                                    org.hiero.block.api.PublishStreamRequest.EndStream.Code
+                                                            .TOO_FAR_BEHIND)
+                                            .earliestBlockNumber(earliestBlockNumber)
+                                            .latestBlockNumber(highestAckedBlockNumber))
+                                    .build();
 
                     sendRequest(endStream);
                     close();
