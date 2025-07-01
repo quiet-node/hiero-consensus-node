@@ -207,11 +207,11 @@ tasks.register<Test>("testSubprocess") {
     systemProperty("hapi.spec.hintsThresholdDenominator", hintsThresholdDenominator)
 
     // Default quiet mode is "false" unless we are running in CI or set it explicitly to "true"
-    systemProperty(
-        "hapi.spec.quiet.mode",
-        System.getProperty("hapi.spec.quiet.mode")
-            ?: if (ciTagExpression.isNotBlank()) "true" else "false",
-    )
+    //    systemProperty(
+    //        "hapi.spec.quiet.mode",
+    //        System.getProperty("hapi.spec.quiet.mode")
+    //            ?: if (ciTagExpression.isNotBlank()) "true" else "false",
+    //    )
     systemProperty("junit.jupiter.execution.parallel.enabled", true)
     systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
     // Surprisingly, the Gradle JUnitPlatformTestExecutionListener fails to gather result
