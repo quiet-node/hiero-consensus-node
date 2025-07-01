@@ -37,9 +37,9 @@ import org.hiero.base.utility.MemoryUtils;
 public final class DataFileWriter implements AutoCloseable {
 
     /**
-     * Default buffer size for writing into the file is 64 Mb
+     * Default buffer size for writing into the file is 256 Mb
      */
-    private static final int DEFAULT_BUF_SIZE = PAGE_SIZE * KIBIBYTES_TO_BYTES * 16;
+    private static final int DEFAULT_BUF_SIZE = PAGE_SIZE * KIBIBYTES_TO_BYTES * 64;
 
     private static final String ERROR_DATA_ITEM_TOO_LARGE =
             "Data item is too large to write to a data file. Increase data file mapped byte buffer size";
