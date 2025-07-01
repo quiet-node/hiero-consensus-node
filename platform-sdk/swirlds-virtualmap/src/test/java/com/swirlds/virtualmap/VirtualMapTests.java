@@ -404,6 +404,7 @@ class VirtualMapTests extends VirtualTestBase {
         vm.remove(A_KEY, TestValueCodec.INSTANCE);
 
         assertEquals(0, vm.size());
+        assertTrue(vm.isEmpty());
 
         vm.put(D_KEY, DATE, TestValueCodec.INSTANCE);
         assertFalse(vm.isEmpty());

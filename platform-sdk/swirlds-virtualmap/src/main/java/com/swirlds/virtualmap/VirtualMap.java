@@ -690,8 +690,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * if the key didn't exist.
      *
      * @param key The key to remove, must not be null
-     * @param valueCodec Value codec to decode the removed value. If the codec is null, this method
-     *                   always returns null
+     * @param valueCodec Value codec to decode the removed value.
      * @return The removed value. May return null if there was no value to remove or if the value was null.
      */
     public <V> V remove(@NonNull final Bytes key, @NonNull final Codec<V> valueCodec) {
