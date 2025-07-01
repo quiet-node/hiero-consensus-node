@@ -238,10 +238,24 @@ public class VirtualLeafBytes<V> {
                 : "pos=" + pos + ", out.position()=" + out.position() + ", size=" + getSizeInBytes();
     }
 
+    private static final ThreadLocal<byte[]> FIELD_BYTES_BOUT = ThreadLocal.withInitial(() -> new byte[256]);
+
     public Hash hash(final HashBuilder builder) {
         builder.reset();
-        builder.update(keyBytes);
-        builder.update(valueBytes());
+        final Bytes kb = keyBytes();
+        final Bytes vb = valueBytes();
+        final int len = ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length())) +
+                ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()));
+        byte[] arr = FIELD_BYTES_BOUT.get();
+        if (arr.length < len) {
+            arr = new byte[len];
+            FIELD_BYTES_BOUT.set(arr);
+        }
+        final BufferedData out = BufferedData.wrap(arr);
+        ProtoWriterTools.writeDelimited(out, FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length()), kb::writeTo);
+        ProtoWriterTools.writeDelimited(out, FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()), vb::writeTo);
+        assert out.position() == len;
+        builder.update(arr, 0, len);
         return builder.build();
     }
 

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.internal.hash;
 
+import com.hedera.pbj.runtime.ProtoWriterTools;
+import com.hedera.pbj.runtime.io.WritableSequentialData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.Path;
@@ -9,6 +12,7 @@ import com.swirlds.virtualmap.test.fixtures.TestKey;
 import com.swirlds.virtualmap.test.fixtures.TestValue;
 import com.swirlds.virtualmap.test.fixtures.TestValueCodec;
 import com.swirlds.virtualmap.test.fixtures.VirtualTestBase;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -158,7 +162,13 @@ public class VirtualHasherTestBase extends VirtualTestBase {
                     assert leaf != null;
                     // HASH_BUILDER is not thread safe
                     synchronized (HASH_BUILDER) {
-                        hash = leaf.hash(HASH_BUILDER);
+                        final ByteArrayOutputStream bb = new ByteArrayOutputStream();
+                        final WritableSequentialData out = new WritableStreamingData(bb);
+                        ProtoWriterTools.writeDelimited(out, VirtualLeafBytes.FIELD_LEAFRECORD_KEY, (int) leaf.keyBytes().length(), leaf.keyBytes()::writeTo);
+                        ProtoWriterTools.writeDelimited(out, VirtualLeafBytes.FIELD_LEAFRECORD_VALUE, (int) leaf.valueBytes().length(), leaf.valueBytes()::writeTo);
+                        HASH_BUILDER.reset();
+                        HASH_BUILDER.update(bb.toByteArray());
+                        hash = HASH_BUILDER.build();
                     }
                 }
                 rec = new VirtualHashRecord(path, hash);
