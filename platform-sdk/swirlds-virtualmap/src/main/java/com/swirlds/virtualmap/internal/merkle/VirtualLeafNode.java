@@ -33,8 +33,8 @@ public final class VirtualLeafNode extends PartialMerkleLeaf implements MerkleLe
      */
     private final VirtualLeafBytes virtualRecord;
 
-    public VirtualLeafNode(final VirtualLeafBytes virtualRecord, final Hash hash) {
-        this.virtualRecord = Objects.requireNonNull(virtualRecord);
+    public VirtualLeafNode(final VirtualLeafBytes virtualLeafBytes, final Hash hash) {
+        this.virtualRecord = Objects.requireNonNull(virtualLeafBytes);
         setHash(hash);
     }
 

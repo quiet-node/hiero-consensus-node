@@ -1085,7 +1085,6 @@ class VirtualMapTests extends VirtualTestBase {
                 assertNull(map.getBytes(TestKey.longToKey(i)), "The old value should not exist anymore");
             }
         } finally {
-            final VirtualRootNode root = map.getLeft();
             map.release();
             assertTrue(map.getPipeline().awaitTermination(60, SECONDS), "Pipeline termination timed out");
         }

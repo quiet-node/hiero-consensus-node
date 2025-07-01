@@ -269,8 +269,6 @@ public class VirtualLeafBytes<V> {
         return new ToStringBuilder(this)
                 .append("path", path)
                 .append("keyBytes", keyBytes)
-                //                .append("value", value)
-                //                .append("valueCodec", valueCodec)
                 .append("valueBytes", valueBytes())
                 .toString();
     }

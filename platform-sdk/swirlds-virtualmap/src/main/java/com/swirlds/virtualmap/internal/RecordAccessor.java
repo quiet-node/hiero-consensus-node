@@ -82,7 +82,7 @@ public interface RecordAccessor {
      * @param key The key. Must not be null.
      * @return The path or INVALID_PATH if the key is not found.
      */
-    long findKey(final Bytes key);
+    long findKey(final @NonNull Bytes key);
 
     /**
      * Gets the data source backed by this {@link RecordAccessor}
