@@ -418,9 +418,9 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * 		must not be null.
      */
     private VirtualMap(final VirtualMap source) {
-        configuration = source.configuration;
-        registryRecord = source.registryRecord;
+        registryRecord = RuntimeObjectRegistry.createRecord(getClass());
 
+        configuration = source.configuration;
         state = source.state.copy();
         fastCopyVersion = source.fastCopyVersion + 1;
         dataSourceBuilder = source.dataSourceBuilder;
