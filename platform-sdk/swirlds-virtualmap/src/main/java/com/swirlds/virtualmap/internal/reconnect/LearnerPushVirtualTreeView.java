@@ -6,6 +6,7 @@ import static com.swirlds.virtualmap.internal.Path.ROOT_PATH;
 import static com.swirlds.virtualmap.internal.Path.getChildPath;
 import static com.swirlds.virtualmap.internal.Path.getParentPath;
 import static com.swirlds.virtualmap.internal.Path.isLeft;
+import static java.util.Objects.requireNonNull;
 
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
@@ -29,7 +30,6 @@ import com.swirlds.virtualmap.internal.RecordAccessor;
 import com.swirlds.virtualmap.internal.merkle.VirtualMapMetadata;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
-import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
@@ -107,18 +107,18 @@ public final class LearnerPushVirtualTreeView extends VirtualTreeViewBase implem
      *      A ReconnectMapStats object to collect reconnect metrics
      */
     public LearnerPushVirtualTreeView(
-            final ReconnectConfig reconnectConfig,
-            final VirtualMap map,
-            final RecordAccessor originalRecords,
-            final VirtualMapMetadata originalState,
-            final VirtualMapMetadata reconnectState,
-            final ReconnectNodeRemover nodeRemover,
+            @NonNull final ReconnectConfig reconnectConfig,
+            @NonNull final VirtualMap map,
+            @NonNull final RecordAccessor originalRecords,
+            @NonNull final VirtualMapMetadata originalState,
+            @NonNull final VirtualMapMetadata reconnectState,
+            @NonNull final ReconnectNodeRemover nodeRemover,
             @NonNull final ReconnectMapStats mapStats) {
         super(map, originalState, reconnectState);
-        this.reconnectConfig = reconnectConfig;
-        this.originalRecords = Objects.requireNonNull(originalRecords);
-        this.nodeRemover = nodeRemover;
-        this.mapStats = mapStats;
+        this.reconnectConfig = requireNonNull(reconnectConfig);
+        this.originalRecords = requireNonNull(originalRecords);
+        this.nodeRemover = requireNonNull(nodeRemover);
+        this.mapStats = requireNonNull(mapStats);
     }
 
     @Override

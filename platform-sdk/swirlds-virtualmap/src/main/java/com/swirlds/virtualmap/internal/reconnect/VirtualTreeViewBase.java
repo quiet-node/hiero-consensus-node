@@ -12,6 +12,7 @@ import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.internal.merkle.VirtualInternalNode;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import com.swirlds.virtualmap.internal.merkle.VirtualMapMetadata;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Objects;
 
 /**
@@ -48,7 +49,9 @@ public abstract class VirtualTreeViewBase implements TreeView<Long> {
      * 		The state of the trees being reconnected. Cannot be null.
      */
     protected VirtualTreeViewBase(
-            final VirtualMap map, final VirtualMapMetadata originalState, final VirtualMapMetadata reconnectState) {
+            @NonNull final VirtualMap map,
+            @NonNull final VirtualMapMetadata originalState,
+            @NonNull final VirtualMapMetadata reconnectState) {
         this.map = Objects.requireNonNull(map);
         this.originalState = Objects.requireNonNull(originalState);
         this.reconnectState = Objects.requireNonNull(reconnectState);
