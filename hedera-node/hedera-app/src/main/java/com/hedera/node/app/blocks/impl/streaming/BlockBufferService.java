@@ -382,7 +382,7 @@ public class BlockBufferService {
             try {
                 logger.error("!!! Block buffer is saturated; blocking thread until buffer is no longer saturated");
                 final long startMs = System.currentTimeMillis();
-                final boolean bufferAvailable = cf.get(); // this call will block until the future is completed
+                final boolean bufferAvailable = cf.get(); // this will block until the future is completed
                 final long durationMs = System.currentTimeMillis() - startMs;
                 logger.warn("Thread was blocked for {}ms waiting for block buffer to free space", durationMs);
 
@@ -627,6 +627,7 @@ public class BlockBufferService {
             return;
         }
 
+        logger.info("Attempting to forcefully switch block node connections due to increasing block buffer saturation");
         lastRecoveryActionTimestamp = now;
         blockNodeConnectionManager.selectNewBlockNodeForStreaming(true);
     }
@@ -645,14 +646,14 @@ public class BlockBufferService {
             // there is not enough of the buffer reclaimed/available yet... do not disable back pressure
             awaitingRecovery = true;
             logger.debug(
-                    "Attempted to disable back pressure, but buffer saturation ({}%) is not less than or equal to recovery threshold ({}%)",
+                    "Attempted to disable back pressure, but buffer saturation is not less than or equal to recovery threshold (saturation={}%, recoveryThreshold={}%)",
                     latestPruneResult.saturationPercent, recoveryThreshold);
             return;
         }
 
         awaitingRecovery = false;
         logger.debug(
-                "Buffer saturation ({}%) is below or equal to the recovery threshold ({}%). Back pressure will be disabled.",
+                "Buffer saturation is below or equal to the recovery threshold; back pressure will be disabled. (saturation={}%, recoveryThreshold={}%)",
                 latestPruneResult.saturationPercent, recoveryThreshold);
 
         final CompletableFuture<Boolean> cf = backpressureCompletableFutureRef.get();
