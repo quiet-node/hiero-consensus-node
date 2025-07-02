@@ -78,7 +78,7 @@ public class HashBuilder {
         if (t == null) {
             update(0);
         } else {
-            update(t.length);
+            update(length);
             digest.update(t, offset, length);
         }
 

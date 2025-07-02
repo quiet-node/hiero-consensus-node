@@ -28,6 +28,8 @@ import com.swirlds.virtualmap.test.fixtures.TestValueCodec;
 import com.swirlds.virtualmap.test.fixtures.VirtualTestBase;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,8 +46,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hiero.base.crypto.Cryptography;
+import org.hiero.base.crypto.CryptographyException;
 import org.hiero.base.crypto.Hash;
-import org.hiero.base.crypto.HashBuilder;
 import org.hiero.base.exceptions.ReferenceCountException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -53,8 +55,6 @@ import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
 class VirtualNodeCacheTest extends VirtualTestBase {
-
-    private static final HashBuilder HASH_BUILDER = new HashBuilder(Cryptography.DEFAULT_DIGEST_TYPE);
 
     private static final long BOGUS_KEY_ID = -7000;
 
@@ -2218,16 +2218,13 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         // Create the copy and add the root internals and hash everything
         final VirtualNodeCache cache1 = cache0.copy();
 
-        final VirtualHashRecord appleLeaf0int = new VirtualHashRecord(appleLeaf0.path(), appleLeaf0.hash(HASH_BUILDER));
-        final VirtualHashRecord bananaLeaf0int =
-                new VirtualHashRecord(bananaLeaf0.path(), bananaLeaf0.hash(HASH_BUILDER));
-        final VirtualHashRecord cherryLeaf0int =
-                new VirtualHashRecord(cherryLeaf0.path(), cherryLeaf0.hash(HASH_BUILDER));
-        final VirtualHashRecord dateLeaf0int = new VirtualHashRecord(dateLeaf0.path(), dateLeaf0.hash(HASH_BUILDER));
-        final VirtualHashRecord eggplantLeaf0int =
-                new VirtualHashRecord(eggplantLeaf0.path(), eggplantLeaf0.hash(HASH_BUILDER));
-        final VirtualHashRecord figLeaf0int = new VirtualHashRecord(figLeaf0.path(), figLeaf0.hash(HASH_BUILDER));
-        final VirtualHashRecord grapeLeaf0int = new VirtualHashRecord(grapeLeaf0.path(), grapeLeaf0.hash(HASH_BUILDER));
+        final VirtualHashRecord appleLeaf0int = new VirtualHashRecord(appleLeaf0.path(), hash(appleLeaf0));
+        final VirtualHashRecord bananaLeaf0int = new VirtualHashRecord(bananaLeaf0.path(), hash(bananaLeaf0));
+        final VirtualHashRecord cherryLeaf0int = new VirtualHashRecord(cherryLeaf0.path(), hash(cherryLeaf0));
+        final VirtualHashRecord dateLeaf0int = new VirtualHashRecord(dateLeaf0.path(), hash(dateLeaf0));
+        final VirtualHashRecord eggplantLeaf0int = new VirtualHashRecord(eggplantLeaf0.path(), hash(eggplantLeaf0));
+        final VirtualHashRecord figLeaf0int = new VirtualHashRecord(figLeaf0.path(), hash(figLeaf0));
+        final VirtualHashRecord grapeLeaf0int = new VirtualHashRecord(grapeLeaf0.path(), hash(grapeLeaf0));
 
         final VirtualHashRecord leftRight0 =
                 new VirtualHashRecord(leftRightInternal().path(), digest(cherryLeaf0int, figLeaf0int));
@@ -2280,14 +2277,13 @@ class VirtualNodeCacheTest extends VirtualTestBase {
         cache1.clearLeafPath(12);
         // Make a copy and hash
         final VirtualNodeCache cache2 = cache1.copy();
-        final VirtualHashRecord cherryLeaf1int =
-                new VirtualHashRecord(cherryLeaf1.path(), cherryLeaf1.hash(HASH_BUILDER));
+        final VirtualHashRecord cherryLeaf1int = new VirtualHashRecord(cherryLeaf1.path(), hash(cherryLeaf1));
         cache1.putHash(cherryLeaf1int);
         VirtualHashRecord leftRight1 = new VirtualHashRecord(leftRight0.path(), digest(cherryLeaf1int, figLeaf0int));
         cache1.putHash(leftRight1);
         VirtualHashRecord left1 = new VirtualHashRecord(left0.path(), digest(leftLeft0, leftRight1));
         cache1.putHash(left1);
-        final VirtualHashRecord grapeLeaf1int = new VirtualHashRecord(grapeLeaf1.path(), grapeLeaf1.hash(HASH_BUILDER));
+        final VirtualHashRecord grapeLeaf1int = new VirtualHashRecord(grapeLeaf1.path(), hash(grapeLeaf1));
         cache1.putHash(grapeLeaf1int);
         VirtualHashRecord right1 = new VirtualHashRecord(right0.path(), digest(grapeLeaf1int, dateLeaf0int));
         cache1.putHash(right1);
@@ -2917,10 +2913,15 @@ class VirtualNodeCacheTest extends VirtualTestBase {
     }
 
     private Hash digest(VirtualHashRecord left, VirtualHashRecord right) {
-        final HashBuilder builder = new HashBuilder(Cryptography.DEFAULT_DIGEST_TYPE);
-        builder.update(left.hash());
-        builder.update(right.hash());
-        return builder.build();
+        try {
+            final MessageDigest md = MessageDigest.getInstance(Cryptography.DEFAULT_DIGEST_TYPE.algorithmName());
+            md.update((byte) 0x0F);
+            left.hash().getBytes().writeTo(md);
+            right.hash().getBytes().writeTo(md);
+            return new Hash(md.digest(), Cryptography.DEFAULT_DIGEST_TYPE);
+        } catch (final NoSuchAlgorithmException e) {
+            throw new CryptographyException(e);
+        }
     }
 
     private void validateDeletedLeaves(
