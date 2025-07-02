@@ -160,7 +160,7 @@ public class RecordAccessorImpl implements RecordAccessor {
      * {@inheritDoc}
      */
     @Override
-    public long findKey(final Bytes key) {
+    public long findKey(final @NonNull Bytes key) {
         final VirtualLeafBytes rec = cache.lookupLeafByKey(key);
         if (rec != null) {
             return rec.path();

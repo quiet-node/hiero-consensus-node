@@ -28,7 +28,7 @@ class VirtualLeafBytesTest {
     @Test
     @Tag(TestComponentTags.VMAP)
     @DisplayName("Keys may not be null")
-    void createLeafRecordWithNullKey() {
+    void createLeafBytesWithNullKey() {
         assertThrows(
                 NullPointerException.class,
                 () -> new VirtualLeafBytes<>(1, null, new TestValue("s"), TestValueCodec.INSTANCE));
@@ -37,7 +37,7 @@ class VirtualLeafBytesTest {
     @Test
     @Tag(TestComponentTags.VMAP)
     @DisplayName("Value codec may not be null when value is not null")
-    void createLeafRecordWithNullCodec() {
+    void createLeafBytesWithNullCodec() {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new VirtualLeafBytes<>(1, TestKey.longToKey(FAKE_KEY_NUM), new TestValue("s"), null));
@@ -98,7 +98,7 @@ class VirtualLeafBytesTest {
         final Bytes key = TestKey.longToKey(FAKE_KEY_NUM);
         final TestValue value = new TestValue("Fake value");
         final VirtualLeafBytes<TestValue> leafBytes = new VirtualLeafBytes<>(102, key, value, TestValueCodec.INSTANCE);
-        assertEquals(leafBytes, leafBytes, "records should be equal");
+        assertEquals(leafBytes, leafBytes, "leaf bytes should be equal");
     }
 
     @Test
@@ -109,8 +109,8 @@ class VirtualLeafBytesTest {
         final TestValue value = new TestValue("Fake value");
         final VirtualLeafBytes<TestValue> leafBytes = new VirtualLeafBytes<>(102, key, value, TestValueCodec.INSTANCE);
         final VirtualLeafBytes<TestValue> leafBytes2 = new VirtualLeafBytes<>(102, key, value, TestValueCodec.INSTANCE);
-        assertEquals(leafBytes, leafBytes2, "records should be equal");
-        assertEquals(leafBytes2, leafBytes, "records should be equal");
+        assertEquals(leafBytes, leafBytes2, "leaf bytes should be equal");
+        assertEquals(leafBytes2, leafBytes, "leaf bytes should be equal");
     }
 
     @Test
@@ -122,8 +122,8 @@ class VirtualLeafBytesTest {
         final Bytes valueBytes = value.toBytes();
         final VirtualLeafBytes<TestValue> leafBytes = new VirtualLeafBytes<>(102, key, value, TestValueCodec.INSTANCE);
         final VirtualLeafBytes<TestValue> leafBytes2 = new VirtualLeafBytes<>(102, key, valueBytes);
-        assertEquals(leafBytes, leafBytes2, "records should be equal");
-        assertEquals(leafBytes2, leafBytes, "records should be equal");
+        assertEquals(leafBytes, leafBytes2, "leaf bytes should be equal");
+        assertEquals(leafBytes2, leafBytes, "leaf bytes should be equal");
     }
 
     @Test
@@ -142,35 +142,35 @@ class VirtualLeafBytesTest {
         // Test with a different path
         final int diffrenetPath = 988;
         VirtualLeafBytes<TestValue> second = new VirtualLeafBytes<>(diffrenetPath, key, value, TestValueCodec.INSTANCE);
-        assertNotEquals(first, second, "records should not be equal");
-        assertNotEquals(second, first, "records should not be equal");
+        assertNotEquals(first, second, "leaf bytes should not be equal");
+        assertNotEquals(second, first, "leaf bytes should not be equal");
 
         // Test with a different key
         final Bytes differentKey = TestKey.longToKey(DIFFERENT_KEY_NUM);
         second = new VirtualLeafBytes<>(path, differentKey, value, TestValueCodec.INSTANCE);
-        assertNotEquals(first, second, "records should not be equal");
-        assertNotEquals(second, first, "records should not be equal");
+        assertNotEquals(first, second, "leaf bytes should not be equal");
+        assertNotEquals(second, first, "leaf bytes should not be equal");
 
         // Test with an empty key
         second = new VirtualLeafBytes<>(path, Bytes.EMPTY, value, TestValueCodec.INSTANCE);
-        assertNotEquals(first, second, "records should not be equal");
-        assertNotEquals(second, first, "records should not be equal");
+        assertNotEquals(first, second, "leaf bytes should not be equal");
+        assertNotEquals(second, first, "leaf bytes should not be equal");
 
         // Test with a different value
         final TestValue differentValue = new TestValue("Different value");
         second = new VirtualLeafBytes<>(path, key, differentValue, TestValueCodec.INSTANCE);
-        assertNotEquals(first, second, "records should not be equal");
-        assertNotEquals(second, first, "records should not be equal");
+        assertNotEquals(first, second, "leaf bytes should not be equal");
+        assertNotEquals(second, first, "leaf bytes should not be equal");
 
         // Test with a null value
         second = new VirtualLeafBytes<>(path, key, null, null);
-        assertNotEquals(first, second, "records should not be equal");
-        assertNotEquals(second, first, "records should not be equal");
+        assertNotEquals(first, second, "leaf bytes should not be equal");
+        assertNotEquals(second, first, "leaf bytes should not be equal");
 
         // Test with some random object
         final String random = "Random!";
         //noinspection AssertBetweenInconvertibleTypes
-        assertNotEquals(random, first, "records should not be equal");
+        assertNotEquals(random, first, "leaf bytes should not be equal");
     }
 
     @Test

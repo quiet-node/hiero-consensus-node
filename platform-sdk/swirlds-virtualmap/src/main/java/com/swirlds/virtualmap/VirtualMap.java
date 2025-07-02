@@ -689,7 +689,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * Removes the key/value pair denoted by the given key from the map. Has no effect
      * if the key didn't exist.
      *
-     * @param key The key to remove, must not be null
+     * @param key The key to remove, must not be null.
      * @param valueCodec Value codec to decode the removed value.
      * @return The removed value. May return null if there was no value to remove or if the value was null.
      */
