@@ -260,7 +260,6 @@ public class DiskStartupNetworks implements StartupNetworks {
                                             .gossipCaCertificate(rosterEntry.gossipCaCertificate())
                                             .grpcCertificateHash(Bytes.EMPTY)
                                             .weight(rosterEntry.weight())
-                                            .deleted(false)
                                             .declineReward(true)
                                             .adminKey(Key.DEFAULT)
                                             .build())

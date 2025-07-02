@@ -7,7 +7,13 @@ public interface ReadableEntityIdStore extends ReadableEntityCounters {
      *
      * @return the next entity number that will be used
      */
-    long peekAtNextNumber();
+    long peekAtNextEntityNumber();
+
+    /**
+     * Returns the next node ID that will be used.
+     * @return the next node ID that will be used
+     */
+    long peekAtNextNodeId();
 
     /**
      * Returns the number of accounts in the store.

@@ -50,6 +50,14 @@ public class WritableNodeStore extends ReadableNodeStoreImpl {
     }
 
     /**
+     * Removes a node from the state by its ID.
+     * @param nodeId - the ID of the node to be removed
+     */
+    public void remove(final long nodeId) {
+        nodesState().remove(EntityNumber.newBuilder().number(nodeId).build());
+    }
+
+    /**
      * Persists a new {@link Node} into the state, as well as exporting its ID to the transaction. It
      * will also increment the entity type count for {@link EntityType#NODE}.
      * @param node - the node to be mapped onto a new {@link Node}

@@ -3,6 +3,7 @@ package com.hedera.node.app.ids;
 
 import com.hedera.node.app.ids.schemas.V0490EntityIdSchema;
 import com.hedera.node.app.ids.schemas.V0590EntityIdSchema;
+import com.hedera.node.app.ids.schemas.V0650EntityIdSchema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
 import com.swirlds.state.lifecycle.Service;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -31,5 +32,6 @@ public class EntityIdService implements Service {
     public void registerSchemas(@NonNull final SchemaRegistry registry) {
         registry.register(new V0490EntityIdSchema());
         registry.register(new V0590EntityIdSchema());
+        registry.register(new V0650EntityIdSchema());
     }
 }

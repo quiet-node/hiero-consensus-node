@@ -114,9 +114,8 @@ public class NodeCreateHandler implements TransactionHandler {
             nodeBuilder.grpcProxyEndpoint(op.grpcProxyEndpoint());
         }
 
-        // Since nodes won't be removed from state, we can set the nodeId to the next available id
-        // in the state based on the size of the state.
-        final var node = nodeBuilder.nodeId(nodeStore.sizeOfState()).build();
+        final var newNodeId = handleContext.entityNumGenerator().newNodeNum();
+        final var node = nodeBuilder.nodeId(newNodeId).build();
 
         nodeStore.putAndIncrementCount(node);
 

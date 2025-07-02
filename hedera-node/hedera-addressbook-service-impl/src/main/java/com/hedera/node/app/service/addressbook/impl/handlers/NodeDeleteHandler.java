@@ -85,17 +85,12 @@ public class NodeDeleteHandler implements TransactionHandler {
         final var nodeStore = context.storeFactory().writableStore(WritableNodeStore.class);
 
         Node node = nodeStore.get(nodeId);
-
         validateFalse(node == null, INVALID_NODE_ID);
-
         validateFalse(node.deleted(), NODE_DELETED);
 
-        /* Copy all the fields from existing, and mark deleted flag  */
-        final var nodeBuilder = node.copyBuilder().deleted(true);
-
-        /* --- Put the modified node. It will be in underlying state's modifications map.
+        /* --- Put the removed node. It will be in underlying state's modifications map.
         It will not be committed to state until commit is called on the state.--- */
-        nodeStore.put(nodeBuilder.build());
+        nodeStore.remove(node.nodeId());
     }
 
     @NonNull

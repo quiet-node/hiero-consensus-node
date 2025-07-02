@@ -27,42 +27,42 @@ class EntityNumGeneratorImplTest {
 
     @Test
     void testNewEntityNumWithInitialState() {
-        when(entityIdStore.incrementAndGet()).thenReturn(1L);
+        when(entityIdStore.incrementEntityNumAndGet()).thenReturn(1L);
         final var actual = subject.newEntityNum();
 
         assertThat(actual).isEqualTo(1L);
-        verify(entityIdStore).incrementAndGet();
+        verify(entityIdStore).incrementEntityNumAndGet();
     }
 
     @Test
     void testPeekingAtNewEntityNumWithInitialState() {
-        when(entityIdStore.peekAtNextNumber()).thenReturn(1L);
+        when(entityIdStore.peekAtNextEntityNumber()).thenReturn(1L);
         final var actual = subject.peekAtNewEntityNum();
 
         assertThat(actual).isEqualTo(1L);
 
-        verify(entityIdStore).peekAtNextNumber();
+        verify(entityIdStore).peekAtNextEntityNumber();
     }
 
     @Test
     void testNewEntityNum() {
-        when(entityIdStore.incrementAndGet()).thenReturn(43L);
+        when(entityIdStore.incrementEntityNumAndGet()).thenReturn(43L);
 
         final var actual = subject.newEntityNum();
 
         assertThat(actual).isEqualTo(43L);
-        verify(entityIdStore).incrementAndGet();
-        verify(entityIdStore, never()).peekAtNextNumber();
+        verify(entityIdStore).incrementEntityNumAndGet();
+        verify(entityIdStore, never()).peekAtNextEntityNumber();
     }
 
     @Test
     void testPeekingAtNewEntityNum() {
-        when(entityIdStore.peekAtNextNumber()).thenReturn(43L);
+        when(entityIdStore.peekAtNextEntityNumber()).thenReturn(43L);
 
         final var actual = subject.peekAtNewEntityNum();
 
         assertThat(actual).isEqualTo(43L);
-        verify(entityIdStore).peekAtNextNumber();
-        verify(entityIdStore, never()).incrementAndGet();
+        verify(entityIdStore).peekAtNextEntityNumber();
+        verify(entityIdStore, never()).incrementEntityNumAndGet();
     }
 }

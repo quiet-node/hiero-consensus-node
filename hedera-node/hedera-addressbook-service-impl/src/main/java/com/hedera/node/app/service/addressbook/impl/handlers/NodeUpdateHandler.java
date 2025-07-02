@@ -7,6 +7,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_GOSSIP_CA_CERTI
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_GRPC_CERTIFICATE_HASH;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_NODE_ACCOUNT_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_NODE_ID;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.NODE_DELETED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.UPDATE_NODE_ACCOUNT_NOT_ALLOWED;
 import static com.hedera.node.app.service.addressbook.AddressBookHelper.checkDABEnabled;
 import static com.hedera.node.app.service.addressbook.impl.validators.AddressBookValidator.validateX509Certificate;
@@ -108,6 +109,7 @@ public class NodeUpdateHandler implements TransactionHandler {
 
         final var existingNode = nodeStore.get(op.nodeId());
         validateFalse(existingNode == null, INVALID_NODE_ID);
+        validateFalse(existingNode.deleted(), NODE_DELETED);
         if (op.hasAccountId()) {
             final var accountId = op.accountIdOrThrow();
             validateTrue(accountStore.contains(accountId), INVALID_NODE_ACCOUNT_ID);

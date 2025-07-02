@@ -36,9 +36,9 @@ class WritableEntityIdStoreTest {
 
     @Test
     void peeksAndIncrementsAsExpected() {
-        assertEquals(1, subject.peekAtNextNumber());
-        subject.incrementAndGet();
-        assertEquals(2, subject.peekAtNextNumber());
+        assertEquals(1, subject.peekAtNextEntityNumber());
+        subject.incrementEntityNumAndGet();
+        assertEquals(2, subject.peekAtNextEntityNumber());
     }
 
     @Test

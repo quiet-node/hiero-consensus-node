@@ -17,6 +17,8 @@ public interface EntityNumGenerator {
      */
     long newEntityNum();
 
+    long newNodeNum();
+
     /**
      * Peeks at the next entity number, for use by handlers that create entities.
      *
@@ -27,4 +29,6 @@ public interface EntityNumGenerator {
      * @return the next entity number
      */
     long peekAtNewEntityNum();
+
+    long peekAtNewNodeNum();
 }

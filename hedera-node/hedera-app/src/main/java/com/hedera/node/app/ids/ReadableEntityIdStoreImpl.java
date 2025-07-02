@@ -3,10 +3,12 @@ package com.hedera.node.app.ids;
 
 import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STATE_KEY;
 import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
+import static com.hedera.node.app.ids.schemas.V0650EntityIdSchema.NODE_ID_KEY;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
+import com.hedera.hapi.platform.state.NodeId;
 import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.spi.ids.ReadableEntityIdStore;
 import com.swirlds.state.spi.ReadableSingletonState;
@@ -23,6 +25,7 @@ public class ReadableEntityIdStoreImpl implements ReadableEntityIdStore {
     private final ReadableSingletonState<EntityNumber> entityIdState;
 
     private final ReadableSingletonState<EntityCounts> entityCountsState;
+    private final ReadableSingletonState<NodeId> nodeIdState;
 
     /**
      * Create a new {@link ReadableEntityIdStoreImpl} instance.
@@ -33,6 +36,7 @@ public class ReadableEntityIdStoreImpl implements ReadableEntityIdStore {
         requireNonNull(states);
         this.entityIdState = states.getSingleton(ENTITY_ID_STATE_KEY);
         this.entityCountsState = states.getSingleton(ENTITY_COUNTS_KEY);
+        this.nodeIdState = states.getSingleton(NODE_ID_KEY);
     }
 
     /**
@@ -41,9 +45,18 @@ public class ReadableEntityIdStoreImpl implements ReadableEntityIdStore {
      * @return the next entity number that will be used
      */
     @Override
-    public long peekAtNextNumber() {
+    public long peekAtNextEntityNumber() {
         final var oldEntityNum = entityIdState.get();
         return oldEntityNum == null ? 1 : oldEntityNum.number() + 1;
+    }
+
+    /**
+     * Returns the next node ID that will be used.
+     * @return the next node ID that will be used
+     */
+    public long peekAtNextNodeId() {
+        final var oldNodeIdNum = nodeIdState.get();
+        return oldNodeIdNum == null ? 0 : oldNodeIdNum.id() + 1;
     }
 
     // Add all getters for number of entities

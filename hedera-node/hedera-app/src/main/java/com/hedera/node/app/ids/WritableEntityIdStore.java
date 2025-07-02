@@ -3,10 +3,12 @@ package com.hedera.node.app.ids;
 
 import static com.hedera.node.app.ids.schemas.V0490EntityIdSchema.ENTITY_ID_STATE_KEY;
 import static com.hedera.node.app.ids.schemas.V0590EntityIdSchema.ENTITY_COUNTS_KEY;
+import static com.hedera.node.app.ids.schemas.V0650EntityIdSchema.NODE_ID_KEY;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.state.common.EntityNumber;
 import com.hedera.hapi.node.state.entity.EntityCounts;
+import com.hedera.hapi.platform.state.NodeId;
 import com.hedera.node.app.hapi.utils.EntityType;
 import com.hedera.node.app.spi.ids.WritableEntityCounters;
 import com.swirlds.state.spi.WritableSingletonState;
@@ -23,6 +25,7 @@ public class WritableEntityIdStore extends ReadableEntityIdStoreImpl implements 
     private final WritableSingletonState<EntityNumber> entityIdState;
 
     private final WritableSingletonState<EntityCounts> entityCountsState;
+    private final WritableSingletonState<NodeId> nodeIdState;
 
     /**
      * Create a new {@link WritableEntityIdStore} instance.
@@ -34,16 +37,7 @@ public class WritableEntityIdStore extends ReadableEntityIdStoreImpl implements 
         requireNonNull(states);
         this.entityIdState = states.getSingleton(ENTITY_ID_STATE_KEY);
         this.entityCountsState = states.getSingleton(ENTITY_COUNTS_KEY);
-    }
-
-    /**
-     * Returns the next entity number that will be used.
-     *
-     * @return the next entity number that will be used
-     */
-    public long peekAtNextNumber() {
-        final var oldEntityNum = entityIdState.get();
-        return oldEntityNum == null ? 1 : oldEntityNum.number() + 1;
+        this.nodeIdState = states.getSingleton(NODE_ID_KEY);
     }
 
     /**
@@ -51,10 +45,16 @@ public class WritableEntityIdStore extends ReadableEntityIdStoreImpl implements 
      *
      * @return the next new entity number
      */
-    public long incrementAndGet() {
-        final var newEntityNum = peekAtNextNumber();
+    public long incrementEntityNumAndGet() {
+        final var newEntityNum = this.peekAtNextEntityNumber();
         entityIdState.put(new EntityNumber(newEntityNum));
         return newEntityNum;
+    }
+
+    public long incrementNodeIdNumAndGet() {
+        final var newNodeNum = peekAtNextNodeId();
+        nodeIdState.put(new NodeId(newNodeNum));
+        return newNodeNum;
     }
 
     @Override
@@ -74,8 +74,8 @@ public class WritableEntityIdStore extends ReadableEntityIdStoreImpl implements 
             case TOPIC -> newEntityCounts.numTopics(entityCounts.numTopics() + delta);
             case FILE -> newEntityCounts.numFiles(entityCounts.numFiles() + delta);
             case CONTRACT_BYTECODE -> newEntityCounts.numContractBytecodes(entityCounts.numContractBytecodes() + delta);
-            case CONTRACT_STORAGE -> newEntityCounts.numContractStorageSlots(
-                    entityCounts.numContractStorageSlots() + delta);
+            case CONTRACT_STORAGE ->
+                newEntityCounts.numContractStorageSlots(entityCounts.numContractStorageSlots() + delta);
             case NFT -> newEntityCounts.numNfts(entityCounts.numNfts() + delta);
             case SCHEDULE -> newEntityCounts.numSchedules(entityCounts.numSchedules() + delta);
             case AIRDROP -> newEntityCounts.numAirdrops(entityCounts.numAirdrops() + delta);

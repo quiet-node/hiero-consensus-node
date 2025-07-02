@@ -39,16 +39,16 @@ class ReadableEntityIdStoreImplTest {
     }
 
     @Test
-    void testPeekAtNextNumber_withNullEntityId() {
+    void testPeekAtNextEntityNumber_withNullEntityId() {
         when(mockEntityIdState.get()).thenReturn(null);
-        assertEquals(1, subject.peekAtNextNumber());
+        assertEquals(1, subject.peekAtNextEntityNumber());
     }
 
     @Test
-    void testPeekAtNextNumber_withValidEntityId() {
+    void testPeekAtNextEntityNumber_withValidEntityId() {
         EntityNumber entityNumber = new EntityNumber(100);
         when(mockEntityIdState.get()).thenReturn(entityNumber);
-        assertEquals(101, subject.peekAtNextNumber());
+        assertEquals(101, subject.peekAtNextEntityNumber());
     }
 
     @Test

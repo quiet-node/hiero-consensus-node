@@ -21,11 +21,21 @@ public class EntityNumGeneratorImpl implements EntityNumGenerator {
 
     @Override
     public long newEntityNum() {
-        return entityIdStore.incrementAndGet();
+        return entityIdStore.incrementEntityNumAndGet();
+    }
+
+    @Override
+    public long newNodeNum() {
+        return entityIdStore.incrementNodeIdNumAndGet();
     }
 
     @Override
     public long peekAtNewEntityNum() {
-        return entityIdStore.peekAtNextNumber();
+        return entityIdStore.peekAtNextEntityNumber();
+    }
+
+    @Override
+    public long peekAtNewNodeNum() {
+        return entityIdStore.peekAtNextNodeId();
     }
 }

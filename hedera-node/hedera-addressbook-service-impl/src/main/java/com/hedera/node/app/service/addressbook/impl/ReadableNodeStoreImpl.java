@@ -95,14 +95,14 @@ public class ReadableNodeStoreImpl implements ReadableNodeStore {
             @NonNull final ReadableNodeStoreImpl nodeStore, @NonNull final LongUnaryOperator weightFunction) {
         final var rosterEntries = new ArrayList<RosterEntry>();
         for (final var nodeNumber : nodeStore.keys()) {
-            final var node = requireNonNull(nodeStore.get(nodeNumber.number()));
-            var nodeEndpoints = node.gossipEndpoint();
-            // we want to swap the internal and external node endpoints
-            // so that the external one is at index 0
-            if (nodeEndpoints.size() > 1) {
-                nodeEndpoints = List.of(nodeEndpoints.getLast(), nodeEndpoints.getFirst());
-            }
-            if (!node.deleted()) {
+            final var node = (nodeStore.get(nodeNumber.number()));
+            if (node != null) {
+                var nodeEndpoints = node.gossipEndpoint();
+                // we want to swap the internal and external node endpoints
+                // so that the external one is at index 0
+                if (nodeEndpoints.size() > 1) {
+                    nodeEndpoints = List.of(nodeEndpoints.getLast(), nodeEndpoints.getFirst());
+                }
                 final var entry = RosterEntry.newBuilder()
                         .nodeId(node.nodeId())
                         .weight(weightFunction.applyAsLong(node.nodeId()))
