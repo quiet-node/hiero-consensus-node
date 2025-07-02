@@ -432,6 +432,38 @@ public class VirtualMapStateTest extends MerkleTestBase {
                     .isInstanceOf(ClassCastException.class);
         }
 
+        @Test
+        @DisplayName("Checking the content of getInfoJson")
+        void testGetInfoJson() {
+            // adding k/v and singleton states directly to the virtual map
+            final var virtualMap = (VirtualMap) virtualMapState.getRoot();
+            addKvState(fruitVirtualMap, fruitMetadata, A_KEY, APPLE);
+            addKvState(fruitVirtualMap, fruitMetadata, B_KEY, BANANA);
+            addKvState(animalMerkleMap, animalMetadata, C_KEY, CUTTLEFISH);
+            addKvState(animalMerkleMap, animalMetadata, D_KEY, DOG);
+            addKvState(animalMerkleMap, animalMetadata, F_KEY, FOX);
+            addSingletonState(virtualMap, countryMetadata, GHANA);
+
+            // Given a State with the fruit and animal and country states
+            virtualMapState.initializeState(fruitMetadata);
+            virtualMapState.initializeState(animalMetadata);
+            virtualMapState.initializeState(countryMetadata);
+            virtualMapState.initializeState(steamMetadata);
+            // adding queue state via State API, to init the QueueState
+            final var writableStates = virtualMapState.getWritableStates(FIRST_SERVICE);
+            writableStates.getQueue(STEAM_STATE_KEY).add(ART);
+            ((CommittableWritableStates) writableStates).commit();
+
+            // Then we can check the content of getInfoJson
+            final String infoJson = virtualMapState.getInfoJson();
+            assertThat(infoJson)
+                    .isEqualTo("{" + "\"Queues (Queue States)\":"
+                            + "{\"First-Service.STEAM\":{\"head\":1,\"path\":14,\"tail\":3}},"
+                            + "\"VirtualMapMetadata\":{\"firstLeafPath\":8,\"lastLeafPath\":16},"
+                            + "\"Singletons\":"
+                            + "{\"First-Service.COUNTRY\":{\"path\":10,\"value\":\"Ghana\"}}}");
+        }
+
         private static void assertFruitState(ReadableKVState<ProtoBytes, String> fruitState) {
             assertThat(fruitState).isNotNull();
             assertThat(fruitState.get(A_KEY)).isSameAs(APPLE);

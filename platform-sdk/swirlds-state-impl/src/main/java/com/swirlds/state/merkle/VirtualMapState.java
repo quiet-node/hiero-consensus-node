@@ -7,6 +7,7 @@ import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.pbj.runtime.Codec;
+import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.Reservable;
@@ -846,6 +847,13 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                         final JSONObject singletonJson = new JSONObject();
                         singletonJson.put("hash", hash);
                         singletonJson.put("path", leafBytes.path());
+                        try {
+                            singletonJson.put(
+                                    "value", stateDefinition.valueCodec().parse(leafBytes.valueBytes()));
+                        } catch (ParseException e) {
+                            singletonJson.put("value", "ParseException: " + e.getMessage());
+                        }
+
                         singletons.put(StateUtils.computeLabel(serviceName, stateKey), singletonJson);
                     }
                 } else if (stateDefinition.queue()) {
