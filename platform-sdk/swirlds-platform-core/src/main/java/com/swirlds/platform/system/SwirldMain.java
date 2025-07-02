@@ -61,7 +61,7 @@ public interface SwirldMain<T extends MerkleNodeState> extends Runnable {
      *         - an instance of {@code HederaStateRoot}.
      *     </li>
      *     <li>A wrapper around the root node
-     *         - an instance of {@code HederaNewStateRoot}.
+     *         - an instance of {@code HederaVirtualMapState}.
      *     </li>
      * </ul>
      *

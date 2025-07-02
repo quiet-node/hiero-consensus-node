@@ -74,7 +74,7 @@ import org.json.JSONObject;
  */
 public abstract class VirtualMapState<T extends VirtualMapState<T>> implements State {
 
-    static final String LABEL = "state";
+    static final String VM_LABEL = "state";
 
     private static final Logger logger = LogManager.getLogger(VirtualMapState.class);
 
@@ -131,7 +131,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                 merkleDbConfig.hashesRamToDiskThreshold());
         dsBuilder = new MerkleDbDataSourceBuilder(tableConfig, configuration);
 
-        this.virtualMap = new VirtualMap(LABEL, dsBuilder, configuration);
+        this.virtualMap = new VirtualMap(VM_LABEL, dsBuilder, configuration);
         this.virtualMap.registerMetrics(metrics);
     }
 

@@ -415,7 +415,7 @@ public final class VirtualHasher {
     }
 
     /**
-     * Internal method calculating the hash of the tre in a given fork-join pool.
+     * Internal method calculating the hash of the tree in a given fork-join pool.
      *
      * @param hashReader
      * 		Return a {@link Hash} by path. Used when this method needs to look up clean nodes.

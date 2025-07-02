@@ -573,7 +573,6 @@ public class DefaultIssDetector implements IssDetector {
             writeSkippedLogCount(sb, skipCount);
 
             final String mnemonic = selfHash == null ? "null" : Mnemonics.generateMnemonic(selfHash);
-            ;
             final String stateJson = swirldStateManager.getConsensusState().getInfoJson();
             logger.fatal(EXCEPTION.getMarker(), new IssPayload(sb.toString(), round, mnemonic, "", true, stateJson));
         }

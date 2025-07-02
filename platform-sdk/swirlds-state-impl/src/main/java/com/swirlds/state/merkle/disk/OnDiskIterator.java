@@ -37,11 +37,11 @@ public class OnDiskIterator<K, V> extends BackedOnDiskIterator<K, V> {
             if (merkleNode instanceof VirtualLeafNode leaf) {
                 final Bytes k = leaf.getKey();
                 // Here we rely on the fact that `VirtualMapKey` has a single `OneOf` field.
-                // So, tge next field number is the key type
-                int nextNextStateId = readNextFieldNumber(k.toReadableSequentialData());
+                // So, the next field number is the key type
+                final int nextNextStateId = readNextFieldNumber(k.toReadableSequentialData());
                 if (stateId == nextNextStateId) {
                     try {
-                        VirtualMapKey parse = VirtualMapKey.PROTOBUF.parse(k);
+                        final VirtualMapKey parse = VirtualMapKey.PROTOBUF.parse(k);
                         this.next = parse.key().as();
                         return true;
                     } catch (final ParseException e) {
