@@ -688,9 +688,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
      * Removes the key/value pair denoted by the given key from the map. Has no effect
      * if the key didn't exist.
      *
-     * @param key The key to remove, must not be null
-     * @param valueCodec Value codec to decode the removed value. If the codec is null, this method
-     *                   always returns null
+     * @param key The key to remove, must not be null.
+     * @param valueCodec Value codec to decode the removed value.
      * @return The removed value. May return null if there was no value to remove or if the value was null.
      */
     public <V> V remove(@NonNull final Bytes key, @NonNull final Codec<V> valueCodec) {
@@ -1433,9 +1432,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             }
             logger.info(RECONNECT.getMarker(), "call postInit()");
             nodeRemover = null;
-            VirtualMapMetadata originalMapState = originalMap.getState();
             originalMap = null;
-            state = new VirtualMapMetadata(originalMapState.getLabel(), reconnectState.getSize());
+            state = new VirtualMapMetadata(reconnectState.getLabel(), reconnectState.getSize());
             postInit();
         } catch (ExecutionException e) {
             final var message = "VirtualMap@" + getRoute() + " failed to get hash during learner reconnect";

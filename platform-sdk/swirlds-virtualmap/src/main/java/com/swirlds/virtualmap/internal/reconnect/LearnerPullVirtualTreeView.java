@@ -96,13 +96,13 @@ public final class LearnerPullVirtualTreeView extends VirtualTreeViewBase implem
      *      A ReconnectMapStats object to collect reconnect metrics
      */
     public LearnerPullVirtualTreeView(
-            final ReconnectConfig reconnectConfig,
-            final VirtualMap map,
-            final RecordAccessor originalRecords,
-            final VirtualMapMetadata originalState,
-            final VirtualMapMetadata reconnectState,
-            final ReconnectNodeRemover nodeRemover,
-            final NodeTraversalOrder traversalOrder,
+            @NonNull final ReconnectConfig reconnectConfig,
+            @NonNull final VirtualMap map,
+            @NonNull final RecordAccessor originalRecords,
+            @NonNull final VirtualMapMetadata originalState,
+            @NonNull final VirtualMapMetadata reconnectState,
+            @NonNull final ReconnectNodeRemover nodeRemover,
+            @NonNull final NodeTraversalOrder traversalOrder,
             @NonNull final ReconnectMapStats mapStats) {
         super(map, originalState, reconnectState);
         this.reconnectConfig = reconnectConfig;

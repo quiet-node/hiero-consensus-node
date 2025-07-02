@@ -37,7 +37,7 @@ public interface MerkleNodeState extends State {
     /**
      * Initializes the defined service state.
      * Note: This method replaces the deprecated {@link #putServiceStateIfAbsent(StateMetadata, Supplier)} methods,
-     * which were specifically used with {@code MerkleStateRoot}. This method will be utilized instead with {@code NewStateRoot}.
+     * which were specifically used with {@code MerkleStateRoot}. This method will be utilized instead with {@code VirtualMapState}.
      *
      * @param md The metadata associated with the state.
      */

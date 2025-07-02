@@ -7,6 +7,7 @@ import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.FILESERV
 import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.SCHEDULESERVICE__SCHEDULES_BY_EQUALITY;
 import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.SINGLETON;
 import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.TOKENSERVICE__ALIASES;
+import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyDoesNotThrow;
 import static com.swirlds.state.lifecycle.StateMetadata.computeClassId;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForKv;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForSingleton;
@@ -27,6 +28,7 @@ import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
+import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
@@ -53,6 +55,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
@@ -455,6 +459,17 @@ public class MerkleTestBase extends StateTestBase {
         }
 
         MerkleDbTestUtils.assertAllDatabasesClosed();
+
+        assertEventuallyDoesNotThrow(
+                () -> {
+                    try {
+                        FileUtils.deleteDirectory(virtualDbPath);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                },
+                Duration.of(1, ChronoUnit.SECONDS),
+                "Unable to delete virtual map directory");
     }
 
     @AfterAll

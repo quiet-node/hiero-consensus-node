@@ -168,7 +168,7 @@ public final class SignedStateFileReader {
                     if (def.singleton() || def.onDisk()) {
                         try {
                             // Production case
-                            // Attempt to initialize the state if it is a NewStateRoot
+                            // Attempt to initialize the state if it is a VirtualMapState
                             state.initializeState(md);
                         } catch (UnsupportedOperationException e) {
                             // Non production case (testing tools)

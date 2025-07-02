@@ -685,7 +685,6 @@ public class SystemTransactions {
                     handleOutput.preferringBlockRecordSource());
             return handleOutput;
         } catch (final Exception e) {
-            e.printStackTrace();
             log.error("{} - exception thrown while handling system transaction", ALERT_MESSAGE, e);
             return failInvalidStreamItems(parentTxn, exchangeRateManager.exchangeRates(), streamMode, recordCache);
         }
