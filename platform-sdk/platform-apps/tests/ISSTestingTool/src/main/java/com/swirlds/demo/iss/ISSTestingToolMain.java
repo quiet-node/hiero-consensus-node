@@ -7,7 +7,6 @@ import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitialize
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
@@ -100,7 +99,7 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
      */
     @Override
     @NonNull
-    public ISSTestingToolState newStateRoot(Configuration platformConfig) {
+    public ISSTestingToolState newStateRoot() {
         final ISSTestingToolState state = new ISSTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;

@@ -358,7 +358,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
     /**
      * The state root supplier to use for creating a new state root.
      */
-    private final Function<Configuration, MerkleNodeState> stateRootSupplier;
+    private final Supplier<MerkleNodeState> stateRootSupplier;
 
     /**
      * The action to take, if any, when a consensus round is sealed.
@@ -448,7 +448,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
             @NonNull final BlockHashSignerFactory blockHashSignerFactory,
             @NonNull final Metrics metrics,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final Function<Configuration, MerkleNodeState> baseSupplier) {
+            @NonNull final Supplier<MerkleNodeState> baseSupplier) {
         requireNonNull(registryFactory);
         requireNonNull(constructableRegistry);
         requireNonNull(hintsServiceFactory);
@@ -546,8 +546,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
         try {
             consensusStateEventHandler = new ConsensusStateEventHandlerImpl(this);
             final var blockStreamsEnabled = isBlockStreamEnabled();
-            stateRootSupplier =
-                    blockStreamsEnabled ? (config) -> withListeners(baseSupplier.apply(config)) : baseSupplier;
+            stateRootSupplier = blockStreamsEnabled ? () -> withListeners(baseSupplier.get()) : baseSupplier;
             onSealConsensusRound = blockStreamsEnabled ? this::manageBlockEndRound : (round, state) -> true;
             // And the factory for the MerkleStateRoot class id must be ours
             constructableRegistry.registerConstructable(
@@ -581,8 +580,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      */
     @Override
     @NonNull
-    public MerkleNodeState newStateRoot(Configuration platformConfig) {
-        return stateRootSupplier.apply(platformConfig);
+    public MerkleNodeState newStateRoot() {
+        return stateRootSupplier.get();
     }
 
     /**
@@ -708,7 +707,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
 
     /**
      * Invoked by the platform when the state should be initialized. This happens <b>BEFORE</b>
-     * {@link SwirldMain#init(Platform, NodeId)} and after {@link #newStateRoot(Configuration)}.
+     * {@link SwirldMain#init(Platform, NodeId)} and after {@link SwirldMain#newStateRoot()}.
      */
     @SuppressWarnings("java:S1181") // catching Throwable instead of Exception when we do a direct System.exit()
     public void onStateInitialized(
@@ -806,7 +805,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * {@inheritDoc}
      *
      * <p>Called <b>AFTER</b> init and migrate have been called on the state (either the new state created from
-     * {@link #newStateRoot(Configuration)} or an instance of {@link MerkleNodeState} created by the platform and
+     * {@link SwirldMain#newStateRoot()} or an instance of {@link MerkleNodeState} created by the platform and
      * loaded from the saved state).
      *
      * <p>(FUTURE) Consider moving this initialization into {@link #onStateInitialized(MerkleNodeState, Platform, InitTrigger)}

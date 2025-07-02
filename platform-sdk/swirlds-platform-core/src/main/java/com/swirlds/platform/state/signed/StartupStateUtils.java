@@ -71,7 +71,7 @@ public final class StartupStateUtils {
     public static HashedReservedSignedState getInitialState(
             @NonNull final RecycleBin recycleBin,
             @NonNull final SemanticVersion softwareVersion,
-            @NonNull final Function<Configuration, MerkleNodeState> genesisStateBuilder,
+            @NonNull final Supplier<MerkleNodeState> genesisStateBuilder,
             @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction,
             @NonNull final String mainClassName,
             @NonNull final String swirldName,
@@ -110,11 +110,7 @@ public final class StartupStateUtils {
         }
 
         final ReservedSignedState genesisState = buildGenesisState(
-                configAddressBook,
-                softwareVersion,
-                genesisStateBuilder.apply(platformContext.getConfiguration()),
-                platformStateFacade,
-                platformContext);
+                configAddressBook, softwareVersion, genesisStateBuilder.get(), platformStateFacade, platformContext);
 
         try (genesisState) {
             return copyInitialSignedState(genesisState.get(), platformStateFacade, platformContext);

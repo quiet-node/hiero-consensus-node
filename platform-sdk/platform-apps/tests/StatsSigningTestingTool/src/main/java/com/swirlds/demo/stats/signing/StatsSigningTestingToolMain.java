@@ -26,7 +26,6 @@ import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.common.threading.framework.StoppableThread;
 import com.swirlds.common.threading.framework.config.StoppableThreadConfiguration;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
-import com.swirlds.config.api.Configuration;
 import com.swirlds.demo.stats.signing.algorithms.ECSecP256K1Algorithm;
 import com.swirlds.demo.stats.signing.algorithms.X25519SigningAlgorithm;
 import com.swirlds.metrics.api.Metrics;
@@ -289,7 +288,7 @@ public class StatsSigningTestingToolMain implements SwirldMain<StatsSigningTesti
 
     @Override
     @NonNull
-    public StatsSigningTestingToolState newStateRoot(Configuration platformConfig) {
+    public StatsSigningTestingToolState newStateRoot() {
         final StatsSigningTestingToolState state = new StatsSigningTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;

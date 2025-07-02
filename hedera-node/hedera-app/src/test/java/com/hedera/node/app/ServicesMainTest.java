@@ -13,7 +13,6 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.config.legacy.ConfigurationException;
 import com.swirlds.platform.config.legacy.LegacyConfigProperties;
@@ -91,9 +90,8 @@ final class ServicesMainTest {
     @Test
     void createsNewStateRoot() {
         ServicesMain.initGlobal(hedera, metrics);
-        Configuration configurationMock = mock(Configuration.class);
-        given(hedera.newStateRoot(configurationMock)).willReturn(state);
-        assertSame(state, subject.newStateRoot(configurationMock));
+        given(hedera.newStateRoot()).willReturn(state);
+        assertSame(state, subject.newStateRoot());
     }
 
     @Test

@@ -40,7 +40,6 @@ import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.common.utility.StopWatch;
-import com.swirlds.config.api.Configuration;
 import com.swirlds.demo.merkle.map.FCMConfig;
 import com.swirlds.demo.merkle.map.MapValueData;
 import com.swirlds.demo.merkle.map.MapValueFCQ;
@@ -860,7 +859,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
      */
     @Override
     @NonNull
-    public PlatformTestingToolState newStateRoot(Configuration platformConfig) {
+    public PlatformTestingToolState newStateRoot() {
         final PlatformTestingToolState state = new PlatformTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
