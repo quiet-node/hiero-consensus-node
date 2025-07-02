@@ -7,11 +7,15 @@ import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.setupG
 import static com.swirlds.platform.state.signed.StartupStateUtils.loadInitialState;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.fail;
+import static org.hiero.otter.fixtures.internal.AbstractNode.LifeCycle.DESTROYED;
+import static org.hiero.otter.fixtures.internal.AbstractNode.LifeCycle.INIT;
+import static org.hiero.otter.fixtures.internal.AbstractNode.LifeCycle.RUNNING;
+import static org.hiero.otter.fixtures.internal.AbstractNode.LifeCycle.SHUTDOWN;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.APP_NAME;
 import static org.hiero.otter.fixtures.turtle.TurtleTestEnvironment.SWIRLD_NAME;
 
-import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.platform.state.NodeId;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
@@ -31,8 +35,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.system.Platform;
-import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedGossip;
-import com.swirlds.platform.test.fixtures.turtle.gossip.SimulatedNetwork;
 import com.swirlds.platform.util.RandomBuilder;
 import com.swirlds.platform.wiring.PlatformWiring;
 import com.swirlds.state.State;
@@ -41,48 +43,36 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
+import java.util.Set;
 import org.apache.logging.log4j.ThreadContext;
 import org.hiero.consensus.model.node.KeysAndCerts;
-import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
-import org.hiero.consensus.roster.ReadableRosterStore;
-import org.hiero.consensus.roster.ReadableRosterStoreImpl;
 import org.hiero.consensus.roster.RosterHistory;
-import org.hiero.consensus.roster.RosterStateId;
 import org.hiero.consensus.roster.RosterUtils;
 import org.hiero.otter.fixtures.AsyncNodeActions;
 import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.NodeConfiguration;
+import org.hiero.otter.fixtures.internal.AbstractNode;
 import org.hiero.otter.fixtures.internal.result.NodeResultsCollector;
 import org.hiero.otter.fixtures.internal.result.SingleNodeLogResultImpl;
 import org.hiero.otter.fixtures.internal.result.SingleNodePcesResultImpl;
-import org.hiero.otter.fixtures.logging.StructuredLog;
-import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
 import org.hiero.otter.fixtures.result.SingleNodePcesResult;
-import org.hiero.otter.fixtures.result.SingleNodeStatusProgression;
+import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResults;
 import org.hiero.otter.fixtures.turtle.app.TurtleApp;
 import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
+import org.hiero.otter.fixtures.turtle.gossip.SimulatedGossip;
+import org.hiero.otter.fixtures.turtle.gossip.SimulatedNetwork;
 
 /**
  * A node in the turtle network.
  *
  * <p>This class implements the {@link Node} interface and provides methods to control the state of the node.
  */
-public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
+public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     public static final String THREAD_CONTEXT_NODE_ID = "nodeId";
-
-    private enum LifeCycle {
-        INIT,
-        STARTED,
-        SHUTDOWN,
-        DESTROYED
-    }
-
-    private final NodeId selfId;
 
     private final Randotron randotron;
     private final Time time;
@@ -96,8 +86,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     private final AsyncNodeActions asyncNodeActions = new TurtleAcyncNodeActions();
 
     private PlatformContext platformContext;
-    private LifeCycle lifeCycle = LifeCycle.INIT;
-    private SemanticVersion version = Node.DEFAULT_VERSION;
 
     @Nullable
     private DeterministicWiringModel model;
@@ -107,9 +95,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
 
     @Nullable
     private PlatformWiring platformWiring;
-
-    @Nullable
-    private PlatformStatus platformStatus;
 
     /**
      * Constructor of {@link TurtleNode}.
@@ -131,13 +116,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
             @NonNull final SimulatedNetwork network,
             @NonNull final TurtleLogging logging,
             @NonNull final Path outputDirectory) {
+        super(selfId);
         logging.addNodeLogging(selfId, outputDirectory);
         try {
-            ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
+            ThreadContext.put(THREAD_CONTEXT_NODE_ID, this.selfId.toString());
 
             this.randotron = requireNonNull(randotron);
             this.time = requireNonNull(time);
-            this.selfId = requireNonNull(selfId);
             this.roster = requireNonNull(roster);
             this.keysAndCerts = requireNonNull(keysAndCerts);
             this.network = requireNonNull(network);
@@ -159,55 +144,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * {@inheritDoc}
      */
     @Override
-    @Nullable
-    public PlatformStatus platformStatus() {
-        return platformStatus;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @NonNull
-    public NodeId getSelfId() {
-        return selfId;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    @NonNull
-    public SemanticVersion getVersion() {
-        return version;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setVersion(@NonNull final SemanticVersion version) {
-        this.version = requireNonNull(version);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void bumpConfigVersion() {
-        int newBuildNumber;
-        try {
-            newBuildNumber = Integer.parseInt(version.build()) + 1;
-        } catch (final NumberFormatException e) {
-            newBuildNumber = 1;
-        }
-        this.version = this.version.copyBuilder().build("" + newBuildNumber).build();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void killImmediately() throws InterruptedException {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
@@ -223,30 +159,12 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      * {@inheritDoc}
      */
     @Override
-    public void shutdownGracefully() throws InterruptedException {
-        try {
-            ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
-
-            if (platformWiring != null) {
-                platformWiring.flushIntakePipeline();
-            }
-            doShutdownNode();
-
-        } finally {
-            ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void start() {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
-            checkLifeCycle(LifeCycle.STARTED, "Node has already been started.");
-            checkLifeCycle(LifeCycle.DESTROYED, "Node has already been destroyed.");
+            throwIfIn(RUNNING, "Node has already been started.");
+            throwIfIn(DESTROYED, "Node has already been destroyed.");
 
             // Start node from current state
             doStartNode();
@@ -272,9 +190,9 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
-            checkLifeCycle(LifeCycle.INIT, "Node has not been started yet.");
-            checkLifeCycle(LifeCycle.SHUTDOWN, "Node has been shut down.");
-            checkLifeCycle(LifeCycle.DESTROYED, "Node has been destroyed.");
+            throwIfIn(INIT, "Node has not been started yet.");
+            throwIfIn(SHUTDOWN, "Node has been shut down.");
+            throwIfIn(DESTROYED, "Node has been destroyed.");
             assert platform != null; // platform must be initialized if lifeCycle is STARTED
 
             platform.createTransaction(transaction);
@@ -289,7 +207,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      */
     @Override
     @NonNull
-    public NodeConfiguration getConfiguration() {
+    public NodeConfiguration configuration() {
         return nodeConfiguration;
     }
 
@@ -308,8 +226,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @NonNull
     @Override
     public SingleNodeLogResult getLogResult() {
-        final List<StructuredLog> logs = InMemoryAppender.getLogs(selfId.id());
-        return new SingleNodeLogResultImpl(selfId, logs);
+        return new SingleNodeLogResultImpl(selfId, Set.of());
     }
 
     /**
@@ -317,7 +234,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      */
     @Override
     @NonNull
-    public SingleNodeStatusProgression getStatusProgression() {
+    public SingleNodePlatformStatusResults getPlatformStatusResults() {
         return resultsCollector.getStatusProgression();
     }
 
@@ -327,7 +244,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
     @Override
     @NonNull
     public SingleNodePcesResult getPcesResult() {
-        return new SingleNodePcesResultImpl(selfId, platformContext);
+        return new SingleNodePcesResultImpl(selfId(), platformContext);
     }
 
     /**
@@ -335,7 +252,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      */
     @Override
     public void tick(@NonNull final Instant now) {
-        if (lifeCycle == LifeCycle.STARTED) {
+        if (lifeCycle == RUNNING) {
             assert model != null; // model must be initialized if lifeCycle is STARTED
             try {
                 ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
@@ -352,13 +269,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
      *
      * @throws InterruptedException if the thread is interrupted while the node is being destroyed
      */
-    public void destroy() throws InterruptedException {
+    void destroy() throws InterruptedException {
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, selfId.toString());
 
             resultsCollector.destroy();
             doShutdownNode();
-            lifeCycle = LifeCycle.DESTROYED;
+            lifeCycle = DESTROYED;
 
             logging.removeNodeLogging(selfId);
 
@@ -367,38 +284,31 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         }
     }
 
-    private void checkLifeCycle(@NonNull final LifeCycle expected, @NonNull final String message) {
-        if (lifeCycle == expected) {
-            throw new IllegalStateException(message);
-        }
-    }
-
     private void doShutdownNode() throws InterruptedException {
-        if (lifeCycle == LifeCycle.STARTED) {
+        if (lifeCycle == RUNNING) {
             assert platform != null; // platform must be initialized if lifeCycle is STARTED
-            assert platformWiring != null; // platformWiring must be initialized if lifeCycle is STARTED
-            getMetricsProvider().removePlatformMetrics(platform.getSelfId());
-            platformWiring.stop();
-            platform.getNotificationEngine().unregisterAll();
+            platform.destroy();
             platformStatus = null;
             platform = null;
             platformWiring = null;
             model = null;
         }
-        lifeCycle = LifeCycle.SHUTDOWN;
+        lifeCycle = SHUTDOWN;
     }
 
     private void doStartNode() {
 
         final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
+        final org.hiero.consensus.model.node.NodeId legacyNodeId =
+                org.hiero.consensus.model.node.NodeId.of(selfId.id());
 
         setupGlobalMetrics(currentConfiguration);
 
         final PlatformStateFacade platformStateFacade = new PlatformStateFacade();
-        final Metrics metrics = getMetricsProvider().createPlatformMetrics(selfId);
+        final Metrics metrics = getMetricsProvider().createPlatformMetrics(legacyNodeId);
         final FileSystemManager fileSystemManager = FileSystemManager.create(currentConfiguration);
         final RecycleBin recycleBin = RecycleBin.create(
-                metrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, selfId);
+                metrics, currentConfiguration, getStaticThreadManager(), time, fileSystemManager, legacyNodeId);
 
         platformContext = TestPlatformContextBuilder.create()
                 .withTime(time)
@@ -420,15 +330,13 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                         currentConfiguration, platformContext.getFileSystemManager(), roster, version),
                 APP_NAME,
                 SWIRLD_NAME,
-                selfId,
+                legacyNodeId,
                 platformStateFacade,
                 platformContext);
         final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
-        final ReadableRosterStore rosterStore =
-                new ReadableRosterStoreImpl(state.getReadableStates(RosterStateId.NAME));
-        final RosterHistory rosterHistory = RosterUtils.createRosterHistory(rosterStore);
+        final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state);
         final String eventStreamLoc = selfId.toString();
 
         final PlatformBuilder platformBuilder = PlatformBuilder.create(
@@ -437,7 +345,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
                         version,
                         initialState,
                         TurtleApp.INSTANCE,
-                        selfId,
+                        legacyNodeId,
                         eventStreamLoc,
                         rosterHistory,
                         platformStateFacade)
@@ -452,10 +360,12 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         final PlatformComponentBuilder platformComponentBuilder = platformBuilder.buildComponentBuilder();
         final PlatformBuildingBlocks platformBuildingBlocks = platformComponentBuilder.getBuildingBlocks();
 
-        final SimulatedGossip gossip = network.getGossipInstance(selfId);
+        final SimulatedGossip gossip = network.getGossipInstance(legacyNodeId);
         gossip.provideIntakeEventCounter(platformBuildingBlocks.intakeEventCounter());
 
-        platformComponentBuilder.withMetricsDocumentationEnabled(false).withGossip(network.getGossipInstance(selfId));
+        platformComponentBuilder
+                .withMetricsDocumentationEnabled(false)
+                .withGossip(network.getGossipInstance(legacyNodeId));
 
         platformWiring = platformBuildingBlocks.platformWiring();
 
@@ -468,7 +378,7 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         platform.getNotificationEngine().register(PlatformStatusChangeListener.class, platformStatusChangeListener);
         platform.start();
 
-        lifeCycle = LifeCycle.STARTED;
+        lifeCycle = RUNNING;
     }
 
     /**
@@ -482,14 +392,6 @@ public class TurtleNode implements Node, TurtleTimeManager.TimeTickReceiver {
         @Override
         public void killImmediately() throws InterruptedException {
             TurtleNode.this.killImmediately();
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void shutdownGracefully() throws InterruptedException {
-            TurtleNode.this.shutdownGracefully();
         }
 
         /**

@@ -19,6 +19,7 @@ import com.swirlds.common.test.fixtures.merkle.util.MerkleTestUtils;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.virtual.merkle.TestKey;
 import com.swirlds.virtual.merkle.TestKeySerializer;
 import com.swirlds.virtual.merkle.TestValue;
@@ -37,6 +38,7 @@ import java.util.function.Function;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -228,5 +230,11 @@ public class VirtualMapReconnectTestBase {
             brokenTeacherTree.release();
             copy.release();
         }
+    }
+
+    @AfterEach
+    public void tearDown() {
+        BrokenBuilder.closeDatasourceCopies();
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 }
