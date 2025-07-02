@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.virtualmap.internal.hash;
 
-import com.hedera.pbj.runtime.ProtoWriterTools;
-import com.hedera.pbj.runtime.io.WritableSequentialData;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import com.swirlds.virtualmap.internal.Path;
@@ -12,7 +9,8 @@ import com.swirlds.virtualmap.test.fixtures.TestKey;
 import com.swirlds.virtualmap.test.fixtures.TestValue;
 import com.swirlds.virtualmap.test.fixtures.TestValueCodec;
 import com.swirlds.virtualmap.test.fixtures.VirtualTestBase;
-import java.io.ByteArrayOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,14 +19,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.hiero.base.crypto.Cryptography;
-import org.hiero.base.crypto.DigestType;
 import org.hiero.base.crypto.Hash;
-import org.hiero.base.crypto.HashBuilder;
 import org.junit.jupiter.params.provider.Arguments;
 
 public class VirtualHasherTestBase extends VirtualTestBase {
-
-    private static final HashBuilder HASH_BUILDER = new HashBuilder(Cryptography.DEFAULT_DIGEST_TYPE);
 
     /**
      * Helper method for computing a list of {@link Arguments} of length {@code num}, each of which contains
@@ -65,11 +59,11 @@ public class VirtualHasherTestBase extends VirtualTestBase {
         return args;
     }
 
-    protected static Hash hashTree(final TestDataSource ds) {
-        final HashBuilder hashBuilder = new HashBuilder(DigestType.SHA_384);
+    protected static Hash hashTree(final TestDataSource ds) throws NoSuchAlgorithmException {
+        final MessageDigest md = MessageDigest.getInstance(Cryptography.DEFAULT_DIGEST_TYPE.algorithmName());
         final VirtualHashRecord root = ds.getInternal(Path.ROOT_PATH);
         assert root != null;
-        return hashSubTree(ds, hashBuilder, root).hash();
+        return hashSubTree(ds, md, root).hash();
     }
 
     protected static List<VirtualLeafBytes> invalidateNodes(final TestDataSource ds, final Stream<Long> dirtyPaths) {
@@ -93,13 +87,13 @@ public class VirtualHasherTestBase extends VirtualTestBase {
     }
 
     protected static VirtualHashRecord hashSubTree(
-            final TestDataSource ds, final HashBuilder hashBuilder, final VirtualHashRecord internalNode) {
+            final TestDataSource ds, final MessageDigest md, final VirtualHashRecord internalNode) {
         final long leftChildPath = Path.getLeftChildPath(internalNode.path());
         VirtualHashRecord leftChild = ds.getInternal(leftChildPath);
         assert leftChild != null;
         final Hash leftHash;
         if (leftChildPath < ds.firstLeafPath) {
-            leftChild = hashSubTree(ds, hashBuilder, leftChild);
+            leftChild = hashSubTree(ds, md, leftChild);
         }
         leftHash = leftChild.hash();
 
@@ -108,15 +102,17 @@ public class VirtualHasherTestBase extends VirtualTestBase {
         Hash rightHash = Cryptography.NULL_HASH;
         if (rightChild != null) {
             if (rightChildPath < ds.firstLeafPath) {
-                rightChild = hashSubTree(ds, hashBuilder, rightChild);
+                rightChild = hashSubTree(ds, md, rightChild);
             }
             rightHash = rightChild.hash();
         }
 
-        hashBuilder.reset();
-        hashBuilder.update(leftHash);
-        hashBuilder.update(rightHash);
-        VirtualHashRecord record = new VirtualHashRecord(internalNode.path(), hashBuilder.build());
+        md.reset();
+        md.update((byte) 0x0F);
+        leftHash.getBytes().writeTo(md);
+        rightHash.getBytes().writeTo(md);
+        final Hash hash = new Hash(md.digest(), Cryptography.DEFAULT_DIGEST_TYPE);
+        VirtualHashRecord record = new VirtualHashRecord(internalNode.path(), hash);
         ds.setInternal(record);
         return record;
     }
@@ -160,16 +156,7 @@ public class VirtualHasherTestBase extends VirtualTestBase {
                 } else {
                     final VirtualLeafBytes<TestValue> leaf = getLeaf(path);
                     assert leaf != null;
-                    // HASH_BUILDER is not thread safe
-                    synchronized (HASH_BUILDER) {
-                        final ByteArrayOutputStream bb = new ByteArrayOutputStream();
-                        final WritableSequentialData out = new WritableStreamingData(bb);
-                        ProtoWriterTools.writeDelimited(out, VirtualLeafBytes.FIELD_LEAFRECORD_KEY, (int) leaf.keyBytes().length(), leaf.keyBytes()::writeTo);
-                        ProtoWriterTools.writeDelimited(out, VirtualLeafBytes.FIELD_LEAFRECORD_VALUE, (int) leaf.valueBytes().length(), leaf.valueBytes()::writeTo);
-                        HASH_BUILDER.reset();
-                        HASH_BUILDER.update(bb.toByteArray());
-                        hash = HASH_BUILDER.build();
-                    }
+                    hash = hash(leaf);
                 }
                 rec = new VirtualHashRecord(path, hash);
             }

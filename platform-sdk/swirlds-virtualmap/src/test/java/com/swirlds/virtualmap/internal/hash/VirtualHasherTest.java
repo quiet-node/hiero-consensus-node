@@ -143,7 +143,8 @@ class VirtualHasherTest extends VirtualHasherTestBase {
     @MethodSource("hashingPermutations")
     @Tag(TestComponentTags.VMAP)
     @DisplayName("Test various dirty nodes in a tree")
-    void hashingPermutations(final long firstLeafPath, final long lastLeafPath, final List<Long> dirtyPaths) {
+    void hashingPermutations(final long firstLeafPath, final long lastLeafPath, final List<Long> dirtyPaths)
+            throws Exception {
         final TestDataSource ds = new TestDataSource(firstLeafPath, lastLeafPath);
         final HashingListener listener = new HashingListener();
         final VirtualHasher hasher = new VirtualHasher();
@@ -294,7 +295,7 @@ class VirtualHasherTest extends VirtualHasherTestBase {
     @Test
     @Tag(TestComponentTags.VMAP)
     @DisplayName("Test the same situation over and over and over")
-    void repeatedTest() {
+    void repeatedTest() throws Exception {
         final long firstLeafPath = 52L;
         final long lastLeafPath = firstLeafPath * 2;
         final TestDataSource ds = new TestDataSource(firstLeafPath, lastLeafPath);
@@ -321,7 +322,7 @@ class VirtualHasherTest extends VirtualHasherTestBase {
     @Test
     @Tag(TestComponentTags.VMAP)
     @DisplayName("Verify methods on the listener are called at the right frequency")
-    void listenerCallCounts() {
+    void listenerCallCounts() throws Exception {
         final long firstLeafPath = 52L;
         final long lastLeafPath = firstLeafPath * 2;
         final TestDataSource ds = new TestDataSource(firstLeafPath, lastLeafPath);

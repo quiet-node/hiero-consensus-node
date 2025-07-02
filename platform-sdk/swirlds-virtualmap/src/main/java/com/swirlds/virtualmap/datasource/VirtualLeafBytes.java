@@ -17,8 +17,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.Objects;
-import org.hiero.base.crypto.Hash;
-import org.hiero.base.crypto.HashBuilder;
 
 /**
  * Virtual leaf record bytes.
@@ -238,25 +236,28 @@ public class VirtualLeafBytes<V> {
                 : "pos=" + pos + ", out.position()=" + out.position() + ", size=" + getSizeInBytes();
     }
 
-    private static final ThreadLocal<byte[]> FIELD_BYTES_BOUT = ThreadLocal.withInitial(() -> new byte[256]);
-
-    public Hash hash(final HashBuilder builder) {
-        builder.reset();
+    public int getSizeInBytesForHashing() {
+        int len = 0;
         final Bytes kb = keyBytes();
+        len += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length()));
         final Bytes vb = valueBytes();
-        final int len = ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length())) +
-                ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()));
-        byte[] arr = FIELD_BYTES_BOUT.get();
-        if (arr.length < len) {
-            arr = new byte[len];
-            FIELD_BYTES_BOUT.set(arr);
+        if (vb != null) {
+            len += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()));
         }
-        final BufferedData out = BufferedData.wrap(arr);
+        return len;
+    }
+
+    // Output size must be at least getSizeInBytesForHashing()
+    public void writeToForHashing(final BufferedData out) {
+        out.reset();
+        assert out.remaining() >= getSizeInBytesForHashing();
+        final Bytes kb = keyBytes();
         ProtoWriterTools.writeDelimited(out, FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length()), kb::writeTo);
-        ProtoWriterTools.writeDelimited(out, FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()), vb::writeTo);
-        assert out.position() == len;
-        builder.update(arr, 0, len);
-        return builder.build();
+        final Bytes vb = valueBytes();
+        if (vb != null) {
+            ProtoWriterTools.writeDelimited(out, FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()), vb::writeTo);
+        }
+        assert out.position() == getSizeInBytesForHashing();
     }
 
     @Override
