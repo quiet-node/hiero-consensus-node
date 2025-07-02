@@ -17,8 +17,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.Objects;
-import org.hiero.base.crypto.Hash;
-import org.hiero.base.crypto.HashBuilder;
 
 /**
  * Virtual leaf record bytes.
@@ -238,11 +236,30 @@ public class VirtualLeafBytes<V> {
                 : "pos=" + pos + ", out.position()=" + out.position() + ", size=" + getSizeInBytes();
     }
 
-    public Hash hash(final HashBuilder builder) {
-        builder.reset();
-        builder.update(keyBytes);
-        builder.update(valueBytes());
-        return builder.build();
+    public int getSizeInBytesForHashing() {
+        int len = 0;
+        len += 1; // 0x00 prefix
+        final Bytes kb = keyBytes();
+        len += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length()));
+        final Bytes vb = valueBytes();
+        if (vb != null) {
+            len += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()));
+        }
+        return len;
+    }
+
+    // Output size must be at least getSizeInBytesForHashing()
+    public void writeToForHashing(final BufferedData out) {
+        out.reset();
+        assert out.remaining() >= getSizeInBytesForHashing();
+        out.writeByte((byte) 0x00);
+        final Bytes kb = keyBytes();
+        ProtoWriterTools.writeDelimited(out, FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length()), kb::writeTo);
+        final Bytes vb = valueBytes();
+        if (vb != null) {
+            ProtoWriterTools.writeDelimited(out, FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()), vb::writeTo);
+        }
+        assert out.position() == getSizeInBytesForHashing();
     }
 
     @Override

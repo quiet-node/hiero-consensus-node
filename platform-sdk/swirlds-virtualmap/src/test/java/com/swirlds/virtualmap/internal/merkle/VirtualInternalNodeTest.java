@@ -151,7 +151,7 @@ class VirtualInternalNodeTest extends VirtualTestBase {
                 new VirtualLeafBytes<>(10, F_KEY, FIG, TestValueCodec.INSTANCE),
                 new VirtualLeafBytes<>(11, G_KEY, GRAPE, TestValueCodec.INSTANCE),
                 new VirtualLeafBytes<>(12, B_KEY, BANANA, TestValueCodec.INSTANCE));
-        map.getDataSource().saveRecords(6, 12, leaves.stream().map(this::hash), leaves.stream(), Stream.empty());
+        map.getDataSource().saveRecords(6, 12, leaves.stream().map(this::hashRecord), leaves.stream(), Stream.empty());
 
         VirtualHashRecord virtualHashRecord = new VirtualHashRecord(2, null);
         VirtualInternalNode internalNode = new VirtualInternalNode(map, virtualHashRecord);
