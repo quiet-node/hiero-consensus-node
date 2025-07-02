@@ -236,7 +236,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         if (connectionState.get() == ConnectionState.ACTIVE) {
             logger.debug("[{}] Performing scheduled stream reset", this);
             endTheStreamWith(EndStream.Code.RESET);
-            restartStreamAtBlock(blockBufferService.getLastBlockNumberProduced());
+            restartStreamAtBlock(blockBufferService.getLowestUnackedBlockNumber());
         }
     }
 
@@ -561,7 +561,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param blockNumber the block number to restart at
      */
     private void restartStreamAtBlock(final long blockNumber) {
-        logger.debug("[{}] Scheduling stream restart at block {}}", this, blockNumber);
+        logger.debug("[{}] Scheduling stream restart at block {}", this, blockNumber);
         blockNodeConnectionManager.scheduleConnectionAttempt(
                 this, BlockNodeConnectionManager.INITIAL_RETRY_DELAY, blockNumber);
     }
