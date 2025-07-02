@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 module com.hedera.state.validator {
-    requires com.github.spotbugs.annotations;
     requires com.hedera.node.app.hapi.utils;
     requires com.hedera.node.app.service.addressbook.impl;
     requires com.hedera.node.app.service.consensus.impl;
@@ -31,6 +30,7 @@ module com.hedera.state.validator {
     requires org.hiero.base.utility;
     requires org.hiero.consensus.utility;
     requires com.fasterxml.jackson.databind;
+    requires com.github.spotbugs.annotations;
     requires com.google.gson;
     requires info.picocli;
     requires org.apache.logging.log4j;
