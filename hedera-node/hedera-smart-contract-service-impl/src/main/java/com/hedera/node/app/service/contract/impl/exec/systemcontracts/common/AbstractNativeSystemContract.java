@@ -14,6 +14,8 @@ import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.pr
 import static com.hedera.node.app.service.contract.impl.utils.ConversionUtils.tuweniToPbjBytes;
 import static com.hedera.node.app.service.contract.impl.utils.SystemContractUtils.contractFunctionResultFailedFor;
 import static com.hedera.node.app.service.contract.impl.utils.SystemContractUtils.successResultOf;
+import static com.hedera.node.app.service.contract.impl.utils.SystemContractUtils.txResultFailedFor;
+import static com.hedera.node.app.service.contract.impl.utils.SystemContractUtils.txSuccessResultOf;
 import static com.hedera.node.app.spi.workflows.HandleException.validateTrue;
 import static java.util.Objects.requireNonNull;
 import static org.hyperledger.besu.evm.frame.ExceptionalHaltReason.INVALID_OPERATION;
@@ -131,11 +133,18 @@ public abstract class AbstractNativeSystemContract extends AbstractFullContract 
             if (dispatchedRecordBuilder != null) {
                 if (insufficientGas) {
                     dispatchedRecordBuilder.status(INSUFFICIENT_GAS);
-                    dispatchedRecordBuilder.contractCallResult(pricedResult.asResultOfInsufficientGasRemaining(
-                            attempt.senderId(), contractID, tuweniToPbjBytes(input), frame.getRemainingGas()));
+                    final var callData = tuweniToPbjBytes(input);
+                    dispatchedRecordBuilder
+                            .contractCallResult(pricedResult.asResultOfInsufficientGasRemaining(
+                                    attempt.senderId(), contractID, callData, frame.getRemainingGas()))
+                            .evmCallTransactionResult(pricedResult.txAsResultOfInsufficientGasRemaining(
+                                    attempt.senderId(), contractID, callData, frame.getRemainingGas()));
                 } else {
-                    dispatchedRecordBuilder.contractCallResult(pricedResult.asResultOfCall(
-                            attempt.senderId(), contractID, tuweniToPbjBytes(input), frame.getRemainingGas()));
+                    dispatchedRecordBuilder
+                            .contractCallResult(pricedResult.asResultOfCall(
+                                    attempt.senderId(), contractID, tuweniToPbjBytes(input), frame.getRemainingGas()))
+                            .evmCallTransactionResult(pricedResult.txAsResultOfCall(
+                                    attempt.senderId(), contractID, tuweniToPbjBytes(input), frame.getRemainingGas()));
                 }
             } else if (pricedResult.isViewCall()) {
                 final var proxyWorldUpdater = proxyUpdaterFor(frame);
@@ -154,7 +163,12 @@ public abstract class AbstractNativeSystemContract extends AbstractFullContract 
                                     pricedResult.responseCode(),
                                     enhancement
                                             .systemOperations()
-                                            .syntheticTransactionForNativeCall(input, contractID, true));
+                                            .syntheticTransactionForNativeCall(input, contractID, true),
+                                    txSuccessResultOf(
+                                            attempt.senderId(),
+                                            pricedResult.fullResult(),
+                                            frame,
+                                            !call.allowsStaticFrame()));
                 } else {
                     externalizeFailure(
                             gasRequirement,
@@ -207,7 +221,8 @@ public abstract class AbstractNativeSystemContract extends AbstractFullContract 
                         contractFunctionResultFailedFor(
                                 attempt.senderId(), output, gasRequirement, status.toString(), contractID),
                         status,
-                        enhancement.systemOperations().syntheticTransactionForNativeCall(input, contractID, true));
+                        enhancement.systemOperations().syntheticTransactionForNativeCall(input, contractID, true),
+                        txResultFailedFor(attempt.senderId(), output, gasRequirement, status.toString(), contractID));
     }
 
     // potentially other cases could be handled here if necessary

@@ -67,7 +67,6 @@ import com.hedera.node.app.spi.workflows.DispatchOptions;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.ResourceExhaustedException;
-import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.UncheckedParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -87,9 +86,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class HandleHederaOperationsTest {
     @Mock
     private TokenServiceApi tokenServiceApi;
-
-    @Mock
-    private StreamBuilder streamBuilder;
 
     @Mock
     private BlockRecordInfo blockRecordInfo;
@@ -344,6 +340,8 @@ class HandleHederaOperationsTest {
         given(storeFactory.readableStore(ReadableAccountStore.class)).willReturn(accountStore);
         given(accountStore.getAccountById(NON_SYSTEM_ACCOUNT_ID)).willReturn(parent);
         given(context.payer()).willReturn(A_NEW_ACCOUNT_ID);
+        given(contractCreateRecordBuilder.createdEvmAddress(any())).willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.evmCreateTransactionResult(any())).willReturn(contractCreateRecordBuilder);
 
         subject.createContract(666L, NON_SYSTEM_ACCOUNT_ID.accountNumOrThrow(), CANONICAL_ALIAS);
 
@@ -410,6 +408,8 @@ class HandleHederaOperationsTest {
         given(context.payer()).willReturn(A_NEW_ACCOUNT_ID);
         given(contractCreateRecordBuilder.createdContractID(any(ContractID.class)))
                 .willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.createdEvmAddress(any())).willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.evmCreateTransactionResult(any())).willReturn(contractCreateRecordBuilder);
         given(contractCreateRecordBuilder.contractCreateResult(any(ContractFunctionResult.class)))
                 .willReturn(contractCreateRecordBuilder);
         given(context.dispatch(captor.capture())).willReturn(contractCreateRecordBuilder);
@@ -485,6 +485,8 @@ class HandleHederaOperationsTest {
                 .willReturn(contractCreateRecordBuilder);
         given(contractCreateRecordBuilder.contractCreateResult(any(ContractFunctionResult.class)))
                 .willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.createdEvmAddress(any())).willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.evmCreateTransactionResult(any())).willReturn(contractCreateRecordBuilder);
         given(context.dispatch(any())).willReturn(contractCreateRecordBuilder);
         given(contractCreateRecordBuilder.status()).willReturn(SUCCESS);
         given(context.payer()).willReturn(A_NEW_ACCOUNT_ID);
@@ -529,6 +531,8 @@ class HandleHederaOperationsTest {
                 .willReturn(contractCreateRecordBuilder);
         given(context.dispatch(any())).willReturn(contractCreateRecordBuilder);
         given(contractCreateRecordBuilder.status()).willReturn(SUCCESS);
+        given(contractCreateRecordBuilder.createdEvmAddress(any())).willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.evmCreateTransactionResult(any())).willReturn(contractCreateRecordBuilder);
         given(context.payer()).willReturn(A_NEW_ACCOUNT_ID);
 
         subject.createContract(666L, someBody, CANONICAL_ALIAS);
@@ -597,6 +601,8 @@ class HandleHederaOperationsTest {
         given(contractCreateRecordBuilder.transaction(any(Transaction.class))).willReturn(contractCreateRecordBuilder);
         given(contractCreateRecordBuilder.contractCreateResult(any(ContractFunctionResult.class)))
                 .willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.createdEvmAddress(any())).willReturn(contractCreateRecordBuilder);
+        given(contractCreateRecordBuilder.evmCreateTransactionResult(any())).willReturn(contractCreateRecordBuilder);
 
         // when
         subject.externalizeHollowAccountMerge(contractId, VALID_CONTRACT_ADDRESS.evmAddress());
