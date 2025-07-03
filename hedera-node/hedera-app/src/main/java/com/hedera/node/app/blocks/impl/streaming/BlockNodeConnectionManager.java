@@ -245,7 +245,7 @@ public class BlockNodeConnectionManager {
         }
     }
 
-    private @NonNull ManagedChannel createNewManagedChannel(@NonNull final BlockNodeConfig nodeConfig) {
+    protected @NonNull ManagedChannel createNewManagedChannel(@NonNull final BlockNodeConfig nodeConfig) {
         return ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
                 .usePlaintext()
                 .build();
@@ -466,6 +466,72 @@ public class BlockNodeConnectionManager {
 
         // Create the connection object
         final ManagedChannel managedChannel = createNewManagedChannel(nodeConfig);
+
+        // Call serverStatus endpoint before establishing the BlockNodeConnection
+        try {
+            // Create a blocking stub for the BlockNodeService
+            BlockNodeServiceGrpc.BlockNodeServiceBlockingStub blockingStub =
+                    BlockNodeServiceGrpc.newBlockingStub(managedChannel);
+
+            // Build the request
+            org.hiero.block.api.protoc.ServerStatusRequest statusRequest =
+                    org.hiero.block.api.protoc.ServerStatusRequest.newBuilder().build();
+
+            // Make the unary call
+            org.hiero.block.api.protoc.ServerStatusResponse statusResponse = blockingStub.serverStatus(statusRequest);
+
+            final long lastAvailableBlockFromBlockNode = statusResponse.getLastAvailableBlock();
+            final long highestAckedBlock = blockBufferService.getHighestAckedBlockNumber();
+            final long earliestBlockNumber = blockBufferService.getEarliestAvailableBlockNumber();
+
+            // If the block node is too far behind, log and return
+            if (lastAvailableBlockFromBlockNode < earliestBlockNumber) {
+                logger.warn(
+                        "Block node {}:{} is too far behind (lastAvailableBlockFromBlockNode={}, earliestAvailableBlockFromConsensusNode={}). Not establishing connection.",
+                        nodeConfig.address(),
+                        nodeConfig.port(),
+                        lastAvailableBlockFromBlockNode,
+                        earliestBlockNumber);
+                managedChannel.shutdown();
+                return;
+            }
+
+            // If the block node is behind, but we have the block in buffer, jump to the block we have
+            if (lastAvailableBlockFromBlockNode < highestAckedBlock) {
+                logger.info(
+                        "Block node {}:{} is behind but block {} is available in buffer. Will jump to this block.",
+                        nodeConfig.address(),
+                        nodeConfig.port(),
+                        lastAvailableBlockFromBlockNode + 1);
+                final BlockNodeConnection connection = new BlockNodeConnection(
+                        configProvider,
+                        nodeConfig,
+                        this,
+                        blockBufferService,
+                        managedChannel,
+                        blockStreamMetrics,
+                        grpcEndpoint);
+                connections.put(nodeConfig, connection);
+                scheduleConnectionAttempt(connection, Duration.ZERO, lastAvailableBlockFromBlockNode + 1);
+                return;
+            }
+
+            // Otherwise, proceed with establishing the connection as normal
+            logger.info(
+                    "Server status for node {}:{}: firstAvailableBlock={}, lastAvailableBlock={}",
+                    nodeConfig.address(),
+                    nodeConfig.port(),
+                    statusResponse.getFirstAvailableBlock(),
+                    statusResponse.getLastAvailableBlock());
+        } catch (Exception e) {
+            logger.error(
+                    "Failed to get server status from block node {}:{}: {}",
+                    nodeConfig.address(),
+                    nodeConfig.port(),
+                    e.getMessage(),
+                    e);
+            return;
+        }
 
         final BlockNodeConnection connection = new BlockNodeConnection(
                 configProvider, nodeConfig, this, blockBufferService, managedChannel, blockStreamMetrics, grpcEndpoint);
