@@ -45,7 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
-
+    private static final long ONCE_PER_DAY_MILLIS = 24 * 60 * 60 * 1000L; // 24 hours in milliseconds
     private static final VarHandle eosTimestampsHandle;
 
     static {
@@ -121,8 +121,8 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(executorService)
                 .scheduleAtFixedRate(
                         any(Runnable.class),
-                        eq(60000L), // initial delay
-                        eq(60000L), // period
+                        eq(ONCE_PER_DAY_MILLIS), // initial delay
+                        eq(ONCE_PER_DAY_MILLIS), // period
                         eq(TimeUnit.MILLISECONDS));
 
         final ConnectionState postUpdateState = connection.getConnectionState();
@@ -138,8 +138,8 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(executorService)
                 .scheduleAtFixedRate(
                         any(Runnable.class),
-                        eq(60000L), // initial delay
-                        eq(60000L), // period
+                        eq(ONCE_PER_DAY_MILLIS), // initial delay
+                        eq(ONCE_PER_DAY_MILLIS), // period
                         eq(TimeUnit.MILLISECONDS));
 
         // do a quick sanity check on the state
@@ -244,8 +244,8 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(executorService)
                 .scheduleAtFixedRate(
                         any(Runnable.class),
-                        eq(60000L), // initial delay
-                        eq(60000L), // period
+                        eq(ONCE_PER_DAY_MILLIS), // initial delay
+                        eq(ONCE_PER_DAY_MILLIS), // period
                         eq(TimeUnit.MILLISECONDS));
 
         verifyNoMoreInteractions(executorService);
@@ -544,8 +544,8 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(executorService)
                 .scheduleAtFixedRate(
                         any(Runnable.class),
-                        eq(60000L), // initial delay
-                        eq(60000L), // period
+                        eq(ONCE_PER_DAY_MILLIS), // initial delay
+                        eq(ONCE_PER_DAY_MILLIS), // period
                         eq(TimeUnit.MILLISECONDS));
 
         connection.close();
@@ -570,8 +570,8 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(executorService)
                 .scheduleAtFixedRate(
                         any(Runnable.class),
-                        eq(60000L), // initial delay
-                        eq(60000L), // period
+                        eq(ONCE_PER_DAY_MILLIS), // initial delay
+                        eq(ONCE_PER_DAY_MILLIS), // period
                         eq(TimeUnit.MILLISECONDS));
 
         connection.close();

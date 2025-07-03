@@ -24,4 +24,4 @@ public record BlockNodeConnectionConfig(
         @ConfigProperty(defaultValue = "5") @NodeProperty int maxEndOfStreamsAllowed,
         @ConfigProperty(defaultValue = "30s") @NodeProperty Duration endOfStreamTimeFrame,
         @ConfigProperty(defaultValue = "30s") @NodeProperty Duration endOfStreamScheduleDelay,
-        @ConfigProperty(defaultValue = "60s") @NodeProperty Duration streamResetPeriod) {}
+        @ConfigProperty(defaultValue = "24h") @NodeProperty Duration streamResetPeriod) {}
