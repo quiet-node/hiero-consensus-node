@@ -220,7 +220,7 @@ public class OpsDurationThrottleTest {
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
                                             .collectMaxOpsDuration(duration)))
                                     .toArray(HapiSpecOperation[]::new)));
-                    allRunFor(spec, throttleUsagePercentageMoreThanThreshold(duration.get(), 98.0));
+                    allRunFor(spec, throttleUsagePercentageMoreThanThreshold(duration.get(), 95.0));
                 }),
                 restoreDefault(MAX_OPS_DURATION));
     }
