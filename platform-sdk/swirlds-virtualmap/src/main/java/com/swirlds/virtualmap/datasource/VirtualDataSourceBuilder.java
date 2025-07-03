@@ -45,6 +45,8 @@ public interface VirtualDataSourceBuilder extends SelfSerializable {
      *
      * @param dataSource
      * 		The dataSource to invoke snapshot on. Cannot be null
+     * @param compactionEnabled
+     *      Indicates whether background compaction should be enabled in the data source copy
      * @param offlineUse
      *      Indicates that the copied data source should use as little resources as possible. Data
      *      source copies created for offline use should not be used for performance critical tasks
@@ -52,7 +54,7 @@ public interface VirtualDataSourceBuilder extends SelfSerializable {
      * 		An opened {@link VirtualDataSource}
      */
     @NonNull
-    VirtualDataSource copy(VirtualDataSource dataSource, boolean offlineUse);
+    VirtualDataSource copy(VirtualDataSource dataSource, boolean compactionEnabled, boolean offlineUse);
 
     /**
      * Builds a new {@link VirtualDataSource} using the configuration of this builder by creating

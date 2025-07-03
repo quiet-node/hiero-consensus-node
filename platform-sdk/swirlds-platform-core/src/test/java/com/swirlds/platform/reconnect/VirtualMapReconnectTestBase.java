@@ -200,9 +200,11 @@ public abstract class VirtualMapReconnectTestBase {
         }
 
         @Override
-        public BreakableDataSource copy(final VirtualDataSource snapshotMe, final boolean offlineUse) {
+        public BreakableDataSource copy(
+                final VirtualDataSource snapshotMe, final boolean compactionEnabled, final boolean offlineUse) {
             final var breakableSnapshot = (BreakableDataSource) snapshotMe;
-            return new BreakableDataSource(this, delegate.copy(breakableSnapshot.delegate, offlineUse));
+            return new BreakableDataSource(
+                    this, delegate.copy(breakableSnapshot.delegate, compactionEnabled, offlineUse));
         }
 
         @Override

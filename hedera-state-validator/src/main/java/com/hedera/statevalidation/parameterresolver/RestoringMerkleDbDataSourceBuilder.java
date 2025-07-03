@@ -6,7 +6,6 @@ import static com.hedera.statevalidation.parameterresolver.InitUtils.getConfigur
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Path;
 
 /**
@@ -21,7 +20,6 @@ public class RestoringMerkleDbDataSourceBuilder extends MerkleDbDataSourceBuilde
         this.snapshotDir = snapshotDir;
     }
 
-    @NonNull
     @Override
     public VirtualDataSource build(String label, boolean withDbCompactionEnabled) {
         return restore(label, snapshotDir, false);

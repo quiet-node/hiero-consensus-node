@@ -1365,7 +1365,7 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
         // The pipeline is paused while this runs, so I can go ahead and call snapshot on the data
         // source, and also snapshot the cache. I will create a new "RecordAccessor" for the detached
         // record state.
-        final VirtualDataSource dataSourceCopy = dataSourceBuilder.copy(dataSource, false);
+        final VirtualDataSource dataSourceCopy = dataSourceBuilder.copy(dataSource, false, false);
         final VirtualNodeCache<K, V> cacheSnapshot = cache.snapshot();
         return new RecordAccessorImpl<>(state, cacheSnapshot, keySerializer, valueSerializer, dataSourceCopy);
     }
@@ -1390,7 +1390,7 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
         // The pipeline is paused while this runs, so I can go ahead and call snapshot on the data
         // source, and also snapshot the cache. I will create a new "RecordAccessor" for the detached
         // record state.
-        final VirtualDataSource dataSourceCopy = dataSourceBuilder.copy(dataSource, true);
+        final VirtualDataSource dataSourceCopy = dataSourceBuilder.copy(dataSource, false, true);
         try {
             final VirtualNodeCache<K, V> cacheSnapshot = cache.snapshot();
             flush(cacheSnapshot, state, dataSourceCopy);
@@ -1457,7 +1457,7 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
             originalMap.dataSource.stopAndDisableBackgroundCompaction();
 
             // Take a snapshot, and use the snapshot database as my data source
-            this.dataSource = dataSourceBuilder.copy(originalMap.dataSource, false);
+            this.dataSource = dataSourceBuilder.copy(originalMap.dataSource, true, false);
 
             // The old map's cache is going to become immutable, but that's OK, because the old map
             // will NEVER be updated again.

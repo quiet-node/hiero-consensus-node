@@ -326,8 +326,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
-                () -> TurtleAppState.createGenesisState(
-                        currentConfiguration, platformContext.getFileSystemManager(), roster, version),
+                () -> TurtleAppState.createGenesisState(currentConfiguration, fileSystemManager, roster, version),
                 APP_NAME,
                 SWIRLD_NAME,
                 legacyNodeId,

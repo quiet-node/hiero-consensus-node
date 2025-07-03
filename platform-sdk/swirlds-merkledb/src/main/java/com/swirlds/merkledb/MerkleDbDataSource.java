@@ -184,8 +184,6 @@ public final class MerkleDbDataSource implements VirtualDataSource {
             final boolean offlineUse)
             throws IOException {
         this.tableName = tableName;
-        this.initialCapacity = initialCapacity;
-        this.hashesRamToDiskThreshold = hashesRamToDiskThreshold;
         this.preferDiskBasedIndices = offlineUse;
 
         this.merkleDbConfig = config.getConfigData(MerkleDbConfig.class);

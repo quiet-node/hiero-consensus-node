@@ -28,7 +28,13 @@ import org.hiero.base.io.streams.SerializableDataOutputStream;
 /**
  * Virtual data source builder that manages MerkleDb data sources.
  *
- * <p>TODO
+ * <p>When a MerkleDb data source builder creates a new data source, or restores a data source
+ * from snapshot, it creates a new temp folder using its {@link FileSystemManager} as the data
+ * source storage dir.
+ *
+ * <p>When a data source snapshot is taken, or a data source is restored from a snapshot, the
+ * builder uses certain sub-folder under snapshot dir as described in {@link #snapshot(Path, VirtualDataSource)}
+ * and {@link #restore(String, Path)} methods.
  */
 @ConstructableClass(
         value = MerkleDbDataSourceBuilder.CLASS_ID,
@@ -125,7 +131,8 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
      */
     @NonNull
     @Override
-    public MerkleDbDataSource copy(final VirtualDataSource dataSource, final boolean offlineUse) {
+    public MerkleDbDataSource copy(
+            final VirtualDataSource dataSource, final boolean compactionEnabled, final boolean offlineUse) {
         if (!(dataSource instanceof MerkleDbDataSource merkleDbDataSource)) {
             throw new IllegalArgumentException("The data source must be compatible with the MerkleDb");
         }
@@ -136,7 +143,13 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
         try {
             snapshotDataSource(merkleDbDataSource, dataSourceDir);
             return new MerkleDbDataSource(
-                    dataSourceDir, configuration, label, initialCapacity, hashesRamToDiskThreshold, true, offlineUse);
+                    dataSourceDir,
+                    configuration,
+                    label,
+                    initialCapacity,
+                    hashesRamToDiskThreshold,
+                    compactionEnabled,
+                    offlineUse);
         } catch (final IOException z) {
             throw new UncheckedIOException(z);
         }
@@ -144,6 +157,9 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>Data source snapshot is placed under "data/label" sub-folder in the provided
+     * {@code snapshotDir}.
      */
     @Override
     public void snapshot(@NonNull final Path snapshotDir, final VirtualDataSource dataSource) {
@@ -157,6 +173,12 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>The builder first checks if "data/label" sub-folder exists in the snapshot dir and
+     * restores a data source from there. If the sub-folder doesn't exist, it may be an old
+     * snapshot with MerkleDb database metadata available. The metadata is used to find the
+     * folder for a data source with the given label. If database metadata file is not found,
+     * this method throws an IO exception.
      */
     @NonNull
     @Override
@@ -182,6 +204,7 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
                     final Path legacySnapshotDataSourceDir =
                             snapshotDir.resolve("tables").resolve(label + "-" + tableId);
                     if (Files.isDirectory(legacySnapshotDataSourceDir)) {
+                        hardLinkTree(legacySnapshotDataSourceDir, dataSourceDir);
                         // Load initial capacity and hashes RAM/disk threshold from legacy MerkleDb database config
                         final long initialCapacity =
                                 tableMetadata.getTableConfig().getInitialCapacity();
@@ -293,6 +316,7 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
         return (initialCapacity == that.initialCapacity) && (hashesRamToDiskThreshold == that.hashesRamToDiskThreshold);
     }
 
+    // This is a legacy class to read old snapshots (versions less than ClassVersion.NO_TABLE_CONFIG)
     private static class TableMetadata {
 
         private final int tableId;

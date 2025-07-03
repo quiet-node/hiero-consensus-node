@@ -57,7 +57,8 @@ public class InMemoryBuilder implements VirtualDataSourceBuilder {
      */
     @NonNull
     @Override
-    public InMemoryDataSource copy(final VirtualDataSource snapshotMe, final boolean offlineUse) {
+    public InMemoryDataSource copy(
+            final VirtualDataSource snapshotMe, final boolean compactionEnabled, final boolean offlineUse) {
         final InMemoryDataSource source = (InMemoryDataSource) snapshotMe;
         final InMemoryDataSource snapshot = new InMemoryDataSource(source);
         databases.put(createUniqueDataSourceName(source.getName()), snapshot);
