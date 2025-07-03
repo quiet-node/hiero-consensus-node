@@ -14,7 +14,7 @@ import java.time.Duration;
  * @param maxEndOfStreamsAllowed the limit of EndOfStream responses allowed in a time frame
  * @param endOfStreamTimeFrame the time frame in seconds to check for EndOfStream responses
  * @param endOfStreamScheduleDelay the delay in seconds to schedule connections after the limit is reached
- * @param streamResetPeriod the period in seconds to periodically reset the stream
+ * @param streamResetPeriod the period in hours to periodically reset the stream, once a day should be enough
  */
 @ConfigData("blockNode")
 public record BlockNodeConnectionConfig(
