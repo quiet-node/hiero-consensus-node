@@ -186,7 +186,7 @@ class MerkleDbBuilderTest {
             assertTrue(Files.isDirectory(tmpDir.resolve("data").resolve(label)));
             VirtualDataSource restored = null;
             try {
-                restored = builder.restore(label, tmpDir, false);
+                restored = builder.restore(label, tmpDir, false, false);
                 assertNotNull(restored);
                 assertTrue(restored instanceof MerkleDbDataSource);
                 final MerkleDbDataSource merkleDbRestored = (MerkleDbDataSource) restored;

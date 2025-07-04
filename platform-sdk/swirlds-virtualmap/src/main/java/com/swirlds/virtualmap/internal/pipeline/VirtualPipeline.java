@@ -367,27 +367,6 @@ public class VirtualPipeline<K extends VirtualKey, V extends VirtualValue> {
     }
 
     /**
-     * Put a copy into a detached state. A detached copy will split off from the regular chain of caches. This
-     * allows for merges and flushes to continue even if this copy is long-lived.
-     *
-     * <p>This method waits for the current pipeline job to complete, then puts the pipeline on hold, and
-     * calls copy's {@link VirtualRoot#detach()} method on the current thread. It prevents any merging of
-     * flushing while the snapshot is being taken. Then the pipeline is resumed.
-     *
-     * @param copy
-     * 		the copy to detach
-     * @return a reference to the detached state
-     */
-    public RecordAccessor<K, V> detachCopy(final VirtualRoot<K, V> copy) {
-        validatePipelineRegistration(copy);
-        final RecordAccessor<K, V> ret = pausePipelineAndExecute("detach", copy::detach);
-        if (alive) {
-            scheduleWork();
-        }
-        return ret;
-    }
-
-    /**
      * Takes a snapshot of the given copy to the specified directory.
      *
      * <p>This method waits for the current pipeline job to complete, then puts the pipeline on hold, and

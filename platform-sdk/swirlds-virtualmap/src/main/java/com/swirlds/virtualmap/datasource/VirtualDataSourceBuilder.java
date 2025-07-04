@@ -88,5 +88,5 @@ public interface VirtualDataSourceBuilder extends SelfSerializable {
      * 		An opened {@link VirtualDataSource}
      */
     @NonNull
-    VirtualDataSource restore(String label, Path snapshotDir);
+    VirtualDataSource restore(String label, Path snapshotDir, boolean compactionEnabled, boolean offlineUse);
 }

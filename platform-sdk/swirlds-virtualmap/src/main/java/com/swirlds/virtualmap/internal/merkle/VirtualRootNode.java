@@ -26,6 +26,7 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.swirlds.common.io.ExternalSelfSerializable;
+import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.exceptions.IllegalChildIndexException;
@@ -89,6 +90,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.base.ValueReference;
 import org.hiero.base.constructable.ConstructableClass;
 import org.hiero.base.crypto.DigestType;
 import org.hiero.base.crypto.Hash;
@@ -1205,10 +1207,21 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
      */
     @Override
     public void serialize(final SerializableDataOutputStream out, final Path outputDirectory) throws IOException {
+        final Path tmpDir = outputDirectory.resolve(state.getLabel() + "-snapshot");
+        final ValueReference<VirtualNodeCache<K, V>> cacheCopy = new ValueReference<>();
         pipeline.pausePipelineAndRun("detach", () -> {
-            snapshot(outputDirectory);
+            dataSourceBuilder.snapshot(tmpDir, dataSource);
+            cacheCopy.setValue(cache.snapshot());
             return null;
         });
+        final VirtualDataSource tmpDataSource = dataSourceBuilder.restore(state.getLabel(), tmpDir, false, true);
+        try {
+            flush(cacheCopy.getValue(), state, tmpDataSource);
+            dataSourceBuilder.snapshot(outputDirectory, tmpDataSource);
+        } finally {
+            tmpDataSource.close();
+            FileUtils.deleteDirectory(tmpDir);
+        }
         out.writeNormalisedString(state.getLabel());
         out.writeSerializable(dataSourceBuilder, true);
         out.writeSerializable(keySerializer, true);
@@ -1225,7 +1238,7 @@ public final class VirtualRootNode<K extends VirtualKey, V extends VirtualValue>
             throws IOException {
         final String label = in.readNormalisedString(MAX_LABEL_LENGTH);
         dataSourceBuilder = in.readSerializable();
-        dataSource = dataSourceBuilder.restore(label, inputDirectory);
+        dataSource = dataSourceBuilder.restore(label, inputDirectory, true, false);
         if (version < ClassVersion.VERSION_2_KEYVALUE_SERIALIZERS) {
             throw new UnsupportedOperationException("Version " + version + " is not supported");
         }

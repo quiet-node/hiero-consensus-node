@@ -80,7 +80,7 @@ public class InMemoryBuilder implements VirtualDataSourceBuilder {
      */
     @NonNull
     @Override
-    public VirtualDataSource restore(final String label, final Path from) {
+    public VirtualDataSource restore(final String label, final Path from, final boolean compactionEnabled, final boolean offlineUse) {
         return snapshots.get(from.toString());
     }
 

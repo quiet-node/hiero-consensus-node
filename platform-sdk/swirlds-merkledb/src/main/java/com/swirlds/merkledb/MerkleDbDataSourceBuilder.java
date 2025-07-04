@@ -182,11 +182,8 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
      */
     @NonNull
     @Override
-    public VirtualDataSource restore(final String label, final Path snapshotDir) {
-        return restore(label, snapshotDir, true);
-    }
-
-    protected VirtualDataSource restore(final String label, final Path snapshotDir, final boolean compactionEnabled) {
+    public VirtualDataSource restore(
+            final String label, final Path snapshotDir, final boolean compactionEnabled, final boolean offlineUse) {
         final Path dataSourceDir = newDataSourceDir(label);
         try {
             final Path snapshotDataSourceDir = snapshotDir.resolve("data").resolve(label);
@@ -194,7 +191,7 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
                 hardLinkTree(snapshotDataSourceDir, dataSourceDir);
                 // Initial capacity and hashes RAM/disk threshold are set to 0, since the real values
                 // are read from data source metadata anyway
-                return new MerkleDbDataSource(dataSourceDir, configuration, label, 0, 0, compactionEnabled, false);
+                return new MerkleDbDataSource(dataSourceDir, configuration, label, 0, 0, compactionEnabled, offlineUse);
             }
             final Path legacyDatabaseMetadataPath = snapshotDir.resolve("database_metadata.pbj");
             if (Files.isReadable(legacyDatabaseMetadataPath)) {
@@ -217,7 +214,7 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
                                 initialCapacity,
                                 hashesRamToDiskThreshold,
                                 true,
-                                false);
+                                offlineUse);
                     } else {
                         throw new IOException("Table dir is not found: dir=" + legacySnapshotDataSourceDir);
                     }

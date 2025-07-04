@@ -22,6 +22,6 @@ public class RestoringMerkleDbDataSourceBuilder extends MerkleDbDataSourceBuilde
 
     @Override
     public VirtualDataSource build(String label, boolean withDbCompactionEnabled) {
-        return restore(label, snapshotDir, false);
+        return restore(label, snapshotDir, false, false);
     }
 }
