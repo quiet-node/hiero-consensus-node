@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.metrics.api.Metrics;
@@ -34,12 +35,13 @@ public abstract class AbstractFakePlatform implements Platform {
             @NonNull final NodeId selfId,
             @NonNull final Roster roster,
             @NonNull final ScheduledExecutorService executorService,
+            @NonNull final FileSystemManager fileSystemManager,
             @NonNull final Metrics metrics) {
         requireNonNull(metrics);
         requireNonNull(executorService);
         this.selfId = requireNonNull(selfId);
         this.roster = requireNonNull(roster);
-        this.platformContext = new FakePlatformContext(selfId, executorService, metrics);
+        this.platformContext = new FakePlatformContext(selfId, executorService, fileSystemManager, metrics);
     }
 
     /**
