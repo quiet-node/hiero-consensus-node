@@ -254,16 +254,16 @@ public class StreamValidationOp extends UtilOp implements LifecycleTest {
 
         if (simulatedBlockNode.hasEverBeenShutdown()) {
             // Check whether other simulated block nodes have verified this block
+            // while the simulated block node was shutdown
             return spec.getBlockNodeNetworkIds().stream()
                     .filter(blockNodeId -> blockNodeId != nodeId)
                     .map(blockNodeId ->
                             spec.getSimulatedBlockNodeById(blockNodeId).getReceivedBlockNumbers())
                     .reduce(new HashSet<>(), (acc, blockNumbers) -> {
-                        acc.addAll(blockNumbers);
                         acc.addAll(simulatedBlockNode.getReceivedBlockNumbers());
+                        acc.addAll(blockNumbers);
                         return acc;
-                    }) /*.flatMap(Set::stream)
-                       .collect(Collectors.toSet())*/;
+                    });
         } else {
             return simulatedBlockNode.getReceivedBlockNumbers();
         }
