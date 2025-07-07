@@ -193,9 +193,13 @@ public class CustomGasCharging {
             @NonNull HederaEvmContext context,
             @NonNull HederaWorldUpdater worldUpdater,
             long intrinsicGas) {
-        final var fee = feeForAborted(sender, context, worldUpdater, intrinsicGas);
-        worldUpdater.collectGasFee(sender, fee, false);
-        return intrinsicGas;
+
+        if(worldUpdater.getHederaAccount(sender) != null) {
+            final var fee = feeForAborted(sender, context, worldUpdater, intrinsicGas);
+            worldUpdater.collectGasFee(sender, fee, false);
+            return intrinsicGas;
+        }
+        return 0;
     }
 
     private long feeForAborted(
