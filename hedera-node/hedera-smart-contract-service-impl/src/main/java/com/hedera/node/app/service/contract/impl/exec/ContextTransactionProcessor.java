@@ -115,11 +115,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
         // the error.
         final var hevmTransaction = safeCreateHevmTransaction();
         if (hevmTransaction.isException()) {
-            return maybeChargeFeesAndReturnOutcome(
-                    hevmTransaction,
-                    context.body().transactionIDOrThrow().accountIDOrThrow(),
-                    null,
-                    contractsConfig.chargeGasOnEvmHandleException());
+            return maybeChargeFeesAndReturnOutcome(hevmTransaction, context.payer(), null);
         }
 
         // Process the transaction and return its outcome
@@ -162,11 +158,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
             final var sender = rootProxyWorldUpdater.getHederaAccount(hevmTransaction.senderId());
             final var senderId = sender != null ? sender.hederaId() : hevmTransaction.senderId();
 
-            return maybeChargeFeesAndReturnOutcome(
-                    hevmTransaction.withException(e),
-                    senderId,
-                    sender,
-                    hevmTransaction.isContractCall() && contractsConfig.chargeGasOnEvmHandleException());
+            return maybeChargeFeesAndReturnOutcome(hevmTransaction.withException(e), senderId, sender);
         }
     }
 
@@ -193,14 +185,15 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
     private CallOutcome maybeChargeFeesAndReturnOutcome(
             @NonNull final HederaEvmTransaction hevmTransaction,
             @NonNull final AccountID senderId,
-            @Nullable final HederaEvmAccount sender,
-            final boolean chargeGas) {
-        final var status = requireNonNull(hevmTransaction.exception()).getStatus();
-        if (chargeGas) {
-            gasCharging.chargeGasForAbortedTransaction(
+            @Nullable final HederaEvmAccount sender) {
+
+        long gasCharged = 0;
+        if (contractsConfig.chargeGasOnEvmHandleException()) {
+            gasCharged = gasCharging.possiblyChargeGasForAbortedTransaction(
                     senderId, hederaEvmContext, rootProxyWorldUpdater, hevmTransaction);
         }
 
+        final var status = requireNonNull(hevmTransaction.exception()).getStatus();
         rootProxyWorldUpdater.commit();
         ContractID recipientId = null;
         if (!INVALID_CONTRACT_ID.equals(status)) {
@@ -211,6 +204,10 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
 
         if (context.body().hasEthereumTransaction() && sender != null) {
             result = result.withSignerNonce(sender.getNonce());
+        }
+
+        if (gasCharged > 0) {
+            result = result.withGasUsed(gasCharged);
         }
 
         final var ethCallData = (hydratedEthTxData != null && hydratedEthTxData.ethTxData() != null)

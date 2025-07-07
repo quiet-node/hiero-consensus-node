@@ -4,6 +4,7 @@ package com.hedera.node.app.service.contract.impl.test.exec.scope;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.DEFAULT_HEDERA_CONFIG;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
@@ -115,6 +116,13 @@ class QueryHederaOperationsTest {
     @Test
     void chargingStorageRentNotSupported() {
         assertThrows(UnsupportedOperationException.class, () -> subject.chargeStorageRent(anotherContractID, 2L, true));
+    }
+
+    @Test
+    void infoAboutGasChargingEventsTests() {
+        assertThrows(UnsupportedOperationException.class, subject::resetGasChargingEvents);
+        assertFalse(subject::hasGasChargingEvents);
+        assertFalse(subject::hasRefundGasFeeEvents);
     }
 
     @Test

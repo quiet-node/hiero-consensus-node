@@ -247,7 +247,7 @@ class ContextTransactionProcessorTest {
 
         subject.call();
 
-        verify(customGasCharging).chargeGasForAbortedTransaction(any(), any(), any(), any());
+        verify(customGasCharging).possiblyChargeGasForAbortedTransaction(any(), any(), any(), any());
         verify(rootProxyWorldUpdater).commit();
     }
 
@@ -278,7 +278,7 @@ class ContextTransactionProcessorTest {
 
         final var outcome = subject.call();
 
-        verify(customGasCharging).chargeGasForAbortedTransaction(any(), any(), any(), any());
+        verify(customGasCharging).possiblyChargeGasForAbortedTransaction(any(), any(), any(), any());
         verify(rootProxyWorldUpdater).commit();
         verify(hederaOpsDuration).applyDurationFromConfig(CONFIGURATION.getConfigData(OpsDurationConfig.class));
         assertEquals(INVALID_CONTRACT_ID, outcome.status());
@@ -311,7 +311,7 @@ class ContextTransactionProcessorTest {
 
         final var outcome = subject.call();
 
-        verify(customGasCharging, never()).chargeGasForAbortedTransaction(any(), any(), any(), any());
+        verify(customGasCharging, never()).possiblyChargeGasForAbortedTransaction(any(), any(), any(), any());
         verify(rootProxyWorldUpdater).commit();
         assertEquals(INVALID_CONTRACT_ID, outcome.status());
     }
@@ -344,7 +344,7 @@ class ContextTransactionProcessorTest {
 
         final var outcome = subject.call();
 
-        verify(customGasCharging).chargeGasForAbortedTransaction(any(), any(), any(), any());
+        verify(customGasCharging).possiblyChargeGasForAbortedTransaction(any(), any(), any(), any());
         // Verify that disabled zeroHapi fees flag won't charge on error
         verify(rootProxyWorldUpdater, never()).collectGasFee(any(), anyLong(), anyBoolean());
         verify(rootProxyWorldUpdater).commit();
@@ -379,7 +379,7 @@ class ContextTransactionProcessorTest {
 
         final var outcome = subject.call();
 
-        verify(customGasCharging, never()).chargeGasForAbortedTransaction(any(), any(), any(), any());
+        verify(customGasCharging, never()).possiblyChargeGasForAbortedTransaction(any(), any(), any(), any());
         // Verify that disabled zeroHapi fees flag won't charge on error
         verify(rootProxyWorldUpdater, never()).collectGasFee(any(), anyLong(), anyBoolean());
         verify(rootProxyWorldUpdater).commit();

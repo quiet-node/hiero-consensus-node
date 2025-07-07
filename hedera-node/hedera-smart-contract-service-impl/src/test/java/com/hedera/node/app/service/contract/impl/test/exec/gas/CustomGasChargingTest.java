@@ -368,11 +368,11 @@ class CustomGasChargingTest {
     }
 
     @Test
-    void chargeGasForAbortedTransaction() {
+    void possiblyChargeGasForAbortedTransaction() {
         givenWellKnownIntrinsicGasCost();
         given(worldUpdater.getHederaAccount(SENDER_ID)).willReturn(sender);
         given(sender.getBalance()).willReturn(Wei.of(100_000_000));
-        subject.chargeGasForAbortedTransaction(
+        subject.possiblyChargeGasForAbortedTransaction(
                 SENDER_ID,
                 wellKnownContextWith(blocks, false, tinybarValues, systemContractGasCalculator),
                 worldUpdater,
@@ -382,11 +382,11 @@ class CustomGasChargingTest {
     }
 
     @Test
-    void chargeGasForAbortedTransactionChargesMax() {
+    void possiblyChargeGasForAbortedTransactionChargesMax() {
         givenExcessiveIntrinsicGasCost(false);
         given(worldUpdater.getHederaAccount(SENDER_ID)).willReturn(sender);
         given(sender.getBalance()).willReturn(Wei.of(100_000_000));
-        subject.chargeGasForAbortedTransaction(
+        subject.possiblyChargeGasForAbortedTransaction(
                 SENDER_ID,
                 wellKnownContextWith(blocks, false, tinybarValues, systemContractGasCalculator),
                 worldUpdater,

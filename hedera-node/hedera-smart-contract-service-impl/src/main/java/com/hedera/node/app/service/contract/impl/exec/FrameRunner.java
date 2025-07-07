@@ -23,6 +23,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCalculator;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransactionResult;
 import com.hedera.node.app.service.contract.impl.hevm.HevmPropagatedCallFailure;
+import com.hedera.node.app.spi.workflows.ResourceExhaustedException;
 import com.swirlds.state.lifecycle.EntityIdFactory;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -87,7 +88,16 @@ public class FrameRunner {
         tracer.traceOriginAction(frame);
         final var stack = frame.getMessageFrameStack();
         while (!stack.isEmpty()) {
-            runToCompletion(stack.peekFirst(), tracer, messageCall, contractCreation);
+            try {
+                runToCompletion(stack.peekFirst(), tracer, messageCall, contractCreation);
+            } catch (final ResourceExhaustedException err) {
+                throw err;
+            } catch (final Exception err) {
+                tracer.sanitizeTracedActions(frame);
+                final var lastFrame = stack.peekLast() == null ? frame : stack.peekLast();
+                final var gasUsed = effectiveGasUsed(gasLimit, lastFrame);
+                return failureFrom(gasUsed, senderId, lastFrame, recipientMetadata.postFailureHederaId(), tracer);
+            }
         }
         tracer.sanitizeTracedActions(frame);
 
