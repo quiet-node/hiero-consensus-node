@@ -21,7 +21,6 @@ public class PhaseTimerBuilder<T extends Enum<T>> {
     private final Class<T> clazz;
     private final Set<T> phases;
     private final String metricsCategory;
-    private final Metrics metrics;
 
     private String metricsNamePrefix;
     private T initialPhase;
