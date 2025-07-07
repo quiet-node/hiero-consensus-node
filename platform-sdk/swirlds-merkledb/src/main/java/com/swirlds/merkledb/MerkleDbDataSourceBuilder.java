@@ -33,8 +33,8 @@ import org.hiero.base.io.streams.SerializableDataOutputStream;
  * source storage dir.
  *
  * <p>When a data source snapshot is taken, or a data source is restored from a snapshot, the
- * builder uses certain sub-folder under snapshot dir as described in {@link #snapshot(Path, VirtualDataSource)}
- * and {@link #restore(String, Path)} methods.
+ * builder uses certain sub-folder under snapshot dir as described in {@link #snapshot(Path,
+ * VirtualDataSource)} and {@link #restore(String, Path, boolean, boolean)} methods.
  */
 @ConstructableClass(
         value = MerkleDbDataSourceBuilder.CLASS_ID,

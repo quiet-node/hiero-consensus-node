@@ -214,7 +214,8 @@ public abstract class VirtualMapReconnectTestBase {
         }
 
         @Override
-        public BreakableDataSource restore(final String label, final Path from, final boolean compactionEnabled, final boolean offlineUse) {
+        public BreakableDataSource restore(
+                final String label, final Path from, final boolean compactionEnabled, final boolean offlineUse) {
             return new BreakableDataSource(this, delegate.restore(label, from, compactionEnabled, offlineUse));
         }
 
