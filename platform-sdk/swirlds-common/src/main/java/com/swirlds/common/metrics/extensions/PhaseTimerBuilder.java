@@ -16,6 +16,7 @@ import java.util.Set;
  */
 public class PhaseTimerBuilder<T extends Enum<T>> {
 
+    private final Metrics metrics;
     private final Time time;
     private final Class<T> clazz;
     private final Set<T> phases;
@@ -125,7 +126,8 @@ public class PhaseTimerBuilder<T extends Enum<T>> {
      * Get the metrics provider
      * @return Metrics provider for this builder
      */
-    public Metrics getMetrics() {
+    @NonNull
+    Metrics getMetrics() {
         return metrics;
     }
 
