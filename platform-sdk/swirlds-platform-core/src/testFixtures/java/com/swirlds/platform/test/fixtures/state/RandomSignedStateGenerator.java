@@ -58,6 +58,14 @@ import org.hiero.consensus.roster.RosterUtils;
 public class RandomSignedStateGenerator {
 
     private static final Logger logger = LogManager.getLogger(RandomSignedStateGenerator.class);
+
+    private static final Configuration CONFIG = new TestConfigBuilder()
+            .withValue("state.stateHistoryEnabled", true)
+            .withConfigDataType(StateConfig.class)
+            .getOrCreateConfig();
+
+    private static final PlatformContext PLATFORM_CONTEXT = PlatformContext.create(CONFIG);
+
     /**
      * Signed states now use virtual maps which are heavy RAM consumers. They need to be released
      * in order to avoid producing OOMs when running tests. This list tracks all signed states
@@ -226,13 +234,8 @@ public class RandomSignedStateGenerator {
             signatureVerifier = SignatureVerificationTestUtils::verifySignature;
         }
 
-        final Configuration configuration = new TestConfigBuilder()
-                .withValue("state.stateHistoryEnabled", true)
-                .withConfigDataType(StateConfig.class)
-                .getOrCreateConfig();
-
         final SignedState signedState = new SignedState(
-                configuration,
+                CONFIG,
                 signatureVerifier,
                 stateInstance,
                 "RandomSignedStateGenerator.build()",
@@ -240,7 +243,7 @@ public class RandomSignedStateGenerator {
                 deleteOnBackgroundThread,
                 pcesRound,
                 platformStateFacade);
-        signedState.init(PlatformContext.create(configuration));
+        signedState.init(PLATFORM_CONTEXT);
 
         TestMerkleCryptoFactory.getInstance().digestTreeSync(stateInstance.getRoot());
         if (stateHash != null) {
