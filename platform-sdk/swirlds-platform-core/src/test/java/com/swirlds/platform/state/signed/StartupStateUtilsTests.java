@@ -17,7 +17,6 @@ import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.filesystem.FileSystemManager;
-import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.TestRecycleBin;
@@ -50,17 +49,19 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @DisplayName("StartupStateUtilities Tests")
 public class StartupStateUtilsTests {
 
-    /**
-     * Temporary directory provided by JUnit
-     */
-    @TempDir
+    private static final Configuration CONFIG = new TestConfigBuilder().getOrCreateConfig();
+
+    // File system manager to manage testDirectory below
+    private static final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIG);
+
+    // Not using JUnit tempDir here, as it may result in states and snapshots on different disk
+    // devices. In this case creating hard links during state snapshots fails
     Path testDirectory;
 
     private SignedStateFilePath signedStateFilePath;
@@ -72,8 +73,8 @@ public class StartupStateUtilsTests {
     private PlatformStateFacade platformStateFacade;
 
     @BeforeEach
-    void beforeEach() throws IOException {
-        FileUtils.deleteDirectory(testDirectory);
+    void beforeEach() {
+        testDirectory = fileSystemManager.resolveNewTemp("state");
         signedStateFilePath = new SignedStateFilePath(new TestConfigBuilder()
                 .withValue("state.savedStateDirectory", testDirectory.toString())
                 .getOrCreateConfig()
@@ -83,8 +84,7 @@ public class StartupStateUtilsTests {
     }
 
     @AfterEach
-    void afterEach() throws IOException {
-        FileUtils.deleteDirectory(testDirectory);
+    void afterEach() {
         RandomSignedStateGenerator.releaseAllBuiltSignedStates();
     }
 
@@ -105,6 +105,7 @@ public class StartupStateUtilsTests {
 
         return TestPlatformContextBuilder.create()
                 .withConfiguration(configuration)
+                .withFileSystemManager(fileSystemManager)
                 .withRecycleBin(recycleBin)
                 .build();
     }
@@ -308,7 +309,6 @@ public class StartupStateUtilsTests {
     private RecycleBin initializeRecycleBin(PlatformContext platformContext, NodeId selfId) {
         final var metrics = new NoOpMetrics();
         final var configuration = platformContext.getConfiguration();
-        final var fileSystemManager = FileSystemManager.create(configuration);
         final var time = Time.getCurrent();
         return RecycleBin.create(metrics, configuration, getStaticThreadManager(), time, fileSystemManager, selfId);
     }
