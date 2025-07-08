@@ -18,7 +18,8 @@ import java.util.Set;
 import java.util.stream.IntStream;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.RepeatedTest;
 
 public class MappedFileCrashTest {
 
@@ -52,7 +53,7 @@ public class MappedFileCrashTest {
                         MappedByteBuffer buf = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
 
                         for (int i :positions) {
-                            buf.put(i, ((byte)i) );
+                            buf.put(i, ((byte)( %s)) );
                         }
 
                         // No force() call
@@ -69,11 +70,38 @@ public class MappedFileCrashTest {
             }
             """;
     public static final Path EXPECTED_FILE = Path.of("expected.dat");
+    static Path tempDir;
+    static Path javaFile;
+    static final String className = "CrashWriter";
 
-    @Test
+    @BeforeAll
+    static void before() throws IOException {
+        tempDir = Files.createTempDirectory("dynjava");
+        javaFile = tempDir.resolve(className + ".java");
+        String javaCode = JAVA_FILE_GENERATOR_SOURCE.formatted(REGION_SIZE, "'a' + i%26");
+
+        Files.writeString(javaFile, javaCode);
+        System.out.println("Created source at: " + javaFile);
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        int result = compiler.run(
+                null,
+                null,
+                null,
+                "--add-exports",
+                "jdk.unsupported/sun.misc=ALL-UNNAMED",
+                "-Xlint:-options",
+                "-proc:none",
+                "-Xlint:none",
+                javaFile.toString());
+        if (result != 0) {
+            throw new RuntimeException("Compilation failed");
+        }
+    }
+
+    @RepeatedTest(100)
     public void testMappedFilePersistence() throws Exception {
         try {
-            createExpectedFile(EXPECTED_FILE);
+            createExpectedFile();
             var testFiles = createTestFiles(TOTAL_TEST_FILES);
 
             compare(EXPECTED_FILE, testFiles);
@@ -111,28 +139,6 @@ public class MappedFileCrashTest {
     }
 
     public static List<Path> createTestFiles(int number) throws Exception {
-        String className = "CrashWriter";
-        String javaCode = JAVA_FILE_GENERATOR_SOURCE.formatted(REGION_SIZE);
-
-        Path tempDir = Files.createTempDirectory("dynjava");
-        Path javaFile = tempDir.resolve(className + ".java");
-        Files.writeString(javaFile, javaCode);
-        System.out.println("Created source at: " + javaFile);
-
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        int result = compiler.run(
-                null,
-                null,
-                null,
-                "--add-exports",
-                "jdk.unsupported/sun.misc=ALL-UNNAMED",
-                "-Xlint:-options",
-                "-proc:none",
-                "-Xlint:none",
-                javaFile.toString());
-        if (result != 0) {
-            throw new RuntimeException("Compilation failed");
-        }
 
         final List<Path> results = new ArrayList<>();
         for (int i = 0; i < number; i++) {
@@ -179,17 +185,16 @@ public class MappedFileCrashTest {
         return builder.toString();
     }
 
-    private void createExpectedFile(Path path) {
-        try (RandomAccessFile raf = new RandomAccessFile(path.toFile(), "rw");
+    private static void createExpectedFile() {
+        try (RandomAccessFile raf = new RandomAccessFile(MappedFileCrashTest.EXPECTED_FILE.toFile(), "rw");
                 FileChannel fc = raf.getChannel()) {
 
             MappedByteBuffer buf = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
             for (int i = 0; i < REGION_SIZE; i++) {
-                buf.put(i, ((byte) i));
+                buf.put(i, (byte) ('a' + i % 26));
             }
             buf.force();
 
-            // No force() call
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
