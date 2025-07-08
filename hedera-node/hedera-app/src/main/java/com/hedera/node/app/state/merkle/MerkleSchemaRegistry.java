@@ -6,7 +6,6 @@ import static com.hedera.node.app.state.merkle.SchemaApplicationType.RESTART;
 import static com.hedera.node.app.state.merkle.SchemaApplicationType.STATE_DEFINITIONS;
 import static com.hedera.node.app.state.merkle.VersionUtils.alreadyIncludesStateDefs;
 import static com.hedera.node.app.state.merkle.VersionUtils.isSoOrdered;
-import static com.swirlds.state.merkle.StateUtils.registerWithSystem;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.SemanticVersion;
@@ -111,13 +110,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                 "Registering schema {} for service {} ",
                 () -> HapiUtils.toString(schema.getVersion()),
                 () -> serviceName);
-
-        // Any states being created, need to be registered for deserialization
-        schema.statesToCreate(bootstrapConfig).forEach(def -> {
-            //noinspection rawtypes,unchecked
-            final var md = new StateMetadata<>(serviceName, schema, def);
-            registerWithSystem(md, constructableRegistry);
-        });
 
         return this;
     }
