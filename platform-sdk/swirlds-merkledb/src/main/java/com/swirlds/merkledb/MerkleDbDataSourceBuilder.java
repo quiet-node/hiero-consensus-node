@@ -10,6 +10,7 @@ import com.hedera.pbj.runtime.FieldType;
 import com.hedera.pbj.runtime.io.ReadableSequentialData;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.swirlds.common.io.filesystem.FileSystemManager;
+import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.constructable.constructors.MerkleDbDataSourceBuilderConstructor;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
@@ -86,7 +87,7 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
     }
 
     private Path newDataSourceDir(final String label) {
-        return fileSystemManager.resolveNewTemp("merkledb-" + label);
+        return FileUtils.getAbsolutePath(fileSystemManager.resolveNewTemp("merkledb-" + label));
     }
 
     /**
