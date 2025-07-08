@@ -485,7 +485,7 @@ public class BlockNodeConnectionManager {
             final long earliestBlockNumber = blockBufferService.getEarliestAvailableBlockNumber();
 
             // If the block node is too far behind, log and return
-            if (lastAvailableBlockFromBlockNode < earliestBlockNumber) {
+            if (lastAvailableBlockFromBlockNode < earliestBlockNumber && lastAvailableBlockFromBlockNode != -1) {
                 logger.warn(
                         "Block node {}:{} is too far behind (lastAvailableBlockFromBlockNode={}, earliestAvailableBlockFromConsensusNode={}). Not establishing connection.",
                         nodeConfig.address(),
