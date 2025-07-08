@@ -111,7 +111,7 @@ public class MappedFileCrashTest {
         Files.deleteIfExists(EXPECTED_FILE);
         IntStream.range(0, TOTAL_TEST_FILES).forEach(i -> {
             try {
-                Files.deleteIfExists(getTestFileName(i));
+                Files.deleteIfExists(Path.of(getTestFileName(i)));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -149,18 +149,18 @@ public class MappedFileCrashTest {
                     "-cp",
                     tempDir.toString(),
                     className,
-                    "crash-test" + i + ".dat");
+                    getTestFileName(i));
             pb.inheritIO();
             Process process = pb.start();
             int exit = process.waitFor();
             System.out.println("Process exited with code: " + exit);
-            results.add(getTestFileName(i));
+            results.add(Path.of(getTestFileName(i)));
         }
         return results;
     }
 
-    private static Path getTestFileName(final int i) {
-        return Path.of("crash-test" + i + ".dat");
+    private static String getTestFileName(final int i) {
+        return "crash-test" + i + ".dat";
     }
 
     /**
