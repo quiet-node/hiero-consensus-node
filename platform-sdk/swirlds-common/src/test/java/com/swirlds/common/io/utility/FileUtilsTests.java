@@ -22,7 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.swirlds.common.config.StateCommonConfig;
+import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
+import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.config.api.Configuration;
@@ -45,7 +47,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -53,15 +54,18 @@ import org.junit.jupiter.params.provider.ValueSource;
 class FileUtilsTests {
 
     private static final Configuration CONFIGURATION = ConfigurationBuilder.create()
+            .withConfigDataType(FileSystemManagerConfig.class)
             .withConfigDataType(TemporaryFileConfig.class)
             .withConfigDataType(StateCommonConfig.class)
             .build();
 
+    private static final FileSystemManager FILE_SYSTEM_MANAGER = FileSystemManager.create(CONFIGURATION);
+
     /**
-     * Temporary directory provided by JUnit
+     * Temporary directory. Don't use JUnit's temp dir, as it may be on a different disk device,
+     * which result in weird issues while moving files or creating hard links.
      */
-    @TempDir
-    Path testDirectory;
+    private final Path testDirectory = FILE_SYSTEM_MANAGER.resolveNewTemp("FileUtilsTests");
 
     @BeforeEach
     void beforeEach() throws IOException {

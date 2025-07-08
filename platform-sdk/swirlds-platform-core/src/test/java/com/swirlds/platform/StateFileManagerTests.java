@@ -78,9 +78,6 @@ class StateFileManagerTests {
     private PlatformContext context;
     private SignedStateFilePath signedStateFilePath;
 
-    /**
-     * Temporary directory provided by JUnit
-     */
     Path testDirectory;
 
     @BeforeAll

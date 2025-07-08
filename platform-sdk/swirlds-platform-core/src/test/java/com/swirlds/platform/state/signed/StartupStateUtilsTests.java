@@ -16,7 +16,9 @@ import com.swirlds.base.time.Time;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.filesystem.FileSystemManager;
+import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.io.utility.RecycleBin;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.TestRecycleBin;
@@ -55,7 +57,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 @DisplayName("StartupStateUtilities Tests")
 public class StartupStateUtilsTests {
 
-    private static final Configuration CONFIG = new TestConfigBuilder().getOrCreateConfig();
+    private static final Configuration CONFIG = new TestConfigBuilder()
+            .withConfigDataType(FileSystemManagerConfig.class)
+            .getOrCreateConfig();
 
     // File system manager to manage testDirectory below
     private static final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIG);
@@ -74,7 +78,7 @@ public class StartupStateUtilsTests {
 
     @BeforeEach
     void beforeEach() {
-        testDirectory = fileSystemManager.resolveNewTemp("state");
+        testDirectory = fileSystemManager.resolveNewTemp("StartupStateUtilsTests");
         signedStateFilePath = new SignedStateFilePath(new TestConfigBuilder()
                 .withValue("state.savedStateDirectory", testDirectory.toString())
                 .getOrCreateConfig()
@@ -89,11 +93,17 @@ public class StartupStateUtilsTests {
     }
 
     @BeforeAll
-    static void beforeAll() throws ConstructableRegistryException {
+    static void beforeAll() throws ConstructableRegistryException, IOException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
         registry.registerConstructables("org.hiero");
         registry.registerConstructable(new ClassConstructorPair(TestMerkleStateRoot.class, TestMerkleStateRoot::new));
+        // SignedStateFileWriter uses a temp dir to write snapshots. This dir is managed using deprecated
+        // LegacyTemporaryFileBuilder with its own base temp file location. This location may be overridden
+        // by some other tests to a path on a different disk device, which would make snapshots fail. At some
+        // point LegacyTemporaryFileBuilder will be dropped, but for now I'm just overriding its base dir
+        LegacyTemporaryFileBuilder.overrideTemporaryFileLocation(
+                fileSystemManager.resolveNewTemp("StartupStateUtilsTests.tmp"));
     }
 
     @NonNull
