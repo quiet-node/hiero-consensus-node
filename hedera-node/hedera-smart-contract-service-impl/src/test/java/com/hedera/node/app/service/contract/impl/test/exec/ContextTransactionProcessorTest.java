@@ -426,6 +426,42 @@ class ContextTransactionProcessorTest {
         assertFailsWith(INVALID_ETHEREUM_TRANSACTION, subject::call);
     }
 
+    @Test
+    void setsGasUsedInResultsWhenGasCharged() {
+        final var contractsConfig = CONFIGURATION.getConfigData(ContractsConfig.class);
+        final var subject = new ContextTransactionProcessor(
+                null,
+                context,
+                contractsConfig,
+                CONFIGURATION,
+                hederaEvmContext,
+                null,
+                tracer,
+                rootProxyWorldUpdater,
+                hevmTransactionFactory,
+                processor,
+                customGasCharging,
+                hederaOpsDuration);
+
+        given(context.body()).willReturn(transactionBody);
+        final var payer = AccountID.DEFAULT;
+        given(context.payer()).willReturn(payer);
+        given(hevmTransactionFactory.fromHapiTransaction(transactionBody, payer))
+                .willThrow(new HandleException(INVALID_CONTRACT_ID));
+        given(hevmTransactionFactory.fromContractTxException(any(), any())).willReturn(HEVM_Exception);
+        given(customGasCharging.possiblyChargeGasForAbortedTransaction(any(), any(), any(), any()))
+                .willReturn(100L);
+
+        final var outcome = subject.call();
+
+        verify(customGasCharging).possiblyChargeGasForAbortedTransaction(any(), any(), any(), any());
+        // Verify that disabled zeroHapi fees flag won't charge on error
+        verify(rootProxyWorldUpdater, never()).collectGasFee(any(), anyLong(), anyBoolean());
+        verify(rootProxyWorldUpdater).commit();
+        assertEquals(INVALID_CONTRACT_ID, outcome.status());
+        assertEquals(100, outcome.txResult().gasUsed());
+    }
+
     void givenSenderAccount() {
         given(rootProxyWorldUpdater.getHederaAccount(SENDER_ID)).willReturn(senderAccount);
         given(rootProxyWorldUpdater.entityIdFactory()).willReturn(entityIdFactory);

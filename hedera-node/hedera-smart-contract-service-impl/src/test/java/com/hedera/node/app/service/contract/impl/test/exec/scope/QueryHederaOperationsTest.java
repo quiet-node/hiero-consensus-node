@@ -16,6 +16,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.TinybarValues;
 import com.hedera.node.app.service.contract.impl.exec.scope.HandleHederaOperations;
 import com.hedera.node.app.service.contract.impl.exec.scope.QueryHederaOperations;
 import com.hedera.node.app.service.contract.impl.state.ContractStateStore;
+import com.hedera.node.app.spi.fees.FeeCharging;
 import com.hedera.node.app.spi.fixtures.ids.FakeEntityIdFactoryImpl;
 import com.hedera.node.app.spi.records.BlockRecordInfo;
 import com.hedera.node.app.spi.workflows.QueryContext;
@@ -41,6 +42,10 @@ class QueryHederaOperationsTest {
     @Mock
     private TinybarValues tinybarValues;
 
+    @Mock
+    private FeeCharging.Context feeChargingContext;
+
+    @Mock
     private QueryHederaOperations subject;
 
     private ContractID contractID;
@@ -111,6 +116,11 @@ class QueryHederaOperationsTest {
     void collectingAndRefundingFeesNotSupported() {
         assertThrows(UnsupportedOperationException.class, () -> subject.collectHtsFee(AccountID.DEFAULT, 1234L));
         assertThrows(UnsupportedOperationException.class, () -> subject.refundGasFee(AccountID.DEFAULT, 1234L));
+    }
+
+    @Test
+    void replayGasChargingNotSupported() {
+        assertThrows(UnsupportedOperationException.class, () -> subject.replayGasChargingIn(feeChargingContext));
     }
 
     @Test
