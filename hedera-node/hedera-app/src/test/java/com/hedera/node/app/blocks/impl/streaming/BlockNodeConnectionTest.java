@@ -361,8 +361,8 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(stateManager).getBlockState(11L);
         verify(requestObserver)
                 .onNext(PublishStreamRequest.newBuilder()
-                        .endStream(PublishStreamRequest.EndStream.newBuilder()
-                                .endCode(PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
+                        .setEndStream(PublishStreamRequest.EndStream.newBuilder()
+                                .setEndCode(PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
                                 .build())
                         .build());
         verify(requestObserver).onCompleted();

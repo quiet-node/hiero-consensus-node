@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.block.api.PublishStreamRequest.EndStream;
 import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
@@ -336,12 +335,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     final var highestAckedBlockNumber = blockBufferService.getHighestAckedBlockNumber();
 
                     // Indicate that the block node should recover and catch up from another trustworthy block node
-                    final PublishStreamRequest endStream = PublishStreamRequest.newBuilder()
-                            .endStream(EndStream.newBuilder()
-                                    .endCode(EndStream.Code.TOO_FAR_BEHIND)
-                                    .earliestBlockNumber(earliestBlockNumber)
-                                    .latestBlockNumber(highestAckedBlockNumber))
-                            .build();
+                    final org.hiero.block.api.PublishStreamRequest endStream =
+                            org.hiero.block.api.PublishStreamRequest.newBuilder()
+                                    .endStream(org.hiero.block.api.PublishStreamRequest.EndStream.newBuilder()
+                                            .endCode(
+                                                    org.hiero.block.api.PublishStreamRequest.EndStream.Code
+                                                            .TOO_FAR_BEHIND)
+                                            .earliestBlockNumber(earliestBlockNumber)
+                                            .latestBlockNumber(highestAckedBlockNumber))
+                                    .build();
 
                     sendRequest(endStream);
                     close();
