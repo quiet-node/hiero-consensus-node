@@ -24,6 +24,7 @@ import com.hedera.node.app.service.contract.impl.state.HederaEvmAccount;
 import com.hedera.node.app.service.contract.impl.state.RootProxyWorldUpdater;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.HandleException;
+import com.hedera.node.app.spi.workflows.ResourceExhaustedException;
 import com.hedera.node.config.data.ContractsConfig;
 import com.hedera.node.config.data.JumboTransactionsConfig;
 import com.hedera.node.config.data.OpsDurationConfig;
@@ -188,7 +189,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
             @Nullable final HederaEvmAccount sender) {
 
         long gasCharged = 0;
-        if (contractsConfig.chargeGasOnEvmHandleException()) {
+        if (shouldChargeGas(hevmTransaction)) {
             gasCharged = gasCharging.possiblyChargeGasForAbortedTransaction(
                     senderId, hederaEvmContext, rootProxyWorldUpdater, hevmTransaction);
         }
@@ -235,5 +236,12 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
     private void setOpsDurationValues() {
         final var opsDurationConfig = configuration.getConfigData(OpsDurationConfig.class);
         hederaOpsDuration.applyDurationFromConfig(requireNonNull(opsDurationConfig));
+    }
+
+    private boolean shouldChargeGas(@NonNull final HederaEvmTransaction hevmTransaction) {
+        return contractsConfig.chargeGasOnEvmHandleException()
+                &&
+                // we charge gas for all contract call and on ResourceExhaustedException
+                (hevmTransaction.isContractCall() || hevmTransaction.exception() instanceof ResourceExhaustedException);
     }
 }
