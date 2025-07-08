@@ -91,7 +91,7 @@ public class StateResolver implements ParameterResolver {
                 HederaVirtualMapState::new,
                 platformStateFacade,
                 platformContext);
-        final MerkleStateRoot servicesState = (MerkleStateRoot)
+        final HederaVirtualMapState servicesState = (HederaVirtualMapState)
                 deserializedSignedState.reservedSignedState().get().getState();
 
         initServiceMigrator(servicesState, platformContext.getConfiguration(), serviceRegistry);

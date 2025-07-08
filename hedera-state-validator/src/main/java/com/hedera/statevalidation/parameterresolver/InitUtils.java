@@ -2,6 +2,7 @@
 package com.hedera.statevalidation.parameterresolver;
 
 import static com.hedera.node.app.spi.fees.NoopFeeCharging.NOOP_FEE_CHARGING;
+import static com.hedera.statevalidation.Constants.VM_LABEL;
 import static com.hedera.statevalidation.parameterresolver.StateResolver.readVersion;
 import static com.hedera.statevalidation.validators.Constants.FILE_CHANNELS;
 import static com.hedera.statevalidation.validators.Constants.STATE_DIR;
@@ -100,9 +101,6 @@ import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.Schema;
 import com.swirlds.state.lifecycle.SchemaRegistry;
-import com.swirlds.state.lifecycle.StateMetadata;
-import com.swirlds.state.merkle.disk.OnDiskKeySerializer;
-import com.swirlds.state.merkle.disk.OnDiskValueSerializer;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import java.nio.file.Path;
@@ -197,6 +195,12 @@ public class InitUtils {
         Map<String, MerkleDbTableConfig> tableConfigByNames = merkleDb.getTableConfigs();
         final var virtualMaps = new ArrayList<VirtualMapAndDataSourceRecord<?, ?>>();
 
+        MerkleDbTableConfig tableConfig = tableConfigByNames.get(VM_LABEL);
+
+        final var ds = new RestoringMerkleDbDataSourceBuilder<>(stateDirPath, tableConfig);
+        final var vm = new VirtualMap(VM_LABEL, ds, CONFIGURATION);
+        virtualMaps.add(new VirtualMapAndDataSourceRecord<>(VM_LABEL, (MerkleDbDataSource) vm.getDataSource(), vm));
+
         servicesRegistry.registrations().forEach((registration) -> {
             try {
                 var service = registration.service();
@@ -211,33 +215,6 @@ public class InitUtils {
                             @SuppressWarnings({"rawtypes", "unchecked"})
                             @Override
                             public SchemaRegistry register(Schema schema) {
-                                schema.statesToCreate().forEach((def) -> {
-                                    if (!def.onDisk()) {
-                                        return;
-                                    }
-                                    final var md = new StateMetadata<>(serviceName, schema, def);
-                                    final var label = StateMetadata.computeLabel(serviceName, def.stateKey());
-                                    if (TABLES_TO_EXCLUDE.contains(label)) {
-                                        return;
-                                    }
-                                    MerkleDbTableConfig tableConfig = tableConfigByNames.get(label);
-                                    final var keySerializer = new OnDiskKeySerializer<>(
-                                            md.onDiskKeySerializerClassId(),
-                                            md.onDiskKeyClassId(),
-                                            md.stateDefinition().keyCodec());
-                                    final var valueSerializer = new OnDiskValueSerializer<>(
-                                            md.onDiskValueSerializerClassId(),
-                                            md.onDiskValueClassId(),
-                                            md.stateDefinition().valueCodec());
-                                    final var ds = new RestoringMerkleDbDataSourceBuilder<>(stateDirPath, tableConfig);
-                                    final var vm = new VirtualMap(label, ds, CONFIGURATION);
-                                    virtualMaps.add(new VirtualMapAndDataSourceRecord<>(
-                                            label,
-                                            (MerkleDbDataSource) vm.getDataSource(),
-                                            vm,
-                                            keySerializer,
-                                            valueSerializer));
-                                });
                                 return null;
                             }
                         };

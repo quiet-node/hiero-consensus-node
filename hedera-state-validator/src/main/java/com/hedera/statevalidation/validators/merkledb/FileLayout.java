@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.statevalidation.validators.merkledb;
 
+import static com.hedera.statevalidation.Constants.VM_LABEL;
 import static com.hedera.statevalidation.validators.Constants.VALIDATE_FILE_LAYOUT;
 import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -57,34 +58,14 @@ public class FileLayout {
 
     // Other files
     private static final List<String> EXPECTED_FILE_PATTERNS = List.of(
-            ".*AddressBookService.NODES.vmap",
-            ".*ConsensusService.TOPICS.vmap",
-            ".*ContractService.BYTECODE.vmap",
-            ".*ContractService.STORAGE.vmap",
+            ".*" + VM_LABEL + ".vmap",
             ".*database_metadata.pbj",
             ".*emergencyRecovery.yaml",
-            ".*FileService.FILES.vmap",
             ".*hashInfo.txt",
-            ".*HintsService.CRS_PUBLICATIONS.vmap",
-            ".*HintsService.HINTS_KEY_SETS.vmap",
-            ".*HintsService.PREPROCESSING_VOTES.vmap",
-            ".*RosterService.ROSTERS.vmap",
-            ".*ScheduleService.SCHEDULE_ID_BY_EQUALITY.vmap",
-            ".*ScheduleService.SCHEDULED_COUNTS.vmap",
-            ".*ScheduleService.SCHEDULED_ORDERS.vmap",
-            ".*ScheduleService.SCHEDULED_USAGES.vmap",
-            ".*ScheduleService.SCHEDULES_BY_ID.vmap",
             ".*settingsUsed.txt",
             ".*signatureSet.bin",
             ".*SignedState.swh",
             ".*stateMetadata.txt",
-            ".*TokenService.ACCOUNTS.vmap",
-            ".*TokenService.ALIASES.vmap",
-            ".*TokenService.NFTS.vmap",
-            ".*TokenService.PENDING_AIRDROPS.vmap",
-            ".*TokenService.STAKING_INFOS.vmap",
-            ".*TokenService.TOKEN_RELS.vmap",
-            ".*TokenService.TOKENS.vmap",
             ".*VERSION");
 
     @Test

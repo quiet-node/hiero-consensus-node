@@ -5,15 +5,9 @@ import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.VirtualValue;
-import com.swirlds.virtualmap.serialize.KeySerializer;
-import com.swirlds.virtualmap.serialize.ValueSerializer;
 
 public record VirtualMapAndDataSourceRecord<K extends VirtualKey, V extends VirtualValue>(
-        String name,
-        MerkleDbDataSource dataSource,
-        VirtualMap map,
-        KeySerializer<K> keySerializer,
-        ValueSerializer<V> valueSerializer) {
+        String name, MerkleDbDataSource dataSource, VirtualMap map) {
 
     @Override
     public String toString() {
