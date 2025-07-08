@@ -116,7 +116,8 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
         // the error.
         final var hevmTransaction = safeCreateHevmTransaction();
         if (hevmTransaction.isException()) {
-            return maybeChargeFeesAndReturnOutcome(hevmTransaction, context.payer(), null, true);
+            return maybeChargeFeesAndReturnOutcome(
+                    hevmTransaction, context.payer(), null, contractsConfig.chargeGasOnEvmHandleException());
         }
 
         // Process the transaction and return its outcome
