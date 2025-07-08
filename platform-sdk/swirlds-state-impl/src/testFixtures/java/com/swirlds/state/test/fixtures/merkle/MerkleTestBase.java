@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.state.test.fixtures.merkle;
 
-import static com.hedera.hapi.platform.state.SingletonType.ENTITYIDSERVICE__ENTITY_ID;
-import static com.hedera.hapi.platform.state.SingletonType.TOKENSERVICE__STAKING_NETWORK_REWARDS;
-import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.FILESERVICE__UPGRADE_DATA_150;
-import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.SCHEDULESERVICE__SCHEDULES_BY_EQUALITY;
+import static com.hedera.hapi.platform.state.SingletonType.ENTITYIDSERVICE_I_ENTITY_ID;
+import static com.hedera.hapi.platform.state.SingletonType.TOKENSERVICE_I_STAKING_NETWORK_REWARDS;
+import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.FILESERVICE_I_UPGRADE_DATA_150;
+import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.SCHEDULESERVICE_I_SCHEDULES_BY_EQUALITY;
 import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.SINGLETON;
-import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.TOKENSERVICE__ALIASES;
+import static com.hedera.hapi.platform.state.VirtualMapKey.KeyOneOfType.TOKENSERVICE_I_ALIASES;
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyDoesNotThrow;
 import static com.swirlds.state.lifecycle.StateMetadata.computeClassId;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForKv;
@@ -223,9 +223,9 @@ public class MerkleTestBase extends StateTestBase {
                         // We have to map "made up" states to existing ones to keep the compatibility with the protocol
                         // The following states are chosen because they have generic `ProtoBytes` as their key type
                         if (FRUIT_SERVICE_NAME.equals(serviceName) || FRUIT_STATE_KEY.equals(stateKey)) {
-                            return createVirtualMapKeyForKv(TOKENSERVICE__ALIASES, keyObject);
+                            return createVirtualMapKeyForKv(TOKENSERVICE_I_ALIASES, keyObject);
                         } else if (ANIMAL_SERVICE_NAME.equals(serviceName) || ANIMAL_STATE_KEY.equals(stateKey)) {
-                            return createVirtualMapKeyForKv(SCHEDULESERVICE__SCHEDULES_BY_EQUALITY, keyObject);
+                            return createVirtualMapKeyForKv(SCHEDULESERVICE_I_SCHEDULES_BY_EQUALITY, keyObject);
                         } else {
                             // Neither the real method nor any test mappings applied.
                             return 65000;
@@ -247,7 +247,7 @@ public class MerkleTestBase extends StateTestBase {
                         // We have to map "made up" states to existing ones to keep the compatibility with the protocol
                         // The following states are chosen because they have generic `ProtoBytes` as their key type
                         if (STEAM_SERVICE_NAME.equals(serviceName) || STEAM_STATE_KEY.equals(stateKey)) {
-                            return createVirtualMapKeyForQueue(FILESERVICE__UPGRADE_DATA_150, keyObject);
+                            return createVirtualMapKeyForQueue(FILESERVICE_I_UPGRADE_DATA_150, keyObject);
                         } else {
                             // Neither the real method nor any test mappings applied.
                             return 65000;
@@ -268,11 +268,11 @@ public class MerkleTestBase extends StateTestBase {
                         // We have to map "made up" states to existing ones to keep the compatibility with the protocol
                         // The following states are chosen because they have generic `ProtoBytes` as their key type
                         if (SPACE_SERVICE_NAME.equals(serviceName) || SPACE_STATE_KEY.equals(stateKey)) {
-                            return createVirtualMapKeyForSingleton(ENTITYIDSERVICE__ENTITY_ID);
+                            return createVirtualMapKeyForSingleton(ENTITYIDSERVICE_I_ENTITY_ID);
                         } else if (STEAM_SERVICE_NAME.equals(serviceName) || STEAM_STATE_KEY.equals(stateKey)) {
-                            return createVirtualMapKeyForSingleton(SingletonType.FILESERVICE__UPGRADE_DATA_150);
+                            return createVirtualMapKeyForSingleton(SingletonType.FILESERVICE_I_UPGRADE_DATA_150);
                         } else if (COUNTRY_SERVICE_NAME.equals(serviceName) || COUNTRY_STATE_KEY.equals(stateKey)) {
-                            return createVirtualMapKeyForSingleton(TOKENSERVICE__STAKING_NETWORK_REWARDS);
+                            return createVirtualMapKeyForSingleton(TOKENSERVICE_I_STAKING_NETWORK_REWARDS);
                         } else {
                             // Neither the real method nor any test mappings applied.
                             return 65000;
