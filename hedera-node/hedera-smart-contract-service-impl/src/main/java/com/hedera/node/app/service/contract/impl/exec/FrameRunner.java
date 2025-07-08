@@ -21,6 +21,7 @@ import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.ContractID;
 import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCalculator;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
+import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransactionResult;
 import com.hedera.node.app.service.contract.impl.hevm.HevmPropagatedCallFailure;
 import com.hedera.node.app.spi.workflows.ResourceExhaustedException;
@@ -78,6 +79,9 @@ public class FrameRunner {
         requireNonNull(senderId);
         requireNonNull(messageCall);
         requireNonNull(contractCreation);
+
+        // We check the frame's duration up front to ensure that we do not start the evm if there is no capacity
+        FrameUtils.checkHederaOpsDuration(frame, 0L);
 
         final var recipientAddress = frame.getRecipientAddress();
         // We compute the called contract's Hedera id up front because it could
