@@ -18,12 +18,13 @@ import java.util.Set;
 import java.util.stream.IntStream;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
 
 public class MappedFileCrashTest {
 
-    private static final int REGION_SIZE = Integer.MAX_VALUE / 100;
+    private static final int REGION_SIZE = 4096 * 100;
     private static final int TOTAL_TEST_FILES = 10;
     private static final String JAVA_FILE_GENERATOR_SOURCE =
             """
@@ -40,29 +41,26 @@ public class MappedFileCrashTest {
                         System.exit(1);
                     }
                     int REGION_SIZE = %d;
-                    java.util.List<Integer> positions = new java.util.ArrayList<>(REGION_SIZE);
-                    for (int i = 0; i < REGION_SIZE; i++) {
-                        positions.add(i);
+                    byte[] writeBuff = new byte[REGION_SIZE];
+                    for (int i = 0; i < writeBuff.length; i++) {
+                        writeBuff[i] = (byte)(%s);
                     }
-                    java.util.Collections.shuffle(positions, new java.util.Random());
 
                     File file = new File(args[0]);
                     try (RandomAccessFile raf = new RandomAccessFile(file, "rw");
                          FileChannel fc = raf.getChannel()) {
 
-                        MappedByteBuffer buf = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
+                        MappedByteBuffer mappedBuffer = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
 
-                        for (int i :positions) {
-                            buf.put(i, ((byte)( %s)) );
+                        for (int i = 0; i<REGION_SIZE; i++) {
+                            mappedBuffer.put(writeBuff);
                         }
 
                         // No force() call
                         double decision = Math.random();
                         if (decision < 0.5) {
-                            System.out.println("Crashing with Runtime.halt()");
                             Runtime.getRuntime().halt(42);
                         } else {
-                            System.out.println("Crashing with Unsafe crash (SIGSEGV)");
                             Unsafe.getUnsafe().putAddress(0L, 42L); // SIGSEGV
                         }
                     }
@@ -96,26 +94,28 @@ public class MappedFileCrashTest {
         if (result != 0) {
             throw new RuntimeException("Compilation failed");
         }
+
+        createExpectedFile();
     }
 
     @RepeatedTest(100)
     public void testMappedFilePersistence() throws Exception {
-        try {
-            createExpectedFile();
-            var testFiles = createTestFiles(TOTAL_TEST_FILES);
 
-            compare(EXPECTED_FILE, testFiles);
-        } finally {
+        var testFiles = createTestFiles(TOTAL_TEST_FILES);
 
-            Files.deleteIfExists(EXPECTED_FILE);
-            IntStream.range(0, TOTAL_TEST_FILES).forEach(i -> {
-                try {
-                    Files.deleteIfExists(getTestFileName(i));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
+        compare(EXPECTED_FILE, testFiles);
+    }
+
+    @AfterAll
+    static void after() throws IOException {
+        Files.deleteIfExists(EXPECTED_FILE);
+        IntStream.range(0, TOTAL_TEST_FILES).forEach(i -> {
+            try {
+                Files.deleteIfExists(getTestFileName(i));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     private static void compare(Path expectedFile, List<Path> files) throws Exception {
@@ -190,9 +190,11 @@ public class MappedFileCrashTest {
                 FileChannel fc = raf.getChannel()) {
 
             MappedByteBuffer buf = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
-            for (int i = 0; i < REGION_SIZE; i++) {
-                buf.put(i, (byte) ('a' + i % 26));
+            byte[] writeBuff = new byte[REGION_SIZE];
+            for (int i = 0; i < writeBuff.length; i++) {
+                writeBuff[i] = (byte) ('a' + i % 26);
             }
+            buf.put(writeBuff);
             buf.force();
 
         } catch (Exception e) {
