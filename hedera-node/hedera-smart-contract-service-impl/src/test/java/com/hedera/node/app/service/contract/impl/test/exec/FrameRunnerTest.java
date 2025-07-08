@@ -260,6 +260,7 @@ class FrameRunnerTest {
                 .build();
         given(entityIdFactory.newContractId(numberOfLongZero(NON_SYSTEM_LONG_ZERO_ADDRESS)))
                 .willReturn(contractId);
+        given(frame.getWorldUpdater()).willReturn(worldUpdater);
 
         final var result = subject.runToCompletion(
                 GAS_LIMIT, SENDER_ID, frame, tracer, messageCallProcessor, contractCreationProcessor);
@@ -292,6 +293,7 @@ class FrameRunnerTest {
                 .build();
         given(entityIdFactory.newContractId(numberOfLongZero(NON_SYSTEM_LONG_ZERO_ADDRESS)))
                 .willReturn(contractId);
+        given(frame.getWorldUpdater()).willReturn(worldUpdater);
 
         // Configure messageCallProcessor to throw ResourceExhaustedException
         doThrow(new ResourceExhaustedException(ResponseCodeEnum.THROTTLED_AT_CONSENSUS))
@@ -336,6 +338,7 @@ class FrameRunnerTest {
         given(frame.getContextVariable(FrameUtils.CONFIG_CONTEXT_VARIABLE)).willReturn(config);
         given(frame.getContextVariable(FrameUtils.TRACKER_CONTEXT_VARIABLE)).willReturn(null);
         given(frame.getExceptionalHaltReason()).willReturn(Optional.of(ExceptionalHaltReason.CODE_SECTION_MISSING));
+        given(frame.getWorldUpdater()).willReturn(worldUpdater);
 
         // Contract ID setup
         final var contractId = ContractID.newBuilder()
@@ -398,6 +401,7 @@ class FrameRunnerTest {
             @NonNull final Address receiver, final boolean success, final boolean receiverSigCheckFailure) {
         final Deque<MessageFrame> messageFrameStack = new ArrayDeque<>();
         messageFrameStack.addFirst(frame);
+        given(frame.getWorldUpdater()).willReturn(worldUpdater);
         given(frame.getType()).willReturn(MessageFrame.Type.CONTRACT_CREATION);
         given(childFrame.getType()).willReturn(MessageFrame.Type.MESSAGE_CALL);
         doAnswer(invocation -> {
