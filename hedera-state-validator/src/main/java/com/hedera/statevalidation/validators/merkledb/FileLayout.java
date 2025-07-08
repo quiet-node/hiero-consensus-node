@@ -7,7 +7,6 @@ import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.hedera.statevalidation.parameterresolver.StateResolver;
-import com.hedera.statevalidation.parameterresolver.VirtualMapHolder;
 import com.hedera.statevalidation.validators.Constants;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import java.io.IOException;
@@ -79,9 +78,7 @@ public class FileLayout {
                 .map(Pattern::compile)
                 .map(v -> new OptionalPattern(v, false))
                 .toList());
-        VirtualMapHolder.getInstance()
-                .getTableNames()
-                .forEach(tableName -> expectedPathPatterns.addAll(indexPathsToMatch(tableName)));
+        expectedPathPatterns.addAll(indexPathsToMatch(VM_LABEL));
 
         Path statePath = Path.of(Constants.STATE_DIR);
         Files.walk(statePath).filter(Files::isRegularFile).forEach(path -> {

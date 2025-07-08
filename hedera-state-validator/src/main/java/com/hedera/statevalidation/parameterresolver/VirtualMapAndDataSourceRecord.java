@@ -2,13 +2,9 @@
 package com.hedera.statevalidation.parameterresolver;
 
 import com.swirlds.merkledb.MerkleDbDataSource;
-import com.swirlds.virtualmap.VirtualKey;
 import com.swirlds.virtualmap.VirtualMap;
-import com.swirlds.virtualmap.VirtualValue;
 
-public record VirtualMapAndDataSourceRecord<K extends VirtualKey, V extends VirtualValue>(
-        String name, MerkleDbDataSource dataSource, VirtualMap map) {
-
+public record VirtualMapAndDataSourceRecord(String name, MerkleDbDataSource dataSource, VirtualMap map) {
     @Override
     public String toString() {
         return name;

@@ -22,8 +22,6 @@ import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.merkledb.files.hashmap.ParsedBucket;
-import com.swirlds.virtualmap.VirtualKey;
-import com.swirlds.virtualmap.VirtualValue;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.LongConsumer;
@@ -43,7 +41,7 @@ public class ValidateLeafIndexHalfDiskHashMap {
 
     @ParameterizedTest
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
-    public void validateIndex(VirtualMapAndDataSourceRecord<VirtualKey, VirtualValue> vmAndSource, Report report) {
+    public void validateIndex(VirtualMapAndDataSourceRecord vmAndSource, Report report) {
         if (vmAndSource.dataSource().getFirstLeafPath() == -1) {
             log.info("Skipping the validation for {} as the map is empty", vmAndSource.name());
             return;
