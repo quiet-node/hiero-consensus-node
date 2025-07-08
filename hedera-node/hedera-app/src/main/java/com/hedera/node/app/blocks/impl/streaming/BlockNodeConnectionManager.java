@@ -215,6 +215,13 @@ public class BlockNodeConnectionManager {
                 .blockItemBatchSize();
     }
 
+    private int publishStreamRequestMaxSizeBytes() {
+        return configProvider
+                .getConfiguration()
+                .getConfigData(BlockStreamConfig.class)
+                .publishStreamRequestMaxSizeBytes();
+    }
+
     /**
      * Extracts block node configurations from the specified configuration file.
      *
@@ -570,7 +577,7 @@ public class BlockNodeConnectionManager {
             return true;
         }
 
-        blockState.processPendingItems(blockItemBatchSize());
+        blockState.processPendingItems(blockItemBatchSize(), publishStreamRequestMaxSizeBytes());
 
         if (blockState.numRequestsCreated() == 0) {
             // the block was not found or there are no requests available to send, so return true (safe to sleep)

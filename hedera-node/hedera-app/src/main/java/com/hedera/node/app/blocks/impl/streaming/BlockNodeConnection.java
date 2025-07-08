@@ -175,10 +175,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void createRequestObserver() {
         if (blockNodeStreamObserver == null) {
-            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub blockingStub =
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub stub =
                     BlockStreamPublishServiceGrpc.newStub(managedChannel);
-            blockNodeStreamObserver =
-                    (ClientCallStreamObserver<PublishStreamRequest>) blockingStub.publishBlockStream(this);
+            blockNodeStreamObserver = (ClientCallStreamObserver<PublishStreamRequest>) stub.publishBlockStream(this);
             updateConnectionState(ConnectionState.PENDING);
         }
     }

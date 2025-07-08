@@ -248,8 +248,9 @@ public class BlockState {
      *
      * @param batchSize the maximum number of items to include in the request; if this value is less than 1 then the
      *                  batch size is set to 1
+     * @param publishStreamRequestMaxSizeBytes the maximum size of a request in bytes
      */
-    public void processPendingItems(final int batchSize) {
+    public void processPendingItems(final int batchSize, final int publishStreamRequestMaxSizeBytes) {
         if (pendingItems.isEmpty()) {
             return; // nothing to do
         }
@@ -266,11 +267,17 @@ public class BlockState {
          */
 
         final boolean hasEnoughItemsForBatch = pendingItems.size() >= maxItems;
+        final boolean hasMoreBytesThanMaxSize =
+                pendingItems.stream().mapToInt(BlockItem::protobufSize).sum() > publishStreamRequestMaxSizeBytes;
         final boolean headerNeedsToBeSent = ItemState.ADDED == headerItemInfo.state.get();
         final boolean proofNeedsToBeSent = ItemState.ADDED == proofItemInfo.state.get();
         final boolean preProofNeedsToBeSent = ItemState.ADDED == preProofItemInfo.state.get();
 
-        if (!hasEnoughItemsForBatch && !headerNeedsToBeSent && !proofNeedsToBeSent && !preProofNeedsToBeSent) {
+        if (!(hasEnoughItemsForBatch
+                || hasMoreBytesThanMaxSize
+                || headerNeedsToBeSent
+                || proofNeedsToBeSent
+                || preProofNeedsToBeSent)) {
             return; // nothing ready to be sent
         }
 
@@ -279,8 +286,23 @@ public class BlockState {
         final Iterator<BlockItem> it = pendingItems.iterator();
 
         boolean forceCreation = false;
+        int currentRequestSizeBytes = 0;
         while (it.hasNext()) {
             final BlockItem item = it.next();
+            if (currentRequestSizeBytes + item.protobufSize() > publishStreamRequestMaxSizeBytes) {
+                // if adding this item would exceed the max size, stop processing
+                if (item.protobufSize() > publishStreamRequestMaxSizeBytes) {
+                    logger.error(
+                            "[Block {}] Item size ({}) exceeds max request size ({}), cannot fit item in a PublishStreamRequest: {}",
+                            blockNumber,
+                            item.protobufSize(),
+                            publishStreamRequestMaxSizeBytes,
+                            item);
+                    return;
+                }
+                break;
+            }
+            currentRequestSizeBytes += item.protobufSize();
             blockItems.add(item);
             it.remove();
 
@@ -331,7 +353,7 @@ public class BlockState {
         logger.trace("[Block {}] Created new request (index={}, numItems={})", blockNumber, index, blockItems.size());
 
         if (!pendingItems.isEmpty()) {
-            processPendingItems(batchSize);
+            processPendingItems(batchSize, publishStreamRequestMaxSizeBytes);
         }
     }
 

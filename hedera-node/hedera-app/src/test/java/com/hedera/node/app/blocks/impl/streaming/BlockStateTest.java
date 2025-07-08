@@ -9,9 +9,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.node.app.blocks.impl.streaming.BlockState.ItemInfo;
 import com.hedera.node.app.blocks.impl.streaming.BlockState.ItemState;
 import com.hedera.node.app.blocks.impl.streaming.BlockState.RequestWrapper;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.VarHandle;
@@ -35,6 +37,7 @@ class BlockStateTest {
     private static final VarHandle headerItemHandle;
     private static final VarHandle preProofItemHandle;
     private static final VarHandle proofItemHandle;
+    public static final int PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES = 4194304;
 
     static {
         try {
@@ -205,7 +208,7 @@ class BlockStateTest {
         pendingItems.clear(); // ensure nothing exists
         requestsByIndex.clear(); // ensure nothing exists
 
-        block.processPendingItems(10);
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).isEmpty();
         assertThat(block.numRequestsCreated()).isZero();
@@ -226,7 +229,7 @@ class BlockStateTest {
         block.addItem(newBlockTxItem());
         block.addItem(newBlockTxItem());
 
-        block.processPendingItems(10);
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).hasSize(6); // no pending requests should be removed from the queue
         assertThat(block.numRequestsCreated()).isZero();
@@ -251,7 +254,7 @@ class BlockStateTest {
         block.addItem(newBlockTxItem());
         block.addItem(newBlockTxItem());
 
-        block.processPendingItems(10);
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).hasSize(1); // all of the pending requests except 1 should be removed
         assertThat(block.numRequestsCreated()).isEqualTo(1); // should be one request with 10 items
@@ -274,7 +277,7 @@ class BlockStateTest {
             block.addItem(newBlockTxItem());
         }
 
-        block.processPendingItems(batchSize);
+        block.processPendingItems(batchSize, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).hasSize(5); // should be 5 extra items that didn't fit in the batches
         assertThat(block.numRequestsCreated()).isEqualTo(2); // should be 2 requests
@@ -297,7 +300,7 @@ class BlockStateTest {
 
         block.addItem(newBlockHeaderItem());
 
-        block.processPendingItems(10);
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).isEmpty();
         assertThat(block.numRequestsCreated()).isEqualTo(1);
@@ -318,7 +321,7 @@ class BlockStateTest {
         block.addItem(newBlockTxItem());
         block.addItem(newPreProofBlockStateChangesItem());
 
-        block.processPendingItems(10);
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).isEmpty();
         assertThat(block.numRequestsCreated()).isEqualTo(1);
@@ -338,7 +341,7 @@ class BlockStateTest {
 
         block.addItem(newBlockProofItem());
 
-        block.processPendingItems(10);
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).isEmpty();
         assertThat(block.numRequestsCreated()).isEqualTo(1);
@@ -373,7 +376,7 @@ class BlockStateTest {
         assertThat(preProofInfo.state()).hasValue(ItemState.ADDED);
         assertThat(proofInfo.state()).hasValue(ItemState.ADDED);
 
-        block.processPendingItems(4);
+        block.processPendingItems(4, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).isEmpty();
         assertThat(block.numRequestsCreated()).isEqualTo(3);
@@ -431,6 +434,103 @@ class BlockStateTest {
         assertThat(proofInfo.state()).hasValue(ItemState.SENT);
         assertThat(block.isBlockProofSent()).isTrue();
         assertThat(rw.isSent()).isTrue();
+    }
+
+    @Test
+    void testPublishStreamRequestCreatedWhenSizeExceeds4MB() {
+        final Queue<BlockItem> pendingItems = pendingItems();
+
+        byte[] largeData = new byte[1024 * 1024 * 3]; // 3MB
+        Bytes bytes = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(bytes)
+                        .build())
+                .build();
+
+        // Create BlockItems with a combined size exceeding 4MB
+        block.addItem(largeItem);
+        block.addItem(largeItem);
+
+        // Act
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+
+        // Assert
+        assertThat(pendingItems).hasSize(1); // Items should be processed
+        assertThat(block.numRequestsCreated()).isEqualTo(1); // One request should be created
+    }
+
+    @Test
+    void testPublishStreamRequestCreatedWhenSizeIsOneByteLessThanLimit() {
+        final Queue<BlockItem> pendingItems = pendingItems();
+
+        byte[] largeData = new byte[4194293]; // 4194293 bytes (1 byte less than the limit, -10 for header)
+        Bytes bytes = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(bytes)
+                        .build())
+                .build();
+
+        // Add BlockItems with a combined size of 4194303 bytes
+        block.addItem(largeItem);
+
+        // Act
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+
+        // Assert
+        assertThat(pendingItems).hasSize(1); // Items should remain unprocessed
+        assertThat(block.numRequestsCreated()).isZero(); // No request should be created
+    }
+
+    @Test
+    void testPublishStreamRequestCreatedWhenSizeIsExactlyAtLimit() {
+        final Queue<BlockItem> pendingItems = pendingItems();
+
+        byte[] largeData = new byte[4194294]; // 4194304 bytes (exactly at the limit, -10 for header)
+        Bytes bytes = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(bytes)
+                        .build())
+                .build();
+
+        // Add BlockItems with a combined size of 4194304 bytes
+        block.addItem(largeItem);
+
+        // Act
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+
+        // Assert
+        assertThat(pendingItems).hasSize(1); // Items should remain unprocessed
+        assertThat(block.numRequestsCreated()).isZero(); // No request should be created
+    }
+
+    @Test
+    void testPublishStreamRequestCreatedWhenSizeIsOneByteMoreThanLimit() {
+        final Queue<BlockItem> pendingItems = pendingItems();
+
+        byte[] largeData = new byte[4194295]; // 4194305 bytes (1 byte more than the limit, -10 for header)
+        Bytes bytes = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(bytes)
+                        .build())
+                .build();
+
+        // Add BlockItems with a combined size of 4194305 bytes
+        block.addItem(largeItem);
+
+        // Act
+        block.processPendingItems(10, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+
+        // Assert
+        assertThat(pendingItems).hasSize(1); // Items should remain unprocessed
+        assertThat(block.numRequestsCreated()).isZero(); // No request should be created
     }
 
     // Utilities
