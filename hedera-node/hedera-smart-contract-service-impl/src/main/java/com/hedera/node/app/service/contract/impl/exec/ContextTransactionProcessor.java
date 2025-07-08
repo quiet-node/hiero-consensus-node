@@ -116,7 +116,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
         // the error.
         final var hevmTransaction = safeCreateHevmTransaction();
         if (hevmTransaction.isException()) {
-            return maybeChargeFeesAndReturnOutcome(hevmTransaction, context.payer(), null);
+            return maybeChargeFeesAndReturnOutcome(hevmTransaction, context.payer(), null, true);
         }
 
         // Process the transaction and return its outcome
@@ -159,7 +159,11 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
             final var sender = rootProxyWorldUpdater.getHederaAccount(hevmTransaction.senderId());
             final var senderId = sender != null ? sender.hederaId() : hevmTransaction.senderId();
 
-            return maybeChargeFeesAndReturnOutcome(hevmTransaction.withException(e), senderId, sender);
+            return maybeChargeFeesAndReturnOutcome(
+                    hevmTransaction.withException(e),
+                    senderId,
+                    sender,
+                    shouldChargeGasAfterProcessing(hevmTransaction));
         }
     }
 
@@ -186,10 +190,11 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
     private CallOutcome maybeChargeFeesAndReturnOutcome(
             @NonNull final HederaEvmTransaction hevmTransaction,
             @NonNull final AccountID senderId,
-            @Nullable final HederaEvmAccount sender) {
+            @Nullable final HederaEvmAccount sender,
+            final boolean chargeGas) {
 
         long gasCharged = 0;
-        if (shouldChargeGas(hevmTransaction)) {
+        if (chargeGas) {
             gasCharged = gasCharging.possiblyChargeGasForAbortedTransaction(
                     senderId, hederaEvmContext, rootProxyWorldUpdater, hevmTransaction);
         }
@@ -238,7 +243,13 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
         hederaOpsDuration.applyDurationFromConfig(requireNonNull(opsDurationConfig));
     }
 
-    private boolean shouldChargeGas(@NonNull final HederaEvmTransaction hevmTransaction) {
+    /**
+     * Determines whether we should charge gas for exceptions after processing has started.
+     *
+     * @param hevmTransaction the Hedera EVM transaction
+     * @return true if gas should be charged, false otherwise
+     */
+    private boolean shouldChargeGasAfterProcessing(@NonNull final HederaEvmTransaction hevmTransaction) {
         return contractsConfig.chargeGasOnEvmHandleException()
                 &&
                 // we charge gas for all contract call and on ResourceExhaustedException
