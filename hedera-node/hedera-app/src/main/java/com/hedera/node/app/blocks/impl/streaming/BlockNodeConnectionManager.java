@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -497,7 +498,7 @@ public class BlockNodeConnectionManager {
                 grpcClient,
                 blockStreamMetrics,
                 grpcEndpoint,
-                executorService);
+                Executors.newSingleThreadScheduledExecutor());
 
         connections.put(nodeConfig, connection);
         // Immediately schedule the FIRST connection attempt.
