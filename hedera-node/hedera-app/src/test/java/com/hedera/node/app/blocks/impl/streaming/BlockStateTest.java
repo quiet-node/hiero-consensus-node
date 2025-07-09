@@ -277,8 +277,8 @@ class BlockStateTest {
 
         block.processPendingItems(batchSize, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
-        assertThat(pendingItems).hasSize(5); // should be 5 extra items that didn't fit in the batches
-        assertThat(block.numRequestsCreated()).isEqualTo(2); // should be 2 requests
+        assertThat(pendingItems).hasSize(15); // should be 15 extra items as it's only invoked once
+        assertThat(block.numRequestsCreated()).isEqualTo(1); // should be 1 requests
 
         final PublishStreamRequest request1 = block.getRequest(0);
         assertThat(request1).isNotNull();
@@ -374,6 +374,8 @@ class BlockStateTest {
         assertThat(preProofInfo.state()).hasValue(ItemState.ADDED);
         assertThat(proofInfo.state()).hasValue(ItemState.ADDED);
 
+        block.processPendingItems(4, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+        block.processPendingItems(4, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
         block.processPendingItems(4, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
 
         assertThat(pendingItems).isEmpty();
