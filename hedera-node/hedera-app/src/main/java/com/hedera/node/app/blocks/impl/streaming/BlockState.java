@@ -119,10 +119,6 @@ public class BlockState {
      */
     private final ConcurrentMap<Integer, RequestWrapper> requestsByIndex = new ConcurrentHashMap<>();
     /**
-     * Counter used to determine the index of requests created.
-     */
-    private final AtomicInteger requestIdxCtr = new AtomicInteger(0);
-    /**
      * The timestamp in which this block was closed. A closed block should not receive any more items and is considered
      * "final".
      */
@@ -140,6 +136,8 @@ public class BlockState {
      * proof is generated.
      */
     private final ItemInfo preProofItemInfo = new ItemInfo();
+
+    private List<BlockItem> currentBlockItems = new ArrayList<>();
 
     /**
      * Create a new block state for the specified block number.
@@ -264,46 +262,34 @@ public class BlockState {
          * 3. The new request would include any pending items before the block proof is created (block proof could take
          *    longer to process)
          * 4. The new request contains the block proof
+         *
+         * Note: A new request is created if the current request exceeds the maximum inbound message size
          */
 
         final boolean hasEnoughItemsForBatch = pendingItems.size() >= maxItems;
-        final boolean hasMoreBytesThanMaxSize =
-                pendingItems.stream().mapToInt(BlockItem::protobufSize).sum() > publishStreamRequestMaxSizeBytes;
         final boolean headerNeedsToBeSent = ItemState.ADDED == headerItemInfo.state.get();
         final boolean proofNeedsToBeSent = ItemState.ADDED == proofItemInfo.state.get();
         final boolean preProofNeedsToBeSent = ItemState.ADDED == preProofItemInfo.state.get();
 
-        if (!(hasEnoughItemsForBatch
-                || hasMoreBytesThanMaxSize
-                || headerNeedsToBeSent
-                || proofNeedsToBeSent
-                || preProofNeedsToBeSent)) {
+        if (!hasEnoughItemsForBatch && !headerNeedsToBeSent && !proofNeedsToBeSent && !preProofNeedsToBeSent) {
             return; // nothing ready to be sent
         }
 
-        final List<BlockItem> blockItems = new ArrayList<>(maxItems);
-        final int index = requestIdxCtr.getAndIncrement();
+        final int index = requestsByIndex.keySet().size();
         final Iterator<BlockItem> it = pendingItems.iterator();
-
         boolean forceCreation = false;
-        int currentRequestSizeBytes = 0;
         while (it.hasNext()) {
             final BlockItem item = it.next();
-            if (currentRequestSizeBytes + item.protobufSize() > publishStreamRequestMaxSizeBytes) {
-                // if adding this item would exceed the max size, stop processing
-                if (item.protobufSize() > publishStreamRequestMaxSizeBytes) {
-                    logger.error(
-                            "[Block {}] Item size ({}) exceeds max request size ({}), cannot fit item in a PublishStreamRequest: {}",
-                            blockNumber,
-                            item.protobufSize(),
-                            publishStreamRequestMaxSizeBytes,
-                            item);
-                    return;
-                }
+            currentBlockItems.add(item);
+            PublishStreamRequest psr = PublishStreamRequest.newBuilder()
+                    .blockItems(BlockItemSet.newBuilder()
+                            .blockItems(currentBlockItems)
+                            .build())
+                    .build();
+            if (psr.protobufSize() > publishStreamRequestMaxSizeBytes) {
+                currentBlockItems.removeLast();
                 break;
             }
-            currentRequestSizeBytes += item.protobufSize();
-            blockItems.add(item);
             it.remove();
 
             if (item.hasBlockHeader()) {
@@ -338,22 +324,27 @@ public class BlockState {
                 }
             }
 
-            if (!it.hasNext() || blockItems.size() == maxItems || forceCreation) {
+            if (!it.hasNext() || currentBlockItems.size() == maxItems || forceCreation) {
                 break;
             }
         }
 
-        final BlockItemSet bis =
-                BlockItemSet.newBuilder().blockItems(blockItems).build();
-        final PublishStreamRequest psr =
-                PublishStreamRequest.newBuilder().blockItems(bis).build();
-        final RequestWrapper rs = new RequestWrapper(index, psr, new AtomicBoolean(false));
-        requestsByIndex.put(index, rs);
+        if (!currentBlockItems.isEmpty()) {
+            final PublishStreamRequest currentPublishStreamRequest = PublishStreamRequest.newBuilder()
+                    .blockItems(BlockItemSet.newBuilder()
+                            .blockItems(currentBlockItems)
+                            .build())
+                    .build();
+            final RequestWrapper rs = new RequestWrapper(index, currentPublishStreamRequest, new AtomicBoolean(false));
+            requestsByIndex.put(index, rs);
 
-        logger.trace("[Block {}] Created new request (index={}, numItems={})", blockNumber, index, blockItems.size());
+            logger.trace(
+                    "[Block {}] Created new request (index={}, numItems={})",
+                    blockNumber,
+                    index,
+                    currentBlockItems.size());
 
-        if (!pendingItems.isEmpty()) {
-            processPendingItems(batchSize, publishStreamRequestMaxSizeBytes);
+            currentBlockItems = new ArrayList<>(); // reset for the next batch
         }
     }
 

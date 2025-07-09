@@ -1,22 +1,26 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 import com.google.protobuf.ByteString;
-import com.hedera.hapi.block.stream.protoc.BlockItem;
-import com.hedera.hapi.platform.event.legacy.EventTransaction;
+import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.platform.event.EventTransaction;
+import com.hedera.pbj.runtime.io.buffer.Bytes;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.ClientCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.LockSupport;
 import org.hiero.block.api.protoc.BlockItemSet;
 import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 import org.hiero.block.api.protoc.PublishStreamRequest;
 import org.hiero.block.api.protoc.PublishStreamResponse;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,13 +29,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 public class BlockNodeStreamingStubTest {
 
-    private Server server;
+    public static final int PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES = 4194304;
+    private static Server server;
     private BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub stub;
 
-    private int count = 0;
+    private static CountDownLatch latch = new CountDownLatch(5000);
 
-    @BeforeEach
-    void setup() throws IOException {
+    @BeforeAll
+    static void setup() throws IOException {
         // Mock implementation of the BlockStreamPublishService
         BlockStreamPublishServiceGrpc.BlockStreamPublishServiceImplBase serviceImpl =
                 new BlockStreamPublishServiceGrpc.BlockStreamPublishServiceImplBase() {
@@ -43,7 +48,7 @@ public class BlockNodeStreamingStubTest {
                             @Override
                             public void onNext(PublishStreamRequest request) {
                                 // No-op for this test, just simulating high-rate data on stream
-                                count++;
+                                latch.countDown();
                             }
 
                             @Override
@@ -60,13 +65,13 @@ public class BlockNodeStreamingStubTest {
                 };
 
         // Start the gRPC server
-        server = ServerBuilder.forPort(8080).addService(serviceImpl).build().start();
+        server = ServerBuilder.forPort(0).addService(serviceImpl).build().start();
     }
 
-    @AfterEach
-    void tearDown() throws InterruptedException {
+    @AfterAll
+    static void tearDown() throws InterruptedException {
         if (server != null) {
-            server.shutdown();
+            server.shutdownNow();
             server.awaitTermination();
         }
     }
@@ -75,7 +80,7 @@ public class BlockNodeStreamingStubTest {
     @Disabled
     void testHighRateDataPublishing() {
         BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub stub =
-                BlockStreamPublishServiceGrpc.newStub(ManagedChannelBuilder.forAddress("localhost", 8080)
+                BlockStreamPublishServiceGrpc.newStub(ManagedChannelBuilder.forAddress("localhost", server.getPort())
                         .usePlaintext()
                         .build());
 
@@ -97,14 +102,13 @@ public class BlockNodeStreamingStubTest {
                     }
                 });
 
-        // Create 1MB byte array
-        byte[] largeData = new byte[1024 * 1024 * 5]; // 2MB
+        byte[] largeData = new byte[1024 * 1024 * 2]; // 2MB
         ByteString largeDataByteString = ByteString.copyFrom(largeData);
 
         PublishStreamRequest testRequest = PublishStreamRequest.newBuilder()
                 .setBlockItems(BlockItemSet.newBuilder()
-                        .addBlockItems(BlockItem.newBuilder()
-                                .setEventTransaction(EventTransaction.newBuilder()
+                        .addBlockItems(com.hedera.hapi.block.stream.protoc.BlockItem.newBuilder()
+                                .setEventTransaction(com.hedera.hapi.platform.event.legacy.EventTransaction.newBuilder()
                                         .setApplicationTransaction(largeDataByteString)
                                         .build())
                                 .build())
@@ -112,24 +116,97 @@ public class BlockNodeStreamingStubTest {
                 .build();
 
         // Simulate high-rate data publishing
-        for (int i = 0; i < 10000; i++) {
-            // Print a Message of Current Status every 1000 messages
-            if (i % 1000 == 0) {
-                System.out.println("Publishing message number: " + i);
-            }
-            if (requestObserver.isReady()) {
+        int cnt = 0;
+        while (latch.getCount() > 0) {
+            if (requestObserver.isReady() && cnt < 5000) {
                 requestObserver.onNext(testRequest);
+                cnt++;
             } else {
                 // Park the thread for 10ms in nanos
                 LockSupport.parkNanos(10_000_000); // 10 milliseconds in nanoseconds
             }
         }
         requestObserver.onCompleted();
-        // Wait for count to reach 10000 with a timeout of 30 seconds
-        long startTime = System.currentTimeMillis();
-        while (count < 10000 && (System.currentTimeMillis() - startTime) < 30000) {
-            // Wait for the count to reach 10000
-            LockSupport.parkNanos(100_000_000); // 100 milliseconds in nanoseconds
-        }
+    }
+
+    @Test
+    void testPublishStreamRequestSizeAtLimit() {
+        BlockState blockState = new BlockState(0);
+
+        byte[] largeData = new byte[PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES - 20];
+        Bytes largeDataByteString = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(largeDataByteString)
+                        .build())
+                .build();
+
+        blockState.addItem(largeItem);
+        blockState.processPendingItems(2, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+        org.hiero.block.api.PublishStreamRequest request = blockState.getRequest(0);
+
+        assertThat(request).isNull();
+    }
+
+    @Test
+    void testPublishStreamRequestSizeAtLimitMinusOneByte() {
+        BlockState blockState = new BlockState(0);
+
+        byte[] largeData = new byte[PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES - 21];
+        Bytes largeDataByteString = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(largeDataByteString)
+                        .build())
+                .build();
+
+        blockState.addItem(largeItem);
+        blockState.processPendingItems(2, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+        org.hiero.block.api.PublishStreamRequest request = blockState.getRequest(0);
+
+        assertThat(request).isNull();
+    }
+
+    @Test
+    void testPublishStreamRequestSizeAtLimitPlusOneByte() {
+        BlockState blockState = new BlockState(0);
+
+        byte[] largeData = new byte[PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES - 19];
+        Bytes largeDataByteString = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(largeDataByteString)
+                        .build())
+                .build();
+
+        blockState.addItem(largeItem);
+        blockState.processPendingItems(2, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+        org.hiero.block.api.PublishStreamRequest request = blockState.getRequest(0);
+
+        assertThat(request).isNull();
+    }
+
+    @Test
+    void testPublishStreamRequestSizeLimit() {
+        BlockState blockState = new BlockState(0);
+
+        byte[] largeData = new byte[PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES / 2];
+        Bytes largeDataByteString = Bytes.wrap(largeData);
+
+        BlockItem largeItem = BlockItem.newBuilder()
+                .eventTransaction(EventTransaction.newBuilder()
+                        .applicationTransaction(largeDataByteString)
+                        .build())
+                .build();
+
+        blockState.addItem(largeItem);
+        blockState.addItem(largeItem);
+        blockState.addItem(largeItem);
+        blockState.processPendingItems(3, PUBLISH_STREAM_REQUEST_MAX_SIZE_BYTES);
+
+        assertThat(blockState.numRequestsCreated()).isEqualTo(1);
     }
 }

@@ -11,6 +11,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogDoesN
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sourcingContextual;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitUntilNextBlocks;
+import static com.hedera.services.bdd.suites.regression.system.MixedOperations.burstOfTps;
 import static java.time.temporal.ChronoUnit.SECONDS;
 
 import com.hedera.services.bdd.HapiBlockNode;
@@ -49,7 +50,9 @@ public class BlockNodeSimulatorSuite {
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
-        return hapiTest(waitUntilNextBlocks(10000).withBackgroundTraffic(false));
+        return hapiTest(
+                waitUntilNextBlocks(20).withBackgroundTraffic(true),
+                assertHgcaaLogDoesNotContain(byNodeId(0), "ERROR", Duration.ofSeconds(5)));
     }
 
     @HapiTest

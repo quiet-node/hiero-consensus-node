@@ -21,7 +21,7 @@ import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import io.grpc.ManagedChannel;
-import io.grpc.stub.StreamObserver;
+import io.grpc.stub.ClientCallStreamObserver;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.VarHandle;
@@ -64,7 +64,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     private ManagedChannel managedChannel;
     private BlockStreamMetrics metrics;
     private final String grpcEndpoint = "foo";
-    private StreamObserver<PublishStreamRequest> requestObserver;
 
     @BeforeEach
     void beforeEach() {
@@ -74,7 +73,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         stateManager = mock(BlockBufferService.class);
         managedChannel = mock(ManagedChannel.class);
         metrics = mock(BlockStreamMetrics.class);
-        requestObserver = mock(StreamObserver.class);
 
         connection = new BlockNodeConnection(
                 configProvider, nodeConfig, connectionManager, stateManager, managedChannel, metrics, grpcEndpoint);
@@ -92,7 +90,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
                     .thenReturn(mockStub);
 
             // Mock the behavior of the stub's publishBlockStream method
-            StreamObserver<org.hiero.block.api.protoc.PublishStreamRequest> mockObserver = mock(StreamObserver.class);
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
             when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
 
             assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
@@ -115,7 +113,8 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
                     .thenReturn(mockStub);
 
             // Mock the behavior of the stub's publishBlockStream method
-            StreamObserver<org.hiero.block.api.protoc.PublishStreamRequest> mockObserver = mock(StreamObserver.class);
+            ClientCallStreamObserver<org.hiero.block.api.protoc.PublishStreamRequest> mockObserver =
+                    mock(ClientCallStreamObserver.class);
             when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
             connection.createRequestObserver();
             connection.createRequestObserver();
@@ -138,22 +137,35 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
 
     @Test
     void testHandleStreamError() {
-        openConnectionAndResetMocks();
-        connection.updateConnectionState(ConnectionState.ACTIVE);
-        // do a quick sanity check on the state
-        final ConnectionState preState = connection.getConnectionState();
-        assertThat(preState).isEqualTo(ConnectionState.ACTIVE);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.handleStreamFailure();
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            connection.updateConnectionState(ConnectionState.ACTIVE);
+            // do a quick sanity check on the state
+            final ConnectionState preState = connection.getConnectionState();
+            assertThat(preState).isEqualTo(ConnectionState.ACTIVE);
 
-        final ConnectionState postState = connection.getConnectionState();
-        assertThat(postState).isEqualTo(ConnectionState.UNINITIALIZED);
+            connection.handleStreamFailure();
 
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verify(connectionManager).jumpToBlock(-1L);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
+            final ConnectionState postState = connection.getConnectionState();
+            assertThat(postState).isEqualTo(ConnectionState.UNINITIALIZED);
+
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verify(connectionManager).jumpToBlock(-1L);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+        }
     }
 
     @Test
@@ -235,31 +247,45 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
 
     @Test
     void testOnNext_endOfStream_exceededMaxPermitted() {
-        openConnectionAndResetMocks();
-        final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        // populate the end of stream timestamp queue with some data so the next call exceeds the max allowed
-        // the queue assumes chronological ordering, so make sure the oldest are added first
-        final Queue<Instant> eosTimestamps = (Queue<Instant>) eosTimestampsHandle.get(connection);
-        final Instant now = Instant.now();
-        eosTimestamps.add(now.minusSeconds(5));
-        eosTimestamps.add(now.minusSeconds(4));
-        eosTimestamps.add(now.minusSeconds(3));
-        eosTimestamps.add(now.minusSeconds(2));
-        eosTimestamps.add(now.minusSeconds(1));
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
 
-        connection.onNext(response);
+            // populate the end of stream timestamp queue with some data so the next call exceeds the max allowed
+            // the queue assumes chronological ordering, so make sure the oldest are added first
+            final Queue<Instant> eosTimestamps = (Queue<Instant>) eosTimestampsHandle.get(connection);
+            final Instant now = Instant.now();
+            eosTimestamps.add(now.minusSeconds(5));
+            eosTimestamps.add(now.minusSeconds(4));
+            eosTimestamps.add(now.minusSeconds(3));
+            eosTimestamps.add(now.minusSeconds(2));
+            eosTimestamps.add(now.minusSeconds(1));
 
-        assertThat(eosTimestamps).hasSize(6);
+            connection.onNext(response);
 
-        verify(metrics).incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.BEHIND);
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(connectionManager).rescheduleAndSelectNewNode(eq(connection), any(Duration.class));
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            assertThat(eosTimestamps).hasSize(6);
+
+            verify(metrics)
+                    .incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.BEHIND);
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(connectionManager).rescheduleAndSelectNewNode(eq(connection), any(Duration.class));
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @ParameterizedTest
@@ -267,22 +293,35 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
             value = EndOfStream.Code.class,
             names = {"INTERNAL_ERROR", "PERSISTENCE_FAILED"})
     void testOnNext_endOfStream_blockNodeInternalError(final EndOfStream.Code responseCode) {
-        openConnectionAndResetMocks();
-        final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.onNext(response);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
 
-        verify(metrics)
-                .incrementEndOfStreamCount(
-                        org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.fromProtobufOrdinal(
-                                responseCode.ordinal()));
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            connection.onNext(response);
+
+            verify(metrics)
+                    .incrementEndOfStreamCount(
+                            org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.fromProtobufOrdinal(
+                                    responseCode.ordinal()));
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @ParameterizedTest
@@ -290,104 +329,174 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
             value = EndOfStream.Code.class,
             names = {"TIMEOUT", "OUT_OF_ORDER", "BAD_STATE_PROOF"})
     void testOnNext_endOfStream_clientFailures(final EndOfStream.Code responseCode) {
-        openConnectionAndResetMocks();
-        final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.onNext(response);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
 
-        verify(metrics)
-                .incrementEndOfStreamCount(
-                        org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.fromProtobufOrdinal(
-                                responseCode.ordinal()));
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(connectionManager).scheduleConnectionAttempt(connection, Duration.ofSeconds(1), 11L);
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            connection.onNext(response);
+
+            verify(metrics)
+                    .incrementEndOfStreamCount(
+                            org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.fromProtobufOrdinal(
+                                    responseCode.ordinal()));
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(connectionManager).scheduleConnectionAttempt(connection, Duration.ofSeconds(1), 11L);
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
     void testOnNext_endOfStream_blockNodeGracefulShutdown() {
-        openConnectionAndResetMocks();
-        // STREAM_ITEMS_SUCCESS is sent when the block node is gracefully shutting down
-        final PublishStreamResponse response = createEndOfStreamResponse(Code.SUCCESS, 10L);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.onNext(response);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            // STREAM_ITEMS_SUCCESS is sent when the block node is gracefully shutting down
+            final PublishStreamResponse response = createEndOfStreamResponse(Code.SUCCESS, 10L);
 
-        verify(metrics).incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.SUCCESS);
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            connection.onNext(response);
+
+            verify(metrics)
+                    .incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.SUCCESS);
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
     void testOnNext_endOfStream_blockNodeBehind_blockExists() {
-        openConnectionAndResetMocks();
-        final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
-        when(stateManager.getBlockState(11L)).thenReturn(new BlockState(11L));
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.onNext(response);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
+            when(stateManager.getBlockState(11L)).thenReturn(new BlockState(11L));
 
-        verify(metrics).incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.BEHIND);
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(connectionManager).scheduleConnectionAttempt(connection, Duration.ofSeconds(1), 11L);
-        verify(stateManager).getBlockState(11L);
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoMoreInteractions(stateManager);
+            connection.onNext(response);
+
+            verify(metrics)
+                    .incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.BEHIND);
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(connectionManager).scheduleConnectionAttempt(connection, Duration.ofSeconds(1), 11L);
+            verify(stateManager).getBlockState(11L);
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoMoreInteractions(stateManager);
+        }
     }
 
     @Test
     void testOnNext_endOfStream_blockNodeBehind_blockDoesNotExist() {
-        openConnectionAndResetMocks();
-        final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
-        when(stateManager.getBlockState(11L)).thenReturn(null);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.updateConnectionState(ConnectionState.ACTIVE);
-        connection.onNext(response);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            when(mockObserver.isReady()).thenReturn(true);
+            openConnectionAndResetMocks();
+            final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
+            when(stateManager.getBlockState(11L)).thenReturn(null);
 
-        verify(metrics).incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.BEHIND);
-        verify(stateManager, times(1)).getEarliestAvailableBlockNumber();
-        verify(stateManager, times(1)).getHighestAckedBlockNumber();
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verify(stateManager).getBlockState(11L);
-        verify(requestObserver)
-                .onNext(PublishStreamRequest.newBuilder()
-                        .setEndStream(PublishStreamRequest.EndStream.newBuilder()
-                                .setEndCode(PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
-                                .build())
-                        .build());
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoMoreInteractions(stateManager);
+            connection.updateConnectionState(ConnectionState.ACTIVE);
+            connection.onNext(response);
+
+            verify(metrics)
+                    .incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.BEHIND);
+            verify(stateManager, times(1)).getEarliestAvailableBlockNumber();
+            verify(stateManager, times(1)).getHighestAckedBlockNumber();
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verify(stateManager).getBlockState(11L);
+            verify(mockObserver)
+                    .onNext(PublishStreamRequest.newBuilder()
+                            .setEndStream(PublishStreamRequest.EndStream.newBuilder()
+                                    .setEndCode(PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
+                                    .build())
+                            .build());
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoMoreInteractions(stateManager);
+        }
     }
 
     @Test
     void testOnNext_endOfStream_itemsUnknown() {
-        openConnectionAndResetMocks();
-        final PublishStreamResponse response = createEndOfStreamResponse(Code.UNKNOWN, 10L);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.onNext(response);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            final PublishStreamResponse response = createEndOfStreamResponse(Code.UNKNOWN, 10L);
 
-        verify(metrics).incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.UNKNOWN);
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            connection.onNext(response);
+
+            verify(metrics)
+                    .incrementEndOfStreamCount(org.hiero.block.api.PublishStreamResponse.EndOfStream.Code.UNKNOWN);
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
@@ -401,7 +510,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(connectionManager).jumpToBlock(26L); // jump to the response block number + 1
         verify(connectionManager).currentStreamingBlockNumber();
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -416,7 +524,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(metrics).incrementSkipBlockCount();
         verify(connectionManager).currentStreamingBlockNumber();
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -432,29 +539,41 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(connectionManager).jumpToBlock(10L);
         verify(stateManager).getBlockState(10L);
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
         verifyNoMoreInteractions(connectionManager);
         verifyNoMoreInteractions(stateManager);
     }
 
     @Test
     void testOnNext_resendBlock_blockDoesNotExist() {
-        openConnectionAndResetMocks();
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        final PublishStreamResponse response = createResendBlock(10L);
-        when(stateManager.getBlockState(10L)).thenReturn(null);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
 
-        connection.onNext(response);
+            final PublishStreamResponse response = createResendBlock(10L);
+            when(stateManager.getBlockState(10L)).thenReturn(null);
 
-        verify(metrics).incrementResendBlockCount();
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verify(stateManager).getBlockState(10L);
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoMoreInteractions(stateManager);
+            connection.onNext(response);
+
+            verify(metrics).incrementResendBlockCount();
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verify(stateManager).getBlockState(10L);
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoMoreInteractions(stateManager);
+        }
     }
 
     @Test
@@ -467,47 +586,75 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(metrics).incrementUnknownResponseCount();
 
         verifyNoMoreInteractions(metrics);
-        verifyNoInteractions(requestObserver);
         verifyNoInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
 
     @Test
     void testSendRequest() throws InvalidProtocolBufferException {
-        openConnectionAndResetMocks();
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        final BlockHeader blockHeader = BlockHeader.newBuilder().number(1L).build();
-        final BlockItem item = BlockItem.newBuilder().blockHeader(blockHeader).build();
-        final org.hiero.block.api.PublishStreamRequest request = createRequest(item);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            when(mockObserver.isReady()).thenReturn(true);
+            openConnectionAndResetMocks();
 
-        connection.updateConnectionState(ConnectionState.ACTIVE);
-        connection.sendRequest(request);
+            final BlockHeader blockHeader = BlockHeader.newBuilder().number(1L).build();
+            final BlockItem item =
+                    BlockItem.newBuilder().blockHeader(blockHeader).build();
+            final org.hiero.block.api.PublishStreamRequest request = createRequest(item);
 
-        verify(requestObserver)
-                .onNext(org.hiero.block.api.protoc.PublishStreamRequest.parseFrom(
-                        org.hiero.block.api.PublishStreamRequest.PROTOBUF
-                                .toBytes(createRequest(item))
-                                .toByteArray()));
-        verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            connection.updateConnectionState(ConnectionState.ACTIVE);
+            connection.sendRequest(request);
+
+            verify(mockObserver)
+                    .onNext(org.hiero.block.api.protoc.PublishStreamRequest.parseFrom(
+                            org.hiero.block.api.PublishStreamRequest.PROTOBUF
+                                    .toBytes(createRequest(item))
+                                    .toByteArray()));
+            verifyNoInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
     void testSendRequest_notActive() throws InvalidProtocolBufferException {
-        final BlockHeader blockHeader = BlockHeader.newBuilder().number(1L).build();
-        final BlockItem item = BlockItem.newBuilder().blockHeader(blockHeader).build();
-        final org.hiero.block.api.PublishStreamRequest request = createRequest(item);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.createRequestObserver();
-        connection.updateConnectionState(ConnectionState.PENDING);
-        connection.sendRequest(request);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            final BlockHeader blockHeader = BlockHeader.newBuilder().number(1L).build();
+            final BlockItem item =
+                    BlockItem.newBuilder().blockHeader(blockHeader).build();
+            final org.hiero.block.api.PublishStreamRequest request = createRequest(item);
 
-        verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            connection.createRequestObserver();
+            connection.updateConnectionState(ConnectionState.PENDING);
+            connection.sendRequest(request);
+
+            verifyNoInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
@@ -521,92 +668,156 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.sendRequest(request);
 
         verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
 
     @Test
     void testClose() {
-        openConnectionAndResetMocks();
-        connection.updateConnectionState(ConnectionState.ACTIVE);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.close();
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            connection.updateConnectionState(ConnectionState.ACTIVE);
 
-        assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
+            connection.close();
 
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).onCompleted();
-        verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
+
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(mockObserver).onCompleted();
+            verifyNoInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
     void testClose_failure() {
-        openConnectionAndResetMocks();
-        doThrow(new RuntimeException("oh no!")).when(requestObserver).onCompleted();
-        connection.updateConnectionState(ConnectionState.ACTIVE);
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.close();
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            doThrow(new RuntimeException("oh no!")).when(mockObserver).onCompleted();
+            connection.updateConnectionState(ConnectionState.ACTIVE);
 
-        assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
+            connection.close();
 
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).onCompleted();
-        verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
+
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(mockObserver).onCompleted();
+            verifyNoInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
     void testOnError() {
-        openConnectionAndResetMocks();
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.onError(new RuntimeException("oh bother"));
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
 
-        assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
+            openConnectionAndResetMocks();
 
-        verify(metrics).incrementOnErrorCount();
+            connection.onError(new RuntimeException("oh bother"));
 
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
+
+            verify(metrics).incrementOnErrorCount();
+
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
     void testOnCompleted_streamClosingInProgress() {
-        openConnectionAndResetMocks();
-        connection.close(); // call this so we mark the connection as closing
-        resetMocks();
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        connection.onCompleted();
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            connection.close(); // call this so we mark the connection as closing
+            resetMocks();
 
-        verifyNoInteractions(metrics);
-        verifyNoInteractions(requestObserver);
-        verifyNoInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            connection.onCompleted();
+
+            verifyNoInteractions(metrics);
+            verifyNoInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     @Test
     void testOnCompleted_streamClosingNotInProgress() {
-        openConnectionAndResetMocks();
-        // don't call close so we do not mark the connection as closing
-        connection.onCompleted();
+        try (MockedStatic<BlockStreamPublishServiceGrpc> mockedStatic =
+                Mockito.mockStatic(BlockStreamPublishServiceGrpc.class)) {
+            // Mock the static method
+            BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub mockStub =
+                    mock(BlockStreamPublishServiceGrpc.BlockStreamPublishServiceStub.class);
+            mockedStatic
+                    .when(() -> BlockStreamPublishServiceGrpc.newStub(managedChannel))
+                    .thenReturn(mockStub);
 
-        verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).onCompleted();
-        verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
-        verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
-        verifyNoMoreInteractions(connectionManager);
-        verifyNoInteractions(stateManager);
+            // Mock the behavior of the stub's publishBlockStream method
+            ClientCallStreamObserver<PublishStreamRequest> mockObserver = mock(ClientCallStreamObserver.class);
+            when(mockStub.publishBlockStream(any())).thenReturn(mockObserver);
+            openConnectionAndResetMocks();
+            // don't call close so we do not mark the connection as closing
+            connection.onCompleted();
+
+            verify(connectionManager).jumpToBlock(-1L);
+            verify(mockObserver).onCompleted();
+            verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
+            verifyNoMoreInteractions(metrics);
+            verifyNoMoreInteractions(mockObserver);
+            verifyNoMoreInteractions(connectionManager);
+            verifyNoInteractions(stateManager);
+        }
     }
 
     // Utilities
@@ -618,6 +829,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     }
 
     private void resetMocks() {
-        reset(connectionManager, requestObserver, stateManager, metrics);
+        reset(connectionManager, stateManager, metrics);
     }
 }

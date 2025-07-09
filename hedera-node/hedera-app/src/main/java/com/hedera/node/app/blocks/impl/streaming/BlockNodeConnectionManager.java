@@ -251,6 +251,10 @@ public class BlockNodeConnectionManager {
     private @NonNull ManagedChannel createNewManagedChannel(@NonNull final BlockNodeConfig nodeConfig) {
         return ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
                 .usePlaintext()
+                .maxInboundMessageSize(configProvider
+                        .getConfiguration()
+                        .getConfigData(BlockStreamConfig.class)
+                        .publishStreamRequestMaxSizeBytes())
                 .build();
     }
 
