@@ -384,8 +384,7 @@ class CustomGasChargingTest {
                 wellKnownContextWith(blocks, false, tinybarValues, systemContractGasCalculator),
                 worldUpdater,
                 wellKnownHapiCall());
-        verify(worldUpdater)
-                .collectGasFee(SENDER_ID, Math.multiplyExact(NETWORK_GAS_PRICE, TestHelpers.INTRINSIC_GAS), false);
+        verify(worldUpdater).collectGasFee(SENDER_ID, 100000000L, false);
     }
 
     @Test
