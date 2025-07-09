@@ -164,7 +164,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                     hevmTransaction.withException(e),
                     senderId,
                     sender,
-                    shouldChargeGasAfterProcessing(hevmTransaction));
+                    shouldChargeGasAfterExceptionalProcessing(hevmTransaction));
         }
     }
 
@@ -250,7 +250,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
      * @param hevmTransaction the Hedera EVM transaction
      * @return true if gas should be charged, false otherwise
      */
-    private boolean shouldChargeGasAfterProcessing(@NonNull final HederaEvmTransaction hevmTransaction) {
+    private boolean shouldChargeGasAfterExceptionalProcessing(@NonNull final HederaEvmTransaction hevmTransaction) {
         return contractsConfig.chargeGasOnEvmHandleException()
                 &&
                 // we charge gas for all contract call and on ResourceExhaustedException

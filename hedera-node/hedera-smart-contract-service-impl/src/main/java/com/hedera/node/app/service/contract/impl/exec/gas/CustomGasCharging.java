@@ -179,7 +179,13 @@ public class CustomGasCharging {
                 if (senderAccount == null || relayerAccount == null) {
                     return chargeSenderIntrinsicGas(sender, context, worldUpdater, intrinsicGas);
                 }
-                chargeWithRelayer(senderAccount, relayerAccount, context, worldUpdater, transaction, intrinsicGas);
+                chargeWithRelayer(
+                        senderAccount,
+                        relayerAccount,
+                        context,
+                        worldUpdater,
+                        transaction,
+                        gasCostGiven(intrinsicGas, context.gasPrice()));
                 return intrinsicGas;
             } else {
                 return chargeSenderIntrinsicGas(sender, context, worldUpdater, intrinsicGas);
@@ -195,7 +201,8 @@ public class CustomGasCharging {
             long intrinsicGas) {
 
         if (worldUpdater.getHederaAccount(sender) != null) {
-            final var fee = feeForAborted(sender, context, worldUpdater, intrinsicGas);
+            final var fee =
+                    feeForAborted(sender, context, worldUpdater, gasCostGiven(intrinsicGas, context.gasPrice()));
             worldUpdater.collectGasFee(sender, fee, false);
             return intrinsicGas;
         }
