@@ -128,7 +128,7 @@ class OnDiskTest extends MerkleTestBase {
 
         // Before we can read the data back, we need to register the data types
         // I plan to deserialize.
-        final var r = new MerkleSchemaRegistry(registry, TokenService.NAME, CONFIGURATION, new SchemaApplications());
+        final var r = new MerkleSchemaRegistry(TokenService.NAME, new SchemaApplications());
         r.register(schema);
 
         virtualMap.release();
