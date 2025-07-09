@@ -111,6 +111,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * Reference to the current state of this connection.
      */
     private final AtomicReference<ConnectionState> connectionState;
+
+    private final Object connectionStateLock = new Object();
     /**
      * The gRPC endpoint used to establish bi-directional communication between the consensus node and block node.
      */
@@ -120,7 +122,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     private final ScheduledExecutorService executorService;
     /**
-     * This task runs every 60 seconds (initial delay of 60 seconds) when a connection is active.
+     * This task runs every 24 hours (initial delay of 24 hours) when a connection is active.
      * The task helps maintain stream stability by forcing periodic reconnections.
      * When the connection is closed or reset, this task is cancelled.
      */
@@ -205,13 +207,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
-        final ConnectionState oldState = connectionState.getAndSet(newState);
-        logger.debug("[{}] Connection state transitioned from {} to {}", this, oldState, newState);
+        synchronized (connectionStateLock) {
+            final ConnectionState oldState = connectionState.getAndSet(newState);
+            logger.debug("[{}] Connection state transitioned from {} to {}", this, oldState, newState);
 
-        if (newState == ConnectionState.ACTIVE) {
-            scheduleStreamReset();
-        } else {
-            cancelStreamReset();
+            if (newState == ConnectionState.ACTIVE) {
+                scheduleStreamReset();
+            } else {
+                cancelStreamReset();
+            }
         }
     }
 
@@ -233,10 +237,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void performStreamReset() {
-        if (connectionState.get() == ConnectionState.ACTIVE) {
-            logger.debug("[{}] Performing scheduled stream reset", this);
-            endTheStreamWith(EndStream.Code.RESET);
-            restartStreamAtBlock(blockBufferService.getLowestUnackedBlockNumber());
+        synchronized (connectionStateLock) {
+            if (connectionState.get() == ConnectionState.ACTIVE) {
+                logger.debug("[{}] Performing scheduled stream reset", this);
+                endTheStreamWith(EndStream.Code.RESET);
+                restartStreamAtBlock(blockBufferService.getLowestUnackedBlockNumber());
+            }
         }
     }
 
@@ -310,7 +316,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param endOfStream the EndOfStream response received from the block node
      */
     private void handleEndOfStream(@NonNull final EndOfStream endOfStream) {
-        requireNonNull(endOfStream);
+        requireNonNull(endOfStream, "endOfStream must not be null");
         final long blockNumber = endOfStream.blockNumber();
         final EndOfStream.Code responseCode = endOfStream.status();
 
@@ -407,7 +413,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param skipBlock the SkipBlock response received from the block node
      */
     private void handleSkipBlock(@NonNull final SkipBlock skipBlock) {
-        requireNonNull(skipBlock);
+        requireNonNull(skipBlock, "skipBlock must not be null");
         final long skipBlockNumber = skipBlock.blockNumber();
         final long streamingBlockNumber = blockNodeConnectionManager.currentStreamingBlockNumber();
 
@@ -432,7 +438,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param resendBlock the ResendBlock response received from the block node
      */
     private void handleResendBlock(@NonNull final ResendBlock resendBlock) {
-        requireNonNull(resendBlock);
+        requireNonNull(resendBlock, "resendBlock must not be null");
 
         final long resendBlockNumber = resendBlock.blockNumber();
         logger.debug("[{}] Received ResendBlock response for block {}", this, resendBlockNumber);
@@ -506,9 +512,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param request the request to send
      */
     public void sendRequest(@NonNull final PublishStreamRequest request) {
-        requireNonNull(request);
-        if (connectionState.get() == ConnectionState.ACTIVE && blockNodeStreamObserver != null) {
-            blockNodeStreamObserver.onNext(request);
+        requireNonNull(request, "request must not be null");
+        synchronized (connectionStateLock) {
+            if (connectionState.get() == ConnectionState.ACTIVE && blockNodeStreamObserver != null) {
+                blockNodeStreamObserver.onNext(request);
+            }
         }
     }
 
@@ -588,7 +596,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     @Override
     public void onNext(final @NonNull PublishStreamResponse response) {
-        requireNonNull(response);
+        requireNonNull(response, "response must not be null");
 
         if (response.hasAcknowledgement()) {
             blockStreamMetrics.incrementAcknowledgedBlockCount();
