@@ -117,5 +117,5 @@ jobs:
       - name: Push Release Candidate Tag to Remote
         run: |
           echo "Pushing release tag to remote"
-          git push origin tag "${{ steps.calculated-tag.outputs.candidate }}"
+          # git push origin tag "${{ steps.calculated-tag.outputs.candidate }}"
           echo "Pushed new release tag to remote"
