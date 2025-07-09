@@ -127,11 +127,6 @@ public class SwirldsPlatform implements Platform {
     private final PlatformContext platformContext;
 
     /**
-     * The initial preconsensus event files read from disk.
-     */
-    private final PcesFileTracker initialPcesFiles;
-
-    /**
      * Controls which states are saved to disk
      */
     private final SavedStateController savedStateController;
@@ -178,8 +173,6 @@ public class SwirldsPlatform implements Platform {
         // in order to ensure that new PCES file writer detects the special migrated PCES file and starts new files with
         // the correct sequence number.
         final InlinePcesWriter inlinePcesWriter = null;
-
-        initialPcesFiles = blocks.initialPcesFiles();
 
         notificationEngine = blocks.notificationEngine();
 
@@ -402,7 +395,7 @@ public class SwirldsPlatform implements Platform {
         platformWiring.getStatusActionSubmitter().submitStatusAction(new StartedReplayingEventsAction());
 
         final IOIterator<PlatformEvent> iterator =
-                initialPcesFiles.getEventIterator(pcesReplayLowerBound, startingRound);
+                new PcesFileTracker().getEventIterator(pcesReplayLowerBound, startingRound);
 
         logger.info(STARTUP.getMarker(), "replaying preconsensus event stream starting at {}", pcesReplayLowerBound);
 

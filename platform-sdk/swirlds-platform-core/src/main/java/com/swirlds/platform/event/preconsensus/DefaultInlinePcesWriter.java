@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.event.preconsensus;
 
+import static com.swirlds.platform.event.preconsensus.PcesUtilities.getDatabaseDirectory;
+
 import com.swirlds.common.context.PlatformContext;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.Objects;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
@@ -13,31 +16,32 @@ import org.hiero.consensus.model.node.NodeId;
 public class DefaultInlinePcesWriter implements InlinePcesWriter {
 
     private final CommonPcesWriter commonPcesWriter;
-    private final NodeId selfId;
-    private final FileSyncOption fileSyncOption;
     private final PcesWriterPerEventMetrics pcesWriterPerEventMetrics;
-
+    private final FileSyncOption fileSyncOption;
+    private final NodeId selfId;
     /**
      * Constructor
      *
      * @param platformContext the platform context
-     * @param fileManager     manages all preconsensus event stream files currently on disk
      */
     public DefaultInlinePcesWriter(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final PcesFileManager fileManager,
-            @NonNull final NodeId selfId) {
+            @NonNull final PlatformContext platformContext, final long initialRound, @NonNull final NodeId selfId) {
         Objects.requireNonNull(platformContext, "platformContext is required");
-        Objects.requireNonNull(fileManager, "fileManager is required");
-        this.commonPcesWriter = new CommonPcesWriter(platformContext, fileManager);
-        this.selfId = Objects.requireNonNull(selfId, "selfId is required");
-        this.fileSyncOption = platformContext
-                .getConfiguration()
-                .getConfigData(PcesConfig.class)
-                .inlinePcesSyncOption();
+        try {
+            final Path databaseDirectory = getDatabaseDirectory(platformContext, selfId);
+            this.commonPcesWriter = new CommonPcesWriter(platformContext, initialRound, databaseDirectory);
 
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        this.selfId = selfId;
+        ;
         this.pcesWriterPerEventMetrics =
                 new PcesWriterPerEventMetrics(platformContext.getMetrics(), platformContext.getTime());
+
+        @NonNull
+        final PcesConfig pcesConfig = platformContext.getConfiguration().getConfigData(PcesConfig.class);
+        this.fileSyncOption = pcesConfig.inlinePcesSyncOption();
     }
 
     @Override
@@ -66,7 +70,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
         try {
             commonPcesWriter.prepareOutputStream(event);
             pcesWriterPerEventMetrics.startFileWrite();
-            final long size = commonPcesWriter.getCurrentMutableFile().writeEvent(event);
+            final long size = commonPcesWriter.writeEvent(event);
             pcesWriterPerEventMetrics.endFileWrite(size);
 
             if (fileSyncOption == FileSyncOption.EVERY_EVENT
@@ -74,7 +78,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
                             && event.getCreatorId().equals(selfId))) {
 
                 pcesWriterPerEventMetrics.startFileSync();
-                commonPcesWriter.getCurrentMutableFile().sync();
+                commonPcesWriter.sync();
                 pcesWriterPerEventMetrics.endFileSync();
             }
             return event;

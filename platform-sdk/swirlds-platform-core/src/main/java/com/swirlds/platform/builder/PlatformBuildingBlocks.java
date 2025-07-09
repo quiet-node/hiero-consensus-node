@@ -8,7 +8,6 @@ import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.component.framework.model.WiringModel;
-import com.swirlds.platform.event.preconsensus.PcesFileTracker;
 import com.swirlds.platform.freeze.FreezeCheckHolder;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.scratchpad.Scratchpad;
@@ -103,7 +102,6 @@ public record PlatformBuildingBlocks(
         @NonNull TransactionPoolNexus transactionPoolNexus,
         @NonNull FreezeCheckHolder freezeCheckHolder,
         @NonNull AtomicReference<Function<String, ReservedSignedState>> latestImmutableStateProviderReference,
-        @NonNull PcesFileTracker initialPcesFiles,
         @NonNull String consensusEventStreamName,
         @NonNull Scratchpad<IssScratchpad> issScratchpad,
         @NonNull NotificationEngine notificationEngine,
@@ -133,7 +131,6 @@ public record PlatformBuildingBlocks(
         requireNonNull(transactionPoolNexus);
         requireNonNull(freezeCheckHolder);
         requireNonNull(latestImmutableStateProviderReference);
-        requireNonNull(initialPcesFiles);
         requireNonNull(consensusEventStreamName);
         requireNonNull(issScratchpad);
         requireNonNull(notificationEngine);

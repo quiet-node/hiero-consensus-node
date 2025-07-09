@@ -18,18 +18,16 @@ import java.util.Random;
 import org.hiero.base.utility.test.fixtures.RandomUtils;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusConstants;
-import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.test.fixtures.hashgraph.EventWindowBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class DefaultInlinePcesWriterTest {
+class CommonPcesWriterTest {
 
     @TempDir
     private Path tempDir;
 
     private final int numEvents = 1_000;
-    private final NodeId selfId = NodeId.of(0);
 
     @NonNull
     private static PlatformContext buildContext(@NonNull final Configuration configuration) {
@@ -58,17 +56,15 @@ class DefaultInlinePcesWriterTest {
         for (int i = 0; i < numEvents; i++) {
             events.add(generator.generateEventWithoutIndex().getBaseEvent());
         }
-
-        final PcesFileTracker pcesFiles = new PcesFileTracker();
-
-        final PcesFileManager fileManager = new PcesFileManager(platformContext, pcesFiles, tempDir, 0);
-        final DefaultInlinePcesWriter writer = new DefaultInlinePcesWriter(platformContext, fileManager, selfId);
+        final CommonPcesWriter writer = new CommonPcesWriter(platformContext, 0, tempDir);
 
         writer.beginStreamingNewEvents();
         for (final PlatformEvent event : events) {
+            writer.prepareOutputStream(event);
             writer.writeEvent(event);
+            writer.sync();
         }
-
+        writer.closeCurrentMutableFile();
         // forces the writer to close the current file so that we can verify the stream
         writer.registerDiscontinuity(1L);
 
@@ -83,10 +79,7 @@ class DefaultInlinePcesWriterTest {
         final StandardGraphGenerator generator = PcesWriterTestUtils.buildGraphGenerator(platformContext, random);
 
         final int stepsUntilAncient = random.nextInt(50, 100);
-        final PcesFileTracker pcesFiles = new PcesFileTracker();
-
-        final PcesFileManager fileManager = new PcesFileManager(platformContext, pcesFiles, tempDir, 0);
-        final DefaultInlinePcesWriter writer = new DefaultInlinePcesWriter(platformContext, fileManager, selfId);
+        final CommonPcesWriter writer = new CommonPcesWriter(platformContext, 0, tempDir);
 
         // We will add this event at the very end, it should be ancient by then
         final PlatformEvent ancientEvent = generator.generateEventWithoutIndex().getBaseEvent();
@@ -102,8 +95,9 @@ class DefaultInlinePcesWriterTest {
         final Iterator<PlatformEvent> iterator = events.iterator();
         while (iterator.hasNext()) {
             final PlatformEvent event = iterator.next();
-
+            writer.prepareOutputStream(event);
             writer.writeEvent(event);
+            writer.sync();
             lowerBound = Math.max(lowerBound, event.getBirthRound() - stepsUntilAncient);
 
             writer.updateNonAncientEventBoundary(EventWindowBuilder.builder()

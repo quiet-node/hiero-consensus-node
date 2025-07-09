@@ -10,6 +10,7 @@ import com.swirlds.common.utility.LongRunningAverage;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.util.Objects;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -108,20 +109,30 @@ public class CommonPcesWriter {
      * Constructor
      *
      * @param platformContext the platform context
-     * @param fileManager     manages all PCES files currently on disk
      */
     public CommonPcesWriter(
-            @NonNull final PlatformContext platformContext, @NonNull final PcesFileManager fileManager) {
-        Objects.requireNonNull(platformContext, "platformContext is required");
-        this.fileManager = Objects.requireNonNull(fileManager, "fileManager is required");
-
+            @NonNull final PlatformContext platformContext,
+            final long initialRound,
+            final @NonNull Path databaseDirectory) {
+        Objects.requireNonNull(platformContext, "platformConfig is required");
+        Objects.requireNonNull(databaseDirectory, "databaseDirectory is required");
+        @NonNull
         final PcesConfig pcesConfig = platformContext.getConfiguration().getConfigData(PcesConfig.class);
-
         previousSpan = pcesConfig.bootstrapSpan();
         bootstrapSpanOverlapFactor = pcesConfig.bootstrapSpanOverlapFactor();
         spanOverlapFactor = pcesConfig.spanOverlapFactor();
         minimumSpan = pcesConfig.minimumSpan();
         preferredFileSizeMegabytes = pcesConfig.preferredFileSizeMegabytes();
+
+        try {
+            // When we perform the migration to using birth round bounding, we will need to read
+            // the old type and start writing the new type.
+            final PcesFileTracker initialPcesFiles = PcesFileReader.readFilesFromDisk(
+                    platformContext, databaseDirectory, initialRound, pcesConfig.permitGaps());
+            fileManager = new PcesFileManager(platformContext, initialPcesFiles, databaseDirectory, initialRound);
+        } catch (final IOException e) {
+            throw new UncheckedIOException(e);
+        }
 
         // performance of FILE_CHANNEL is 150x slower on MacOS, but marginally better on Linux; it is so bad on Mac
         // that basic tests cannot pass in some cases, so we need to make it system dependent, at same time allowing
@@ -151,9 +162,8 @@ public class CommonPcesWriter {
      * Inform the preconsensus event writer that a discontinuity has occurred in the preconsensus event stream.
      *
      * @param newOriginRound the round of the state that the new stream will be starting from
-     * @return {@code true} if this method call resulted in the current file being closed
      */
-    public boolean registerDiscontinuity(@NonNull final Long newOriginRound) {
+    public void registerDiscontinuity(@NonNull final Long newOriginRound) {
         if (!streamingNewEvents) {
             logger.error(EXCEPTION.getMarker(), "registerDiscontinuity() called while replaying events");
         }
@@ -161,12 +171,10 @@ public class CommonPcesWriter {
         try {
             if (currentMutableFile != null) {
                 closeFile();
-                return true;
             }
         } finally {
             fileManager.registerDiscontinuity(newOriginRound);
         }
-        return false;
     }
 
     /**
@@ -192,6 +200,45 @@ public class CommonPcesWriter {
     public void setMinimumAncientIdentifierToStore(@NonNull final Long minimumAncientIdentifierToStore) {
         this.minimumAncientIdentifierToStore = minimumAncientIdentifierToStore;
         pruneOldFiles();
+    }
+
+    /**
+     * Indicates if the writer is currently streaming new events.
+     *
+     * @return {@code true} if the writer is currently streaming new events, {@code false} otherwise
+     */
+    public boolean isStreamingNewEvents() {
+        return streamingNewEvents;
+    }
+
+    /**
+     * Get the non-ancient boundary.
+     *
+     * @return the non-ancient boundary
+     */
+    public long getNonAncientBoundary() {
+        return nonAncientBoundary;
+    }
+
+    /**
+     * Close the current mutable file.
+     */
+    public void closeCurrentMutableFile() {
+        if (currentMutableFile != null) {
+            try {
+                currentMutableFile.close();
+            } catch (final IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    public long writeEvent(final PlatformEvent event) throws IOException {
+        return currentMutableFile.writeEvent(event);
+    }
+
+    public void sync() throws IOException {
+        currentMutableFile.sync();
     }
 
     /**
@@ -240,10 +287,8 @@ public class CommonPcesWriter {
      * Prepare the output stream for a particular event. May create a new file/stream if needed.
      *
      * @param eventToWrite the event that is about to be written
-     * @return true if this method call resulted in the current file being closed
      */
-    public boolean prepareOutputStream(@NonNull final PlatformEvent eventToWrite) throws IOException {
-        boolean fileClosed = false;
+    public void prepareOutputStream(@NonNull final PlatformEvent eventToWrite) throws IOException {
         if (currentMutableFile != null) {
             final boolean fileCanContainEvent = currentMutableFile.canContain(eventToWrite.getBirthRound());
             final boolean fileIsFull =
@@ -251,7 +296,6 @@ public class CommonPcesWriter {
 
             if (!fileCanContainEvent || fileIsFull) {
                 closeFile();
-                fileClosed = true;
             }
 
             if (fileIsFull) {
@@ -268,8 +312,6 @@ public class CommonPcesWriter {
                     .getNextFileDescriptor(nonAncientBoundary, upperBound)
                     .getMutableFile(pcesFileWriterType);
         }
-
-        return fileClosed;
     }
 
     /**
@@ -291,45 +333,5 @@ public class CommonPcesWriter {
         final long minimumSpan = (nextAncientIdentifierToWrite + this.minimumSpan) - minimumLowerBound;
 
         return Math.max(desiredSpan, minimumSpan);
-    }
-
-    /**
-     * Indicates if the writer is currently streaming new events.
-     *
-     * @return {@code true} if the writer is currently streaming new events, {@code false} otherwise
-     */
-    public boolean isStreamingNewEvents() {
-        return streamingNewEvents;
-    }
-
-    /**
-     * Get the non-ancient boundary.
-     *
-     * @return the non-ancient boundary
-     */
-    public long getNonAncientBoundary() {
-        return nonAncientBoundary;
-    }
-
-    /**
-     * Get the current mutable file.
-     *
-     * @return the current mutable file
-     */
-    public PcesMutableFile getCurrentMutableFile() {
-        return currentMutableFile;
-    }
-
-    /**
-     * Close the current mutable file.
-     */
-    public void closeCurrentMutableFile() {
-        if (currentMutableFile != null) {
-            try {
-                currentMutableFile.close();
-            } catch (final IOException e) {
-                throw new UncheckedIOException(e);
-            }
-        }
     }
 }
