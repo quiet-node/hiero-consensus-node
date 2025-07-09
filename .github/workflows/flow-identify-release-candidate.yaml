@@ -8,7 +8,7 @@ on:
         type: string
         required: true
       release-version:
-        description: "Release Candidate Version (ex: 0.64.0)"
+        description: "Release Candidate Version (ex: 0.64.0):"
         type: string
         required: true
 
@@ -95,14 +95,14 @@ jobs:
         id: release-version
         run: |
           RELEASE_VERSION="$(semver get release "${{ inputs.release-version }}")"
-          echo "version=${FINAL_VERSION}" >>"${GITHUB_OUTPUT}"
+          echo "version=${RELEASE_VERSION}" >>"${GITHUB_OUTPUT}"
 
       - name: Calculate Release Candidate Tag Value
         id: calculated-tag
         run: |
           MAJOR=$(semver get major "${{ steps.release-version.outputs.version }}")
           MINOR=$(semver get minor "${{ steps.release-version.outputs.version }}")
-          
+
           NEW_TAG="release-candidate-${MAJOR}.${MINOR}"
           echo "Release Candiate Tag: ${NEW_TAG}"
           echo "candidate=${NEW_TAG}" >> "${GITHUB_OUTPUT}"
