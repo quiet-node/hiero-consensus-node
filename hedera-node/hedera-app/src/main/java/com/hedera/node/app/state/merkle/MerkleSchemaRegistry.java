@@ -14,7 +14,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.util.HapiUtils;
 import com.hedera.node.app.services.MigrationContextImpl;
 import com.hedera.node.app.services.MigrationStateChanges;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
@@ -172,7 +171,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
             @NonNull final SemanticVersion currentVersion,
             @NonNull final Configuration appConfig,
             @NonNull final Configuration platformConfig,
-            @NonNull final FileSystemManager fileSystemManager,
             @NonNull final Metrics metrics,
             @NonNull final Map<String, Object> sharedValues,
             @NonNull final MigrationStateChanges migrationStateChanges,
@@ -182,7 +180,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
         requireNonNull(currentVersion);
         requireNonNull(appConfig);
         requireNonNull(platformConfig);
-        requireNonNull(fileSystemManager);
         requireNonNull(metrics);
         requireNonNull(sharedValues);
         requireNonNull(migrationStateChanges);
@@ -230,13 +227,7 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                                 && alreadyIncludesStateDefs(previousVersion, s.getVersion()))
                         .toList();
                 final var redefinedWritableStates = applyStateDefinitions(
-                        schema,
-                        schemasAlreadyInState,
-                        appConfig,
-                        platformConfig,
-                        fileSystemManager,
-                        metrics,
-                        stateRoot);
+                        schema, schemasAlreadyInState, appConfig, platformConfig, metrics, stateRoot);
                 writableStates = redefinedWritableStates.beforeStates();
                 newStates = redefinedWritableStates.afterStates();
             } else {
@@ -273,7 +264,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
             @NonNull final List<Schema> schemasAlreadyInState,
             @NonNull final Configuration nodeConfiguration,
             @NonNull final Configuration platformConfiguration,
-            @NonNull final FileSystemManager fileSystemManager,
             @NonNull final Metrics metrics,
             @NonNull final MerkleNodeState stateRoot) {
         // Create the new states (based on the schema) which, thanks to the above, does not
@@ -334,7 +324,6 @@ public class MerkleSchemaRegistry implements SchemaRegistry {
                                     final var label = StateMetadata.computeLabel(serviceName, stateKey);
                                     final var dsBuilder = new MerkleDbDataSourceBuilder(
                                             platformConfiguration,
-                                            fileSystemManager,
                                             def.maxKeysHint(),
                                             merkleDbConfig.hashesRamToDiskThreshold());
                                     final var virtualMap = new VirtualMap<>(

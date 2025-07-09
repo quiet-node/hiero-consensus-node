@@ -18,7 +18,7 @@ import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.filesystem.FileSystemManager;
-import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
+import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.TestRecycleBin;
@@ -51,6 +51,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -61,11 +62,10 @@ public class StartupStateUtilsTests {
             .withConfigDataType(FileSystemManagerConfig.class)
             .getOrCreateConfig();
 
-    // File system manager to manage testDirectory below
-    private static final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIG);
-
-    // Not using JUnit tempDir here, as it may result in states and snapshots on different disk
-    // devices. In this case creating hard links during state snapshots fails
+    /**
+     * Temporary directory provided by JUnit
+     */
+    @TempDir
     Path testDirectory;
 
     private SignedStateFilePath signedStateFilePath;
@@ -77,8 +77,8 @@ public class StartupStateUtilsTests {
     private PlatformStateFacade platformStateFacade;
 
     @BeforeEach
-    void beforeEach() {
-        testDirectory = fileSystemManager.resolveNewTemp("StartupStateUtilsTests");
+    void beforeEach() throws IOException {
+        FileUtils.deleteDirectory(testDirectory);
         signedStateFilePath = new SignedStateFilePath(new TestConfigBuilder()
                 .withValue("state.savedStateDirectory", testDirectory.toString())
                 .getOrCreateConfig()
@@ -88,7 +88,8 @@ public class StartupStateUtilsTests {
     }
 
     @AfterEach
-    void afterEach() {
+    void afterEach() throws IOException {
+        FileUtils.deleteDirectory(testDirectory);
         RandomSignedStateGenerator.releaseAllBuiltSignedStates();
     }
 
@@ -98,12 +99,6 @@ public class StartupStateUtilsTests {
         registry.registerConstructables("com.swirlds");
         registry.registerConstructables("org.hiero");
         registry.registerConstructable(new ClassConstructorPair(TestMerkleStateRoot.class, TestMerkleStateRoot::new));
-        // SignedStateFileWriter uses a temp dir to write snapshots. This dir is managed using deprecated
-        // LegacyTemporaryFileBuilder with its own base temp file location. This location may be overridden
-        // by some other tests to a path on a different disk device, which would make snapshots fail. At some
-        // point LegacyTemporaryFileBuilder will be dropped, but for now I'm just overriding its base dir
-        LegacyTemporaryFileBuilder.overrideTemporaryFileLocation(
-                fileSystemManager.resolveNewTemp("StartupStateUtilsTests.tmp"));
     }
 
     @NonNull
@@ -115,7 +110,6 @@ public class StartupStateUtilsTests {
 
         return TestPlatformContextBuilder.create()
                 .withConfiguration(configuration)
-                .withFileSystemManager(fileSystemManager)
                 .withRecycleBin(recycleBin)
                 .build();
     }
@@ -319,6 +313,7 @@ public class StartupStateUtilsTests {
     private RecycleBin initializeRecycleBin(PlatformContext platformContext, NodeId selfId) {
         final var metrics = new NoOpMetrics();
         final var configuration = platformContext.getConfiguration();
+        final var fileSystemManager = FileSystemManager.create(configuration);
         final var time = Time.getCurrent();
         return RecycleBin.create(metrics, configuration, getStaticThreadManager(), time, fileSystemManager, selfId);
     }

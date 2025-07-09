@@ -6,7 +6,6 @@ import static java.util.Objects.requireNonNull;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.RecycleBin;
@@ -36,22 +35,17 @@ public class FakePlatformContext implements PlatformContext {
             .withConfigDataType(VirtualMapConfig.class)
             .withConfigDataType(MerkleDbConfig.class)
             .withConfigDataType(TemporaryFileConfig.class)
-            .withConfigDataType(FileSystemManagerConfig.class)
             .withConfigDataType(StateCommonConfig.class)
             .build();
-
-    private final FileSystemManager fileSystemManager;
 
     private final Metrics metrics;
 
     public FakePlatformContext(
             @NonNull final NodeId defaultNodeId,
             @NonNull final ScheduledExecutorService executorService,
-            @NonNull final FileSystemManager fileSystemManager,
             @NonNull final Metrics metrics) {
         requireNonNull(defaultNodeId);
         requireNonNull(executorService);
-        this.fileSystemManager = requireNonNull(fileSystemManager);
         this.metrics = requireNonNull(metrics);
     }
 
@@ -76,7 +70,7 @@ public class FakePlatformContext implements PlatformContext {
     @NonNull
     @Override
     public FileSystemManager getFileSystemManager() {
-        return fileSystemManager;
+        throw new UnsupportedOperationException("Not used by Hedera");
     }
 
     @NonNull

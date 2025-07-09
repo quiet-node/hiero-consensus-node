@@ -12,7 +12,6 @@ import com.hedera.node.config.data.HederaConfig;
 import com.swirlds.base.test.fixtures.time.FakeTime;
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
@@ -311,7 +310,6 @@ class SerializationTest extends MerkleTestBase {
                 schemaV1.getVersion(),
                 config,
                 config,
-                mock(FileSystemManager.class),
                 mock(Metrics.class),
                 new HashMap<>(),
                 migrationStateChanges,
@@ -334,7 +332,6 @@ class SerializationTest extends MerkleTestBase {
                 v1,
                 config,
                 config,
-                FileSystemManager.create(config),
                 mock(Metrics.class),
                 new HashMap<>(),
                 migrationStateChanges,

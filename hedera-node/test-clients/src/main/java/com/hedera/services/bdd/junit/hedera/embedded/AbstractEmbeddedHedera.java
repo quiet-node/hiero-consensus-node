@@ -38,7 +38,6 @@ import com.hederahashgraph.api.proto.java.Timestamp;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionResponse;
 import com.swirlds.base.utility.Pair;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
 import com.swirlds.common.metrics.platform.MetricKeyRegistry;
@@ -96,7 +95,6 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
     protected final Roster roster;
     protected final NodeId defaultNodeId;
     protected final AtomicInteger nextNano = new AtomicInteger(0);
-    protected final FileSystemManager fileSystemManager;
     protected final Metrics metrics;
     protected final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
@@ -151,7 +149,6 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
                 .collect(toMap(Pair::left, Pair::right));
         defaultNodeId = NodeId.FIRST_NODE_ID;
         defaultNodeAccountId = fromPbj(accountIds.get(defaultNodeId));
-        fileSystemManager = FileSystemManager.create(PLATFORM_CONFIG);
         final var metricsConfig = PLATFORM_CONFIG.getConfigData(MetricsConfig.class);
         metrics = new DefaultPlatformMetrics(
                 defaultNodeId,
@@ -174,7 +171,7 @@ public abstract class AbstractEmbeddedHedera implements EmbeddedHedera {
 
     @Override
     public void start() {
-        hedera.initializeStatesApi(state, trigger, fakePlatform().getContext(), ServicesMain.buildPlatformConfig());
+        hedera.initializeStatesApi(state, trigger, ServicesMain.buildPlatformConfig());
         hedera.setInitialStateHash(FAKE_START_OF_STATE_HASH);
         hedera.onStateInitialized(state, fakePlatform(), GENESIS);
         hedera.init(fakePlatform(), defaultNodeId);

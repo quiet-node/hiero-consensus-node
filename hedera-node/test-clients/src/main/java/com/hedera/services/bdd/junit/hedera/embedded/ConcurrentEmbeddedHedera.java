@@ -17,7 +17,6 @@ import com.hedera.services.bdd.junit.hedera.embedded.fakes.FakeRound;
 import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionResponse;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.system.Platform;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -50,7 +49,7 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
 
     public ConcurrentEmbeddedHedera(@NonNull final EmbeddedNode node) {
         super(node);
-        platform = new ConcurrentFakePlatform(executorService, fileSystemManager, metrics);
+        platform = new ConcurrentFakePlatform(executorService, metrics);
     }
 
     @Override
@@ -144,15 +143,8 @@ class ConcurrentEmbeddedHedera extends AbstractEmbeddedHedera implements Embedde
         private final ScheduledExecutorService executorService;
 
         public ConcurrentFakePlatform(
-                @NonNull final ScheduledExecutorService executorService,
-                @NonNull final FileSystemManager fileSystemManager,
-                @NonNull final Metrics metrics) {
-            super(
-                    defaultNodeId,
-                    roster,
-                    requireNonNull(executorService),
-                    requireNonNull(fileSystemManager),
-                    requireNonNull(metrics));
+                @NonNull final ScheduledExecutorService executorService, @NonNull final Metrics metrics) {
+            super(defaultNodeId, roster, requireNonNull(executorService), requireNonNull(metrics));
             this.executorService = executorService;
         }
 

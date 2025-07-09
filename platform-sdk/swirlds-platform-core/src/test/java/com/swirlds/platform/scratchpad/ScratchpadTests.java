@@ -10,8 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.io.config.FileSystemManagerConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.utility.SerializableLong;
@@ -32,19 +30,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("Scratchpad Tests")
 class ScratchpadTests {
 
-    private static final Configuration CONFIG = new TestConfigBuilder()
-            .withConfigDataType(FileSystemManagerConfig.class)
-            .getOrCreateConfig();
-
-    // File system manager to manage testDirectory below
-    private static final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIG);
-
-    // Not using JUnit tempDir here, as it may result in states and snapshots on different disk
-    // devices. In this case creating hard links during state snapshots fails
+    /**
+     * Temporary directory provided by JUnit
+     */
+    @TempDir
     Path testDirectory;
 
     private PlatformContext platformContext;
@@ -53,7 +47,8 @@ class ScratchpadTests {
 
     @BeforeEach
     void beforeEach() throws IOException {
-        testDirectory = fileSystemManager.resolveNewTemp("ScratchpadTests");
+        FileUtils.deleteDirectory(testDirectory);
+        Files.createDirectories(testDirectory);
         LegacyTemporaryFileBuilder.overrideTemporaryFileLocation(testDirectory.resolve("tmp"));
         final Configuration configuration = new TestConfigBuilder()
                 .withValue(StateCommonConfig_.SAVED_STATE_DIRECTORY, testDirectory.toString())

@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
@@ -43,13 +42,11 @@ final class MapTest {
             .withConfigDataType(StateCommonConfig.class)
             .build();
 
-    private static final FileSystemManager FILE_SYSTEM_MANAGER = FileSystemManager.create(CONFIGURATION);
-
     private static final MerkleDbConfig MERKLE_DB_CONFIG = CONFIGURATION.getConfigData(MerkleDbConfig.class);
 
     VirtualDataSourceBuilder createBuilder() {
         return new MerkleDbDataSourceBuilder(
-                CONFIGURATION, FILE_SYSTEM_MANAGER, INITIAL_MAP_SIZE, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
+                CONFIGURATION, INITIAL_MAP_SIZE, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
     }
 
     VirtualMap<TestKey, TestValue> createLongMap(String label) {

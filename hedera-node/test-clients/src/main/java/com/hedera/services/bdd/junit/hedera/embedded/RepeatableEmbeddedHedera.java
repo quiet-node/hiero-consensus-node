@@ -19,7 +19,6 @@ import com.hederahashgraph.api.proto.java.AccountID;
 import com.hederahashgraph.api.proto.java.Transaction;
 import com.hederahashgraph.api.proto.java.TransactionResponse;
 import com.swirlds.base.test.fixtures.time.FakeTime;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.system.Platform;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -61,7 +60,7 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
 
     public RepeatableEmbeddedHedera(@NonNull final EmbeddedNode node) {
         super(node);
-        platform = new SynchronousFakePlatform(defaultNodeId, executorService, fileSystemManager, metrics);
+        platform = new SynchronousFakePlatform(defaultNodeId, executorService, metrics);
     }
 
     @Override
@@ -192,9 +191,8 @@ public class RepeatableEmbeddedHedera extends AbstractEmbeddedHedera implements 
         public SynchronousFakePlatform(
                 @NonNull final NodeId selfId,
                 @NonNull final ScheduledExecutorService executorService,
-                @NonNull final FileSystemManager fileSystemManager,
                 @NonNull final Metrics metrics) {
-            super(selfId, roster, executorService, fileSystemManager, metrics);
+            super(selfId, roster, executorService, metrics);
         }
 
         @Override

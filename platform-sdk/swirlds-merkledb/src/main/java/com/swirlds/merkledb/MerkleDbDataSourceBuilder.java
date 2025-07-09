@@ -9,7 +9,7 @@ import com.hedera.pbj.runtime.FieldDefinition;
 import com.hedera.pbj.runtime.FieldType;
 import com.hedera.pbj.runtime.io.ReadableSequentialData;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
-import com.swirlds.common.io.filesystem.FileSystemManager;
+import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.constructable.constructors.MerkleDbDataSourceBuilderConstructor;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
@@ -29,7 +29,7 @@ import org.hiero.base.io.streams.SerializableDataOutputStream;
  * Virtual data source builder that manages MerkleDb data sources.
  *
  * <p>When a MerkleDb data source builder creates a new data source, or restores a data source
- * from snapshot, it creates a new temp folder using its {@link FileSystemManager} as the data
+ * from snapshot, it creates a new temp folder using {@link LegacyTemporaryFileBuilder} as the data
  * source storage dir.
  *
  * <p>When a data source snapshot is taken, or a data source is restored from a snapshot, the
@@ -51,9 +51,6 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
     /** Platform configuration */
     private final Configuration configuration;
 
-    /** Platform file system manager */
-    private final FileSystemManager fileSystemManager;
-
     private long initialCapacity = 0;
 
     private long hashesRamToDiskThreshold = 0;
@@ -61,10 +58,8 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
     /**
      * Constructor for deserialization purposes.
      */
-    public MerkleDbDataSourceBuilder(
-            @NonNull final Configuration configuration, @NonNull final FileSystemManager fileSystemManager) {
+    public MerkleDbDataSourceBuilder(@NonNull final Configuration configuration) {
         this.configuration = requireNonNull(configuration);
-        this.fileSystemManager = requireNonNull(fileSystemManager);
     }
 
     /**
@@ -76,17 +71,15 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
      */
     public MerkleDbDataSourceBuilder(
             @NonNull final Configuration configuration,
-            @NonNull final FileSystemManager fileSystemManager,
             final long initialCapacity,
             final long hashesRamToDiskThreshold) {
         this.configuration = requireNonNull(configuration);
-        this.fileSystemManager = requireNonNull(fileSystemManager);
         this.initialCapacity = initialCapacity;
         this.hashesRamToDiskThreshold = hashesRamToDiskThreshold;
     }
 
-    private Path newDataSourceDir(final String label) {
-        return fileSystemManager.resolveNewTemp("merkledb-" + label);
+    private Path newDataSourceDir(final String label) throws IOException {
+        return LegacyTemporaryFileBuilder.buildTemporaryFile("merkledb-" + label, configuration);
     }
 
     /**
@@ -98,8 +91,8 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
         if (initialCapacity <= 0) {
             throw new IllegalArgumentException("Initial map capacity not set");
         }
-        final Path dataSourceDir = newDataSourceDir(label);
         try {
+            final Path dataSourceDir = newDataSourceDir(label);
             return new MerkleDbDataSource(
                     dataSourceDir,
                     configuration,
@@ -139,8 +132,8 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
         final String label = merkleDbDataSource.getTableName();
         final long initialCapacity = merkleDbDataSource.getInitialCapacity();
         final long hashesRamToDiskThreshold = merkleDbDataSource.getHashesRamToDiskThreshold();
-        final Path dataSourceDir = newDataSourceDir(label);
         try {
+            final Path dataSourceDir = newDataSourceDir(label);
             snapshotDataSource(merkleDbDataSource, dataSourceDir);
             return new MerkleDbDataSource(
                     dataSourceDir,
@@ -187,8 +180,8 @@ public class MerkleDbDataSourceBuilder implements VirtualDataSourceBuilder {
     }
 
     protected VirtualDataSource restore(final String label, final Path snapshotDir, final boolean compactionEnabled) {
-        final Path dataSourceDir = newDataSourceDir(label);
         try {
+            final Path dataSourceDir = newDataSourceDir(label);
             final Path snapshotDataSourceDir = snapshotDir.resolve("data").resolve(label);
             if (Files.isDirectory(snapshotDataSourceDir)) {
                 hardLinkTree(snapshotDataSourceDir, dataSourceDir);

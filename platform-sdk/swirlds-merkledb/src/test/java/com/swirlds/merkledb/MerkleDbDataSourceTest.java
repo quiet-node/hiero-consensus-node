@@ -16,7 +16,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import com.swirlds.base.function.CheckedConsumer;
 import com.swirlds.base.units.UnitConstants;
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.config.api.Configuration;
@@ -748,7 +747,6 @@ class MerkleDbDataSourceTest {
                 .withConfigDataType(VirtualMapConfig.class)
                 .withConfigDataType(TemporaryFileConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
-                .withConfigDataType(FileSystemManagerConfig.class)
                 .withSource(new SimpleConfigSource("merkleDb.tablesToRepairHdhm", ""))
                 .build();
         final MerkleDbDataSource snapshotDataSource1 =
@@ -766,7 +764,6 @@ class MerkleDbDataSourceTest {
                 .withConfigDataType(VirtualMapConfig.class)
                 .withConfigDataType(TemporaryFileConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
-                .withConfigDataType(FileSystemManagerConfig.class)
                 .withSource(new SimpleConfigSource("merkleDb.tablesToRepairHdhm", label))
                 .build();
         final MerkleDbDataSource snapshotDataSource2 =
