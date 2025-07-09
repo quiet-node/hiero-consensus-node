@@ -157,7 +157,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockBufferService = requireNonNull(blockBufferService, "blockBufferService must not be null");
         this.managedChannel = requireNonNull(managedChannel, "managedChannel must not be null");
-        // this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
         this.connectionState = new AtomicReference<>(ConnectionState.UNINITIALIZED);
         this.grpcEndpoint = requireNonNull(grpcEndpoint);
@@ -533,7 +532,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * Processes responses received from the block node through the bidirectional gRPC stream.
      * Handles {@link BlockAcknowledgement}s, {@link EndOfStream} response signals, {@link SkipBlock} and {@link ResendBlock}.
      *
-     * //* @param response the response received from block node
+     * @param responseProto the response received from block node
      */
     @Override
     public void onNext(final @NonNull PublishStreamResponse responseProto) {
@@ -544,7 +543,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     org.hiero.block.api.PublishStreamResponse.PROTOBUF.parse(Bytes.wrap(responseProto.toByteArray()));
         } catch (ParseException e) {
             logger.error("Failed to parse response from block node {}: {}", this.grpcEndpoint, e.getMessage());
-            // TODO parse error add to metrics??
             return;
         }
 
