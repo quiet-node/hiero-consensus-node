@@ -117,8 +117,8 @@ jobs:
         run: |
           echo "Applying release candidate tag"
           # git tag --annotate "${{ steps.calculated-tag.outputs.candidate }}" --message "${{ steps.calculated-tag.outputs.candidate }}"
-          echo "Applied tag ${{ steps.calculated-tag.outputs.candidate }}"
-          echo "Version Tag Applied: ${{ steps.calculated-tag.outputs.candidate_tag }}" >> ${GITHUB_STEP_SUMMARY}
+          echo "Applied Tag ${{ steps.calculated-tag.outputs.candidate }}"
+          echo "Version Tag Applied: ${{ steps.calculated-tag.outputs.candidate }}" >> ${GITHUB_STEP_SUMMARY}
 
       - name: Push Release Candidate Tag to Remote
         if: ${{ inputs.dry-run-enabled == false }}
