@@ -21,8 +21,8 @@ import org.hiero.consensus.model.hashgraph.EventWindow;
  * This class provides the common functionality for writing preconsensus events to disk. It is used by the
  * {@link DefaultInlinePcesWriter}.
  */
-public class CommonPcesWriter {
-    private static final Logger logger = LogManager.getLogger(CommonPcesWriter.class);
+public class PcesWriteManager {
+    private static final Logger logger = LogManager.getLogger(PcesWriteManager.class);
 
     /**
      * Keeps track of the event stream files on disk.
@@ -110,7 +110,7 @@ public class CommonPcesWriter {
      *
      * @param platformContext the platform context
      */
-    public CommonPcesWriter(
+    public PcesWriteManager(
             @NonNull final PlatformContext platformContext,
             final long initialRound,
             final @NonNull Path databaseDirectory) {

@@ -22,7 +22,7 @@ import org.hiero.consensus.model.test.fixtures.hashgraph.EventWindowBuilder;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class CommonPcesWriterTest {
+class PcesWriteManagerTest {
 
     @TempDir
     private Path tempDir;
@@ -56,7 +56,7 @@ class CommonPcesWriterTest {
         for (int i = 0; i < numEvents; i++) {
             events.add(generator.generateEventWithoutIndex().getBaseEvent());
         }
-        final CommonPcesWriter writer = new CommonPcesWriter(platformContext, 0, tempDir);
+        final PcesWriteManager writer = new PcesWriteManager(platformContext, 0, tempDir);
 
         writer.beginStreamingNewEvents();
         for (final PlatformEvent event : events) {
@@ -79,7 +79,7 @@ class CommonPcesWriterTest {
         final StandardGraphGenerator generator = PcesWriterTestUtils.buildGraphGenerator(platformContext, random);
 
         final int stepsUntilAncient = random.nextInt(50, 100);
-        final CommonPcesWriter writer = new CommonPcesWriter(platformContext, 0, tempDir);
+        final PcesWriteManager writer = new PcesWriteManager(platformContext, 0, tempDir);
 
         // We will add this event at the very end, it should be ancient by then
         final PlatformEvent ancientEvent = generator.generateEventWithoutIndex().getBaseEvent();

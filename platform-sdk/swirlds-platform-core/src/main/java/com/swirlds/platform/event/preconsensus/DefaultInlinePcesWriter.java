@@ -15,7 +15,7 @@ import org.hiero.consensus.model.node.NodeId;
 
 public class DefaultInlinePcesWriter implements InlinePcesWriter {
 
-    private final CommonPcesWriter commonPcesWriter;
+    private final PcesWriteManager pcesWriteManager;
     private final PcesWriterPerEventMetrics pcesWriterPerEventMetrics;
     private final FileSyncOption fileSyncOption;
     private final NodeId selfId;
@@ -29,13 +29,12 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
         Objects.requireNonNull(platformContext, "platformContext is required");
         try {
             final Path databaseDirectory = getDatabaseDirectory(platformContext, selfId);
-            this.commonPcesWriter = new CommonPcesWriter(platformContext, initialRound, databaseDirectory);
+            this.pcesWriteManager = new PcesWriteManager(platformContext, initialRound, databaseDirectory);
 
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
         this.selfId = selfId;
-        ;
         this.pcesWriterPerEventMetrics =
                 new PcesWriterPerEventMetrics(platformContext.getMetrics(), platformContext.getTime());
 
@@ -46,7 +45,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
 
     @Override
     public void beginStreamingNewEvents() {
-        commonPcesWriter.beginStreamingNewEvents();
+        pcesWriteManager.beginStreamingNewEvents();
     }
 
     /**
@@ -58,19 +57,19 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
         pcesWriterPerEventMetrics.startWriteEvent();
 
         // if we aren't streaming new events yet, assume that the given event is already durable
-        if (!commonPcesWriter.isStreamingNewEvents()) {
+        if (!pcesWriteManager.isStreamingNewEvents()) {
             return event;
         }
 
-        if (event.getBirthRound() < commonPcesWriter.getNonAncientBoundary()) {
+        if (event.getBirthRound() < pcesWriteManager.getNonAncientBoundary()) {
             // don't do anything with ancient events
             return event;
         }
 
         try {
-            commonPcesWriter.prepareOutputStream(event);
+            pcesWriteManager.prepareOutputStream(event);
             pcesWriterPerEventMetrics.startFileWrite();
-            final long size = commonPcesWriter.writeEvent(event);
+            final long size = pcesWriteManager.writeEvent(event);
             pcesWriterPerEventMetrics.endFileWrite(size);
 
             if (fileSyncOption == FileSyncOption.EVERY_EVENT
@@ -78,7 +77,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
                             && event.getCreatorId().equals(selfId))) {
 
                 pcesWriterPerEventMetrics.startFileSync();
-                commonPcesWriter.sync();
+                pcesWriteManager.sync();
                 pcesWriterPerEventMetrics.endFileSync();
             }
             return event;
@@ -95,7 +94,7 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
      */
     @Override
     public void registerDiscontinuity(@NonNull Long newOriginRound) {
-        commonPcesWriter.registerDiscontinuity(newOriginRound);
+        pcesWriteManager.registerDiscontinuity(newOriginRound);
     }
 
     /**
@@ -103,11 +102,11 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
      */
     @Override
     public void updateNonAncientEventBoundary(@NonNull EventWindow nonAncientBoundary) {
-        commonPcesWriter.updateNonAncientEventBoundary(nonAncientBoundary);
+        pcesWriteManager.updateNonAncientEventBoundary(nonAncientBoundary);
     }
 
     @Override
     public void setMinimumAncientIdentifierToStore(@NonNull final Long minimumAncientIdentifierToStore) {
-        commonPcesWriter.setMinimumAncientIdentifierToStore(minimumAncientIdentifierToStore);
+        pcesWriteManager.setMinimumAncientIdentifierToStore(minimumAncientIdentifierToStore);
     }
 }

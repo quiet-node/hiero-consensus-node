@@ -3,11 +3,11 @@ package com.swirlds.platform.state;
 
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.utility.FileUtils;
-import com.swirlds.platform.event.preconsensus.CommonPcesWriter;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileReader;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
 import com.swirlds.platform.event.preconsensus.PcesMultiFileIterator;
+import com.swirlds.platform.event.preconsensus.PcesWriteManager;
 import com.swirlds.platform.state.snapshot.SavedStateMetadata;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
@@ -51,7 +51,7 @@ public final class SavedStateUtils {
 
         final PcesMultiFileIterator eventIterator =
                 fileTracker.getEventIterator(stateMetadata.minimumBirthRoundNonAncient(), stateMetadata.round());
-        final CommonPcesWriter pcesWriter = new CommonPcesWriter(platformContext, stateMetadata.round(), pcesFiles);
+        final PcesWriteManager pcesWriter = new PcesWriteManager(platformContext, stateMetadata.round(), pcesFiles);
         pcesWriter.beginStreamingNewEvents();
 
         // Go through the events and write them to the new files, skipping any events that are from a future round
