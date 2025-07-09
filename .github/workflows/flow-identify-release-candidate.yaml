@@ -11,6 +11,11 @@ on:
         description: "Release Candidate Version (ex: 0.64.0):"
         type: string
         required: true
+      dry-run-enabled:
+        description: "If true, the workflow will not create a tag, but will validate the commit."
+        required: false
+        default: false
+        type: boolean
 
 defaults:
   run:
@@ -108,6 +113,7 @@ jobs:
           echo "candidate=${NEW_TAG}" >> "${GITHUB_OUTPUT}"
 
       - name: Apply Release Candidate Tag
+        if: ${{ inputs.dry-run-enabled == false }}
         run: |
           echo "Applying release candidate tag"
           # git tag --annotate "${{ steps.calculated-tag.outputs.candidate }}" --message "${{ steps.calculated-tag.outputs.candidate }}"
@@ -115,6 +121,7 @@ jobs:
           echo "Version Tag Applied: ${{ steps.calculated-tag.outputs.candidate_tag }}" >> ${GITHUB_STEP_SUMMARY}
 
       - name: Push Release Candidate Tag to Remote
+        if: ${{ inputs.dry-run-enabled == false }}
         run: |
           echo "Pushing release tag to remote"
           # git push origin tag "${{ steps.calculated-tag.outputs.candidate }}"
