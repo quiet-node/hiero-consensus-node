@@ -116,7 +116,7 @@ jobs:
         if: ${{ inputs.dry-run-enabled == false }}
         run: |
           echo "Applying release candidate tag"
-          # git tag --annotate "${{ steps.calculated-tag.outputs.candidate }}" --message "${{ steps.calculated-tag.outputs.candidate }}"
+          git tag --annotate "${{ steps.calculated-tag.outputs.candidate }}" --message "${{ steps.calculated-tag.outputs.candidate }}"
           echo "Applied Tag ${{ steps.calculated-tag.outputs.candidate }}"
           echo "Version Tag Applied: ${{ steps.calculated-tag.outputs.candidate }}" >> ${GITHUB_STEP_SUMMARY}
 
@@ -124,5 +124,5 @@ jobs:
         if: ${{ inputs.dry-run-enabled == false }}
         run: |
           echo "Pushing release tag to remote"
-          # git push origin tag "${{ steps.calculated-tag.outputs.candidate }}"
+          git push origin tag "${{ steps.calculated-tag.outputs.candidate }}"
           echo "Pushed new release tag to remote"
