@@ -2,6 +2,7 @@
 package com.swirlds.platform.test.fixtures.state;
 
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
+import static com.swirlds.platform.test.fixtures.state.manager.SignatureVerificationTestUtils.buildFakeSignature;
 import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomHash;
 import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomHashBytes;
 import static org.hiero.base.crypto.test.fixtures.CryptoRandomUtils.randomSignature;
@@ -33,6 +34,7 @@ import com.swirlds.platform.test.fixtures.state.manager.SignatureVerificationTes
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.lang.reflect.Field;
+import java.security.PublicKey;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -399,15 +401,14 @@ public class RandomSignedStateGenerator {
     }
 
     /**
-     * Provide signatures for the signed state.
+     * Configures the generator to use the signature supplier that generates signatures
      *
      * @return this object
      */
     @NonNull
-    public RandomSignedStateGenerator setSignatureSupplier(
-            @NonNull final Function<Hash, Map<NodeId, Signature>> signatureSupplier) {
-        Objects.requireNonNull(signatureSupplier, "signatureSupplier must not be null");
-        this.signatureSupplier = signatureSupplier;
+    public RandomSignedStateGenerator useSignatureSupplierFromRoster() {
+        Objects.requireNonNull(roster, "roster must not be null");
+        this.signatureSupplier = createSignatureSupplier(roster);
         return this;
     }
 
@@ -506,5 +507,22 @@ public class RandomSignedStateGenerator {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Given the roster, create a function that will return a map of node IDs to signatures.
+     * @param roster roster to use for creating signatures
+     * @return a function that takes a hash and returns a map of node IDs to signatures
+     */
+    public static Function<Hash, Map<NodeId, Signature>> createSignatureSupplier(Roster roster) {
+        return hash -> {
+            final Map<NodeId, Signature> signatures = new HashMap<>();
+            for (final RosterEntry node : roster.rosterEntries()) {
+                final PublicKey publicKey =
+                        RosterUtils.fetchGossipCaCertificate(node).getPublicKey();
+                signatures.put(NodeId.of(node.nodeId()), buildFakeSignature(publicKey, hash));
+            }
+            return signatures;
+        };
     }
 }
