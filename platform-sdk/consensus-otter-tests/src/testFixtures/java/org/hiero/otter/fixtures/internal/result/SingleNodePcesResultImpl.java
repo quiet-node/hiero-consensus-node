@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.fixtures.internal.result;
 
+import static com.swirlds.platform.event.preconsensus.PcesFileManager.NO_LOWER_BOUND;
 import static com.swirlds.platform.event.preconsensus.PcesUtilities.getDatabaseDirectory;
-import static com.swirlds.platform.event.preconsensus.PcesWriteManager.NO_LOWER_BOUND;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.platform.state.NodeId;

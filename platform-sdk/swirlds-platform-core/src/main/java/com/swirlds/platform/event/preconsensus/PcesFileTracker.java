@@ -2,7 +2,7 @@
 package com.swirlds.platform.event.preconsensus;
 
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.event.preconsensus.PcesWriteManager.NO_LOWER_BOUND;
+import static com.swirlds.platform.event.preconsensus.PcesFileManager.NO_LOWER_BOUND;
 
 import com.swirlds.common.utility.RandomAccessDeque;
 import com.swirlds.common.utility.UnmodifiableIterator;
@@ -142,7 +142,7 @@ public class PcesFileTracker {
      * @param lowerBound    the desired lower bound, iterator is guaranteed to return all available events with an
      *                      ancient indicator (the birth round of events)
      *                      greater or equal to this value. No events with a smaller ancient identifier will be
-     *                      returned. A value of {@link PcesWriteManager#NO_LOWER_BOUND} will cause the returned iterator
+     *                      returned. A value of {@link PcesFileManager#NO_LOWER_BOUND} will cause the returned iterator
      *                      to walk over all available events.
      * @param startingRound the round to start iterating from
      * @return an iterator that walks over events
@@ -160,7 +160,7 @@ public class PcesFileTracker {
      *
      * @param lowerBound  the desired lower bound, iterator is guaranteed to walk over all files that may contain events
      *                    with an ancient indicator (i.e. birth round greater or equal to this value. A value of
-     *                    {@link PcesWriteManager#NO_LOWER_BOUND} will cause the returned iterator to walk over all
+     *                    {@link PcesFileManager#NO_LOWER_BOUND} will cause the returned iterator to walk over all
      *                    available event files.
      * @param originRound the origin round to start iterating from. The origin of a PCES segment is used to
      *                    differentiate segments of PCES files separated by discontinuities.

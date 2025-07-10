@@ -79,7 +79,7 @@ class PcesReplayerTests {
         latestImmutableStateSupplier = () -> latestImmutableState;
 
         final List<PlatformEvent> events = new ArrayList<>();
-        final var writer = new PcesWriteManager(
+        final var writer = new PcesFileManager(
                 TestPlatformContextBuilder.create().withTime(time).build(), 0, tmpDir);
         writer.beginStreamingNewEvents();
 

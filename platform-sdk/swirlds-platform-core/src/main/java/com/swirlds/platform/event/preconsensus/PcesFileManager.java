@@ -28,13 +28,13 @@ import org.hiero.consensus.model.hashgraph.EventWindow;
  * This class provides the common functionality for writing preconsensus events to disk. It is used by the
  * {@link DefaultInlinePcesWriter}.
  */
-public class PcesWriteManager {
+public class PcesFileManager {
     /**
      * This constant can be used when the caller wants all events, regardless of the lower bound.
      */
     public static final long NO_LOWER_BOUND = -1;
 
-    private static final Logger logger = LogManager.getLogger(PcesWriteManager.class);
+    private static final Logger logger = LogManager.getLogger(PcesFileManager.class);
 
     /**
      * The current file that is being written to.
@@ -144,7 +144,7 @@ public class PcesWriteManager {
      *
      * @param platformContext the platform context
      */
-    public PcesWriteManager(
+    public PcesFileManager(
             @NonNull final PlatformContext platformContext,
             final long initialRound,
             final @NonNull Path databaseDirectory) {

@@ -2,7 +2,7 @@
 package com.swirlds.platform.event.preconsensus;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertIteratorEquality;
-import static com.swirlds.platform.event.preconsensus.PcesWriteManager.NO_LOWER_BOUND;
+import static com.swirlds.platform.event.preconsensus.PcesFileManager.NO_LOWER_BOUND;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -37,7 +37,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class PcesWriteManagerTest {
+class PcesFileManagerTest {
 
     @TempDir
     private Path tempDir;
@@ -85,7 +85,7 @@ class PcesWriteManagerTest {
         for (int i = 0; i < numEvents; i++) {
             events.add(generator.generateEventWithoutIndex().getBaseEvent());
         }
-        final PcesWriteManager writer = new PcesWriteManager(platformContext, 0, tempDir);
+        final PcesFileManager writer = new PcesFileManager(platformContext, 0, tempDir);
 
         writer.beginStreamingNewEvents();
         for (final PlatformEvent event : events) {
@@ -108,7 +108,7 @@ class PcesWriteManagerTest {
         final StandardGraphGenerator generator = PcesWriterTestUtils.buildGraphGenerator(platformContext, random);
 
         final int stepsUntilAncient = random.nextInt(50, 100);
-        final PcesWriteManager writer = new PcesWriteManager(platformContext, 0, tempDir);
+        final PcesFileManager writer = new PcesFileManager(platformContext, 0, tempDir);
 
         // We will add this event at the very end, it should be ancient by then
         final PlatformEvent ancientEvent = generator.generateEventWithoutIndex().getBaseEvent();
@@ -195,7 +195,7 @@ class PcesWriteManagerTest {
         final FakeTime time = new FakeTime(lastFile.getTimestamp().plus(Duration.ofHours(1)), Duration.ZERO);
         final PlatformContext platformContext = TestPlatformContexts.context(time, dataDirectory);
 
-        final PcesWriteManager manager = new PcesWriteManager(platformContext, 0, fileDirectory);
+        final PcesFileManager manager = new PcesFileManager(platformContext, 0, fileDirectory);
         manager.beginStreamingNewEvents();
         // assertIteratorEquality(expectedFiles.iterator(), fileTracker.getFileIterator(NO_LOWER_BOUND, 0));
 
@@ -283,7 +283,7 @@ class PcesWriteManagerTest {
         final FakeTime time = new FakeTime(firstFile.getTimestamp().plus(Duration.ofMinutes(59)), Duration.ZERO);
         final PlatformContext platformContext = TestPlatformContexts.context(time, dataDirectory);
 
-        final PcesWriteManager manager = new PcesWriteManager(platformContext, 0, fileDirectory);
+        final PcesFileManager manager = new PcesFileManager(platformContext, 0, fileDirectory);
 
         manager.beginStreamingNewEvents();
         // assertIteratorEquality(files.iterator(), fileTracker.getFileIterator(NO_LOWER_BOUND, 0));
