@@ -137,11 +137,11 @@ public class FrameBuilder {
             contextEntries.put(BYTECODE_SIDECARS_VARIABLE, true);
         }
         contextEntries.put(THROTTLE_BY_OPS_DURATION, contractConfig.throttleThrottleByOpsDuration());
+        contextEntries.put(HEDERA_OPS_DURATION, new HederaOpsDurationCounter(0L));
         if (context.isTransaction()) {
             contextEntries.put(HAPI_RECORD_BUILDER_CONTEXT_VARIABLE, context.streamBuilder());
             contextEntries.put(
                     PENDING_CREATION_BUILDER_CONTEXT_VARIABLE, context.pendingCreationRecordBuilderReference());
-            contextEntries.put(HEDERA_OPS_DURATION, new HederaOpsDurationCounter(0L));
         }
         return contextEntries;
     }
