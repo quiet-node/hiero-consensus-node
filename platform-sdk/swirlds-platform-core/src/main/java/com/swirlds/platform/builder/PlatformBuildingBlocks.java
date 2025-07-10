@@ -63,7 +63,6 @@ import org.hiero.consensus.roster.RosterHistory;
  *                                               debugging). Return value may be null (implementation detail of
  *                                               underlying data source), this indirection can be removed once states
  *                                               are passed within the wiring framework
- * @param initialPcesFiles                       the initial set of PCES files present when the node starts
  * @param consensusEventStreamName               a part of the name of the directory where the consensus event stream is written
  * @param issScratchpad                          scratchpad storage for ISS recovery
  * @param notificationEngine                     for sending notifications to the application (legacy pattern)
