@@ -140,7 +140,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @param nodeConfig the configuration for the block node
      * @param blockNodeConnectionManager the connection manager coordinating block node connections
      * @param blockBufferService the block stream state manager for block node connections
-     * //* @param grpcServiceClient the gRPC client to establish the bidirectional streaming to block node connections
+     * @param managedChannel the gRPC channel to use for communication with the block node
      * @param blockStreamMetrics the block stream metrics for block node connections
      */
     public BlockNodeConnection(

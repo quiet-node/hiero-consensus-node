@@ -251,10 +251,7 @@ public class BlockNodeConnectionManager {
     private @NonNull ManagedChannel createNewManagedChannel(@NonNull final BlockNodeConfig nodeConfig) {
         return ManagedChannelBuilder.forAddress(nodeConfig.address(), nodeConfig.port())
                 .usePlaintext()
-                .maxInboundMessageSize(configProvider
-                        .getConfiguration()
-                        .getConfigData(BlockStreamConfig.class)
-                        .publishStreamRequestMaxSizeBytes())
+                .maxInboundMessageSize(publishStreamRequestMaxSizeBytes())
                 .build();
     }
 
@@ -278,8 +275,8 @@ public class BlockNodeConnectionManager {
 
         if (isOnlyOneBlockNodeConfigured()) {
             // If there is only one block node configured, we will not try to select a new node
-            // Immediately schedule a retry for the failed connection
-            scheduleConnectionAttempt(connection, Duration.ofSeconds(1), null);
+            // Schedule a retry for the failed connection with no delay
+            scheduleConnectionAttempt(connection, Duration.ofSeconds(0), null);
         } else {
             // Schedule retry for the failed connection after a delay (initialDelay)
             scheduleConnectionAttempt(connection, initialDelay, null);
