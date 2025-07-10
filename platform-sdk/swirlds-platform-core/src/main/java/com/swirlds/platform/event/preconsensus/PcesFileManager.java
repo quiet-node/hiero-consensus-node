@@ -7,7 +7,6 @@ import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 
 import com.swirlds.base.time.Time;
-import com.swirlds.base.units.UnitConstants;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.LongRunningAverage;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -137,7 +136,7 @@ public class PcesFileManager {
      */
     private long totalFileByteCount = 0;
 
-    private final PcesMetrics metrics;
+    final PcesFileManagerMetrics metrics;
 
     /**
      * Constructor
@@ -175,9 +174,11 @@ public class PcesFileManager {
         } else {
             this.pcesFileWriterType = pcesConfig.pcesFileWriterType();
         }
-        this.metrics = new PcesMetrics(platformContext.getMetrics());
+        this.metrics = new PcesFileManagerMetrics(platformContext.getMetrics());
         this.averageSpanUtilization = new LongRunningAverage(pcesConfig.spanUtilizationRunningAverageLength());
-        initializeMetrics();
+        this.totalFileByteCount = files.getTotalFileByteCount();
+        metrics.initializeMetrics(files, platformContext.getTime());
+        metrics.updateFileSizeMetrics(totalFileByteCount, files);
     }
 
     /**
@@ -288,11 +289,23 @@ public class PcesFileManager {
     }
 
     public long writeEvent(final PlatformEvent event) throws IOException {
-        return currentMutableFile.writeEvent(event);
+        long start = time.nanoTime();
+        long size = 0;
+        try {
+            size = currentMutableFile.writeEvent(event);
+            return size;
+        } finally {
+            metrics.endFileWrite(size, getDurationInNanos(start));
+        }
     }
 
     public void sync() throws IOException {
-        currentMutableFile.sync();
+        long start = time.nanoTime();
+        try {
+            currentMutableFile.sync();
+        } finally {
+            metrics.endFileSync(getDurationInNanos(start));
+        }
     }
 
     /**
@@ -474,7 +487,7 @@ public class PcesFileManager {
                 metrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
             }
 
-            updateFileSizeMetrics();
+            metrics.updateFileSizeMetrics(totalFileByteCount, files);
         } catch (final IOException e) {
             throw new UncheckedIOException("unable to prune old files", e);
         }
@@ -502,40 +515,14 @@ public class PcesFileManager {
         metrics.getPreconsensusEventFileRate().cycle();
         metrics.getPreconsensusEventAverageFileSpan().update(file.getSpan());
         metrics.getPreconsensusEventAverageUnUtilizedFileSpan().update(file.getUnUtilizedSpan());
-        updateFileSizeMetrics();
+        metrics.updateFileSizeMetrics(totalFileByteCount, files);
     }
-
     /**
-     * Initialize metrics given the files currently on disk.
+     * Returns the duration in nanos from the given start up to now as reported by time instance
+     * @param startNanos the start of the duration to consider
+     * @return the value in nanos of the duration, up to Integer.MAX_VALUE
      */
-    private void initializeMetrics() {
-        totalFileByteCount = files.getTotalFileByteCount();
-
-        if (files.getFileCount() > 0) {
-            metrics.getPreconsensusEventFileOldestIdentifier()
-                    .set(files.getFirstFile().getLowerBound());
-            metrics.getPreconsensusEventFileYoungestIdentifier()
-                    .set(files.getLastFile().getUpperBound());
-            final Duration age = Duration.between(files.getFirstFile().getTimestamp(), time.now());
-            metrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
-        } else {
-            metrics.getPreconsensusEventFileOldestIdentifier().set(NO_LOWER_BOUND);
-            metrics.getPreconsensusEventFileYoungestIdentifier().set(NO_LOWER_BOUND);
-            metrics.getPreconsensusEventFileOldestSeconds().set(0);
-        }
-        updateFileSizeMetrics();
-    }
-
-    /**
-     * Update metrics with the latest data on file size.
-     */
-    private void updateFileSizeMetrics() {
-        metrics.getPreconsensusEventFileCount().set(files.getFileCount());
-        metrics.getPreconsensusEventFileTotalSizeGB().set(totalFileByteCount * UnitConstants.BYTES_TO_GIBIBYTES);
-
-        if (files.getFileCount() > 0) {
-            metrics.getPreconsensusEventFileAverageSizeMB()
-                    .set(((double) totalFileByteCount) / files.getFileCount() * UnitConstants.BYTES_TO_MEBIBYTES);
-        }
+    private long getDurationInNanos(final long startNanos) {
+        return time.nanoTime() - startNanos;
     }
 }

@@ -14,9 +14,7 @@ import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.NodeId;
 
 public class DefaultInlinePcesWriter implements InlinePcesWriter {
-
     private final PcesFileManager pcesFileManager;
-    private final PcesWriterPerEventMetrics pcesWriterPerEventMetrics;
     private final FileSyncOption fileSyncOption;
     private final NodeId selfId;
     /**
@@ -31,10 +29,6 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
         this.pcesFileManager = new PcesFileManager(platformContext, initialRound, databaseDirectory);
 
         this.selfId = selfId;
-        this.pcesWriterPerEventMetrics =
-                new PcesWriterPerEventMetrics(platformContext.getMetrics(), platformContext.getTime());
-
-        @NonNull
         final PcesConfig pcesConfig = platformContext.getConfiguration().getConfigData(PcesConfig.class);
         this.fileSyncOption = pcesConfig.inlinePcesSyncOption();
     }
@@ -50,8 +44,6 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
     @NonNull
     @Override
     public PlatformEvent writeEvent(@NonNull final PlatformEvent event) {
-        pcesWriterPerEventMetrics.startWriteEvent();
-
         // if we aren't streaming new events yet, assume that the given event is already durable
         if (!pcesFileManager.isStreamingNewEvents()) {
             return event;
@@ -64,24 +56,17 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
 
         try {
             pcesFileManager.prepareOutputStream(event);
-            pcesWriterPerEventMetrics.startFileWrite();
-            final long size = pcesFileManager.writeEvent(event);
-            pcesWriterPerEventMetrics.endFileWrite(size);
+            pcesFileManager.writeEvent(event);
 
             if (fileSyncOption == FileSyncOption.EVERY_EVENT
                     || (fileSyncOption == FileSyncOption.EVERY_SELF_EVENT
                             && event.getCreatorId().equals(selfId))) {
 
-                pcesWriterPerEventMetrics.startFileSync();
                 pcesFileManager.sync();
-                pcesWriterPerEventMetrics.endFileSync();
             }
             return event;
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
-        } finally {
-            pcesWriterPerEventMetrics.endWriteEvent();
-            pcesWriterPerEventMetrics.clear();
         }
     }
 
