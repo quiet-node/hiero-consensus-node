@@ -72,7 +72,6 @@ import com.hedera.node.config.data.AccountsConfig;
 import com.hedera.node.config.data.EntitiesConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.LedgerConfig;
-import com.hedera.node.config.data.StakingConfig;
 import com.hedera.node.config.data.TokensConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -322,7 +321,7 @@ public class CryptoCreateHandler extends BaseCryptoHandler implements Transactio
         }
 
         // You can never set the alias to be an "entity num alias" (sometimes called "long-zero").
-        validateFalse(isEntityNumAlias(alias, hederaConfig.shard(), hederaConfig.realm()), INVALID_ALIAS_KEY);
+        validateFalse(isEntityNumAlias(alias), INVALID_ALIAS_KEY);
 
         // We have a limit on the total maximum number of entities that can be created on the network, for different
         // types of entities. We need to verify that creating a new account won't exceed that number.
@@ -373,7 +372,6 @@ public class CryptoCreateHandler extends BaseCryptoHandler implements Transactio
         // Validate the staking information included in this account creation.
         if (op.hasStakedAccountId() || op.hasStakedNodeId()) {
             StakingValidator.validateStakedIdForCreation(
-                    context.configuration().getConfigData(StakingConfig.class).isEnabled(),
                     op.declineReward(),
                     op.stakedId().kind().name(),
                     op.stakedAccountId(),

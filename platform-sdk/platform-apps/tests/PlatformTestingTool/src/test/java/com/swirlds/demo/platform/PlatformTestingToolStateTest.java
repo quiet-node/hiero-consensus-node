@@ -19,7 +19,7 @@ import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.merkle.crypto.internal.MerkleCryptoEngine;
+import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
@@ -35,12 +35,12 @@ import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.Metric;
 import com.swirlds.platform.ParameterProvider;
 import com.swirlds.platform.crypto.KeyGeneratingException;
-import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.crypto.PlatformSigner;
+import com.swirlds.platform.crypto.KeysAndCertsGenerator;
 import com.swirlds.platform.crypto.PublicStores;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
+import com.swirlds.state.spi.ReadableStates;
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.MapWritableStates;
@@ -55,12 +55,15 @@ import java.util.Random;
 import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import org.hiero.base.crypto.Hash;
-import org.hiero.consensus.model.event.AncientMode;
+import org.hiero.base.utility.CommonUtils;
+import org.hiero.consensus.crypto.PlatformSigner;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.ConsensusRound;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.hashgraph.Round;
+import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
+import org.hiero.consensus.model.test.fixtures.hashgraph.EventWindowBuilder;
 import org.hiero.consensus.model.transaction.ConsensusTransaction;
 import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
 import org.hiero.consensus.model.transaction.Transaction;
@@ -70,7 +73,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 
 class PlatformTestingToolStateTest {
 
@@ -95,6 +97,9 @@ class PlatformTestingToolStateTest {
         final PayloadCfgSimple payloadConfig = mock(PayloadCfgSimple.class);
         when(payloadConfig.isAppendSig()).thenReturn(true);
         state = mock(PlatformTestingToolState.class);
+        final ReadableStates readableStates = mock(ReadableStates.class);
+        when(readableStates.isEmpty()).thenReturn(true);
+        when(state.getReadableStates(any())).thenReturn(readableStates);
         final ExpectedFCMFamily expectedFCMFamily = mock(ExpectedFCMFamily.class);
         when(state.getStateExpectedMap()).thenReturn(expectedFCMFamily);
         main = new PlatformTestingToolMain();
@@ -102,19 +107,23 @@ class PlatformTestingToolStateTest {
         roster = new Roster(Collections.EMPTY_LIST);
         transaction = mock(TransactionWrapper.class);
         platformEvent = mock(PlatformEvent.class);
-        eventWindow = new EventWindow(10, 5, 20, AncientMode.BIRTH_ROUND_THRESHOLD);
+        eventWindow = EventWindowBuilder.builder()
+                .setLatestConsensusRound(10)
+                .setAncientThreshold(5)
+                .setExpiredThreshold(20)
+                .build();
 
         consumedSystemTransactions = new ArrayList<>();
         consumer = systemTransaction -> consumedSystemTransactions.add(systemTransaction);
 
         when(platformEvent.getCreatorId()).thenReturn(new NodeId());
-        when(platformEvent.getSoftwareVersion()).thenReturn(new SemanticVersion(1, 1, 1, "", ""));
+        when(platformEvent.getSoftwareVersion()).thenReturn(null);
         when(platformEvent.getConsensusTimestamp()).thenReturn(Instant.now());
 
         final Randotron randotron = Randotron.create();
 
-        final KeysAndCerts keysAndCerts =
-                KeysAndCerts.generate(NodeId.FIRST_NODE_ID, EMPTY_ARRAY, EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
+        final KeysAndCerts keysAndCerts = KeysAndCertsGenerator.generate(
+                NodeId.FIRST_NODE_ID, EMPTY_ARRAY, EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
 
         final PlatformSigner signer = new PlatformSigner(keysAndCerts);
         final Hash stateHash = randotron.nextHash();
@@ -207,7 +216,9 @@ class PlatformTestingToolStateTest {
                 roster,
                 List.of(platformEvent),
                 eventWindow,
-                Mockito.mock(ConsensusSnapshot.class),
+                ConsensusSnapshot.newBuilder()
+                        .consensusTimestamp(CommonUtils.toPbjTimestamp(Instant.now()))
+                        .build(),
                 false,
                 Instant.now());
 
@@ -310,7 +321,9 @@ class PlatformTestingToolStateTest {
                 roster,
                 List.of(platformEvent),
                 eventWindow,
-                Mockito.mock(ConsensusSnapshot.class),
+                ConsensusSnapshot.newBuilder()
+                        .consensusTimestamp(CommonUtils.toPbjTimestamp(Instant.now()))
+                        .build(),
                 false,
                 Instant.now());
     }
@@ -356,7 +369,7 @@ class PlatformTestingToolStateTest {
 
     private void givenPlatform(final Platform platform, final PlatformContext platformContext, final NodeId nodeId) {
         final Future<Hash> futureHash = mock(Future.class);
-        final MerkleCryptoEngine cryptography = mock(MerkleCryptoEngine.class);
+        final MerkleCryptography cryptography = mock(MerkleCryptography.class);
         when(cryptography.digestTreeAsync(any())).thenReturn(futureHash);
         final NotificationEngine notificationEngine = mock(NotificationEngine.class);
 

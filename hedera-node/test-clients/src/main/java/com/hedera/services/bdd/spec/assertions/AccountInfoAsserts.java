@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.esaulpaugh.headlong.abi.Address;
 import com.google.protobuf.ByteString;
+import com.hedera.services.bdd.spec.HapiPropertySource;
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.queries.crypto.ExpectedTokenRel;
 import com.hederahashgraph.api.proto.java.AccountID;
@@ -87,8 +88,20 @@ public class AccountInfoAsserts extends BaseErroringAssertsProvider<AccountInfo>
     }
 
     public AccountInfoAsserts stakedAccountId(String acctNum) {
+        return stakedAccountId(Long.parseLong(acctNum));
+    }
+
+    public AccountInfoAsserts stakedAccountId(long acctNum) {
         registerProvider((spec, o) -> assertEquals(
-                asAccount(spec.shard(), spec.realm(), Long.parseLong(acctNum)),
+                asAccount(spec.shard(), spec.realm(), acctNum),
+                ((AccountInfo) o).getStakingInfo().getStakedAccountId(),
+                "Bad stakedAccountId id!"));
+        return this;
+    }
+
+    public AccountInfoAsserts stakedAccountIdWithLiteral(String idLiteral) {
+        registerProvider((spec, o) -> assertEquals(
+                HapiPropertySource.asAccount(idLiteral),
                 ((AccountInfo) o).getStakingInfo().getStakedAccountId(),
                 "Bad stakedAccountId id!"));
         return this;
@@ -305,9 +318,19 @@ public class AccountInfoAsserts extends BaseErroringAssertsProvider<AccountInfo>
         return approxChangeFromSnapshot(snapshot, expDelta, 0L);
     }
 
+    public static Function<HapiSpec, Function<Long, Optional<String>>> tokenChangeFromSnapshot(
+            String token, String snapshot, long expDelta) {
+        return approxTokenChangeFromSnapshot(token, snapshot, expDelta, 0L);
+    }
+
     public static Function<HapiSpec, Function<Long, Optional<String>>> approxChangeFromSnapshot(
             String snapshot, long expDelta, long epsilon) {
         return approxChangeFromSnapshot(snapshot, ignore -> expDelta, epsilon);
+    }
+
+    public static Function<HapiSpec, Function<Long, Optional<String>>> approxTokenChangeFromSnapshot(
+            String token, String snapshot, long expDelta, long epsilon) {
+        return approxTokenChangeFromSnapshot(token, snapshot, ignore -> expDelta, epsilon);
     }
 
     public static Function<HapiSpec, Function<Long, Optional<String>>> approxChangeFromSnapshot(
@@ -321,6 +344,21 @@ public class AccountInfoAsserts extends BaseErroringAssertsProvider<AccountInfo>
                 return Optional.of(String.format(
                         "Expected balance change from '%s' to be <%d +/- %d>, was" + " <%d>!",
                         snapshot, expDelta, epsilon, actualDelta));
+            }
+        };
+    }
+
+    public static Function<HapiSpec, Function<Long, Optional<String>>> approxTokenChangeFromSnapshot(
+            String token, String snapshot, ToLongFunction<HapiSpec> expDeltaFn, long epsilon) {
+        return spec -> actual -> {
+            long expDelta = expDeltaFn.applyAsLong(spec);
+            long actualDelta = actual - spec.registry().getTokenBalanceSnapshot(token, snapshot);
+            if (Math.abs(actualDelta - expDelta) <= epsilon) {
+                return Optional.empty();
+            } else {
+                return Optional.of(String.format(
+                        "Expected token %s balance change from '%s' to be <%d +/- %d>, was" + " <%d>!",
+                        token, snapshot, expDelta, epsilon, actualDelta));
             }
         };
     }

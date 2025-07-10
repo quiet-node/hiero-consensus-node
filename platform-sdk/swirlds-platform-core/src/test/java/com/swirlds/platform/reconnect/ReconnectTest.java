@@ -2,6 +2,7 @@
 package com.swirlds.platform.reconnect;
 
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -19,6 +20,7 @@ import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
+import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.metrics.ReconnectMetrics;
 import com.swirlds.platform.network.Connection;
 import com.swirlds.platform.network.SocketConnection;
@@ -27,7 +29,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateValidator;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
-import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade;
 import java.io.IOException;
@@ -73,12 +74,13 @@ final class ReconnectTest {
         registry.registerConstructables("com.swirlds.platform.state.signed");
         registry.registerConstructables("com.swirlds.platform.system");
         registry.registerConstructables("com.swirlds.state.merkle");
-        FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
+        registerMerkleStateRootClassIds();
     }
 
     @AfterAll
     static void tearDown() {
         RandomSignedStateGenerator.releaseAllBuiltSignedStates();
+        MerkleDbTestUtils.assertAllDatabasesClosed();
     }
 
     @Test

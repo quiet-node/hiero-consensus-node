@@ -10,6 +10,11 @@
 /example-apps/**/module-info.java               @hiero-ledger/hiero-consensus-node-foundation-codeowners
 /example-apps/swirlds-platform-base-example/    @hiero-ledger/hiero-consensus-node-foundation-codeowners
 
+############################
+##### State Validator ######
+############################
+/hedera-state-validator                         @hiero-ledger/hiero-consensus-node-foundation-codeowners
+
 #########################
 ##### HAPI protobuf #####
 #########################
@@ -26,7 +31,7 @@
 /hedera-node/                                   @hiero-ledger/hiero-consensus-node-execution-codeowners
 
 # Hedera Node Deployments - Configuration & Grafana Dashboards
-/hedera-node/configuration/**                   @rbair23 @dalvizu @poulok @netopyr @Nana-EC @SimiHunjan @steven-sheehy @nathanklick @rbarker-dev @Ferparishuertas @beeradb
+/hedera-node/configuration/**                   @rbair23 @dalvizu @Nana-EC @SimiHunjan @steven-sheehy @nathanklick @rbarker-dev @Ferparishuertas @beeradb
 /hedera-node/configuration/dev/**               @hiero-ledger/hiero-consensus-node-execution-codeowners
 /hedera-node/infrastructure/**                  @hiero-ledger/github-maintainers @hiero-ledger/hiero-consensus-node-devops-codeowners @hiero-ledger/hiero-consensus-node-execution-codeowners
 

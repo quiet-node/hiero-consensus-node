@@ -27,6 +27,7 @@ import com.hedera.node.config.data.AtomicBatchConfig;
 import com.hedera.node.config.data.AutoRenew2Config;
 import com.hedera.node.config.data.AutoRenewConfig;
 import com.hedera.node.config.data.BalancesConfig;
+import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockRecordStreamConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.BootstrapConfig;
@@ -38,12 +39,14 @@ import com.hedera.node.config.data.ExpiryConfig;
 import com.hedera.node.config.data.FeesConfig;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.GrpcConfig;
+import com.hedera.node.config.data.GrpcUsageTrackerConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.JumboTransactionsConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NettyConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
 import com.hedera.node.config.data.NodesConfig;
+import com.hedera.node.config.data.OpsDurationConfig;
 import com.hedera.node.config.data.RatesConfig;
 import com.hedera.node.config.data.SchedulingConfig;
 import com.hedera.node.config.data.StakingConfig;
@@ -86,6 +89,7 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 BalancesConfig.class,
                 BlockRecordStreamConfig.class,
                 BlockStreamConfig.class,
+                BlockNodeConnectionConfig.class,
                 BootstrapConfig.class,
                 CacheConfig.class,
                 ConsensusConfig.class,
@@ -109,7 +113,9 @@ public class ServicesConfigExtension implements ConfigurationExtension {
                 AtomicBatchConfig.class,
                 VersionConfig.class,
                 TssConfig.class,
-                JumboTransactionsConfig.class);
+                JumboTransactionsConfig.class,
+                GrpcUsageTrackerConfig.class,
+                OpsDurationConfig.class);
     }
 
     @NonNull

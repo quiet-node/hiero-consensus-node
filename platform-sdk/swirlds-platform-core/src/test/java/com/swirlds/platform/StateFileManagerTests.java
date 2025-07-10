@@ -8,6 +8,7 @@ import static com.swirlds.platform.state.snapshot.StateToDiskReason.FATAL_ERROR;
 import static com.swirlds.platform.state.snapshot.StateToDiskReason.ISS;
 import static com.swirlds.platform.state.snapshot.StateToDiskReason.PERIODIC_SNAPSHOT;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 import static java.nio.file.Files.exists;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
@@ -45,8 +46,8 @@ import com.swirlds.platform.state.snapshot.SignedStateFileUtils;
 import com.swirlds.platform.state.snapshot.StateDumpRequest;
 import com.swirlds.platform.state.snapshot.StateSnapshotManager;
 import com.swirlds.platform.test.fixtures.state.BlockingState;
-import com.swirlds.platform.test.fixtures.state.FakeConsensusStateEventHandler;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -88,15 +89,15 @@ class StateFileManagerTests {
     static void beforeAll() throws ConstructableRegistryException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
-        registry.registerConstructables("org.hiero.base.crypto");
-        FakeConsensusStateEventHandler.registerMerkleStateRootClassIds();
+        registry.registerConstructables("org.hiero");
+        registerMerkleStateRootClassIds();
     }
 
     @BeforeEach
     void beforeEach() throws IOException {
         // Don't use JUnit @TempDir as it runs into a thread race with Merkle DB DataSource release...
         testDirectory = LegacyTemporaryFileBuilder.buildTemporaryFile(
-                "SignedStateFileReadWriteTest", FakeConsensusStateEventHandler.CONFIGURATION);
+                "SignedStateFileReadWriteTest", TestingAppStateInitializer.CONFIGURATION);
         LegacyTemporaryFileBuilder.overrideTemporaryFileLocation(testDirectory);
         MerkleDb.resetDefaultInstancePath();
         final TestConfigBuilder configBuilder = new TestConfigBuilder()
@@ -149,24 +150,17 @@ class StateFileManagerTests {
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState =
                 readStateFile(stateFile, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
+        SignedState signedState = deserializedSignedState.reservedSignedState().get();
         TestMerkleCryptoFactory.getInstance()
-                .digestTreeSync(deserializedSignedState
-                        .reservedSignedState()
-                        .get()
-                        .getState()
-                        .getRoot());
+                .digestTreeSync(signedState.getState().getRoot());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
-        assertNotSame(
-                deserializedSignedState.reservedSignedState().get(),
-                originalState,
-                "deserialized object should not be the same");
+        assertNotSame(signedState, originalState, "deserialized object should not be the same");
 
-        assertEquals(
-                originalState.getState().getHash(),
-                deserializedSignedState.reservedSignedState().get().getState().getHash(),
-                "hash should match");
+        assertEquals(originalState.getState().getHash(), signedState.getState().getHash(), "hash should match");
         assertEquals(originalState.getState().getHash(), deserializedSignedState.originalHash(), "hash should match");
+
+        signedState.getState().release();
     }
 
     @ParameterizedTest
@@ -336,8 +330,8 @@ class StateFileManagerTests {
 
                 assertNotNull(stateSavingResult, "state should have been saved");
                 assertEquals(
-                        oldestMetadata.minimumGenerationNonAncient(),
-                        stateSavingResult.oldestMinimumGenerationOnDisk());
+                        oldestMetadata.minimumBirthRoundNonAncient(),
+                        stateSavingResult.oldestMinimumBirthRoundOnDisk());
 
                 assertTrue(
                         currentStatesOnDisk.size() <= statesOnDisk,
@@ -349,6 +343,8 @@ class StateFileManagerTests {
 
                     Configuration configuration =
                             TestPlatformContextBuilder.create().build().getConfiguration();
+                    // Restore to a new MerkleDb instance
+                    MerkleDb.resetDefaultInstancePath();
                     final SignedState stateFromDisk = assertDoesNotThrow(
                             () -> SignedStateFileReader.readStateFile(
                                             savedStateInfo.stateFile(),
@@ -364,6 +360,7 @@ class StateFileManagerTests {
                             originalState.getConsensusTimestamp(),
                             stateFromDisk.getConsensusTimestamp(),
                             "timestamp should match");
+                    stateFromDisk.getState().release();
                 }
 
                 // The first state with a timestamp after this boundary should be saved
@@ -467,6 +464,6 @@ class StateFileManagerTests {
     }
 
     private static void makeImmutable(SignedState signedState) {
-        signedState.getState().copy();
+        signedState.getState().copy().release();
     }
 }

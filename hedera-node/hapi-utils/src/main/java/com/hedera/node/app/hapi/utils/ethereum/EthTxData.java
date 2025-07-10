@@ -102,28 +102,6 @@ public record EthTxData(
     }
 
     @VisibleForTesting
-    EthTxData replaceOfferedGasPrice(@NonNull final BigInteger replacementGasPrice) {
-        return new EthTxData(
-                null,
-                type,
-                chainId,
-                nonce,
-                replacementGasPrice.toByteArray(),
-                maxPriorityGas,
-                maxGas,
-                gasLimit,
-                to,
-                value,
-                callData,
-                accessList,
-                null,
-                recId,
-                v,
-                r,
-                s);
-    }
-
-    @VisibleForTesting
     EthTxData replaceValue(@NonNull final BigInteger replacementValue) {
         return new EthTxData(
                 null,

@@ -4,8 +4,10 @@ open module com.swirlds.common.test.fixtures {
     exports com.swirlds.common.test.fixtures.benchmark;
     exports com.swirlds.common.test.fixtures.dummy;
     exports com.swirlds.common.test.fixtures.io;
+    exports com.swirlds.common.test.fixtures.io.extendable;
     exports com.swirlds.common.test.fixtures.map;
     exports com.swirlds.common.test.fixtures.merkle;
+    exports com.swirlds.common.test.fixtures.merkle.dummy;
     exports com.swirlds.common.test.fixtures.merkle.util;
     exports com.swirlds.common.test.fixtures.threading;
     exports com.swirlds.common.test.fixtures.set;
@@ -27,7 +29,6 @@ open module com.swirlds.common.test.fixtures {
     requires com.swirlds.logging;
     requires com.swirlds.platform.core;
     requires org.hiero.base.utility.test.fixtures;
-    requires org.hiero.consensus.utility;
     requires org.apache.logging.log4j.core;
     requires org.apache.logging.log4j;
     requires org.junit.jupiter.api;

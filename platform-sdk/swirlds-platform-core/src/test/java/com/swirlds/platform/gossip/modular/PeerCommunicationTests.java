@@ -11,7 +11,7 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.config.extensions.sources.SystemEnvironmentConfigSource;
 import com.swirlds.config.extensions.sources.SystemPropertiesConfigSource;
-import com.swirlds.platform.crypto.KeysAndCerts;
+import com.swirlds.platform.crypto.KeysAndCertsGenerator;
 import com.swirlds.platform.crypto.PublicStores;
 import com.swirlds.platform.gossip.ProtocolConfig;
 import com.swirlds.platform.network.PeerCommunication;
@@ -30,10 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.hiero.base.constructable.ConstructableRegistry;
+import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 public class PeerCommunicationTests {
@@ -80,14 +80,17 @@ public class PeerCommunicationTests {
 
     private void loadAddressBook(int nodeCount) throws Exception {
 
+        // 15301 is used by other tests and may cause conflicts with parallel runs
+        final int portBase = 16301;
+
         this.perNodeCerts = new HashMap<>();
         this.allPeers = new ArrayList<>();
         for (int i = 0; i < nodeCount; i++) {
             NodeId nodeId = NodeId.of(i);
             KeysAndCerts keysAndCerts =
-                    KeysAndCerts.generate(nodeId, EMPTY_ARRAY, EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
+                    KeysAndCertsGenerator.generate(nodeId, EMPTY_ARRAY, EMPTY_ARRAY, EMPTY_ARRAY, new PublicStores());
             perNodeCerts.put(nodeId, keysAndCerts);
-            allPeers.add(new PeerInfo(nodeId, "127.0.0.1", 15301 + i, keysAndCerts.sigCert()));
+            allPeers.add(new PeerInfo(nodeId, "127.0.0.1", portBase + i, keysAndCerts.sigCert()));
         }
     }
 
@@ -232,8 +235,8 @@ public class PeerCommunicationTests {
     }
 
     @Test
-    // Flaky, c.f. https://github.com/hiero-ledger/hiero-consensus-node/issues/18549
-    @Disabled
+    // Used to be flaky, c.f. https://github.com/hiero-ledger/hiero-consensus-node/issues/18549
+    // if it happens again, mark it with @Ignore and open a ticket referencing old one
     public void testFullyConnected() throws Exception {
 
         loadAddressBook(MAX_NODES);

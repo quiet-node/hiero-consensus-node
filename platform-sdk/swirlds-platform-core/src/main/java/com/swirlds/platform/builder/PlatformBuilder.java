@@ -23,11 +23,10 @@ import com.swirlds.component.framework.model.WiringModelBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.SwirldsPlatform;
 import com.swirlds.platform.crypto.CryptoStatic;
-import com.swirlds.platform.crypto.KeysAndCerts;
-import com.swirlds.platform.crypto.PlatformSigner;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileReader;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
+import com.swirlds.platform.freeze.FreezeCheckHolder;
 import com.swirlds.platform.gossip.DefaultIntakeEventCounter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.NoOpIntakeEventCounter;
@@ -58,9 +57,10 @@ import org.apache.logging.log4j.Logger;
 import org.hiero.base.concurrent.ExecutorFactory;
 import org.hiero.base.crypto.CryptoUtils;
 import org.hiero.base.crypto.Signature;
-import org.hiero.consensus.config.EventConfig;
+import org.hiero.consensus.crypto.PlatformSigner;
 import org.hiero.consensus.event.creator.impl.pool.TransactionPoolNexus;
 import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.roster.RosterHistory;
 
@@ -421,11 +421,7 @@ public final class PlatformBuilder {
                     platformContext,
                     databaseDirectory,
                     initialState.get().getRound(),
-                    preconsensusEventStreamConfig.permitGaps(),
-                    platformContext
-                            .getConfiguration()
-                            .getConfigData(EventConfig.class)
-                            .getAncientMode());
+                    preconsensusEventStreamConfig.permitGaps());
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -477,6 +473,9 @@ public final class PlatformBuilder {
         final PlatformWiring platformWiring = new PlatformWiring(
                 platformContext, model, callbacks, initialState.get().isGenesisState());
 
+        final TransactionPoolNexus transactionPoolNexus = new TransactionPoolNexus(
+                platformContext.getConfiguration(), platformContext.getMetrics(), platformContext.getTime());
+
         final PlatformBuildingBlocks buildingBlocks = new PlatformBuildingBlocks(
                 platformWiring,
                 platformContext,
@@ -493,8 +492,8 @@ public final class PlatformBuilder {
                 snapshotOverrideConsumer,
                 intakeEventCounter,
                 randomBuilder,
-                new TransactionPoolNexus(platformContext),
-                new AtomicReference<>(),
+                transactionPoolNexus,
+                new FreezeCheckHolder(),
                 new AtomicReference<>(),
                 initialPcesFiles,
                 consensusEventStreamName,

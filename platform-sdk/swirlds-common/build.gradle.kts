@@ -14,17 +14,13 @@ tasks.withType<JavaCompile>().configureEach {
     )
 }
 
-mainModuleInfo {
-    annotationProcessor("com.swirlds.config.processor")
-
-    runtimeOnly("resource.loader")
-    runtimeOnly("com.sun.jna")
-}
+mainModuleInfo { annotationProcessor("com.swirlds.config.processor") }
 
 testModuleInfo {
-    requires("com.swirlds.config.extensions.test.fixtures")
     requires("com.swirlds.base.test.fixtures")
+    requires("com.swirlds.common.test.fixtures")
     requires("com.swirlds.config.extensions")
+    requires("com.swirlds.config.extensions.test.fixtures")
     requires("org.hiero.base.crypto.test.fixtures")
     requires("org.hiero.base.utility.test.fixtures")
     requires("org.assertj.core")
@@ -32,6 +28,8 @@ testModuleInfo {
     requires("org.junit.jupiter.params")
     requires("org.mockito")
     requires("org.mockito.junit.jupiter")
+
+    exportsTo("org.hiero.base.utility")
 }
 
 timingSensitiveModuleInfo {

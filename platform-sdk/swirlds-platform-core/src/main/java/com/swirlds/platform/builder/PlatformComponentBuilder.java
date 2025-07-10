@@ -17,28 +17,21 @@ import com.swirlds.platform.components.consensus.ConsensusEngine;
 import com.swirlds.platform.components.consensus.DefaultConsensusEngine;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.CryptoStatic;
-import com.swirlds.platform.crypto.PlatformSigner;
-import com.swirlds.platform.event.DefaultFutureEventBuffer;
-import com.swirlds.platform.event.FutureEventBuffer;
 import com.swirlds.platform.event.branching.BranchDetector;
 import com.swirlds.platform.event.branching.BranchReporter;
 import com.swirlds.platform.event.branching.DefaultBranchDetector;
 import com.swirlds.platform.event.branching.DefaultBranchReporter;
-import com.swirlds.platform.event.creation.tipset.TipsetEventCreator;
 import com.swirlds.platform.event.deduplication.EventDeduplicator;
 import com.swirlds.platform.event.deduplication.StandardEventDeduplicator;
-import com.swirlds.platform.event.hashing.DefaultEventHasher;
-import com.swirlds.platform.event.hashing.EventHasher;
 import com.swirlds.platform.event.orphan.DefaultOrphanBuffer;
 import com.swirlds.platform.event.orphan.OrphanBuffer;
 import com.swirlds.platform.event.preconsensus.DefaultInlinePcesWriter;
 import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
 import com.swirlds.platform.event.preconsensus.PcesFileManager;
+import com.swirlds.platform.event.preconsensus.PcesUtilities;
 import com.swirlds.platform.event.resubmitter.DefaultTransactionResubmitter;
 import com.swirlds.platform.event.resubmitter.TransactionResubmitter;
-import com.swirlds.platform.event.signing.DefaultSelfEventSigner;
-import com.swirlds.platform.event.signing.SelfEventSigner;
 import com.swirlds.platform.event.stream.ConsensusEventStream;
 import com.swirlds.platform.event.stream.DefaultConsensusEventStream;
 import com.swirlds.platform.event.validation.DefaultEventSignatureValidator;
@@ -78,13 +71,20 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
+import org.hiero.consensus.crypto.DefaultEventHasher;
+import org.hiero.consensus.crypto.EventHasher;
+import org.hiero.consensus.crypto.PlatformSigner;
+import org.hiero.consensus.event.FutureEventBuffer;
 import org.hiero.consensus.event.creator.impl.DefaultEventCreationManager;
 import org.hiero.consensus.event.creator.impl.EventCreationManager;
 import org.hiero.consensus.event.creator.impl.EventCreator;
 import org.hiero.consensus.event.creator.impl.pool.DefaultTransactionPool;
 import org.hiero.consensus.event.creator.impl.pool.TransactionPool;
+import org.hiero.consensus.event.creator.impl.signing.DefaultSelfEventSigner;
+import org.hiero.consensus.event.creator.impl.signing.SelfEventSigner;
 import org.hiero.consensus.event.creator.impl.stale.DefaultStaleEventDetector;
 import org.hiero.consensus.event.creator.impl.stale.StaleEventDetector;
+import org.hiero.consensus.event.creator.impl.tipset.TipsetEventCreator;
 import org.hiero.consensus.model.event.CesEvent;
 
 /**
@@ -346,9 +346,7 @@ public class PlatformComponentBuilder {
             eventSignatureValidator = new DefaultEventSignatureValidator(
                     blocks.platformContext(),
                     CryptoStatic::verifySignature,
-                    blocks.appVersion(),
-                    blocks.rosterHistory().getPreviousRoster(),
-                    blocks.rosterHistory().getCurrentRoster(),
+                    blocks.rosterHistory(),
                     blocks.intakeEventCounter());
         }
         return eventSignatureValidator;
@@ -429,7 +427,10 @@ public class PlatformComponentBuilder {
     @NonNull
     public OrphanBuffer buildOrphanBuffer() {
         if (orphanBuffer == null) {
-            orphanBuffer = new DefaultOrphanBuffer(blocks.platformContext(), blocks.intakeEventCounter());
+            orphanBuffer = new DefaultOrphanBuffer(
+                    blocks.platformContext().getConfiguration(),
+                    blocks.platformContext().getMetrics(),
+                    blocks.intakeEventCounter());
         }
         return orphanBuffer;
     }
@@ -479,16 +480,21 @@ public class PlatformComponentBuilder {
     public EventCreationManager buildEventCreationManager() {
         if (eventCreationManager == null) {
             final EventCreator eventCreator = new TipsetEventCreator(
-                    blocks.platformContext(),
+                    blocks.platformContext().getConfiguration(),
+                    blocks.platformContext().getMetrics(),
+                    blocks.platformContext().getTime(),
                     blocks.randomBuilder().buildNonCryptographicRandom(),
                     data -> new PlatformSigner(blocks.keysAndCerts()).sign(data),
                     blocks.rosterHistory().getCurrentRoster(),
                     blocks.selfId(),
-                    blocks.appVersion(),
                     blocks.transactionPoolNexus());
 
             eventCreationManager = new DefaultEventCreationManager(
-                    blocks.platformContext(), blocks.transactionPoolNexus(), eventCreator);
+                    blocks.platformContext().getConfiguration(),
+                    blocks.platformContext().getMetrics(),
+                    blocks.platformContext().getTime(),
+                    blocks.transactionPoolNexus(),
+                    eventCreator);
         }
         return eventCreationManager;
     }
@@ -520,7 +526,10 @@ public class PlatformComponentBuilder {
     public ConsensusEngine buildConsensusEngine() {
         if (consensusEngine == null) {
             consensusEngine = new DefaultConsensusEngine(
-                    blocks.platformContext(), blocks.rosterHistory().getCurrentRoster(), blocks.selfId());
+                    blocks.platformContext(),
+                    blocks.rosterHistory().getCurrentRoster(),
+                    blocks.selfId(),
+                    blocks.freezeCheckHolder());
         }
         return consensusEngine;
     }
@@ -558,9 +567,8 @@ public class PlatformComponentBuilder {
                     (byte[] data) -> new PlatformSigner(blocks.keysAndCerts()).sign(data),
                     blocks.consensusEventStreamName(),
                     (CesEvent event) -> event.isLastInRoundReceived()
-                            && blocks.isInFreezePeriodReference()
-                                    .get()
-                                    .test(event.getPlatformEvent().getConsensusTimestamp()));
+                            && blocks.freezeCheckHolder()
+                                    .isInFreezePeriod(event.getPlatformEvent().getConsensusTimestamp()));
         }
         return consensusEventStream;
     }
@@ -696,7 +704,7 @@ public class PlatformComponentBuilder {
                 final PcesFileManager preconsensusEventFileManager = new PcesFileManager(
                         blocks.platformContext(),
                         blocks.initialPcesFiles(),
-                        blocks.selfId(),
+                        PcesUtilities.getDatabaseDirectory(blocks.platformContext(), blocks.selfId()),
                         blocks.initialState().get().getRound());
                 inlinePcesWriter = new DefaultInlinePcesWriter(
                         blocks.platformContext(), preconsensusEventFileManager, blocks.selfId());
@@ -766,13 +774,15 @@ public class PlatformComponentBuilder {
                             .validateInitialState()
                     ? DO_NOT_IGNORE_ROUNDS
                     : initialStateRound;
+            final long latestFreezeRound = blocks.platformStateFacade()
+                    .latestFreezeRoundOf(blocks.initialState().get().getState());
 
             issDetector = new DefaultIssDetector(
                     blocks.platformContext(),
                     blocks.rosterHistory().getCurrentRoster(),
-                    blocks.appVersion(),
                     ignorePreconsensusSignatures,
-                    roundToIgnore);
+                    roundToIgnore,
+                    latestFreezeRound);
         }
         return issDetector;
     }
@@ -844,8 +854,7 @@ public class PlatformComponentBuilder {
     public StaleEventDetector buildStaleEventDetector() {
         if (staleEventDetector == null) {
             final PlatformContext context = blocks.platformContext();
-            staleEventDetector =
-                    new DefaultStaleEventDetector(context.getConfiguration(), context.getMetrics(), blocks.selfId());
+            staleEventDetector = new DefaultStaleEventDetector(context.getMetrics(), blocks.selfId());
         }
         return staleEventDetector;
     }
@@ -1224,19 +1233,6 @@ public class PlatformComponentBuilder {
             latestCompleteStateNotifier = new DefaultLatestCompleteStateNotifier();
         }
         return latestCompleteStateNotifier;
-    }
-
-    /**
-     * Builds the {@link FutureEventBuffer} if it has not yet been built and returns it.
-     *
-     * @return the future event buffer
-     */
-    @NonNull
-    public FutureEventBuffer buildFutureEventBuffer() {
-        if (futureEventBuffer == null) {
-            futureEventBuffer = new DefaultFutureEventBuffer(blocks.platformContext());
-        }
-        return futureEventBuffer;
     }
 
     /**

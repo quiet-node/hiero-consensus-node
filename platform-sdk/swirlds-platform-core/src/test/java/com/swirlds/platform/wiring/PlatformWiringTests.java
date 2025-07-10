@@ -19,16 +19,13 @@ import com.swirlds.platform.components.EventWindowManager;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.components.appcomm.LatestCompleteStateNotifier;
 import com.swirlds.platform.components.consensus.ConsensusEngine;
-import com.swirlds.platform.event.FutureEventBuffer;
 import com.swirlds.platform.event.branching.BranchDetector;
 import com.swirlds.platform.event.branching.BranchReporter;
 import com.swirlds.platform.event.deduplication.EventDeduplicator;
-import com.swirlds.platform.event.hashing.EventHasher;
 import com.swirlds.platform.event.orphan.OrphanBuffer;
 import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
 import com.swirlds.platform.event.preconsensus.PcesReplayer;
 import com.swirlds.platform.event.resubmitter.TransactionResubmitter;
-import com.swirlds.platform.event.signing.SelfEventSigner;
 import com.swirlds.platform.event.stream.ConsensusEventStream;
 import com.swirlds.platform.event.validation.EventSignatureValidator;
 import com.swirlds.platform.event.validation.InternalEventValidator;
@@ -46,11 +43,13 @@ import com.swirlds.platform.state.signed.StateGarbageCollector;
 import com.swirlds.platform.state.signed.StateSignatureCollector;
 import com.swirlds.platform.state.signer.StateSigner;
 import com.swirlds.platform.state.snapshot.StateSnapshotManager;
-import com.swirlds.platform.system.events.BirthRoundMigrationShim;
 import com.swirlds.platform.system.status.StatusStateMachine;
 import java.util.stream.Stream;
+import org.hiero.consensus.crypto.EventHasher;
+import org.hiero.consensus.event.FutureEventBuffer;
 import org.hiero.consensus.event.creator.impl.EventCreationManager;
 import org.hiero.consensus.event.creator.impl.pool.TransactionPool;
+import org.hiero.consensus.event.creator.impl.signing.SelfEventSigner;
 import org.hiero.consensus.event.creator.impl.stale.DefaultStaleEventDetector;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -150,7 +149,7 @@ class PlatformWiringTests {
                 mock(PcesReplayer.class),
                 mock(StateSignatureCollector.class),
                 mock(EventWindowManager.class),
-                mock(BirthRoundMigrationShim.class),
+                mock(InlinePcesWriter.class),
                 mock(SignedStateNexus.class),
                 mock(LatestCompleteStateNexus.class),
                 mock(SavedStateController.class),

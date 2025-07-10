@@ -6,7 +6,7 @@ import static com.swirlds.platform.crypto.KeyCertPurpose.SIGNING;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.test.fixtures.WeightGenerator;
 import com.swirlds.common.test.fixtures.WeightGenerators;
-import com.swirlds.platform.crypto.KeysAndCerts;
+import com.swirlds.platform.crypto.KeysAndCertsGenerator;
 import com.swirlds.platform.crypto.PublicStores;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.HashMap;
@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.IntStream;
+import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.roster.SerializableX509Certificate;
 
@@ -167,6 +168,19 @@ public class RandomRosterBuilder {
     }
 
     /**
+     * Convenience method to retrieve the private keys for a node using HAPI NodeId.
+     * This method internally converts the HAPI NodeId to the platform-specific NodeId format.
+     *
+     * @param nodeId the node id
+     * @return the private keys
+     * @see RandomRosterBuilder#getPrivateKeys(NodeId)
+     */
+    @NonNull
+    public KeysAndCerts getPrivateKeys(@NonNull final com.hedera.hapi.platform.state.NodeId nodeId) {
+        return getPrivateKeys(NodeId.of(nodeId.id()));
+    }
+
+    /**
      * Get the private keys for a node. Should only be called after the roster has been built and only if
      * {@link #withRealKeysEnabled(boolean)} was set to true.
      *
@@ -213,7 +227,7 @@ public class RandomRosterBuilder {
                 random.nextBytes(masterKey);
 
                 final KeysAndCerts keysAndCerts =
-                        KeysAndCerts.generate(nodeId, new byte[] {}, masterKey, new byte[] {}, publicStores);
+                        KeysAndCertsGenerator.generate(nodeId, new byte[] {}, masterKey, new byte[] {}, publicStores);
                 privateKeys.put(nodeId, keysAndCerts);
 
                 final SerializableX509Certificate sigCert =

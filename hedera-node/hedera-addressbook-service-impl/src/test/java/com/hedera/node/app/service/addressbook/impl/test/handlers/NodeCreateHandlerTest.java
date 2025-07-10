@@ -505,7 +505,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
                 .withAccountId(accountId)
                 .withGossipEndpoint(List.of(endpoint1, endpoint2))
                 .withServiceEndpoint(List.of(endpoint1, endpoint3))
-                .withGrpcWebProxyEndpoint(endpoint1)
+                .withGrpcWebProxyEndpoint(endpoint3)
                 .withAdminKey(invalidKey)
                 .build(payerId);
         setupHandle();
@@ -514,6 +514,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
                 .withValue("nodes.maxGossipEndpoint", 2)
                 .withValue("nodes.maxServiceEndpoint", 2)
                 .withValue("nodes.maxFqdnSize", 100)
+                .withValue("nodes.webProxyEndpointsEnabled", true)
                 .getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);
         given(handleContext.attributeValidator()).willReturn(validator);
@@ -530,7 +531,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
                 .withDescription("Description")
                 .withGossipEndpoint(List.of(endpoint1, endpoint2))
                 .withServiceEndpoint(List.of(endpoint1, endpoint3))
-                .withGrpcWebProxyEndpoint(endpoint1)
+                .withGrpcWebProxyEndpoint(endpoint3)
                 .withGossipCaCertificate(Bytes.wrap(certList.get(0).getEncoded()))
                 .withGrpcCertificateHash(Bytes.wrap("hash"))
                 .withAdminKey(key)
@@ -542,6 +543,7 @@ class NodeCreateHandlerTest extends AddressBookTestBase {
                 .withValue("nodes.nodeMaxDescriptionUtf8Bytes", 12)
                 .withValue("nodes.maxGossipEndpoint", 4)
                 .withValue("nodes.maxServiceEndpoint", 3)
+                .withValue("nodes.webProxyEndpointsEnabled", true)
                 .getOrCreateConfig();
         given(handleContext.configuration()).willReturn(config);
         given(handleContext.storeFactory()).willReturn(storeFactory);

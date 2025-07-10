@@ -28,6 +28,7 @@ import com.hedera.node.config.data.AtomicBatchConfig;
 import com.hedera.node.config.data.AutoRenew2Config;
 import com.hedera.node.config.data.AutoRenewConfig;
 import com.hedera.node.config.data.BalancesConfig;
+import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockRecordStreamConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.BootstrapConfig;
@@ -39,12 +40,14 @@ import com.hedera.node.config.data.ExpiryConfig;
 import com.hedera.node.config.data.FeesConfig;
 import com.hedera.node.config.data.FilesConfig;
 import com.hedera.node.config.data.GrpcConfig;
+import com.hedera.node.config.data.GrpcUsageTrackerConfig;
 import com.hedera.node.config.data.HederaConfig;
 import com.hedera.node.config.data.JumboTransactionsConfig;
 import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.NettyConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
 import com.hedera.node.config.data.NodesConfig;
+import com.hedera.node.config.data.OpsDurationConfig;
 import com.hedera.node.config.data.RatesConfig;
 import com.hedera.node.config.data.SchedulingConfig;
 import com.hedera.node.config.data.StakingConfig;
@@ -124,6 +127,7 @@ public final class HederaTestConfigBuilder {
                 .withConfigDataType(PlatformStatusConfig.class)
                 .withConfigDataType(MerkleDbConfig.class)
                 .withConfigDataType(AddressBookConfig.class)
+                .withConfigDataType(OpsDurationConfig.class)
                 /*
                 These data types from the platform were not available on the classpath. Add if needed later.
                 .withConfigDataType(ThreadConfig.class)
@@ -167,8 +171,10 @@ public final class HederaTestConfigBuilder {
                 .withConfigDataType(NodesConfig.class)
                 .withConfigDataType(TssConfig.class)
                 .withConfigDataType(BlockStreamConfig.class)
+                .withConfigDataType(BlockNodeConnectionConfig.class)
                 .withConfigDataType(AtomicBatchConfig.class)
                 .withConfigDataType(JumboTransactionsConfig.class)
+                .withConfigDataType(GrpcUsageTrackerConfig.class)
                 .withConverter(CongestionMultipliers.class, new CongestionMultipliersConverter())
                 .withConverter(EntityScaleFactors.class, new EntityScaleFactorsConverter())
                 .withConverter(KnownBlockValues.class, new KnownBlockValuesConverter())
