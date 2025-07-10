@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
@@ -33,7 +32,6 @@ import com.swirlds.virtualmap.internal.pipeline.VirtualRoot;
 import com.swirlds.virtualmap.serialize.KeySerializer;
 import com.swirlds.virtualmap.serialize.ValueSerializer;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.function.Function;
 import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
@@ -87,8 +85,8 @@ public class VirtualMapReconnectTestBase {
             .withValue(ReconnectConfig_.MAX_ACK_DELAY, "1000ms")
             .getOrCreateConfig();
 
-    VirtualDataSourceBuilder createBuilder() throws IOException {
-        return new MerkleDbDataSourceBuilder(CONFIGURATION, FileSystemManager.create(CONFIGURATION), 1_000_000, 0);
+    VirtualDataSourceBuilder createBuilder() {
+        return new MerkleDbDataSourceBuilder(CONFIGURATION, 1_000_000, 0);
     }
 
     BrokenBuilder createBrokenBuilder(final VirtualDataSourceBuilder delegate) {

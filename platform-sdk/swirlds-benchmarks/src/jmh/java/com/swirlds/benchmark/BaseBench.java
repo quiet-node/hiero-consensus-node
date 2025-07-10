@@ -3,13 +3,13 @@ package com.swirlds.benchmark;
 
 import com.swirlds.benchmark.config.BenchmarkConfig;
 import com.swirlds.benchmark.reconnect.BenchmarkMerkleInternal;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.config.extensions.export.ConfigExport;
 import com.swirlds.config.extensions.sources.LegacyFileConfigSource;
+import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.virtualmap.config.VirtualMapConfig;
 import java.io.IOException;
@@ -72,8 +72,6 @@ public abstract class BaseBench {
 
     protected static Configuration configuration;
 
-    protected static FileSystemManager fileSystemManager;
-
     private static void loadConfig() throws IOException {
         ConfigurationBuilder configurationBuilder = ConfigurationBuilder.create()
                 .autoDiscoverExtensions()
@@ -99,8 +97,6 @@ public abstract class BaseBench {
         logger.info("Benchmark configuration: {}", benchmarkConfig);
         logger.info("Build: {}", Utils.buildVersion());
 
-        fileSystemManager = FileSystemManager.create(configuration);
-
         final String data = benchmarkConfig.benchmarkData();
         if (data == null || data.isBlank()) {
             benchDir = Files.createTempDirectory(benchmarkName());
@@ -124,6 +120,8 @@ public abstract class BaseBench {
                     new ClassConstructorPair(BenchmarkMerkleInternal.class, BenchmarkMerkleInternal::new));
             registry.registerConstructable(new ClassConstructorPair(BenchmarkKey.class, BenchmarkKey::new));
             registry.registerConstructable(new ClassConstructorPair(BenchmarkValue.class, BenchmarkValue::new));
+            registry.registerConstructable(new ClassConstructorPair(
+                    MerkleDbDataSourceBuilder.class, () -> new MerkleDbDataSourceBuilder(configuration)));
         } catch (ConstructableRegistryException ex) {
             logger.error("Failed to construct registry", ex);
         }

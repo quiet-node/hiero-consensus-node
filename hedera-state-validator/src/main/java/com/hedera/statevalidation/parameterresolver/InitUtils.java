@@ -84,9 +84,7 @@ import com.hedera.node.internal.network.Network;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
@@ -149,7 +147,6 @@ public class InitUtils {
                 .withConfigDataType(CryptoConfig.class)
                 .withConfigDataType(StateCommonConfig.class)
                 .withConfigDataType(StateConfig.class)
-                .withConfigDataType(FileSystemManagerConfig.class)
                 .withConfigDataType(TemporaryFileConfig.class)
                 .withConfigDataType(FilesConfig.class)
                 .withConfigDataType(ApiPermissionConfig.class)
@@ -193,7 +190,6 @@ public class InitUtils {
      */
     static List<VirtualMapAndDataSourceRecord<?, ?>> initVirtualMapRecords(ServicesRegistryImpl servicesRegistry) {
         final Path stateDirPath = Paths.get(STATE_DIR);
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
 
         final var virtualMaps = new ArrayList<VirtualMapAndDataSourceRecord<?, ?>>();
         servicesRegistry.registrations().forEach((registration) -> {
@@ -227,8 +223,7 @@ public class InitUtils {
                                             md.onDiskValueSerializerClassId(),
                                             md.onDiskValueClassId(),
                                             md.stateDefinition().valueCodec());
-                                    final var ds =
-                                            new RestoringMerkleDbDataSourceBuilder(stateDirPath, fileSystemManager);
+                                    final var ds = new RestoringMerkleDbDataSourceBuilder(stateDirPath);
                                     final var vm =
                                             new VirtualMap(label, keySerializer, valueSerializer, ds, CONFIGURATION);
                                     virtualMaps.add(new VirtualMapAndDataSourceRecord<>(
@@ -329,7 +324,6 @@ public class InitUtils {
      */
     static void initServiceMigrator(State state, PlatformContext platformContext, ServicesRegistry servicesRegistry) {
         final var configuration = platformContext.getConfiguration();
-        final var fileSystemManager = platformContext.getFileSystemManager();
         final var bootstrapConfigProvider = new BootstrapConfigProviderImpl();
         final var serviceMigrator = new OrderedServiceMigrator();
         final var platformFacade = PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
@@ -342,7 +336,6 @@ public class InitUtils {
                 version,
                 configuration,
                 configuration,
-                fileSystemManager,
                 new NoOpMetrics(),
                 new FakeStartupNetworks(Network.newBuilder().build()),
                 new StoreMetricsServiceImpl(new NoOpMetrics()),

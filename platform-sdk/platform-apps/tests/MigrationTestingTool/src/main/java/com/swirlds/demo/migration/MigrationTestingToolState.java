@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.migration;
 
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
@@ -181,9 +180,8 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
                 ConfigurationBuilder.create().autoDiscoverExtensions().build();
         setMerkleMap(new MerkleMap<>());
         final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
-        final FileSystemManager fileSystemManager = FileSystemManager.create(configuration);
         final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(
-                configuration, fileSystemManager, INITIAL_ACCOUNTS_HINT, merkleDbConfig.hashesRamToDiskThreshold());
+                configuration, INITIAL_ACCOUNTS_HINT, merkleDbConfig.hashesRamToDiskThreshold());
         setVirtualMap(new VirtualMap<>(
                 "virtualMap",
                 new AccountVirtualMapKeySerializer(),

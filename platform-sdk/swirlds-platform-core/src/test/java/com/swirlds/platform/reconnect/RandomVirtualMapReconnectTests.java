@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.metrics.config.MetricsConfig;
 import com.swirlds.common.metrics.platform.DefaultPlatformMetrics;
@@ -49,8 +48,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 @DisplayName("Random VirtualMap MerkleDb Reconnect Tests")
 class RandomVirtualMapReconnectTests extends VirtualMapReconnectTestBase {
 
-    private static final FileSystemManager FILE_SYSTEM_MANAGER = FileSystemManager.create(CONFIGURATION);
-
     // used to convert between key as long to key as String
     public static final int LETTER_COUNT = 26;
     public static final String LETTERS = "abcdefghijklmnopqrstuvwxyz";
@@ -59,8 +56,7 @@ class RandomVirtualMapReconnectTests extends VirtualMapReconnectTestBase {
     @Override
     protected VirtualDataSourceBuilder createBuilder() {
         final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        return new MerkleDbDataSourceBuilder(
-                CONFIGURATION, FILE_SYSTEM_MANAGER, 1_000_000, merkleDbConfig.hashesRamToDiskThreshold());
+        return new MerkleDbDataSourceBuilder(CONFIGURATION, 1_000_000, merkleDbConfig.hashesRamToDiskThreshold());
     }
 
     public String randomWord(final Random random, final int maximumKeySize) {

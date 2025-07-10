@@ -11,7 +11,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
@@ -61,24 +60,17 @@ public class TestingAppStateInitializer {
             .withConfigDataType(FileSystemManagerConfig.class)
             .build();
 
-    public static final FileSystemManager FILE_SYSTEM_MANAGER = FileSystemManager.create(CONFIGURATION);
-
-    public static final TestingAppStateInitializer DEFAULT =
-            new TestingAppStateInitializer(CONFIGURATION, FILE_SYSTEM_MANAGER);
+    public static final TestingAppStateInitializer DEFAULT = new TestingAppStateInitializer(CONFIGURATION);
 
     private final Configuration configuration;
-
-    private final FileSystemManager fileSystemManager;
 
     /**
      * Constructor for {@link TestingAppStateInitializer}
      *
      * @param configuration the configuration to use for the initialized state
      */
-    public TestingAppStateInitializer(
-            @NonNull final Configuration configuration, @NonNull final FileSystemManager fileSystemManager) {
+    public TestingAppStateInitializer(@NonNull final Configuration configuration) {
         this.configuration = requireNonNull(configuration);
-        this.fileSystemManager = requireNonNull(fileSystemManager);
     }
 
     /**
@@ -95,8 +87,7 @@ public class TestingAppStateInitializer {
             registry.registerConstructable(
                     new ClassConstructorPair(VirtualMap.class, () -> new VirtualMap(CONFIGURATION)));
             registry.registerConstructable(new ClassConstructorPair(
-                    MerkleDbDataSourceBuilder.class,
-                    () -> new MerkleDbDataSourceBuilder(CONFIGURATION, FILE_SYSTEM_MANAGER)));
+                    MerkleDbDataSourceBuilder.class, () -> new MerkleDbDataSourceBuilder(CONFIGURATION)));
             registry.registerConstructable(new ClassConstructorPair(
                     VirtualNodeCache.class,
                     () -> new VirtualNodeCache(CONFIGURATION.getConfigData(VirtualMapConfig.class))));
@@ -199,8 +190,7 @@ public class TestingAppStateInitializer {
                                     md.onDiskValueClassId(),
                                     md.stateDefinition().valueCodec());
                             final var label = StateMetadata.computeLabel(RosterStateId.NAME, def.stateKey());
-                            final var dsBuilder = new MerkleDbDataSourceBuilder(
-                                    configuration, fileSystemManager, def.maxKeysHint(), 16);
+                            final var dsBuilder = new MerkleDbDataSourceBuilder(configuration, def.maxKeysHint(), 16);
                             final var virtualMap =
                                     new VirtualMap<>(label, keySerializer, valueSerializer, dsBuilder, configuration);
                             return virtualMap;

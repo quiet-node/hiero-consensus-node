@@ -16,6 +16,7 @@ import com.swirlds.base.time.Time;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.config.StateCommonConfig_;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.io.utility.RecycleBin;
@@ -57,6 +58,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 @DisplayName("StartupStateUtilities Tests")
 public class StartupStateUtilsTests {
 
+    private static final Configuration CONFIG = new TestConfigBuilder()
+            .withConfigDataType(FileSystemManagerConfig.class)
+            .getOrCreateConfig();
+
     /**
      * Temporary directory provided by JUnit
      */
@@ -89,7 +94,7 @@ public class StartupStateUtilsTests {
     }
 
     @BeforeAll
-    static void beforeAll() throws ConstructableRegistryException {
+    static void beforeAll() throws ConstructableRegistryException, IOException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
         registry.registerConstructables("org.hiero");

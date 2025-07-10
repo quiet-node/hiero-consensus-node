@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
@@ -60,8 +59,6 @@ class VirtualMapSerializationTests {
     public static final ValueSerializer<ExampleFixedSizeVirtualValue> VALUE_SERIALIZER =
             new ExampleFixedSizeVirtualValueSerializer();
 
-    private static final FileSystemManager FILE_SYSTEM_MANAGER = FileSystemManager.create(CONFIGURATION);
-
     @BeforeAll
     static void setUp() throws ConstructableRegistryException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
@@ -71,8 +68,7 @@ class VirtualMapSerializationTests {
         registry.registerConstructables("org.hiero");
         ConstructableRegistry.getInstance()
                 .registerConstructable(new ClassConstructorPair(
-                        MerkleDbDataSourceBuilder.class,
-                        () -> new MerkleDbDataSourceBuilder(CONFIGURATION, FILE_SYSTEM_MANAGER)));
+                        MerkleDbDataSourceBuilder.class, () -> new MerkleDbDataSourceBuilder(CONFIGURATION)));
         registry.registerConstructable(
                 new ClassConstructorPair(VirtualMap.class, () -> new VirtualMap<>(CONFIGURATION)));
         registry.registerConstructable(new ClassConstructorPair(
@@ -88,7 +84,7 @@ class VirtualMapSerializationTests {
     }
 
     public static MerkleDbDataSourceBuilder constructBuilder(final Configuration configuration) throws IOException {
-        return new MerkleDbDataSourceBuilder(configuration, FILE_SYSTEM_MANAGER, 10_000, Long.MAX_VALUE);
+        return new MerkleDbDataSourceBuilder(configuration, 10_000, Long.MAX_VALUE);
     }
 
     /**

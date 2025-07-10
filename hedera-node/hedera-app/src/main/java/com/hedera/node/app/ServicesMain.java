@@ -274,6 +274,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         logger.info("Starting node {} with version {}", selfId, version);
 
         // --- Build required infrastructure to load the initial state, then initialize the States API ---
+        BootstrapUtils.setupConstructableRegistryWithConfiguration(platformConfig);
         final var time = Time.getCurrent();
         final var fileSystemManager = FileSystemManager.create(platformConfig);
         final var recycleBin =
@@ -281,7 +282,6 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler = hedera.newConsensusStateEvenHandler();
         final PlatformContext platformContext = PlatformContext.create(
                 platformConfig, Time.getCurrent(), metrics, fileSystemManager, recycleBin, merkleCryptography);
-        BootstrapUtils.setupConstructableRegistryWithPlatformContext(platformContext);
         final Optional<AddressBook> maybeDiskAddressBook = loadLegacyAddressBook();
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
@@ -298,7 +298,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                     }
                     genesisNetwork.set(network);
                     final var genesisState = hedera.newStateRoot();
-                    hedera.initializeStatesApi(genesisState, GENESIS, platformContext, platformConfig);
+                    hedera.initializeStatesApi(genesisState, GENESIS, platformConfig);
                     return genesisState;
                 },
                 Hedera.APP_NAME,
@@ -309,7 +309,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
         final ReservedSignedState initialState = reservedState.state();
         final MerkleNodeState state = initialState.get().getState();
         if (genesisNetwork.get() == null) {
-            hedera.initializeStatesApi(state, RESTART, platformContext, platformConfig);
+            hedera.initializeStatesApi(state, RESTART, platformConfig);
         }
         hedera.setInitialStateHash(reservedState.hash());
 

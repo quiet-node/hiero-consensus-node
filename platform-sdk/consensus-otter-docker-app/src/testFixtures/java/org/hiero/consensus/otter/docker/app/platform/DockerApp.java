@@ -109,7 +109,7 @@ public class DockerApp {
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
-                () -> TurtleAppState.createGenesisState(platformConfig, fileSystemManager, genesisRoster, version),
+                () -> TurtleAppState.createGenesisState(platformConfig, genesisRoster, version),
                 APP_NAME,
                 SWIRLD_NAME,
                 oldSelfId,

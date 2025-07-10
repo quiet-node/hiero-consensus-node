@@ -70,7 +70,7 @@ public class StateResolver implements ParameterResolver {
         if (deserializedSignedState == null) {
             try {
                 initState();
-            } catch (Exception e) {
+            } catch (ConstructableRegistryException | IOException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -131,12 +131,13 @@ public class StateResolver implements ParameterResolver {
         ConstructableRegistry.getInstance().registerConstructables("org.hiero.base");
 
         ConstructableUtils.registerVirtualMapConstructables(getConfiguration());
+        BootstrapUtils.setupConstructableRegistryWithConfiguration(getConfiguration());
         final SemanticVersion servicesVersion = readVersion();
 
         ConstructableRegistry.getInstance()
                 .registerConstructable(new ClassConstructorPair(MerkleStateRoot.class, HederaStateRoot::new));
 
-        final PlatformContext platformContext = new PlatformContext() {
+        return new PlatformContext() {
 
             private final Configuration platformConfig = ConfigurationBuilder.create()
                     .withConfigDataType(MetricsConfig.class)
@@ -177,7 +178,5 @@ public class StateResolver implements ParameterResolver {
                 return FileSystemManager.create(getConfiguration());
             }
         };
-        BootstrapUtils.setupConstructableRegistryWithPlatformContext(platformContext);
-        return platformContext;
     }
 }

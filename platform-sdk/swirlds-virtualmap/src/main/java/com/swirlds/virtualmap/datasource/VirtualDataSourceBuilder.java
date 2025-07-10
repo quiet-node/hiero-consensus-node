@@ -48,8 +48,9 @@ public interface VirtualDataSourceBuilder extends SelfSerializable {
      * @param compactionEnabled
      *      Indicates whether background compaction should be enabled in the data source copy
      * @param offlineUse
-     *      Indicates that the copied data source should use as little resources as possible. Data
-     *      source copies created for offline use should not be used for performance critical tasks
+     *      Indicates that the data source copy should use as little resources as possible, e.g.
+     *      disk based indices to reduce memory usage. Data source copies created for offline use should
+     *      not be used for performance critical tasks
      * @return
      * 		An opened {@link VirtualDataSource}
      */
@@ -78,12 +79,17 @@ public interface VirtualDataSourceBuilder extends SelfSerializable {
      * database directory and then opening that database.
      *
      * <p>This method is used when a virtual map is deserialized from a state snapshot.
-     * for details.
      *
      * @param label
      * 		The label. Cannot be null. This label must be posix compliant
      * @param snapshotDir
      * 		The base path of the database from which to copy all the database files. Cannot be null
+     * @param compactionEnabled
+     *      Indicates whether background compaction should be enabled in the restored data source
+     * @param offlineUse
+     *      Indicates that the restored data source should use as little resources as possible, e.g.
+     *      disk based indices to reduce memory usage. Data source copies created for offline use should
+     *      not be used for performance critical tasks
      * @return
      * 		An opened {@link VirtualDataSource}
      */

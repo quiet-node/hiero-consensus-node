@@ -4,7 +4,6 @@ package com.swirlds.merkledb.files;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.CONFIGURATION;
 
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
@@ -48,8 +47,6 @@ import org.junit.jupiter.api.Test;
  */
 public class CloseFlushTest {
 
-    private static final FileSystemManager FILE_SYSTEM_MANAGER = FileSystemManager.create(CONFIGURATION);
-
     @BeforeAll
     public static void setup() throws IOException {
         Configurator.setRootLevel(Level.WARN);
@@ -72,8 +69,7 @@ public class CloseFlushTest {
                     TestType.fixed_fixed.dataType().createDataSource(storeDir, "closeFlushTest", count, 0, false, true);
             // Create a custom data source builder, which creates a custom data source to capture
             // all exceptions happened in saveRecords()
-            final VirtualDataSourceBuilder builder =
-                    new CustomDataSourceBuilder(dataSource, exception, CONFIGURATION, FILE_SYSTEM_MANAGER);
+            final VirtualDataSourceBuilder builder = new CustomDataSourceBuilder(dataSource, exception, CONFIGURATION);
             VirtualMap<VirtualKey, ExampleByteArrayVirtualValue> map = new VirtualMap(
                     "closeFlushTest",
                     TestType.fixed_fixed.dataType().getKeySerializer(),
@@ -124,15 +120,14 @@ public class CloseFlushTest {
 
         // Provided for deserialization
         public CustomDataSourceBuilder() {
-            super(CONFIGURATION, FILE_SYSTEM_MANAGER);
+            super(CONFIGURATION);
         }
 
         public CustomDataSourceBuilder(
                 final VirtualDataSource delegate,
                 AtomicReference<Exception> sink,
-                final @NonNull Configuration configuration,
-                final @NonNull FileSystemManager fileSystemManager) {
-            super(configuration, fileSystemManager);
+                final @NonNull Configuration configuration) {
+            super(configuration);
             this.delegate = delegate;
             this.exceptionSink = sink;
         }

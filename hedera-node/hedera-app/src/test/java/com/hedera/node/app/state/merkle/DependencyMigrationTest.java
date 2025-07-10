@@ -20,7 +20,6 @@ import com.hedera.node.app.services.OrderedServiceMigrator;
 import com.hedera.node.app.services.ServicesRegistryImpl;
 import com.hedera.node.config.VersionedConfigImpl;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
@@ -93,7 +92,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             CURRENT_VERSION,
                             VERSIONED_CONFIG,
                             VERSIONED_CONFIG,
-                            mock(FileSystemManager.class),
                             mock(Metrics.class),
                             startupNetworks,
                             storeMetricsService,
@@ -112,7 +110,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             null,
                             VERSIONED_CONFIG,
                             VERSIONED_CONFIG,
-                            mock(FileSystemManager.class),
                             mock(Metrics.class),
                             startupNetworks,
                             storeMetricsService,
@@ -130,26 +127,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             null,
                             CURRENT_VERSION,
                             null,
-                            null,
-                            mock(FileSystemManager.class),
-                            mock(Metrics.class),
-                            startupNetworks,
-                            storeMetricsService,
-                            configProvider,
-                            TEST_PLATFORM_STATE_FACADE))
-                    .isInstanceOf(NullPointerException.class);
-        }
-
-        @Test
-        void fileSystemManagerRequired2() {
-            final var subject = new OrderedServiceMigrator();
-            Assertions.assertThatThrownBy(() -> subject.doMigrations(
-                            merkleTree,
-                            servicesRegistry,
-                            null,
-                            CURRENT_VERSION,
-                            VERSIONED_CONFIG,
-                            VERSIONED_CONFIG,
                             null,
                             mock(Metrics.class),
                             startupNetworks,
@@ -169,7 +146,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                             CURRENT_VERSION,
                             VERSIONED_CONFIG,
                             VERSIONED_CONFIG,
-                            mock(FileSystemManager.class),
                             null,
                             startupNetworks,
                             storeMetricsService,
@@ -255,7 +231,6 @@ class DependencyMigrationTest extends MerkleTestBase {
 
         // When: the migrations are run
         final var subject = new OrderedServiceMigrator();
-        final var fileSystemManager = FileSystemManager.create(VERSIONED_CONFIG);
         subject.doMigrations(
                 merkleTree,
                 servicesRegistry,
@@ -263,7 +238,6 @@ class DependencyMigrationTest extends MerkleTestBase {
                 SemanticVersion.newBuilder().major(1).build(),
                 VERSIONED_CONFIG,
                 VERSIONED_CONFIG,
-                fileSystemManager,
                 mock(Metrics.class),
                 startupNetworks,
                 storeMetricsService,

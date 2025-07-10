@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
@@ -80,10 +79,8 @@ class MerkleDbBuilderTest {
         registry.registerConstructables("org.hiero");
         registry.registerConstructables("com.swirlds.merkledb");
         registry.registerConstructables("com.swirlds.virtualmap");
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
         registry.registerConstructable(new ClassConstructorPair(
-                MerkleDbDataSourceBuilder.class,
-                () -> new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager)));
+                MerkleDbDataSourceBuilder.class, () -> new MerkleDbDataSourceBuilder(CONFIGURATION)));
         registry.registerConstructable(new ClassConstructorPair(VirtualMap.class, () -> new VirtualMap(CONFIGURATION)));
         registry.registerConstructable(new ClassConstructorPair(
                 VirtualNodeCache.class,
@@ -98,9 +95,7 @@ class MerkleDbBuilderTest {
 
     final MerkleDbDataSourceBuilder createDefaultBuilder() {
         final MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        return new MerkleDbDataSourceBuilder(
-                CONFIGURATION, fileSystemManager, INITIAL_SIZE, merkleDbConfig.hashesRamToDiskThreshold());
+        return new MerkleDbDataSourceBuilder(CONFIGURATION, INITIAL_SIZE, merkleDbConfig.hashesRamToDiskThreshold());
     }
 
     private void verify(final MerkleInternal stateRoot) {
@@ -119,9 +114,8 @@ class MerkleDbBuilderTest {
     @CsvSource({"100,0", "100,100", "1000000,1024", "1000000,9223372036854775807"})
     @DisplayName("Test table config is passed to data source")
     public void testTableConfig(final long initialCapacity, final long hashesRamToDiskThreshold) throws IOException {
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        final MerkleDbDataSourceBuilder builder = new MerkleDbDataSourceBuilder(
-                CONFIGURATION, fileSystemManager, initialCapacity, hashesRamToDiskThreshold);
+        final MerkleDbDataSourceBuilder builder =
+                new MerkleDbDataSourceBuilder(CONFIGURATION, initialCapacity, hashesRamToDiskThreshold);
         VirtualDataSource dataSource = null;
         try {
             dataSource = builder.build("test1", false);
@@ -140,9 +134,7 @@ class MerkleDbBuilderTest {
     @ValueSource(booleans = {true, false})
     @DisplayName("Test compaction flag is passed to data source")
     public void testCompactionConfig(final boolean compactionEnabled) throws IOException {
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        final MerkleDbDataSourceBuilder builder =
-                new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, 1024, 0);
+        final MerkleDbDataSourceBuilder builder = new MerkleDbDataSourceBuilder(CONFIGURATION, 1024, 0);
         VirtualDataSource dataSource = null;
         try {
             dataSource = builder.build("test2", compactionEnabled);
@@ -156,14 +148,12 @@ class MerkleDbBuilderTest {
 
     @Test
     void testSnapshot() throws IOException {
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        final MerkleDbDataSourceBuilder builder =
-                new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, 1024, 1024);
+        final MerkleDbDataSourceBuilder builder = new MerkleDbDataSourceBuilder(CONFIGURATION, 1024, 1024);
         VirtualDataSource dataSource = null;
         try {
             final String label = "testSnapshot";
             dataSource = builder.build(label, false);
-            final Path tmpDir = fileSystemManager.resolveNewTemp("snapshot");
+            final Path tmpDir = LegacyTemporaryFileBuilder.buildTemporaryDirectory("snapshot", CONFIGURATION);
             builder.snapshot(tmpDir, dataSource);
             assertTrue(Files.isDirectory(tmpDir.resolve("data").resolve(label)));
         } finally {
@@ -173,15 +163,14 @@ class MerkleDbBuilderTest {
 
     @Test
     void testSnapshotRestore() throws IOException {
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
         final int hashesRamToDiskThreshold = 4096;
         final MerkleDbDataSourceBuilder builder =
-                new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, 10_000, hashesRamToDiskThreshold);
+                new MerkleDbDataSourceBuilder(CONFIGURATION, 10_000, hashesRamToDiskThreshold);
         VirtualDataSource dataSource = null;
         try {
             final String label = "testSnapshotRestore";
             dataSource = builder.build(label, false);
-            final Path tmpDir = fileSystemManager.resolveNewTemp("snapshot");
+            final Path tmpDir = LegacyTemporaryFileBuilder.buildTemporaryDirectory("snapshot", CONFIGURATION);
             builder.snapshot(tmpDir, dataSource);
             assertTrue(Files.isDirectory(tmpDir.resolve("data").resolve(label)));
             VirtualDataSource restored = null;

@@ -10,7 +10,6 @@ import com.hedera.hapi.node.state.token.Account;
 import com.hedera.node.app.state.merkle.MerkleSchemaRegistry;
 import com.hedera.node.app.state.merkle.SchemaApplications;
 import com.hedera.node.config.data.HederaConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
@@ -73,8 +72,7 @@ class OnDiskTest extends MerkleTestBase {
                 onDiskValueClassId(SERVICE_NAME, ACCOUNT_STATE_KEY),
                 Account.PROTOBUF);
 
-        final var fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        final var builder = new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, 100, 0);
+        final var builder = new MerkleDbDataSourceBuilder(CONFIGURATION, 100, 0);
         virtualMap = new VirtualMap<>(
                 StateMetadata.computeLabel(SERVICE_NAME, ACCOUNT_STATE_KEY),
                 keySerializer,

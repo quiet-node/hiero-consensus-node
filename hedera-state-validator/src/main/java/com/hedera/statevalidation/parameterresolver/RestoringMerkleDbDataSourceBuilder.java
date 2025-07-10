@@ -3,7 +3,6 @@ package com.hedera.statevalidation.parameterresolver;
 
 import static com.hedera.statevalidation.parameterresolver.InitUtils.getConfiguration;
 
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import java.nio.file.Path;
@@ -15,8 +14,8 @@ public class RestoringMerkleDbDataSourceBuilder extends MerkleDbDataSourceBuilde
 
     private final Path snapshotDir;
 
-    public RestoringMerkleDbDataSourceBuilder(Path snapshotDir, FileSystemManager fileSystemManager) {
-        super(getConfiguration(), fileSystemManager);
+    public RestoringMerkleDbDataSourceBuilder(Path snapshotDir) {
+        super(getConfiguration());
         this.snapshotDir = snapshotDir;
     }
 

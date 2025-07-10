@@ -77,8 +77,8 @@ public abstract class VirtualMapBaseBench extends BaseBench {
     protected VirtualMap<BenchmarkKey, BenchmarkValue> createEmptyMap(String label) {
         final MerkleDbConfig merkleDbConfig = getConfig(MerkleDbConfig.class);
         // Start with a relatively low virtual map size hint and let MerkleDb resize its HDHM
-        MerkleDbDataSourceBuilder dataSourceBuilder = new MerkleDbDataSourceBuilder(
-                configuration, fileSystemManager, maxKey / 2, merkleDbConfig.hashesRamToDiskThreshold());
+        MerkleDbDataSourceBuilder dataSourceBuilder =
+                new MerkleDbDataSourceBuilder(configuration, maxKey / 2, merkleDbConfig.hashesRamToDiskThreshold());
         return new VirtualMap<>(
                 label, new BenchmarkKeySerializer(), new BenchmarkValueSerializer(), dataSourceBuilder, configuration);
     }

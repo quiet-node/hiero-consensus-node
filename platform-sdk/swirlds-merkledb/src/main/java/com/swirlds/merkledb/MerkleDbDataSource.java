@@ -92,9 +92,9 @@ public final class MerkleDbDataSource implements VirtualDataSource {
     /** Table name. Used as a subdir name in the database directory */
     private final String tableName;
 
-    private volatile long initialCapacity = -1;
+    private volatile long initialCapacity;
 
-    private volatile long hashesRamToDiskThreshold = -1;
+    private volatile long hashesRamToDiskThreshold;
 
     /**
      * Indicates whether disk based indices are used for this data source.

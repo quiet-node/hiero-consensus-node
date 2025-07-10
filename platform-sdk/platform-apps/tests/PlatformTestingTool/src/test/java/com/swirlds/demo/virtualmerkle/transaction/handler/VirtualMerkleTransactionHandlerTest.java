@@ -2,9 +2,7 @@
 package com.swirlds.demo.virtualmerkle.transaction.handler;
 
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.demo.platform.fs.stresstest.proto.CreateSmartContract;
@@ -33,7 +31,6 @@ public class VirtualMerkleTransactionHandlerTest {
             .withConfigDataType(MerkleDbConfig.class)
             .withConfigDataType(VirtualMapConfig.class)
             .withConfigDataType(TemporaryFileConfig.class)
-            .withConfigDataType(FileSystemManagerConfig.class)
             .withConfigDataType(StateCommonConfig.class)
             .build();
     private static VirtualMap<SmartContractMapKey, SmartContractMapValue> smartContract;
@@ -41,13 +38,11 @@ public class VirtualMerkleTransactionHandlerTest {
 
     @BeforeAll
     public static void beforeAll() {
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-
         final long maximumNumberOfKeyValuePairsCreation = 28750;
         final SmartContractMapKeySerializer keySerializer = new SmartContractMapKeySerializer();
         final SmartContractMapValueSerializer valueSerializer = new SmartContractMapValueSerializer();
-        final MerkleDbDataSourceBuilder dataSourceBuilder = new MerkleDbDataSourceBuilder(
-                CONFIGURATION, fileSystemManager, maximumNumberOfKeyValuePairsCreation, 0);
+        final MerkleDbDataSourceBuilder dataSourceBuilder =
+                new MerkleDbDataSourceBuilder(CONFIGURATION, maximumNumberOfKeyValuePairsCreation, 0);
 
         smartContract =
                 new VirtualMap<>("smartContracts", keySerializer, valueSerializer, dataSourceBuilder, CONFIGURATION);
@@ -57,7 +52,7 @@ public class VirtualMerkleTransactionHandlerTest {
         final SmartContractByteCodeMapKeySerializer keySerializer2 = new SmartContractByteCodeMapKeySerializer();
         final SmartContractByteCodeMapValueSerializer valueSerializer2 = new SmartContractByteCodeMapValueSerializer();
         final MerkleDbDataSourceBuilder dataSourceBuilder2 =
-                new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, totalSmartContractCreations, 0);
+                new MerkleDbDataSourceBuilder(CONFIGURATION, totalSmartContractCreations, 0);
 
         smartContractByteCodeVM = new VirtualMap<>(
                 "smartContractByteCode", keySerializer2, valueSerializer2, dataSourceBuilder2, CONFIGURATION);

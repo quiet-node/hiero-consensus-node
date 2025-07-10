@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.swirlds.base.utility.Pair;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.merkledb.test.fixtures.ExampleFixedSizeVirtualValue;
 import com.swirlds.merkledb.test.fixtures.ExampleFixedSizeVirtualValueSerializer;
 import com.swirlds.merkledb.test.fixtures.ExampleLongKeyFixedSize;
@@ -140,8 +139,7 @@ class MigrationTest {
     /**
      * Create a new virtual map data source builder.
      */
-    private static MerkleDbDataSourceBuilder constructBuilder() throws IOException {
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        return new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, 1234, Long.MAX_VALUE);
+    private static MerkleDbDataSourceBuilder constructBuilder() {
+        return new MerkleDbDataSourceBuilder(CONFIGURATION, 1234, Long.MAX_VALUE);
     }
 }

@@ -242,6 +242,9 @@ public class Browser {
             // Set the MerkleCryptography instance for this node
             final MerkleCryptography merkleCryptography = MerkleCryptographyFactory.create(configuration);
 
+            // Register with the ConstructableRegistry classes which need configuration.
+            BootstrapUtils.setupConstructableRegistryWithConfiguration(configuration);
+
             // Create platform context
             final PlatformContext platformContext = PlatformContext.create(
                     configuration,
@@ -250,9 +253,6 @@ public class Browser {
                     FileSystemManager.create(configuration),
                     recycleBin,
                     merkleCryptography);
-
-            // Register with the ConstructableRegistry classes which need configuration.
-            BootstrapUtils.setupConstructableRegistryWithPlatformContext(platformContext);
 
             PlatformStateFacade platformStateFacade = new PlatformStateFacade();
             // Create the initial state for the platform

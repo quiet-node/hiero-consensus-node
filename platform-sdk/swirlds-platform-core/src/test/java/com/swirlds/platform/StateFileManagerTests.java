@@ -78,9 +78,6 @@ class StateFileManagerTests {
     private PlatformContext context;
     private SignedStateFilePath signedStateFilePath;
 
-    /**
-     * Temporary directory provided by JUnit
-     */
     Path testDirectory;
 
     @BeforeAll
@@ -115,21 +112,18 @@ class StateFileManagerTests {
     /**
      * Make sure the signed state was properly saved.
      */
-    private void validateSavingOfState(final SignedState originalState, final PlatformContext context)
-            throws IOException {
+    private void validateSavingOfState(final SignedState originalState) throws IOException {
 
         final Path stateDirectory = signedStateFilePath.getSignedStateDirectory(
                 MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, originalState.getRound());
 
-        validateSavingOfState(originalState, stateDirectory, context);
+        validateSavingOfState(originalState, stateDirectory);
     }
 
     /**
      * Make sure the signed state was properly saved.
      */
-    private void validateSavingOfState(
-            final SignedState originalState, final Path stateDirectory, final PlatformContext context)
-            throws IOException {
+    private void validateSavingOfState(final SignedState originalState, final Path stateDirectory) throws IOException {
         assertEventuallyEquals(
                 -1, originalState::getReservationCount, Duration.ofSeconds(1), "invalid reservation count");
 
@@ -180,7 +174,7 @@ class StateFileManagerTests {
 
         if (successExpected) {
             assertNotNull(stateSavingResult, "If succeeded, should return a StateSavingResult");
-            validateSavingOfState(signedState, context);
+            validateSavingOfState(signedState);
         } else {
             assertNull(stateSavingResult, "If unsuccessful, should return null");
         }
@@ -212,7 +206,7 @@ class StateFileManagerTests {
         thread.join(1000);
 
         final Path stateDirectory = testDirectory.resolve("fatal").resolve("node1234_round" + signedState.getRound());
-        validateSavingOfState(signedState, stateDirectory, context);
+        validateSavingOfState(signedState, stateDirectory);
     }
 
     @Test
@@ -227,7 +221,7 @@ class StateFileManagerTests {
         manager.dumpStateTask(StateDumpRequest.create(signedState.reserve("test")));
 
         final Path stateDirectory = testDirectory.resolve("iss").resolve("node1234_round" + signedState.getRound());
-        validateSavingOfState(signedState, stateDirectory, context);
+        validateSavingOfState(signedState, stateDirectory);
     }
 
     /**
@@ -313,7 +307,7 @@ class StateFileManagerTests {
 
                 savedStates.add(signedState);
 
-                validateSavingOfState(signedState, context);
+                validateSavingOfState(signedState);
 
                 final List<SavedStateInfo> currentStatesOnDisk = new SignedStateFilePath(
                                 context.getConfiguration().getConfigData(StateCommonConfig.class))
@@ -398,7 +392,7 @@ class StateFileManagerTests {
         makeImmutable(issState);
         issState.markAsStateToSave(ISS);
         manager.dumpStateTask(StateDumpRequest.create(issState.reserve("test")));
-        validateSavingOfState(issState, issDirectory, context);
+        validateSavingOfState(issState, issDirectory);
 
         // Simulate the saving of a fatal state
         final int fatalRound = 667;
@@ -411,7 +405,7 @@ class StateFileManagerTests {
         makeImmutable(fatalState);
         fatalState.markAsStateToSave(FATAL_ERROR);
         manager.dumpStateTask(StateDumpRequest.create(fatalState.reserve("test")));
-        validateSavingOfState(fatalState, fatalDirectory, context);
+        validateSavingOfState(fatalState, fatalDirectory);
 
         // Save a bunch of states. After each time, check the states that are still on disk.
         final List<SignedState> states = new ArrayList<>();
@@ -429,7 +423,7 @@ class StateFileManagerTests {
                 if (roundToValidate < 0) {
                     continue;
                 }
-                validateSavingOfState(states.get(roundToValidate), context);
+                validateSavingOfState(states.get(roundToValidate));
             }
 
             // Verify that old states are properly deleted
@@ -443,8 +437,8 @@ class StateFileManagerTests {
                     "unexpected number of states on disk after saving round " + round);
 
             // ISS/fatal state should still be in place
-            validateSavingOfState(issState, issDirectory, context);
-            validateSavingOfState(fatalState, fatalDirectory, context);
+            validateSavingOfState(issState, issDirectory);
+            validateSavingOfState(fatalState, fatalDirectory);
         }
     }
 

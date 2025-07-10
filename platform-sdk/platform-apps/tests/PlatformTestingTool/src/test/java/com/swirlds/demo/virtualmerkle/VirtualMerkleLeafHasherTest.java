@@ -5,9 +5,7 @@ import static com.swirlds.demo.virtualmerkle.VirtualMerkleLeafHasher.hashOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.demo.virtualmerkle.map.smartcontracts.bytecode.SmartContractByteCodeMapKey;
@@ -35,7 +33,6 @@ class VirtualMerkleLeafHasherTest {
             .withConfigDataType(MerkleDbConfig.class)
             .withConfigDataType(VirtualMapConfig.class)
             .withConfigDataType(TemporaryFileConfig.class)
-            .withConfigDataType(FileSystemManagerConfig.class)
             .withConfigDataType(StateCommonConfig.class)
             .build();
     static Path storeDir;
@@ -54,8 +51,7 @@ class VirtualMerkleLeafHasherTest {
         keySerializer = new SmartContractByteCodeMapKeySerializer();
         valueSerializer = new SmartContractByteCodeMapValueSerializer();
 
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        dataSourceBuilder = new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, 50_000_000, 0);
+        dataSourceBuilder = new MerkleDbDataSourceBuilder(CONFIGURATION, 50_000_000, 0);
     }
 
     @Test

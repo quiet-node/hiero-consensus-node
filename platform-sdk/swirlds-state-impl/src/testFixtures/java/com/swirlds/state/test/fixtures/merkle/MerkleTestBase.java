@@ -8,7 +8,6 @@ import com.hedera.pbj.runtime.Codec;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.FileSystemManagerConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.streams.MerkleDataInputStream;
 import com.swirlds.common.io.streams.MerkleDataOutputStream;
 import com.swirlds.common.merkle.MerkleNode;
@@ -250,11 +249,9 @@ public class MerkleTestBase extends StateTestBase {
             registry.registerConstructables("com.swirlds.merkle");
             registry.registerConstructables("com.swirlds.merkle.tree");
 
-            final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
             ConstructableRegistry.getInstance()
                     .registerConstructable(new ClassConstructorPair(
-                            MerkleDbDataSourceBuilder.class,
-                            () -> new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager)));
+                            MerkleDbDataSourceBuilder.class, () -> new MerkleDbDataSourceBuilder(CONFIGURATION)));
             registerVirtualMapConstructables(CONFIGURATION);
         } catch (ConstructableRegistryException ex) {
             throw new AssertionError(ex);
@@ -283,8 +280,7 @@ public class MerkleTestBase extends StateTestBase {
                 new OnDiskKeySerializer<>(keySerializerClassId, keyClassId, keyCodec);
         final ValueSerializer<OnDiskValue<String>> valueSerializer =
                 new OnDiskValueSerializer<>(valueSerializerClassId, valueClassId, valueCodec);
-        final FileSystemManager fileSystemManager = FileSystemManager.create(CONFIGURATION);
-        final var builder = new MerkleDbDataSourceBuilder(CONFIGURATION, fileSystemManager, 100, 0);
+        final var builder = new MerkleDbDataSourceBuilder(CONFIGURATION, 100, 0);
         return new VirtualMap<>(label, keySerializer, valueSerializer, builder, CONFIGURATION);
     }
 

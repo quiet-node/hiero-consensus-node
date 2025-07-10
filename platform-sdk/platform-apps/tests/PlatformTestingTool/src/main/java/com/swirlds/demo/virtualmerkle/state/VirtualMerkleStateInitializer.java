@@ -3,7 +3,6 @@ package com.swirlds.demo.virtualmerkle.state;
 
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.io.config.TemporaryFileConfig;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
@@ -46,8 +45,6 @@ public final class VirtualMerkleStateInitializer {
             .build();
 
     private static final MerkleDbConfig MERKLE_DB_CONFIG = CONFIGURATION.getConfigData(MerkleDbConfig.class);
-
-    private static final FileSystemManager FILE_SYSTEM_MANAGER = FileSystemManager.create(CONFIGURATION);
 
     /*
      * This capacity is somewhat arbitrary, but it is a reasonable limit for all the PTT tests that we have.
@@ -119,7 +116,7 @@ public final class VirtualMerkleStateInitializer {
 
     private static VirtualMap<AccountVirtualMapKey, AccountVirtualMapValue> createAccountsVM() {
         final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(
-                CONFIGURATION, FILE_SYSTEM_MANAGER, MAX_LIST_CAPACITY, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
+                CONFIGURATION, MAX_LIST_CAPACITY, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
         return new VirtualMap<>(
                 "accounts",
                 new AccountVirtualMapKeySerializer(),
@@ -130,7 +127,7 @@ public final class VirtualMerkleStateInitializer {
 
     private static VirtualMap<SmartContractMapKey, SmartContractMapValue> createSmartContractsVM() {
         final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(
-                CONFIGURATION, FILE_SYSTEM_MANAGER, MAX_LIST_CAPACITY, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
+                CONFIGURATION, MAX_LIST_CAPACITY, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
         return new VirtualMap<>(
                 "smartContracts",
                 new SmartContractMapKeySerializer(),
@@ -142,7 +139,7 @@ public final class VirtualMerkleStateInitializer {
     private static VirtualMap<SmartContractByteCodeMapKey, SmartContractByteCodeMapValue>
             createSmartContractByteCodeVM() {
         final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(
-                CONFIGURATION, FILE_SYSTEM_MANAGER, MAX_LIST_CAPACITY, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
+                CONFIGURATION, MAX_LIST_CAPACITY, MERKLE_DB_CONFIG.hashesRamToDiskThreshold());
         return new VirtualMap<>(
                 "smartContractByteCode",
                 new SmartContractByteCodeMapKeySerializer(),

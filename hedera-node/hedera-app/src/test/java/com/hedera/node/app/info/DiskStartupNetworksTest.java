@@ -46,7 +46,6 @@ import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
 import com.hedera.pbj.runtime.io.stream.WritableStreamingData;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.state.State;
@@ -303,7 +302,6 @@ class DiskStartupNetworksTest {
                         new AddressBookServiceImpl())
                 .forEach(servicesRegistry::register);
         final var migrator = new FakeServiceMigrator();
-        final var fileSystemManager = FileSystemManager.create(DEFAULT_CONFIG);
         migrator.doMigrations(
                 state,
                 servicesRegistry,
@@ -311,7 +309,6 @@ class DiskStartupNetworksTest {
                 currentVersion,
                 new ConfigProviderImpl().getConfiguration(),
                 DEFAULT_CONFIG,
-                fileSystemManager,
                 NO_OP_METRICS,
                 startupNetworks,
                 storeMetricsService,

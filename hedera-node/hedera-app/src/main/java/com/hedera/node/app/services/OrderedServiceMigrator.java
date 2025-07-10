@@ -9,7 +9,6 @@ import com.hedera.node.app.config.ConfigProviderImpl;
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
 import com.hedera.node.app.state.merkle.MerkleSchemaRegistry;
-import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -64,7 +63,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
             @NonNull final SemanticVersion currentVersion,
             @NonNull final Configuration appConfig,
             @NonNull final Configuration platformConfig,
-            @NonNull final FileSystemManager fileSystemManager,
             @NonNull final Metrics metrics,
             @NonNull final StartupNetworks startupNetworks,
             @NonNull final StoreMetricsServiceImpl storeMetricsService,
@@ -74,7 +72,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
         requireNonNull(currentVersion);
         requireNonNull(appConfig);
         requireNonNull(platformConfig);
-        requireNonNull(fileSystemManager);
         requireNonNull(metrics);
 
         final Map<String, Object> sharedValues = new HashMap<>();
@@ -92,7 +89,6 @@ public class OrderedServiceMigrator implements ServiceMigrator {
                     currentVersion,
                     appConfig,
                     platformConfig,
-                    fileSystemManager,
                     metrics,
                     sharedValues,
                     migrationStateChanges,
