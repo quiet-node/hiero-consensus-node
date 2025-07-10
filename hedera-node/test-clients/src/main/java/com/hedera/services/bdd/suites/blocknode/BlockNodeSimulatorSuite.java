@@ -280,7 +280,7 @@ public class BlockNodeSimulatorSuite {
             })
     @Order(5)
     final Stream<DynamicTest> node0StatusApiTest() {
-        final AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
+        final AtomicReference<Instant> startTime = new AtomicReference<>(Instant.now());
         final List<Integer> portNumbers = new ArrayList<>();
         return hapiTest(
                 doingContextual(spec -> {
@@ -288,13 +288,12 @@ public class BlockNodeSimulatorSuite {
                     portNumbers.add(spec.getBlockNodePortById(1));
                 }),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
-                doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
-                        connectionDropTime::get,
-                        Duration.of(120, SECONDS),
-                        Duration.of(120, SECONDS),
+                        startTime::get,
+                        Duration.of(60, SECONDS),
+                        Duration.of(45, SECONDS),
                         String.format(
                                 "Server status for node localhost:%s: firstAvailableBlock=-1, lastAvailableBlock=-1",
                                 portNumbers.getFirst()),
