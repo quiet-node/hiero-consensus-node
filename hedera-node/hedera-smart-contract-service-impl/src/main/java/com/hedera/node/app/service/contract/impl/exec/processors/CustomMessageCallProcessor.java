@@ -12,6 +12,7 @@ import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.al
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.incrementOpsDuration;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.isPrecompileEnabled;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.isTopLevelTransaction;
+import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.opsDurationCounterOf;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.proxyUpdaterFor;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.recordBuilderFor;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.setPropagatedCallFailure;
@@ -225,7 +226,7 @@ public class CustomMessageCallProcessor extends MessageCallProcessor {
         } else {
             frame.decrementRemainingGas(gasRequirement);
             final var duration = gasRequirement * hederaOpsDuration.precompileDurationMultiplier() / MULTIPLIER_FACTOR;
-            incrementOpsDuration(frame, duration);
+            incrementOpsDuration(frame, opsDurationCounterOf(frame), duration);
             contractMetrics.opsDurationMetrics().recordPrecompileOpsDuration(precompile.getName(), duration);
             result = precompile.computePrecompile(frame.getInputData(), frame);
             if (result.isRefundGas()) {
@@ -268,6 +269,7 @@ public class CustomMessageCallProcessor extends MessageCallProcessor {
                 frame.decrementRemainingGas(gasRequirement);
                 incrementOpsDuration(
                         frame,
+                        opsDurationCounterOf(frame),
                         gasRequirement * hederaOpsDuration.systemContractDurationMultiplier() / MULTIPLIER_FACTOR);
             }
             result = fullResult.result();
