@@ -45,7 +45,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
-    private static final long ONCE_PER_DAY_MILLIS = 24 * 60 * 60 * 1000L; // 24 hours in milliseconds
+    private static final long ONCE_PER_DAY_MILLIS = Duration.ofHours(24).toMillis();
     private static final VarHandle eosTimestampsHandle;
 
     static {
