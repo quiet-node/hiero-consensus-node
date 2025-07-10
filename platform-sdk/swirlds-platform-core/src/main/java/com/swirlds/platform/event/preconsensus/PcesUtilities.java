@@ -223,14 +223,14 @@ public final class PcesUtilities {
      * with the starting round, or the starting round itself if no file has an original that is compatible with the
      * starting round.
      *
-     * <p>If the starting round is {@link PcesFileManager#NO_LOWER_BOUND}, the origin of the first file is returned.
+     * <p>If the starting round is {@link PcesWriteManager#NO_LOWER_BOUND}, the origin of the first file is returned.
      *
      * @param files         the files that have been read from disk
      * @param startingRound the round the system is starting from
      * @return the initial origin round
      */
     public static long getInitialOrigin(@NonNull final PcesFileTracker files, final long startingRound) {
-        if (startingRound == PcesFileManager.NO_LOWER_BOUND) {
+        if (startingRound == PcesWriteManager.NO_LOWER_BOUND) {
             // if the starting round is NO_LOWER_BOUNDS, return the origin of the first file
             return files.getFirstFile().getOrigin();
         }

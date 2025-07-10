@@ -4,14 +4,21 @@ package com.swirlds.platform.event.preconsensus;
 import static com.swirlds.common.units.DataUnit.UNIT_BYTES;
 import static com.swirlds.common.units.DataUnit.UNIT_MEGABYTES;
 import static com.swirlds.logging.legacy.LogMarker.EXCEPTION;
+import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 
+import com.swirlds.base.time.Time;
+import com.swirlds.base.units.UnitConstants;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.utility.LongRunningAverage;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.model.event.PlatformEvent;
@@ -22,12 +29,12 @@ import org.hiero.consensus.model.hashgraph.EventWindow;
  * {@link DefaultInlinePcesWriter}.
  */
 public class PcesWriteManager {
-    private static final Logger logger = LogManager.getLogger(PcesWriteManager.class);
-
     /**
-     * Keeps track of the event stream files on disk.
+     * This constant can be used when the caller wants all events, regardless of the lower bound.
      */
-    private final PcesFileManager fileManager;
+    public static final long NO_LOWER_BOUND = -1;
+
+    private static final Logger logger = LogManager.getLogger(PcesWriteManager.class);
 
     /**
      * The current file that is being written to.
@@ -106,6 +113,33 @@ public class PcesWriteManager {
     private final PcesFileWriterType pcesFileWriterType;
 
     /**
+     * The current origin round.
+     */
+    private long currentOrigin;
+    /**
+     * The root directory where event files are stored.
+     */
+    private final Path databaseDirectory;
+    /**
+     * The minimum amount of time that must pass before a file becomes eligible for deletion.
+     */
+    private final Duration minimumRetentionPeriod;
+    /**
+     * Keeps track of the event stream files on disk.
+     */
+    private final PcesFileTracker files;
+    /**
+     * Provides the wall clock time.
+     */
+    private final Time time;
+    /**
+     * The size of all tracked files, in bytes.
+     */
+    private long totalFileByteCount = 0;
+
+    private final PcesMetrics metrics;
+
+    /**
      * Constructor
      *
      * @param platformContext the platform context
@@ -116,20 +150,19 @@ public class PcesWriteManager {
             final @NonNull Path databaseDirectory) {
         Objects.requireNonNull(platformContext, "platformConfig is required");
         Objects.requireNonNull(databaseDirectory, "databaseDirectory is required");
-        @NonNull
         final PcesConfig pcesConfig = platformContext.getConfiguration().getConfigData(PcesConfig.class);
-        previousSpan = pcesConfig.bootstrapSpan();
-        bootstrapSpanOverlapFactor = pcesConfig.bootstrapSpanOverlapFactor();
-        spanOverlapFactor = pcesConfig.spanOverlapFactor();
-        minimumSpan = pcesConfig.minimumSpan();
-        preferredFileSizeMegabytes = pcesConfig.preferredFileSizeMegabytes();
-
+        this.previousSpan = pcesConfig.bootstrapSpan();
+        this.bootstrapSpanOverlapFactor = pcesConfig.bootstrapSpanOverlapFactor();
+        this.spanOverlapFactor = pcesConfig.spanOverlapFactor();
+        this.minimumSpan = pcesConfig.minimumSpan();
+        this.preferredFileSizeMegabytes = pcesConfig.preferredFileSizeMegabytes();
+        this.time = platformContext.getTime();
+        this.minimumRetentionPeriod = pcesConfig.minimumRetentionPeriod();
+        this.databaseDirectory = Objects.requireNonNull(databaseDirectory);
         try {
-            // When we perform the migration to using birth round bounding, we will need to read
-            // the old type and start writing the new type.
-            final PcesFileTracker initialPcesFiles = PcesFileReader.readFilesFromDisk(
+            this.files = PcesFileReader.readFilesFromDisk(
                     platformContext, databaseDirectory, initialRound, pcesConfig.permitGaps());
-            fileManager = new PcesFileManager(platformContext, initialPcesFiles, databaseDirectory, initialRound);
+            this.currentOrigin = PcesUtilities.getInitialOrigin(files, initialRound);
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -138,12 +171,13 @@ public class PcesWriteManager {
         // that basic tests cannot pass in some cases, so we need to make it system dependent, at same time allowing
         // override if needed
         if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-            pcesFileWriterType = pcesConfig.macPcesFileWriterType();
+            this.pcesFileWriterType = pcesConfig.macPcesFileWriterType();
         } else {
-            pcesFileWriterType = pcesConfig.pcesFileWriterType();
+            this.pcesFileWriterType = pcesConfig.pcesFileWriterType();
         }
-
-        averageSpanUtilization = new LongRunningAverage(pcesConfig.spanUtilizationRunningAverageLength());
+        this.metrics = new PcesMetrics(platformContext.getMetrics());
+        this.averageSpanUtilization = new LongRunningAverage(pcesConfig.spanUtilizationRunningAverageLength());
+        initializeMetrics();
     }
 
     /**
@@ -168,13 +202,33 @@ public class PcesWriteManager {
             logger.error(EXCEPTION.getMarker(), "registerDiscontinuity() called while replaying events");
         }
 
-        try {
-            if (currentMutableFile != null) {
+        RuntimeException memoException = null;
+        if (currentMutableFile != null) {
+            try {
                 closeFile();
+            } catch (RuntimeException e) {
+                memoException = e;
             }
-        } finally {
-            fileManager.registerDiscontinuity(newOriginRound);
         }
+        if (newOriginRound <= currentOrigin) {
+            throw new IllegalArgumentException("New origin round must be greater than the current origin round. "
+                    + "Current origin round: " + currentOrigin + ", new origin round: " + newOriginRound);
+        }
+
+        final PcesFile lastFile = files.getFileCount() > 0 ? files.getLastFile() : null;
+
+        logger.info(
+                STARTUP.getMarker(),
+                "Due to recent operations on this node, the local preconsensus event stream"
+                        + " will have a discontinuity. The last file with the old origin round is {}. "
+                        + "All future files will have an origin round of {}.",
+                lastFile,
+                newOriginRound);
+
+        currentOrigin = newOriginRound;
+        Optional.ofNullable(memoException).ifPresent(e -> {
+            throw e;
+        });
     }
 
     /**
@@ -199,7 +253,7 @@ public class PcesWriteManager {
      */
     public void setMinimumAncientIdentifierToStore(@NonNull final Long minimumAncientIdentifierToStore) {
         this.minimumAncientIdentifierToStore = minimumAncientIdentifierToStore;
-        pruneOldFiles();
+        pruneOldFiles(minimumAncientIdentifierToStore);
     }
 
     /**
@@ -254,32 +308,14 @@ public class PcesWriteManager {
             }
             currentMutableFile.close();
 
-            fileManager.finishedWritingFile(currentMutableFile);
+            finishedWritingFile(currentMutableFile);
             currentMutableFile = null;
 
             // Not strictly required here, but not a bad place to ensure we delete
             // files incrementally (as opposed to deleting a bunch of files all at once).
-            pruneOldFiles();
+            pruneOldFiles(minimumAncientIdentifierToStore);
         } catch (final IOException e) {
             throw new UncheckedIOException("unable to prune files", e);
-        }
-    }
-
-    /**
-     * Delete old files from the disk.
-     */
-    private void pruneOldFiles() {
-        if (!streamingNewEvents) {
-            // Don't attempt to prune files until we are done replaying the event stream (at start up).
-            // Files are being iterated on a different thread, and it isn't thread safe to prune files
-            // while they are being iterated.
-            return;
-        }
-
-        try {
-            fileManager.pruneOldFiles(minimumAncientIdentifierToStore);
-        } catch (final IOException e) {
-            throw new UncheckedIOException("unable to prune old files", e);
         }
     }
 
@@ -308,9 +344,8 @@ public class PcesWriteManager {
             final long upperBound =
                     nonAncientBoundary + computeNewFileSpan(nonAncientBoundary, eventToWrite.getBirthRound());
 
-            currentMutableFile = fileManager
-                    .getNextFileDescriptor(nonAncientBoundary, upperBound)
-                    .getMutableFile(pcesFileWriterType);
+            currentMutableFile =
+                    getNextFileDescriptor(nonAncientBoundary, upperBound).getMutableFile(pcesFileWriterType);
         }
     }
 
@@ -333,5 +368,174 @@ public class PcesWriteManager {
         final long minimumSpan = (nextAncientIdentifierToWrite + this.minimumSpan) - minimumLowerBound;
 
         return Math.max(desiredSpan, minimumSpan);
+    }
+    /**
+     * Create a new event file descriptor for the next event file, and start tracking it. (Note, this method doesn't
+     * actually open the file, it just permits the file to be opened by the caller.)
+     *
+     * @param lowerBound the lower bound that can be stored in the file
+     * @param upperBound the upper bound that can be stored in the file
+     * @return a new event file descriptor
+     */
+    public @NonNull PcesFile getNextFileDescriptor(final long lowerBound, final long upperBound) {
+
+        if (lowerBound > upperBound) {
+            throw new IllegalArgumentException("lower bound must be less than or equal to the upper bound");
+        }
+
+        final long lowerBoundForFile;
+        final long upperBoundForFile;
+
+        if (files.getFileCount() == 0) {
+            // This is the first file
+            lowerBoundForFile = lowerBound;
+            upperBoundForFile = upperBound;
+        } else {
+            // This is not the first file, min/max values are constrained to only increase
+            lowerBoundForFile = Math.max(lowerBound, files.getLastFile().getLowerBound());
+            upperBoundForFile = Math.max(upperBound, files.getLastFile().getUpperBound());
+        }
+
+        final PcesFile descriptor = PcesFile.of(
+                time.now(),
+                getNextSequenceNumber(),
+                lowerBoundForFile,
+                upperBoundForFile,
+                currentOrigin,
+                databaseDirectory);
+
+        if (files.getFileCount() > 0) {
+            // There are never enough sanity checks. This is the same sanity check that is run when we parse
+            // the files from disk, so if it doesn't pass now it's not going to pass when we read the files.
+            final PcesFile previousFile = files.getLastFile();
+            PcesUtilities.fileSanityChecks(
+                    false,
+                    previousFile.getSequenceNumber(),
+                    previousFile.getLowerBound(),
+                    previousFile.getUpperBound(),
+                    currentOrigin,
+                    previousFile.getTimestamp(),
+                    descriptor);
+        }
+
+        files.addFile(descriptor);
+        metrics.getPreconsensusEventFileYoungestIdentifier().set(descriptor.getUpperBound());
+
+        return descriptor;
+    }
+
+    /**
+     * Get the sequence number that should be allocated next.
+     *
+     * @return the sequence number that should be allocated next
+     */
+    private long getNextSequenceNumber() {
+        if (files.getFileCount() == 0) {
+            return 0;
+        }
+        return files.getLastFile().getSequenceNumber() + 1;
+    }
+
+    /**
+     * Prune old event files. Files are pruned if they are too old AND if they do not contain events with high enough
+     * ancient indicators.
+     *
+     * @param lowerBoundToKeep the minimum ancient indicator that we need to keep in this store. It's possible that
+     *                         this operation won't delete all files with events older than this value, but this
+     *                         operation is guaranteed not to delete any files that may contain events with a higher
+     *                         ancient indicator.
+     */
+    public void pruneOldFiles(final long lowerBoundToKeep) {
+
+        if (!streamingNewEvents) {
+            // Don't attempt to prune files until we are done replaying the event stream (at start up).
+            // Files are being iterated on a different thread, and it isn't thread safe to prune files
+            // while they are being iterated.
+            return;
+        }
+
+        try {
+
+            final Instant minimumTimestamp = time.now().minus(minimumRetentionPeriod);
+
+            while (files.getFileCount() > 0
+                    && files.getFirstFile().getUpperBound() < lowerBoundToKeep
+                    && files.getFirstFile().getTimestamp().isBefore(minimumTimestamp)) {
+
+                final PcesFile file = files.removeFirstFile();
+                totalFileByteCount -= Files.size(file.getPath());
+                file.deleteFile(databaseDirectory);
+            }
+
+            if (files.getFileCount() > 0) {
+                metrics.getPreconsensusEventFileOldestIdentifier()
+                        .set(files.getFirstFile().getLowerBound());
+                final Duration age = Duration.between(files.getFirstFile().getTimestamp(), time.now());
+                metrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
+            }
+
+            updateFileSizeMetrics();
+        } catch (final IOException e) {
+            throw new UncheckedIOException("unable to prune old files", e);
+        }
+    }
+
+    /**
+     * The event file writer calls this method when it finishes writing an event file.
+     *
+     * @param file the file that has been completely written
+     */
+    public void finishedWritingFile(@NonNull final PcesMutableFile file) {
+        final long previousFileUpperBound;
+        if (files.getFileCount() == 1) {
+            previousFileUpperBound = 0;
+        } else {
+            previousFileUpperBound = files.getFile(files.getFileCount() - 2).getUpperBound();
+        }
+
+        // Compress the span of the file. Reduces overlap between files.
+        final PcesFile compressedDescriptor = file.compressSpan(previousFileUpperBound);
+        files.setFile(files.getFileCount() - 1, compressedDescriptor);
+
+        // Update metrics
+        totalFileByteCount += file.fileSize();
+        metrics.getPreconsensusEventFileRate().cycle();
+        metrics.getPreconsensusEventAverageFileSpan().update(file.getSpan());
+        metrics.getPreconsensusEventAverageUnUtilizedFileSpan().update(file.getUnUtilizedSpan());
+        updateFileSizeMetrics();
+    }
+
+    /**
+     * Initialize metrics given the files currently on disk.
+     */
+    private void initializeMetrics() {
+        totalFileByteCount = files.getTotalFileByteCount();
+
+        if (files.getFileCount() > 0) {
+            metrics.getPreconsensusEventFileOldestIdentifier()
+                    .set(files.getFirstFile().getLowerBound());
+            metrics.getPreconsensusEventFileYoungestIdentifier()
+                    .set(files.getLastFile().getUpperBound());
+            final Duration age = Duration.between(files.getFirstFile().getTimestamp(), time.now());
+            metrics.getPreconsensusEventFileOldestSeconds().set(age.toSeconds());
+        } else {
+            metrics.getPreconsensusEventFileOldestIdentifier().set(NO_LOWER_BOUND);
+            metrics.getPreconsensusEventFileYoungestIdentifier().set(NO_LOWER_BOUND);
+            metrics.getPreconsensusEventFileOldestSeconds().set(0);
+        }
+        updateFileSizeMetrics();
+    }
+
+    /**
+     * Update metrics with the latest data on file size.
+     */
+    private void updateFileSizeMetrics() {
+        metrics.getPreconsensusEventFileCount().set(files.getFileCount());
+        metrics.getPreconsensusEventFileTotalSizeGB().set(totalFileByteCount * UnitConstants.BYTES_TO_GIBIBYTES);
+
+        if (files.getFileCount() > 0) {
+            metrics.getPreconsensusEventFileAverageSizeMB()
+                    .set(((double) totalFileByteCount) / files.getFileCount() * UnitConstants.BYTES_TO_MEBIBYTES);
+        }
     }
 }
