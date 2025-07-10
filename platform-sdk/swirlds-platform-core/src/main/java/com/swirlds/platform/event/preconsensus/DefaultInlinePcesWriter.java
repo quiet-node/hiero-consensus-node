@@ -27,13 +27,9 @@ public class DefaultInlinePcesWriter implements InlinePcesWriter {
     public DefaultInlinePcesWriter(
             @NonNull final PlatformContext platformContext, final long initialRound, @NonNull final NodeId selfId) {
         Objects.requireNonNull(platformContext, "platformContext is required");
-        try {
-            final Path databaseDirectory = getDatabaseDirectory(platformContext, selfId);
-            this.pcesWriteManager = new PcesWriteManager(platformContext, initialRound, databaseDirectory);
+        final Path databaseDirectory = getDatabaseDirectory(platformContext, selfId);
+        this.pcesWriteManager = new PcesWriteManager(platformContext, initialRound, databaseDirectory);
 
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
         this.selfId = selfId;
         this.pcesWriterPerEventMetrics =
                 new PcesWriterPerEventMetrics(platformContext.getMetrics(), platformContext.getTime());

@@ -5,6 +5,7 @@ import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.logging.legacy.LogMarker.STATE_TO_DISK;
 import static com.swirlds.platform.StateInitializer.initializeState;
 import static com.swirlds.platform.builder.internal.StaticPlatformBuilder.getMetricsProvider;
+import static com.swirlds.platform.event.preconsensus.PcesUtilities.getDatabaseDirectory;
 import static com.swirlds.platform.state.address.RosterMetrics.registerRosterMetrics;
 import static org.hiero.base.CompareTo.isLessThan;
 
@@ -14,7 +15,6 @@ import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.io.IOIterator;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningEventHashOverride;
 import com.swirlds.common.utility.AutoCloseableWrapper;
@@ -31,8 +31,8 @@ import com.swirlds.platform.consensus.EventWindowUtils;
 import com.swirlds.platform.event.EventCounter;
 import com.swirlds.platform.event.preconsensus.InlinePcesWriter;
 import com.swirlds.platform.event.preconsensus.PcesConfig;
-import com.swirlds.platform.event.preconsensus.PcesFileTracker;
 import com.swirlds.platform.event.preconsensus.PcesReplayer;
+import com.swirlds.platform.event.preconsensus.PcesReplayer.PcesReplayerInput;
 import com.swirlds.platform.metrics.RuntimeMetrics;
 import com.swirlds.platform.publisher.DefaultPlatformPublisher;
 import com.swirlds.platform.publisher.PlatformPublisher;
@@ -68,7 +68,6 @@ import org.hiero.base.crypto.Hash;
 import org.hiero.base.crypto.Signature;
 import org.hiero.consensus.crypto.PlatformSigner;
 import org.hiero.consensus.event.creator.impl.pool.TransactionPoolNexus;
-import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.KeysAndCerts;
 import org.hiero.consensus.model.node.NodeId;
@@ -205,6 +204,7 @@ public class SwirldsPlatform implements Platform {
                 .getConfigData(PcesConfig.class)
                 .replayHealthThreshold();
         final PcesReplayer pcesReplayer = new PcesReplayer(
+                getDatabaseDirectory(platformContext, selfId),
                 platformContext,
                 platformWiring.getPcesReplayerEventOutput(),
                 platformWiring::flushIntakePipeline,
@@ -394,12 +394,9 @@ public class SwirldsPlatform implements Platform {
     private void replayPreconsensusEvents() {
         platformWiring.getStatusActionSubmitter().submitStatusAction(new StartedReplayingEventsAction());
 
-        final IOIterator<PlatformEvent> iterator =
-                new PcesFileTracker().getEventIterator(pcesReplayLowerBound, startingRound);
-
         logger.info(STARTUP.getMarker(), "replaying preconsensus event stream starting at {}", pcesReplayLowerBound);
 
-        platformWiring.getPcesReplayerIteratorInput().inject(iterator);
+        platformWiring.getPcesReplayerInput().inject(new PcesReplayerInput(pcesReplayLowerBound, startingRound));
 
         // We have to wait for all the PCES transactions to reach the ISS detector before telling it that PCES replay is
         // done. The PCES replay will flush the intake pipeline, but we have to flush the hasher
