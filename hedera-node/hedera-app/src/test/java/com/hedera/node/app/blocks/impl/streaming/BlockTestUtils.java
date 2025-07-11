@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
 import com.hedera.hapi.block.stream.Block;
@@ -36,9 +37,10 @@ import org.hiero.block.api.BlockItemSet;
 import org.hiero.block.api.PublishStreamRequest;
 
 public class BlockTestUtils {
-    private BlockTestUtils() { }
+    private BlockTestUtils() {}
 
-    public static void writeBlockToDiskV1(final BlockState block, final boolean isAcked, final File file) throws IOException {
+    public static void writeBlockToDiskV1(final BlockState block, final boolean isAcked, final File file)
+            throws IOException {
         final ByteBuffer byteBuffer = ByteBuffer.allocate(27);
         byteBuffer.put((byte) 1); // schema version
         byteBuffer.putLong(block.blockNumber()); // block number
@@ -47,7 +49,7 @@ public class BlockTestUtils {
         byteBuffer.putLong(closedTimestamp.getEpochSecond());
         byteBuffer.putInt(closedTimestamp.getNano());
         byteBuffer.put(block.isBlockProofSent() ? (byte) 1 : (byte) 0); // is proof sent
-        byteBuffer.put(isAcked ?  (byte) 1 : (byte) 0); // is the block acked
+        byteBuffer.put(isAcked ? (byte) 1 : (byte) 0); // is the block acked
 
         final List<BlockItem> items = new ArrayList<>();
 
@@ -64,7 +66,12 @@ public class BlockTestUtils {
         final int length = (int) blkBytes.length();
 
         byteBuffer.putInt(length);
-        Files.write(file.toPath(), byteBuffer.array(), StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW, StandardOpenOption.TRUNCATE_EXISTING);
+        Files.write(
+                file.toPath(),
+                byteBuffer.array(),
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE_NEW,
+                StandardOpenOption.TRUNCATE_EXISTING);
         Files.write(file.toPath(), blkBytes.toByteArray(), StandardOpenOption.WRITE, StandardOpenOption.APPEND);
     }
 
@@ -96,7 +103,7 @@ public class BlockTestUtils {
     }
 
     public static BlockState generateRandomBlock(final long blockNumber, final int batchSize) {
-        final int numItems = ThreadLocalRandom.current().nextInt(25,250);
+        final int numItems = ThreadLocalRandom.current().nextInt(25, 250);
         final BlockState block = new BlockState(blockNumber);
         block.addItem(newBlockHeader(blockNumber));
         for (int i = 0; i < numItems; ++i) {
@@ -169,20 +176,20 @@ public class BlockTestUtils {
 
     public static BlockItem newStateChanges() {
         final MapUpdateChange muc = MapUpdateChange.newBuilder()
-                .key(MapChangeKey.newBuilder().nodeIdKey(NodeId.newBuilder().id(2)).accountIdKey(AccountID.newBuilder().accountNum(10002)))
-                .value(MapChangeValue.newBuilder().accountIdValue(AccountID.newBuilder().accountNum(10002)).build())
+                .key(MapChangeKey.newBuilder()
+                        .nodeIdKey(NodeId.newBuilder().id(2))
+                        .accountIdKey(AccountID.newBuilder().accountNum(10002)))
+                .value(MapChangeValue.newBuilder()
+                        .accountIdValue(AccountID.newBuilder().accountNum(10002))
+                        .build())
                 .build();
-        final StateChange stateChange1 = StateChange.newBuilder()
-                .stateId(100)
-                .mapUpdate(muc)
-                .build();
+        final StateChange stateChange1 =
+                StateChange.newBuilder().stateId(100).mapUpdate(muc).build();
         final StateChanges stateChanges = StateChanges.newBuilder()
                 .stateChanges(stateChange1)
                 .consensusTimestamp(new Timestamp(1000, 1000))
                 .build();
-        return BlockItem.newBuilder()
-                .stateChanges(stateChanges)
-                .build();
+        return BlockItem.newBuilder().stateChanges(stateChanges).build();
     }
 
     public static BlockItem newEventHeader() {
@@ -209,27 +216,19 @@ public class BlockTestUtils {
                 .parents(parent1, parent2)
                 .eventCore(eventCore)
                 .build();
-        return BlockItem.newBuilder()
-                .eventHeader(eventHeader)
-                .build();
+        return BlockItem.newBuilder().eventHeader(eventHeader).build();
     }
 
     public static BlockItem newEventTransaction() {
-        final EventTransaction tx = EventTransaction.newBuilder()
-                .applicationTransaction(APP_TX)
-                .build();
-        return BlockItem.newBuilder()
-                .eventTransaction(tx)
-                .build();
+        final EventTransaction tx =
+                EventTransaction.newBuilder().applicationTransaction(APP_TX).build();
+        return BlockItem.newBuilder().eventTransaction(tx).build();
     }
 
     public static BlockItem newRoundHeader(final long roundNumber) {
-        final RoundHeader roundHeader = RoundHeader.newBuilder()
-                .roundNumber(roundNumber)
-                .build();
-        return BlockItem.newBuilder()
-                .roundHeader(roundHeader)
-                .build();
+        final RoundHeader roundHeader =
+                RoundHeader.newBuilder().roundNumber(roundNumber).build();
+        return BlockItem.newBuilder().roundHeader(roundHeader).build();
     }
 
     public static BlockItem newBlockProof(final long blockNumber) {
@@ -240,9 +239,7 @@ public class BlockTestUtils {
                 .previousBlockRootHash(PREV_BLOCK_ROOT_HASH)
                 .startOfBlockStateRootHash(ROOT_HASH_START)
                 .build();
-        return BlockItem.newBuilder()
-                .blockProof(proof)
-                .build();
+        return BlockItem.newBuilder().blockProof(proof).build();
     }
 
     public static BlockItem newBlockHeader(final long blockNumber) {
@@ -252,8 +249,6 @@ public class BlockTestUtils {
                 .blockTimestamp(new Timestamp(now.getEpochSecond(), now.getNano()))
                 .softwareVersion(new SemanticVersion(1, 2, 3, null, null))
                 .build();
-        return BlockItem.newBuilder()
-                .blockHeader(header)
-                .build();
+        return BlockItem.newBuilder().blockHeader(header).build();
     }
 }

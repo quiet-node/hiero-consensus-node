@@ -499,7 +499,9 @@ public class BlockBufferService {
             }
 
             if (blockBuffer.putIfAbsent(bfd.blockNumber(), block) != null) {
-                logger.debug("Block {} was read from disk but it was already in the buffer; ignoring block from disk", bfd.blockNumber());
+                logger.debug(
+                        "Block {} was read from disk but it was already in the buffer; ignoring block from disk",
+                        bfd.blockNumber());
             }
         }
     }
@@ -541,8 +543,7 @@ public class BlockBufferService {
                 continue;
             }
             final long highestRoundInBlock = block.highestRoundInBlock();
-            if ((highestRoundInBlock == -1 && !lastRoundFound)
-                    || (highestRoundInBlock <= lastRound)) {
+            if ((highestRoundInBlock == -1 && !lastRoundFound) || (highestRoundInBlock <= lastRound)) {
                 blocksToPersist.add(block);
             } else if (highestRoundInBlock > lastRound && !lastRoundFound) {
                 lastRoundFound = true;
@@ -551,7 +552,8 @@ public class BlockBufferService {
         }
 
         if (!lastRoundFound) {
-            logger.debug("Buffer persistence was requested for up to round {}, however one or more blocks are still required for the round; persistence will be attempted again later",
+            logger.debug(
+                    "Buffer persistence was requested for up to round {}, however one or more blocks are still required for the round; persistence will be attempted again later",
                     lastRound);
             return false;
         }

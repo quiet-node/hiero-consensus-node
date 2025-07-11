@@ -1325,11 +1325,10 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
             try (final Stream<Path> subStream = Files.list(subDir)) {
                 final List<Path> files = subStream.toList();
                 assertThat(files).hasSize(4);
-                final Set<String> expectedFileNames = new HashSet<>(Set.of("block-1.bin", "block-2.bin", "block-3.bin", "block-4.bin"));
-                final Set<String> actualFileNames = files.stream()
-                        .map(Path::toFile)
-                        .map(File::getName)
-                        .collect(Collectors.toSet());
+                final Set<String> expectedFileNames =
+                        new HashSet<>(Set.of("block-1.bin", "block-2.bin", "block-3.bin", "block-4.bin"));
+                final Set<String> actualFileNames =
+                        files.stream().map(Path::toFile).map(File::getName).collect(Collectors.toSet());
                 assertThat(actualFileNames).isEqualTo(expectedFileNames);
             }
         }
@@ -1427,11 +1426,10 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
             try (final Stream<Path> subStream = Files.list(subDir)) {
                 final List<Path> files = subStream.toList();
                 assertThat(files).hasSize(3);
-                final Set<String> expectedFileNames = new HashSet<>(Set.of("block-1.bin", "block-2.bin", "block-3.bin"));
-                final Set<String> actualFileNames = files.stream()
-                        .map(Path::toFile)
-                        .map(File::getName)
-                        .collect(Collectors.toSet());
+                final Set<String> expectedFileNames =
+                        new HashSet<>(Set.of("block-1.bin", "block-2.bin", "block-3.bin"));
+                final Set<String> actualFileNames =
+                        files.stream().map(Path::toFile).map(File::getName).collect(Collectors.toSet());
                 assertThat(actualFileNames).isEqualTo(expectedFileNames);
             }
         }
@@ -1447,8 +1445,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.buffer.isPruningEnabled", false)
                 .withValue("blockStream.buffer.isBufferPersistenceEnabled", false)
                 .getOrCreateConfig();
-        when(configProvider.getConfiguration())
-                .thenReturn(new VersionedConfigImpl(config, 1));
+        when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
 
         Files.createDirectories(testDirFile.toPath());
 
@@ -1476,7 +1473,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
             assertThat(stream.count()).isZero();
         }
     }
-
 
     // Utilities
 

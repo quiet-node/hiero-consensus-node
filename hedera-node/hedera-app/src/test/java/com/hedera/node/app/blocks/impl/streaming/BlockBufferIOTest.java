@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
 import static com.hedera.node.app.blocks.impl.streaming.BlockTestUtils.generateRandomBlock;
@@ -33,7 +34,7 @@ class BlockBufferIOTest {
     private final BlockBufferIO bufferIO = new BlockBufferIO(testDir);
 
     @BeforeEach
-    void beforeEach() throws IOException  {
+    void beforeEach() throws IOException {
         cleanupDirectory();
     }
 
@@ -112,7 +113,11 @@ class BlockBufferIOTest {
         byteBuffer.put((byte) 1); // 1 -> true (block proof sent)
         byteBuffer.put((byte) 0); // 0 -> false (block not acked)
         byteBuffer.putInt(0); // payload length
-        Files.write(new File(directory, "block-1.dat").toPath(), byteBuffer.array(), StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW);
+        Files.write(
+                new File(directory, "block-1.dat").toPath(),
+                byteBuffer.array(),
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE_NEW);
         byteBuffer.clear();
         byteBuffer.put((byte) 1); // valid schema number (1)
         byteBuffer.putLong(2); // block number
@@ -121,7 +126,11 @@ class BlockBufferIOTest {
         byteBuffer.put((byte) 1); // 1 -> true (block proof sent)
         byteBuffer.put((byte) 1); // 1 -> true (block acked)
         byteBuffer.putInt(0); // payload length
-        Files.write(new File(directory, "block-2.dat").toPath(), byteBuffer.array(), StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW);
+        Files.write(
+                new File(directory, "block-2.dat").toPath(),
+                byteBuffer.array(),
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE_NEW);
 
         // when reading the blocks, the block with the invalid schema should be ignored
 
@@ -155,7 +164,8 @@ class BlockBufferIOTest {
         // make sure the name isn't one of the pre-write directories
         for (final File f : subdirectories) {
             if (postWriteSubdirectory.getName().equals(f.getName())) {
-                fail("Post-write directory (" + postWriteSubdirectory.getAbsolutePath() + ") found in pre-write list of directories");
+                fail("Post-write directory (" + postWriteSubdirectory.getAbsolutePath()
+                        + ") found in pre-write list of directories");
             }
         }
     }
@@ -190,5 +200,4 @@ class BlockBufferIOTest {
             }
         }
     }
-
 }

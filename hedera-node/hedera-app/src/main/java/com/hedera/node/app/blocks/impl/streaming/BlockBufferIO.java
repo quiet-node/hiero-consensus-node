@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
@@ -76,7 +77,12 @@ public class BlockBufferIO {
      * @param isAcknowledged true if the block was acknowledged, else false
      * @param items list of items that make up the block
      */
-    public record BlockFromDisk(long blockNumber, Instant closedTimestamp, boolean isProofSent, boolean isAcknowledged, List<BlockItem> items) { }
+    public record BlockFromDisk(
+            long blockNumber,
+            Instant closedTimestamp,
+            boolean isProofSent,
+            boolean isAcknowledged,
+            List<BlockItem> items) {}
 
     private class Reader {
 
@@ -84,7 +90,9 @@ public class BlockBufferIO {
             final File[] files = rootDirectory.listFiles();
 
             if (files == null) {
-                logger.warn("Block buffer directory not found and/or no files present (directory: {})", rootDirectory.getAbsolutePath());
+                logger.warn(
+                        "Block buffer directory not found and/or no files present (directory: {})",
+                        rootDirectory.getAbsolutePath());
                 return List.of();
             }
 
@@ -125,9 +133,7 @@ public class BlockBufferIO {
             logger.debug("Reading blocks from directory: {}", directory.getAbsolutePath());
             final List<File> files;
             try (final Stream<Path> stream = Files.list(directory.toPath())) {
-                files = stream
-                        .map(Path::toFile)
-                        .toList();
+                files = stream.map(Path::toFile).toList();
             }
 
             final List<BlockFromDisk> blocks = new ArrayList<>(files.size());
@@ -152,7 +158,9 @@ public class BlockBufferIO {
 
                 final byte schemaVersion = byteBuffer.get();
                 if (BYTE_ONE != schemaVersion) {
-                    throw new IllegalStateException("Block file contained an unexpected schema version (expected: 1, found: " + schemaVersion + ")");
+                    throw new IllegalStateException(
+                            "Block file contained an unexpected schema version (expected: 1, found: " + schemaVersion
+                                    + ")");
                 }
 
                 final long blockNumber = byteBuffer.getLong();
@@ -165,7 +173,12 @@ public class BlockBufferIO {
                 byteBuffer.get(payload);
                 final Block blk = Block.PROTOBUF.parse(Bytes.wrap(payload));
 
-                return new BlockFromDisk(blockNumber, Instant.ofEpochSecond(closedSecondsPart, closedNanosPart), toBoolean(isProofSent), toBoolean(isAcknowledged), blk.items());
+                return new BlockFromDisk(
+                        blockNumber,
+                        Instant.ofEpochSecond(closedSecondsPart, closedNanosPart),
+                        toBoolean(isProofSent),
+                        toBoolean(isAcknowledged),
+                        blk.items());
             }
         }
 
@@ -190,7 +203,9 @@ public class BlockBufferIO {
             final Path directoryPath = directory.toPath();
             Files.createDirectories(directoryPath);
 
-            logger.debug("Created new block buffer directory: {}", directoryPath.toFile().getAbsolutePath());
+            logger.debug(
+                    "Created new block buffer directory: {}",
+                    directoryPath.toFile().getAbsolutePath());
 
             // write metadata file
             for (final BlockState block : blocks) {
@@ -222,18 +237,27 @@ public class BlockBufferIO {
 
                 final Block blk = new Block(items);
                 final Bytes blkBytes = Block.PROTOBUF.toBytes(blk);
-                final int length = (int) blkBytes.length(); // Bytes#length returns a long, but the actual data is an int
+                final int length =
+                        (int) blkBytes.length(); // Bytes#length returns a long, but the actual data is an int
 
                 fileHeaderBuffer.putInt(length);
 
                 // write the header
-                Files.write(path, fileHeaderBuffer.array(), StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW, StandardOpenOption.TRUNCATE_EXISTING);
+                Files.write(
+                        path,
+                        fileHeaderBuffer.array(),
+                        StandardOpenOption.WRITE,
+                        StandardOpenOption.CREATE_NEW,
+                        StandardOpenOption.TRUNCATE_EXISTING);
                 // write the block payload
                 Files.write(path, blkBytes.toByteArray(), StandardOpenOption.WRITE, StandardOpenOption.APPEND);
                 if (logger.isDebugEnabled()) {
                     final int numBytes = fileHeaderBuffer.capacity() + length;
-                    logger.debug("Block {} written to file: {} (bytes: {})", block.blockNumber(),
-                            path.toFile().getAbsolutePath(), numBytes);
+                    logger.debug(
+                            "Block {} written to file: {} (bytes: {})",
+                            block.blockNumber(),
+                            path.toFile().getAbsolutePath(),
+                            numBytes);
                 }
             }
 
