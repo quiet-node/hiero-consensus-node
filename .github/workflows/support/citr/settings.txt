@@ -1,4 +1,3 @@
-cat <<EOF > settings.txt
 checkSignedStateFromDisk,                      1
 csvFileName,                                   MainNetStats
 doUpnp,                                        false
@@ -14,4 +13,3 @@ merkleDb.hashesRamToDiskThreshold,             8388608
 event.creation.maxCreationRate,                20
 virtualMap.familyThrottleThreshold,            6000000000
 consensus.roundsExpired,                       2500
-EOF

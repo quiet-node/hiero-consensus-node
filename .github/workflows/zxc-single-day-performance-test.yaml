@@ -252,12 +252,12 @@ jobs:
           # Remove Taskfile.yml
           rm -f Taskfile.yml
           # Generate the Taskfile.yml file inline
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/genTaskfile.sh
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/Taskfile.yml Taskfile.yml
           
           # Remove init-containers-values8.yaml
           rm -f init-containers-values8.yaml
           # Generate the init-containers-values8.yaml inline
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/genInitContainerValues.sh
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/init-containers-values8.yaml init-containers-values8.yaml
           
           # Update Taskfile values
           sed -i -e "s@%HOME%@${HOME}@g" -e "s@%SOLO_NAMESPACE%@${{ env.namespace }}@g" \
@@ -271,12 +271,12 @@ jobs:
           # Remove application.properties
           rm -f application.properties
           # Generate the application.properties file inline
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/genApplicationProperties.sh
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties application.properties
           
           # Remove settings.txt
           rm -f settings.txt
           # Generate the settings.txt file inline
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/genSettings.sh
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/settings.txt settings.txt
           
           if [ "${{ inputs.add-app-props }}" != "" ]
           then
@@ -340,12 +340,12 @@ jobs:
           # Remove nlg-values.yaml
           rm -f nlg-values.yaml
           # Generate the nlg-values.yaml file inline
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/genNlgValues.sh
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/nlg-values.yaml nlg-values.yaml
           
           # Remove merkledb-values.yaml
           rm -f merkledb-values.yaml
           # Generate the merkledb-values.yaml file inline
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/genMerkleDbValues.sh
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/merkledb-values.yaml merkledb-values.yaml
           
           #Disable auto-start
           sed -i -e 's/NftTransferLoadTest/NftTransferLoadTestDONOTSTART/g' nlg-values.yaml

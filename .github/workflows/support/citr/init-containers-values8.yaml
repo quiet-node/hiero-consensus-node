@@ -1,4 +1,3 @@
-cat <<EOF > init-containers-values8.yaml
 # hedera node configuration
 hedera:
   initContainers:
@@ -200,4 +199,3 @@ deployment:
       operator: "Equal"
       value: "engineering-1"
       effect: "NoSchedule"
-EOF
