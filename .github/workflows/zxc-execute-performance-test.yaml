@@ -8,7 +8,7 @@ on:
         description: "Which cluster to run tests on"
         required: true
         type: string
-        default: "AdHoc6"
+        default: "AdHoc5"
       ref:
         description: "Version of hiero-consensus-node: branch, tag, commit"
         required: true
@@ -56,7 +56,7 @@ on:
 env:
   LC_ALL: C.UTF-8
   LATITUDE_NAMESPACE_PREFIX: solo-sdpt-n
-  DEFAULT_NAMESPACE: AdHoc6
+  DEFAULT_NAMESPACE: AdHoc5
   DEFAULT_HEDERAVERSION: main
   timeout_6h_limit: 330
   GS_ROOT_DIR: gs://performance-engineering-reports/ephemeral/test_runs
