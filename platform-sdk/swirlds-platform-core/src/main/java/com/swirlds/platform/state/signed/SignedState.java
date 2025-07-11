@@ -316,7 +316,7 @@ public class SignedState {
     }
 
     /**
-     * Reserves the SignedState for use. While reserved, this SignedState will not be deleted.
+     * Reserves the SignedState for use.  While reserved, this SignedState will not be deleted.
      *
      * @param reason a short description of why this SignedState is being reserved. Each location where a SignedState is
      *               reserved should attempt to use a unique reason, as this makes debugging reservation bugs easier.
