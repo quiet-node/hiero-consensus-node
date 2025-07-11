@@ -55,7 +55,7 @@ on:
 
 env:
   LC_ALL: C.UTF-8
-  LATITUDE_NAMESPACE_PREFIX: solo-sdpt-n
+  ADHOC_NAMESPACE_PREFIX: solo-sdpt-n
   DEFAULT_NAMESPACE: AdHoc5
   DEFAULT_HEDERAVERSION: main
   timeout_6h_limit: 330
@@ -141,7 +141,7 @@ jobs:
           #trim run-hcn-version
           echo "run-hcn-version=`echo ${{ inputs.ref }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
           n=`echo "${{ inputs.test-asset }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
-          echo "namespace=${LATITUDE_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
+          echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
         run: |

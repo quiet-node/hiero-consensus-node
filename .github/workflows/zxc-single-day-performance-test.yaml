@@ -64,7 +64,7 @@ permissions:
   id-token: write
 
 env:
-  LATITUDE_NAMESPACE_PREFIX: solo-sdpt-n
+  ADHOC_NAMESPACE_PREFIX: solo-sdpt-n
   DEFAULT_NAMESPACE: AdHoc5
   DEFAULT_HCN_VERSION: main
   TIMEOUT_6H_LIMIT: 330
@@ -187,7 +187,7 @@ jobs:
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
           n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
-          echo "namespace=${LATITUDE_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
+          echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
         run: |
@@ -630,7 +630,7 @@ jobs:
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
           n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
-          echo "namespace=${LATITUDE_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
+          echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
         run: |
@@ -826,7 +826,7 @@ jobs:
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
           n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
-          echo "namespace=${LATITUDE_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
+          echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
         run: |
