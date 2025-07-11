@@ -73,11 +73,11 @@ public class ContainerNode extends AbstractNode implements Node {
     /**
      * Constructor for the {@link ContainerNode} class.
      *
-     * @param selfId       the unique identifier for this node
-     * @param roster       the roster of the network
+     * @param selfId the unique identifier for this node
+     * @param roster the roster of the network
      * @param keysAndCerts the keys for the node
-     * @param network      the network this node is part of
-     * @param dockerImage  the Docker image to use for this node
+     * @param network the network this node is part of
+     * @param dockerImage the Docker image to use for this node
      */
     public ContainerNode(
             @NonNull final NodeId selfId,
@@ -195,11 +195,15 @@ public class ContainerNode extends AbstractNode implements Node {
     }
 
     /**
-     * Shuts down the node and cleans up resources. Once this method is called, the node cannot be started again. This
-     * method is idempotent and can be called multiple times without any side effects.
+     * Shuts down the container and cleans up resources. Once this method is called, the node cannot be started again
+     * and no more data can be retrieved. This method is idempotent and can be called multiple times without any side
+     * effects.
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    // ignoring the Empty answer from destroyContainer
     void destroy() {
         if (lifeCycle == RUNNING) {
+            log.info("Destroying container of node {}...", selfId);
             channel.shutdownNow();
             container.stop();
         }
