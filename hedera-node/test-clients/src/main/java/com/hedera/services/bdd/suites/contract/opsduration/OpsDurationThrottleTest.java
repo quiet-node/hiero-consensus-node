@@ -88,7 +88,8 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(duration)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, throttleUsagePercentageMoreThanThreshold(duration.get(), 95.0));
-                }));
+                }),
+                restoreDefault(MAX_OPS_DURATION));
     }
 
     @HapiTest
@@ -109,8 +110,7 @@ public class OpsDurationThrottleTest {
                                             .collectMaxOpsDuration(duration)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, throttleUsagePercentageLessThreshold(duration.get(), 20.0));
-                }),
-                restoreDefault(MAX_OPS_DURATION));
+                }));
     }
 
     @HapiTest
@@ -399,6 +399,7 @@ public class OpsDurationThrottleTest {
                         contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(1000000000))
                                 .gas(10_000_000L)
                                 .hasKnownStatus(ResponseCodeEnum.THROTTLED_AT_CONSENSUS))),
-                restoreDefault(OPS_DURATION_THROTTLE_BURST_SECONDS));
+                restoreDefault(OPS_DURATION_THROTTLE_BURST_SECONDS),
+                restoreDefault(MAX_OPS_DURATION));
     }
 }
