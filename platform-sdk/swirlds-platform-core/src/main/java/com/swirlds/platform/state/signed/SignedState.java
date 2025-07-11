@@ -65,7 +65,7 @@ import org.hiero.consensus.roster.RosterUtils;
  * rejoining after a long absence.
  * </p>
  */
-public class SignedState implements SignedStateInfo {
+public class SignedState {
 
     private static final Logger logger = LogManager.getLogger(SignedState.class);
 
@@ -218,9 +218,10 @@ public class SignedState implements SignedStateInfo {
     }
 
     /**
-     * {@inheritDoc}
+     * The round of the state.
+     *
+     * @return the round number
      */
-    @Override
     public long getRound() {
         return platformStateFacade.roundOf(state);
     }
@@ -235,9 +236,11 @@ public class SignedState implements SignedStateInfo {
     }
 
     /**
-     * {@inheritDoc}
+     * Return the set of signatures collected so far for the hash of this SignedState. This includes the signature by
+     * self.
+     *
+     * @return the set of signatures
      */
-    @Override
     public @NonNull SigSet getSigSet() {
         return sigSet;
     }
@@ -264,9 +267,10 @@ public class SignedState implements SignedStateInfo {
     }
 
     /**
-     * {@inheritDoc}
+     * Get the roster for this signed state.
+     *
+     * @return the roster
      */
-    @Override
     public @NonNull Roster getRoster() {
         /*
         Ideally the roster would be captured in the constructor but due to the mutable underlying state, the roster
@@ -542,9 +546,13 @@ public class SignedState implements SignedStateInfo {
     }
 
     /**
-     * {@inheritDoc}
+     * Check if this object contains a complete set of signatures with respect to an address book.
+     * <p>
+     * Note that there is a special edge case during emergency state recovery. A state with a root hash that matches the
+     * current epoch hash is considered to be complete regardless of the signatures it has collected.
+     *
+     * @return does this contain signatures from members with greater than 2/3 of the total weight?
      */
-    @Override
     public boolean isComplete() {
         return recoveryState | signedBy(SUPER_MAJORITY);
     }
