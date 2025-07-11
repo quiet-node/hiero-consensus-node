@@ -55,7 +55,7 @@ public class OpsDurationThrottleTest {
     protected static final String OPS_DURATION_THROTTLE_BURST_SECONDS = "contracts.opsDurationThrottleBurstSeconds";
     protected static final String MAX_OPS_DURATION = "contracts.maxOpsDuration";
     protected static final String DURATION_PERIOD = "10000";
-    protected static final String SMALLER_DURATION_PERIOD = "10";
+    protected static final String BIGGER_DURATION_PERIOD = "10000000";
 
     @AfterEach
     public void restABit() {
@@ -132,7 +132,7 @@ public class OpsDurationThrottleTest {
                 cryptoApproveAllowance()
                         .addTokenAllowance(SENDER, TOKEN, SYSTEM_CONTRACT_TRANSFER, 1_000_000L)
                         .signedByPayerAnd(SENDER),
-                overriding(MAX_OPS_DURATION, SMALLER_DURATION_PERIOD),
+                overriding(MAX_OPS_DURATION, BIGGER_DURATION_PERIOD),
                 withOpContext((spec, opLog) -> {
                     final var tokenAddress = HapiParserUtil.asHeadlongAddress(
                             asAddress(spec.registry().getTokenID(TOKEN)));
@@ -390,7 +390,7 @@ public class OpsDurationThrottleTest {
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
                 uploadInitCode(OPS_DURATION_THROTTLE),
                 contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
-                overriding(MAX_OPS_DURATION, SMALLER_DURATION_PERIOD),
+                overriding(MAX_OPS_DURATION, BIGGER_DURATION_PERIOD),
                 withOpContext((spec, opLog) -> allRunFor(
                         spec,
                         contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(5L))
