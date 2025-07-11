@@ -253,7 +253,7 @@ jobs:
           rm -f Taskfile.yml
           
           # Generate the Taskfile.yml file inline
-          genTaskfile.sh
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/genTaskfile.sh
           
           # Remove init-containers-values8.yaml
           rm -f init-containers-values8.yaml
