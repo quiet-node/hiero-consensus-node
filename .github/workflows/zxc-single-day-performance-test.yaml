@@ -6,8 +6,8 @@ on:
     inputs:
       test-asset:
         required: true
-        default: "Latitude3"
-        description: "Performance test on given Latitude Machine (Latitude0-4)"
+        default: "AdHoc5"
+        description: "Performance test on given AdHoc Machine (AdHoc5, 6, or 7)"
         type: string
       ref:
         required: true
@@ -65,7 +65,7 @@ permissions:
 
 env:
   LATITUDE_NAMESPACE_PREFIX: solo-sdpt-n
-  DEFAULT_NAMESPACE: Latitude3
+  DEFAULT_NAMESPACE: AdHoc5
   DEFAULT_HCN_VERSION: main
   TIMEOUT_6H_LIMIT: 330
   GS_ROOT_DIR: gs://performance-engineering-reports/ephemeral/test_runs
@@ -186,7 +186,7 @@ jobs:
           set +e
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
-          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Latitude(\d+)$/'`
+          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
           echo "namespace=${LATITUDE_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
@@ -629,7 +629,7 @@ jobs:
 
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
-          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Latitude(\d+)$/'`
+          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
           echo "namespace=${LATITUDE_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
@@ -825,7 +825,7 @@ jobs:
 
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
-          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Latitude(\d+)$/'`
+          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
           echo "namespace=${LATITUDE_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
