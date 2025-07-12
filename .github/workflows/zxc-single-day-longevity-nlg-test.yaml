@@ -237,10 +237,6 @@ jobs:
 
           cd "${{ github.workspace }}"/solo/examples/performance-tuning/latitude
 
-          echo "DEBUG:"
-          pwd
-          find "${{ github.workspace }}"/.github/workflows
-
           # Remove Taskfile.yml
           rm -f Taskfile.yml
           # Generate the Taskfile.yml file inline
@@ -530,11 +526,11 @@ jobs:
 
           echo kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g ${throttle} \
             ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${test} \
-            ${NLGargs} -tt ${{ env.run_NLG_Time }} > client_${test}.log 2>&1 &"
+            ${NLGargs} -tt ${{ env.run_NLG_Time }}m > client_${test}.log 2>&1 &"
 
           kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g ${throttle} \
             ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${test} \
-            ${NLGargs} -tt ${{ env.run_NLG_Time }} > client_${test}.log 2>&1 &"
+            ${NLGargs} -tt ${{ env.run_NLG_Time }}m > client_${test}.log 2>&1 &"
           sleep 30
           done
 
@@ -983,7 +979,7 @@ jobs:
           echo "Size of report dir:"
           du -sk report
 
-          gcloud --no-user-output-enabled storage cp --recursive report "${{ env.GS_ROOT_DIR }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}/report/longevity
+          gcloud --no-user-output-enabled storage cp --recursive report "${{ env.GS_ROOT_DIR }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}/report/longevity"
           echo Done: see results in "${{ env.GS_ROOT_HTTPS }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}/report/longevity"
 
           echo "Truncating logs for next test..."
