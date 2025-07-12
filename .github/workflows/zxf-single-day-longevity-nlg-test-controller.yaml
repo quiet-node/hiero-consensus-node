@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 name: "ZXF: [CITR] Single Day Longevity NLG Test Controller (SDLnT)"
 on:
-  INTENTIONALLY BREAK FLOW TO REFRESH GH-A
   workflow_dispatch:
     inputs:
       test-asset:
