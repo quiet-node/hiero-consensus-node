@@ -237,15 +237,19 @@ jobs:
 
           cd "${{ github.workspace }}"/solo/examples/performance-tuning/latitude
 
+          echo "DEBUG:"
+          pwd
+          find "${{ github.workspace }}"/.github/workflows
+
           # Remove Taskfile.yml
           rm -f Taskfile.yml
           # Generate the Taskfile.yml file inline
-          cp "${{ github.workspace }}"/.github/workflows/support/citr/Taskfile.yml Taskfile.yml
+          cp ${{ github.workspace }}/.github/workflows/support/citr/Taskfile.yml Taskfile.yml
 
           # Remove init-containers-values8.yaml
           rm -f init-containers-values8.yaml
           # Generate the init-containers-values8.yaml inline
-          cp "${{ github.workspace }}"/.github/workflows/support/citr/init-containers-values8.yaml init-containers-values8.yaml
+          cp ${{ github.workspace }}/.github/workflows/support/citr/init-containers-values8.yaml init-containers-values8.yaml
 
           # Update Taskfile values
           sed -i -e "s@%HOME%@${HOME}@g" -e "s@%SOLO_NAMESPACE%@${{ env.namespace }}@g" \
@@ -259,12 +263,12 @@ jobs:
           # Remove application.properties
           rm -f application.properties
           # Generate the application.properties file inline
-          cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties.txt application.properties
+          cp ${{ github.workspace }}/.github/workflows/support/citr/application.properties.txt application.properties
 
           # Remove settings.txt
           rm -f settings.txt
           # Generate the settings.txt file inline
-          cp "${{ github.workspace }}"/.github/workflows/support/citr/settings.txt settings.txt
+          cp ${{ github.workspace }}/.github/workflows/support/citr/settings.txt settings.txt
 
           if [ "${{ inputs.add-app-props }}" != "" ]
           then
