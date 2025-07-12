@@ -1,4 +1,4 @@
-# hedera node configuration
+# SPDX-License-Identifier: Apache-2.0
 hedera:
   initContainers:
     - name: init-hedera-node
