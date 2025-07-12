@@ -248,36 +248,36 @@ jobs:
           fi
 
           cd "${{ github.workspace }}"/solo/examples/performance-tuning/latitude
-          
+
           # Remove Taskfile.yml
           rm -f Taskfile.yml
           # Generate the Taskfile.yml file inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/Taskfile.yml Taskfile.yml
-          
+
           # Remove init-containers-values8.yaml
           rm -f init-containers-values8.yaml
           # Generate the init-containers-values8.yaml inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/init-containers-values8.yaml init-containers-values8.yaml
-          
+
           # Update Taskfile values
           sed -i -e "s@%HOME%@${HOME}@g" -e "s@%SOLO_NAMESPACE%@${{ env.namespace }}@g" \
           -e "s@%HEDERA_SERVICES_ROOT%@${curdir}@g" Taskfile.yml
-          
+
           # Update Init Containers values
           NETWORK_ID=`echo "${{ env.namespace }}" | perl -pne '~s/^.*[^\d](\d+)$/$1/g'`
           sed -i -e "s@%NETWORK_ID%@${NETWORK_ID}@g" init-containers-values8.yaml
           sed -i -e "s@engineering-1@${NETWORK_ID}@g" init-containers-values8.yaml
-          
+
           # Remove application.properties
           rm -f application.properties
           # Generate the application.properties file inline
-          cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties application.properties
-          
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties.txt application.properties
+
           # Remove settings.txt
           rm -f settings.txt
           # Generate the settings.txt file inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/settings.txt settings.txt
-          
+
           if [ "${{ inputs.add-app-props }}" != "" ]
           then
             echo -e "${{ inputs.add-app-props }}" >> application.properties
@@ -336,17 +336,17 @@ jobs:
             grep -v 'node10' | grep -v 'CLUSTER-IP' > networks.txt
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt get svc -n "${{ env.namespace }}" -l "solo.hedera.com/type=network-node-svc" |\
             grep 'node10' | grep -v 'CLUSTER-IP' >> networks.txt
-          
+
           # Remove nlg-values.yaml
           rm -f nlg-values.yaml
           # Generate the nlg-values.yaml file inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/nlg-values.yaml nlg-values.yaml
-          
+
           # Remove merkledb-values.yaml
           rm -f merkledb-values.yaml
           # Generate the merkledb-values.yaml file inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/merkledb-values.yaml merkledb-values.yaml
-          
+
           #Disable auto-start
           sed -i -e 's/NftTransferLoadTest/NftTransferLoadTestDONOTSTART/g' nlg-values.yaml
           grep -v 'x.y.z' nlg-values.yaml > new.yml
