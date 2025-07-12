@@ -2,6 +2,7 @@
 name: "ZXC: [CITR] Single Day Longevity NLG Test"
 
 on:
+  BROKEN to REFRESH GH-A again
   workflow_call:
     inputs:
       test-asset:
