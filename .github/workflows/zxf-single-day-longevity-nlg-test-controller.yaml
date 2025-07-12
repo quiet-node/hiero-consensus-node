@@ -9,6 +9,7 @@ on:
         description: "Performance test on given namespace"
         type: choice
         options:
+          - AdHoc1
           - AdHoc5
           - AdHoc6
           - AdHoc7
