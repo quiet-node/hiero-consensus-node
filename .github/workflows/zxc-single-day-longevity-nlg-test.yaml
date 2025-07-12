@@ -236,36 +236,36 @@ jobs:
           fi
 
           cd "${{ github.workspace }}"/solo/examples/performance-tuning/latitude
-          
+
           # Remove Taskfile.yml
           rm -f Taskfile.yml
           # Generate the Taskfile.yml file inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/Taskfile.yml Taskfile.yml
-          
+
           # Remove init-containers-values8.yaml
           rm -f init-containers-values8.yaml
           # Generate the init-containers-values8.yaml inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/init-containers-values8.yaml init-containers-values8.yaml
-          
+
           # Update Taskfile values
           sed -i -e "s@%HOME%@${HOME}@g" -e "s@%SOLO_NAMESPACE%@${{ env.namespace }}@g" \
           -e "s@%HEDERA_SERVICES_ROOT%@${curdir}@g" Taskfile.yml
-          
+
           # Update Init Containers values
           NETWORK_ID=`echo "${{ env.namespace }}" | perl -pne '~s/^.*[^\d](\d+)$/$1/g'`
           sed -i -e "s@%NETWORK_ID%@${NETWORK_ID}@g" init-containers-values8.yaml
           sed -i -e "s@engineering-1@${NETWORK_ID}@g" init-containers-values8.yaml
-          
+
           # Remove application.properties
           rm -f application.properties
           # Generate the application.properties file inline
-          cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties application.properties
-          
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties.txt application.properties
+
           # Remove settings.txt
           rm -f settings.txt
           # Generate the settings.txt file inline
           cp "${{ github.workspace }}"/.github/workflows/support/citr/settings.txt settings.txt
-          
+
           if [ "${{ inputs.add-app-props }}" != "" ]
           then
             echo -e "${{ inputs.add-app-props }}" >> application.properties
@@ -504,7 +504,7 @@ jobs:
           nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
           n=`expr ${{ env.run_NLG_Accounts }} / 1000`
           NLG_c=32
-          
+
           if [ "${{ github.event.inputs.perf_analysis }}" = "true" ]
           then
             NLG_c=10
@@ -907,7 +907,7 @@ jobs:
           do
            sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client_${test}.log "${{ github.workspace }}"/report//client_${test}.log
           done
-          
+
           sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
           cp -r podlog_"${{ env.namespace }}" "${{ github.workspace }}"/report/
@@ -984,7 +984,6 @@ jobs:
 
           echo "Truncating logs for next test..."
           sh "${{ github.workspace }}"/.github/workflows/support/citr/resetCNlogs.sh "${{ env.namespace }}"
-
 
   # Send this output back to the caller workflow
   single-day-performance-test-result:
