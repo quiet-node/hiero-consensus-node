@@ -57,7 +57,8 @@ env:
   ADHOC_NAMESPACE_PREFIX: solo-sdpt-n
   DEFAULT_NAMESPACE: AdHoc5
   DEFAULT_HCN_VERSION: main
-  TIMEOUT_6H_LIMIT: 330
+  TIMEOUT_2W_LIMIT: 20180
+  #2 weeks and 20 min
   GS_ROOT_DIR: gs://performance-engineering-reports/ephemeral/test_runs
   GS_ROOT_HTTPS: https://perf.analytics.eng.hashgraph.io/ephemeral/test_runs
   #Release version from jFrog
@@ -417,7 +418,7 @@ jobs:
 
           counter=0
           start_time=`date +%s`
-          max_counter=${{ env.TIMEOUT_6H_LIMIT }}  #max_counter=330 mins
+          max_counter=${{ env.TIMEOUT_2W_LIMIT }}  #max_counter=2 weeks + 20 mins
 
           ec=2
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
@@ -498,7 +499,7 @@ jobs:
           echo "Truncating logs for next test..."
           sh "${{ github.workspace }}"/.github/workflows/support/citr/resetCNlogs.sh "${{ env.namespace }}"
 
-      - name: Start test
+      - name: Start Longevity test
         run: |
           run_NLGDebugparams="" # e.g. -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
           nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
@@ -537,6 +538,7 @@ jobs:
   performance-NftTransferLoadTest-watch1:
     name: NFT Transfer Load Test
     runs-on: hiero-citr-linux-large
+    timeout-minutes: 20180
     needs:
       - performance-tests-start
     env:
@@ -595,7 +597,7 @@ jobs:
           proxy: hashgraph.teleport.sh:443
           token: gh-performance-engineering-svcs-bot
           kubernetes-cluster: k8s.pft.dal.lat.ope.eng.hashgraph.io
-          certificate-ttl: 20h
+          certificate-ttl: 337h
 
       - name: Authenticate to Google Cloud
         id: google-auth
@@ -640,7 +642,7 @@ jobs:
         run: |
           mkdir "${{ github.workspace }}"/report
 
-      - name: Wait for NLG Transfer
+      - name: Wait for Longevity
         run: |
           set +x
           set +e
@@ -674,7 +676,7 @@ jobs:
 
           counter=0
           start_time=`date +%s`
-          max_counter=${{ env.TIMEOUT_6H_LIMIT }}  #max_counter=330 mins
+          max_counter=${{ env.TIMEOUT_2W_LIMIT }}  #max_counter=2 weeks + 20 mins
 
           ec=2
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
@@ -869,7 +871,7 @@ jobs:
 
           counter=0
           start_time=`date +%s`
-          max_counter=${{ env.TIMEOUT_6H_LIMIT }}  #max_counter=330 mins
+          max_counter=${{ env.TIMEOUT_2W_LIMIT }}  #max_counter=2 weeks + 20 mins
 
           ec=2
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null

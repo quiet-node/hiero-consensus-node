@@ -46,6 +46,9 @@ on:
           - "21"
           - "180"
           - "330"
+          - "1200"
+          - "10080"
+          - "20160"
       add-app-props:
         required: false
         default: ""
