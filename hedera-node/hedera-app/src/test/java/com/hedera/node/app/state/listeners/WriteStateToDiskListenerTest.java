@@ -53,7 +53,7 @@ class WriteStateToDiskListenerTest {
 
     @Test
     void archivesStartupNetworkFilesOnceFileWrittenIfRoundNotZero() {
-        given(notification.getRoundNumber()).willReturn(0L, 0L, 1L, 1L);
+        given(notification.getRoundNumber()).willReturn(0L, 1L);
 
         subject.notify(notification);
         subject.notify(notification);
