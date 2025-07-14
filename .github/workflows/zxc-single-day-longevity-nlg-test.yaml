@@ -6,8 +6,8 @@ on:
     inputs:
       test-asset:
         required: true
-        default: "AdHoc5"
-        description: "Performance test on given AdHoc Machine (AdHoc5, 6, or 7)"
+        default: "Longevity3"
+        description: "Performance test on given AdHoc Machine (Longevity3, 4)"
         type: string
       ref:
         required: true
@@ -54,8 +54,8 @@ permissions:
   id-token: write
 
 env:
-  ADHOC_NAMESPACE_PREFIX: solo-sdpt-n
-  DEFAULT_NAMESPACE: AdHoc5
+  ADHOC_NAMESPACE_PREFIX: solo-mdlt-n
+  DEFAULT_NAMESPACE: Longevity3
   DEFAULT_HCN_VERSION: main
   TIMEOUT_2W_LIMIT: 20180
   #2 weeks and 20 min
@@ -175,7 +175,7 @@ jobs:
           set +e
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
-          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
+          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Longevity(\d+)$/'`
           echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
@@ -241,12 +241,14 @@ jobs:
           # Remove Taskfile.yml
           rm -f Taskfile.yml
           # Generate the Taskfile.yml file inline
-          cp ${{ github.workspace }}/.github/workflows/support/citr/Taskfile.yml Taskfile.yml
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/Taskfile.examples.yml Taskfile.examples.yml
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/Taskfile.yml Taskfile.yml
+          sed -i -e 's/SOLO_NETWORK_SIZE: 8/SOLO_NETWORK_SIZE: 7/g' Taskfile.yml
 
-          # Remove init-containers-values8.yaml
-          rm -f init-containers-values8.yaml
-          # Generate the init-containers-values8.yaml inline
-          cp ${{ github.workspace }}/.github/workflows/support/citr/init-containers-values8.yaml init-containers-values8.yaml
+          # Remove init-containers-values7.yaml
+          rm -f init-containers-values7.yaml
+          # Generate the init-containers-values7.yaml inline
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/init-containers-values7.yaml init-containers-values7.yaml
 
           # Update Taskfile values
           sed -i -e "s@%HOME%@${HOME}@g" -e "s@%SOLO_NAMESPACE%@${{ env.namespace }}@g" \
@@ -254,18 +256,19 @@ jobs:
 
           # Update Init Containers values
           NETWORK_ID=`echo "${{ env.namespace }}" | perl -pne '~s/^.*[^\d](\d+)$/$1/g'`
-          sed -i -e "s@%NETWORK_ID%@${NETWORK_ID}@g" init-containers-values8.yaml
-          sed -i -e "s@engineering-1@${NETWORK_ID}@g" init-containers-values8.yaml
+          sed -i -e "s@%NETWORK_ID%@${NETWORK_ID}@g" init-containers-values7.yaml
+          NETWORK_OWNER="multi-day-longevity-test"
+          sed -i -e "s@%NETWORK_OWNER%@${NETWORK_OWNER}@g" init-containers-values7.yaml
 
           # Remove application.properties
           rm -f application.properties
           # Generate the application.properties file inline
-          cp ${{ github.workspace }}/.github/workflows/support/citr/application.properties.txt application.properties
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/application.properties.txt application.properties
 
           # Remove settings.txt
           rm -f settings.txt
           # Generate the settings.txt file inline
-          cp ${{ github.workspace }}/.github/workflows/support/citr/settings.txt settings.txt
+          cp "${{ github.workspace }}"/.github/workflows/support/citr/settings.txt settings.txt
 
           if [ "${{ inputs.add-app-props }}" != "" ]
           then
@@ -311,6 +314,7 @@ jobs:
           cp -r podlog_"${{ env.namespace }}" solo_deploy/
           gcloud --no-user-output-enabled storage cp --recursive solo_deploy "${{ env.GS_ROOT_DIR }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}"/solo_deploy
           exit "${task_code}"
+
 
       - name: Move to Github Workspace
         run: cd "${{ github.workspace }}"
