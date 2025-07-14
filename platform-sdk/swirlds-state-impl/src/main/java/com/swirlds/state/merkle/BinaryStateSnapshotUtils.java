@@ -16,7 +16,7 @@ import java.nio.file.Path;
 /**
  * Utility class for creating and loading snapshots of a {@link BinaryState}.
  * <p>
- * This class provides methods to create a snapshot of a  {@link BinaryState} and to load a b {@link BinaryState} from a snapshot.
+ * This class provides methods to create a snapshot of a {@link BinaryState} and to load a {@link BinaryState} from a snapshot.
  * The state must be hashed and immutable before calling the snapshot creation method.
  */
 public final class BinaryStateSnapshotUtils {
