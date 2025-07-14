@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-
 contracts.chainId=298
 ledger.id=0x03
 entities.unlimitedAutoAssociationsEnabled=true
