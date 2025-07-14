@@ -31,6 +31,22 @@ import org.hiero.block.api.PublishStreamRequest;
 
 /**
  * This class supports reading and writing a series of blocks to disk.
+ * <p>
+ * Block files are written into a directory whose name is the current (at the time of writing) timestamp in milliseconds.
+ * This naming structure allows for an easy way to find the most recently written batch of blocks. Each block file is
+ * named: {@code block-$BlockNumber.bin}
+ * <p>
+ * The block files are written using a schema, with V1 of the schema being the following format, in order:
+ * <ol>
+ *     <li>Schema Version (byte): Hardcoded to 1</li>
+ *     <li>Block Number (long)</li>
+ *     <li>Closed Timestamp Epoch Second (long): The epoc seconds component of the closed timestamp</li>
+ *     <li>Closed Timestamp Nanosecond (int): The nanosecond adjustment of the closed timestamp</li>
+ *     <li>Block Proof Sent Flag (byte): 1 (true) if the block proof has been sent, else 0 (false)</li>
+ *     <li>Block Acknowledged Flag (byte): 1 (true) if the block has been acknowledged, else 0 (false)</li>
+ *     <li>Block Payload Length (int): The number of bytes the block data (e.g. items) consumes</li>
+ *     <li>Block Payload (byte array): The block data (e.g. items)</li>
+ * </ol>
  */
 public class BlockBufferIO {
     private static final Logger logger = LogManager.getLogger(BlockBufferIO.class);
@@ -43,6 +59,11 @@ public class BlockBufferIO {
      */
     private final File rootDirectory;
 
+    /**
+     * Constructor for the block buffer IO operations.
+     *
+     * @param rootDirectory the root directory that will contain subdirectories containing the block files.
+     */
     public BlockBufferIO(final String rootDirectory) {
         this.rootDirectory = new File(requireNonNull(rootDirectory));
     }
@@ -84,13 +105,16 @@ public class BlockBufferIO {
             boolean isAcknowledged,
             List<BlockItem> items) {}
 
+    /**
+     * Utility class that contains logic related to reading blocks from disk.
+     */
     private class Reader {
 
         private List<BlockFromDisk> read() throws IOException {
             final File[] files = rootDirectory.listFiles();
 
             if (files == null) {
-                logger.warn(
+                logger.info(
                         "Block buffer directory not found and/or no files present (directory: {})",
                         rootDirectory.getAbsolutePath());
                 return List.of();
@@ -129,6 +153,14 @@ public class BlockBufferIO {
             return read(dirToRead);
         }
 
+        /**
+         * Given the specified directory, read all valid blocks from disk. If a block file on disk is corrupt or
+         * otherwise invalid, it will be skipped.
+         *
+         * @param directory the directory containing the blocks to read
+         * @return a list of blocks
+         * @throws IOException if there is an error reading the block files
+         */
         private List<BlockFromDisk> read(final File directory) throws IOException {
             logger.debug("Reading blocks from directory: {}", directory.getAbsolutePath());
             final List<File> files;
@@ -151,6 +183,14 @@ public class BlockBufferIO {
             return blocks;
         }
 
+        /**
+         * Reads a specified block file.
+         *
+         * @param file the block file to read
+         * @return the block
+         * @throws IOException if there was an error reading the block file
+         * @throws ParseException if there was an error parsing the block file
+         */
         private BlockFromDisk readBlockFile(final File file) throws IOException, ParseException {
             try (final RandomAccessFile raf = new RandomAccessFile(file, "r")) {
                 final FileChannel fileChannel = raf.getChannel();
@@ -187,6 +227,9 @@ public class BlockBufferIO {
         }
     }
 
+    /**
+     * Utility class that contains logic related to writing blocks to disk.
+     */
     private class Writer {
         private final List<BlockState> blocks;
         private final long latestAcknowledgedBlockNumber;
@@ -197,6 +240,11 @@ public class BlockBufferIO {
             this.latestAcknowledgedBlockNumber = latestAcknowledgedBlockNumber;
         }
 
+        /**
+         * Performs the actual writing of blocks to disk. This will also perform cleanup of any older block directories.
+         *
+         * @throws IOException if there was an error writing the blocks to disk
+         */
         private void write() throws IOException {
             final Instant now = Instant.now();
             final File directory = new File(rootDirectory, Long.toString(now.toEpochMilli()));

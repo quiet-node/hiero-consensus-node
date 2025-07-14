@@ -59,7 +59,6 @@ class WriteStateToDiskListenerTest {
         subject.notify(notification);
 
         verify(startupNetworks, times(1)).archiveStartupNetworks();
-        verify(blockBufferService).requestBufferPersist(0L);
-        verify(blockBufferService).requestBufferPersist(1L);
+        verify(blockBufferService, times(2)).persistBuffer();
     }
 }

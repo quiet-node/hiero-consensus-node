@@ -59,7 +59,11 @@ public class WriteStateToDiskListener implements StateWriteToDiskCompleteListene
 
     @Override
     public void notify(@NonNull final StateWriteToDiskCompleteNotification notification) {
-        blockBufferService.requestBufferPersist(notification.getRoundNumber());
+        try {
+            blockBufferService.persistBuffer();
+        } catch (final Exception e) {
+            log.error("Error while writing block buffer to disk", e);
+        }
 
         if (notification.isFreezeState()) {
             log.info(

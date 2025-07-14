@@ -16,12 +16,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -478,7 +475,14 @@ public class BlockBufferService {
             return;
         }
 
+        if (blocks.isEmpty()) {
+            logger.info("Block buffer will not be repopulated (reason: no blocks found on disk)");
+            return;
+        }
+
         final int batchSize = blockItemBatchSize();
+
+        logger.info("Block buffer is being restored from disk (blocksRead: {})", blocks.size());
 
         for (final BlockFromDisk bfd : blocks) {
             final BlockState block = new BlockState(bfd.blockNumber());
@@ -507,65 +511,26 @@ public class BlockBufferService {
     }
 
     /**
-     * Requests that the block buffer be written to disk the next time the buffer worker task is invoked.
-     * @param lastRound blocks in the buffer that contain rounds before and up to this round will be persisted
-     */
-    public void requestBufferPersist(final long lastRound) {
-        persistUpToRound.updateAndGet(old -> Math.max(lastRound, old));
-    }
-
-    /**
-     * If a buffer persist operation was requested, then the current blocks in the buffer containing rounds up to the
-     * round specified with the request will be written to disk. If the block containing a required round is not yet
-     * closed, then the writing operation will be deferred to the disk worker loop iteration.
+     * If block buffer persistence is enabled, then all blocks that are closed at the time of invocation will be
+     * persisted to disk. These persisted blocks can be loaded upon startup to recover the buffer.
      *
-     * @return true if the operation was completed (either successfully written or not needed) or false when the
-     * operation could not be carried out (e.g. due to required blocks not being closed)
+     * @see BlockBufferIO
      */
-    private boolean persistBufferIfRequired() {
+    public void persistBuffer() {
         if (!isBufferPersistenceEnabled()) {
-            return true;
+            return;
         }
 
-        final long lastRound = persistUpToRound.get();
-        if (lastRound == -1) {
-            return true; // persistence not requested
-        }
-
-        final List<BlockState> blocksToPersist = new ArrayList<>(blockBuffer.size());
-        final Set<Long> sortedBlockNumbers = new TreeSet<>(blockBuffer.keySet());
-        boolean lastRoundFound = false;
-
-        // iterate through the blocks until we find the block that has the specified round
-        for (final long blockNumber : sortedBlockNumbers) {
-            final BlockState block = blockBuffer.get(blockNumber);
-            if (block == null || block.closedTimestamp() == null) {
-                continue;
-            }
-            final long highestRoundInBlock = block.highestRoundInBlock();
-            if ((highestRoundInBlock == -1 && !lastRoundFound) || (highestRoundInBlock <= lastRound)) {
-                blocksToPersist.add(block);
-            } else if (highestRoundInBlock > lastRound && !lastRoundFound) {
-                lastRoundFound = true;
-                blocksToPersist.add(block);
-            }
-        }
-
-        if (!lastRoundFound) {
-            logger.debug(
-                    "Buffer persistence was requested for up to round {}, however one or more blocks are still required for the round; persistence will be attempted again later",
-                    lastRound);
-            return false;
-        }
+        // collect all closed blocks
+        final List<BlockState> blocksToPersist = blockBuffer.values().stream()
+                .filter(block -> block.closedTimestamp() != null)
+                .toList();
 
         try {
             bufferIO.write(blocksToPersist, highestAckedBlockNumber.get());
         } catch (final RuntimeException | IOException e) {
             logger.error("Failed to write block buffer to disk!", e);
         }
-
-        persistUpToRound.compareAndSet(lastRound, -1); // reset the marker if it was the round we just handled
-        return true;
     }
 
     /**
@@ -882,15 +847,6 @@ public class BlockBufferService {
         @Override
         public void run() {
             try {
-                // persist the buffer (if required) before pruning the buffer
-                if (!persistBufferIfRequired()) {
-                    // we weren't able to persist the buffer so return early to avoid pruning the buffer and potentially
-                    // causing us to prematurely remove blocks from the buffer we meant to persist
-                    logger.info("Unable to persist block buffer to disk; skipping buffer pruning");
-                    return;
-                }
-
-                // If the interval is 0, pruning is disabled, so only do the prune if the interval is NOT 0.
                 if (isPruningEnabled()) {
                     checkBuffer();
                 }

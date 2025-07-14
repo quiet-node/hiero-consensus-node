@@ -102,7 +102,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
             checkBufferMethod.setAccessible(true);
             checkBufferHandle = lookup.unreflect(checkBufferMethod);
 
-            final Method persisBufferMethod = BlockBufferService.class.getDeclaredMethod("persistBufferIfRequired");
+            final Method persisBufferMethod = BlockBufferService.class.getDeclaredMethod("persistBuffer");
             persisBufferMethod.setAccessible(true);
             persistBufferHandle = lookup.unreflect(persisBufferMethod);
         } catch (final Exception e) {
@@ -1221,7 +1221,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
     }
 
     @Test
-    void testPersistBuffer_needToWaitForBlockClose() throws Throwable {
+    void testPersistBuffer() throws Throwable {
         final int batchSize = 7;
         final Configuration config1 = HederaTestConfigBuilder.create()
                 .withConfigDataType(BlockStreamConfig.class)
@@ -1287,16 +1287,27 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
         block4Items.forEach(item -> blockBufferService.addItem(BLOCK_4, item));
         blockBufferService.getBlockState(BLOCK_4).processPendingItems(batchSize);
 
-        // request the buffer be persisted up to round 5
-        blockBufferService.requestBufferPersist(5L);
+        // request the buffer be persisted
+        blockBufferService.persistBuffer();
 
-        // attempt to persist the buffer... this should not happen because the block with the round is not yet closed
-        boolean wasPersisted = (boolean) persistBufferHandle.invoke(blockBufferService);
-        assertThat(wasPersisted).isFalse();
+        // attempt to persist the buffer... this should work for only block 1, 2, and 3 since block 4 is not closed
+        persistBufferHandle.invoke(blockBufferService);
 
-        // verify nothing on disk
+        // verify blocks 1-3 on disk
         try (final Stream<Path> stream = Files.list(testDirFile.toPath())) {
-            assertThat(stream.count()).isZero();
+            final List<Path> subDirs = stream.toList();
+            assertThat(subDirs).hasSize(1);
+            final Path subDir = subDirs.getFirst();
+
+            try (final Stream<Path> subStream = Files.list(subDir)) {
+                final List<Path> files = subStream.toList();
+                assertThat(files).hasSize(3);
+                final Set<String> expectedFileNames =
+                        new HashSet<>(Set.of("block-1.bin", "block-2.bin", "block-3.bin"));
+                final Set<String> actualFileNames =
+                        files.stream().map(Path::toFile).map(File::getName).collect(Collectors.toSet());
+                assertThat(actualFileNames).isEqualTo(expectedFileNames);
+            }
         }
 
         // close block 4
@@ -1310,13 +1321,8 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
         blockBufferService.closeBlock(BLOCK_5);
         blockBufferService.getBlockState(BLOCK_5).processPendingItems(batchSize);
 
-        // attempt to persist the buffer again, this time it should succeed because the block with the require rounds
-        // is now closed
-        wasPersisted = (boolean) persistBufferHandle.invoke(blockBufferService);
-        assertThat(wasPersisted).isTrue();
-
-        // verify block 1, 2, 3, and 4 are on disk. block 5 should not be on disk since it contains events only for
-        // round 6 and 7
+        // attempt to persist the buffer again, this time blocks 1-5 should be persisted since they are all closed
+        persistBufferHandle.invoke(blockBufferService);
         try (final Stream<Path> stream = Files.list(testDirFile.toPath())) {
             final List<Path> subDirs = stream.toList();
             assertThat(subDirs).hasSize(1);
@@ -1324,110 +1330,9 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
 
             try (final Stream<Path> subStream = Files.list(subDir)) {
                 final List<Path> files = subStream.toList();
-                assertThat(files).hasSize(4);
-                final Set<String> expectedFileNames =
-                        new HashSet<>(Set.of("block-1.bin", "block-2.bin", "block-3.bin", "block-4.bin"));
-                final Set<String> actualFileNames =
-                        files.stream().map(Path::toFile).map(File::getName).collect(Collectors.toSet());
-                assertThat(actualFileNames).isEqualTo(expectedFileNames);
-            }
-        }
-    }
-
-    @Test
-    void testPersistBuffer_blockAndRoundBoundary() throws Throwable {
-        /*
-        This test is used to verify that the correct blocks are persisted when the request round spans multiple blocks.
-        In this case, Block 1 with have Round 10 and 11, Block 2 will be for Round 11, and Block 3 will contain the end
-        of Round 11 and start of Round 12.
-
-        When we request up to Round 11 to the persisted, Block 1, 2, and 3 should be written.
-         */
-        final int batchSize = 7;
-        final Configuration config1 = HederaTestConfigBuilder.create()
-                .withConfigDataType(BlockStreamConfig.class)
-                .withConfigDataType(BlockBufferConfig.class)
-                .withValue("blockStream.writerMode", "FILE")
-                .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
-                .withValue("blockStream.buffer.isPruningEnabled", false)
-                .withValue("blockStream.buffer.isBufferPersistenceEnabled", false)
-                .getOrCreateConfig();
-        final Configuration config2 = HederaTestConfigBuilder.create()
-                .withConfigDataType(BlockStreamConfig.class)
-                .withConfigDataType(BlockBufferConfig.class)
-                .withValue("blockStream.writerMode", "GRPC")
-                .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
-                .withValue("blockStream.buffer.blockTtl", Duration.ofSeconds(10))
-                .withValue("blockStream.buffer.isPruningEnabled", true)
-                .withValue("blockStream.buffer.actionStageThreshold", 50.0)
-                .withValue("blockStream.buffer.actionGracePeriod", Duration.ofSeconds(2))
-                .withValue("blockStream.buffer.recoveryThreshold", 100.0)
-                .withValue("blockStream.buffer.isBufferPersistenceEnabled", true)
-                .withValue("blockStream.buffer.bufferDirectory", testDir)
-                .withValue("blockStream.blockItemBatchSize", batchSize)
-                .getOrCreateConfig();
-        when(configProvider.getConfiguration())
-                .thenReturn(new VersionedConfigImpl(config1, 1), new VersionedConfigImpl(config2, 1));
-
-        Files.createDirectories(testDirFile.toPath());
-
-        blockBufferService = new BlockBufferService(configProvider, blockStreamMetrics);
-        blockBufferService.setBlockNodeConnectionManager(connectionManager);
-
-        final AtomicBoolean isStreamingEnabled = isStreamingEnabled(blockBufferService);
-        isStreamingEnabled.set(true);
-
-        // Setup block 1
-        final long BLOCK_1 = 1L;
-        blockBufferService.openBlock(BLOCK_1);
-        final List<BlockItem> block1Items = generateBlockItems(10, BLOCK_1, Set.of(10L, 11L));
-        block1Items.forEach(item -> blockBufferService.addItem(BLOCK_1, item));
-        blockBufferService.closeBlock(BLOCK_1);
-        blockBufferService.getBlockState(BLOCK_1).processPendingItems(batchSize);
-
-        // Setup block 2
-        final long BLOCK_2 = 2L;
-        blockBufferService.openBlock(BLOCK_2);
-        final List<BlockItem> block2Items = generateBlockItems(35, BLOCK_2, Set.of());
-        block2Items.forEach(item -> blockBufferService.addItem(BLOCK_2, item));
-        blockBufferService.closeBlock(BLOCK_2);
-        blockBufferService.getBlockState(BLOCK_2).processPendingItems(batchSize);
-
-        blockBufferService.requestBufferPersist(11L); // submit persistence request up to round 11
-
-        // attempt to write the buffer to disk... should not occur due to missing the Round 12 header which implicitly
-        // signals that all items for Round 11 have been submitted
-        boolean wasPersisted = (boolean) persistBufferHandle.invoke(blockBufferService);
-        assertThat(wasPersisted).isFalse();
-
-        // verify nothing on disk
-        try (final Stream<Path> stream = Files.list(testDirFile.toPath())) {
-            assertThat(stream.count()).isZero();
-        }
-
-        // Setup block 3
-        final long BLOCK_3 = 3L;
-        blockBufferService.openBlock(BLOCK_3);
-        final List<BlockItem> block3Items = generateBlockItems(38, BLOCK_3, Set.of(12L));
-        block3Items.forEach(item -> blockBufferService.addItem(BLOCK_3, item));
-        blockBufferService.closeBlock(BLOCK_3);
-        blockBufferService.getBlockState(BLOCK_3).processPendingItems(batchSize);
-
-        // attempt writing again... this time it should succeed since the next round has been included in a new block
-        wasPersisted = (boolean) persistBufferHandle.invoke(blockBufferService);
-        assertThat(wasPersisted).isTrue();
-
-        // verify Block 1, 2, and 3 written to disk
-        try (final Stream<Path> stream = Files.list(testDirFile.toPath())) {
-            final List<Path> subDirs = stream.toList();
-            assertThat(subDirs).hasSize(1);
-            final Path subDir = subDirs.getFirst();
-
-            try (final Stream<Path> subStream = Files.list(subDir)) {
-                final List<Path> files = subStream.toList();
-                assertThat(files).hasSize(3);
-                final Set<String> expectedFileNames =
-                        new HashSet<>(Set.of("block-1.bin", "block-2.bin", "block-3.bin"));
+                assertThat(files).hasSize(5);
+                final Set<String> expectedFileNames = new HashSet<>(
+                        Set.of("block-1.bin", "block-2.bin", "block-3.bin", "block-4.bin", "block-5.bin"));
                 final Set<String> actualFileNames =
                         files.stream().map(Path::toFile).map(File::getName).collect(Collectors.toSet());
                 assertThat(actualFileNames).isEqualTo(expectedFileNames);
@@ -1463,10 +1368,9 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
         blockBufferService.closeBlock(BLOCK_1);
         blockBufferService.getBlockState(BLOCK_1).processPendingItems(25);
 
-        blockBufferService.requestBufferPersist(10L);
+        blockBufferService.persistBuffer();
 
-        final boolean wasPersisted = (boolean) persistBufferHandle.invoke(blockBufferService);
-        assertThat(wasPersisted).isTrue(); // should have exited "successfully"
+        persistBufferHandle.invoke(blockBufferService);
 
         // verify nothing on disk
         try (final Stream<Path> stream = Files.list(testDirFile.toPath())) {
