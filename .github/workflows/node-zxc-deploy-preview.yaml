@@ -96,12 +96,25 @@ jobs:
       - name: Verify Version Update (As Specified)
         if: ${{ inputs.version-policy == 'specified' && !cancelled() && !failure() }}
         run: |
-          VALID_VERSION="$(semver validate "${{ inputs.new-version }}")"
+          if [[ "$(semver validate "$VERSION" 2>/dev/null || echo "invalid")" == "valid" ]]; then
+            VALID_VERSION="true"
+          fi
+          
+          if [[ "$VERSION" =~ ^build-[0-9]+$ ]]; then
+            VALID_VERSION="true"
+          fi
 
-          if [[ "${VALID_VERSION}" != "valid" ]]; then
+          if [[ "$VALID_VERSION" != "true" ]]; then
             echo "::error title=Version Error::The supplied new-version parameter (${{ inputs.new-version }}) is invalid and does not conform to the semantic versioning specifications."
             exit 2
+          else
+            echo "Input version validated"
           fi
+
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Authenticate to Google Cloud
         uses: step-security/google-github-auth@40f6deebd366f16c782d7a0ad0844e3b96a032a6 # v2.1.10
