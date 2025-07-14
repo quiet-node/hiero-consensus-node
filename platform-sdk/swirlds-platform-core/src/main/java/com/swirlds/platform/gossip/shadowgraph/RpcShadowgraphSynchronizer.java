@@ -67,7 +67,7 @@ public class RpcShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer 
         final SyncConfig syncConfig = platformContext.getConfiguration().getConfigData(SyncConfig.class);
 
         this.selfId = selfId;
-        this.sleepAfterSync = syncConfig.sleepAfterSync();
+        this.sleepAfterSync = syncConfig.rpcSleepAfterSync();
     }
 
     /**

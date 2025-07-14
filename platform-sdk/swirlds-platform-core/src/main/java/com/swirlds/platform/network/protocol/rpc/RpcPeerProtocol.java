@@ -196,8 +196,8 @@ public class RpcPeerProtocol implements PeerProtocol, GossipRpcSender {
         this.time = Objects.requireNonNull(time);
         this.syncMetrics = Objects.requireNonNull(syncMetrics);
         this.maxWaitForConversationFinishMs = syncConfig.maxSyncTime().toMillis();
-        this.idleDispatchPollTimeoutMs = syncConfig.idleDispatchPollTimeout().toMillis();
-        this.idleWritePollTimeoutMs = syncConfig.idleWritePollTimeout().toMillis();
+        this.idleDispatchPollTimeoutMs = syncConfig.rpcIdleDispatchPollTimeout().toMillis();
+        this.idleWritePollTimeoutMs = syncConfig.rpcIdleWritePollTimeout().toMillis();
         this.pingHandler = new RpcPingHandler(time, networkMetrics, remotePeerId, this);
     }
 

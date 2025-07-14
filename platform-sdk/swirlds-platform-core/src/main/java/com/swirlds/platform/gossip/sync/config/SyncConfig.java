@@ -35,14 +35,17 @@ import java.time.Duration;
  * @param minimumHealthyUnrevokedPermitCount the minimum number of permits that must be unrevoked when the system is in
  *                                           a healthy state. If non-zero, this means that this number of permits is
  *                                           immediately returned as soon as the system becomes healthy.
- * @param sleepAfterSync                     time after finishing the sync in which new sync will not be attempted;
+ * @param rpcSleepAfterSync                  time after finishing the sync in which new sync will not be attempted;
  *                                           currently ignored and assumed 0 for old style network sync, used only for
  *                                           rpc sync; current implementation is limited by
- *                                           {@link #idleDispatchPollTimeout} regarding worst-case frequency of
+ *                                           {@link #rpcIdleDispatchPollTimeout} regarding worst-case frequency of
  *                                           synchronizations
- * @param idleWritePollTimeout               how long should gossip rpc mechanism wait between write actions if no
- *                                           events are ready to be sent; pings etc
- * @param idleDispatchPollTimeout            how long should gossip rpc mechanism wait between dispatch actions if no
+ * @param rpcIdleWritePollTimeout            how long should gossip rpc mechanism wait between actions piggybacking on
+ *                                           write threads if no events are ready to be sent; for example, ping logic is
+ *                                           executed there and in case no other writes are performed, this determines
+ *                                           resolution of the ping initiation (ping is still performed roughly once per
+ *                                           second, regardless of this setting)
+ * @param rpcIdleDispatchPollTimeout         how long should gossip rpc mechanism wait between dispatch actions if no
  *                                           events are ready to be processed (for example synchronization start)
  */
 @ConfigData("sync")
@@ -61,6 +64,6 @@ public record SyncConfig(
         @ConfigProperty(defaultValue = "5") double permitsRevokedPerSecond,
         @ConfigProperty(defaultValue = "0.1") double permitsReturnedPerSecond,
         @ConfigProperty(defaultValue = "1") int minimumHealthyUnrevokedPermitCount,
-        @ConfigProperty(defaultValue = "0ms") Duration sleepAfterSync,
-        @ConfigProperty(defaultValue = "5ms") Duration idleWritePollTimeout,
-        @ConfigProperty(defaultValue = "5ms") Duration idleDispatchPollTimeout) {}
+        @ConfigProperty(defaultValue = "0ms") Duration rpcSleepAfterSync,
+        @ConfigProperty(defaultValue = "5ms") Duration rpcIdleWritePollTimeout,
+        @ConfigProperty(defaultValue = "5ms") Duration rpcIdleDispatchPollTimeout) {}
