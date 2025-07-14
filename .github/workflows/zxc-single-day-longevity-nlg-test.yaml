@@ -1054,7 +1054,7 @@ jobs:
                     "type": "header",
                     "text": {
                       "type": "plain_text",
-                      "text": "CITR Network Load Test report",
+                      "text": "CITR Longevity (Network Load Test) report",
                       "emoji": true
                     }
                   },
