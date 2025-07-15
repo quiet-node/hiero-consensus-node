@@ -5,11 +5,12 @@ on:
     inputs:
       test-asset:
         required: true
-        default: "AdHoc5"
+        default: "Longevity3"
         description: "Performance test on given namespace"
         type: choice
         options:
           - Longevity3
+          - Longevity4
       ref:
         required: true
         default: "main"
