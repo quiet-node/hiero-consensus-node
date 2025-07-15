@@ -73,7 +73,7 @@ val prCheckTags =
         "hapiTestTimeConsuming" to "LONG_RUNNING",
         "hapiTestIss" to "ISS",
         "hapiTestMisc" to
-            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING|ISS|BLOCK_NODE_SIMULATOR)",
+            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING|ISS|BLOCK_NODE)",
     )
 val remoteCheckTags =
     prCheckTags
