@@ -2,11 +2,13 @@
 package com.swirlds.demo.iss;
 
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
@@ -46,7 +48,8 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
             logger.info(STARTUP.getMarker(), "Registering ISSTestingToolState with ConstructableRegistry");
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(new ClassConstructorPair(ISSTestingToolState.class, () -> {
-                ISSTestingToolState issTestingToolState = new ISSTestingToolState();
+                ISSTestingToolState issTestingToolState =
+                        new ISSTestingToolState(PlatformContext.create(CONFIGURATION));
                 return issTestingToolState;
             }));
             registerMerkleStateRootClassIds();
@@ -99,8 +102,8 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
      */
     @Override
     @NonNull
-    public ISSTestingToolState newStateRoot() {
-        final ISSTestingToolState state = new ISSTestingToolState();
+    public ISSTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
+        final ISSTestingToolState state = new ISSTestingToolState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
     }
@@ -112,7 +115,8 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
      * </p>
      */
     @Override
-    public Function<VirtualMap, ISSTestingToolState> stateRootFromVirtualMap() {
+    public Function<VirtualMap, ISSTestingToolState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 
