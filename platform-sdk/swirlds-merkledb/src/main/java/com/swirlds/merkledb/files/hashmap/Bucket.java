@@ -484,7 +484,7 @@ public sealed class Bucket implements Closeable permits ParsedBucket {
     }
 
     private boolean keyEquals(final long pos, final int size, final Bytes key) {
-        if (key.length() != size) {
+        if (size != key.length()) {
             return false;
         }
         for (int i = 0; i < size; i++) {
