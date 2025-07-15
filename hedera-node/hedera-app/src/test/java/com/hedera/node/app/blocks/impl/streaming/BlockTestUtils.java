@@ -196,7 +196,6 @@ public class BlockTestUtils {
         final EventDescriptor eventDescriptor = EventDescriptor.newBuilder()
                 .birthRound(1)
                 .creatorNodeId(2)
-                .generation(100)
                 .hash(EVENT_HASH)
                 .build();
         final ParentEventReference parent1 = ParentEventReference.newBuilder()
