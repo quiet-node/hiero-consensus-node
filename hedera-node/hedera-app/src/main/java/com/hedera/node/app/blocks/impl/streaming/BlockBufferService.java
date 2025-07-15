@@ -116,11 +116,6 @@ public class BlockBufferService {
      */
     private boolean awaitingRecovery = false;
     /**
-     * Marker indicating when block persistence is requested up to the specified round. A value of -1 indicates no
-     * outstanding request to write the buffer to disk.
-     */
-    private final AtomicLong persistUpToRound = new AtomicLong(-1);
-    /**
      * Utility for managing reading and writing block buffer to disk.
      */
     private final BlockBufferIO bufferIO;
