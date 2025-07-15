@@ -11,6 +11,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.verify;
 import static org.mockito.Mockito.times;
 
+import com.hedera.hapi.node.base.CurrentAndNextFeeSchedule;
+import com.hedera.hapi.node.base.ServicesConfigurationList;
+import com.hedera.hapi.node.base.Setting;
 import com.hedera.hapi.node.base.TransactionID;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.fees.ExchangeRateManager;
@@ -43,6 +46,7 @@ import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.state.State;
 import com.swirlds.state.lifecycle.EntityIdFactory;
+import com.swirlds.state.lifecycle.StartupNetworks;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.ReadableSingletonState;
 import com.swirlds.state.spi.ReadableStates;
@@ -139,6 +143,12 @@ class SystemTransactionsTest {
     @Mock
     private HederaRecordCache recordCache;
 
+    @Mock
+    private StartupNetworks startupNetworks;
+
+    @Mock
+    private StakePeriodChanges stakePeriodChanges;
+
     @LoggingSubject
     private SystemTransactions subject;
 
@@ -165,7 +175,9 @@ class SystemTransactionsTest {
                 blockRecordManager,
                 blockStreamManager,
                 exchangeRateManager,
-                recordCache);
+                recordCache,
+                startupNetworks,
+                stakePeriodChanges);
     }
 
     @Test

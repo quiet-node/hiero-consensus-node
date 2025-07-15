@@ -110,6 +110,7 @@ import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.transaction.ConsensusTransaction;
 import org.hiero.consensus.model.transaction.ScopedSystemTransaction;
 import org.hiero.consensus.roster.ReadableRosterStoreImpl;
+import org.hiero.consensus.roster.WritableRosterStore;
 
 /**
  * The handle workflow that is responsible for handling the next {@link Round} of transactions.
@@ -159,6 +160,8 @@ public class HandleWorkflow {
     private long lastExecutedSecond;
     private final NodeRewardManager nodeRewardManager;
     private final PlatformStateFacade platformStateFacade;
+    // Flag to indicate whether we have checked for transplant updates after JVM started
+    private boolean checkedForTransplant;
 
     @Inject
     public HandleWorkflow(
@@ -259,6 +262,28 @@ public class HandleWorkflow {
         }
         systemTransactions.resetNextDispatchNonce();
         recordCache.resetRoundReceipts();
+
+        // This is only set if streamMode is BLOCKS or BOTH or once user transactions are handled
+        // Dispatch transplant updates for the nodes in override network
+        if (boundaryStateChangeListener.lastConsensusTime() != null && !checkedForTransplant) {
+            boolean dispatchedTransplantUpdates = false;
+            try {
+                dispatchedTransplantUpdates = systemTransactions.dispatchTransplantUpdates(
+                        state, boundaryStateChangeListener.lastConsensusTimeOrThrow(), round.getRoundNum());
+                transactionsDispatched |= dispatchedTransplantUpdates;
+            } catch (Exception e) {
+                logger.error("Failed to dispatch transplant updates", e);
+            } finally {
+                checkedForTransplant = true;
+                if (dispatchedTransplantUpdates) {
+                    final var writableStates = state.getWritableStates(RosterService.NAME);
+                    final var writableRosterStore = new WritableRosterStore(writableStates);
+                    writableRosterStore.updateTransplantInProgress(false);
+                    ((CommittableWritableStates) writableStates).commit();
+                    logger.info("Transplant in progress is set to false in the roster store");
+                }
+            }
+        }
 
         configureTssCallbacks(state);
         try {
@@ -692,7 +717,7 @@ public class HandleWorkflow {
                 parentTxn.stack().commitTransaction(parentTxn.baseBuilder());
             } else {
                 final var dispatch = parentTxnFactory.createDispatch(parentTxn, exchangeRateManager.exchangeRates());
-                advanceTimeFor(parentTxn, dispatch);
+                stakePeriodChanges.advanceTimeTo(parentTxn, true);
                 logPreDispatch(parentTxn);
                 hollowAccountCompletions.completeHollowAccounts(parentTxn, dispatch);
                 dispatchProcessor.processDispatch(dispatch);
@@ -737,7 +762,7 @@ public class HandleWorkflow {
         final var baseBuilder = baseBuilderFor(executableTxn, scheduledTxn);
         final var dispatch =
                 parentTxnFactory.createDispatch(scheduledTxn, baseBuilder, executableTxn.keyVerifier(), SCHEDULED);
-        advanceTimeFor(scheduledTxn, dispatch);
+        stakePeriodChanges.advanceTimeTo(scheduledTxn, true);
         try {
             dispatchProcessor.processDispatch(dispatch);
             final var handleOutput = scheduledTxn
@@ -753,23 +778,6 @@ public class HandleWorkflow {
             logger.error("{} - exception thrown while handling scheduled transaction", ALERT_MESSAGE, e);
             return HandleOutput.failInvalidStreamItems(
                     scheduledTxn, exchangeRateManager.exchangeRates(), streamMode, recordCache);
-        }
-    }
-
-    /**
-     * Manages time-based side effects for the given user transaction and dispatch.
-     *
-     * @param parentTxn the user transaction to manage time for
-     * @param dispatch the dispatch to manage time for
-     */
-    private void advanceTimeFor(@NonNull final ParentTxn parentTxn, @NonNull final Dispatch dispatch) {
-        // WARNING: The check below relies on the BlockStreamManager's last-handled time not being updated yet,
-        // so we must not call setLastHandleTime() until after them
-        processStakePeriodChanges(parentTxn, dispatch);
-        blockStreamManager.setLastHandleTime(parentTxn.consensusNow());
-        if (streamMode != BLOCKS) {
-            // This updates consTimeOfLastHandledTxn as a side effect
-            blockRecordManager.advanceConsensusClock(parentTxn.consensusNow(), parentTxn.state());
         }
     }
 
@@ -847,29 +855,8 @@ public class HandleWorkflow {
     }
 
     /**
-     * Processes any side effects of crossing a stake period boundary.
-     *
-     * @param parentTxn the user transaction that crossed the boundary
-     * @param dispatch the dispatch for the user transaction that crossed the boundary
-     */
-    private void processStakePeriodChanges(@NonNull final ParentTxn parentTxn, @NonNull final Dispatch dispatch) {
-        try {
-            stakePeriodChanges.process(
-                    dispatch,
-                    parentTxn.stack(),
-                    parentTxn.tokenContextImpl(),
-                    streamMode,
-                    blockStreamManager.lastHandleTime());
-        } catch (final Exception e) {
-            // We don't propagate a failure here to avoid a catastrophic scenario
-            // where we are "stuck" trying to process node stake updates and never
-            // get back to user transactions
-            logger.error("Failed to process stake period changes", e);
-        }
-    }
-
-    /**
      * Configure the TSS callbacks for the given state.
+     *
      * @param state the latest state
      */
     private void configureTssCallbacks(@NonNull final State state) {
