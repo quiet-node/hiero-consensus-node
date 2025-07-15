@@ -17,6 +17,7 @@ import static java.util.Objects.requireNonNull;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
+import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
@@ -182,26 +183,21 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      */
     private boolean startupMode = true;
 
+    private PlatformContext platformContext;
+
     /**
      * Create a new instance. This constructor must be used for all creations of this class.
-     *
      */
-    public MerkleStateRoot() {
+    public MerkleStateRoot(PlatformContext platformContext) {
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
-    }
 
-    public void init(
-            Time time,
-            Configuration configuration,
-            Metrics metrics,
-            MerkleCryptography merkleCryptography,
-            LongSupplier roundSupplier) {
-        this.time = time;
-        this.configuration = configuration;
-        this.metrics = metrics;
-        this.merkleCryptography = merkleCryptography;
-        this.roundSupplier = roundSupplier;
-        snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.platformContext = platformContext;
+
+        this.time = platformContext.getTime();
+        this.configuration = platformContext.getConfiguration();
+        this.metrics = platformContext.getMetrics();
+        this.merkleCryptography = platformContext.getMerkleCryptography();
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
     }
 
     /**
@@ -213,9 +209,14 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         // Copy the Merkle route from the source instance
         super(from);
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
-        this.listeners.addAll(from.listeners);
-        this.roundSupplier = from.roundSupplier;
         this.startupMode = from.startupMode;
+        this.time = from.time;
+        this.configuration = from.configuration;
+        this.metrics = from.metrics;
+        this.merkleCryptography = from.merkleCryptography;
+        this.roundSupplier = from.roundSupplier;
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.listeners.addAll(from.listeners);
 
         // Copy over the metadata
         for (final var entry : from.services.entrySet()) {
@@ -231,6 +232,10 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 setChild(childIndex, childToCopy.copy());
             }
         }
+    }
+
+    public void setRoundSupplier(@NonNull final LongSupplier roundSupplier) {
+        this.roundSupplier = roundSupplier;
     }
 
     public void disableStartupMode() {
@@ -346,14 +351,14 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         throwIfImmutable();
         throwIfDestroyed();
         setImmutable(true);
-        return copyingConstructor();
+        return copyingConstructor(platformContext);
     }
 
     /**
      * Creates a copy of the instance.
      * @return a copy of the instance
      */
-    protected abstract T copyingConstructor();
+    protected abstract T copyingConstructor(PlatformContext platformContext);
 
     /**
      * Puts the defined service state and its associated node into the merkle tree. The precondition
