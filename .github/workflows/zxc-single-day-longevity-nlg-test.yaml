@@ -54,7 +54,7 @@ permissions:
   id-token: write
 
 env:
-  ADHOC_NAMESPACE_PREFIX: solo-mdlt-n
+  NAMESPACE_PREFIX: solo-mdlt-n
   DEFAULT_NAMESPACE: Longevity3
   DEFAULT_HCN_VERSION: main
   TIMEOUT_2W_LIMIT: 20180
@@ -177,7 +177,7 @@ jobs:
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
           n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Longevity(\d+)$/'`
-          echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
+          echo "namespace=${NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
         run: |
@@ -576,7 +576,7 @@ jobs:
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
           n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Longevity(\d+)$/'`
-          echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
+          echo "namespace=${NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
         run: |
@@ -776,7 +776,7 @@ jobs:
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
           n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Longevity(\d+)$/'`
-          echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
+          echo "namespace=${NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
         run: |
