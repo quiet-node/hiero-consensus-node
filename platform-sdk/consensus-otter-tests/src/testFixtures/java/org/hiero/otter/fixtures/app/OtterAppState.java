@@ -19,11 +19,11 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
 
     long state;
 
-    public TurtleAppState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
+    public OtterAppState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
         super(configuration, metrics);
     }
 
-    public TurtleAppState(@NonNull final VirtualMap virtualMap) {
+    public OtterAppState(@NonNull final VirtualMap virtualMap) {
         super(virtualMap);
     }
 
@@ -32,7 +32,7 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
      *
      * @param from the object to copy
      */
-    public TurtleAppState(@NonNull final TurtleAppState from) {
+    public OtterAppState(@NonNull final OtterAppState from) {
         super(from);
         this.state = from.state;
     }
@@ -75,7 +75,7 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
     }
 
     @Override
-    protected TurtleAppState newInstance(@NonNull VirtualMap virtualMap) {
-        return new TurtleAppState(virtualMap);
+    protected OtterAppState newInstance(@NonNull VirtualMap virtualMap) {
+        return new OtterAppState(virtualMap);
     }
 }

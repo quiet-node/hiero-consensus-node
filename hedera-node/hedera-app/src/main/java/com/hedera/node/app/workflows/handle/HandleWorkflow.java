@@ -131,7 +131,6 @@ public class HandleWorkflow {
     private final CacheWarmer cacheWarmer;
     private final OpWorkflowMetrics opWorkflowMetrics;
     private final ThrottleServiceManager throttleServiceManager;
-    private final SemanticVersion version;
     private final InitTrigger initTrigger;
     private final HollowAccountCompletions hollowAccountCompletions;
     private final SystemTransactions systemTransactions;
@@ -203,7 +202,6 @@ public class HandleWorkflow {
         this.cacheWarmer = requireNonNull(cacheWarmer);
         this.opWorkflowMetrics = requireNonNull(opWorkflowMetrics);
         this.throttleServiceManager = requireNonNull(throttleServiceManager);
-        this.version = requireNonNull(version);
         this.initTrigger = requireNonNull(initTrigger);
         this.hollowAccountCompletions = requireNonNull(hollowAccountCompletions);
         this.systemTransactions = requireNonNull(systemTransactions);
@@ -262,14 +260,15 @@ public class HandleWorkflow {
         }
         systemTransactions.resetNextDispatchNonce();
         recordCache.resetRoundReceipts();
+        boolean transactionsDispatched = false;
 
         // This is only set if streamMode is BLOCKS or BOTH or once user transactions are handled
         // Dispatch transplant updates for the nodes in override network
-        if (boundaryStateChangeListener.lastConsensusTime() != null && !checkedForTransplant) {
+        if (!checkedForTransplant) {
             boolean dispatchedTransplantUpdates = false;
             try {
                 dispatchedTransplantUpdates = systemTransactions.dispatchTransplantUpdates(
-                        state, boundaryStateChangeListener.lastConsensusTimeOrThrow(), round.getRoundNum());
+                        state, blockStreamManager.lastExecutionTime(), round.getRoundNum());
                 transactionsDispatched |= dispatchedTransplantUpdates;
             } catch (Exception e) {
                 logger.error("Failed to dispatch transplant updates", e);
@@ -292,14 +291,12 @@ public class HandleWorkflow {
             logger.error("{} trying to reconcile TSS state", ALERT_MESSAGE, e);
         }
         try {
-            boolean transactionsDispatched = handleEvents(state, round, stateSignatureTxnCallback);
+            transactionsDispatched |= handleEvents(state, round, stateSignatureTxnCallback);
             try {
                 // This is only set if streamMode is BLOCKS or BOTH or once user transactions are handled
                 // Dispatch rewards for active nodes after at least one user transaction is handled
-                if (transactionsDispatched) {
-                    nodeRewardManager.maybeRewardActiveNodes(
-                            state, blockStreamManager.lastExecutionTime().plusNanos(1), systemTransactions);
-                }
+                transactionsDispatched |= nodeRewardManager.maybeRewardActiveNodes(
+                        state, blockStreamManager.lastExecutionTime().plusNanos(1), systemTransactions);
             } catch (Exception e) {
                 logger.warn("Failed to reward active nodes", e);
             }

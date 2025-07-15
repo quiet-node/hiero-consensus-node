@@ -118,7 +118,7 @@ public class ConsensusNodeManager {
                 legacySelfId,
                 platformStateFacade,
                 platformContext,
-                TurtleAppState::new);
+                OtterAppState::new);
         final ReservedSignedState initialState = reservedState.state();
 
         final MerkleNodeState state = initialState.get().getState();

@@ -350,7 +350,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
                 legacyNodeId,
                 platformStateFacade,
                 platformContext,
-                TurtleAppState::new);
+                OtterAppState::new);
         final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
@@ -367,7 +367,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
                         eventStreamLoc,
                         rosterHistory,
                         platformStateFacade,
-                        TurtleAppState::new)
+                        OtterAppState::new)
                 .withPlatformContext(platformContext)
                 .withConfiguration(currentConfiguration)
                 .withKeysAndCerts(keysAndCerts)
