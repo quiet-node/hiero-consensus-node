@@ -7,7 +7,7 @@ on:
       test-asset:
         required: true
         default: "Longevity3"
-        description: "Performance test on given AdHoc Machine (Longevity3, 4)"
+        description: "Performance test on given Longevity Machine (Longevity3, 4)"
         type: string
       ref:
         required: true
@@ -573,7 +573,7 @@ jobs:
 
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
-          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
+          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Longevity(\d+)$/'`
           echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
@@ -773,7 +773,7 @@ jobs:
 
           #trim RUN_HCN_VERSION
           echo "RUN_HCN_VERSION=`echo ${{ env.RUN_HCN_VERSION }} | awk '{print $1}'`" >> "${GITHUB_ENV}"
-          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^AdHoc(\d+)$/'`
+          n=`echo "${{ env.run_namespace }}" | perl -ne 'print "$1\n" if /^Longevity(\d+)$/'`
           echo "namespace=${ADHOC_NAMESPACE_PREFIX}${n}" >> "${GITHUB_ENV}"
 
       - name: Print parameters
