@@ -155,13 +155,7 @@ haproxyDeployment:
       operator: "Equal"
       value: "%NETWORK_ID%"
       effect: "NoSchedule"
-  resources:
-    requests:
-      cpu: 2
-      memory: 200Mi
-    limits:
-      cpu: 4
-      memory: 400Mi
+
 envoyDeployment:
   nodeSelector:
     solo.hashgraph.io/role: "auxiliary-services"
@@ -180,13 +174,7 @@ envoyDeployment:
       operator: "Equal"
       value: "%NETWORK_ID%"
       effect: "NoSchedule"
-  resources:
-    requests:
-      cpu: 2
-      memory: 200Mi
-    limits:
-      cpu: 4
-      memory: 400Mi
+
 minio-server:
   tenant:
     pools:
