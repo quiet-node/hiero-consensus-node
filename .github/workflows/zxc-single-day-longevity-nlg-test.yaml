@@ -302,6 +302,8 @@ jobs:
           task init
           task
           task_code=${?}
+          cat "${HOME}"/.solo/logs/solo.log
+
           task solo:node:logs
           if [ ${task_code} -ne 0 ]
           then
