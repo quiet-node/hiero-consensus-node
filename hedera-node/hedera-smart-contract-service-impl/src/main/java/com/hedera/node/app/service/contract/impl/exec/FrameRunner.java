@@ -158,20 +158,12 @@ public class FrameRunner {
     }
 
     private long effectiveGasUsed(final long gasLimit, @NonNull final MessageFrame frame) {
-        final var nominalGasUsed = gasLimit - frame.getRemainingGas();
-
-        // A gas refund limit as defined in EIP-3529
-        final var nominalRefund = frame.getGasRefund();
-        final var maxGasRefunded = nominalGasUsed / gasCalculator.getMaxRefundQuotient();
-        final var actualGasToRefund = Math.min(maxGasRefunded, nominalRefund);
-
-        final var gasUsedAfterRefund = nominalGasUsed - actualGasToRefund;
-
-        // Hedera-specific restriction: the transaction can't use less gas than a certain percentage of gasLimit
-        final var maxRefundPercentOfGasLimit = contractsConfigOf(frame).maxRefundPercentOfGasLimit();
-        final var minimumGasUsed = gasLimit - gasLimit * maxRefundPercentOfGasLimit / 100;
-
-        return Math.max(gasUsedAfterRefund, minimumGasUsed);
+        var nominalUsed = gasLimit - frame.getRemainingGas();
+        final var selfDestructRefund = gasCalculator.getSelfDestructRefundAmount()
+                * Math.min(frame.getSelfDestructs().size(), nominalUsed / gasCalculator.getMaxRefundQuotient());
+        nominalUsed -= (selfDestructRefund + frame.getGasRefund());
+        final var maxRefundPercent = contractsConfigOf(frame).maxRefundPercentOfGasLimit();
+        return Math.max(nominalUsed, gasLimit - gasLimit * maxRefundPercent / 100);
     }
 
     // potentially other cases could be handled here if necessary

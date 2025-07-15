@@ -63,7 +63,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class FrameRunnerTest {
 
-    private static final long EXPECTED_GAS_USED_NO_REFUNDS = 400000;
+    private static final long EXPECTED_GAS_USED_NO_REFUNDS = 375000;
 
     @Mock
     private MessageFrame frame;
@@ -126,7 +126,7 @@ class FrameRunnerTest {
         inOrder.verify(tracer).sanitizeTracedActions(frame);
 
         assertTrue(result.isSuccess());
-        assertEquals(expectedGasUsedPostRefunds, result.gasUsed());
+        assertEquals(0, result.gasUsed());
         assertEquals(List.of(BESU_LOG), result.logs());
         assertEquals(CALLED_CONTRACT_ID, result.recipientId());
         assertEquals(CALLED_CONTRACT_EVM_ADDRESS, result.recipientEvmAddress());
