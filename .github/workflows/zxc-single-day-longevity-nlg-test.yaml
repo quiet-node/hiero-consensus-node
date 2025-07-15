@@ -260,6 +260,11 @@ jobs:
           NETWORK_OWNER="multi-day-longevity-test"
           sed -i -e "s@%NETWORK_OWNER%@${NETWORK_OWNER}@g" init-containers-values7.yaml
 
+          #FIXME: debug
+          cat init-containers-values7.yaml
+          echo "======="
+          cat Taskfile.yml
+          echo "======="
           # Remove application.properties
           rm -f application.properties
           # Generate the application.properties file inline
