@@ -316,7 +316,6 @@ jobs:
           gcloud --no-user-output-enabled storage cp --recursive solo_deploy "${{ env.GS_ROOT_DIR }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}"/solo_deploy
           exit "${task_code}"
 
-
       - name: Move to Github Workspace
         run: cd "${{ github.workspace }}"
 
@@ -347,7 +346,6 @@ jobs:
           NETWORK_ID=`echo "${{ env.namespace }}" | perl -pne '~s/^.*[^\d](\d+)$/$1/g'`
           sed -i -e "s@%NETWORK_ID%@${NETWORK_ID}@g" nlg-values.yaml
           sed -i -e "s@%NETWORK_OWNER%@${NETWORK_OWNER}@g" nlg-values.yaml
-
 
       - name: Deploy NLG test
         run: |
