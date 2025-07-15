@@ -49,10 +49,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
@@ -66,10 +66,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingBufferFull() {
@@ -81,28 +81,28 @@ public class BlockNodeSimulatorSuite {
     @HapiTest
     @HapiBlockNode(
             blockNodeConfigs = {
-                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR),
             },
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0}),
-                    @SubProcessNodeConfig(
-                            nodeId = 1,
-                            blockNodeIds = {1},
-                            blockNodePriorities = {0}),
-                    @SubProcessNodeConfig(
-                            nodeId = 2,
-                            blockNodeIds = {2},
-                            blockNodePriorities = {0}),
-                    @SubProcessNodeConfig(
-                            nodeId = 3,
-                            blockNodeIds = {3},
-                            blockNodePriorities = {0}),
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0}),
+                @SubProcessNodeConfig(
+                        nodeId = 1,
+                        blockNodeIds = {1},
+                        blockNodePriorities = {0}),
+                @SubProcessNodeConfig(
+                        nodeId = 2,
+                        blockNodeIds = {2},
+                        blockNodePriorities = {0}),
+                @SubProcessNodeConfig(
+                        nodeId = 3,
+                        blockNodeIds = {3},
+                        blockNodePriorities = {0}),
             })
     @Order(1)
     final Stream<DynamicTest> allNodesStreamingHappyPath() {
@@ -116,10 +116,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(2)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsCanStreamGenesisBlock() {
@@ -148,16 +148,16 @@ public class BlockNodeSimulatorSuite {
     @HapiBlockNode(
             networkSize = 1,
             blockNodeConfigs = {
-                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR)
+                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 2, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 3, mode = BlockNodeMode.SIMULATOR)
             },
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0, 1, 2, 3},
-                            blockNodePriorities = {0, 1, 2, 3})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0, 1, 2, 3},
+                        blockNodePriorities = {0, 1, 2, 3})
             })
     @Order(3)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickle() {
@@ -255,14 +255,14 @@ public class BlockNodeSimulatorSuite {
             networkSize = 2,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0}),
-                    @SubProcessNodeConfig(
-                            nodeId = 1,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0}),
+                @SubProcessNodeConfig(
+                        nodeId = 1,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(4)
     final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
@@ -275,14 +275,14 @@ public class BlockNodeSimulatorSuite {
     @HapiBlockNode(
             networkSize = 1,
             blockNodeConfigs = {
-                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
+                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
             },
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0, 1},
-                            blockNodePriorities = {0, 1})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0, 1},
+                        blockNodePriorities = {0, 1})
             })
     @Order(5)
     final Stream<DynamicTest> testProactiveBlockBufferAction() {
@@ -318,10 +318,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(6)
     final Stream<DynamicTest> testBlockBufferBackPressure() {
@@ -360,10 +360,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(7)
     final Stream<DynamicTest> testBlockBufferDurability() {
