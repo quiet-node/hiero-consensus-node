@@ -20,7 +20,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.PublishStreamRequest;
@@ -110,7 +109,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     /**
      * Reference to the current state of this connection.
      */
-    private final AtomicReference<ConnectionState> connectionState;
+    private ConnectionState connectionState;
 
     private final Object connectionStateLock = new Object();
     /**
@@ -178,7 +177,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         this.blockBufferService = requireNonNull(blockBufferService, "blockBufferService must not be null");
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
-        this.connectionState = new AtomicReference<>(ConnectionState.UNINITIALIZED);
+        this.connectionState = ConnectionState.UNINITIALIZED;
         this.grpcEndpoint = requireNonNull(grpcEndpoint, "grpcEndpoint must not be null");
         this.executorService = requireNonNull(executorService, "executorService must not be null");
 
@@ -208,8 +207,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
         synchronized (connectionStateLock) {
-            final ConnectionState oldState = connectionState.getAndSet(newState);
-            logger.debug("[{}] Connection state transitioned from {} to {}", this, oldState, newState);
+            logger.debug("[{}] Connection state transitioned from {} to {}", this, connectionState, newState);
+            connectionState = newState;
 
             if (newState == ConnectionState.ACTIVE) {
                 scheduleStreamReset();
@@ -238,7 +237,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void performStreamReset() {
         synchronized (connectionStateLock) {
-            if (connectionState.get() == ConnectionState.ACTIVE) {
+            if (getConnectionState() == ConnectionState.ACTIVE) {
                 logger.debug("[{}] Performing scheduled stream reset", this);
                 endTheStreamWith(EndStream.Code.RESET);
                 blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
@@ -514,7 +513,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request, "request must not be null");
         synchronized (connectionStateLock) {
-            if (connectionState.get() == ConnectionState.ACTIVE && blockNodeStreamObserver != null) {
+            if (getConnectionState() == ConnectionState.ACTIVE && blockNodeStreamObserver != null) {
                 blockNodeStreamObserver.onNext(request);
             }
         }
@@ -650,12 +649,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * @return the connection state
      */
     public ConnectionState getConnectionState() {
-        return connectionState.get();
+        synchronized (connectionStateLock) {
+            return connectionState;
+        }
     }
 
     @Override
     public String toString() {
-        return blockNodeConfig.address() + ":" + blockNodeConfig.port() + "/" + connectionState.get();
+        return blockNodeConfig.address() + ":" + blockNodeConfig.port() + "/" + getConnectionState();
     }
 
     @Override
