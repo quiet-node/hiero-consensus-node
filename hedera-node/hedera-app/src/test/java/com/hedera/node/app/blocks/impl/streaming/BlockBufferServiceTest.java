@@ -171,8 +171,8 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 () -> assertThat(blockBufferService.getBlockState(TEST_BLOCK_NUMBER))
                         .isNotNull(),
                 () -> assertThat(blockBufferService
-                                .getBlockState(TEST_BLOCK_NUMBER)
-                                .blockNumber())
+                        .getBlockState(TEST_BLOCK_NUMBER)
+                        .blockNumber())
                         .isEqualTo(TEST_BLOCK_NUMBER),
                 () -> assertThat(blockBufferService.getEarliestAvailableBlockNumber())
                         .isEqualTo(TEST_BLOCK_NUMBER));
@@ -231,12 +231,12 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 () -> assertThat(blockBufferService.getBlockState(TEST_BLOCK_NUMBER2))
                         .isNotNull(),
                 () -> assertThat(blockBufferService
-                                .getBlockState(TEST_BLOCK_NUMBER)
-                                .blockNumber())
+                        .getBlockState(TEST_BLOCK_NUMBER)
+                        .blockNumber())
                         .isEqualTo(TEST_BLOCK_NUMBER),
                 () -> assertThat(blockBufferService
-                                .getBlockState(TEST_BLOCK_NUMBER2)
-                                .blockNumber())
+                        .getBlockState(TEST_BLOCK_NUMBER2)
+                        .blockNumber())
                         .isEqualTo(TEST_BLOCK_NUMBER2),
                 () -> assertThat(blockBufferService.getEarliestAvailableBlockNumber())
                         .isEqualTo(TEST_BLOCK_NUMBER));
@@ -343,7 +343,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
 
         // when and then
         assertThatThrownBy(() -> blockBufferService.addItem(
-                        TEST_BLOCK_NUMBER, BlockItem.newBuilder().build()))
+                TEST_BLOCK_NUMBER, BlockItem.newBuilder().build()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Block state not found for block " + TEST_BLOCK_NUMBER);
     }
