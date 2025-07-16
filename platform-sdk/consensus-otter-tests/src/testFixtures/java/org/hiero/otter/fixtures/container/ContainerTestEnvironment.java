@@ -15,7 +15,7 @@ import org.hiero.otter.fixtures.internal.RegularTimeManager;
  */
 public class ContainerTestEnvironment implements TestEnvironment {
 
-    public static final Set<Capability> CAPABILITIES = Set.of(Capability.RECONNECT);
+    public static final Set<Capability> CAPABILITIES = Set.of(Capability.RECONNECT, Capability.BACK_PRESSURE);
 
     private final ContainerNetwork network;
     private final RegularTimeManager timeManager = new RegularTimeManager();
