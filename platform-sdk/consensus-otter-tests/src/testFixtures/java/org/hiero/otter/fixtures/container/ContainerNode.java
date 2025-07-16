@@ -19,6 +19,9 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -221,7 +224,14 @@ public class ContainerNode extends AbstractNode implements Node {
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
     // ignoring the Empty answer from destroyContainer
-    void destroy() {
+    void destroy() throws IOException {
+        final Path logPath = Path.of("build", "container", "node-" + selfId.id());
+        Files.createDirectories(logPath);
+        Files.deleteIfExists(logPath.resolve("swirlds.log"));
+        container.copyFileFromContainer("logs/swirlds.log", logPath + "/swirlds.log");
+        Files.deleteIfExists(logPath.resolve("swirlds-hashstream.log"));
+        container.copyFileFromContainer("logs/swirlds-hashstream.log", logPath + "/swirlds-hashstream.log");
+
         if (lifeCycle == RUNNING) {
             log.info("Destroying container of node {}...", selfId);
             channel.shutdownNow();

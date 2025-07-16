@@ -2,6 +2,7 @@
 package org.hiero.otter.fixtures.container;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.io.IOException;
 import java.util.Set;
 import org.hiero.otter.fixtures.Capability;
 import org.hiero.otter.fixtures.Network;
@@ -59,7 +60,7 @@ public class ContainerTestEnvironment implements TestEnvironment {
      * {@inheritDoc}
      */
     @Override
-    public void destroy() throws InterruptedException {
+    public void destroy() throws InterruptedException, IOException {
         network.destroy();
     }
 }
