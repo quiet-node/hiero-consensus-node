@@ -11,24 +11,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.model.status.PlatformStatus;
+import org.hiero.otter.fixtures.AbstractTransactionGenerator;
 import org.hiero.otter.fixtures.Node;
-import org.hiero.otter.fixtures.TransactionFactory;
 import org.hiero.otter.fixtures.TransactionGenerator;
 
 /**
  * A {@link TransactionGenerator} for the container environment.
  * This class is a placeholder and does not implement any functionality yet.
  */
-public class ContainerTransactionGenerator implements TransactionGenerator {
+public class ContainerTransactionGenerator extends AbstractTransactionGenerator {
 
     private static final Logger log = LogManager.getLogger();
 
     /** Duration between two transaction submissions to a single node. */
     private static final Duration CYCLE_DURATION = Duration.ofSeconds(1).dividedBy(TPS);
-
-    /** Random instance */
-    private final Random random = new Random();
 
     /** Supplies the current list of nodes to which transactions should be sent. */
     private Supplier<List<Node>> nodesSupplier = List::of;
@@ -53,6 +49,7 @@ public class ContainerTransactionGenerator implements TransactionGenerator {
      * @param scheduler the scheduler to use for running the generation task
      */
     public ContainerTransactionGenerator(final ScheduledExecutorService scheduler) {
+        super(new Random());
         this.scheduler = scheduler;
     }
 
@@ -100,20 +97,11 @@ public class ContainerTransactionGenerator implements TransactionGenerator {
 
         final List<Node> nodes = nodesSupplier.get();
 
-        if (nodes == null || nodes.isEmpty()) {
+        if (nodes == null) {
+            log.warn("Node supplier returned null");
             return;
         }
 
-        for (final Node node : nodes) {
-            if (node.platformStatus() == PlatformStatus.ACTIVE) {
-                final byte[] transaction = TransactionFactory.createEmptyTransaction(random.nextInt())
-                        .toByteArray();
-                try {
-                    node.submitTransaction(transaction);
-                } catch (final Exception e) {
-                    log.debug("Unable to submit transaction to node {}", node.selfId(), e);
-                }
-            }
-        }
+        submitRandomTransactions(nodes);
     }
 }

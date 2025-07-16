@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.fixtures.turtle;
 
-import static java.util.Objects.requireNonNull;
-
 import com.swirlds.common.test.fixtures.Randotron;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import org.hiero.consensus.model.status.PlatformStatus;
-import org.hiero.otter.fixtures.TransactionFactory;
+import org.hiero.otter.fixtures.AbstractTransactionGenerator;
 import org.hiero.otter.fixtures.TransactionGenerator;
 
 /**
@@ -19,11 +16,9 @@ import org.hiero.otter.fixtures.TransactionGenerator;
  * <p>This class implements the {@link TransactionGenerator} interface and generates transactions at a fixed rate
  * to be submitted to the active nodes in the Turtle network.
  */
-public class TurtleTransactionGenerator implements TransactionGenerator {
+public class TurtleTransactionGenerator extends AbstractTransactionGenerator {
 
     private static final Duration CYCLE_DURATION = Duration.ofSeconds(1).dividedBy(TransactionGenerator.TPS);
-
-    private final Randotron randotron;
 
     @Nullable
     private Instant startTime;
@@ -39,7 +34,7 @@ public class TurtleTransactionGenerator implements TransactionGenerator {
      * @param randotron the random number generator
      */
     public TurtleTransactionGenerator(@NonNull final Randotron randotron) {
-        this.randotron = requireNonNull(randotron);
+        super(randotron);
     }
 
     /**
@@ -78,16 +73,9 @@ public class TurtleTransactionGenerator implements TransactionGenerator {
             final long previousCount =
                     Duration.between(startTime, lastTimestamp).dividedBy(CYCLE_DURATION);
             final long currentCount = Duration.between(startTime, now).dividedBy(CYCLE_DURATION);
-            final List<TurtleNode> activeNodes = nodes.stream()
-                    .filter(node -> node.platformStatus() == PlatformStatus.ACTIVE)
-                    .toList();
+
             for (long i = previousCount; i < currentCount; i++) {
-                for (final TurtleNode node : activeNodes) {
-                    // Generate a random transaction and submit it to the node.
-                    final byte[] transaction = TransactionFactory.createEmptyTransaction(randotron.nextInt())
-                            .toByteArray();
-                    node.submitTransaction(transaction);
-                }
+                submitRandomTransactions(nodes);
             }
         }
 
