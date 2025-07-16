@@ -27,6 +27,7 @@ public class BlockNodeOp extends UtilOp {
     private final long blockNumber;
     private final AtomicLong lastVerifiedBlockNumber;
     private final Consumer<Long> lastVerifiedBlockConsumer;
+    private final boolean sendBlockAcknowledgementsEnabled;
 
     private BlockNodeOp(
             final long nodeIndex,
@@ -34,13 +35,15 @@ public class BlockNodeOp extends UtilOp {
             final EndOfStream.Code responseCode,
             final long blockNumber,
             final AtomicLong lastVerifiedBlockNumber,
-            final Consumer<Long> lastVerifiedBlockConsumer) {
+            final Consumer<Long> lastVerifiedBlockConsumer,
+            final boolean sendBlockAcknowledgementsEnabled) {
         this.nodeIndex = nodeIndex;
         this.action = action;
         this.responseCode = responseCode;
         this.blockNumber = blockNumber;
         this.lastVerifiedBlockNumber = lastVerifiedBlockNumber;
         this.lastVerifiedBlockConsumer = lastVerifiedBlockConsumer;
+        this.sendBlockAcknowledgementsEnabled = sendBlockAcknowledgementsEnabled;
     }
 
     @Override
@@ -159,6 +162,13 @@ public class BlockNodeOp extends UtilOp {
                 verifiedBlock = controller.getLastVerifiedBlockNumber(nodeIndex);
                 log.info("Retrieved last verified block number {} from simulator {}", verifiedBlock, nodeIndex);
                 break;
+            case UPDATE_SENDING_BLOCK_ACKS:
+                log.info(
+                        "[node {}] Update sending block acknowledgements to: {}",
+                        nodeIndex,
+                        sendBlockAcknowledgementsEnabled);
+                controller.setSendBlockAcknowledgementsEnabled(nodeIndex, sendBlockAcknowledgementsEnabled);
+                break;
             default:
                 throw new IllegalStateException("Action: " + action + " is not supported for block node simulators");
         }
@@ -245,7 +255,9 @@ public class BlockNodeOp extends UtilOp {
         /** Assert that a specific block has been received */
         ASSERT_BLOCK_RECEIVED,
         /** Get the last verified block number */
-        GET_LAST_VERIFIED_BLOCK
+        GET_LAST_VERIFIED_BLOCK,
+        /** Whether or not to send block acknowledgements */
+        UPDATE_SENDING_BLOCK_ACKS
     }
 
     /**
@@ -342,6 +354,18 @@ public class BlockNodeOp extends UtilOp {
     }
 
     /**
+     * Creates a builder that allows for updating whether block acknowledgements will be sent by the block node simulator.
+     *
+     * @param nodeIndex the index of the block node simulator to update (0-based)
+     * @param sendBlockAcknowledgementsEnabled true if block acknowledgements will be sent, otherwise they will not
+     * @return the builder
+     */
+    public static UpdateSendingBlockAcknowledgementsBuilder updateSendingBlockAcknowledgements(
+            final long nodeIndex, final boolean sendBlockAcknowledgementsEnabled) {
+        return new UpdateSendingBlockAcknowledgementsBuilder(nodeIndex, sendBlockAcknowledgementsEnabled);
+    }
+
+    /**
      * Builder for sending an immediate EndOfStream response to a block node simulator.
      * This builder also implements UtilOp so it can be used directly in HapiSpec without calling build().
      */
@@ -402,7 +426,8 @@ public class BlockNodeOp extends UtilOp {
                     responseCode,
                     blockNumber,
                     lastVerifiedBlockNumber,
-                    lastVerifiedBlockConsumer);
+                    lastVerifiedBlockConsumer,
+                    true);
         }
 
         @Override
@@ -431,7 +456,13 @@ public class BlockNodeOp extends UtilOp {
          */
         public BlockNodeOp build() {
             return new BlockNodeOp(
-                    nodeIndex, BlockNodeAction.SEND_SKIP_BLOCK_IMMEDIATELY, null, blockNumber, null, null);
+                    nodeIndex,
+                    BlockNodeAction.SEND_SKIP_BLOCK_IMMEDIATELY,
+                    null,
+                    blockNumber,
+                    null,
+                    null,
+                    true);
         }
 
         @Override
@@ -460,7 +491,13 @@ public class BlockNodeOp extends UtilOp {
          */
         public BlockNodeOp build() {
             return new BlockNodeOp(
-                    nodeIndex, BlockNodeAction.SEND_RESEND_BLOCK_IMMEDIATELY, null, blockNumber, null, null);
+                    nodeIndex,
+                    BlockNodeAction.SEND_RESEND_BLOCK_IMMEDIATELY,
+                    null,
+                    blockNumber,
+                    null,
+                    null,
+                    true);
         }
 
         @Override
@@ -482,7 +519,8 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(nodeIndex, BlockNodeAction.SHUTDOWN, null, 0, null, null);
+            return new BlockNodeOp(
+                    nodeIndex, BlockNodeAction.SHUTDOWN, null, 0, null, null, true);
         }
 
         @Override
@@ -498,7 +536,8 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(0, BlockNodeAction.SHUTDOWN_ALL, null, 0, null, null);
+            return new BlockNodeOp(
+                    0, BlockNodeAction.SHUTDOWN_ALL, null, 0, null, null, true);
         }
 
         @Override
@@ -520,7 +559,8 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(nodeIndex, BlockNodeAction.START, null, 0, null, null);
+            return new BlockNodeOp(
+                    nodeIndex, BlockNodeAction.START, null, 0, null, null, true);
         }
 
         @Override
@@ -536,7 +576,8 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(0, BlockNodeAction.START_ALL, null, 0, null, null);
+            return new BlockNodeOp(
+                    0, BlockNodeAction.START_ALL, null, 0, null, null, true);
         }
 
         @Override
@@ -560,7 +601,35 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(nodeIndex, BlockNodeAction.ASSERT_BLOCK_RECEIVED, null, blockNumber, null, null);
+            return new BlockNodeOp(
+                    nodeIndex, BlockNodeAction.ASSERT_BLOCK_RECEIVED, null, blockNumber, null, null, true);
+        }
+
+        @Override
+        protected boolean submitOp(final HapiSpec spec) throws Throwable {
+            return build().submitOp(spec);
+        }
+    }
+
+    public static class UpdateSendingBlockAcknowledgementsBuilder extends UtilOp {
+        private final long nodeIndex;
+        private final boolean sendBlockAcknowledgementsEnabled;
+
+        private UpdateSendingBlockAcknowledgementsBuilder(
+                final long nodeIndex, final boolean sendBlockAcknowledgementsEnabled) {
+            this.nodeIndex = nodeIndex;
+            this.sendBlockAcknowledgementsEnabled = sendBlockAcknowledgementsEnabled;
+        }
+
+        public BlockNodeOp build() {
+            return new BlockNodeOp(
+                    nodeIndex,
+                    BlockNodeAction.UPDATE_SENDING_BLOCK_ACKS,
+                    null,
+                    0,
+                    null,
+                    null,
+                    sendBlockAcknowledgementsEnabled);
         }
 
         @Override
@@ -613,7 +682,8 @@ public class BlockNodeOp extends UtilOp {
                     null,
                     0,
                     lastVerifiedBlockNumber,
-                    lastVerifiedBlockConsumer);
+                    lastVerifiedBlockConsumer,
+                    true);
         }
 
         @Override
