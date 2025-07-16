@@ -20,7 +20,7 @@ import org.hiero.base.crypto.Hash;
 import org.hiero.base.io.streams.SerializableDataOutputStream;
 
 /**
- * Utility class that provides access to virtual records. Recently access virtual records
+ * Utility class that provides access to virtual records. Recently updated virtual records
  * are in virtual node cache, others are on disk (in the data source). This class provides
  * a layer on top of the cache and the data source. Every request is first sent to the
  * cache. If the cache doesn't contain the requested record, it is looked up in the data
