@@ -456,13 +456,7 @@ public class BlockNodeOp extends UtilOp {
          */
         public BlockNodeOp build() {
             return new BlockNodeOp(
-                    nodeIndex,
-                    BlockNodeAction.SEND_SKIP_BLOCK_IMMEDIATELY,
-                    null,
-                    blockNumber,
-                    null,
-                    null,
-                    true);
+                    nodeIndex, BlockNodeAction.SEND_SKIP_BLOCK_IMMEDIATELY, null, blockNumber, null, null, true);
         }
 
         @Override
@@ -491,13 +485,7 @@ public class BlockNodeOp extends UtilOp {
          */
         public BlockNodeOp build() {
             return new BlockNodeOp(
-                    nodeIndex,
-                    BlockNodeAction.SEND_RESEND_BLOCK_IMMEDIATELY,
-                    null,
-                    blockNumber,
-                    null,
-                    null,
-                    true);
+                    nodeIndex, BlockNodeAction.SEND_RESEND_BLOCK_IMMEDIATELY, null, blockNumber, null, null, true);
         }
 
         @Override
@@ -519,8 +507,7 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(
-                    nodeIndex, BlockNodeAction.SHUTDOWN, null, 0, null, null, true);
+            return new BlockNodeOp(nodeIndex, BlockNodeAction.SHUTDOWN, null, 0, null, null, true);
         }
 
         @Override
@@ -536,8 +523,7 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(
-                    0, BlockNodeAction.SHUTDOWN_ALL, null, 0, null, null, true);
+            return new BlockNodeOp(0, BlockNodeAction.SHUTDOWN_ALL, null, 0, null, null, true);
         }
 
         @Override
@@ -559,8 +545,7 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(
-                    nodeIndex, BlockNodeAction.START, null, 0, null, null, true);
+            return new BlockNodeOp(nodeIndex, BlockNodeAction.START, null, 0, null, null, true);
         }
 
         @Override
@@ -576,8 +561,7 @@ public class BlockNodeOp extends UtilOp {
          * @return the operation
          */
         public BlockNodeOp build() {
-            return new BlockNodeOp(
-                    0, BlockNodeAction.START_ALL, null, 0, null, null, true);
+            return new BlockNodeOp(0, BlockNodeAction.START_ALL, null, 0, null, null, true);
         }
 
         @Override

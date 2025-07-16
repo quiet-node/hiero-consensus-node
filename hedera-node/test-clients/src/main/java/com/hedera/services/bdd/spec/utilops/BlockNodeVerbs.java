@@ -176,8 +176,8 @@ public class BlockNodeVerbs {
          * @param sendBlockAcknowledgementsEnabled true if acknowledgements should be sent, else they will not be sent
          * @return the operation
          */
-        public BlockNodeSimulatorOp updateSendingBlockAcknowledgements(final boolean sendBlockAcknowledgementsEnabled) {
-            return BlockNodeSimulatorOp.updateSendingBlockAcknowledgements(nodeIndex, sendBlockAcknowledgementsEnabled)
+        public BlockNodeOp updateSendingBlockAcknowledgements(final boolean sendBlockAcknowledgementsEnabled) {
+            return BlockNodeOp.updateSendingBlockAcknowledgements(nodeIndex, sendBlockAcknowledgementsEnabled)
                     .build();
         }
     }

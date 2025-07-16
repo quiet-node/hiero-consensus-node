@@ -290,7 +290,7 @@ public class BlockNodeSuite {
         return hapiTest(
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> timeRef.set(Instant.now())),
-                blockNodeSimulator(0).updateSendingBlockAcknowledgements(false),
+                blockNode(0).updateSendingBlockAcknowledgements(false),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 sourcingContextual(
                         spec -> assertHgcaaLogContainsTimeframe(
@@ -329,7 +329,7 @@ public class BlockNodeSuite {
         return hapiTest(
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> timeRef.set(Instant.now())),
-                blockNodeSimulator(0).shutDownImmediately(),
+                blockNode(0).shutDownImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         timeRef::get,
@@ -342,7 +342,7 @@ public class BlockNodeSuite {
                     LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
                 }),
                 waitForAny(byNodeId(0), Duration.ofSeconds(30), PlatformStatus.CHECKING),
-                blockNodeSimulator(0).startImmediately(),
+                blockNode(0).startImmediately(),
                 sourcingContextual(
                         spec -> assertHgcaaLogContainsTimeframe(
                                 byNodeId(0),
