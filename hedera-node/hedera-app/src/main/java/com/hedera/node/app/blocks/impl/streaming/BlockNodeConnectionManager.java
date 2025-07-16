@@ -44,6 +44,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -153,6 +154,8 @@ public class BlockNodeConnectionManager {
      * Flag that indicates if streaming to block nodes is enabled. This flag is set once upon startup and cannot change.
      */
     private final AtomicBoolean isStreamingEnabled = new AtomicBoolean(false);
+
+    private final ReentrantReadWriteLock connectionStateLock = new ReentrantReadWriteLock();
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -342,7 +345,13 @@ public class BlockNodeConnectionManager {
         logger.info("[{}] Scheduling reconnection for node at block {} in {} ms", connection, blockNumber, delayMillis);
 
         activeConnectionRef.compareAndSet(connection, null); // if this was the active connection, remove it
-        connection.updateConnectionState(ConnectionState.CONNECTING);
+
+        connectionStateLock.writeLock().lock();
+        try {
+            connection.updateConnectionState(ConnectionState.CONNECTING);
+        } finally {
+            connectionStateLock.writeLock().unlock();
+        }
 
         // Schedule the first attempt using the connectionExecutor
         try {
@@ -485,21 +494,25 @@ public class BlockNodeConnectionManager {
      * @return a node that is a candidate to connect to, or null if no candidate was found
      */
     private @Nullable BlockNodeConfig findAvailableNode(@NonNull final List<BlockNodeConfig> nodes) {
-        requireNonNull(nodes);
-
-        return nodes.stream()
-                .filter(nodeConfig -> {
-                    // We only want connections that are uninitialized
-                    final BlockNodeConnection connection = connections.get(nodeConfig);
-                    return connection == null || ConnectionState.UNINITIALIZED == connection.getConnectionState();
-                })
-                .collect(collectingAndThen(toList(), collected -> {
-                    // Randomize the available nodes
-                    shuffle(collected);
-                    return collected.stream();
-                }))
-                .findFirst() // select a node
-                .orElse(null);
+        requireNonNull(nodes, "nodes must not be null");
+        connectionStateLock.readLock().lock();
+        try {
+            return nodes.stream()
+                    .filter(nodeConfig -> {
+                        // We only want connections that are uninitialized
+                        final BlockNodeConnection connection = connections.get(nodeConfig);
+                        return connection == null || ConnectionState.UNINITIALIZED == connection.getConnectionState();
+                    })
+                    .collect(collectingAndThen(toList(), collected -> {
+                        // Randomize the available nodes
+                        shuffle(collected);
+                        return collected.stream();
+                    }))
+                    .findFirst() // select a node
+                    .orElse(null);
+        } finally {
+            connectionStateLock.readLock().unlock();
+        }
     }
 
     /**
@@ -777,7 +790,13 @@ public class BlockNodeConnectionManager {
 
                 if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
                     // we were able to elevate this connection to the new active one
-                    connection.updateConnectionState(ConnectionState.ACTIVE);
+                    connectionStateLock.writeLock().lock();
+                    try {
+                        connection.updateConnectionState(ConnectionState.ACTIVE);
+                    } finally {
+                        connectionStateLock.writeLock().unlock();
+                    }
+
                     final long blockToJumpTo =
                             blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
                     jumpTargetBlock.set(blockToJumpTo);
