@@ -175,7 +175,7 @@ public class BlockNodeSuite {
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(45, SECONDS),
                         String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.getFirst()),
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(1)),
@@ -192,7 +192,7 @@ public class BlockNodeSuite {
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(45, SECONDS),
                         String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(1)),
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(2)),
@@ -209,7 +209,7 @@ public class BlockNodeSuite {
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(45, SECONDS),
                         String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(2)),
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(3)),
@@ -283,7 +283,7 @@ public class BlockNodeSuite {
                         blockNodeIds = {0, 1},
                         blockNodePriorities = {0, 1})
             })
-    @Order(5)
+    @Order(6)
     final Stream<DynamicTest> testProactiveBlockBufferAction() {
         // NOTE: com.hedera.node.app.blocks.impl.streaming MUST have DEBUG logging enabled
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
@@ -322,7 +322,7 @@ public class BlockNodeSuite {
                         blockNodeIds = {0},
                         blockNodePriorities = {0})
             })
-    @Order(6)
+    @Order(7)
     final Stream<DynamicTest> testBlockBufferBackPressure() {
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
 

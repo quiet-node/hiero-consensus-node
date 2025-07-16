@@ -8,7 +8,7 @@ import static com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork.
 import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.node.internal.network.BlockNodeConnectionInfo;
 import com.hedera.services.bdd.junit.hedera.containers.BlockNodeContainer;
-import com.hedera.services.bdd.junit.hedera.simulator.BlockNodeSimulatorController;
+import com.hedera.services.bdd.junit.hedera.simulator.BlockNodeController;
 import com.hedera.services.bdd.junit.hedera.simulator.SimulatedBlockNodeServer;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,8 +34,6 @@ public class BlockNodeNetwork {
     private final Map<Long, BlockNodeMode> blockNodeModeById = new HashMap<>();
     private final Map<Long, SimulatedBlockNodeServer> simulatedBlockNodeById = new HashMap<>();
     private final Map<Long, BlockNodeContainer> blockNodeContainerById = new HashMap<>();
-    // Add map to track shutdown container ports
-    private final Map<Long, Integer> shutdownContainerPorts = new HashMap<>();
 
     // SubProcessNode configuration for Block Nodes (just priorities for now)
     private final Map<Long, long[]> blockNodePrioritiesBySubProcessNodeId = new HashMap<>();
@@ -43,11 +41,11 @@ public class BlockNodeNetwork {
 
     public static final int BLOCK_NODE_LOCAL_PORT = 8080;
 
-    private BlockNodeSimulatorController blockNodeSimulatorController;
+    private final BlockNodeController blockNodeController;
 
     public BlockNodeNetwork() {
         // Initialize the Block Node Simulator Controller
-        this.blockNodeSimulatorController = new BlockNodeSimulatorController(this);
+        this.blockNodeController = new BlockNodeController(this);
     }
 
     public void start() {
@@ -237,10 +235,6 @@ public class BlockNodeNetwork {
         return blockNodeContainerById;
     }
 
-    public Map<Long, Integer> getShutdownContainerPorts() {
-        return shutdownContainerPorts;
-    }
-
     public Map<Long, long[]> getBlockNodePrioritiesBySubProcessNodeId() {
         return blockNodePrioritiesBySubProcessNodeId;
     }
@@ -249,7 +243,7 @@ public class BlockNodeNetwork {
         return blockNodeIdsBySubProcessNodeId;
     }
 
-    public BlockNodeSimulatorController getBlockNodeSimulatorController() {
-        return blockNodeSimulatorController;
+    public BlockNodeController getBlockNodeController() {
+        return blockNodeController;
     }
 }

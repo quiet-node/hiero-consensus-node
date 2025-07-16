@@ -2,8 +2,7 @@
 package com.hedera.services.bdd.spec.utilops;
 
 import com.hedera.services.bdd.junit.hedera.BlockNodeMode;
-import com.hedera.services.bdd.junit.hedera.containers.BlockNodeContainer;
-import com.hedera.services.bdd.junit.hedera.simulator.BlockNodeSimulatorController;
+import com.hedera.services.bdd.junit.hedera.simulator.BlockNodeController;
 import com.hedera.services.bdd.spec.HapiSpec;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -63,8 +62,8 @@ public class BlockNodeOp extends UtilOp {
     }
 
     private boolean submitSimulatorOp() {
-        final BlockNodeSimulatorController controller =
-                HapiSpec.TARGET_BLOCK_NODE_NETWORK.get().getBlockNodeSimulatorController();
+        final BlockNodeController controller =
+                HapiSpec.TARGET_BLOCK_NODE_NETWORK.get().getBlockNodeController();
         long verifiedBlock = 0;
 
         switch (action) {
@@ -115,7 +114,7 @@ public class BlockNodeOp extends UtilOp {
                 log.info("Shutdown simulator {}", nodeIndex);
                 break;
             case START:
-                if (!controller.isSimulatorShutdown(nodeIndex)) {
+                if (!controller.isBlockNodeShutdown(nodeIndex)) {
                     log.error("Cannot start simulator {} because it has not been shut down", nodeIndex);
                     return false;
                 }
@@ -132,7 +131,7 @@ public class BlockNodeOp extends UtilOp {
                 log.info("Shutdown all simulators to simulate connection drops");
                 break;
             case START_ALL:
-                if (!controller.areAnySimulatorsShutdown()) {
+                if (!controller.areAnyBlockNodesBeenShutdown()) {
                     log.error("Cannot start simulators because none have been shut down");
                     return false;
                 }
@@ -184,41 +183,19 @@ public class BlockNodeOp extends UtilOp {
     }
 
     private boolean submitContainerOp() {
-        final var blockNodeContainerMap =
-                HapiSpec.TARGET_BLOCK_NODE_NETWORK.get().getBlockNodeContainerById();
-        final var shutdownContainerPorts =
-                HapiSpec.TARGET_BLOCK_NODE_NETWORK.get().getShutdownContainerPorts();
+        final BlockNodeController controller =
+                HapiSpec.TARGET_BLOCK_NODE_NETWORK.get().getBlockNodeController();
 
         switch (action) {
             case START:
-                if (!shutdownContainerPorts.containsKey(nodeIndex)) {
+                if (!controller.isBlockNodeShutdown(nodeIndex)) {
                     log.error("Cannot start container {} because it has not been shut down", nodeIndex);
                     return false;
                 }
-
-                try {
-                    final int port = shutdownContainerPorts.get(nodeIndex);
-                    final BlockNodeContainer blockNodeContainer = new BlockNodeContainer(nodeIndex, port);
-
-                    blockNodeContainer.start();
-
-                    log.info("Started container {} and waited for readiness", nodeIndex);
-                    blockNodeContainerMap.put(nodeIndex, blockNodeContainer);
-                    shutdownContainerPorts.remove(nodeIndex);
-                } catch (final Exception e) {
-                    log.error("Failed to start container {}", nodeIndex, e);
-                    return false;
-                }
+                controller.startContainer(nodeIndex);
                 break;
             case SHUTDOWN:
-                log.info("Shutting down container {}", nodeIndex);
-                final BlockNodeContainer shutdownContainer = blockNodeContainerMap.get(nodeIndex);
-
-                shutdownContainerPorts.put(nodeIndex, shutdownContainer.getPort());
-                shutdownContainer.stop();
-
-                log.info("Container {} shutdown complete", nodeIndex);
-                blockNodeContainerMap.remove(nodeIndex, shutdownContainer);
+                controller.shutdownContainer(nodeIndex);
                 break;
             default:
                 throw new IllegalStateException("Action: " + action + " is not supported for block node containers");
