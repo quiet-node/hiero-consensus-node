@@ -75,13 +75,17 @@ public class BlockNodeNetwork {
     }
 
     public void terminate() {
+
+        List<CompletableFuture<Void>> shutdownFutures = new ArrayList<>();
         // Stop block node containers
         for (Entry<Long, BlockNodeContainer> entry : blockNodeContainerById.entrySet()) {
             BlockNodeContainer container = entry.getValue();
-            container.stop();
-            logger.info("Stopped block node container ID {}", entry.getKey());
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                container.stop();
+                logger.info("Stopped block node container ID {}", entry.getKey());
+            });
+            shutdownFutures.add(future);
         }
-        blockNodeContainerById.clear();
 
         // Stop simulated block nodes with grace period
         Duration shutdownTimeout = Duration.ofSeconds(30);
@@ -90,7 +94,6 @@ public class BlockNodeNetwork {
                 simulatedBlockNodeById.size(),
                 shutdownTimeout);
 
-        List<CompletableFuture<Void>> shutdownFutures = new ArrayList<>();
         for (Entry<Long, SimulatedBlockNodeServer> entry : simulatedBlockNodeById.entrySet()) {
             SimulatedBlockNodeServer server = entry.getValue();
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
@@ -108,10 +111,12 @@ public class BlockNodeNetwork {
             // Wait for all servers to stop or timeout
             CompletableFuture.allOf(shutdownFutures.toArray(new CompletableFuture[0]))
                     .get(shutdownTimeout.toMillis(), TimeUnit.MILLISECONDS);
-            logger.info("All simulated block nodes stopped successfully");
+            logger.info("All block nodes stopped successfully");
         } catch (Exception e) {
             logger.error("Timeout or error while stopping simulated block nodes", e);
         }
+
+        blockNodeContainerById.clear();
         simulatedBlockNodeById.clear();
     }
 

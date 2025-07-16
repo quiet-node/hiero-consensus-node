@@ -200,7 +200,6 @@ public class BlockNodeOp extends UtilOp {
             default:
                 throw new IllegalStateException("Action: " + action + " is not supported for block node containers");
         }
-
         return true;
     }
 
