@@ -176,7 +176,7 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
      */
     @NonNull
     @Override
-    public MigrationTestingToolState newStateRoot(PlatformContext platformContext) {
+    public MigrationTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final MigrationTestingToolState state = new MigrationTestingToolState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -189,7 +189,8 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
      * </p>
      */
     @Override
-    public Function<VirtualMap, MigrationTestingToolState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, MigrationTestingToolState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

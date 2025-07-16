@@ -107,8 +107,7 @@ public class CryptocurrencyDemoState extends MerkleStateRoot<CryptocurrencyDemoS
 
     ////////////////////////////////////////////////////
 
-    public CryptocurrencyDemoState(PlatformContext platformContext) {
-        // no-op
+    public CryptocurrencyDemoState(@NonNull final PlatformContext platformContext) {
         super(platformContext);
     }
 

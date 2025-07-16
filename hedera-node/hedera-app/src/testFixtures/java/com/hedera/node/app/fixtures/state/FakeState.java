@@ -9,11 +9,8 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.HederaVirtualMapState;
 import com.hedera.node.app.state.recordcache.RecordCacheService;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
-import com.swirlds.config.api.Configuration;
-import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.State;
@@ -71,11 +68,10 @@ public class FakeState implements MerkleNodeState {
 
     @Override
     public MerkleNode getRoot() {
-        final Configuration configuration = new TestConfigBuilder().getOrCreateConfig();
-        final PlatformContext platformContext = TestPlatformContextBuilder.create()
-                .withConfiguration(configuration)
-                .build();
-        return new HederaVirtualMapState(VirtualMapUtils.createVirtualMap(VM_LABEL), platformContext).getRoot();
+        return new HederaVirtualMapState(
+                        VirtualMapUtils.createVirtualMap(VM_LABEL),
+                        TestPlatformContextBuilder.create().build())
+                .getRoot();
     }
 
     /**

@@ -78,7 +78,7 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
      */
     private List<PlannedLogError> plannedLogErrorList = new LinkedList<>();
 
-    public ISSTestingToolState(PlatformContext platformContext) {
+    public ISSTestingToolState(@NonNull final PlatformContext platformContext) {
         super(platformContext);
     }
 

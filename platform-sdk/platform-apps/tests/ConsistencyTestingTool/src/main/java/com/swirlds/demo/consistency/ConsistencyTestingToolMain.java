@@ -102,7 +102,7 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
      */
     @Override
     @NonNull
-    public ConsistencyTestingToolState newStateRoot(PlatformContext platformContext) {
+    public ConsistencyTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final ConsistencyTestingToolState state = new ConsistencyTestingToolState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
 
@@ -116,7 +116,8 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
      * </p>
      */
     @Override
-    public Function<VirtualMap, ConsistencyTestingToolState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, ConsistencyTestingToolState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

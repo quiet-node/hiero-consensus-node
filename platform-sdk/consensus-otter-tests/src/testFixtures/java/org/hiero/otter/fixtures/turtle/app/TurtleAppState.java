@@ -21,7 +21,7 @@ public class TurtleAppState extends VirtualMapState<TurtleAppState> implements M
         super(platformContext);
     }
 
-    public TurtleAppState(@NonNull final VirtualMap virtualMap, PlatformContext platformContext) {
+    public TurtleAppState(@NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
         super(virtualMap, platformContext);
     }
 
@@ -72,7 +72,8 @@ public class TurtleAppState extends VirtualMapState<TurtleAppState> implements M
     }
 
     @Override
-    protected TurtleAppState newInstance(@NonNull VirtualMap virtualMap, PlatformContext platformContext) {
+    protected TurtleAppState newInstance(
+            @NonNull VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
         return new TurtleAppState(virtualMap, platformContext);
     }
 }

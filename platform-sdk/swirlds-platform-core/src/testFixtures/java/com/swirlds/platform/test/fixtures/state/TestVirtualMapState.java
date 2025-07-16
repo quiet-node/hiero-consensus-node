@@ -14,7 +14,7 @@ public class TestVirtualMapState extends VirtualMapState<TestVirtualMapState> im
         super(platformContext);
     }
 
-    public TestVirtualMapState(@NonNull final VirtualMap virtualMap, PlatformContext platformContext) {
+    public TestVirtualMapState(@NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
         super(virtualMap, platformContext);
     }
 
@@ -30,7 +30,8 @@ public class TestVirtualMapState extends VirtualMapState<TestVirtualMapState> im
     }
 
     @Override
-    protected TestVirtualMapState newInstance(@NonNull final VirtualMap virtualMap, PlatformContext platformContext) {
+    protected TestVirtualMapState newInstance(
+            @NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
         return new TestVirtualMapState(virtualMap, platformContext);
     }
 

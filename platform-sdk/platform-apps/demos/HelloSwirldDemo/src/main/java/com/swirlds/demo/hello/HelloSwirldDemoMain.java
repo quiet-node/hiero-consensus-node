@@ -121,7 +121,7 @@ public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
 
     @NonNull
     @Override
-    public HelloSwirldDemoState newStateRoot(PlatformContext platformContext) {
+    public HelloSwirldDemoState newStateRoot(@NonNull final PlatformContext platformContext) {
         final HelloSwirldDemoState state = new HelloSwirldDemoState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -134,7 +134,8 @@ public class HelloSwirldDemoMain implements SwirldMain<HelloSwirldDemoState> {
      * </p>
      */
     @Override
-    public Function<VirtualMap, HelloSwirldDemoState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, HelloSwirldDemoState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

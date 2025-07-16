@@ -33,7 +33,7 @@ public class StatsSigningTestingToolState extends MerkleStateRoot<StatsSigningTe
     /** A running sum of transaction contents */
     private long runningSum = 0;
 
-    public StatsSigningTestingToolState(PlatformContext platformContext) {
+    public StatsSigningTestingToolState(@NonNull final PlatformContext platformContext) {
         super(platformContext);
     }
 

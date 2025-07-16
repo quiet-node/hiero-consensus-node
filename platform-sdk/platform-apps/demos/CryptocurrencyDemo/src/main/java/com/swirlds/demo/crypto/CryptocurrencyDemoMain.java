@@ -196,7 +196,7 @@ public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoStat
      */
     @Override
     @NonNull
-    public CryptocurrencyDemoState newStateRoot(PlatformContext platformContext) {
+    public CryptocurrencyDemoState newStateRoot(@NonNull final PlatformContext platformContext) {
         final CryptocurrencyDemoState state = new CryptocurrencyDemoState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -209,7 +209,8 @@ public class CryptocurrencyDemoMain implements SwirldMain<CryptocurrencyDemoStat
      * </p>
      */
     @Override
-    public Function<VirtualMap, CryptocurrencyDemoState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, CryptocurrencyDemoState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

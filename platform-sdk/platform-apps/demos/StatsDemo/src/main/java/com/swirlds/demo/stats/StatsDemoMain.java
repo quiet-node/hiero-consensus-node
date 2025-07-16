@@ -308,7 +308,7 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
 
     @NonNull
     @Override
-    public StatsDemoState newStateRoot(PlatformContext platformContext) {
+    public StatsDemoState newStateRoot(@NonNull final PlatformContext platformContext) {
         final StatsDemoState state = new StatsDemoState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -321,7 +321,8 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
      * </p>
      */
     @Override
-    public Function<VirtualMap, StatsDemoState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, StatsDemoState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

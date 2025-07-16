@@ -35,7 +35,6 @@ import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
-import com.swirlds.metrics.api.Metrics;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
 import com.swirlds.state.lifecycle.StateMetadata;
@@ -137,20 +136,15 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     private LongSupplier roundSupplier;
 
     private MerkleCryptography merkleCryptography;
-    private Time time;
 
     public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
         return services;
     }
 
-    private Configuration configuration;
-
-    private Metrics metrics;
-
     /**
      * Metrics for the snapshot creation process
      */
-    private MerkleRootSnapshotMetrics snapshotMetrics = new MerkleRootSnapshotMetrics();
+    private MerkleRootSnapshotMetrics snapshotMetrics;
 
     /**
      * Maintains information about each service, and each state of each service, known by this
@@ -188,16 +182,11 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     /**
      * Create a new instance. This constructor must be used for all creations of this class.
      */
-    public MerkleStateRoot(PlatformContext platformContext) {
+    public MerkleStateRoot(@NonNull final PlatformContext platformContext) {
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
-
         this.platformContext = platformContext;
-
-        this.time = platformContext.getTime();
-        this.configuration = platformContext.getConfiguration();
-        this.metrics = platformContext.getMetrics();
         this.merkleCryptography = platformContext.getMerkleCryptography();
-        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
     }
 
     /**
@@ -210,12 +199,9 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         super(from);
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
         this.startupMode = from.startupMode;
-        this.time = from.time;
-        this.configuration = from.configuration;
-        this.metrics = from.metrics;
         this.merkleCryptography = from.merkleCryptography;
         this.roundSupplier = from.roundSupplier;
-        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
         this.listeners.addAll(from.listeners);
 
         // Copy over the metadata
@@ -747,9 +733,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             final var md = stateMetadata.get(stateKey);
             final VirtualMap virtualMap = findNode(md).cast();
             final var mutableCopy = virtualMap.copy();
-            if (metrics != null) {
-                mutableCopy.registerMetrics(metrics);
-            }
+            mutableCopy.registerMetrics(platformContext.getMetrics());
             setChild(findNodeIndex(serviceName, stateKey), mutableCopy);
             kvInstances.put(stateKey, createReadableKVState(md, mutableCopy));
         }
@@ -958,6 +942,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      */
     @Override
     public void createSnapshot(@NonNull final Path targetPath) {
+        final Time time = platformContext.getTime();
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
         throwIfMutable();
@@ -973,7 +958,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @SuppressWarnings("unchecked")
     @Override
     public T loadSnapshot(@NonNull Path targetPath) throws IOException {
-        return (T) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
+        return (T) MerkleTreeSnapshotReader.readStateFileData(platformContext.getConfiguration(), targetPath)
                 .stateRoot();
     }
 

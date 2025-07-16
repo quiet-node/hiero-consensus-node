@@ -72,7 +72,7 @@ public class HelloSwirldDemoState extends MerkleStateRoot<HelloSwirldDemoState> 
 
     // ///////////////////////////////////////////////////////////////////
 
-    public HelloSwirldDemoState(PlatformContext platformContext) {
+    public HelloSwirldDemoState(@NonNull final PlatformContext platformContext) {
         super(platformContext);
     }
 

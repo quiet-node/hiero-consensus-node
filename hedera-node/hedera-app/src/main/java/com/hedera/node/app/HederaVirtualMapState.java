@@ -28,7 +28,7 @@ public class HederaVirtualMapState extends VirtualMapState<HederaVirtualMapState
      * @param virtualMap      the virtual map whose metrics must already be registered
      * @param platformContext
      */
-    public HederaVirtualMapState(@NonNull final VirtualMap virtualMap, PlatformContext platformContext) {
+    public HederaVirtualMapState(@NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
         super(virtualMap, platformContext);
     }
 
@@ -51,7 +51,8 @@ public class HederaVirtualMapState extends VirtualMapState<HederaVirtualMapState
      * @return a new instance of {@link HederaVirtualMapState}
      */
     @Override
-    protected HederaVirtualMapState newInstance(@NonNull final VirtualMap virtualMap, PlatformContext platformContext) {
+    protected HederaVirtualMapState newInstance(
+            @NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
         return new HederaVirtualMapState(virtualMap, platformContext);
     }
 }

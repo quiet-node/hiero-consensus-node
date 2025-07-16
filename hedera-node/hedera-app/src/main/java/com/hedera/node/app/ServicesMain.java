@@ -148,7 +148,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * {@inheritDoc}
      */
     @Override
-    public @NonNull MerkleNodeState newStateRoot(PlatformContext platformContext) {
+    public @NonNull MerkleNodeState newStateRoot(@NonNull final PlatformContext platformContext) {
         return hederaOrThrow().newStateRoot(platformContext);
     }
 
@@ -157,7 +157,8 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * Specifically, {@link HederaVirtualMapState}.
      */
     @Override
-    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         return hederaOrThrow().stateRootFromVirtualMap(platformContext);
     }
 

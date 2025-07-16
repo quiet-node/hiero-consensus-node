@@ -46,7 +46,7 @@ public class StatsDemoState extends MerkleStateRoot<StatsDemoState> implements M
 
     private static final long CLASS_ID = 0xc550a1cd94e91ca3L;
 
-    public StatsDemoState(PlatformContext platformContext) {
+    public StatsDemoState(@NonNull final PlatformContext platformContext) {
         // no op
         super(platformContext);
     }

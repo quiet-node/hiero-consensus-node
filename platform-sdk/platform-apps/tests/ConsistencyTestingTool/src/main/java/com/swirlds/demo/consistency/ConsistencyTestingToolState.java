@@ -83,7 +83,7 @@ public class ConsistencyTestingToolState extends MerkleStateRoot<ConsistencyTest
     /**
      * Constructor
      */
-    public ConsistencyTestingToolState(PlatformContext platformContext) {
+    public ConsistencyTestingToolState(@NonNull final PlatformContext platformContext) {
         super(platformContext);
         transactionHandlingHistory = new TransactionHandlingHistory();
         transactionsAwaitingPostHandle = ConcurrentHashMap.newKeySet();

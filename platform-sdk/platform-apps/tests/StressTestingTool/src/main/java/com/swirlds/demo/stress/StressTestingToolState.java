@@ -28,7 +28,7 @@ public class StressTestingToolState extends MerkleStateRoot<StressTestingToolSta
     /** A running sum of transaction contents */
     private long runningSum = 0;
 
-    public StressTestingToolState(PlatformContext platformContext) {
+    public StressTestingToolState(@NonNull final PlatformContext platformContext) {
         super(platformContext);
     }
 

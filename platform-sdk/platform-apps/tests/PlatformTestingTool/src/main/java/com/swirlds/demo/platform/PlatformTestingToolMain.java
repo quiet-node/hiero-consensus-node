@@ -862,7 +862,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
      */
     @Override
     @NonNull
-    public PlatformTestingToolState newStateRoot(PlatformContext platformContext) {
+    public PlatformTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final PlatformTestingToolState state = new PlatformTestingToolState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -875,7 +875,8 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
      * </p>
      */
     @Override
-    public Function<VirtualMap, PlatformTestingToolState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, PlatformTestingToolState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

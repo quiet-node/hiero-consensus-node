@@ -572,7 +572,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      */
     @Override
     @NonNull
-    public MerkleNodeState newStateRoot(PlatformContext platformContext) {
+    public MerkleNodeState newStateRoot(@NonNull final PlatformContext platformContext) {
         return stateRootSupplier.apply(platformContext);
     }
 
@@ -580,7 +580,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
      * {@inheritDoc}
      */
     @Override
-    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         return virtualMap -> new HederaVirtualMapState(virtualMap, platformContext);
     }
 

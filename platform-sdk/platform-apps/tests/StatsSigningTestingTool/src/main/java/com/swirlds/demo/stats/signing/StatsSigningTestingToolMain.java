@@ -291,7 +291,7 @@ public class StatsSigningTestingToolMain implements SwirldMain<StatsSigningTesti
 
     @Override
     @NonNull
-    public StatsSigningTestingToolState newStateRoot(PlatformContext platformContext) {
+    public StatsSigningTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final StatsSigningTestingToolState state = new StatsSigningTestingToolState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -304,7 +304,8 @@ public class StatsSigningTestingToolMain implements SwirldMain<StatsSigningTesti
      * </p>
      */
     @Override
-    public Function<VirtualMap, StatsSigningTestingToolState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, StatsSigningTestingToolState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

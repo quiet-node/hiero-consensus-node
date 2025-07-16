@@ -16,7 +16,6 @@ import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.Reservable;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.test.fixtures.WeightGenerators;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
@@ -149,11 +148,8 @@ public class RandomSignedStateGenerator {
         if (state == null) {
             final String virtualMapLabel =
                     "vm-" + RandomSignedStateGenerator.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-            final Configuration configuration = new TestConfigBuilder().getOrCreateConfig();
-            final PlatformContext platformContext = TestPlatformContextBuilder.create()
-                    .withConfiguration(configuration)
-                    .build();
-            stateInstance = TestVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel, platformContext);
+            stateInstance = TestVirtualMapState.createInstanceWithVirtualMapLabel(
+                    virtualMapLabel, TestPlatformContextBuilder.create().build());
             stateInstance.setRoundSupplier(() -> platformStateFacade.roundOf(stateInstance));
         } else {
             stateInstance = state;

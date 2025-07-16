@@ -243,8 +243,9 @@ public class StressTestingToolMain implements SwirldMain<StressTestingToolState>
         // failed to create this time, and will create next time
     }
 
+    @NonNull
     @Override
-    public StressTestingToolState newStateRoot(PlatformContext platformContext) {
+    public StressTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final StressTestingToolState state = new StressTestingToolState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -257,7 +258,8 @@ public class StressTestingToolMain implements SwirldMain<StressTestingToolState>
      * </p>
      */
     @Override
-    public Function<VirtualMap, StressTestingToolState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, StressTestingToolState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

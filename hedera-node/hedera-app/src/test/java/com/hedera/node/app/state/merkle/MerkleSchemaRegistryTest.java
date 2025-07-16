@@ -12,11 +12,9 @@ import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.hedera.node.config.data.HederaConfig;
 import com.swirlds.common.config.StateCommonConfig;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.config.TemporaryFileConfig;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -178,13 +176,10 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             final var virtualMapLabel =
                     "vm-" + MerkleSchemaRegistryTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
             final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
-            final Configuration configuration = new TestConfigBuilder().getOrCreateConfig();
-            final PlatformContext platformContext = TestPlatformContextBuilder.create()
-                    .withConfiguration(configuration)
-                    .build();
             SemanticVersion latestVersion = version(10, 0, 0);
             schemaRegistry.migrate(
-                    new TestVirtualMapState(virtualMap, platformContext),
+                    new TestVirtualMapState(
+                            virtualMap, TestPlatformContextBuilder.create().build()),
                     version(9, 0, 0),
                     latestVersion,
                     config,

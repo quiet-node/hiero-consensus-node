@@ -102,7 +102,7 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
      */
     @Override
     @NonNull
-    public ISSTestingToolState newStateRoot(PlatformContext platformContext) {
+    public ISSTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final ISSTestingToolState state = new ISSTestingToolState(platformContext);
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -115,7 +115,8 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
      * </p>
      */
     @Override
-    public Function<VirtualMap, ISSTestingToolState> stateRootFromVirtualMap(PlatformContext platformContext) {
+    public Function<VirtualMap, ISSTestingToolState> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

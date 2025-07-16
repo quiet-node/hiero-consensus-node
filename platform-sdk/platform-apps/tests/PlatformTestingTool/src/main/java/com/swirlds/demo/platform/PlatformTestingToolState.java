@@ -91,7 +91,7 @@ public class PlatformTestingToolState extends MerkleStateRoot<PlatformTestingToo
      */
     private NodeId selfId;
 
-    public PlatformTestingToolState(PlatformContext platformContext) {
+    public PlatformTestingToolState(@NonNull final PlatformContext platformContext) {
         super(platformContext);
         expectedFCMFamily = new ExpectedFCMFamilyImpl();
         referenceNftLedger = new ReferenceNftLedger(NFT_TRACKING_FRACTION);
