@@ -19,6 +19,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -87,6 +88,8 @@ public class SimulatedBlockNodeServer {
     private final Random random = new Random();
     private final Supplier<Long> externalLastVerifiedBlockNumberSupplier;
 
+    private final AtomicBoolean sendingAcksEnabled = new AtomicBoolean(true);
+
     /**
      * Creates a new simulated block node server on the specified port.
      *
@@ -136,6 +139,10 @@ public class SimulatedBlockNodeServer {
      */
     public int getPort() {
         return port;
+    }
+
+    public void setSendingBlockAcknowledgementsEnabled(final boolean sendingBlockAcksEnabled) {
+        sendingAcksEnabled.set(sendingBlockAcksEnabled);
     }
 
     /**
@@ -817,6 +824,9 @@ public class SimulatedBlockNodeServer {
             final long blockNumber,
             @NonNull final StreamObserver<PublishStreamResponse> responseObserver,
             final boolean blockAlreadyExists) {
+        if (!sendingAcksEnabled.get()) {
+            return;
+        }
         requireNonNull(responseObserver, "Response observer cannot be null");
 
         final PublishStreamResponse.BlockAcknowledgement ack = PublishStreamResponse.BlockAcknowledgement.newBuilder()
