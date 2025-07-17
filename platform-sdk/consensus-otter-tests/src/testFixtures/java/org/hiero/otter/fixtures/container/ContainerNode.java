@@ -352,6 +352,7 @@ public class ContainerNode extends AbstractNode implements Node {
          */
         @Override
         public void startSyntheticBottleneck(@NonNull final Duration delayPerRound) {
+            log.info("Starting synthetic bottleneck on node {}", selfId);
             blockingStub.syntheticBottleneckUpdate(SyntheticBottleneckRequest.newBuilder()
                     .setSleepMillisPerRound(delayPerRound.toMillis())
                     .build());
@@ -362,6 +363,7 @@ public class ContainerNode extends AbstractNode implements Node {
          */
         @Override
         public void stopSyntheticBottleneck() {
+            log.info("Stopping synthetic bottleneck on node {}", selfId);
             blockingStub.syntheticBottleneckUpdate(SyntheticBottleneckRequest.newBuilder()
                     .setSleepMillisPerRound(0)
                     .build());
@@ -371,6 +373,7 @@ public class ContainerNode extends AbstractNode implements Node {
     private void handlePlatformChange(@NonNull final EventMessage value) {
         final PlatformStatusChange change = value.getPlatformStatusChange();
         final String statusName = change.getNewStatus();
+        log.debug("Received platform status change from {}: {}", selfId, statusName);
         try {
             final PlatformStatus newStatus = PlatformStatus.valueOf(statusName);
             platformStatus = newStatus;
