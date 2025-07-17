@@ -20,6 +20,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.PublishStreamRequest;
@@ -111,7 +114,10 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     private ConnectionState connectionState;
 
-    private final Object connectionStateLock = new Object();
+    private final ReadWriteLock connectionStateLock = new ReentrantReadWriteLock();
+    private final Lock readLock = connectionStateLock.readLock();
+    private final Lock writeLock = connectionStateLock.writeLock();
+
     /**
      * The gRPC endpoint used to establish bi-directional communication between the consensus node and block node.
      */
@@ -196,7 +202,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     public void createRequestObserver() {
         if (blockNodeStreamObserver == null) {
             blockNodeStreamObserver = grpcServiceClient.bidi(grpcEndpoint, this);
-            updateConnectionState(ConnectionState.PENDING);
+
+            writeLock.lock();
+            try {
+                updateConnectionState(ConnectionState.PENDING);
+            } finally {
+                writeLock.unlock();
+            }
         }
     }
 
@@ -206,15 +218,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
-        synchronized (connectionStateLock) {
-            logger.debug("[{}] Connection state transitioned from {} to {}", this, connectionState, newState);
-            connectionState = newState;
 
-            if (newState == ConnectionState.ACTIVE) {
-                scheduleStreamReset();
-            } else {
-                cancelStreamReset();
-            }
+        logger.debug("[{}] Connection state transitioned from {} to {}", this, connectionState, newState);
+        connectionState = newState;
+
+        if (newState == ConnectionState.ACTIVE) {
+            scheduleStreamReset();
+        } else {
+            cancelStreamReset();
         }
     }
 
@@ -236,12 +247,15 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void performStreamReset() {
-        synchronized (connectionStateLock) {
+        readLock.lock();
+        try {
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 logger.debug("[{}] Performing scheduled stream reset", this);
                 endTheStreamWith(EndStream.Code.RESET);
                 blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
             }
+        } finally {
+            readLock.unlock();
         }
     }
 
@@ -512,10 +526,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request, "request must not be null");
-        synchronized (connectionStateLock) {
+
+        readLock.lock();
+        try {
             if (getConnectionState() == ConnectionState.ACTIVE && blockNodeStreamObserver != null) {
                 blockNodeStreamObserver.onNext(request);
             }
+        } finally {
+            readLock.unlock();
         }
     }
 
@@ -527,7 +545,13 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         try {
             logger.debug("[{}] Closing connection...", this);
 
-            updateConnectionState(ConnectionState.UNINITIALIZED);
+            writeLock.lock();
+            try {
+                updateConnectionState(ConnectionState.UNINITIALIZED);
+            } finally {
+                writeLock.unlock();
+            }
+
             closeObserver();
             jumpToBlock(-1L);
 
@@ -648,10 +672,29 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      *
      * @return the connection state
      */
+    @NonNull
     public ConnectionState getConnectionState() {
-        synchronized (connectionStateLock) {
-            return connectionState;
-        }
+        return connectionState;
+    }
+
+    /**
+     * Returns the read lock of the connection state for this connection.
+     *
+     * @return the read lock of the connection state
+     */
+    @NonNull
+    public Lock acquireReadLock() {
+        return readLock;
+    }
+
+    /**
+     * Returns the write lock of the connection state for this connection.
+     *
+     * @return the write lock of the connection state
+     */
+    @NonNull
+    public Lock acquireWriteLock() {
+        return writeLock;
     }
 
     @Override
