@@ -92,7 +92,11 @@ public final class DockerManager extends TestControlGrpc.TestControlImplBase {
             final OutboundDispatcher currentDispatcher = dispatcher;
 
             nodeManager.registerPlatformStatusChangeListener(
-                    notification -> dispatcher.enqueue(EventMessageFactory.fromPlatformStatusChange(notification)));
+                    notification -> {
+                        final EventMessage message = EventMessageFactory.fromPlatformStatusChange(notification);
+                        dispatcher.enqueue(message);
+                        LOGGER.info("Sending platform status change: {}", message);
+                    });
 
             nodeManager.registerConsensusRoundListener(
                     rounds -> dispatcher.enqueue(EventMessageFactory.fromConsensusRounds(rounds)));
