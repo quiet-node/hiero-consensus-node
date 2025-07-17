@@ -512,7 +512,7 @@ public class BlockBufferService {
      * @see BlockBufferIO
      */
     public void persistBuffer() {
-        if (!isBufferPersistenceEnabled()) {
+        if (!isStreamingEnabled.get() || !isBufferPersistenceEnabled()) {
             return;
         }
 

@@ -2,7 +2,6 @@
 package com.hedera.node.app.blocks.impl.streaming;
 
 import com.hedera.hapi.block.stream.BlockItem;
-import com.hedera.hapi.block.stream.input.RoundHeader;
 import com.hedera.hapi.block.stream.output.StateChange;
 import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.node.state.blockstream.BlockStreamInfo;
@@ -19,7 +18,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -143,8 +141,6 @@ public class BlockState {
      */
     private final ItemInfo preProofItemInfo = new ItemInfo();
 
-    private final AtomicLong highestRoundInBlock = new AtomicLong(-1);
-
     /**
      * Create a new block state for the specified block number.
      *
@@ -193,17 +189,9 @@ public class BlockState {
                     "[Block {}] Pre-proof state change item added, but pre-proof state change already encountered (state={})",
                     blockNumber,
                     preProofItemInfo.state.get());
-        } else if (item.hasRoundHeader()) {
-            final RoundHeader roundHeader = item.roundHeader();
-            final long round = roundHeader.roundNumber();
-            highestRoundInBlock.updateAndGet(old -> Math.max(old, round));
         }
 
         pendingItems.add(item);
-    }
-
-    public long highestRoundInBlock() {
-        return highestRoundInBlock.get();
     }
 
     /**
