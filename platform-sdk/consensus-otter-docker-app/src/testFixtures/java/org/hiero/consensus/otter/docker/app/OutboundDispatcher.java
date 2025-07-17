@@ -57,7 +57,8 @@ public final class OutboundDispatcher {
      */
     public void enqueue(@NonNull final EventMessage message) {
         if (message.getEventCase() == EventCase.PLATFORM_STATUS_CHANGE) {
-            LOGGER.info("Enqueuing platform status change ({}, {}): {}", cancelled.get(), outboundQueue.size(), message);
+            LOGGER.info(
+                    "Enqueuing platform status change ({}, {}): {}", cancelled.get(), outboundQueue.size(), message);
         }
         if (!cancelled.get()) {
             outboundQueue.offer(message);
