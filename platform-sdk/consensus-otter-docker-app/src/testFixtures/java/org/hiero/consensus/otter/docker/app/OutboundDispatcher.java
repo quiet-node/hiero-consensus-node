@@ -51,7 +51,10 @@ public final class OutboundDispatcher {
     }
 
     /**
-     * Adds a message to the outbound queue if the dispatcher has not been cancelled.
+     * Adds a message to the outbound queue. Platform status changes are inserted at the front of
+     * the queue so they are delivered with priority over potentially many log or consensus round
+     * messages. This prevents long delays in the test framework that relies on timely status
+     * updates.
      *
      * @param message the message to enqueue
      */
