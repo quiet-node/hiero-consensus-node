@@ -4,14 +4,15 @@ package org.hiero.consensus.otter.docker.app;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.otter.fixtures.container.proto.EventMessage;
+import org.hiero.otter.fixtures.container.proto.EventMessage.EventCase;
 
 /**
  * Handles queuing {@link EventMessage}s and delivering them to a gRPC {@link StreamObserver} on a
@@ -22,7 +23,7 @@ public final class OutboundDispatcher {
     private static final Logger LOGGER = LogManager.getLogger(OutboundDispatcher.class);
 
     /** Queue used to hand over messages from the platform threads to the dispatcher thread. */
-    private final BlockingQueue<EventMessage> outboundQueue = new LinkedBlockingQueue<>();
+    private final BlockingDeque<EventMessage> outboundQueue = new LinkedBlockingDeque<>();
 
     /** Indicates whether the dispatcher has been cancelled. */
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
@@ -55,8 +56,14 @@ public final class OutboundDispatcher {
      * @param message the message to enqueue
      */
     public void enqueue(@NonNull final EventMessage message) {
-        if (!cancelled.get()) {
-            outboundQueue.offer(message);
+        if (cancelled.get()) {
+            return;
+        }
+
+        if (message.getEventCase() == EventCase.PLATFORM_STATUS_CHANGE) {
+            outboundQueue.offerFirst(message);
+        } else {
+            outboundQueue.offerLast(message);
         }
     }
 
