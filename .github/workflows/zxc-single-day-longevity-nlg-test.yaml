@@ -391,8 +391,8 @@ jobs:
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp "${{ github.workspace }}"/version_run.txt ${nlgpod}:/app/
 
           #copy new NLG
-          sh "${GITHUB_WORKSPACE}"/node_control/kubectlt -n "${{ env.namespace }}" cp /tmp/NLG.tar ${nlgpod}:/app/
-          sh "${GITHUB_WORKSPACE}"/node_control/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "cd /app; rm -rf lib network-load-generator-*.jar; ls -l; tar xvf NLG.tar; ls -l"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt-n "${{ env.namespace }}" cp /tmp/NLG.tar ${nlgpod}:/app/
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt-n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "cd /app; rm -rf lib network-load-generator-*.jar; ls -l; tar xvf NLG.tar; ls -l"
 
       - name: Start Account Creation
         run: |
