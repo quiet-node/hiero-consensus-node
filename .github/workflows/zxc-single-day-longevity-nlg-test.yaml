@@ -1055,8 +1055,8 @@ jobs:
           echo "result=${RESULT}" >> "${GITHUB_STEP_SUMMARY}"
 
   performance-report-to-Slack:
+    if: false
     runs-on: hiero-citr-linux-medium
-    if: never()
     needs:
       - performance-NftTransferLoadTest-report
 
