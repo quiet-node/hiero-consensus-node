@@ -373,7 +373,7 @@ public class ContainerNode extends AbstractNode implements Node {
     private void handlePlatformChange(@NonNull final EventMessage value) {
         final PlatformStatusChange change = value.getPlatformStatusChange();
         final String statusName = change.getNewStatus();
-        log.debug("Received platform status change from {}: {}", selfId, statusName);
+        log.info("Received platform status change from {}: {}", selfId, statusName);
         try {
             final PlatformStatus newStatus = PlatformStatus.valueOf(statusName);
             platformStatus = newStatus;
