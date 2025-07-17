@@ -330,7 +330,7 @@ jobs:
 
       - name: Build NLG test
         env:
-          GITHUB_PAGES_URL: ${{ secrets.GHP }}
+          GITHUB_PAGES_URL: ${{ secrets.GH_ACCESS_TOKEN }}
         run: |
           set +x
           set +e
