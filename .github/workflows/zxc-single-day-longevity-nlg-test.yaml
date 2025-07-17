@@ -107,7 +107,7 @@ jobs:
           repository: hashgraph/network-load-generator
           path: network-load-generator
           ref: 00287-longevity-test
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.NLG_ACCESS_TOKEN }}
 
       - name: Install KubeCtl
         uses: step-security/setup-kubectl@2edbf6aff97d814e9dc52827498ac51fe972e6d0 # v4.0.0
