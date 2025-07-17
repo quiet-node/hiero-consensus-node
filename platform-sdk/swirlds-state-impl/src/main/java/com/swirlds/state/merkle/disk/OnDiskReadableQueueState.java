@@ -37,7 +37,7 @@ public class OnDiskReadableQueueState<E> extends ReadableQueueStateBase<E> {
      * @param serviceName  the service name
      * @param stateKey     the state key
      * @param valueCodec   the codec for the value
-     * @param binaryState   the backing merkle data structure to use
+     * @param binaryState  the interface for accessing and modifying state
      */
     public OnDiskReadableQueueState(
             @NonNull final String serviceName,

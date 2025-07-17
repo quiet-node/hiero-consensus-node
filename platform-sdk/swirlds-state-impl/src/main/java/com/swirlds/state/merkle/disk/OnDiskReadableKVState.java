@@ -47,7 +47,7 @@ public final class OnDiskReadableKVState<K, V> extends ReadableKVStateBase<K, V>
      * @param stateKey     the state key
      * @param keyCodec     the codec for the key
      * @param valueCodec   the codec for the value
-     * @param binaryState   the backing merkle data structure to use
+     * @param binaryState  the interface for accessing and modifying state
      */
     public OnDiskReadableKVState(
             @NonNull final String serviceName,

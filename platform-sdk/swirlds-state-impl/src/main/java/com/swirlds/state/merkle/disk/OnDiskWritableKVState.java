@@ -47,7 +47,7 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
      * @param stateKey     the state key
      * @param keyCodec     the codec for the key
      * @param valueCodec   the codec for the value
-     * @param binaryState   the backing merkle data structure to use
+     * @param binaryState  the interface for accessing and modifying state
      */
     public OnDiskWritableKVState(
             @NonNull final String serviceName,

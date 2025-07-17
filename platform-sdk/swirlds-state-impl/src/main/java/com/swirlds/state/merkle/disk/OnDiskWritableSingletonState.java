@@ -39,7 +39,7 @@ public class OnDiskWritableSingletonState<T> extends WritableSingletonStateBase<
      * @param serviceName  the service name
      * @param stateKey     the state key
      * @param valueCodec   the codec for the value
-     * @param binaryState   the backing merkle data structure to use
+     * @param binaryState  the interface for accessing and modifying state
      */
     public OnDiskWritableSingletonState(
             @NonNull final String serviceName,
