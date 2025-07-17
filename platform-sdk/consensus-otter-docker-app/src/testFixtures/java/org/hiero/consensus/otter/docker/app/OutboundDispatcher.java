@@ -4,11 +4,14 @@ package org.hiero.consensus.otter.docker.app;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
+import java.util.EnumMap;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.otter.fixtures.container.proto.EventMessage;
@@ -31,6 +34,12 @@ public final class OutboundDispatcher {
     /** Handle to the running dispatcher task so it can be cancelled. */
     private final Future<?> dispatchFuture;
 
+    /** Counter for each EventCase type */
+    private final EnumMap<EventCase, LongAdder> eventCounters = new EnumMap<>(EventCase.class);
+
+    /** Total number of messages enqueued */
+    private final LongAdder totalMessages = new LongAdder();
+
     /**
      * Creates a new dispatcher instance and immediately starts the background task.
      *
@@ -39,6 +48,11 @@ public final class OutboundDispatcher {
      */
     public OutboundDispatcher(
             @NonNull final ExecutorService executor, @NonNull final StreamObserver<EventMessage> responseObserver) {
+
+        // Initialize counters
+        for (final EventCase ec : EventCase.values()) {
+            eventCounters.put(ec, new LongAdder());
+        }
 
         // Register a cancellation callback if possible so that we stop delivering messages once the
         // client has canceled the stream.
@@ -62,7 +76,20 @@ public final class OutboundDispatcher {
         if (cancelled.get()) {
             return;
         }
-        if (message.getEventCase() == EventCase.PLATFORM_STATUS_CHANGE) {
+
+        final EventCase type = message.getEventCase();
+        // Count and log
+        eventCounters.get(type).increment();
+        totalMessages.increment();
+
+        if (totalMessages.sum() % 1000 == 0) {
+            final String countsSnapshot = eventCounters.entrySet().stream()
+                    .map(e -> e.getKey() + "=" + e.getValue().sum())
+                    .collect(Collectors.joining(", "));
+            LOGGER.info("Total msgs: {}, per type: {}", totalMessages.sum(), countsSnapshot);
+        }
+
+        if (type == EventCase.PLATFORM_STATUS_CHANGE) {
             LOGGER.info(
                     "Enqueuing platform status change ({}, {}): {}", cancelled.get(), outboundQueue.size(), message);
             outboundQueue.offerFirst(message);
