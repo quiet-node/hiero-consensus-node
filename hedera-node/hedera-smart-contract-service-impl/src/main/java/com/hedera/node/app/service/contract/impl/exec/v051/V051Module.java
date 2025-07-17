@@ -36,7 +36,6 @@ import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCa
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.HederaSystemContract;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameBuilder;
 import com.hedera.node.app.service.contract.impl.exec.v038.Version038AddressChecks;
-import com.hedera.node.app.service.contract.impl.hevm.HederaOpsDuration;
 import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
@@ -117,10 +116,9 @@ public interface V051Module {
             @ServicesV051 @NonNull final AddressChecks addressChecks,
             @ServicesV051 @NonNull final PrecompileContractRegistry registry,
             @NonNull final Map<Address, HederaSystemContract> systemContracts,
-            @NonNull final HederaOpsDuration hederaOpsDuration,
             @NonNull final ContractMetrics contractMetrics) {
         return new CustomMessageCallProcessor(
-                evm, featureFlags, registry, addressChecks, systemContracts, hederaOpsDuration, contractMetrics);
+                evm, featureFlags, registry, addressChecks, systemContracts, contractMetrics);
     }
 
     @Provides

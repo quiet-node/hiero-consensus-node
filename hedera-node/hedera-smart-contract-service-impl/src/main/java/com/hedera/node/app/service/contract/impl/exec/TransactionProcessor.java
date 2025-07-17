@@ -18,7 +18,7 @@ import com.hedera.hapi.node.contract.ContractCreateTransactionBody;
 import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCharging;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameBuilder;
-import com.hedera.node.app.service.contract.impl.exec.utils.HederaOpsDurationCounter;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottle;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmContext;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransactionResult;
@@ -102,10 +102,10 @@ public class TransactionProcessor {
             @NonNull final HederaEvmContext context,
             @NonNull final ActionSidecarContentTracer tracer,
             @NonNull final Configuration config,
-            @NonNull final HederaOpsDurationCounter opsDurationCounter) {
+            @NonNull final OpsDurationThrottle opsDurationThrottle) {
         final var parties = computeInvolvedPartiesOrAbort(transaction, updater, config);
         return processTransactionWithParties(
-                transaction, updater, context, tracer, config, opsDurationCounter, parties);
+                transaction, updater, context, tracer, config, opsDurationThrottle, parties);
     }
 
     private HederaEvmTransactionResult processTransactionWithParties(
@@ -114,9 +114,8 @@ public class TransactionProcessor {
             @NonNull final HederaEvmContext context,
             @NonNull final ActionSidecarContentTracer tracer,
             @NonNull final Configuration config,
-            @NonNull final HederaOpsDurationCounter opsDurationCounter,
+            @NonNull final OpsDurationThrottle opsDurationCounter,
             @NonNull final InvolvedParties parties) {
-
         final var gasCharges =
                 gasCharging.chargeForGas(parties.sender(), parties.relayer(), context, updater, transaction);
         final var initialFrame = frameBuilder.buildInitialFrameWith(
@@ -145,9 +144,7 @@ public class TransactionProcessor {
         initialFrame.getSelfDestructs().forEach(updater::deleteAccount);
 
         // Tries to commit and return the original result; returns a fees-only result on resource exhaustion
-        final var commitResult = safeCommit(result, transaction, updater, context);
-
-        return commitResult;
+        return safeCommit(result, transaction, updater, context);
     }
 
     private InvolvedParties computeInvolvedPartiesOrAbort(

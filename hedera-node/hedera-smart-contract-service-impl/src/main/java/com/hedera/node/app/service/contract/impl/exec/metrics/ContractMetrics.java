@@ -399,8 +399,8 @@ public class ContractMetrics {
                 this.failedTransactionDuration.recordObservation(summary.durationMs());
             }
             this.transactionGasUsed.recordObservation(summary.gasUsed());
-            summary.gasPrice().ifPresent(gasPrice -> {
-                this.gasPrice.set(gasPrice);
+            summary.gasPrice().ifPresent(newGasPrice -> {
+                this.gasPrice.set(newGasPrice);
             });
         }
 

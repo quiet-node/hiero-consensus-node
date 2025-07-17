@@ -55,6 +55,27 @@ public class LeakyBucketDeterministicThrottle implements CongestibleThrottle {
     }
 
     /**
+     * Calculates the amount of nanoseconds that elapsed since the last time the bucket was updated
+     * and then consumes the specified amount of capacity.
+     * If there isn't enough capacity, consumes whatever capacity is available and returns (does not throw).
+     *
+     * @param now           - the instant against which the {@link LeakyBucketThrottle} is evaluated.
+     * @param capacityToUse - the amount of capacity to consume
+     */
+    public void useCapacity(@NonNull final Instant now, final long capacityToUse) {
+        final var elapsedNanos = nanosBetween(lastDecisionTime, now);
+        if (elapsedNanos < 0L) {
+            throw new IllegalArgumentException("Throttle timeline must advance, but " + now + " is not after "
+                    + Instant.ofEpochSecond(lastDecisionTime.seconds(), lastDecisionTime.nanos()));
+        }
+        if (capacityToUse < 0) {
+            throw new IllegalArgumentException("Capacity to use must be non-negative, but was " + capacityToUse);
+        }
+        lastDecisionTime = new Timestamp(now.getEpochSecond(), now.getNano());
+        delegate.useCapacity(capacityToUse, elapsedNanos);
+    }
+
+    /**
      * Returns the free-to-used ratio in the bucket at its last decision time.
      *
      * @return the free-to-used ratio at that time
@@ -76,6 +97,21 @@ public class LeakyBucketDeterministicThrottle implements CongestibleThrottle {
         }
         final var elapsedNanos = Math.max(0, nanosBetween(lastDecisionTime, now));
         return delegate.percentUsed(elapsedNanos);
+    }
+
+    /**
+     * Returns the available free capacity of this throttle, at a time which may be later than the last
+     * throttling decision (which would imply some capacity has been freed).
+     *
+     * @param now a time which will be ignored if before the last throttling decision
+     * @return the capacity available at this time
+     */
+    public long capacityFree(@NonNull final Instant now) {
+        if (lastDecisionTime == null) {
+            return delegate().capacityFree();
+        }
+        final var elapsedNanos = Math.max(0, nanosBetween(lastDecisionTime, now));
+        return delegate.capacityFree(elapsedNanos);
     }
 
     /**

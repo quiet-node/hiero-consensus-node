@@ -3,7 +3,6 @@ package com.hedera.node.app.service.contract.impl.exec.metrics;
 
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethod;
 import com.swirlds.metrics.api.Metrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
@@ -28,41 +27,16 @@ public class OpsDurationMetrics {
     /**
      * Records the duration of a system contract operation in nanoseconds
      *
-     * @param method the system contract method that was executed
+     * @param systemContractName the system contract name
+     * @param systemContractAddress the system contract address
      * @param durationNanos the duration in nanoseconds
      */
-    public void recordSystemContractOpsDuration(@NonNull final SystemContractMethod method, final long durationNanos) {
-        systemContractOpsDurationMetric.recordOperationDuration(method, durationNanos);
-    }
-
-    /**
-     * Gets the current average duration for a specific system contract operation
-     *
-     * @param method the system contract method to get duration for
-     * @return the average duration in nanoseconds
-     */
-    public double getAverageSystemContractOpsDuration(@NonNull final SystemContractMethod method) {
-        return systemContractOpsDurationMetric.getAverageSystemContractOpsDuration(method);
-    }
-
-    /**
-     * Gets the current count for a specific system contract operation
-     *
-     * @param method the system contract method to get count for
-     * @return the count of operations executed
-     */
-    public long getSystemContractOpsDurationCount(@NonNull final SystemContractMethod method) {
-        return systemContractOpsDurationMetric.getSystemContractOpsDurationCount(method);
-    }
-
-    /**
-     * Gets the total duration for a specific system contract operation
-     *
-     * @param method the system contract method to get total duration for
-     * @return the total duration in nanoseconds
-     */
-    public long getTotalSystemContractOpsDuration(@NonNull final SystemContractMethod method) {
-        return systemContractOpsDurationMetric.getSystemContractOpsTotalDuration(method);
+    public void recordSystemContractOpsDuration(
+            @NonNull final String systemContractName,
+            @NonNull final String systemContractAddress,
+            final long durationNanos) {
+        systemContractOpsDurationMetric.recordOperationDuration(
+                systemContractName, systemContractAddress, durationNanos);
     }
 
     /**
@@ -141,9 +115,9 @@ public class OpsDurationMetrics {
     }
 
     /**
-     * Records the count of transactions that were throttled due to exceeding the maximum allowed
+     * Records a transaction that was throttled due to exceeding the ops duration throttle.
      */
-    public void recordTransactionsThrottledByOpsDuration() {
+    public void recordTransactionThrottledByOpsDuration() {
         transactionThrottledByOpsDurationMetric.increment();
     }
 

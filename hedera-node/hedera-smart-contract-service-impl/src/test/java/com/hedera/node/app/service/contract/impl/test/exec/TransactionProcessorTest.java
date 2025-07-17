@@ -56,7 +56,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.SystemContractGasCalcu
 import com.hedera.node.app.service.contract.impl.exec.gas.TinybarValues;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameBuilder;
-import com.hedera.node.app.service.contract.impl.exec.utils.HederaOpsDurationCounter;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottle;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmBlocks;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransactionResult;
@@ -138,13 +138,13 @@ class TransactionProcessorTest {
 
     private TransactionProcessor subject;
 
-    private HederaOpsDurationCounter opsDurationCounter;
+    private OpsDurationThrottle opsDurationCounter;
 
     @BeforeEach
     void setUp() {
         subject = new TransactionProcessor(
                 frameBuilder, frameRunner, gasCharging, messageCallProcessor, contractCreationProcessor, featureFlags);
-        opsDurationCounter = new HederaOpsDurationCounter(0L);
+        opsDurationCounter = OpsDurationThrottle.disabled();
     }
 
     @Test
@@ -224,7 +224,6 @@ class TransactionProcessorTest {
                         messageCallProcessor,
                         contractCreationProcessor))
                 .willReturn(SUCCESS_RESULT);
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
 
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
@@ -279,7 +278,6 @@ class TransactionProcessorTest {
         given(featureFlags.isAllowCallsToNonContractAccountsEnabled(any(), any()))
                 .willReturn(true);
         given(senderAccount.getNonce()).willReturn(NONCE);
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
 
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
@@ -334,7 +332,6 @@ class TransactionProcessorTest {
         given(featureFlags.isAllowCallsToNonContractAccountsEnabled(any(), any()))
                 .willReturn(true);
         given(senderAccount.getNonce()).willReturn(NONCE);
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
 
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
@@ -446,7 +443,6 @@ class TransactionProcessorTest {
                 Account.newBuilder().accountId(senderAccount.hederaId()).build();
         given(senderAccount.toNativeAccount()).willReturn(parsedAccount);
         given(initialFrame.getSelfDestructs()).willReturn(Set.of(NON_SYSTEM_LONG_ZERO_ADDRESS));
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
 
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
@@ -521,7 +517,6 @@ class TransactionProcessorTest {
                         contractCreationProcessor))
                 .willReturn(SUCCESS_RESULT);
         given(initialFrame.getSelfDestructs()).willReturn(Set.of(NON_SYSTEM_LONG_ZERO_ADDRESS));
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
 
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
@@ -593,7 +588,6 @@ class TransactionProcessorTest {
                         eq(contractCreationProcessor)))
                 .willReturn(SUCCESS_RESULT);
         given(initialFrame.getSelfDestructs()).willReturn(Set.of(NON_SYSTEM_LONG_ZERO_ADDRESS));
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
 
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
@@ -669,7 +663,6 @@ class TransactionProcessorTest {
                         eq(contractCreationProcessor)))
                 .willReturn(SUCCESS_RESULT);
         given(initialFrame.getSelfDestructs()).willReturn(Set.of(NON_SYSTEM_LONG_ZERO_ADDRESS));
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
         given(featureFlags.isAllowCallsToNonContractAccountsEnabled(any(), any()))
                 .willReturn(true);
         given(senderAccount.getNonce()).willReturn(NONCE);
@@ -745,7 +738,6 @@ class TransactionProcessorTest {
                         eq(contractCreationProcessor)))
                 .willReturn(SUCCESS_RESULT);
         given(initialFrame.getSelfDestructs()).willReturn(Set.of(NON_SYSTEM_LONG_ZERO_ADDRESS));
-        given(initialFrame.getMessageFrameStack()).willReturn(stack);
 
         willThrow(new ResourceExhaustedException(INSUFFICIENT_BALANCES_FOR_RENEWAL_FEES))
                 .given(worldUpdater)
