@@ -34,7 +34,12 @@
       </Filters>
     </File>
 
-    <InMemoryAppender name="InMemory"/>
+    <InMemoryAppender name="InMemory">
+      <Filters>
+        <ThresholdFilter level="INFO" onMatch="NEUTRAL" onMismatch="DENY"/>
+        <MarkerFilter marker="STATE_HASH" onMatch="DENY" onMismatch="NEUTRAL"/>
+      </Filters>
+    </InMemoryAppender>
   </Appenders>
 
   <Loggers>
