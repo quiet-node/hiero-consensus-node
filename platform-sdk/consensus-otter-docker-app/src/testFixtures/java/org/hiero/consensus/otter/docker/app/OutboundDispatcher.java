@@ -59,8 +59,9 @@ public final class OutboundDispatcher {
         if (cancelled.get()) {
             return;
         }
-
         if (message.getEventCase() == EventCase.PLATFORM_STATUS_CHANGE) {
+            LOGGER.info(
+                    "Enqueuing platform status change ({}, {}): {}", cancelled.get(), outboundQueue.size(), message);
             outboundQueue.offerFirst(message);
         } else {
             outboundQueue.offerLast(message);
@@ -95,6 +96,9 @@ public final class OutboundDispatcher {
                 final EventMessage msg = outboundQueue.take();
                 try {
                     observer.onNext(msg);
+                    if (msg.getEventCase() == EventCase.PLATFORM_STATUS_CHANGE) {
+                        LOGGER.info("Dispatched platform status change: {}", msg);
+                    }
                 } catch (final RuntimeException e) {
                     // Any exception here implies that the stream is no longer writable.
                     LOGGER.error("Unexpected error while sending event message", e);

@@ -15,7 +15,7 @@
       <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %notEmpty{[%marker] }%-5level %logger{36} - %msg %n"/>
       <Filters>
         <ThresholdFilter level="INFO" onMatch="NEUTRAL" onMismatch="DENY"/>
-<!--        <MarkerFilter marker="STATE_HASH" onMatch="DENY" onMismatch="NEUTRAL"/>-->
+        <MarkerFilter marker="STATE_HASH" onMatch="DENY" onMismatch="NEUTRAL"/>
       </Filters>
     </Console>
 
@@ -34,8 +34,6 @@
         <MarkerFilter marker="STATE_HASH" onMatch="NEUTRAL" onMismatch="DENY"/>
       </Filters>
     </File>
-
-    <InMemoryAppender name="InMemory"/>
   </Appenders>
 
   <Loggers>
