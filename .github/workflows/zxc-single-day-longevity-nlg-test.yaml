@@ -101,14 +101,6 @@ jobs:
           path: solo
           ref: ${{ env.run_soloversion }}
 
-      - name: Checkout NLG Repo
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: hashgraph/network-load-generator
-          path: network-load-generator
-          ref: 00287-longevity-test
-          token: ${{ secrets.NLG_ACCESS_TOKEN }}
-
       - name: Install KubeCtl
         uses: step-security/setup-kubectl@2edbf6aff97d814e9dc52827498ac51fe972e6d0 # v4.0.0
         with:
@@ -337,10 +329,14 @@ jobs:
         run: cd "${{ github.workspace }}"
 
       - name: Build NLG test
+        env:
+          GITHUB_PAGES_URL: ${{ secrets.NLG_ACCESS_TOKEN }}
         run: |
           set +x
           set +e
+          git clone https://"${GITHUB_PAGES_URL}"@github.com/hashgraph/network-load-generator network-load-generator
           cd network-load-generator
+          git checkout 00287-longevity-test
           ./gradlew --no-daemon clean assemble
           cd build/libs
           tar cvf /tmp/NLG.tar lib network-load-generator-*.jar
