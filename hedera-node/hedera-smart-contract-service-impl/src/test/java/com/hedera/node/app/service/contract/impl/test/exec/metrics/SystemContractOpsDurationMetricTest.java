@@ -19,13 +19,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class SystemContractOpsDurationMetricTest {
+    private static final String SC1 = "sc1";
+    private static final String ADDR1 = "cafebabe";
+
+    private static final String SC2 = "sc2";
+    private static final String ADDR2 = "babecafe";
+
     private SystemContractOpsDurationMetric subject;
-
-    private final String systemContract1 = "sc1";
-    private final String address1 = "cafebabe";
-
-    private final String systemContract2 = "sc2";
-    private final String address2 = "babecafe";
 
     @BeforeEach
     void setUp() {
@@ -49,20 +49,17 @@ class SystemContractOpsDurationMetricTest {
         final long duration2 = 200L;
 
         // When
-        subject.recordOperationDuration(systemContract1, address1, duration1);
-        subject.recordOperationDuration(systemContract1, address1, duration2);
+        subject.recordOperationDuration(SC1, ADDR1, duration1);
+        subject.recordOperationDuration(SC1, ADDR1, duration2);
 
         // Then
-        final double average = subject.getSystemContractOpsDuration(systemContract1, address1)
-                .average()
-                .get();
+        final double average =
+                subject.getSystemContractOpsDuration(SC1, ADDR1).average().get();
 
-        final double count = subject.getSystemContractOpsDuration(systemContract1, address1)
-                .counter()
-                .get();
-        final double total = subject.getSystemContractOpsDuration(systemContract1, address1)
-                .accumulator()
-                .get();
+        final double count =
+                subject.getSystemContractOpsDuration(SC1, ADDR1).counter().get();
+        final double total =
+                subject.getSystemContractOpsDuration(SC1, ADDR1).accumulator().get();
         assertThat(average).isCloseTo(150.0, within(5.0)); // (100 + 200) / 2
         assertThat(count).isEqualTo(2.0); // Two durations recorded
         assertThat(total).isEqualTo(300.0); // 100 + 200
@@ -70,7 +67,7 @@ class SystemContractOpsDurationMetricTest {
 
     @Test
     void returnsZeroForNonExistentMethod() {
-        final var metric = subject.getSystemContractOpsDuration(systemContract2, address2);
+        final var metric = subject.getSystemContractOpsDuration(SC2, ADDR2);
         assertThat(metric.average().get()).isZero();
         assertThat(metric.accumulator().get()).isZero();
         assertThat(metric.counter().get()).isZero();
@@ -84,16 +81,16 @@ class SystemContractOpsDurationMetricTest {
         final long duration3 = 300L;
 
         // When
-        subject.recordOperationDuration(systemContract1, address1, duration1);
-        subject.recordOperationDuration(systemContract1, address1, duration3);
-        subject.recordOperationDuration(systemContract1, address1, duration1);
-        subject.recordOperationDuration(systemContract1, address1, duration3);
-        subject.recordOperationDuration(systemContract2, address2, duration2);
-        subject.recordOperationDuration(systemContract2, address2, duration2);
+        subject.recordOperationDuration(SC1, ADDR1, duration1);
+        subject.recordOperationDuration(SC1, ADDR1, duration3);
+        subject.recordOperationDuration(SC1, ADDR1, duration1);
+        subject.recordOperationDuration(SC1, ADDR1, duration3);
+        subject.recordOperationDuration(SC2, ADDR2, duration2);
+        subject.recordOperationDuration(SC2, ADDR2, duration2);
 
         // Then
-        final var metric1 = subject.getSystemContractOpsDuration(systemContract1, address1);
-        final var metric2 = subject.getSystemContractOpsDuration(systemContract2, address2);
+        final var metric1 = subject.getSystemContractOpsDuration(SC1, ADDR1);
+        final var metric2 = subject.getSystemContractOpsDuration(SC2, ADDR2);
         assertThat(metric1.average().get()).isCloseTo(200.0, within(5.0));
         assertThat(metric1.counter().get()).isEqualTo(4);
         assertThat(metric1.accumulator().get()).isEqualTo(800L); // 100 + 300 + 100 + 300

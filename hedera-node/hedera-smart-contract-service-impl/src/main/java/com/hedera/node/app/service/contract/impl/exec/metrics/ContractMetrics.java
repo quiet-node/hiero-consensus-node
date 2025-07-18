@@ -74,7 +74,11 @@ public class ContractMetrics {
     }
 
     public record TransactionProcessingSummary(
-            long durationMs, long opsDurationUnitsConsumed, long gasUsed, Optional<Long> gasPrice, boolean success) {}
+            long durationNanos,
+            long opsDurationUnitsConsumed,
+            long gasUsed,
+            Optional<Long> gasPrice,
+            boolean success) {}
 
     // Counters that are the P2 metrics, and maps that take `SystemContractMethods` into the specific counters
 
@@ -195,17 +199,17 @@ public class ContractMetrics {
                     metrics,
                     METRIC_CATEGORY,
                     METRIC_SERVICE + ":TransactionDuration",
-                    "Actual duration of processed smart contract transactions in milliseconds");
+                    "Actual duration of processed smart contract transactions in nanoseconds");
             successfulTransactionDuration = CountAccumulateAverageMetricTriplet.create(
                     metrics,
                     METRIC_CATEGORY,
                     METRIC_SERVICE + ":SuccessfulTransactionDuration",
-                    "Actual duration of successful smart contract transactions in milliseconds");
+                    "Actual duration of successful smart contract transactions in nanoseconds");
             failedTransactionDuration = CountAccumulateAverageMetricTriplet.create(
                     metrics,
                     METRIC_CATEGORY,
                     METRIC_SERVICE + ":FailedTransactionDuration",
-                    "Actual duration of failed smart contract transactions in milliseconds");
+                    "Actual duration of failed smart contract transactions in nanoseconds");
             transactionGasUsed = CountAccumulateAverageMetricTriplet.create(
                     metrics,
                     METRIC_CATEGORY,
@@ -392,11 +396,11 @@ public class ContractMetrics {
 
     public void recordProcessedTransaction(final TransactionProcessingSummary summary) {
         if (p1MetricsEnabled) {
-            this.transactionDuration.recordObservation(summary.durationMs());
+            this.transactionDuration.recordObservation(summary.durationNanos());
             if (summary.success()) {
-                this.successfulTransactionDuration.recordObservation(summary.durationMs());
+                this.successfulTransactionDuration.recordObservation(summary.durationNanos());
             } else {
-                this.failedTransactionDuration.recordObservation(summary.durationMs());
+                this.failedTransactionDuration.recordObservation(summary.durationNanos());
             }
             this.transactionGasUsed.recordObservation(summary.gasUsed());
             summary.gasPrice().ifPresent(newGasPrice -> {

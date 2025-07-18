@@ -105,7 +105,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
     @Override
     public CallOutcome call() {
         // ONLY USED FOR METRICS: Measure the actual execution time.
-        final var startTimeMs = System.currentTimeMillis();
+        final var startTimeNanos = System.nanoTime();
 
         // Ensure that if this is an EthereumTransaction, we have a valid EthTxData
         assertEthTxDataValidIfApplicable();
@@ -121,8 +121,8 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                     null,
                     contractsConfig.chargeGasOnEvmHandleException());
 
-            final var elapsedMs = System.currentTimeMillis() - startTimeMs;
-            recordProcessedTransactionToMetrics(hevmTransaction, outcome, elapsedMs, 0L);
+            final var elapsedNanos = System.currentTimeMillis() - startTimeNanos;
+            recordProcessedTransactionToMetrics(hevmTransaction, outcome, elapsedNanos, 0L);
 
             return outcome;
         }
@@ -191,7 +191,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                 throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationThrottle.opsDurationUnitsConsumed());
             }
 
-            final var elapsedMs = System.currentTimeMillis() - startTimeMs;
+            final var elapsedMs = System.currentTimeMillis() - startTimeNanos;
             recordProcessedTransactionToMetrics(
                     hevmTransaction, outcome, elapsedMs, opsDurationThrottle.opsDurationUnitsConsumed());
 
@@ -215,18 +215,18 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                 contractMetrics.opsDurationMetrics().recordTransactionThrottledByOpsDuration();
             }
 
-            final var elapsedMs = System.currentTimeMillis() - startTimeMs;
+            final var elapsedNanos = System.nanoTime() - startTimeNanos;
             recordProcessedTransactionToMetrics(
-                    hevmTransaction, outcome, elapsedMs, opsDurationThrottle.opsDurationUnitsConsumed());
+                    hevmTransaction, outcome, elapsedNanos, opsDurationThrottle.opsDurationUnitsConsumed());
 
             return outcome;
         }
     }
 
     private void recordProcessedTransactionToMetrics(
-            HederaEvmTransaction hevmTxn, CallOutcome outcome, long elapsedMs, long opsDurationUnitsConsumed) {
+            HederaEvmTransaction hevmTxn, CallOutcome outcome, long elapsedNanos, long opsDurationUnitsConsumed) {
         contractMetrics.recordProcessedTransaction(new ContractMetrics.TransactionProcessingSummary(
-                elapsedMs,
+                elapsedNanos,
                 opsDurationUnitsConsumed,
                 outcome.result().gasUsed(),
                 hevmTxn.hasOfferedGasPrice() ? Optional.of(hevmTxn.offeredGasPrice()) : Optional.empty(),
