@@ -752,6 +752,8 @@ jobs:
             rm -rf "${{ github.workspace }}"/report/*
           fi
 
+          sleep 420 # max estimate of post-completion wait for any finalization procedures in new NLG
+
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
           sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
@@ -947,7 +949,6 @@ jobs:
             rm -rf "${{ github.workspace }}"/report/*
           fi
 
-          sleep 420 # max estimate of post-completion wait for any finalization procedures in new NLG
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
 
 
