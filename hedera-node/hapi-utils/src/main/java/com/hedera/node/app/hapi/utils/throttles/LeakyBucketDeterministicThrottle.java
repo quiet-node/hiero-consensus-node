@@ -55,27 +55,6 @@ public class LeakyBucketDeterministicThrottle implements CongestibleThrottle {
     }
 
     /**
-     * Calculates the amount of nanoseconds that elapsed since the last time the bucket was updated
-     * and then consumes the specified amount of capacity.
-     * If there isn't enough capacity, consumes whatever capacity is available and returns (does not throw).
-     *
-     * @param now           - the instant against which the {@link LeakyBucketThrottle} is evaluated.
-     * @param capacityToUse - the amount of capacity to consume
-     */
-    public void useCapacity(@NonNull final Instant now, final long capacityToUse) {
-        final var elapsedNanos = nanosBetween(lastDecisionTime, now);
-        if (elapsedNanos < 0L) {
-            throw new IllegalArgumentException("Throttle timeline must advance, but " + now + " is not after "
-                    + Instant.ofEpochSecond(lastDecisionTime.seconds(), lastDecisionTime.nanos()));
-        }
-        if (capacityToUse < 0) {
-            throw new IllegalArgumentException("Capacity to use must be non-negative, but was " + capacityToUse);
-        }
-        lastDecisionTime = new Timestamp(now.getEpochSecond(), now.getNano());
-        delegate.useCapacity(capacityToUse, elapsedNanos);
-    }
-
-    /**
      * Returns the free-to-used ratio in the bucket at its last decision time.
      *
      * @return the free-to-used ratio at that time

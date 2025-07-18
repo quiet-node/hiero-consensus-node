@@ -61,19 +61,6 @@ public class LeakyBucketThrottle {
         }
     }
 
-    /**
-     * Calculates and leaks the amount of capacity that should be leaked from the bucket based on the
-     * amount of nanoseconds passed as input argument and then consumes the specified amount of capacity.
-     * If there isn't enough capacity, consumes whatever capacity is available and returns (does not throw).
-     *
-     * @param capacityToUse - the amount of capacity to consume
-     * @param elapsedNanos - the amount of time passed since the last call
-     */
-    public void useCapacity(final long capacityToUse, final long elapsedNanos) {
-        leakFor(elapsedNanos);
-        bucket.useCapacity(Math.min(bucket.capacityFree(), capacityToUse));
-    }
-
     void leakFor(final long elapsedNanos) {
         bucket.leak(effectiveLeak(elapsedNanos));
     }
@@ -90,7 +77,7 @@ public class LeakyBucketThrottle {
      * @return the percent of the bucket that is used
      */
     double percentUsed(final long givenElapsedNanos) {
-        return 100.0 * capacityFree(givenElapsedNanos) / bucket.totalCapacity();
+        return 100.0 * capacityUsed(givenElapsedNanos) / bucket.totalCapacity();
     }
 
     /**
@@ -101,8 +88,19 @@ public class LeakyBucketThrottle {
      * @return the free capacity of the bucket
      */
     long capacityFree(final long givenElapsedNanos) {
+        return bucket.totalCapacity() - capacityUsed(givenElapsedNanos);
+    }
+
+    /**
+     * Returns the throttle bucket's capacity that is used, given some number of
+     * nanoseconds have elapsed since the last capacity test.
+     *
+     * @param givenElapsedNanos time since last test
+     * @return the used capacity of the bucket
+     */
+    long capacityUsed(final long givenElapsedNanos) {
         final var used = bucket.capacityUsed();
-        return used - Math.min(used, effectiveLeak(givenElapsedNanos));
+        return (used - Math.min(used, effectiveLeak(givenElapsedNanos)));
     }
 
     /**

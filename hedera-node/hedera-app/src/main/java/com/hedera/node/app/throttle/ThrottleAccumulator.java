@@ -216,7 +216,14 @@ public class ThrottleAccumulator {
         if (throttleType == NOOP_THROTTLE) {
             return;
         }
-        contractOpsDurationThrottle.useCapacity(now, opsDurationUnitsToConsume);
+        if (!contractOpsDurationThrottle.allow(now, opsDurationUnitsToConsume)) {
+            // This indicates a bug - the execution somehow consumed more ops duration than was really available.
+            // Consume the available amount as a fallback and bump the metrics (which should trigger an alert).
+            contractOpsDurationThrottle.allow(now, contractOpsDurationThrottle.capacityFree(now));
+            if (throttleMetrics != null) {
+                throttleMetrics.incOpsDurationInvalidConsumeCalls();
+            }
+        }
     }
 
     /**
