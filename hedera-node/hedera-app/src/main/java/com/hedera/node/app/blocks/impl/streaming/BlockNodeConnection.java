@@ -212,9 +212,9 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
-
-        logger.debug("[{}] Connection state transitioned from {} to {}", this, connectionState, newState);
+        final ConnectionState previousState = connectionState;
         connectionState = newState;
+        logger.debug("[{}] Connection state transitioned from {} to {}", this, previousState, newState);
 
         if (newState == ConnectionState.ACTIVE) {
             scheduleStreamReset();
