@@ -20,7 +20,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.PublishStreamRequest;
@@ -197,11 +197,11 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         if (blockNodeStreamObserver == null) {
             blockNodeStreamObserver = grpcServiceClient.bidi(grpcEndpoint, this);
 
-            writeLock().lock();
+            acquireLock().writeLock().lock();
             try {
                 updateConnectionState(ConnectionState.PENDING);
             } finally {
-                writeLock().unlock();
+                acquireLock().writeLock().unlock();
             }
         }
     }
@@ -241,7 +241,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     private void performStreamReset() {
-        writeLock().lock();
+        acquireLock().writeLock().lock();
         try {
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 logger.debug("[{}] Performing scheduled stream reset", this);
@@ -249,7 +249,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
             }
         } finally {
-            writeLock().unlock();
+            acquireLock().writeLock().unlock();
         }
     }
 
@@ -265,12 +265,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      * Handles the failure of the stream by closing the connection and notifying the connection manager.
      */
     public void handleStreamFailure() {
-        writeLock().lock();
+        acquireLock().writeLock().lock();
         try {
             close();
             blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
         } finally {
-            writeLock().unlock();
+            acquireLock().writeLock().unlock();
         }
     }
 
@@ -337,7 +337,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         // Include this new EoS response in our set that tracks the occurrences of EoS responses
         endOfStreamTimestamps.add(Instant.now());
 
-        writeLock().lock();
+        acquireLock().writeLock().lock();
         try {
             // Check if we've exceeded the EndOfStream rate limit
             if (hasExceededEndOfStreamLimit()) {
@@ -421,7 +421,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                 }
             }
         } finally {
-            writeLock().unlock();
+            acquireLock().writeLock().unlock();
         }
     }
 
@@ -471,12 +471,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     this,
                     resendBlockNumber);
 
-            writeLock().lock();
+            acquireLock().writeLock().lock();
             try {
                 close();
                 blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
             } finally {
-                writeLock().unlock();
+                acquireLock().writeLock().unlock();
             }
         }
     }
@@ -612,13 +612,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     }
 
     @NonNull
-    private Lock writeLock() {
-        return blockNodeConnectionManager.acquireConnectionLock().writeLock();
-    }
-
-    @NonNull
-    private Lock readLock() {
-        return blockNodeConnectionManager.acquireConnectionLock().readLock();
+    private ReadWriteLock acquireLock() {
+        return blockNodeConnectionManager.acquireConnectionLock();
     }
 
     /**

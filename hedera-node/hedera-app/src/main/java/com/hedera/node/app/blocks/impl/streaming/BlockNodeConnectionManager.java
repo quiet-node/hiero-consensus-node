@@ -648,7 +648,13 @@ public class BlockNodeConnectionManager {
                     requestIndex);
             final PublishStreamRequest publishStreamRequest = blockState.getRequest(requestIndex);
             if (publishStreamRequest != null) {
-                connection.sendRequest(publishStreamRequest);
+                connectionStateLock.readLock().lock();
+                try {
+                    connection.sendRequest(publishStreamRequest);
+                } finally {
+                    connectionStateLock.readLock().unlock();
+                }
+
                 blockState.markRequestSent(requestIndex);
                 requestIndex++;
             }
@@ -692,7 +698,7 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * @return
+     * @return the lock used to synchronize the connection state
      */
     @NonNull
     public ReadWriteLock acquireConnectionLock() {
