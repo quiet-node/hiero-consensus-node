@@ -29,15 +29,14 @@ import java.lang.invoke.VarHandle;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Queue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 import org.hiero.block.api.protoc.PublishStreamRequest;
 import org.hiero.block.api.protoc.PublishStreamResponse;
 import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.protoc.PublishStreamResponse.EndOfStream.Code;
 import org.junit.jupiter.api.AfterEach;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import org.hiero.block.api.PublishStreamResponse.ResponseOneOfType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -68,7 +67,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     private ManagedChannel managedChannel;
     private BlockStreamMetrics metrics;
     private final String grpcEndpoint = "foo";
-    private StreamObserver<PublishStreamRequest> requestObserver;
     private ScheduledExecutorService executorService;
     private ClientCallStreamObserver<PublishStreamRequest> requestObserver;
     private MockedStatic<BlockStreamPublishServiceGrpc> mockedGrpcService;
@@ -82,7 +80,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         stateManager = mock(BlockBufferService.class);
         managedChannel = mock(ManagedChannel.class);
         metrics = mock(BlockStreamMetrics.class);
-        requestObserver = mock(StreamObserver.class);
         executorService = mock(ScheduledExecutorService.class);
 
         connection = new BlockNodeConnection(

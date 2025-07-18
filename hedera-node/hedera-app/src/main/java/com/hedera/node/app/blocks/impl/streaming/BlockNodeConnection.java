@@ -391,7 +391,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     logger.warn("[{}] Block node is behind and block state is not available.", this);
 
                     // Indicate that the block node should recover and catch up from another trustworthy block node
-                    endTheStreamWith(EndStream.Code.TOO_FAR_BEHIND);
+                    endTheStreamWith(org.hiero.block.api.PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND);
 
                     blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
                 }
@@ -488,28 +488,24 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      *
      * @param code the code on why stream was ended
      */
-    private void endTheStreamWith(EndStream.Code code) {
+    private void endTheStreamWith(org.hiero.block.api.PublishStreamRequest.EndStream.Code code) {
         final var earliestBlockNumber = blockBufferService.getEarliestAvailableBlockNumber();
         final var highestAckedBlockNumber = blockBufferService.getHighestAckedBlockNumber();
 
         // Indicate that the block node should recover and catch up from another trustworthy block node
         /*final PublishStreamRequest endStream = PublishStreamRequest.newBuilder()
-                .endStream(EndStream.newBuilder()
+        .endStream(EndStream.newBuilder()
+                .endCode(code)
+                .earliestBlockNumber(earliestBlockNumber)
+                .latestBlockNumber(highestAckedBlockNumber))
+        .build();*/
+
+        final org.hiero.block.api.PublishStreamRequest endStream = org.hiero.block.api.PublishStreamRequest.newBuilder()
+                .endStream(org.hiero.block.api.PublishStreamRequest.EndStream.newBuilder()
                         .endCode(code)
                         .earliestBlockNumber(earliestBlockNumber)
                         .latestBlockNumber(highestAckedBlockNumber))
-                .build();*/
-
-
-
-        final org.hiero.block.api.PublishStreamRequest endStream =
-                            org.hiero.block.api.PublishStreamRequest.newBuilder()
-                                    .endStream(org.hiero.block.api.PublishStreamRequest.EndStream.newBuilder()
-                                            .endCode(code)
-                                            .earliestBlockNumber(earliestBlockNumber)
-                                            .latestBlockNumber(highestAckedBlockNumber))
-                                    .build();
-
+                .build();
 
         sendRequest(endStream);
         close();
