@@ -16,6 +16,7 @@ import com.swirlds.virtualmap.config.VirtualMapConfig;
 import com.swirlds.virtualmap.datasource.VirtualDataSource;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
+import com.swirlds.virtualmap.internal.RecordAccessor;
 import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import com.swirlds.virtualmap.test.fixtures.InMemoryBuilder;
 import com.swirlds.virtualmap.test.fixtures.InMemoryDataSource;
@@ -35,7 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-public class RecordAccessorImplTest {
+public class RecordAccessorTest {
 
     private static final int MAX_PATH = 12;
     private static final Cryptography CRYPTO = CryptographyProvider.getInstance();
@@ -51,15 +52,15 @@ public class RecordAccessorImplTest {
     private static final long BOGUS_LEAF_PATH = 22;
 
     private BreakableDataSource dataSource;
-    private RecordAccessorImpl records;
-    private RecordAccessorImpl mutableRecords;
+    private RecordAccessor records;
+    private RecordAccessor mutableRecords;
 
     @BeforeEach
     void setUp() throws IOException {
         VirtualMapMetadata state = new VirtualMapMetadata(VM_LABEL);
         VirtualNodeCache cache = new VirtualNodeCache(CONFIGURATION.getConfigData(VirtualMapConfig.class));
         dataSource = new BreakableDataSource();
-        records = new RecordAccessorImpl(state, cache, dataSource);
+        records = new RecordAccessor(state, cache, dataSource);
 
         // Prepopulate the database with some records
         final VirtualHashRecord root = internal(0);
@@ -97,7 +98,7 @@ public class RecordAccessorImplTest {
         cache.deleteLeaf(seventhLeafGone);
         cache.deleteHash(DELETED_INTERNAL_PATH);
         cache.deleteHash(OLD_DELETED_INTERNAL_PATH);
-        mutableRecords = new RecordAccessorImpl(state, cache.copy(), dataSource);
+        mutableRecords = new RecordAccessor(state, cache.copy(), dataSource);
         cache.prepareForHashing();
         cache.putHash(rootChanged);
         cache.putHash(rightChanged);

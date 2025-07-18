@@ -48,7 +48,7 @@ import com.swirlds.state.spi.WritableSingletonStateBase;
 import com.swirlds.state.spi.WritableStates;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
-import com.swirlds.virtualmap.internal.merkle.RecordAccessorImpl;
+import com.swirlds.virtualmap.internal.RecordAccessor;
 import com.swirlds.virtualmap.internal.merkle.VirtualMapMetadata;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -821,7 +821,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     public String getInfoJson() {
         final JSONObject rootJson = new JSONObject();
 
-        final RecordAccessorImpl recordAccessor = (RecordAccessorImpl) virtualMap.getRecords();
+        final RecordAccessor recordAccessor = virtualMap.getRecords();
         final VirtualMapMetadata virtualMapMetadata = virtualMap.getState();
 
         final JSONObject virtualMapMetadataJson = new JSONObject();

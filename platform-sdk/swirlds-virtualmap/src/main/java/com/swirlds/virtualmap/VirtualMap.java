@@ -57,7 +57,6 @@ import com.swirlds.virtualmap.internal.cache.VirtualNodeCache;
 import com.swirlds.virtualmap.internal.hash.VirtualHashListener;
 import com.swirlds.virtualmap.internal.hash.VirtualHasher;
 import com.swirlds.virtualmap.internal.merkle.ExternalVirtualMapMetadata;
-import com.swirlds.virtualmap.internal.merkle.RecordAccessorImpl;
 import com.swirlds.virtualmap.internal.merkle.VirtualInternalNode;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import com.swirlds.virtualmap.internal.merkle.VirtualMapMetadata;
@@ -454,7 +453,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
 
         updateShouldBeFlushed();
 
-        this.records = new RecordAccessorImpl(this.state, cache, dataSource);
+        this.records = new RecordAccessor(this.state, cache, dataSource);
         if (statistics == null) {
             // Only create statistics instance if we don't yet have statistics. During a reconnect operation.
             // it is necessary to use the statistics object from the previous instance of the state.
@@ -1169,7 +1168,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
         // record state.
         final VirtualDataSource dataSourceCopy = dataSourceBuilder.copy(dataSource, false, false);
         final VirtualNodeCache cacheSnapshot = cache.snapshot();
-        return new RecordAccessorImpl(state, cacheSnapshot, dataSourceCopy);
+        return new RecordAccessor(state, cacheSnapshot, dataSourceCopy);
     }
 
     /**
@@ -1268,7 +1267,7 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
             final VirtualNodeCache snapshotCache = originalMap.cache.snapshot();
             flush(snapshotCache, originalMap.state, this.dataSource);
 
-            return new RecordAccessorImpl(reconnectState, snapshotCache, dataSource);
+            return new RecordAccessor(reconnectState, snapshotCache, dataSource);
         });
 
         // Set up the VirtualHasher which we will use during reconnect.
@@ -1310,8 +1309,8 @@ public final class VirtualMap extends PartialBinaryMerkleInternal
         assert originalMap != null;
         // During reconnect we want to look up state from the original records
         final VirtualMapMetadata originalState = originalMap.getState();
-        reconnectFlusher = new ReconnectHashLeafFlusher(
-                reconnectRecords.getDataSource(), virtualMapConfig.reconnectFlushInterval(), statistics);
+        reconnectFlusher =
+                new ReconnectHashLeafFlusher(dataSource, virtualMapConfig.reconnectFlushInterval(), statistics);
         nodeRemover = new ReconnectNodeRemover(
                 originalMap.getRecords(),
                 originalState.getFirstLeafPath(),
