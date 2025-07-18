@@ -165,7 +165,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
         final Duration delay = Duration.ofSeconds(1);
 
-        doReturn(writeLock).when(connection).acquireWriteLock();
         connectionManager.rescheduleAndSelectNewNode(connection, delay);
 
         // Verify task created to reconnect to the failing connection after a delay
@@ -184,7 +183,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
     void testScheduleConnectionAttempt() {
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
 
-        doReturn(writeLock).when(connection).acquireWriteLock();
         connectionManager.scheduleConnectionAttempt(connection, Duration.ofSeconds(2), 100L);
 
         verify(executorService).schedule(any(BlockNodeConnectionTask.class), eq(2_000L), eq(TimeUnit.MILLISECONDS));
@@ -199,7 +197,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
     void testScheduleConnectionAttempt_negativeDelay() {
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
 
-        doReturn(writeLock).when(connection).acquireWriteLock();
         connectionManager.scheduleConnectionAttempt(connection, Duration.ofSeconds(-2), 100L);
 
         verify(executorService).schedule(any(BlockNodeConnectionTask.class), eq(0L), eq(TimeUnit.MILLISECONDS));
@@ -217,7 +214,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
                 .when(executorService)
                 .schedule(any(Runnable.class), anyLong(), any(TimeUnit.class));
 
-        doReturn(writeLock).when(connection).acquireWriteLock();
         connectionManager.scheduleConnectionAttempt(connection, Duration.ofSeconds(2), 100L);
 
         verify(executorService).schedule(any(BlockNodeConnectionTask.class), eq(2_000L), eq(TimeUnit.MILLISECONDS));
@@ -413,9 +409,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         connections.put(node1Config, node1Conn);
         connections.put(node2Config, node2Conn);
 
-        doReturn(readLock).when(node1Conn).acquireReadLock();
-        doReturn(readLock).when(node2Conn).acquireReadLock();
-
         final boolean isScheduled = connectionManager.selectNewBlockNodeForStreaming(false);
 
         assertThat(isScheduled).isFalse();
@@ -485,9 +478,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         availableNodes.add(node3Config);
         activeConnection.set(node2Conn);
 
-        doReturn(readLock).when(node1Conn).acquireReadLock();
-        doReturn(readLock).when(node2Conn).acquireReadLock();
-
         final boolean isScheduled = connectionManager.selectNewBlockNodeForStreaming(false);
 
         assertThat(isScheduled).isTrue();
@@ -533,9 +523,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         availableNodes.add(node3Config);
         availableNodes.add(node4Config);
         activeConnection.set(node2Conn);
-
-        doReturn(readLock).when(node1Conn).acquireReadLock();
-        doReturn(readLock).when(node2Conn).acquireReadLock();
 
         final boolean isScheduled = connectionManager.selectNewBlockNodeForStreaming(false);
 
@@ -745,7 +732,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConfig newConnectionConfig = new BlockNodeConfig("localhost", 8081, 2);
         doReturn(newConnectionConfig).when(newConnection).getNodeConfig();
 
-        doReturn(writeLock).when(newConnection).acquireWriteLock();
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), null, true).run();
 
         assertThat(activeConnectionRef).hasValue(newConnection);
@@ -779,7 +765,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConfig newConnectionConfig = new BlockNodeConfig("localhost", 8081, 1);
         doReturn(newConnectionConfig).when(newConnection).getNodeConfig();
 
-        doReturn(writeLock).when(newConnection).acquireWriteLock();
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), 30L, false).run();
 
         final AtomicLong jumpTarget = jumpTarget();
@@ -824,7 +809,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         final BlockNodeConnection newConnection = mock(BlockNodeConnection.class);
 
-        doReturn(writeLock).when(newConnection).acquireWriteLock();
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), null, false).run();
 
         assertThat(jumpTarget).hasValue(10L);
@@ -856,7 +840,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConfig newConnectionConfig = new BlockNodeConfig("localhost", 8081, 1);
         doReturn(newConnectionConfig).when(newConnection).getNodeConfig();
 
-        doReturn(writeLock).when(newConnection).acquireWriteLock();
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), 30L, false).run();
 
         final AtomicLong jumpTarget = jumpTarget();
@@ -1005,7 +988,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(null).when(bufferService).getBlockState(10L);
         doReturn(11L).when(bufferService).getLastBlockNumberProduced();
 
-        doReturn(writeLock).when(connection).acquireWriteLock();
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
 
         assertThat(shouldSleep).isTrue();

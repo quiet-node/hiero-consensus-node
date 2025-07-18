@@ -33,18 +33,17 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -154,6 +153,11 @@ public class BlockNodeConnectionManager {
      * Flag that indicates if streaming to block nodes is enabled. This flag is set once upon startup and cannot change.
      */
     private final AtomicBoolean isStreamingEnabled = new AtomicBoolean(false);
+
+    /**
+     * Lock
+     */
+    private final ReadWriteLock connectionStateLock = new ReentrantReadWriteLock();
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -344,13 +348,7 @@ public class BlockNodeConnectionManager {
 
         activeConnectionRef.compareAndSet(connection, null); // if this was the active connection, remove it
 
-        final Lock writeLock = connection.acquireWriteLock();
-        writeLock.lock();
-        try {
-            connection.updateConnectionState(ConnectionState.CONNECTING);
-        } finally {
-            writeLock.unlock();
-        }
+        connection.updateConnectionState(ConnectionState.CONNECTING);
 
         // Schedule the first attempt using the connectionExecutor
         try {
@@ -442,17 +440,21 @@ public class BlockNodeConnectionManager {
             return false;
         }
 
-        final BlockNodeConfig selectedNode = getNextPriorityBlockNode();
+        connectionStateLock.readLock().lock();
+        try {
+            final BlockNodeConfig selectedNode = getNextPriorityBlockNode();
+            if (selectedNode == null) {
+                logger.warn("No block nodes found for attempted streaming");
+                return false;
+            }
 
-        if (selectedNode == null) {
-            logger.warn("No block nodes found for attempted streaming");
-            return false;
+            logger.debug(
+                    "Selected block node {}:{} for connection attempt", selectedNode.address(), selectedNode.port());
+            // If we selected a node, schedule the connection attempt.
+            connectToNode(selectedNode, force);
+        } finally {
+            connectionStateLock.readLock().unlock();
         }
-
-        logger.debug("Selected block node {}:{} for connection attempt", selectedNode.address(), selectedNode.port());
-        // If we selected a node, schedule the connection attempt.
-        connectToNode(selectedNode, force);
-
         return true;
     }
 
@@ -496,17 +498,9 @@ public class BlockNodeConnectionManager {
         requireNonNull(nodes, "nodes must not be null");
         return nodes.stream()
                 .filter(nodeConfig -> {
+                    // We only want connections that are uninitialized
                     final BlockNodeConnection connection = connections.get(nodeConfig);
-                    if (connection == null) return true;
-
-                    final Lock readLock = connection.acquireReadLock();
-                    readLock.lock();
-                    try {
-                        // We only want connections that are uninitialized
-                        return ConnectionState.UNINITIALIZED == connection.getConnectionState();
-                    } finally {
-                        readLock.unlock();
-                    }
+                    return connection == null || ConnectionState.UNINITIALIZED == connection.getConnectionState();
                 })
                 .collect(collectingAndThen(toList(), collected -> {
                     // Randomize the available nodes
@@ -698,6 +692,14 @@ public class BlockNodeConnectionManager {
     }
 
     /**
+     * @return
+     */
+    @NonNull
+    public ReadWriteLock acquireConnectionLock() {
+        return connectionStateLock;
+    }
+
+    /**
      * Set the flag to indicate the current active connection should "jump" to the specified block.
      *
      * @param blockNumberToJumpTo the block number to jump to
@@ -750,6 +752,7 @@ public class BlockNodeConnectionManager {
                 return;
             }
 
+            connectionStateLock.writeLock().lock();
             try {
                 logger.debug("[{}] Running connection task...", connection);
                 final BlockNodeConnection activeConnection = activeConnectionRef.get();
@@ -793,13 +796,7 @@ public class BlockNodeConnectionManager {
                 if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
                     // we were able to elevate this connection to the new active one
 
-                    final Lock writeLock = connection.acquireWriteLock();
-                    writeLock.lock();
-                    try {
-                        connection.updateConnectionState(ConnectionState.ACTIVE);
-                    } finally {
-                        writeLock.unlock();
-                    }
+                    connection.updateConnectionState(ConnectionState.ACTIVE);
 
                     final long blockToJumpTo =
                             blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
@@ -823,6 +820,8 @@ public class BlockNodeConnectionManager {
             } catch (final Exception e) {
                 logger.warn("[{}] Failed to establish connection to block node; will schedule a retry", connection);
                 reschedule();
+            } finally {
+                connectionStateLock.writeLock().unlock();
             }
         }
 
@@ -866,19 +865,6 @@ public class BlockNodeConnectionManager {
                 connections.remove(connection.getNodeConfig());
                 connection.close();
             }
-        }
-    }
-
-    /**
-     * Thread factory for the shared executor service for block node connections.
-     */
-    public static class BlockNodeConnectionThreadFactory implements ThreadFactory {
-        @Override
-        public Thread newThread(@NonNull final Runnable runnable) {
-            Objects.requireNonNull(runnable, "runnable must not be null");
-            final Thread thread = new Thread(runnable);
-            thread.setName("BlockNodeConnectionExecutor-" + thread.threadId());
-            return thread;
         }
     }
 }
