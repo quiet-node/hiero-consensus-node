@@ -272,7 +272,7 @@ public final class TeacherPullVirtualTreeView extends VirtualTreeViewBase implem
     public void close() {
         try {
             waitUntilReady();
-            records.getDataSource().close();
+            records.close();
         } catch (final IOException e) {
             logger.error(EXCEPTION.getMarker(), "interrupted while attempting to close data source");
         } catch (final InterruptedException e) {
