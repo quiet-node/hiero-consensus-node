@@ -387,7 +387,7 @@ public class BlockNodeSuite {
                         blockNodeIds = {0, 1},
                         blockNodePriorities = {0, 1})
             })
-    @Order(7)
+    @Order(8)
     final Stream<DynamicTest> activeConnectionPeriodicallyRestarts() {
         final AtomicReference<Instant> connectionDropTime = new AtomicReference<>(Instant.now());
         final List<Integer> portNumbers = new ArrayList<>();
