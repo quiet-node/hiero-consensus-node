@@ -783,8 +783,7 @@ public class RepeatableHip1064Tests {
                                         .round(0))
                                 .latestFreezeRound(0)
                                 .lastFrozenTime((Timestamp) null)
-                                .build())
-                );
+                                .build()));
     }
 
     private static Optional<TransactionParts> findFirst(
