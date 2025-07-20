@@ -308,7 +308,6 @@ public class ProxyWorldUpdater implements HederaWorldUpdater {
             @NonNull final Address deleted, @NonNull final Address beneficiary, @NonNull final MessageFrame frame) {
         evmFrameState.trackSelfDestructBeneficiary(deleted, beneficiary, frame);
     }
-    ;
 
     /**
      * {@inheritDoc}

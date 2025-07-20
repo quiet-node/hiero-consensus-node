@@ -534,7 +534,7 @@ public class PairedStreamBuilder
 
     @NonNull
     @Override
-    public CryptoTransferStreamBuilder transferList(@NonNull TransferList hbarTransfers) {
+    public CryptoTransferStreamBuilder transferList(@NonNull final TransferList hbarTransfers) {
         recordStreamBuilder.transferList(hbarTransfers);
         blockStreamBuilder.transferList(hbarTransfers);
         return this;

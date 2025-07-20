@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.protobuf.ByteString;
 import com.hedera.hapi.node.state.roster.Roster;
+import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.state.NodeId;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import io.grpc.ManagedChannel;
@@ -32,9 +33,11 @@ import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.NodeConfiguration;
 import org.hiero.otter.fixtures.ProtobufConverter;
 import org.hiero.otter.fixtures.container.proto.EventMessage;
+import org.hiero.otter.fixtures.container.proto.InitRequest;
 import org.hiero.otter.fixtures.container.proto.KillImmediatelyRequest;
 import org.hiero.otter.fixtures.container.proto.PlatformStatusChange;
 import org.hiero.otter.fixtures.container.proto.StartRequest;
+import org.hiero.otter.fixtures.container.proto.SyntheticBottleneckRequest;
 import org.hiero.otter.fixtures.container.proto.TestControlGrpc;
 import org.hiero.otter.fixtures.container.proto.TestControlGrpc.TestControlStub;
 import org.hiero.otter.fixtures.container.proto.TransactionRequest;
@@ -66,18 +69,18 @@ public class ContainerNode extends AbstractNode implements Node {
     private final ManagedChannel channel;
     private final TestControlGrpc.TestControlBlockingStub blockingStub;
     private final AsyncNodeActions defaultAsyncAction = withTimeout(DEFAULT_TIMEOUT);
-    private final ContainerNodeConfiguration nodeConfiguration = new ContainerNodeConfiguration();
+    private final ContainerNodeConfiguration nodeConfiguration;
     private final NodeResultsCollector resultsCollector;
     private final List<StructuredLog> receivedLogs = new CopyOnWriteArrayList<>();
 
     /**
      * Constructor for the {@link ContainerNode} class.
      *
-     * @param selfId       the unique identifier for this node
-     * @param roster       the roster of the network
+     * @param selfId the unique identifier for this node
+     * @param roster the roster of the network
      * @param keysAndCerts the keys for the node
-     * @param network      the network this node is part of
-     * @param dockerImage  the Docker image to use for this node
+     * @param network the network this node is part of
+     * @param dockerImage the Docker image to use for this node
      */
     public ContainerNode(
             @NonNull final NodeId selfId,
@@ -85,13 +88,13 @@ public class ContainerNode extends AbstractNode implements Node {
             @NonNull final KeysAndCerts keysAndCerts,
             @NonNull final Network network,
             @NonNull final ImageFromDockerfile dockerImage) {
-        super(selfId);
+        super(selfId, getWeight(roster, selfId));
         this.roster = requireNonNull(roster, "roster must not be null");
         this.keysAndCerts = requireNonNull(keysAndCerts, "keysAndCerts must not be null");
 
         this.resultsCollector = new NodeResultsCollector(selfId);
+        this.nodeConfiguration = new ContainerNodeConfiguration(() -> lifeCycle);
 
-        //noinspection resource
         container = new ContainerImage(dockerImage, network, selfId);
         container.start();
         channel = ManagedChannelBuilder.forAddress(container.getHost(), container.getMappedPort(CONTROL_PORT))
@@ -100,6 +103,20 @@ public class ContainerNode extends AbstractNode implements Node {
                 .build();
 
         blockingStub = TestControlGrpc.newBlockingStub(channel);
+
+        final InitRequest initRequest = InitRequest.newBuilder()
+                .setSelfId(ProtobufConverter.fromPbj(selfId))
+                .build();
+        //noinspection ResultOfMethodCallIgnored
+        blockingStub.init(initRequest);
+    }
+
+    private static long getWeight(@NonNull final Roster roster, @NonNull final NodeId selfId) {
+        return roster.rosterEntries().stream()
+                .filter(entry -> entry.nodeId() == selfId.id())
+                .findFirst()
+                .map(RosterEntry::weight)
+                .orElseThrow(() -> new IllegalArgumentException("Node ID not found in roster"));
     }
 
     /**
@@ -108,6 +125,16 @@ public class ContainerNode extends AbstractNode implements Node {
     @Override
     public void killImmediately() throws InterruptedException {
         defaultAsyncAction.killImmediately();
+    }
+
+    @Override
+    public void startSyntheticBottleneck(@NonNull final Duration delayPerRound) {
+        defaultAsyncAction.startSyntheticBottleneck(delayPerRound);
+    }
+
+    @Override
+    public void stopSyntheticBottleneck() {
+        defaultAsyncAction.stopSyntheticBottleneck();
     }
 
     /**
@@ -195,11 +222,13 @@ public class ContainerNode extends AbstractNode implements Node {
     }
 
     /**
-     * Shuts down the node and cleans up resources. Once this method is called, the node cannot be started again. This
-     * method is idempotent and can be called multiple times without any side effects.
+     * Shuts down the container and cleans up resources. Once this method is called, the node cannot be started again
+     * and no more data can be retrieved. This method is idempotent and can be called multiple times without any side
+     * effects.
      */
     void destroy() {
         if (lifeCycle == RUNNING) {
+            log.info("Destroying container of node {}...", selfId);
             channel.shutdownNow();
             container.stop();
         }
@@ -235,7 +264,6 @@ public class ContainerNode extends AbstractNode implements Node {
             log.info("Starting node {}...", selfId);
 
             final StartRequest startRequest = StartRequest.newBuilder()
-                    .setSelfId(ProtobufConverter.fromPbj(selfId))
                     .setRoster(ProtobufConverter.fromPbj(roster))
                     .setKeysAndCerts(KeysAndCertsConverter.toProto(keysAndCerts))
                     .setVersion(ProtobufConverter.fromPbj(version))
@@ -266,16 +294,14 @@ public class ContainerNode extends AbstractNode implements Node {
                      * client receives an INTERNAL error. This is expected and must *not* fail the test.
                      * Only report unexpected errors that occur while the node is still running.
                      */
-                    if (lifeCycle == RUNNING) {
-                        if (!isExpectedError(error)) {
-                            final String message = String.format("gRPC error from node %s", selfId);
-                            fail(message, error);
-                        }
+                    if ((lifeCycle == RUNNING) && !isExpectedError(error)) {
+                        final String message = String.format("gRPC error from node %s", selfId);
+                        fail(message, error);
                     }
                 }
 
                 private static boolean isExpectedError(final @NonNull Throwable error) {
-                    if (error instanceof StatusRuntimeException sre) {
+                    if (error instanceof final StatusRuntimeException sre) {
                         final Code code = sre.getStatus().getCode();
                         return code == Code.UNAVAILABLE || code == Code.CANCELLED || code == Code.INTERNAL;
                     }
@@ -311,6 +337,30 @@ public class ContainerNode extends AbstractNode implements Node {
             } catch (final Exception e) {
                 fail("Failed to kill node %d immediately".formatted(selfId.id()), e);
             }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        @SuppressWarnings("ResultOfMethodCallIgnored") // ignoring the Empty answer from killImmediately
+        public void startSyntheticBottleneck(@NonNull final Duration delayPerRound) {
+            //noinspection ResultOfMethodCallIgnored
+            blockingStub.syntheticBottleneckUpdate(SyntheticBottleneckRequest.newBuilder()
+                    .setSleepMillisPerRound(delayPerRound.toMillis())
+                    .build());
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        @SuppressWarnings("ResultOfMethodCallIgnored") // ignoring the Empty answer from killImmediately
+        public void stopSyntheticBottleneck() {
+            //noinspection ResultOfMethodCallIgnored
+            blockingStub.syntheticBottleneckUpdate(SyntheticBottleneckRequest.newBuilder()
+                    .setSleepMillisPerRound(0)
+                    .build());
         }
     }
 

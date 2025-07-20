@@ -9,10 +9,12 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.ETH_DAT
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.ETH_DATA_WITH_TO_ADDRESS;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.HEVM_CREATION;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SENDER_ID;
+import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SIGNER_NONCE;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SUCCESS_RESULT_WITH_SIGNER_NONCE;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.entityIdFactory;
 import static com.hedera.node.app.service.contract.impl.test.handlers.ContractCallHandlerTest.INTRINSIC_GAS_FOR_0_ARG_METHOD;
 import static com.hedera.node.app.spi.fixtures.Assertions.assertThrowsPreCheck;
+import static com.hedera.node.app.spi.workflows.HandleContext.DispatchMetadata.EMPTY_METADATA;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -194,6 +196,7 @@ class EthereumTransactionHandlerTest {
                 .build();
         given(handleContext.body()).willReturn(body);
         given(handleContext.payer()).willReturn(AccountID.DEFAULT);
+        given(handleContext.dispatchMetadata()).willReturn(EMPTY_METADATA);
         given(hevmTransactionFactory.fromHapiTransaction(handleContext.body(), handleContext.payer()))
                 .willReturn(HEVM_CREATION);
 
@@ -216,7 +219,7 @@ class EthereumTransactionHandlerTest {
         given(handleContext.savepointStack()).willReturn(stack);
         given(stack.getBaseBuilder(EthereumTransactionStreamBuilder.class)).willReturn(recordBuilder);
         given(stack.getBaseBuilder(ContractCallStreamBuilder.class)).willReturn(callRecordBuilder);
-        givenSenderAccount();
+        givenSenderAccountWithNonce(SIGNER_NONCE);
         given(baseProxyWorldUpdater.entityIdFactory()).willReturn(entityIdFactory);
         given(enhancement.operations()).willReturn(hederaOperations);
         given(baseProxyWorldUpdater.enhancement()).willReturn(enhancement);
@@ -297,7 +300,7 @@ class EthereumTransactionHandlerTest {
         given(createRecordBuilder.withCommonFieldsSetFrom(expectedOutcome)).willReturn(createRecordBuilder);
         given(recordBuilder.ethereumHash(Bytes.wrap(ETH_DATA_WITHOUT_TO_ADDRESS.getEthereumHash()), false))
                 .willReturn(recordBuilder);
-        givenSenderAccount();
+        givenSenderAccountWithNonce(SIGNER_NONCE);
 
         assertDoesNotThrow(() -> subject.handle(handleContext));
     }
@@ -427,8 +430,8 @@ class EthereumTransactionHandlerTest {
                 .build();
     }
 
-    void givenSenderAccount() {
+    void givenSenderAccountWithNonce(final long nonce) {
         given(baseProxyWorldUpdater.getHederaAccount(SENDER_ID)).willReturn(senderAccount);
-        given(senderAccount.getNonce()).willReturn(1L);
+        given(senderAccount.getNonce()).willReturn(nonce);
     }
 }
