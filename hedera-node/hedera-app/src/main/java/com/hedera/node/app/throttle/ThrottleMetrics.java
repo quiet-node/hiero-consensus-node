@@ -83,12 +83,6 @@ public class ThrottleMetrics {
         throttlesToSample.stream()
                 .filter(name -> !throttleNames.contains(name) && !throttlesExcludedFromInertMetrics.contains(name))
                 .forEach(this::setupInertMetric);
-
-        opsDurationInvalidConsumeCalls =
-                metrics.getOrCreate(new Counter.Config("app", "consOpsDurationInvalidConsumeCalls")
-                        .withDescription("A count of invalid ops duration throttle consume calls "
-                                + "(i.e. when the execution consumes more ops duration "
-                                + "than was available) - indicating a possible bug."));
     }
 
     /**
@@ -127,6 +121,11 @@ public class ThrottleMetrics {
         final var throttlesToSample = throttlesToSampleSupplier.apply(statsConfig);
         opsDurationThrottleMetricPair =
                 throttlesToSample.contains(OPS_DURATION_ID) ? setupLiveMetricPair(opsDurationThrottle) : null;
+        opsDurationInvalidConsumeCalls =
+                metrics.getOrCreate(new Counter.Config("app", "consOpsDurationInvalidConsumeCalls")
+                        .withDescription("A count of invalid ops duration throttle consume calls "
+                                + "(i.e. when the execution consumes more ops duration "
+                                + "than was available) - indicating a possible bug."));
     }
 
     /**
