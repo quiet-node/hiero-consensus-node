@@ -363,7 +363,8 @@ public class RoleFreeBlockUnitSplit {
             traces.add(trace);
         }
 
-        BlockTransactionParts toBlockTransactionParts(final boolean isTopLevel, final boolean hasEnrichedLegacyRecord) {
+        BlockTransactionParts toBlockTransactionParts(
+                final boolean isTopLevel, final boolean hasEnrichedLegacyRecord, final boolean inBatch) {
             // The only absolute requirement is the result is not null
             requireNonNull(result);
             return new BlockTransactionParts(
