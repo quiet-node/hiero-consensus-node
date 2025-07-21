@@ -31,7 +31,7 @@ public enum HederaEvmVersion {
     /**
      * EVM version 0.64
      */
-    VERSION_064("v0.64"); /* Alternate gas schedule */
+    VERSION_065("v0.65"); /* Alternate gas schedule */
 
     /**
      * All supported EVM versions
@@ -43,7 +43,7 @@ public enum HederaEvmVersion {
             VERSION_046.key(), VERSION_046,
             VERSION_050.key(), VERSION_050,
             VERSION_051.key(), VERSION_051,
-            VERSION_064.key(), VERSION_064);
+            VERSION_065.key(), VERSION_065);
 
     HederaEvmVersion(String key) {
         this.key = key;
