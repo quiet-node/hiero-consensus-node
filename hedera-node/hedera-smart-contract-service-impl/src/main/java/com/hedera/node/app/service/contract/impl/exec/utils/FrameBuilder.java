@@ -142,8 +142,8 @@ public class FrameBuilder {
             contextEntries.put(HAPI_RECORD_BUILDER_CONTEXT_VARIABLE, context.streamBuilder());
             contextEntries.put(
                     PENDING_CREATION_BUILDER_CONTEXT_VARIABLE, context.pendingCreationRecordBuilderReference());
-            contextEntries.put(OPS_DURATION_THROTTLE, opsDurationThrottle);
         }
+        contextEntries.put(OPS_DURATION_THROTTLE, opsDurationThrottle);
         return contextEntries;
     }
 
