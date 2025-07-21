@@ -2,6 +2,7 @@
 package com.hedera.services.bdd.junit.support.translators;
 
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_TRANSACTION_RECEIPTS_QUEUE;
+import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
 import static com.hedera.hapi.node.base.HederaFunctionality.SCHEDULE_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.SCHEDULE_SIGN;
 import static com.hedera.node.app.spi.records.RecordCache.matchesExceptNonce;
@@ -240,7 +241,9 @@ public class RoleFreeBlockUnitSplit {
             final boolean isTopLevel = topLevelIds.containsKey(idx);
             final boolean usesEnrichedLegacyRecord =
                     isTopLevel || nextContractOpUsesEnrichedLegacyRecord(unitParts, pending);
-            unitParts.add(pending.toBlockTransactionParts(topLevelIds.containsKey(idx), usesEnrichedLegacyRecord));
+            final boolean isBatchUnit = unitParts.stream().anyMatch(part -> part.functionality() == ATOMIC_BATCH);
+            unitParts.add(pending.toBlockTransactionParts(
+                    topLevelIds.containsKey(idx), usesEnrichedLegacyRecord, isBatchUnit));
         }
         if (unitParts != null) {
             units.add(new BlockTransactionalUnit(unitParts, stateChanges));
@@ -363,7 +366,8 @@ public class RoleFreeBlockUnitSplit {
         BlockTransactionParts toBlockTransactionParts(final boolean isTopLevel, final boolean hasEnrichedLegacyRecord) {
             // The only absolute requirement is the result is not null
             requireNonNull(result);
-            return new BlockTransactionParts(parts, result, traces, outputs, isTopLevel, hasEnrichedLegacyRecord);
+            return new BlockTransactionParts(
+                    parts, result, traces, outputs, isTopLevel, hasEnrichedLegacyRecord, inBatch);
         }
     }
 }

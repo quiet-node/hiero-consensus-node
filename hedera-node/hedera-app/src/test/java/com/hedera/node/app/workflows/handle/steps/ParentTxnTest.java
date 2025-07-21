@@ -211,7 +211,7 @@ class ParentTxnTest {
 
         assertSame(PAYER_ID, dispatch.payerId());
         final var result = ((BlockStreamBuilder) subject.baseBuilder())
-                .build(false).blockItems().stream()
+                .build(false, false).blockItems().stream()
                         .filter(BlockItem::hasTransactionResult)
                         .findFirst()
                         .map(BlockItem::transactionResultOrThrow)
@@ -244,7 +244,7 @@ class ParentTxnTest {
 
         assertSame(PAYER_ID, dispatch.payerId());
         final var result = ((BlockStreamBuilder) subject.baseBuilder())
-                .build(false).blockItems().stream()
+                .build(false, false).blockItems().stream()
                         .filter(BlockItem::hasTransactionResult)
                         .findFirst()
                         .map(BlockItem::transactionResultOrThrow)
