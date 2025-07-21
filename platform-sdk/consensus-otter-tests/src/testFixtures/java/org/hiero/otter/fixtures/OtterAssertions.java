@@ -11,6 +11,7 @@ import org.hiero.otter.fixtures.assertions.MultipleNodeLogResultsContinuousAsser
 import org.hiero.otter.fixtures.assertions.MultipleNodePcesResultsAssert;
 import org.hiero.otter.fixtures.assertions.MultipleNodePlatformStatusResultsAssert;
 import org.hiero.otter.fixtures.assertions.MultipleNodePlatformStatusResultsContinuousAssert;
+import org.hiero.otter.fixtures.assertions.MultipleNodeReconnectResultContinuousAssert;
 import org.hiero.otter.fixtures.assertions.MultipleNodeReconnectResultsAssert;
 import org.hiero.otter.fixtures.assertions.SingleNodeConsensusResultAssert;
 import org.hiero.otter.fixtures.assertions.SingleNodeConsensusResultContinuousAssert;
@@ -82,6 +83,18 @@ public class OtterAssertions extends Assertions {
     public static MultipleNodeConsensusResultsContinuousAssert assertContinuouslyThat(
             @Nullable final MultipleNodeConsensusResults actual) {
         return MultipleNodeConsensusResultsContinuousAssert.assertContinuouslyThat(actual);
+    }
+
+    /**
+     * Creates a continuous assertion for the given {@link MultipleNodeReconnectResults}.
+     *
+     * @param actual the {@link MultipleNodeReconnectResults} to assert
+     * @return a continuous assertion for the given {@link MultipleNodeReconnectResults}
+     */
+    @NonNull
+    public static MultipleNodeReconnectResultContinuousAssert assertContinuouslyThat(
+            @Nullable final MultipleNodeReconnectResults actual) {
+        return MultipleNodeReconnectResultContinuousAssert.assertContinuouslyThat(actual);
     }
 
     /**
