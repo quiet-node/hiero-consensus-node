@@ -1,6 +1,6 @@
 /**
- * # PlatformState
- * Messages that hold platform state in the network state.
+ * # VirtualMapKey
+ * Messages that define the type of keys used in the Virtual Map State.
  *
  * The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
  * "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
