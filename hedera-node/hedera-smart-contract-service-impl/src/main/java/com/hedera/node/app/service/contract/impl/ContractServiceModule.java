@@ -146,5 +146,5 @@ public interface ContractServiceModule {
     @IntoMap
     @Singleton
     @ServicesVersionKey(VERSION_065)
-    TransactionProcessor bindV064Processor(@ServicesV065 @NonNull final TransactionProcessor processor);
+    TransactionProcessor bindV065Processor(@ServicesV065 @NonNull final TransactionProcessor processor);
 }

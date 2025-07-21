@@ -29,9 +29,9 @@ public enum HederaEvmVersion {
      */
     VERSION_051("v0.51"), /* Hedera Account Service System Contract */
     /**
-     * EVM version 0.64
+     * EVM version 0.65
      */
-    VERSION_065("v0.65"); /* Alternate gas schedule */
+    VERSION_065("v0.65"); /* ops duration */
 
     /**
      * All supported EVM versions
