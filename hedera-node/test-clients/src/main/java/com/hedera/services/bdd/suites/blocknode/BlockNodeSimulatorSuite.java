@@ -379,14 +379,14 @@ public class BlockNodeSimulatorSuite {
     @HapiBlockNode(
             networkSize = 1,
             blockNodeConfigs = {
-                    @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
-                    @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
+                @BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR),
+                @BlockNodeConfig(nodeId = 1, mode = BlockNodeMode.SIMULATOR)
             },
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0, 1},
-                            blockNodePriorities = {0, 1})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0, 1},
+                        blockNodePriorities = {0, 1})
             })
     @Order(7)
     final Stream<DynamicTest> activeConnectionPeriodicallyRestarts() {
@@ -437,10 +437,10 @@ public class BlockNodeSimulatorSuite {
             networkSize = 1,
             blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.SIMULATOR)},
             subProcessNodeConfigs = {
-                    @SubProcessNodeConfig(
-                            nodeId = 0,
-                            blockNodeIds = {0},
-                            blockNodePriorities = {0})
+                @SubProcessNodeConfig(
+                        nodeId = 0,
+                        blockNodeIds = {0},
+                        blockNodePriorities = {0})
             })
     @Order(7)
     final Stream<DynamicTest> testBlockBufferDurability() {
