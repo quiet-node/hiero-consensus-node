@@ -4,11 +4,6 @@ package com.hedera.node.app.workflows.handle.stack;
 import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.NO_SCHEDULING_ALLOWED_AFTER_SCHEDULED_RECURSION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.RECURSIVE_SCHEDULING_LIMIT_REACHED;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.FIRST_CHILD;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.LAST_CHILD;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.MIDDLE_CHILD;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.PARENT;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.STARTING_PARENT;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.BATCH_INNER;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.CHILD;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
@@ -531,20 +526,6 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                 break;
             }
         }
-        // Reduce the work that light clients must do when ingesting block streams by explicitly
-        // grouping all logical transactions connected to this commit's Merkle state changes
-        if (streamMode != RECORDS && n > 1) {
-            for (int i = 0; i < indexOfParentBuilder; i++) {
-                final var builder = builders.get(i);
-                builder.setTransactionGroupRole(i == 0 ? FIRST_CHILD : MIDDLE_CHILD);
-            }
-            final var parentBuilder = builders.get(indexOfParentBuilder);
-            parentBuilder.setTransactionGroupRole(indexOfParentBuilder == 0 ? STARTING_PARENT : PARENT);
-            for (int i = indexOfParentBuilder + 1; i < n; i++) {
-                final var builder = builders.get(i);
-                builder.setTransactionGroupRole(i == n - 1 ? LAST_CHILD : MIDDLE_CHILD);
-            }
-        }
         int nextNonceOffset = 1;
         var parentConsensusTime = consensusTime;
         for (int i = 0; i < n; i++) {
@@ -594,6 +575,10 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                     case CHILD -> builder.parentConsensus(parentConsensusTime).exchangeRate(null);
                 }
             }
+
+            // Add trace data for batch inner (or inner child) transaction fields, that are normally computed by state
+            // changes
+            final boolean addAdditionalTraceData = baseBuilder.functionality() == ATOMIC_BATCH;
             switch (streamMode) {
                 case RECORDS -> {
                     final var nextRecord = ((RecordStreamBuilder) builder).build();
@@ -602,12 +587,16 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                             nextRecord.transactionRecord().transactionIDOrThrow(),
                             nextRecord.transactionRecord().receiptOrThrow()));
                 }
-                case BLOCKS -> requireNonNull(outputs).add(((BlockStreamBuilder) builder).build());
+                case BLOCKS ->
+                    requireNonNull(outputs)
+                            .add(((BlockStreamBuilder) builder).build(builder == baseBuilder, addAdditionalTraceData));
                 case BOTH -> {
                     final var pairedBuilder = (PairedStreamBuilder) builder;
                     records.add(pairedBuilder.recordStreamBuilder().build());
                     requireNonNull(outputs)
-                            .add(pairedBuilder.blockStreamBuilder().build());
+                            .add(pairedBuilder
+                                    .blockStreamBuilder()
+                                    .build(builder == baseBuilder, addAdditionalTraceData));
                 }
             }
         }

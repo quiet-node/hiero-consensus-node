@@ -95,7 +95,6 @@ import com.hedera.services.bdd.junit.hedera.ExternalPath;
 import com.hedera.services.bdd.junit.hedera.MarkerFile;
 import com.hedera.services.bdd.junit.hedera.NodeSelector;
 import com.hedera.services.bdd.junit.hedera.embedded.EmbeddedNetwork;
-import com.hedera.services.bdd.junit.hedera.embedded.SyntheticVersion;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
 import com.hedera.services.bdd.junit.support.translators.inputs.TransactionParts;
 import com.hedera.services.bdd.spec.HapiSpec;
@@ -570,17 +569,16 @@ public class UtilVerbs {
 
     /**
      * Returns a submission strategy that requires an embedded network and given one submits a transaction with
-     * the given synthetic version.
-     *
-     * @param syntheticVersion the synthetic version to use
+     * the given event birth round.
+     * @param eventBirthRound the event birth round to use for the submission
      * @return the submission strategy
      */
-    public static HapiTxnOp.SubmissionStrategy usingVersion(@NonNull final SyntheticVersion syntheticVersion) {
+    public static HapiTxnOp.SubmissionStrategy usingEventBirthRound(long eventBirthRound) {
         return (network, transaction, functionality, target, nodeAccountId) -> {
             if (!(network instanceof EmbeddedNetwork embeddedNetwork)) {
                 throw new IllegalArgumentException("Expected an EmbeddedNetwork");
             }
-            return embeddedNetwork.embeddedHederaOrThrow().submit(transaction, nodeAccountId, syntheticVersion);
+            return embeddedNetwork.embeddedHederaOrThrow().submit(transaction, nodeAccountId, eventBirthRound);
         };
     }
 
@@ -898,6 +896,10 @@ public class UtilVerbs {
 
     public static BalanceSnapshot balanceSnapshot(String name, String forAccount) {
         return new BalanceSnapshot(forAccount, name);
+    }
+
+    public static BalanceSnapshot tokenBalanceSnapshot(String token, String name, String forAccount) {
+        return new BalanceSnapshot(forAccount, name).forToken(token);
     }
 
     public static MutateAccountOp mutateAccount(
@@ -2074,6 +2076,28 @@ public class UtilVerbs {
     }
 
     /**
+     * Validates that the gas charge for an inner transaction (inside Atomic Batch)
+     * is within the allowedPercentDiff of expected gas in USD.
+     *
+     * @param txn txn to be validated
+     * @param expectedUsdForGas expected gas charge in usd
+     * @param allowedPercentDiff allowed percentage difference
+     */
+    public static CustomSpecAssert validateChargedUsdForGasOnlyForInnerTxn(
+            String txn, String parent, double expectedUsdForGas, double allowedPercentDiff) {
+        return assertionsHold((spec, assertLog) -> {
+            final var gasCharged = getChargedGasForInnerTxn(spec, txn, parent);
+            assertEquals(
+                    expectedUsdForGas,
+                    gasCharged,
+                    (allowedPercentDiff / 100.0) * expectedUsdForGas,
+                    String.format(
+                            "%s gas charge (%s) more than %.2f percent different than expected!",
+                            sdec(expectedUsdForGas, 4), txn, allowedPercentDiff));
+        });
+    }
+
+    /**
      * Validates that an amount is within a certain percentage of an expected value.
      * @param expected expected value
      * @param actual actual value
@@ -2667,6 +2691,31 @@ public class UtilVerbs {
                 / ONE_HBAR
                 / rcd.getReceipt().getExchangeRate().getCurrentRate().getHbarEquiv()
                 * rcd.getReceipt().getExchangeRate().getCurrentRate().getCentEquiv()
+                / 100;
+    }
+
+    /**
+     * Returns the charged gas for an inner transaction (inside Atomic Batch) in USD, assuming a standard cost of
+     * 71 tinybars per gas unit.
+     *
+     * @param spec the spec
+     * @param txn the transaction
+     * @return the charged gas in USD
+     */
+    private static double getChargedGasForInnerTxn(
+            @NonNull final HapiSpec spec, @NonNull final String txn, @NonNull final String parent) {
+        requireNonNull(spec);
+        requireNonNull(txn);
+        var subOp = getTxnRecord(txn).logged();
+        var parentOp = getTxnRecord(parent);
+        allRunFor(spec, subOp, parentOp);
+        final var rcd = subOp.getResponseRecord();
+        final var parentRcd = parentOp.getResponseRecord();
+        final var gasUsed = rcd.getContractCallResult().getGasUsed();
+        return (gasUsed * 71.0)
+                / ONE_HBAR
+                / parentRcd.getReceipt().getExchangeRate().getCurrentRate().getHbarEquiv()
+                * parentRcd.getReceipt().getExchangeRate().getCurrentRate().getCentEquiv()
                 / 100;
     }
 
