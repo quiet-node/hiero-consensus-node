@@ -54,7 +54,9 @@ public class SingleNodeReconnectResultContinuousAssert
     public SingleNodeReconnectResultContinuousAssert hasNoFailedReconnects() {
         return checkContinuously(logEntry -> {
             if (logEntry.message().contains(ReconnectFailurePayload.class.toString())) {
-                failWithMessage("Expected no failed reconnects, but found %s", logEntry.message());
+                failWithMessage(
+                        "Expected no failed reconnects, but found %s on node %s",
+                        logEntry.message(), logEntry.nodeId());
             }
         });
     }
@@ -68,7 +70,9 @@ public class SingleNodeReconnectResultContinuousAssert
     public SingleNodeReconnectResultContinuousAssert doesNotAttemptToReconnect() {
         return checkContinuously(logEntry -> {
             if (logEntry.message().contains(ReconnectStartPayload.class.toString())) {
-                failWithMessage("Expected no failed reconnect, but found %s", logEntry.message());
+                failWithMessage(
+                        "Expected no attempted reconnects, but found %s on node %s",
+                        logEntry.message(), logEntry.nodeId());
             }
         });
     }
@@ -88,8 +92,10 @@ public class SingleNodeReconnectResultContinuousAssert
                         parsePayload(SynchronizationCompletePayload.class, logEntry.message());
                 if (payload.getTimeInSeconds() > maximumReconnectTime.getSeconds()) {
                     failWithMessage(
-                            "Expected maximum reconnect time to be <%s> but found <%s>",
-                            maximumReconnectTime, Duration.ofSeconds((long) payload.getTimeInSeconds()));
+                            "Expected maximum reconnect time to be <%s> but found <%s> on node %s",
+                            maximumReconnectTime,
+                            Duration.ofSeconds((long) payload.getTimeInSeconds()),
+                            logEntry.nodeId());
                 }
             }
         });
@@ -110,9 +116,10 @@ public class SingleNodeReconnectResultContinuousAssert
                         parsePayload(SynchronizationCompletePayload.class, logEntry.message());
                 if (payload.getInitializationTimeInSeconds() > maximumTreeInitializationTime.getSeconds()) {
                     failWithMessage(
-                            "Expected maximum tree initialization time to be <%s> but found <%s>",
+                            "Expected maximum tree initialization time to be <%s> but found <%s> on node %s",
                             maximumTreeInitializationTime,
-                            Duration.ofSeconds((long) payload.getInitializationTimeInSeconds()));
+                            Duration.ofSeconds((long) payload.getInitializationTimeInSeconds()),
+                            logEntry.nodeId());
                 }
             }
         });

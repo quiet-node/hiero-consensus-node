@@ -36,12 +36,15 @@ public class SingleNodeReconnectResultsAssert
      *
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public SingleNodeReconnectResultsAssert hasNoReconnects() {
         isNotNull();
         if (actual.numSuccessfulReconnects() > 0 || actual.numFailedReconnects() > 0) {
             failWithMessage(
-                    "Expected no reconnects but found <%d> successful and <%d> failed reconnects",
-                    actual.numSuccessfulReconnects(), actual.numFailedReconnects());
+                    "Expected no reconnects but found <%d> successful and <%d> failed reconnects on node %s",
+                    actual.numSuccessfulReconnects(),
+                    actual.numFailedReconnects(),
+                    actual.nodeId().id());
         }
         return this;
     }
@@ -51,6 +54,7 @@ public class SingleNodeReconnectResultsAssert
      *
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public SingleNodeReconnectResultsAssert hasNoFailedReconnects() {
         isNotNull();
         if (actual.numFailedReconnects() > 0) {
@@ -65,6 +69,7 @@ public class SingleNodeReconnectResultsAssert
      *
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public SingleNodeReconnectResultsAssert hasMaximumFailedReconnects(final int maximum) {
         isNotNull();
         if (actual.numFailedReconnects() >= maximum) {
@@ -81,6 +86,7 @@ public class SingleNodeReconnectResultsAssert
      * @param expected the expected number of successful reconnects
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public SingleNodeReconnectResultsAssert hasExactSuccessfulReconnects(final int expected) {
         isNotNull();
         if (actual.numSuccessfulReconnects() != expected) {
@@ -97,6 +103,7 @@ public class SingleNodeReconnectResultsAssert
      * @param minimum the minimum number of successful reconnects expected
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public SingleNodeReconnectResultsAssert hasMinimumSuccessfulReconnects(final int minimum) {
         isNotNull();
         if (actual.numSuccessfulReconnects() < minimum) {
@@ -113,6 +120,7 @@ public class SingleNodeReconnectResultsAssert
      * @param maximum the maximum number of successful reconnects expected
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public SingleNodeReconnectResultsAssert hasMaximumSuccessfulReconnects(final int maximum) {
         isNotNull();
         if (actual.numSuccessfulReconnects() >= maximum) {
@@ -131,7 +139,8 @@ public class SingleNodeReconnectResultsAssert
      * @param maximumReconnectTime the maximum allowed reconnect time
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
-    public SingleNodeReconnectResultsAssert hasMaximumReconnectTime(final Duration maximumReconnectTime) {
+    @NonNull
+    public SingleNodeReconnectResultsAssert hasMaximumReconnectTime(@NonNull final Duration maximumReconnectTime) {
         isNotNull();
         final List<SynchronizationCompletePayload> payloads = actual.getSynchronizationCompletePayloads();
         payloads.forEach(payload -> {
@@ -153,8 +162,9 @@ public class SingleNodeReconnectResultsAssert
      * @param maximumTreeInitializationTime the maximum allowed tree initialization time
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public SingleNodeReconnectResultsAssert hasMaximumTreeInitializationTime(
-            final Duration maximumTreeInitializationTime) {
+            @NonNull final Duration maximumTreeInitializationTime) {
         isNotNull();
         final List<SynchronizationCompletePayload> payloads = actual.getSynchronizationCompletePayloads();
         payloads.forEach(payload -> {

@@ -42,6 +42,7 @@ public class MultipleNodeReconnectResultsAssert
      *
      * @return this assertion object for method chaining
      */
+    @NonNull
     public MultipleNodeReconnectResultsAssert haveNoReconnects() {
         isNotNull();
         for (final SingleNodeReconnectResult result : actual.reconnectResults()) {
@@ -55,6 +56,7 @@ public class MultipleNodeReconnectResultsAssert
      *
      * @return this assertion object for method chaining
      */
+    @NonNull
     public MultipleNodeReconnectResultsAssert haveNoFailedReconnects() {
         isNotNull();
         for (final SingleNodeReconnectResult result : actual.reconnectResults()) {
@@ -71,7 +73,8 @@ public class MultipleNodeReconnectResultsAssert
      * @param maximumReconnectTime the maximum allowed reconnect time
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
-    public MultipleNodeReconnectResultsAssert haveMaximumReconnectTime(final Duration maximumReconnectTime) {
+    @NonNull
+    public MultipleNodeReconnectResultsAssert haveMaximumReconnectTime(@NonNull final Duration maximumReconnectTime) {
         isNotNull();
         for (final SingleNodeReconnectResult result : actual.reconnectResults()) {
             OtterAssertions.assertThat(result).hasMaximumReconnectTime(maximumReconnectTime);
@@ -88,8 +91,9 @@ public class MultipleNodeReconnectResultsAssert
      * @param maximumTreeInitializationTime the maximum allowed tree initialization time
      * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
      */
+    @NonNull
     public MultipleNodeReconnectResultsAssert haveMaximumTreeInitializationTime(
-            final Duration maximumTreeInitializationTime) {
+            @NonNull final Duration maximumTreeInitializationTime) {
         isNotNull();
         for (final SingleNodeReconnectResult result : actual.reconnectResults()) {
             OtterAssertions.assertThat(result).hasMaximumTreeInitializationTime(maximumTreeInitializationTime);

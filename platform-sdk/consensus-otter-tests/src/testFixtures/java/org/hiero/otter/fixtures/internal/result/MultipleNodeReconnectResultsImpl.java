@@ -57,11 +57,17 @@ public class MultipleNodeReconnectResultsImpl implements MultipleNodeReconnectRe
         return new MultipleNodeReconnectResultsImpl(filtered);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void subscribe(@NotNull final LogSubscriber subscriber) {
         reconnectSubscribers.add(subscriber);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @NotNull
     public List<SingleNodeReconnectResult> reconnectResults() {

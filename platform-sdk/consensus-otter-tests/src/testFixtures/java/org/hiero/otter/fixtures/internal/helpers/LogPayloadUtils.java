@@ -49,7 +49,9 @@ public class LogPayloadUtils {
         try {
             payload = mapper.treeToValue(extractJsonData(data), type);
         } catch (final JsonProcessingException e) {
-            throw new PayloadParsingException("Unable to map json data onto object", e);
+            throw new PayloadParsingException(
+                    String.format("Unable to map json data onto object%nObject:%n%s%nData:%n%s", type.getName(), data),
+                    e);
         }
 
         payload.setMessage(extractMessage(data));
@@ -69,6 +71,8 @@ public class LogPayloadUtils {
             final int endIndex = data.indexOf('{') - 1;
             return data.substring(0, endIndex);
         } catch (final IndexOutOfBoundsException ignored) {
+            // If we fail to parse the message, do not fail.
+            // Return an empty string so that other parsed data can still be used.
             return "";
         }
     }
@@ -88,7 +92,7 @@ public class LogPayloadUtils {
             final String jsonString = data.substring(startIndex, endIndex);
             return mapper.readTree(jsonString);
         } catch (final IndexOutOfBoundsException | JsonProcessingException e) {
-            throw new PayloadParsingException(e);
+            throw new PayloadParsingException(String.format("Unable to extract json data from message:%n%s", data), e);
         }
     }
 }

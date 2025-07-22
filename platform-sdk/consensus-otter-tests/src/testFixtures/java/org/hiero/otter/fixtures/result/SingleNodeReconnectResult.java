@@ -61,5 +61,6 @@ public interface SingleNodeReconnectResult extends OtterResult {
      *
      * @return a list of synchronization complete payloads
      */
+    @NonNull
     List<SynchronizationCompletePayload> getSynchronizationCompletePayloads();
 }

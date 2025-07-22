@@ -70,6 +70,9 @@ public class SingleNodeReconnectResultImpl implements SingleNodeReconnectResult 
                 .count();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     @NonNull
     public List<SynchronizationCompletePayload> getSynchronizationCompletePayloads() {
