@@ -111,7 +111,7 @@ jobs:
               sleep 2m
             fi
           done
-          echo "::white_check_mark:: Artifact ${ARTIFACT_NAME}.zip is available."
+          echo ":white_check_mark: Artifact ${ARTIFACT_NAME}.zip is available."
           echo "build-version=${ARTIFACT_NAME}" >> "${GITHUB_OUTPUT}"
 
       - name: Summary
@@ -123,6 +123,6 @@ jobs:
           echo "- **Build Tag**: ${{ inputs.build-tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Artifact Name**: ${{ steps.check-if-exist.outputs.build-version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Artifact Verified**: ${{ steps.verify-artifact.outputs.artifact-verified }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ::white_check_mark:: Ready for canonical testing" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: :white_check_mark: Ready for canonical testing" >> $GITHUB_STEP_SUMMARY
 
 
