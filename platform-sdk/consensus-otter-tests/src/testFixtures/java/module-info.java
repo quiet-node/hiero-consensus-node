@@ -32,8 +32,10 @@ module org.hiero.otter.fixtures {
     requires org.hiero.base.crypto;
     requires org.hiero.consensus.utility;
     requires awaitility;
+    requires com.fasterxml.jackson.datatype.jsr310;
     requires io.grpc.protobuf;
     requires java.net.http;
+    requires org.hyperledger.besu.evm;
     requires org.junit.jupiter.params;
     requires org.junit.platform.commons;
     requires static com.github.spotbugs.annotations;

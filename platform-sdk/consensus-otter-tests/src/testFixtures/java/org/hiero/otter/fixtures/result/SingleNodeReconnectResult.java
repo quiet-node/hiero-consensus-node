@@ -2,7 +2,9 @@
 package org.hiero.otter.fixtures.result;
 
 import com.hedera.hapi.platform.state.NodeId;
+import com.swirlds.logging.legacy.payload.SynchronizationCompletePayload;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.List;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 
 /**
@@ -51,4 +53,13 @@ public interface SingleNodeReconnectResult extends OtterResult {
      * @param subscriber the subscriber that will receive platform status updates
      */
     void subscribe(@NonNull PlatformStatusSubscriber subscriber);
+
+    /**
+     * Returns a list of {@link SynchronizationCompletePayload} entries logged by the node.
+     *
+     * <p>This method retrieves all synchronization complete payloads that have been logged by the node.</p>
+     *
+     * @return a list of synchronization complete payloads
+     */
+    List<SynchronizationCompletePayload> getSynchronizationCompletePayloads();
 }
