@@ -63,6 +63,7 @@ import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
 import org.hiero.otter.fixtures.result.SingleNodePcesResult;
 import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResults;
+import org.hiero.otter.fixtures.result.SingleNodeReconnectResult;
 import org.hiero.otter.fixtures.turtle.gossip.SimulatedGossip;
 import org.hiero.otter.fixtures.turtle.gossip.SimulatedNetwork;
 import org.jetbrains.annotations.NotNull;
@@ -129,7 +130,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
             this.keysAndCerts = requireNonNull(keysAndCerts);
             this.network = requireNonNull(network);
             this.logging = requireNonNull(logging);
-            this.nodeConfiguration = new TurtleNodeConfiguration(outputDirectory);
+            this.nodeConfiguration = new TurtleNodeConfiguration(() -> lifeCycle, outputDirectory);
             this.resultsCollector = new NodeResultsCollector(selfId);
 
         } finally {
@@ -261,7 +262,17 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
     @Override
     @NonNull
     public SingleNodePcesResult getPcesResult() {
-        return new SingleNodePcesResultImpl(selfId(), platformContext);
+        return new SingleNodePcesResultImpl(selfId(), platformContext.getConfiguration());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This method is not supported in TurtleNode and will throw an {@link UnsupportedOperationException}.
+     */
+    @Override
+    public @NotNull SingleNodeReconnectResult getReconnectResults() {
+        throw new UnsupportedOperationException("Reconnect is not supported in TurtleNode.");
     }
 
     /**
@@ -315,7 +326,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
 
     private void doStartNode() {
 
-        final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
+        final Configuration currentConfiguration = nodeConfiguration.current();
         final org.hiero.consensus.model.node.NodeId legacyNodeId =
                 org.hiero.consensus.model.node.NodeId.of(selfId.id());
 
