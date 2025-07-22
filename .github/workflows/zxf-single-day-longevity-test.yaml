@@ -58,7 +58,7 @@ jobs:
           BRANCH_NAME="${BRANCH_NAME##origin/}"
           BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
           BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/' '-' | tr '_' '.')"
-          LAST_BUILD_TAG="${{ inputs.build_tag }}"
+          LAST_BUILD_TAG="${{ inputs.build-tag }}"
           TAG_COMMIT_SHA=$(git rev-list -n 1 $LATEST_BUILD_TAG)
           TAG_COMMIT_SHORT=$(echo $TAG_COMMIT_SHA | cut -c1-8)
 
