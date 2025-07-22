@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-name: "ZXF: [CITR] Single Day Longevity Tests (SDLT)"
+name: "ZXF: [CITR] Single Day Canonical Tests (SDCT)"
 on:
   workflow_dispatch:
     inputs:
@@ -18,18 +18,11 @@ defaults:
     shell: bash
 
 env:
-  TEST_SCRIPT: ".github/workflows/support/scripts/nightly.sh"
-  CHECK_ACTIVE: ".github/workflows/support/scripts/loki-logs.sh"
   VERSION_MIRRORNODE: "custom"
-  K8S_CLUSTER: "gke_hedera-testing-1_us-south1-c_nightly-perfnet"
 
   USERNAME: ${{ secrets.TESTING_JENKINS_API_USERNAME }}
   PASSWORD: ${{ secrets.TESTING_JENKINS_API_PASSWORD }}
   SERVER: ${{ secrets.TESTING_JENKINS_API_SERVER }}
-
-  LOKI_ADDR: ${{ secrets.LOKI_ADDR }}
-  LOKI_USERNAME: ${{ secrets.LOKI_USERNAME }}
-  LOKI_PASSWORD: ${{ secrets.LOKI_PASSWORD }}
 
 permissions:
   id-token: write
@@ -60,13 +53,17 @@ jobs:
       - name: Verify Workflow Parameters
         id: parameters
         run: |
+
           BRANCH_NAME="${{ inputs.ref }}"
           BRANCH_NAME="${BRANCH_NAME##origin/}"
           BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
           BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/' '-' | tr '_' '.')"
+          LAST_BUILD_TAG="${{ inputs.build_tag }}"
+          TAG_COMMIT_SHA=$(git rev-list -n 1 $LATEST_BUILD_TAG)
+          TAG_COMMIT_SHORT=$(echo $TAG_COMMIT_SHA | cut -c1-8)
 
-          echo "branch-name-lower=${BRANCH_NAME_LOWER}" >>"${GITHUB_OUTPUT}"
-          echo "commit-id-short=$(echo "${{ github.sha }}" | cut -c1-8)" >>"${GITHUB_OUTPUT}"
+          echo "branch-name-lower=${BRANCH_NAME_SAFE}" >>"${GITHUB_OUTPUT}"
+          echo "commit-id-short=$TAG_COMMIT_SHORT" >> "${GITHUB_OUTPUT}"
 
       - name: Check If Release Artifact Exist in Bucket
         id: check-if-exist
@@ -90,35 +87,3 @@ jobs:
           done
           echo "build-version=${ARTIFACT_NAME}" >>"${GITHUB_OUTPUT}"
 
-      - name: Reset Network
-        id: reset-network
-        run: |
-          curl -X POST 'https://ci.preprod.hedera-devops.com/generic-webhook-trigger/invoke?token=${{ secrets.JENKINS_NETWORK_RESET }}&command=/devops-reset&text=engnet1%20${{ steps.check-if-exist.outputs.build-version }}&user_id=${{ vars.SLACK_ID }}&user_name=${{ vars.SLACK_USER }}&channel_id=${{ vars.DEVOP_CHANNEL_ID }}&channel_name=${{ vars.DEVOP_CHANNEL_NAME }}'
-          echo "Sleep 6 minutes for network reset"
-          sleep 6m
-
-      - name: Run LogCLI to Wait for Network Active
-        id: run-logcli-wait-network-active
-        run: |
-          curl -O -L "https://github.com/grafana/loki/releases/download/v2.9.2/logcli-linux-amd64.zip"
-          unzip logcli-linux-amd64.zip
-          chmod a+x logcli-linux-amd64
-          bash "${{ github.workspace }}/${{ env.CHECK_ACTIVE }}" engnet1 7 3 600 "${{ github.workspace }}/logcli-linux-amd64" 0
-          sleep 9m
-
-      - name: Restore Old Signed State
-        id: restore-old-signed-state
-        run: |
-          curl -X POST 'https://ci.preprod.hedera-devops.com/generic-webhook-trigger/invoke?token=${{ secrets.JENKINS_RESTORE_BACKUP }}&command=/devops-restore-backup&text=gs%3A%2F%2Fchillybin%2Fengnet1-state%2Fengnet1-node00%2F${{ vars.GS_STATE }}&user_id=${{ vars.SLACK_ID }}&user_name=${{ vars.SLACK_USER }}&channel_id=${{ vars.DEVOP_CHANNEL_ID }}&channel_name=${{ vars.DEVOP_CHANNEL_NAME }}'
-          echo "Sleep 18 minutes for network to load"
-          sleep 20m
-
-      - name: Run LogCLI to Wait for Network Active Again
-        id: run-logcli-wait-network-active-again
-        run: |
-          bash "${{ github.workspace }}/${{ env.CHECK_ACTIVE }}" engnet1 7 3 3000 "${{ github.workspace }}/logcli-linux-amd64" 0
-
-      - name: Call Test Script
-        id: call-test-script
-        run: |
-          bash "${{ github.workspace }}/${{ env.TEST_SCRIPT }}" "${{ env.USERNAME }}" "${{ env.PASSWORD }}" "${{ env.SERVER }}" "${{ env.K8S_CLUSTER }}" "${{ inputs.build-tag }}" "${{ steps.check-if-exist.outputs.build-version }}" "${{ env.VERSION_MIRRORNODE }}"
