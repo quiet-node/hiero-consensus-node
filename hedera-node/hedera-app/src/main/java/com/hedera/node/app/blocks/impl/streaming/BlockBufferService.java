@@ -3,8 +3,9 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.block.internal.BufferedBlock;
 import com.hedera.hapi.block.stream.BlockItem;
-import com.hedera.node.app.blocks.impl.streaming.BlockBufferIO.BlockFromDisk;
+import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockBufferConfig;
@@ -462,7 +463,7 @@ public class BlockBufferService {
             return;
         }
 
-        final List<BlockFromDisk> blocks;
+        final List<BufferedBlock> blocks;
         try {
             blocks = bufferIO.read();
         } catch (final IOException e) {
@@ -479,28 +480,30 @@ public class BlockBufferService {
 
         logger.info("Block buffer is being restored from disk (blocksRead: {})", blocks.size());
 
-        for (final BlockFromDisk bfd : blocks) {
-            final BlockState block = new BlockState(bfd.blockNumber());
-            bfd.items().forEach(block::addItem);
+        for (final BufferedBlock bufferedBlock : blocks) {
+            final BlockState block = new BlockState(bufferedBlock.blockNumber());
+            bufferedBlock.block().items().forEach(block::addItem);
             // create the requests
             block.processPendingItems(batchSize);
-            if (bfd.isProofSent()) {
+            if (bufferedBlock.isProofSent()) {
                 // the proof is sent and since it is the last thing in a block, mark all the requests as sent
                 for (int i = 0; i < block.numRequestsCreated(); ++i) {
                     block.markRequestSent(i);
                 }
             }
 
-            block.closeBlock(bfd.closedTimestamp());
+            final Timestamp closedTimestamp = bufferedBlock.closedTimestamp();
+            final Instant closedInstant = Instant.ofEpochSecond(closedTimestamp.seconds(), closedTimestamp.nanos());
+            block.closeBlock(closedInstant);
 
-            if (bfd.isAcknowledged()) {
-                setLatestAcknowledgedBlock(bfd.blockNumber());
+            if (bufferedBlock.isAcknowledged()) {
+                setLatestAcknowledgedBlock(bufferedBlock.blockNumber());
             }
 
-            if (blockBuffer.putIfAbsent(bfd.blockNumber(), block) != null) {
+            if (blockBuffer.putIfAbsent(bufferedBlock.blockNumber(), block) != null) {
                 logger.debug(
                         "Block {} was read from disk but it was already in the buffer; ignoring block from disk",
-                        bfd.blockNumber());
+                        bufferedBlock.blockNumber());
             }
         }
     }

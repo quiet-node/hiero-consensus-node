@@ -3,8 +3,10 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.block.internal.BufferedBlock;
 import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
+import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.io.File;
@@ -35,24 +37,9 @@ import org.hiero.block.api.PublishStreamRequest;
  * Block files are written into a directory whose name is the current (at the time of writing) timestamp in milliseconds.
  * This naming structure allows for an easy way to find the most recently written batch of blocks. Each block file is
  * named: {@code block-$BlockNumber.bin}
- * <p>
- * The block files are written using a schema, with V1 of the schema being the following format, in order:
- * <ol>
- *     <li>Schema Version (byte): Hardcoded to 1</li>
- *     <li>Block Number (long)</li>
- *     <li>Closed Timestamp Epoch Second (long): The epoc seconds component of the closed timestamp</li>
- *     <li>Closed Timestamp Nanosecond (int): The nanosecond adjustment of the closed timestamp</li>
- *     <li>Block Proof Sent Flag (byte): 1 (true) if the block proof has been sent, else 0 (false)</li>
- *     <li>Block Acknowledged Flag (byte): 1 (true) if the block has been acknowledged, else 0 (false)</li>
- *     <li>Block Payload Length (int): The number of bytes the block data (e.g. items) consumes</li>
- *     <li>Block Payload (byte array): The block data (e.g. items)</li>
- * </ol>
  */
 public class BlockBufferIO {
     private static final Logger logger = LogManager.getLogger(BlockBufferIO.class);
-
-    private static final byte BYTE_ZERO = (byte) 0;
-    private static final byte BYTE_ONE = (byte) 1;
 
     /**
      * The root directory where blocks are stored.
@@ -85,32 +72,16 @@ public class BlockBufferIO {
      * @return a list of blocks from disk
      * @throws IOException if there is an error reading the block data from disk
      */
-    public List<BlockFromDisk> read() throws IOException {
+    public List<BufferedBlock> read() throws IOException {
         return new Reader().read();
     }
-
-    /**
-     * Record representing a single block from disk.
-     *
-     * @param blockNumber the block number
-     * @param closedTimestamp the timestamp of when the block was closed
-     * @param isProofSent true if the block proof was sent to a block node, else false
-     * @param isAcknowledged true if the block was acknowledged, else false
-     * @param items list of items that make up the block
-     */
-    public record BlockFromDisk(
-            long blockNumber,
-            Instant closedTimestamp,
-            boolean isProofSent,
-            boolean isAcknowledged,
-            List<BlockItem> items) {}
 
     /**
      * Utility class that contains logic related to reading blocks from disk.
      */
     private class Reader {
 
-        private List<BlockFromDisk> read() throws IOException {
+        private List<BufferedBlock> read() throws IOException {
             final File[] files = rootDirectory.listFiles();
 
             if (files == null) {
@@ -161,20 +132,20 @@ public class BlockBufferIO {
          * @return a list of blocks
          * @throws IOException if there is an error reading the block files
          */
-        private List<BlockFromDisk> read(final File directory) throws IOException {
+        private List<BufferedBlock> read(final File directory) throws IOException {
             logger.debug("Reading blocks from directory: {}", directory.getAbsolutePath());
             final List<File> files;
             try (final Stream<Path> stream = Files.list(directory.toPath())) {
                 files = stream.map(Path::toFile).toList();
             }
 
-            final List<BlockFromDisk> blocks = new ArrayList<>(files.size());
+            final List<BufferedBlock> blocks = new ArrayList<>(files.size());
 
             for (final File file : files) {
                 try {
-                    final BlockFromDisk bfd = readBlockFile(file);
-                    logger.debug("Read block {} from file: {}", bfd.blockNumber, file.getAbsolutePath());
-                    blocks.add(bfd);
+                    final BufferedBlock bufferedBlock = readBlockFile(file);
+                    logger.debug("Read block {} from file: {}", bufferedBlock.blockNumber(), file.getAbsolutePath());
+                    blocks.add(bufferedBlock);
                 } catch (final Exception e) {
                     logger.warn("Failed to read block file; ignoring block (file={})", file.getAbsolutePath(), e);
                 }
@@ -191,39 +162,18 @@ public class BlockBufferIO {
          * @throws IOException if there was an error reading the block file
          * @throws ParseException if there was an error parsing the block file
          */
-        private BlockFromDisk readBlockFile(final File file) throws IOException, ParseException {
+        private BufferedBlock readBlockFile(final File file) throws IOException, ParseException {
             try (final RandomAccessFile raf = new RandomAccessFile(file, "r")) {
                 final FileChannel fileChannel = raf.getChannel();
                 final MappedByteBuffer byteBuffer = fileChannel.map(MapMode.READ_ONLY, 0, fileChannel.size());
 
-                final byte schemaVersion = byteBuffer.get();
-                if (BYTE_ONE != schemaVersion) {
-                    throw new IllegalStateException(
-                            "Block file contained an unexpected schema version (expected: 1, found: " + schemaVersion
-                                    + ")");
-                }
-
-                final long blockNumber = byteBuffer.getLong();
-                final long closedSecondsPart = byteBuffer.getLong();
-                final int closedNanosPart = byteBuffer.getInt();
-                final byte isProofSent = byteBuffer.get();
-                final byte isAcknowledged = byteBuffer.get();
-                final int payloadBytesLength = byteBuffer.getInt();
-                final byte[] payload = new byte[payloadBytesLength];
+                final int length = byteBuffer.getInt();
+                final byte[] payload = new byte[length];
                 byteBuffer.get(payload);
-                final Block blk = Block.PROTOBUF.parse(Bytes.wrap(payload));
+                final Bytes bytes = Bytes.wrap(payload);
 
-                return new BlockFromDisk(
-                        blockNumber,
-                        Instant.ofEpochSecond(closedSecondsPart, closedNanosPart),
-                        toBoolean(isProofSent),
-                        toBoolean(isAcknowledged),
-                        blk.items());
+                return BufferedBlock.PROTOBUF.parse(bytes);
             }
-        }
-
-        private static boolean toBoolean(final byte data) {
-            return BYTE_ONE == data;
         }
     }
 
@@ -233,7 +183,6 @@ public class BlockBufferIO {
     private class Writer {
         private final List<BlockState> blocks;
         private final long latestAcknowledgedBlockNumber;
-        private final ByteBuffer fileHeaderBuffer = ByteBuffer.allocate(27);
 
         Writer(final List<BlockState> blocks, final long latestAcknowledgedBlockNumber) {
             this.blocks = new ArrayList<>(requireNonNull(blocks));
@@ -255,65 +204,88 @@ public class BlockBufferIO {
                     "Created new block buffer directory: {}",
                     directoryPath.toFile().getAbsolutePath());
 
-            // write metadata file
             for (final BlockState block : blocks) {
                 final String fileName = "block-" + block.blockNumber() + ".bin";
                 final Path path = new File(directory, fileName).toPath();
-                fileHeaderBuffer.clear();
-                // add a schema version, hardcoded to 1 (in case the format needs to change in the future)
-                fileHeaderBuffer.put(BYTE_ONE);
-                fileHeaderBuffer.putLong(block.blockNumber());
 
-                // store the closed timestamp
-                final Instant closedTimestamp = block.closedTimestamp();
-                fileHeaderBuffer.putLong(closedTimestamp.getEpochSecond());
-                fileHeaderBuffer.putInt(closedTimestamp.getNano());
+                writeBlock(path, block);
+            }
 
-                fileHeaderBuffer.put(block.isBlockProofSent() ? BYTE_ONE : BYTE_ZERO);
-                fileHeaderBuffer.put(block.blockNumber() <= latestAcknowledgedBlockNumber ? BYTE_ONE : BYTE_ZERO);
+            cleanupOldFiles(directoryPath);
+        }
 
-                // collect the block items to write
-                final List<BlockItem> items = new ArrayList<>();
+        /**
+         * Writes the specified block to the specified path.
+         *
+         * @param path the path to write the block to
+         * @param block the block to export
+         * @throws IOException if there was an error while writing the block to disk
+         */
+        private void writeBlock(final Path path, final BlockState block) throws IOException {
+            // collect the block items to write
+            final List<BlockItem> items = new ArrayList<>();
 
-                for (int i = 0; i < block.numRequestsCreated(); ++i) {
-                    final PublishStreamRequest req = block.getRequest(i);
-                    if (req != null) {
-                        final BlockItemSet bis = req.blockItemsOrElse(BlockItemSet.DEFAULT);
-                        items.addAll(bis.blockItems());
-                    }
-                }
-
-                final Block blk = new Block(items);
-                final Bytes blkBytes = Block.PROTOBUF.toBytes(blk);
-                final int length =
-                        (int) blkBytes.length(); // Bytes#length returns a long, but the actual data is an int
-
-                fileHeaderBuffer.putInt(length);
-
-                // write the header
-                Files.write(
-                        path,
-                        fileHeaderBuffer.array(),
-                        StandardOpenOption.WRITE,
-                        StandardOpenOption.CREATE_NEW,
-                        StandardOpenOption.TRUNCATE_EXISTING);
-                // write the block payload
-                Files.write(path, blkBytes.toByteArray(), StandardOpenOption.WRITE, StandardOpenOption.APPEND);
-                if (logger.isDebugEnabled()) {
-                    final int numBytes = fileHeaderBuffer.capacity() + length;
-                    logger.debug(
-                            "Block {} written to file: {} (bytes: {})",
-                            block.blockNumber(),
-                            path.toFile().getAbsolutePath(),
-                            numBytes);
+            for (int i = 0; i < block.numRequestsCreated(); ++i) {
+                final PublishStreamRequest req = block.getRequest(i);
+                if (req != null) {
+                    final BlockItemSet bis = req.blockItemsOrElse(BlockItemSet.DEFAULT);
+                    items.addAll(bis.blockItems());
                 }
             }
 
+            final Block blk = new Block(items);
+            final Instant closedInstant = block.closedTimestamp();
+
+            final Timestamp closedTimestamp = Timestamp.newBuilder()
+                    .seconds(closedInstant.getEpochSecond())
+                    .nanos(closedInstant.getNano())
+                    .build();
+            final BufferedBlock bufferedBlock = BufferedBlock.newBuilder()
+                    .blockNumber(block.blockNumber())
+                    .closedTimestamp(closedTimestamp)
+                    .isProofSent(block.isBlockProofSent())
+                    .isAcknowledged(block.blockNumber() <= latestAcknowledgedBlockNumber)
+                    .block(blk)
+                    .build();
+
+            /*
+            Build the final byte array to be written to disk. This will consist of the first 4 bytes being the
+            length of the buffered block data, followed by the buffered block data: [length][data]
+             */
+
+            final Bytes payload = BufferedBlock.PROTOBUF.toBytes(bufferedBlock);
+            final int length = (int) payload.length();
+            final byte[] lenArray = ByteBuffer.allocate(4).putInt(length).array();
+            final Bytes len = Bytes.wrap(lenArray);
+            final Bytes bytes = Bytes.merge(len, payload);
+
+            Files.write(
+                    path,
+                    bytes.toByteArray(),
+                    StandardOpenOption.WRITE,
+                    StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "Block {} written to file: {} (bytes: {})",
+                        block.blockNumber(),
+                        path.toFile().getAbsolutePath(),
+                        bytes.length());
+            }
+        }
+
+        /**
+         * Remove old directories and files that were from previous buffer exports.
+         *
+         * @param newestDirectory the directory containing the latest export
+         * @throws IOException if there was an error cleaning up the directories/files
+         */
+        private void cleanupOldFiles(final Path newestDirectory) throws IOException {
             // Clean up any other block buffer directories
             Files.walkFileTree(rootDirectory.toPath(), new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attrs) {
-                    if (dir.equals(directoryPath)) {
+                    if (dir.equals(newestDirectory)) {
                         // avoid checking the directory we just created
                         return FileVisitResult.SKIP_SUBTREE;
                     }
@@ -330,7 +302,7 @@ public class BlockBufferIO {
 
                 @Override
                 public FileVisitResult postVisitDirectory(final Path dir, final IOException exc) throws IOException {
-                    if (!dir.equals(directoryPath) && !dir.equals(rootDirectory.toPath())) {
+                    if (!dir.equals(newestDirectory) && !dir.equals(rootDirectory.toPath())) {
                         logger.debug("Deleting old block buffer directory: {}", dir);
                         // delete the directory (after making sure it isn't the new directory)
                         Files.delete(dir);

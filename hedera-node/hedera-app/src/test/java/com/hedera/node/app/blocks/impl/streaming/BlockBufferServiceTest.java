@@ -3,7 +3,7 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static com.hedera.node.app.blocks.impl.streaming.BlockTestUtils.generateBlockItems;
 import static com.hedera.node.app.blocks.impl.streaming.BlockTestUtils.generateRandomBlocks;
-import static com.hedera.node.app.blocks.impl.streaming.BlockTestUtils.writeBlockToDiskV1;
+import static com.hedera.node.app.blocks.impl.streaming.BlockTestUtils.writeBlockToDisk;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -1170,7 +1170,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
         Files.createDirectories(blockDir.toPath());
         final List<BlockState> blocks = generateRandomBlocks(10, batchSize);
         for (final BlockState block : blocks) {
-            writeBlockToDiskV1(block, true, new File(blockDir, "block-" + block.blockNumber() + ".bin"));
+            writeBlockToDisk(block, true, new File(blockDir, "block-" + block.blockNumber() + ".bin"));
         }
 
         blockBufferService = new BlockBufferService(configProvider, blockStreamMetrics);

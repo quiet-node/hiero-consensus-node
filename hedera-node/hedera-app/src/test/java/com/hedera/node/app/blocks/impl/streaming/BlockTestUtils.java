@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import com.hedera.hapi.block.internal.BufferedBlock;
 import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.BlockProof;
@@ -20,7 +21,6 @@ import com.hedera.hapi.platform.event.EventCore;
 import com.hedera.hapi.platform.event.EventDescriptor;
 import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.state.NodeId;
-import com.hedera.node.app.blocks.impl.streaming.BlockBufferIO.BlockFromDisk;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.io.File;
 import java.io.IOException;
@@ -39,18 +39,8 @@ import org.hiero.block.api.PublishStreamRequest;
 public class BlockTestUtils {
     private BlockTestUtils() {}
 
-    public static void writeBlockToDiskV1(final BlockState block, final boolean isAcked, final File file)
+    public static void writeBlockToDisk(final BlockState block, final boolean isAcked, final File file)
             throws IOException {
-        final ByteBuffer byteBuffer = ByteBuffer.allocate(27);
-        byteBuffer.put((byte) 1); // schema version
-        byteBuffer.putLong(block.blockNumber()); // block number
-        // serialize the closed timestamp
-        final Instant closedTimestamp = block.closedTimestamp();
-        byteBuffer.putLong(closedTimestamp.getEpochSecond());
-        byteBuffer.putInt(closedTimestamp.getNano());
-        byteBuffer.put(block.isBlockProofSent() ? (byte) 1 : (byte) 0); // is proof sent
-        byteBuffer.put(isAcked ? (byte) 1 : (byte) 0); // is the block acked
-
         final List<BlockItem> items = new ArrayList<>();
 
         for (int i = 0; i < block.numRequestsCreated(); ++i) {
@@ -62,32 +52,49 @@ public class BlockTestUtils {
         }
 
         final Block blk = new Block(items);
-        final Bytes blkBytes = Block.PROTOBUF.toBytes(blk);
-        final int length = (int) blkBytes.length();
+        final Instant closedInstant = block.closedTimestamp();
 
-        byteBuffer.putInt(length);
+        final Timestamp closedTimestamp = Timestamp.newBuilder()
+                .seconds(closedInstant.getEpochSecond())
+                .nanos(closedInstant.getNano())
+                .build();
+        final BufferedBlock bufferedBlock = BufferedBlock.newBuilder()
+                .blockNumber(block.blockNumber())
+                .closedTimestamp(closedTimestamp)
+                .isProofSent(block.isBlockProofSent())
+                .isAcknowledged(isAcked)
+                .block(blk)
+                .build();
+
+        final Bytes payload = BufferedBlock.PROTOBUF.toBytes(bufferedBlock);
+        final int length = (int) payload.length();
+        final byte[] lenArray = ByteBuffer.allocate(4).putInt(length).array();
+        final Bytes len = Bytes.wrap(lenArray);
+        final Bytes bytes = Bytes.merge(len, payload);
+
         Files.write(
                 file.toPath(),
-                byteBuffer.array(),
+                bytes.toByteArray(),
                 StandardOpenOption.WRITE,
                 StandardOpenOption.CREATE_NEW,
                 StandardOpenOption.TRUNCATE_EXISTING);
-        Files.write(file.toPath(), blkBytes.toByteArray(), StandardOpenOption.WRITE, StandardOpenOption.APPEND);
     }
 
-    public static BlockState toBlockState(final BlockFromDisk bfd, final int batchSize) {
-        final BlockState block = new BlockState(bfd.blockNumber());
+    public static BlockState toBlockState(final BufferedBlock bufferedBlock, final int batchSize) {
+        final BlockState block = new BlockState(bufferedBlock.blockNumber());
 
-        bfd.items().forEach(block::addItem);
+        bufferedBlock.block().items().forEach(block::addItem);
         block.processPendingItems(batchSize);
 
-        if (bfd.isProofSent()) {
+        if (bufferedBlock.isProofSent()) {
             for (int i = 0; i < block.numRequestsCreated(); ++i) {
                 block.markRequestSent(i);
             }
         }
 
-        block.closeBlock(bfd.closedTimestamp());
+        final Timestamp closedTimestamp = bufferedBlock.closedTimestamp();
+        final Instant closedInstant = Instant.ofEpochSecond(closedTimestamp.seconds(), closedTimestamp.nanos());
+        block.closeBlock(closedInstant);
 
         return block;
     }
