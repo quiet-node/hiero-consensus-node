@@ -47,6 +47,7 @@ import com.hedera.node.app.blocks.BlockItemWriter;
 import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
+import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
 import com.hedera.node.app.service.networkadmin.impl.FreezeServiceImpl;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
@@ -166,6 +167,9 @@ class BlockStreamManagerImplTest {
     @Mock
     private ReadableSingletonState<Object> platformStateReadableSingletonState;
 
+    @Mock
+    private BlockBufferService blockBufferService;
+
     private final AtomicReference<Bytes> lastAItem = new AtomicReference<>();
     private final AtomicReference<Bytes> lastBItem = new AtomicReference<>();
     private final AtomicReference<PlatformState> stateRef = new AtomicReference<>();
@@ -241,7 +245,8 @@ class BlockStreamManagerImplTest {
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
                 lifecycle,
-                metrics);
+                metrics,
+                blockBufferService);
         assertSame(Instant.EPOCH, subject.lastIntervalProcessTime());
         subject.setLastIntervalProcessTime(CONSENSUS_NOW);
         assertEquals(CONSENSUS_NOW, subject.lastIntervalProcessTime());
@@ -265,7 +270,8 @@ class BlockStreamManagerImplTest {
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
                 lifecycle,
-                metrics);
+                metrics,
+                blockBufferService);
         assertThrows(IllegalStateException.class, () -> subject.startRound(round, state));
     }
 
@@ -961,7 +967,8 @@ class BlockStreamManagerImplTest {
                 SemanticVersion.DEFAULT,
                 TEST_PLATFORM_STATE_FACADE,
                 lifecycle,
-                metrics);
+                metrics,
+                blockBufferService);
         given(state.getReadableStates(any())).willReturn(readableStates);
         given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
         lenient().when(state.getReadableStates(FreezeServiceImpl.NAME)).thenReturn(readableStates);

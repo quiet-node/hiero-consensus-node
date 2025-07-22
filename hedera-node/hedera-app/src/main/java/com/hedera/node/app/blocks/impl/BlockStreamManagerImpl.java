@@ -33,6 +33,8 @@ import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.StreamingTreeHasher;
+import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
+import com.hedera.node.app.blocks.impl.streaming.BlockState;
 import com.hedera.node.app.hapi.utils.CommonUtils;
 import com.hedera.node.app.info.DiskStartupNetworks;
 import com.hedera.node.app.info.DiskStartupNetworks.InfoType;
@@ -108,6 +110,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private final Supplier<BlockItemWriter> writerSupplier;
     private final BoundaryStateChangeListener boundaryStateChangeListener;
     private final PlatformStateFacade platformStateFacade;
+
+    private final BlockBufferService blockBufferService;
 
     private final Lifecycle lifecycle;
     private final BlockHashManager blockHashManager;
@@ -190,6 +194,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
      */
     @Nullable
     private volatile CompletableFuture<Void> fatalShutdownFuture = null;
+    private long fatalRoundNumber = 0;
 
     /**
      * False until the node has tried to recover any blocks pending TSS signature still on disk.
@@ -212,7 +217,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final SemanticVersion version,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final Lifecycle lifecycle,
-            @NonNull final Metrics metrics) {
+            @NonNull final Metrics metrics,
+            @NonNull final BlockBufferService blockBufferService) {
         this.blockHashSigner = requireNonNull(blockHashSigner);
         this.networkInfo = requireNonNull(networkInfo);
         this.version = requireNonNull(version);
@@ -245,6 +251,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 "Initialized BlockStreamManager from round {} with end-of-round hash {}",
                 lastRoundOfPrevBlock,
                 hashFuture.isDone() ? hashFuture.join().toHex() : "<PENDING>");
+        this.blockBufferService = requireNonNull(blockBufferService);
     }
 
     @Override
@@ -512,6 +519,13 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 writer.closeCompleteBlock();
                 writer = null;
             }
+            BlockState blockState = blockBufferService.getBlockStateForRoundNumber(fatalRoundNumber);
+            if (blockState != null) {
+                blockBufferService.uploadBlockStateToGcpBucket(blockState, networkInfo);
+            } else {
+                log.warn("BlockState for fatal ISS round {} is not available, skipping upload to GCP bucket", fatalRoundNumber);
+            }
+
             requireNonNull(fatalShutdownFuture).complete(null);
         }
         return closesBlock;
@@ -887,8 +901,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     }
 
     @Override
-    public void notifyFatalEvent() {
+    public void notifyFatalEvent(final long roundNumber) {
         fatalShutdownFuture = new CompletableFuture<>();
+        fatalRoundNumber = roundNumber;
     }
 
     @Override

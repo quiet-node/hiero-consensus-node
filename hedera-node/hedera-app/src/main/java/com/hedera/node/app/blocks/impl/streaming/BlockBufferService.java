@@ -3,18 +3,28 @@ package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockBufferConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
+import com.hedera.node.internal.network.BlockNodeConfig;
+import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,10 +35,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.zip.GZIPOutputStream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.hiero.block.api.BlockItemSet;
+import org.hiero.block.api.PublishStreamRequest;
+import com.google.auth.oauth2.GoogleCredentials;
 
 /**
  * Manages the state and lifecycle of blocks being streamed to block nodes.
@@ -308,6 +323,20 @@ public class BlockBufferService {
     }
 
     /**
+     * Retrieves the block state for the specified round number.
+     * @param roundNumber the round number to retrieve the block state for
+     * @return the block state which contains the specified round number, or null if no block state exists
+     */
+    public @Nullable BlockState getBlockStateForRoundNumber(final long roundNumber) {
+        for (final BlockState blockState : blockBuffer.values()) {
+            if (roundNumber >= blockState.getLowestRoundNumber() && roundNumber <= blockState.getHighestRoundNumber()) {
+                return blockState;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Retrieves if the specified block has been marked as acknowledged.
      *
      * @param blockNumber the block to check
@@ -462,6 +491,75 @@ public class BlockBufferService {
         blockStreamMetrics.setOldestUnacknowledgedBlockTime(oldestUnackedMillis);
 
         return new PruneResult(idealMaxBufferSize, numChecked, numPendingAck, numPruned);
+    }
+
+    /**
+     * Uploads the block state to the GCP bucket.
+     * @param blockState the block state to upload
+     * @param networkInfo the networkInfo containing information about this node for the upload path
+     */
+    public void uploadBlockStateToGcpBucket(@NonNull final BlockState blockState, @NonNull final NetworkInfo networkInfo) {
+        requireNonNull(blockState, "blockState must not be null");
+        requireNonNull(networkInfo, "networkInfo must not be null");
+        List<BlockItem> blockItems = new ArrayList<>();
+
+        // Add all BlockItems from the Requests in the BlockState
+        List<PublishStreamRequest> requests = blockState.getRequests();
+        for (PublishStreamRequest request : requests) {
+            if (request.blockItems() != null) {
+                BlockItemSet blockItemSet = request.blockItems();
+                blockItems.addAll(blockItemSet.blockItems());
+            }
+        }
+        if (blockState.closedTimestamp() == null) {
+            blockItems.addAll(blockState.getPendingItems().stream().toList());
+        }
+
+        Block block = Block.newBuilder().items(blockItems).build();
+
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
+
+            // Serialize the Block object into bytes
+            byte[] blockBytes = Block.PROTOBUF.toBytes(block).toByteArray();
+
+            // Write the serialized bytes to the GZIPOutputStream
+            gzipOutputStream.write(blockBytes);
+            gzipOutputStream.close();
+
+            // Get the compressed data
+            byte[] compressedData = byteArrayOutputStream.toByteArray();
+
+            // Load credentials
+            GoogleCredentials credentials = GoogleCredentials
+                    .fromStream(new FileInputStream("service-account.json"))
+                    .createScoped("https://www.googleapis.com/auth/devstorage.read_write");
+            credentials.refreshIfExpired();
+            String token = credentials.getAccessToken().getTokenValue();
+
+            // Prepare upload
+            String bucketName = "your-bucket-name";
+            String objectName = "file.txt";
+            URL url = new URL("https://storage.googleapis.com/upload/storage/v1/b/" +
+                    bucketName + "/o?uploadType=media&name=" + objectName);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setDoOutput(true);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Authorization", "Bearer " + token);
+            conn.setRequestProperty("Content-Type", "application/octet-stream");
+
+            // Write file content
+            OutputStream os = conn.getOutputStream();
+            os.write(compressedData);
+
+            // Handle response
+            int code = conn.getResponseCode();
+            System.out.println("Response code: " + code);
+
+            // Upload the compressed data to the GCP bucket
+        } catch (IOException e) {
+            logger.warn("Failed to upload Block {} to GCP bucket: {}", blockState.blockNumber(), e);
+        }
     }
 
     /**
