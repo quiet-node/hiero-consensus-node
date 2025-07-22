@@ -5,16 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottle;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
 import com.hedera.node.app.service.contract.impl.hevm.OpsDurationSchedule;
 import org.junit.jupiter.api.Test;
 
-class OpsDurationThrottleTest {
+class OpsDurationThrottleUtilsTest {
     @Test
     void testConsumeFromThrottle() {
         final var schedule = mock(OpsDurationSchedule.class);
-        OpsDurationThrottle opsDurationThrottle = OpsDurationThrottle.withInitiallyAvailableUnits(schedule, 50L);
-        assertTrue(opsDurationThrottle.tryConsumeOpsDurationUnits(25L));
-        assertEquals(25L, opsDurationThrottle.opsDurationUnitsConsumed());
+        OpsDurationThrottleUtils opsDurationThrottleUtils =
+                OpsDurationThrottleUtils.withInitiallyAvailableUnits(schedule, 50L);
+        assertTrue(opsDurationThrottleUtils.tryConsumeOpsDurationUnits(25L));
+        assertEquals(25L, opsDurationThrottleUtils.opsDurationUnitsConsumed());
     }
 }

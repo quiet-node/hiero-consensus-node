@@ -18,7 +18,7 @@ import com.hedera.hapi.node.contract.ContractCreateTransactionBody;
 import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCharging;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameBuilder;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottle;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmContext;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransactionResult;
@@ -102,10 +102,10 @@ public class TransactionProcessor {
             @NonNull final HederaEvmContext context,
             @NonNull final ActionSidecarContentTracer tracer,
             @NonNull final Configuration config,
-            @NonNull final OpsDurationThrottle opsDurationThrottle) {
+            @NonNull final OpsDurationThrottleUtils opsDurationThrottleUtils) {
         final var parties = computeInvolvedPartiesOrAbort(transaction, updater, config);
         return processTransactionWithParties(
-                transaction, updater, context, tracer, config, opsDurationThrottle, parties);
+                transaction, updater, context, tracer, config, opsDurationThrottleUtils, parties);
     }
 
     private HederaEvmTransactionResult processTransactionWithParties(
@@ -114,7 +114,7 @@ public class TransactionProcessor {
             @NonNull final HederaEvmContext context,
             @NonNull final ActionSidecarContentTracer tracer,
             @NonNull final Configuration config,
-            @NonNull final OpsDurationThrottle opsDurationCounter,
+            @NonNull final OpsDurationThrottleUtils opsDurationCounter,
             @NonNull final InvolvedParties parties) {
         final var gasCharges =
                 gasCharging.chargeForGas(parties.sender(), parties.relayer(), context, updater, transaction);

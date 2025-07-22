@@ -14,7 +14,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCharging;
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.tracers.AddOnEvmActionTracer;
 import com.hedera.node.app.service.contract.impl.exec.tracers.EvmActionTracer;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottle;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
 import com.hedera.node.app.service.contract.impl.hevm.*;
 import com.hedera.node.app.service.contract.impl.hevm.OpsDurationSchedule;
 import com.hedera.node.app.service.contract.impl.infra.HevmTransactionFactory;
@@ -131,17 +131,17 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                 rootProxyWorldUpdater.enhancement().operations().getThrottleAdviser();
         final var opsDurationThrottleEnabled =
                 contractsConfig.throttleThrottleByOpsDuration() && throttleAdviser != null;
-        final OpsDurationThrottle opsDurationThrottle;
+        final OpsDurationThrottleUtils opsDurationThrottleUtils;
         if (opsDurationThrottleEnabled) {
             final long availableOpsDurationUnits = throttleAdviser.availableOpsDurationCapacity();
 
             final var opsDurationSchedule =
                     OpsDurationSchedule.fromConfig(configuration.getConfigData(OpsDurationConfig.class));
 
-            opsDurationThrottle =
-                    OpsDurationThrottle.withInitiallyAvailableUnits(opsDurationSchedule, availableOpsDurationUnits);
+            opsDurationThrottleUtils = OpsDurationThrottleUtils.withInitiallyAvailableUnits(
+                    opsDurationSchedule, availableOpsDurationUnits);
         } else {
-            opsDurationThrottle = OpsDurationThrottle.disabled();
+            opsDurationThrottleUtils = OpsDurationThrottleUtils.disabled();
         }
 
         // Process the transaction and return its outcome
@@ -155,7 +155,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                     hederaEvmContext,
                     tracer,
                     configuration,
-                    opsDurationThrottle);
+                    opsDurationThrottleUtils);
 
             if (hydratedEthTxData != null) {
                 final var sender = requireNonNull(rootProxyWorldUpdater.getHederaAccount(hevmTransaction.senderId()));
@@ -186,14 +186,15 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                     result.isSuccess() ? result.evmAddressIfCreatedIn(rootProxyWorldUpdater) : null,
                     result);
 
+            final var elapsedMs = System.currentTimeMillis() - startTimeNanos;
+
             // Update the ops duration throttle
             if (opsDurationThrottleEnabled) {
-                throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationThrottle.opsDurationUnitsConsumed());
+                throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationThrottleUtils.opsDurationUnitsConsumed());
             }
 
-            final var elapsedMs = System.currentTimeMillis() - startTimeNanos;
             recordProcessedTransactionToMetrics(
-                    hevmTransaction, outcome, elapsedMs, opsDurationThrottle.opsDurationUnitsConsumed());
+                    hevmTransaction, outcome, elapsedMs, opsDurationThrottleUtils.opsDurationUnitsConsumed());
 
             return outcome;
         } catch (HandleException e) {
@@ -208,7 +209,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
 
             // Update the ops duration throttle
             if (opsDurationThrottleEnabled) {
-                throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationThrottle.opsDurationUnitsConsumed());
+                throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationThrottleUtils.opsDurationUnitsConsumed());
             }
 
             if (e.getStatus() == THROTTLED_AT_CONSENSUS) {
@@ -217,7 +218,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
 
             final var elapsedNanos = System.nanoTime() - startTimeNanos;
             recordProcessedTransactionToMetrics(
-                    hevmTransaction, outcome, elapsedNanos, opsDurationThrottle.opsDurationUnitsConsumed());
+                    hevmTransaction, outcome, elapsedNanos, opsDurationThrottleUtils.opsDurationUnitsConsumed());
 
             return outcome;
         }

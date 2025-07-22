@@ -26,7 +26,7 @@ import com.hedera.node.app.service.contract.impl.exec.metrics.OpsDurationMetrics
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.FullResult;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.PrngSystemContract;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottle;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
 import com.hedera.node.app.service.contract.impl.test.TestHelpers;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
@@ -126,7 +126,7 @@ class CustomMessageCallProcessorTest {
         givenPrngCall(ZERO_GAS_REQUIREMENT);
         given(frame.getValue()).willReturn(Wei.ZERO);
         given(frame.getMessageFrameStack()).willReturn(stack);
-        given(frame.getContextVariable(OPS_DURATION_THROTTLE)).willReturn(OpsDurationThrottle.disabled());
+        given(frame.getContextVariable(OPS_DURATION_THROTTLE)).willReturn(OpsDurationThrottleUtils.disabled());
         given(stack.getLast()).willReturn(frame);
         given(result.getOutput()).willReturn(OUTPUT_DATA);
         given(result.getState()).willReturn(MessageFrame.State.CODE_SUCCESS);
@@ -222,7 +222,7 @@ class CustomMessageCallProcessorTest {
         given(nativePrecompile.gasRequirement(INPUT_DATA)).willReturn(GAS_REQUIREMENT);
         given(frame.getRemainingGas()).willReturn(3L);
         given(frame.getMessageFrameStack()).willReturn(stack);
-        given(frame.getContextVariable(OPS_DURATION_THROTTLE)).willReturn(OpsDurationThrottle.disabled());
+        given(frame.getContextVariable(OPS_DURATION_THROTTLE)).willReturn(OpsDurationThrottleUtils.disabled());
         given(stack.getLast()).willReturn(frame);
 
         subject.start(frame, operationTracer);
@@ -244,7 +244,7 @@ class CustomMessageCallProcessorTest {
         given(nativePrecompile.gasRequirement(INPUT_DATA)).willReturn(GAS_REQUIREMENT);
         given(frame.getRemainingGas()).willReturn(3L);
         given(frame.getMessageFrameStack()).willReturn(stack);
-        given(frame.getContextVariable(OPS_DURATION_THROTTLE)).willReturn(OpsDurationThrottle.disabled());
+        given(frame.getContextVariable(OPS_DURATION_THROTTLE)).willReturn(OpsDurationThrottleUtils.disabled());
         given(stack.getLast()).willReturn(frame);
         given(frame.getContractAddress()).willReturn(Address.ALTBN128_ADD);
 

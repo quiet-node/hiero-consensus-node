@@ -17,7 +17,7 @@ import static com.hedera.node.app.service.contract.impl.test.TestHelpers.SENDER_
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.assertSamePrecompileResult;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.lenient;
 
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.scope.SystemContractOperations;

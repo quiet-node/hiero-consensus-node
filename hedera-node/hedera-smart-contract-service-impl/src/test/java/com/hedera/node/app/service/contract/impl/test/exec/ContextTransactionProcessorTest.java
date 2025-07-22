@@ -30,7 +30,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCharging;
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.scope.HederaOperations;
 import com.hedera.node.app.service.contract.impl.exec.tracers.EvmActionTracer;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottle;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmContext;
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
 import com.hedera.node.app.service.contract.impl.hevm.HydratedEthTxData;
@@ -130,7 +130,7 @@ class ContextTransactionProcessorTest {
                         hederaEvmContext,
                         tracer,
                         CONFIGURATION,
-                        OpsDurationThrottle.disabled()))
+                        OpsDurationThrottleUtils.disabled()))
                 .willReturn(SUCCESS_RESULT_WITH_SIGNER_NONCE);
 
         final var protoResult = SUCCESS_RESULT_WITH_SIGNER_NONCE.asProtoResultOf(
@@ -181,7 +181,7 @@ class ContextTransactionProcessorTest {
                         hederaEvmContext,
                         tracer,
                         CONFIGURATION,
-                        OpsDurationThrottle.disabled()))
+                        OpsDurationThrottleUtils.disabled()))
                 .willReturn(SUCCESS_RESULT_WITH_SIGNER_NONCE);
 
         final var protoResult = SUCCESS_RESULT_WITH_SIGNER_NONCE.asProtoResultOf(
@@ -230,7 +230,7 @@ class ContextTransactionProcessorTest {
                         hederaEvmContext,
                         tracer,
                         CONFIGURATION,
-                        OpsDurationThrottle.disabled()))
+                        OpsDurationThrottleUtils.disabled()))
                 .willReturn(SUCCESS_RESULT);
         given(rootProxyWorldUpdater.entityIdFactory()).willReturn(entityIdFactory);
 
@@ -278,7 +278,7 @@ class ContextTransactionProcessorTest {
                         hederaEvmContext,
                         tracer,
                         CONFIGURATION,
-                        OpsDurationThrottle.disabled()))
+                        OpsDurationThrottleUtils.disabled()))
                 .willThrow(new HandleException(INVALID_CONTRACT_ID));
 
         subject.call();

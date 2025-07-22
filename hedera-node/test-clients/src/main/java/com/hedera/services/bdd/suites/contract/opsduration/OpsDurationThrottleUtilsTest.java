@@ -45,8 +45,8 @@ import org.junit.jupiter.api.Tag;
 @DisplayName("opsDurationThrottle")
 @HapiTestLifecycle
 @OrderedInIsolation
-public class OpsDurationThrottleTest {
-    private static final String OPS_DURATION_THROTTLE = "OpsDurationThrottle";
+public class OpsDurationThrottleUtilsTest {
+    private static final String OPS_DURATION_THROTTLE = "OpsDurationThrottleUtils";
     private static final String SYSTEM_CONTRACT_TRANSFER = "HtsTransferFrom";
     private static final String SENDER = "sender";
     private static final String RECEIVER = "receiver";

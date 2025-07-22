@@ -8,23 +8,23 @@ import java.util.Objects;
  * A helper utility that keeps track of the ops duration throttle
  * throughout the execution of a single EVM transaction.
  */
-public final class OpsDurationThrottle {
+public final class OpsDurationThrottleUtils {
     private final boolean enabled;
     private final OpsDurationSchedule schedule;
     private final long opsDurationUnitsInitiallyAvailable;
 
     private long opsDurationUnitsConsumed;
 
-    public static OpsDurationThrottle disabled() {
-        return new OpsDurationThrottle(false, OpsDurationSchedule.empty(), 0L, 0L);
+    public static OpsDurationThrottleUtils disabled() {
+        return new OpsDurationThrottleUtils(false, OpsDurationSchedule.empty(), 0L, 0L);
     }
 
-    public static OpsDurationThrottle withInitiallyAvailableUnits(
+    public static OpsDurationThrottleUtils withInitiallyAvailableUnits(
             final OpsDurationSchedule schedule, final long opsDurationUnitsInitiallyAvailable) {
-        return new OpsDurationThrottle(true, schedule, opsDurationUnitsInitiallyAvailable, 0L);
+        return new OpsDurationThrottleUtils(true, schedule, opsDurationUnitsInitiallyAvailable, 0L);
     }
 
-    private OpsDurationThrottle(
+    private OpsDurationThrottleUtils(
             final boolean enabled,
             final OpsDurationSchedule schedule,
             final long opsDurationUnitsInitiallyAvailable,
@@ -71,7 +71,7 @@ public final class OpsDurationThrottle {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof OpsDurationThrottle that)) return false;
+        if (!(o instanceof OpsDurationThrottleUtils that)) return false;
         return enabled == that.enabled
                 && opsDurationUnitsInitiallyAvailable == that.opsDurationUnitsInitiallyAvailable
                 && opsDurationUnitsConsumed == that.opsDurationUnitsConsumed
