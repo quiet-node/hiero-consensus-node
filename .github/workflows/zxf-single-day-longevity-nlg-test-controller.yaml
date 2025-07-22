@@ -169,7 +169,7 @@ jobs:
           git tag --annotate "${TAG_NAME}" --message "Single Day Performance Test passed for build-${{ needs.verify-tag.outputs.build-number }}"
           git push --set-upstream origin --tags
 
-          echo "### SDLT Pass - Tag Information" >> "${GITHUB_STEP_SUMMARY}"
+          echo "### Longevity Pass - Tag Information" >> "${GITHUB_STEP_SUMMARY}"
           echo "SDLT Passing Tag: ${TAG_NAME}" >> "${GITHUB_STEP_SUMMARY}"
 
   get-commit-info:

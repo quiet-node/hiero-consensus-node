@@ -58,7 +58,6 @@ permissions:
 
 env:
   NAMESPACE_PREFIX: solo-mdlt-n
-  DEFAULT_NAMESPACE: Longevity3
   DEFAULT_HCN_VERSION: main
   TIMEOUT_2W_LIMIT: 20180
   #2 weeks and 20 min
@@ -394,152 +393,6 @@ jobs:
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp /tmp/NLG.tar ${nlgpod}:/app/
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "cd /app; rm -rf lib network-load-generator-*.jar; ls -l; tar xvf NLG.tar; ls -l"
 
-      - name: Start Account Creation
-        if: false
-        run: |
-          run_NLGDparams="" # e.g. -Dbenchmark.maxtps=8000
-          run_NLGDebugparams="" # e.g. -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
-
-          nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
-
-          n=`expr "${{ env.run_NLG_Accounts }}" / 1000`
-          NLG_c=32
-
-          NLGargs="-metrics -R -c ${NLG_c} -a ${{ env.run_NLG_Accounts }}"
-
-          case "${{ env.run_NLG_Test }}" in
-            NftTransferLoadTest)    NLGargs="-K ECDSA ${NLGargs} -n ${n} -T 1000 -S hot -p 50";;
-            CryptoTransferLoadTest) NLGargs="-K ECDSA ${NLGargs}";;
-            HCSLoadTest)            NLGargs="-K ECDSA ${NLGargs} -n ${n}";;
-            TokenTransferLoadTest)  NLGargs="-K ECDSA ${NLGargs} -n ${n} -T 1000";;
-          esac
-
-          echo \
-          kubectl -n "${{ env.namespace }}" exec "${nlgpod}" -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
-          ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${{ env.run_NLG_Test }} \
-          ${NLGargs} -tt 10s > client.log 2>&1 &"
-
-          kubectl -n "${{ env.namespace }}" exec "${nlgpod}" -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
-          ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${{ env.run_NLG_Test }} \
-          ${NLGargs} -tt 10s > client.log 2>&1 &"
-
-      - name: Wait for account creation
-        if: false
-        run: |
-          set +x
-          set +e
-
-          check_status() {
-           logfile=$1
-           ec=2 # continue
-           grep -E 'Finished .*Test' ${logfile} >/dev/null
-           if [ ${?} -eq 0 ]
-           then
-              echo "Test finished, exiting..."
-              ec=0
-           fi
-
-           grep -E 'ERROR com.hedera.benchmark.*LoadTest - Setup|ERROR com.hedera.benchmark.*LoadTest - Test failed' ${logfile}
-           if [ ${?} -eq 0 ]
-           then
-              echo "ERROR: Wrong config/environment"
-              tail ${logfile}
-              ec=1
-           fi
-
-           return ${ec}
-          }
-
-          sleep 60
-
-          nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
-
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log"
-
-          counter=0
-          start_time=`date +%s`
-          max_counter=${{ env.TIMEOUT_2W_LIMIT }}  #max_counter=2 weeks + 20 mins
-
-          ec=2
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
-          isRunning=${?}
-
-          while [ \( ${isRunning} -eq 0 \) -a \( ${counter} -le ${max_counter} \) ]
-          do
-
-           sleep 60
-           current_time=`date +%s`
-           counter=`expr "${current_time}" - "${start_time}"`
-           counter=`expr "${counter}" \/ 60`
-
-           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log" > client.log
-           tail -n 1 client.log
-
-           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
-           isRunning=${?}
-
-           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "grep -E 'ERROR com.hedera.benchmark|Finished .*Test' /app/client.log" > client_state.log
-           check_status client_state.log
-           ec=${?}
-           if [ ${ec} -lt 2 ] #any terminal states 0 or 1, ec=2 is to continue
-           then
-             break
-           fi
-          done
-
-          if [ -f "${{ github.workspace }}"/report/client.log ]
-          then
-            rm -rf "${{ github.workspace }}"/report/*
-          fi
-
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
-          cp -r podlog_"${{ env.namespace }}" "${{ github.workspace }}"/report/
-
-          check_status "${{ github.workspace }}"/report/client.log
-          ec=${?}
-
-          if [ ${ec} -eq 2 ]
-          then
-            echo "Continue to wait in next Runner ..."
-            ec=0
-          fi
-
-          tail "${{ github.workspace }}"/report/client.log
-          echo "Finished, exit code=${ec}"
-          exit ${ec}
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@ba79af03959ebeac9769e648f473a284504d9193 # v2.1.10
-        with:
-          workload_identity_provider: "projects/716789254648/locations/global/workloadIdentityPools/perf-eng-reports-pool/providers/gh-provider"
-          service_account: "gh-perf-report-writer@perf-engineering-reports.iam.gserviceaccount.com"
-
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
-
-      - name: Archive account creation logs
-        if: false
-        run: |
-          cd "${{ github.workspace }}"/
-
-          gcloud --no-user-output-enabled storage ls gs://performance-engineering-reports 2>/dev/null | grep permanent >/dev/null 2>&1
-          if [ ${?} -ne 0 ]
-          then
-            sleep 10
-            gcloud --no-user-output-enabled storage ls gs://performance-engineering-reports | grep permanent >/dev/null
-          fi
-
-          echo "Size of report dir:"
-          du -sk report
-
-          gcloud --no-user-output-enabled storage cp --recursive report "${{ env.GS_ROOT_DIR }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}/create_accounts"
-          echo Done: see results in "${{ env.GS_ROOT_HTTPS }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}/create_accounts"
-
-          echo "Truncating logs for next test..."
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/resetCNlogs.sh "${{ env.namespace }}"
-
       - name: Start Longevity test
         run: |
           run_NLGDebugparams="" # e.g. -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
@@ -547,38 +400,22 @@ jobs:
           n=`expr ${{ env.run_NLG_Accounts }} / 1000`
           NLG_c=32
 
-          if [ "${{ github.event.inputs.perf_analysis }}" = "true" ]
-          then
-            NLG_c=10
-          fi
-
-  
           test=LongevityLoadTest
 
-          NLGargs="-R -c ${NLG_c} -a ${{ env.run_NLG_Accounts }}"
-          throttle="-Dbenchmark.maxtps="
-          case "${test}" in
-           NftTransferLoadTest)    NLGargs="-K ECDSA ${NLGargs} -n ${n} -T 1000 -S hot -p 50"; throttle="${throttle}3000";;
-           LongevityLoadTest)      NLGargs="-K ECDSA ${NLGargs} -n ${n} -T 1000 -S hot -p 50";;
-           CryptoTransferLoadTest) NLGargs="-K ECDSA ${NLGargs}"; throttle="${throttle}5000";;
-           HCSLoadTest)            NLGargs="-K ECDSA ${NLGargs} -n ${n}"; throttle="${throttle}2000";;
-           TokenTransferLoadTest)  NLGargs="-K ECDSA ${NLGargs} -n ${n} -T 1000"; throttle="${throttle}1";; #FIXME: not in use
-           HeliSwapLoadTest) throttle="${throttle}300";;
-           SmartContractLoadTest) throttle="${throttle}50";;
-          esac
+          NLGargs="-K ECDSA -R -c ${NLG_c} -a ${{ env.run_NLG_Accounts }}  -n ${n} -T 1000 -S hot -p 50"
 
-          echo kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g ${throttle} \
+          echo kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
             ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${test} \
             ${NLGargs} -tt ${{ env.run_NLG_Time }}m > client.log 2>&1 &"
 
-          kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g ${throttle} \
+          kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
             ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${test} \
             ${NLGargs} -tt ${{ env.run_NLG_Time }}m > client.log 2>&1 &"
           sleep 30
 
 
-  performance-NftTransferLoadTest-watch1:
-    name: NFT Transfer Load Test
+  performance-LongevityLoadTest-watch1:
+    name: Longevity Load Test
     runs-on: hiero-citr-linux-large
     timeout-minutes: 20180
     needs:
@@ -772,11 +609,11 @@ jobs:
           echo "Finished, exit code=${ec}"
           exit ${ec}
 
-  performance-NftTransferLoadTest-report:
-    name: NFT Transfer Load Test Report
+  performance-LongevityLoadTest-report:
+    name: Longevity Load Test Report
     runs-on: hiero-citr-linux-large
     needs:
-      - performance-NftTransferLoadTest-watch1
+      - performance-LongevityLoadTest-watch1
     env:
       run_namespace: ${{ inputs.test-asset }}
       RUN_HCN_VERSION: ${{ inputs.ref }}
@@ -1035,7 +872,7 @@ jobs:
     runs-on: hiero-citr-linux-large
     if: ${{ always() }}
     needs:
-      - performance-NftTransferLoadTest-report
+      - performance-LongevityLoadTest-report
     outputs:
       result: ${{ steps.sdpt-status.outputs.result }}
     steps:
@@ -1047,7 +884,7 @@ jobs:
       - name: Set output
         id: sdpt-status
         env:
-          nft_transfer_load_result: ${{ needs.performance-NftTransferLoadTest-report.result }}
+          nft_transfer_load_result: ${{ needs.performance-LongevityLoadTest-report.result }}
 
         run: |
           # result is 'success' or 'failure'. If any of the tests failed, we return 'failure'
@@ -1065,7 +902,7 @@ jobs:
     if: false
     runs-on: hiero-citr-linux-medium
     needs:
-      - performance-NftTransferLoadTest-report
+      - performance-LongevityLoadTest-report
 
     steps:
       - name: Harden the runner (Audit all outbound calls)
@@ -1078,12 +915,12 @@ jobs:
         run: |
 
           report="\
-            NftTransferLoadTest ${{ needs.performance-NftTransferLoadTest-report.outputs.NFTscore }} \n\
-            HCSLoadTest ${{ needs.performance-NftTransferLoadTest-report.outputs.HCSscore }} \n\
-            CryptoTransferLoadTest ${{ needs.performance-NftTransferLoadTest-report.outputs.Cryptoscore }} \n\
-            HeliSwapLoadTest ${{ needs.performance-NftTransferLoadTest-report.outputs.Heliscore }}\n\
-            SmartContractLoadTest ${{ needs.performance-NftTransferLoadTest-report.outputs.Smartscore }}"
-          #last line is 6, it does not need comma block separator
+            NftTransferLoadTest ${{ needs.performance-LongevityLoadTest-report.outputs.NFTscore }} \n\
+            HCSLoadTest ${{ needs.performance-LongevityLoadTest-report.outputs.HCSscore }} \n\
+            CryptoTransferLoadTest ${{ needs.performance-LongevityLoadTest-report.outputs.Cryptoscore }} \n\
+            HeliSwapLoadTest ${{ needs.performance-LongevityLoadTest-report.outputs.Heliscore }}\n\
+            SmartContractLoadTest ${{ needs.performance-LongevityLoadTest-report.outputs.Smartscore }}"
+          #last line is 5, it does not need comma block separator
           freport=`/usr/bin/echo -e "$report" | awk '{print $1" "$2}'| perl -ne 'if ($. < 5) {$comma=","} else {$comma="";} ($t,$d)=split(/\s+/,$_,2);printf("{\"type\": \"text\",\"text\": \"%-25s %7d \\\n\"}%s",$t,$d,$comma);'`
           freport="{\"type\": \"text\",\"text\": \"Name                          TPS\n\"},$freport"
 
