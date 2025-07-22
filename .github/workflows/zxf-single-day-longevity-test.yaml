@@ -16,22 +16,22 @@ on:
 
 defaults:
   run:
-    shell: bash
+    shell: bash --noprofile --norc -euo pipefail
 
 env:
   USERNAME: ${{ secrets.TESTING_JENKINS_API_USERNAME }}
   PASSWORD: ${{ secrets.TESTING_JENKINS_API_PASSWORD }}
   SERVER: ${{ secrets.TESTING_JENKINS_API_SERVER }}
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   canonical-test:
     name: Canonical
     runs-on: hiero-citr-linux-medium
-    timeout-minutes: 180  # 3 hours timeout 
+    timeout-minutes: 60  # max one hour timeout 
+
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Harden Runner
@@ -56,14 +56,21 @@ jobs:
 
       - name: Verify Workflow Parameters
         id: parameters
+        env:
+          REF_INPUT: ${{ inputs.ref }}
+          BUILD_TAG_INPUT: ${{ inputs.build-tag }}
         run: |
           set -euo pipefail
+
           BRANCH_NAME="${{ inputs.ref }}"
           BUILD_ARTIFACT="${{ inputs.build-tag }}"
           if [[ "${BRANCH_NAME}" = "main" ]]; then
             BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
             BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/_' '-.')"
-            TAG_COMMIT_SHA=$(git rev-list -n 1 "${BUILD_ARTIFACT}")
+            TAG_COMMIT_SHA=$(git rev-list -n 1 "${BUILD_ARTIFACT}") || {
+              echo "::error::Tag ${BUILD_ARTIFACT} not found"
+              exit 1
+            }
             TAG_COMMIT_SHORT="${TAG_COMMIT_SHA:0:8}"
             BUILD_ARTIFACT="build-${BRANCH_NAME_SAFE}-${TAG_COMMIT_SHORT}"
           fi
