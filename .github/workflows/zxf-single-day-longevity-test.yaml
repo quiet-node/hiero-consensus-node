@@ -59,11 +59,11 @@ jobs:
           BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
           BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/' '-' | tr '_' '.')"
           LAST_BUILD_TAG="${{ inputs.build-tag }}"
-          TAG_COMMIT_SHA=$(git rev-list -n 1 $LATEST_BUILD_TAG)
-          TAG_COMMIT_SHORT=$(echo $TAG_COMMIT_SHA | cut -c1-8)
+          TAG_COMMIT_SHA=$(git rev-list -n 1 ${LATEST_BUILD_TAG})
+          TAG_COMMIT_SHORT=$(echo ${TAG_COMMIT_SHA} | cut -c1-8)
 
           echo "branch-name-lower=${BRANCH_NAME_SAFE}" >>"${GITHUB_OUTPUT}"
-          echo "commit-id-short=$TAG_COMMIT_SHORT" >> "${GITHUB_OUTPUT}"
+          echo "commit-id-short=${TAG_COMMIT_SHORT}" >> "${GITHUB_OUTPUT}"
 
       - name: Check If Release Artifact Exist in Bucket
         id: check-if-exist
