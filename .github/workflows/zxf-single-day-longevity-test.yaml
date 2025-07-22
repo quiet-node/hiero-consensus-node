@@ -65,7 +65,7 @@ jobs:
               LATEST_BUILD_TAG="${{ inputs.build-tag }}"
               TAG_COMMIT_SHA=$(git rev-list -n 1 ${LATEST_BUILD_TAG})
               TAG_COMMIT_SHORT=$(echo ${TAG_COMMIT_SHA} | cut -c1-8)
-              BUILD_ARTIFACT="build-${BRANCH_NAME_SAFE}-${TAG_COMMIT_SHORT}""
+              BUILD_ARTIFACT="build-${BRANCH_NAME_SAFE}-${TAG_COMMIT_SHORT}"
           fi
           echo "artifact-name=${BUILD_ARTIFACT}" >> "${GITHUB_OUTPUT}"
 
