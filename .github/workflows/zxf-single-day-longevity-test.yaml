@@ -56,23 +56,24 @@ jobs:
       - name: Verify Workflow Parameters
         id: parameters
         run: |
-
           BRANCH_NAME="${{ inputs.ref }}"
-          BRANCH_NAME="${BRANCH_NAME##origin/}"
-          BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
-          BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/' '-' | tr '_' '.')"
-          LATEST_BUILD_TAG="${{ inputs.build-tag }}"
-          TAG_COMMIT_SHA=$(git rev-list -n 1 ${LATEST_BUILD_TAG})
-          TAG_COMMIT_SHORT=$(echo ${TAG_COMMIT_SHA} | cut -c1-8)
-
-          echo "branch-name-lower=${BRANCH_NAME_SAFE}" >>"${GITHUB_OUTPUT}"
-          echo "commit-id-short=${TAG_COMMIT_SHORT}" >> "${GITHUB_OUTPUT}"
+          BUILD_ARTIFACT="${{ inputs.build-tag }}"
+          if [[ "${BRANCH_NAME}" = "main" ]]; then
+              BRANCH_NAME="${BRANCH_NAME##origin/}"
+              BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
+              BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/' '-' | tr '_' '.')"
+              LATEST_BUILD_TAG="${{ inputs.build-tag }}"
+              TAG_COMMIT_SHA=$(git rev-list -n 1 ${LATEST_BUILD_TAG})
+              TAG_COMMIT_SHORT=$(echo ${TAG_COMMIT_SHA} | cut -c1-8)
+              BUILD_ARTIFACT="build-${BRANCH_NAME_SAFE}-${TAG_COMMIT_SHORT}""
+          fi
+          echo "artifact-name=${BUILD_ARTIFACT}" >> "${GITHUB_OUTPUT}"
 
       - name: Check If Release Artifact Exist in Bucket
         id: check-if-exist
         run: |
           set +e
-          ARTIFACT_NAME="build-${{ steps.parameters.outputs.branch-name-lower }}-${{ steps.parameters.outputs.commit-id-short }}"
+          ARTIFACT_NAME="${{ steps.parameters.outputs.artifact-name }}"
           ARTIFACT_PATH="gs://${{ secrets.RELEASE_ARTIFACT_BUCKET_NAME }}/${ARTIFACT_NAME}.zip"
           echo "ARTIFACT_PATH=${ARTIFACT_PATH}"
 
