@@ -163,6 +163,55 @@ public class FileWritingCrashExperimentTest {
                 }
             """;
 
+    private static final String MULTI_THREAD_RUN =
+            """
+            import java.io.*;
+            import java.nio.channels.FileChannel;
+            import java.nio.MappedByteBuffer;
+            import sun.misc.Unsafe;
+
+            public class %s {
+                public static void main(String[] args) throws Exception {
+                    System.setProperty("jdk.lang.processExitOnOOM", "true");
+                    if (args.length != 1) {
+                        System.err.println("Expected one file name argument");
+                        System.exit(1);
+                    }
+                    int REGION_SIZE = %d;
+                    new Thread(() -> {
+                        try {
+                            byte[] writeBuff = new byte[REGION_SIZE];
+                            for (int i = 0; i < writeBuff.length; i++) {
+                                writeBuff[i] = (byte)(%s);
+                            }
+                            File file = new File(args[0]);
+                            System.out.println(": " + args[0]);
+                            try (RandomAccessFile raf = new RandomAccessFile(file, "rw");
+                                FileChannel fc = raf.getChannel()) {
+                                MappedByteBuffer mappedBuffer = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
+                                mappedBuffer.put(writeBuff);
+                                if (%s) {
+                                  Thread.sleep(600000);
+                                  return;
+                                }
+                                // No force() call
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }).run();
+
+                  new Thread(() -> {
+                    double decision = Math.random();
+                    if (decision < 0.5) {
+                        Runtime.getRuntime().halt(42);
+                    } else {
+                        Unsafe.getUnsafe().putAddress(0L, 42L); // SIGSEGV
+                    }
+                  }).run();
+                }
+            }
+            """;
     public static final Path EXPECTED_FILE = Path.of("expected.dat");
     static Path tempDir;
 
@@ -188,6 +237,11 @@ public class FileWritingCrashExperimentTest {
                 "FileChannelDsyncCrashWriterSleep",
                 FILE_CHANNEL_DSYNC_SOURCE.formatted(
                         "FileChannelDsyncCrashWriterSleep", REGION_SIZE, "'a' + i%26", "true"));
+
+        compile(
+                "MultiThreadedCrashFileChannelExperiment",
+                MULTI_THREAD_RUN.formatted(
+                        "MultiThreadedCrashFileChannelExperiment", REGION_SIZE, "'a' + i%26", "false"));
         createExpectedFile();
     }
 
@@ -253,6 +307,17 @@ public class FileWritingCrashExperimentTest {
         Files.deleteIfExists(Path.of(resultingFile));
     }
 
+    @RepeatedTest(10)
+    public void testMultithreadedRun() throws Exception {
+        var resultingFile = UUID.randomUUID().toString();
+        final var process = startProcess("MultiThreadedCrashFileChannelExperiment", resultingFile);
+        Thread.sleep(1000); // give enough time to reach the sleep
+        kill(process.pid());
+        compare(EXPECTED_FILE, Path.of(resultingFile));
+
+        Files.deleteIfExists(Path.of(resultingFile));
+    }
+
     @AfterAll
     static void after() throws IOException {
         Files.deleteIfExists(EXPECTED_FILE);
@@ -291,6 +356,7 @@ public class FileWritingCrashExperimentTest {
         final long resultingSize = Files.size(resultingFile);
         logger.info("Expected checksum:{} obtained: {}", expectedChs, resultingChs);
         logger.info("Expected filesize:{} obtained:{}", expectedSize, resultingSize);
+        System.out.printf("Expected checksum:%s obtained: %s%n", expectedChs, resultingChs);
         assertEquals(expectedChs, resultingChs);
         assertEquals(expectedSize, resultingSize);
     }
