@@ -14,12 +14,14 @@ import java.nio.file.Path;
 import java.util.UUID;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.RepeatedTest;
 
-public class MappedFileCrashTest {
-
+public class FileWritingCrashExperimentTest {
+    private static final Logger logger = LogManager.getLogger(FileWritingCrashExperimentTest.class);
     private static final int REGION_SIZE = 4096;
     private static final String MEMAP_SOURCE =
             """
@@ -48,8 +50,10 @@ public class MappedFileCrashTest {
 
                         MappedByteBuffer mappedBuffer = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
 
-                        for (int i = 0; i<REGION_SIZE; i++) {
-                            mappedBuffer.put(writeBuff);
+                        mappedBuffer.put(writeBuff);
+                        if (%s) {
+                          Thread.sleep(600000);
+                          return;
                         }
 
                         // No force() call
@@ -89,19 +93,24 @@ public class MappedFileCrashTest {
 
                       File file = new File(args[0]);
 
-                           FileChannel fc = FileChannel.open(file.toPath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+                      FileChannel fc = FileChannel.open(file.toPath(), StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
 
-                          ByteBuffer buffer = ByteBuffer.wrap(writeBuff);
+                      ByteBuffer buffer = ByteBuffer.wrap(writeBuff);
 
-                          fc.write(buffer);
+                      fc.write(buffer);
+                      // No force() call
 
-                          // No force() call
-                          double decision = Math.random();
-                          if (decision < 0.5) {
-                              Runtime.getRuntime().halt(42);
-                          } else {
-                              Unsafe.getUnsafe().putAddress(0L, 42L); // SIGSEGV
-                          }
+                      if (%s) {
+                        Thread.sleep(600000);
+                        return;
+                      }
+
+                      double decision = Math.random();
+                      if (decision < 0.5) {
+                          Runtime.getRuntime().halt(42);
+                      } else {
+                          Unsafe.getUnsafe().putAddress(0L, 42L); // SIGSEGV
+                      }
 
                   }
                 }
@@ -137,8 +146,12 @@ public class MappedFileCrashTest {
                         ByteBuffer buffer = ByteBuffer.wrap(writeBuff);
 
                         fc.write(buffer);
-
                         // No force() call
+
+                        if (%s) {
+                            Thread.sleep(600000);
+                            return;
+                        }
                         double decision = Math.random();
                         if (decision < 0.5) {
                             Runtime.getRuntime().halt(42);
@@ -155,37 +168,27 @@ public class MappedFileCrashTest {
 
     @BeforeAll
     static void before() throws IOException {
+        logger.info("{} before test", FileWritingCrashExperimentTest.class.toString());
         tempDir = Files.createTempDirectory("dynjava");
-        compile("MemMapCrashWriter", MEMAP_SOURCE.formatted("MemMapCrashWriter", REGION_SIZE, "'a' + i%26"));
+        compile("MemMapCrashWriter", MEMAP_SOURCE.formatted("MemMapCrashWriter", REGION_SIZE, "'a' + i%26", "false"));
         compile(
                 "FileChannelCrashWriter",
-                FILE_CHANNEL_SOURCE.formatted("FileChannelCrashWriter", REGION_SIZE, "'a' + i%26"));
+                FILE_CHANNEL_SOURCE.formatted("FileChannelCrashWriter", REGION_SIZE, "'a' + i%26", "false"));
         compile(
                 "FileChannelDsyncCrashWriter",
-                FILE_CHANNEL_DSYNC_SOURCE.formatted("FileChannelDsyncCrashWriter", REGION_SIZE, "'a' + i%26"));
+                FILE_CHANNEL_DSYNC_SOURCE.formatted("FileChannelDsyncCrashWriter", REGION_SIZE, "'a' + i%26", "false"));
+
+        compile(
+                "MemMapCrashWriterSleep",
+                MEMAP_SOURCE.formatted("MemMapCrashWriterSleep", REGION_SIZE, "'a' + i%26", "true"));
+        compile(
+                "FileChannelCrashWriterSleep",
+                FILE_CHANNEL_SOURCE.formatted("FileChannelCrashWriterSleep", REGION_SIZE, "'a' + i%26", "true"));
+        compile(
+                "FileChannelDsyncCrashWriterSleep",
+                FILE_CHANNEL_DSYNC_SOURCE.formatted(
+                        "FileChannelDsyncCrashWriterSleep", REGION_SIZE, "'a' + i%26", "true"));
         createExpectedFile();
-    }
-
-    static Path compile(String className, String javaCode) throws IOException {
-        Path javaFile = tempDir.resolve(className + ".java");
-        Files.writeString(javaFile, javaCode);
-        System.out.println("Created source at: " + javaFile);
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        int result = compiler.run(
-                null,
-                null,
-                null,
-                "--add-exports",
-                "jdk.unsupported/sun.misc=ALL-UNNAMED",
-                "-Xlint:-options",
-                "-proc:none",
-                "-Xlint:none",
-                javaFile.toString());
-        if (result != 0) {
-            throw new RuntimeException("Compilation failed");
-        }
-
-        return javaFile;
     }
 
     @RepeatedTest(10)
@@ -208,6 +211,28 @@ public class MappedFileCrashTest {
     }
 
     @RepeatedTest(10)
+    public void testFileChannelSleep() throws Exception {
+        var resultingFile = UUID.randomUUID().toString();
+        final var process = startProcess("FileChannelCrashWriterSleep", resultingFile);
+        Thread.sleep(1000); // give enough time to reach the sleep
+        kill(process.pid());
+        compare(EXPECTED_FILE, Path.of(resultingFile));
+
+        Files.deleteIfExists(Path.of(resultingFile));
+    }
+
+    @RepeatedTest(10)
+    public void testMappedFileSleep() throws Exception {
+        var resultingFile = UUID.randomUUID().toString();
+        final var process = startProcess("MemMapCrashWriterSleep", resultingFile);
+        Thread.sleep(1000); // give enough time to reach the sleep
+        kill(process.pid());
+        compare(EXPECTED_FILE, Path.of(resultingFile));
+
+        Files.deleteIfExists(Path.of(resultingFile));
+    }
+
+    @RepeatedTest(10)
     public void testFileChannelFileSync() throws Exception {
 
         final Path resultingFile = executeAndGetResult("FileChannelDsyncCrashWriter");
@@ -217,24 +242,75 @@ public class MappedFileCrashTest {
         Files.deleteIfExists(resultingFile);
     }
 
+    @RepeatedTest(10)
+    public void testFileChannelFileSyncSleep() throws Exception {
+        var resultingFile = UUID.randomUUID().toString();
+        final var process = startProcess("FileChannelDsyncCrashWriterSleep", resultingFile);
+        Thread.sleep(1000); // give enough time to reach the sleep
+        kill(process.pid());
+        compare(EXPECTED_FILE, Path.of(resultingFile));
+
+        Files.deleteIfExists(Path.of(resultingFile));
+    }
+
     @AfterAll
     static void after() throws IOException {
         Files.deleteIfExists(EXPECTED_FILE);
     }
 
+    /**
+     * Compiles a java source string
+     */
+    private static void compile(String className, String javaCode) throws IOException {
+        Path javaFile = tempDir.resolve(className + ".java");
+        Files.writeString(javaFile, javaCode);
+        logger.info("Created source at: {}", javaFile);
+        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        int result = compiler.run(
+                null,
+                null,
+                null,
+                "--add-exports",
+                "jdk.unsupported/sun.misc=ALL-UNNAMED",
+                "-Xlint:-options",
+                "-proc:none",
+                "-Xlint:none",
+                javaFile.toString());
+        if (result != 0) {
+            throw new RuntimeException("Compilation failed");
+        }
+    }
+
+    /**
+     * Compares the two pats using the shasum process result
+     */
     private static void compare(Path expectedFile, Path resultingFile) throws Exception {
         final String expectedChs = checkSum(expectedFile);
         final long expectedSize = Files.size(expectedFile);
         final String resultingChs = checkSum(resultingFile);
         final long resultingSize = Files.size(resultingFile);
-        System.out.printf("Expected checksum:%s obtained: %s%n", expectedChs, resultingChs);
-        System.out.printf("Expected filesize:%s obtained: %s%n", expectedSize, resultingSize);
+        logger.info("Expected checksum:{} obtained: {}", expectedChs, resultingChs);
+        logger.info("Expected filesize:{} obtained:{}", expectedSize, resultingSize);
         assertEquals(expectedChs, resultingChs);
         assertEquals(expectedSize, resultingSize);
     }
 
-    public static Path executeAndGetResult(final String className) throws Exception {
+    /**
+     * Executes one of the compiled java classes and return the result of the generated file
+     */
+    private static Path executeAndGetResult(final String className) throws Exception {
         var testFile = UUID.randomUUID().toString();
+        final Process process = startProcess(className, testFile);
+        int exit = process.waitFor();
+        process.destroy();
+        logger.info("Process exited with code: {}", exit);
+        return Path.of(testFile);
+    }
+
+    /**
+     * Starts one of the compiled java classes
+     */
+    private static Process startProcess(final String className, final String testFile) throws IOException {
         ProcessBuilder pb = new ProcessBuilder(
                 System.getProperty("java.home") + "/bin/java",
                 "--add-exports",
@@ -244,20 +320,13 @@ public class MappedFileCrashTest {
                 className,
                 testFile);
         pb.inheritIO();
-        Process process = pb.start();
-        int exit = process.waitFor();
-        process.destroy();
-        System.out.println("Process exited with code: " + exit);
-        return Path.of(testFile);
+        return pb.start();
     }
 
     /**
      * Compute SHA256 checksum of a file (Linux/macOS)
-     * @param val
-     * @return
-     * @throws Exception
      */
-    static String checkSum(Path val) throws Exception {
+    private static String checkSum(Path val) throws Exception {
         ProcessBuilder pb =
                 new ProcessBuilder("shasum", "-a", "256", val.toFile().getAbsolutePath());
         Process process = pb.start();
@@ -273,8 +342,22 @@ public class MappedFileCrashTest {
         return builder.toString();
     }
 
+    /**
+     * Kills a process with kill -9 (Linux/macOS)
+     */
+    private static void kill(Long pid) throws Exception {
+        ProcessBuilder pb = new ProcessBuilder("kill", "-9", pid.toString());
+        Process process = pb.start();
+        process.waitFor();
+        logger.info("killed process {}. result: {}", pid, process.exitValue());
+        process.destroy();
+    }
+
+    /**
+     * Creates the same test file each source is producing for the purposes of comparing it
+     */
     private static void createExpectedFile() {
-        try (RandomAccessFile raf = new RandomAccessFile(MappedFileCrashTest.EXPECTED_FILE.toFile(), "rw");
+        try (RandomAccessFile raf = new RandomAccessFile(FileWritingCrashExperimentTest.EXPECTED_FILE.toFile(), "rw");
                 FileChannel fc = raf.getChannel()) {
 
             MappedByteBuffer buf = fc.map(FileChannel.MapMode.READ_WRITE, 0, REGION_SIZE);
