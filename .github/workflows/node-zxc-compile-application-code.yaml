@@ -611,7 +611,7 @@ jobs:
         with:
           name: HAPI Test (Block Node Communication) Network Logs
           path: |
-            hedera-node/test-clients/build/hapi-test/**/output/**
+            hedera-node/test-clients/build/*-test/**/output/**
           retention-days: 7
 
       - name: Otter Testing
