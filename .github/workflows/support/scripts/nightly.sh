@@ -35,7 +35,7 @@ COOKIEJAR=$(mktemp)
 trap 'rm -f "$COOKIEJAR"' EXIT INT TERM HUP
 
 # ---------- Jenkins crumb ----------
-CRUMB=$(curl -sS -f --netrc-file "$NETRC" --cookie-jar "$COOKIEJAR" \
+CRUMB=$(curl -sS -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" \
         "${SERVER}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,':',//crumb)") \
   || die "Failed to fetch Jenkins crumb" 3
 
@@ -48,3 +48,5 @@ curl -sS -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
   || die "Canonical Test failed to start for [${BUILD_TAG}] [${VERSION_SERVICE}]" 4
 
 log "Canonical test started for [${BUILD_TAG}] [${VERSION_SERVICE}]" "$GREEN"
+
+exit 0
