@@ -19,15 +19,10 @@ SERVER=${SERVER}
 
 USERPASSWORD="${USERNAME}:${PASSWORD}"
 
-# Set up CRUMB and netrc
+# Set up CRUMB
 #
 COOKIEJAR="$(mktemp -t cookies.XXXXXXXXX)"
-NETRC=$(mktemp -t netrc.XXXXXXXXX)
-trap 'rm -f "${COOKIEJAR}" "${NETRC}"' EXIT INT TERM HUP
-
-SERVER_HOST="${SERVER#*://}"
-echo "machine ${SERVER_HOST} login ${USERNAME} password ${PASSWORD}" > "${NETRC}"
-#              --netrc-file "${NETRC}"     \
+trap 'rm -f "${COOKIEJAR}"' EXIT INT TERM HUP
 
 if !  CRUMB=$(curl --no-progress-meter -f    \
               -u "$USERPASSWORD"             \
@@ -36,8 +31,6 @@ if !  CRUMB=$(curl --no-progress-meter -f    \
     printf '%s ❌ Failed to get CRUMB from Jenkins\n' "$(date '+%Y-%m-%d %T')" >&2
     exit 1
 fi
-
-#    --netrc-file "${NETRC}"
 
 curl_args=(
     --no-progress-meter -f -X POST
@@ -53,8 +46,6 @@ if ! curl "${curl_args[@]}"; then
     printf '%s ❌ Canonical Test failed to start for [%s][%s]\n' "$(date '+%Y-%m-%d %T')" "${BUILD_TAG}" "${VERSION_SERVICE}" >&2
     exit 1
 fi
-
-rm -f "${COOKIEJAR}" "${NETRC}"
 
 printf '%s ✅ Canonical Test started for [%s][%s]\n' "$(date '+%Y-%m-%d %T')" "${BUILD_TAG}" "${VERSION_SERVICE}"
 
