@@ -17,6 +17,8 @@ USERNAME=${USERNAME}
 PASSWORD=${PASSWORD}
 SERVER=${SERVER}
 
+USERPASSWORD="${USERNAME}:${PASSWORD}"
+
 # Set up CRUMB and netrc
 #
 COOKIEJAR="$(mktemp -t cookies.XXXXXXXXX)"
@@ -25,10 +27,11 @@ trap 'rm -f "${COOKIEJAR}" "${NETRC}"' EXIT INT TERM HUP
 
 SERVER_HOST="${SERVER#*://}"
 echo "machine ${SERVER_HOST} login ${USERNAME} password ${PASSWORD}" > "${NETRC}"
+#              --netrc-file "${NETRC}"     \
 
 if !  CRUMB=$(curl --no-progress-meter -f    \
-              --netrc-file "${NETRC}"     \
-              --cookie-jar "${COOKIEJAR}" \
+              -u "$USERPASSWORD"             \
+              --cookie-jar "${COOKIEJAR}"    \
               "${SERVER}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,%22:%22,//crumb)"); then
     printf '%s ❌ Failed to get CRUMB from Jenkins\n' "$(date '+%Y-%m-%d %T')" >&2
     exit 1
