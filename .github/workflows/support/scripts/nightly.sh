@@ -8,7 +8,7 @@ Usage() {
     exit 1
 }
 
-if [[ $# -lt 5 ]]; then Usage; fi
+[[ $# -eq 2 ]] || Usage
 
 BUILD_TAG=${1}
 VERSION_SERVICE=${2}
