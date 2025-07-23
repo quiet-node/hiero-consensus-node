@@ -25,6 +25,7 @@ import org.hyperledger.besu.evm.operation.Create2Operation;
  */
 public class CustomCreate2Operation extends AbstractCustomCreateOperation {
     private static final Bytes EIP_1014_PREFIX = Bytes.fromHexString("0xFF");
+
     private final FeatureFlags featureFlags;
 
     /**

@@ -159,6 +159,15 @@ public interface HandleContext {
              * Whether a contract dispatch should externalize explicit writes with its slot usage traces.
              */
             EXPLICIT_WRITE_TRACING,
+            /**
+             * Batch inner transaction bytes. Used to prehandle inner transaction while dispatching them.
+             */
+            INNER_TRANSACTION_BYTES,
+            /**
+             * A callback to be invoked to increment the nonce of the payer account.
+             * This is used to ensure that the nonce is incremented when ethereum transaction fails inside a batch.
+             */
+            ETHEREUM_NONCE_INCREMENT_CALLBACK
         }
     }
 
