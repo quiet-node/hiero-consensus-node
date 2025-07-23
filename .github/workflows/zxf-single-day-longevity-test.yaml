@@ -89,7 +89,7 @@ jobs:
 
           BRANCH_NAME="${REF_INPUT//[^a-zA-Z0-9\-_]/_}"
           BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
-          BUILD_ARTIFACT="${BUILD_TAG_INPUT//[^a-zA-Z0-9\-_]/_}"
+          BUILD_ARTIFACT="${BUILD_TAG_INPUT//[^a-zA-Z0-9\-_.]/_}"
 
           log_info "Parameters: Branch: ${BRANCH_NAME}, Build: ${BUILD_ARTIFACT}"
           if [[ "${BRANCH_NAME_LOWER}" = "main" ]]; then
