@@ -61,6 +61,37 @@ jobs:
           version: 'latest'
           install_components: 'gsutil'
 
+     - name: Install Utility Tools
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "::group::Setup JQ Command"
+            sudo apt update
+            sudo apt install -y jq
+            echo "::endgroup::"
+          fi
+          JQ_VERSION="$(jq --version)"
+          if [[ "${JQ_VERSION}" != "jq-1.6" ]]; then
+            echo "::group::Updating JQ Version"
+            sudo apt update
+            sudo apt upgrade -y jq
+            echo "::endgroup::"
+          fi
+          if ! command -v tee >/dev/null 2>&1; then
+            echo "::group::Setup Tee Command"
+            sudo apt update
+            sudo apt install -y coreutils
+            echo "::endgroup::"
+          fi
+          if ! command -v curl >/dev/null 2>&1; then
+            echo "::group::Setup Curl Command"
+            sudo apt update
+            sudo apt install -y curl
+            echo "::endgroup::"
+          fi
+          echo "::group::Show JQ Version"
+          jq --version
+          echo "::endgroup::"
+
       - name: Verify Workflow Parameters
         id: parameters
         run: |
@@ -112,7 +143,13 @@ jobs:
             fi
           done
           echo "✅ Artifact ${ARTIFACT_NAME}.zip is available."
+          echo "build-tag=${{ inputs.build-tag }}" >> "${GITHUB_OUTPUT}"
           echo "build-version=${ARTIFACT_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: Start Canonical Test
+        id: start-canonical-test
+        run: |
+          bash "${{ github.workspace }}/${{ env.TEST_SCRIPT }}" "${{ env.USERNAME }}" "${{ env.PASSWORD }}" "${{ env.SERVER }}" "${{ env.K8S_CLUSTER }}" "${{ steps.check-if-exist.outputs.build-tag }}" "${{ steps.check-if-exist.outputs.build-version }}" 
 
       - name: Summary
         run: |
