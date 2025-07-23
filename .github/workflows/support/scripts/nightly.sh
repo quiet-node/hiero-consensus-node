@@ -49,8 +49,8 @@ curl --no-progress-meter -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
      -F "BUILD_TAG=${BUILD_TAG}"                             \
      -F "VERSION_SERVICE=${VERSION_SERVICE}"                 \
      "${SERVER}/job/pipelines/job/ops/buildWithParameters"   \
-  || die "Canonical Test failed to start for [${BUILD_TAG}] [${VERSION_SERVICE}]" 4
+  || die "❌ Error: Canonical Test failed to start for [${BUILD_TAG}] [${VERSION_SERVICE}]" 4
 
-log "Canonical test started for [${BUILD_TAG}] [${VERSION_SERVICE}]" "$GREEN"
+log "✅ Canonical test started for [${BUILD_TAG}] [${VERSION_SERVICE}]" "$GREEN"
 
 exit 0
