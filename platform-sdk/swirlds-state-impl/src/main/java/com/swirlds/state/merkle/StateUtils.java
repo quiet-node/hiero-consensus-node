@@ -8,6 +8,7 @@ import static com.hedera.pbj.runtime.ProtoWriterTools.sizeOfVarInt32;
 
 import com.hedera.hapi.platform.state.SingletonType;
 import com.hedera.hapi.platform.state.VirtualMapKey;
+import com.hedera.hapi.platform.state.VirtualMapValue;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.OneOf;
 import com.hedera.pbj.runtime.ParseException;
@@ -502,5 +503,15 @@ public final class StateUtils {
         bufferedData.writeBytes(keyObjectBytes);
 
         return byteBuffer.array();
+    }
+
+    public static <V> VirtualMapValue getVirtualMapValue(
+            @NonNull final String serviceName, @NonNull final String stateKey, final V value) {
+        return new VirtualMapValue(new OneOf<>(
+                VirtualMapValue.ValueOneOfType.fromProtobufOrdinal(getValidatedStateId(serviceName, stateKey)), value));
+    }
+
+    public static <V> VirtualMapValue getVirtualMapValueQueueState(final V value) {
+        return new VirtualMapValue(new OneOf<>(VirtualMapValue.ValueOneOfType.QUEUE_STATE, value));
     }
 }

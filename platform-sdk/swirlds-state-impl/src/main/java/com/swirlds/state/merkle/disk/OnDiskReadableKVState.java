@@ -8,6 +8,7 @@ import static com.swirlds.state.merkle.logging.StateLogger.logMapGetSize;
 import static com.swirlds.state.merkle.logging.StateLogger.logMapIterate;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.platform.state.VirtualMapValue;
 import com.hedera.pbj.runtime.Codec;
 import com.swirlds.state.merkle.StateUtils;
 import com.swirlds.state.spi.ReadableKVState;
@@ -32,37 +33,34 @@ public final class OnDiskReadableKVState<K, V> extends ReadableKVStateBase<K, V>
     @NonNull
     private final Codec<K> keyCodec;
 
-    @NonNull
-    private final Codec<V> valueCodec;
-
     /**
      * Create a new instance
      *
-     * @param serviceName  the service name
-     * @param stateKey     the state key
-     * @param keyCodec     the codec for the key
-     * @param valueCodec   the codec for the value
-     * @param virtualMap   the backing merkle data structure to use
+     * @param serviceName the service name
+     * @param stateKey    the state key
+     * @param keyCodec    the codec for the key
+     * @param virtualMap  the backing merkle data structure to use
      */
     public OnDiskReadableKVState(
             @NonNull final String serviceName,
             @NonNull final String stateKey,
             @NonNull final Codec<K> keyCodec,
-            @NonNull final Codec<V> valueCodec,
             @NonNull final VirtualMap virtualMap) {
         super(serviceName, stateKey);
         this.keyCodec = requireNonNull(keyCodec);
-        this.valueCodec = requireNonNull(valueCodec);
         this.virtualMap = requireNonNull(virtualMap);
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected V readFromDataSource(@NonNull K key) {
-        final var value = virtualMap.get(getVirtualMapKeyForKv(serviceName, stateKey, key), valueCodec);
+        final VirtualMapValue virtualMapValue =
+                virtualMap.get(getVirtualMapKeyForKv(serviceName, stateKey, key), VirtualMapValue.PROTOBUF);
         // Log to transaction state log, what was read
-        logMapGet(computeLabel(serviceName, stateKey), key, value);
-        return value;
+        logMapGet(computeLabel(serviceName, stateKey), key, virtualMapValue);
+        return virtualMapValue != null ? virtualMapValue.value().as() : null;
     }
 
     /** {@inheritDoc} */

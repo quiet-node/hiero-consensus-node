@@ -52,8 +52,8 @@ class WritablePlatformStateStoreTest {
                 PlatformState.PROTOBUF);
 
         when(writableStates.<PlatformState>getSingleton(PLATFORM_STATE_KEY))
-                .thenReturn(new OnDiskWritableSingletonState<>(
-                        PlatformStateService.NAME, PLATFORM_STATE_KEY, PlatformState.PROTOBUF, virtualMap));
+                .thenReturn(
+                        new OnDiskWritableSingletonState<>(PlatformStateService.NAME, PLATFORM_STATE_KEY, virtualMap));
         store = new WritablePlatformStateStore(writableStates);
     }
 
