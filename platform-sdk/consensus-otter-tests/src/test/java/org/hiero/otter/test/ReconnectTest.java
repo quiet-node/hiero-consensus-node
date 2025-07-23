@@ -22,6 +22,7 @@ import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.OtterTest;
 import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
+import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResults;
 import org.junit.jupiter.api.Disabled;
 
 /**
@@ -73,9 +74,10 @@ public class ReconnectTest {
         nodeToReconnect.killImmediately();
 
         // Verify that the node was healthy prior to being killed
-        assertThat(nodeToReconnect.getPlatformStatusResults())
+        final SingleNodePlatformStatusResults nodeToReconnectStatusResults = nodeToReconnect.getPlatformStatusResults();
+        assertThat(nodeToReconnectStatusResults)
                 .hasSteps(target(ACTIVE).requiringInterim(REPLAYING_EVENTS, OBSERVING, CHECKING));
-        nodeToReconnect.getPlatformStatusResults().clear();
+        nodeToReconnectStatusResults.clear();
 
         // Wait for the node we just killed to fall behind
         if (!timeManager.waitForCondition(
@@ -86,7 +88,7 @@ public class ReconnectTest {
         // Restart the node that was killed
         nodeToReconnect.start();
 
-        // Wait for thirty seconds minutes and allow the node to reconnect and become active again
+        // Wait for thirty seconds to allow the node to reconnect and become active again
         timeManager.waitFor(Duration.ofSeconds(30L));
 
         // Validations
@@ -105,7 +107,7 @@ public class ReconnectTest {
                 .haveSteps(target(ACTIVE).requiringInterim(REPLAYING_EVENTS, OBSERVING, CHECKING));
 
         // The reconnected node should have gone through the reconnect status progression since restarting
-        assertThat(nodeToReconnect.getPlatformStatusResults())
+        assertThat(nodeToReconnectStatusResults)
                 .hasSteps(target(ACTIVE)
                         .requiringInterim(REPLAYING_EVENTS, OBSERVING, BEHIND, RECONNECT_COMPLETE, CHECKING));
     }
