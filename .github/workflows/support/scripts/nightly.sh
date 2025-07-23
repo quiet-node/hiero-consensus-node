@@ -49,6 +49,7 @@ trap 'rm -f "${COOKIEJAR}" "${NETRC}"' EXIT INT TERM HUP
 
 SERVER_HOST=$(awk -F/ '{print $3}' <<<"${SERVER}")
 printf "machine %s\nlogin %s\npassword %s\n" "${SERVER_HOST}" "${USERNAME}" "${PASSWORD}" > "${NETRC}"
+echo "[$SERVER_HOST]"
 
 #CRUMB=$(curl --no-progress-meter -f -u "${USERPASSWORD}" --cookie-jar "${COOKIEJAR}" \
 CRUMB=$(curl --no-progress-meter -f --netrc-file "$NETRC" --cookie-jar "${COOKIEJAR}" \
