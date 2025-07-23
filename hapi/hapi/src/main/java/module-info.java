@@ -62,6 +62,7 @@ module com.hedera.node.hapi {
     exports com.hederahashgraph.service.proto.java;
     exports com.hedera.hapi.util;
     exports com.hedera.hapi.block.internal;
+    exports com.hedera.hapi.block.internal.protoc;
     exports com.hedera.hapi.block.stream;
     exports com.hedera.hapi.block.stream.input;
     exports com.hedera.hapi.block.stream.output;
