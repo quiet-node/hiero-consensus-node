@@ -99,9 +99,10 @@ jobs:
 
           for ((i=1;i<=30;i++)); do
               gsutil -q stat "${ARTIFACT_PATH}" && break
-              echo "⏳ Artifact ${ARTIFACT_NAME}.zip not ready, wait for 2 minutes, on [$i/30] try." ; sleep 120
+              printf '%s ⏳ Artifact ${ARTIFACT_NAME}.zip not ready, wait for 2 minutes, on [%d/30] try.' "$(date '+%Y-%m-%d %T')" $ ; sleep 120
           done
-          ((i<=30)) || {printf '%s ❌ Error: Artifact not found after 30 attempts, timed out.\n' "$(date '+%Y-%m-%d %T')"; exit 1; }
+          [ "${i:-0}" -le 30 ] || { printf '%s [x] Error: Artifact not found after 30 attempts, timed out.\n' "$(date '+%Y-%m-%d %T')"; exit 1; }
+          #((i<=30)) || {printf '%s ❌ Error: Artifact not found after 30 attempts, timed out.\n' "$(date '+%Y-%m-%d %T')"; exit 1; }
 
           printf '%s ✅ Artifact ${ARTIFACT_NAME}.zip is available.\n' "$(date '+%Y-%m-%d %T')" >&2
           echo "build-tag=${{ inputs.build-tag }}" >> "${GITHUB_OUTPUT}"
