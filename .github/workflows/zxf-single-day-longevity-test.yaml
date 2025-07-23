@@ -18,11 +18,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  USERNAME: ${{ secrets.TESTING_JENKINS_API_USERNAME }}
-  PASSWORD: ${{ secrets.TESTING_JENKINS_API_PASSWORD }}
-  SERVER: ${{ secrets.TESTING_JENKINS_API_SERVER }}
-
 jobs:
   canonical-test:
     name: Canonical
@@ -148,10 +143,20 @@ jobs:
 
       - name: Start Canonical Test
         id: start-canonical-test
+        env:
+          USERNAME: ${{ secrets.TESTING_JENKINS_API_USERNAME }}
+          PASSWORD: ${{ secrets.TESTING_JENKINS_API_PASSWORD }}
+          SERVER: ${{ secrets.TESTING_JENKINS_API_SERVER }}
+          TEST_SCRIPT: ".github/workflows/support/scripts/nightly.sh"
+
         run: |
-          bash "${{ github.workspace }}/${{ env.TEST_SCRIPT }}" "${{ env.USERNAME }}" "${{ env.PASSWORD }}" "${{ env.SERVER }}" "${{ env.K8S_CLUSTER }}" "${{ steps.check-if-exist.outputs.build-tag }}" "${{ steps.check-if-exist.outputs.build-version }}" 
+          bash "${{ github.workspace }}/${{ env.TEST_SCRIPT }}" \
+               "${{ env.USERNAME }}" "${{ env.PASSWORD }}" "${{ env.SERVER }}" \
+               "${{ steps.check-if-exist.outputs.build-tag }}" \
+               "${{ steps.check-if-exist.outputs.build-version }}" 
 
       - name: Summary
+        if: always()
         run: |
           set -euo pipefail
 
@@ -159,7 +164,3 @@ jobs:
           echo "- **Reference**: ${{ inputs.ref }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Build Tag**: ${{ inputs.build-tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Artifact Name**: ${{ steps.check-if-exist.outputs.build-version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Artifact Verified**: ${{ steps.verify-artifact.outputs.artifact-verified }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: :white_check_mark: Ready for canonical testing" >> $GITHUB_STEP_SUMMARY
-
-

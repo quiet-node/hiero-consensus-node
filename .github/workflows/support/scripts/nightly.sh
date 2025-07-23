@@ -10,7 +10,6 @@ Usage() {
 USER=${1}
 PASSWORD=${2}
 SERVER=${3}
-K8S_CLUSTER=${4}
 BUILD_TAG=${5}
 VERSION_SERVICE=${6}
 
@@ -18,7 +17,7 @@ USERPASSWORD="${USER}:${PASSWORD}"
 
 # File where web session cookie is saved
 #
-COOKIEJAR="$(mktemp)"
+COOKIEJAR="$(mktemp -t cookies.XXXXXXXXX)"
 CRUMB=$(curl --no-progress-meter -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" "$SERVER/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,%22:%22,//crumb)")
 
 status=$?
