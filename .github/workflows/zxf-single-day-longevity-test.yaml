@@ -72,7 +72,7 @@ jobs:
             BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
             BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/_' '-.')"
             TAG_COMMIT_SHA=$(git rev-list -n 1 "${BUILD_ARTIFACT}") || {
-              echo "::error:: Error : Tag ${BUILD_ARTIFACT} not found"
+              echo "❌ Error : Tag ${BUILD_ARTIFACT} not found"
               exit 1
             }
             TAG_COMMIT_SHORT="${TAG_COMMIT_SHA:0:8}"
@@ -89,11 +89,11 @@ jobs:
           ARTIFACT_NAME="${{ steps.parameters.outputs.artifact-name }}"
           BUCKET_NAME="${{ secrets.RELEASE_ARTIFACT_BUCKET_NAME }}"
           if [[ -z "${ARTIFACT_NAME}" ]]; then
-            echo "::error:: Error : Artifact name is empty"
+            echo "❌ Error : Artifact name is empty"
             exit 1
           fi
           if [[ -z "${BUCKET_NAME}" ]]; then
-            echo "::error:: Error : Bucket name is empty"
+            echo "❌ Error : Bucket name is empty"
             exit 1
           fi
 
@@ -107,11 +107,11 @@ jobs:
             if [ ${PATH_EXIST} -eq 0 ]; then
               break
             else
-              echo "::hourglass_flowing_sand:: Artifact ${ARTIFACT_NAME}.zip not ready, wait for 2 minutes."
+              echo "⏳ Artifact ${ARTIFACT_NAME}.zip not ready, wait for 2 minutes."
               sleep 2m
             fi
           done
-          echo ":white_check_mark: Artifact ${ARTIFACT_NAME}.zip is available."
+          echo "✅ Artifact ${ARTIFACT_NAME}.zip is available."
           echo "build-version=${ARTIFACT_NAME}" >> "${GITHUB_OUTPUT}"
 
       - name: Summary
