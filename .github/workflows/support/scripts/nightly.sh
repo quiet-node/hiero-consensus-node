@@ -2,14 +2,19 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# ---------- colours ----------
-readonly RED=$'\e[31m' GREEN=$'\e[32m' RESET=$'\e[0m'
+# ANSI Colors
+#
+readonly RED=$'\e[31m'
+readonly GREEN=$'\e[32m'
+readonly RESET=$'\e[0m'
 
-# ---------- logging ----------
+# Logging
+#
 log()  { printf '%b[%s]%b %s\n' "$2" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$RESET" "$1"; }
 die()  { log "$*" "$RED"; exit "${2:-1}"; }
 
-# ---------- usage ----------
+# Usage 
+#
 Usage() {
 cat <<EOF
 Usage: $0 <build-tag> <version-service>
@@ -21,30 +26,39 @@ Environment variables required:
 EOF
 }
 
-# ---------- argument / env check ----------
+# Preflight Checks
+#
 [[ $# -eq 2 ]] || Usage
-USERNAME=${USERNAME}
-PASSWORD=${PASSWORD}
-SERVER=${SERVER}
-[[ -v USERNAME && -n $USERNAME ]] || die "USERNAME not set" 2
-[[ -v PASSWORD && -n $PASSWORD ]] || die "PASSWORD not set" 2
-[[ -v SERVER   && -n $SERVER   ]] || die "SERVER not set"   2
+[[ -v USERNAME && -n ${USERNAME} ]] || die "USERNAME not set" 2
+[[ -v PASSWORD && -n ${PASSWORD} ]] || die "PASSWORD not set" 2
+[[ -v SERVER   && -n ${SERVER}   ]] || die "SERVER not set"   2
 
-readonly BUILD_TAG=$1 VERSION_SERVICE=$2
+readonly BUILD_TAG=${1} 
+readonly VERSION_SERVICE=${2}
 readonly USERPASSWORD="${USERNAME}:${PASSWORD}"
 
-# ---------- temp files ----------
-COOKIEJAR="$(mktemp -t cookies.XXXXXXXXX)"
-trap 'rm -f "$COOKIEJAR"' EXIT INT TERM HUP
+command -v curl >/dev/null || die "❌ curl is not installed"
+command -v mktemp >/dev/null || die "❌ mktemp is not available"
 
-# ---------- Jenkins crumb ----------
-CRUMB=$(curl --no-progress-meter -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" \
+# Jenkins CSRF crumbs
+#
+COOKIEJAR="$(mktemp -t cookies.XXXXXXXXX)"
+NETRC=$(mktemp -t netrc.XXXXXXXXX) || die "Failed to create netrc file" 3
+chmod 600 "${NETRC}"
+trap 'rm -f "${COOKIEJAR}" "${NETRC}"' EXIT INT TERM HUP
+
+SERVER_HOST=$(awk -F/ '{print $3}' <<<"${SERVER}")
+printf "machine %s\nlogin %s\npassword %s\n" "${SERVER_HOST}" "${USERNAME}" "${PASSWORD}" > "${NETRC}"
+
+#CRUMB=$(curl --no-progress-meter -f -u "${USERPASSWORD}" --cookie-jar "${COOKIEJAR}" \
+CRUMB=$(curl --no-progress-meter -f --netrc-file "$NETRC" --cookie-jar "${COOKIEJAR}" \
         "${SERVER}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,%22:%22,//crumb)") \
   || die "❌ Error: Failed to fetch Jenkins crumb" 3
 
-
-# ---------- trigger job ----------
-curl --no-progress-meter -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
+# Start Jenkins Job
+#
+#curl --no-progress-meter -f -X POST -u "${USERPASSWORD}" --cookie "${COOKIEJAR}" \
+curl --no-progress-meter -f -X POST --netrc-file "${NETRC}" --cookie "${COOKIEJAR}" \
      -H "${CRUMB:?Missing CRUMB header}"                     \
      -F "BUILD_TAG=${BUILD_TAG}"                             \
      -F "VERSION_SERVICE=${VERSION_SERVICE}"                 \
