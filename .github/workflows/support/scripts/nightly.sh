@@ -55,7 +55,7 @@ curl --no-progress-meter -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
      -H "${CRUMB:?Missing CRUMB header}"                     \
      -F "BUILD_TAG=${BUILD_TAG}"                             \
      -F "VERSION_SERVICE=${VERSION_SERVICE}"                 \
-     "${SERVER}/job/pipelines/job/ops/buildWithParameters"   \
+     "${SERVER}/job/nightly/job/sdct/buildWithParameters"   \
   || die "❌ Error: Canonical Test failed to start for [${BUILD_TAG}] [${VERSION_SERVICE}]" 4
 
 log "✅ Canonical test started for [${BUILD_TAG}] [${VERSION_SERVICE}]" "$GREEN"
