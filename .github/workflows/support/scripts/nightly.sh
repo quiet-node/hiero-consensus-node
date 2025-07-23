@@ -23,6 +23,9 @@ EOF
 
 # ---------- argument / env check ----------
 [[ $# -eq 2 ]] || Usage
+USERNAME=${USERNAME}
+PASSWORD=${PASSWORD}
+SERVER=${SERVER}
 [[ -v USERNAME && -n $USERNAME ]] || die "USERNAME not set" 2
 [[ -v PASSWORD && -n $PASSWORD ]] || die "PASSWORD not set" 2
 [[ -v SERVER   && -n $SERVER   ]] || die "SERVER not set"   2
