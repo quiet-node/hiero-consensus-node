@@ -37,9 +37,11 @@ if !  CRUMB=$(curl --no-progress-meter -f    \
     exit 1
 fi
 
+#    --netrc-file "${NETRC}"
+
 curl_args=(
     --no-progress-meter -f -X POST
-    --netrc-file "${NETRC}"
+    -u "$USERPASSWORD"
     --cookie "${COOKIEJAR}"
     -H "${CRUMB:?Missing CRUMB header}"
     "${SERVER}/job/pipelines/job/ops/buildWithParameters"
