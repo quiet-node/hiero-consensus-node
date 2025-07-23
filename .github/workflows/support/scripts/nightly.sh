@@ -35,12 +35,14 @@ COOKIEJAR=$(mktemp)
 trap 'rm -f "$COOKIEJAR"' EXIT INT TERM HUP
 
 # ---------- Jenkins crumb ----------
-CRUMB=$(curl -sS -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" \
+#CRUMB=$(curl -sS -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" \
+CRUMB=$(curl --no-progress-meter -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" \
         "${SERVER}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,':',//crumb)") \
   || die "Failed to fetch Jenkins crumb" 3
 
 # ---------- trigger job ----------
-curl -sS -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
+#curl -sS -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
+curl --no-progress-meter -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
      -H "${CRUMB:?Missing CRUMB header}"                     \
      -F "BUILD_TAG=${BUILD_TAG}"                             \
      -F "VERSION_SERVICE=${VERSION_SERVICE}"                 \
