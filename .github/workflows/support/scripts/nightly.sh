@@ -34,17 +34,16 @@ readonly BUILD_TAG=$1 VERSION_SERVICE=$2
 readonly USERPASSWORD="${USERNAME}:${PASSWORD}"
 
 # ---------- temp files ----------
-COOKIEJAR=$(mktemp)
+COOKIEJAR="$(mktemp -t cookies.XXXXXXXXX)"
 trap 'rm -f "$COOKIEJAR"' EXIT INT TERM HUP
 
 # ---------- Jenkins crumb ----------
-#CRUMB=$(curl -sS -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" \
 CRUMB=$(curl --no-progress-meter -f -u "$USERPASSWORD" --cookie-jar "$COOKIEJAR" \
-        "${SERVER}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,':',//crumb)") \
-  || die "Failed to fetch Jenkins crumb" 3
+        "${SERVER}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,%22:%22,//crumb)") \
+  || die "❌ Error: Failed to fetch Jenkins crumb" 3
+
 
 # ---------- trigger job ----------
-#curl -sS -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
 curl --no-progress-meter -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
      -H "${CRUMB:?Missing CRUMB header}"                     \
      -F "BUILD_TAG=${BUILD_TAG}"                             \
