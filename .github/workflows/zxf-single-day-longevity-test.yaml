@@ -69,7 +69,7 @@ jobs:
             BRANCH_NAME_LOWER="$(echo "${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]')"
             BRANCH_NAME_SAFE="$(echo "${BRANCH_NAME_LOWER}" | tr '/_' '-.')"
             TAG_COMMIT_SHA=$(git rev-list -n 1 "${BUILD_ARTIFACT}") || {
-              echo "❌ Error: Tag ${BUILD_ARTIFACT} not found" >&2
+              printf '%s ❌ Error: Failed to get CRUMB from Jenkins\n' "$(date '+%Y-%m-%d %T')" >&2
               exit 1
             }
             TAG_COMMIT_SHORT="${TAG_COMMIT_SHA:0:8}"
@@ -86,11 +86,11 @@ jobs:
           ARTIFACT_NAME="${{ steps.parameters.outputs.artifact-name }}"
           BUCKET_NAME="${{ secrets.RELEASE_ARTIFACT_BUCKET_NAME }}"
           if [[ -z "${ARTIFACT_NAME}" ]]; then
-            echo "❌ Error: Artifact name is empty"
+            printf '%s ❌ Error: Artifact name is empty\n' "$(date '+%Y-%m-%d %T')" >&2
             exit 1
           fi
           if [[ -z "${BUCKET_NAME}" ]]; then
-            echo "❌ Error : Bucket name is empty"
+            printf '%s ❌ Error: Bucket  name is empty\n' "$(date '+%Y-%m-%d %T')" >&2
             exit 1
           fi
 
@@ -101,9 +101,9 @@ jobs:
               gsutil -q stat "${ARTIFACT_PATH}" && break
               echo "⏳ Artifact ${ARTIFACT_NAME}.zip not ready, wait for 2 minutes, on [$i/30] try." ; sleep 120
           done
-          ((i<=30)) || { echo "❌ Error: Artifact not found after 30 attempts, timed out."; exit 1; }
+          ((i<=30)) || {printf '%s ❌ Error: Artifact not found after 30 attempts, timed out.\n' "$(date '+%Y-%m-%d %T')"; exit 1; }
 
-          echo "✅ Artifact ${ARTIFACT_NAME}.zip is available."
+          printf '%s ✅ Artifact ${ARTIFACT_NAME}.zip is available.\n' "$(date '+%Y-%m-%d %T')" >&2
           echo "build-tag=${{ inputs.build-tag }}" >> "${GITHUB_OUTPUT}"
           echo "build-version=${ARTIFACT_NAME}" >> "${GITHUB_OUTPUT}"
 
