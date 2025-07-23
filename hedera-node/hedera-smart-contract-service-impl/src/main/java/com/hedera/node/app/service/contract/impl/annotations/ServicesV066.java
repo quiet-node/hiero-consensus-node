@@ -12,11 +12,11 @@ import java.lang.annotation.Target;
 import javax.inject.Qualifier;
 
 /**
- * Qualifies a binding for use with the {@code v0.65} (Cancun/Pectra) Services EVM.  Adds support for the
+ * Qualifies a binding for use with the {@code v0.66} (Cancun/Pectra) Services EVM.  Adds support for the
  * Hedera Account Service system contract.
  */
 @Target({METHOD, PARAMETER, TYPE})
 @Retention(RUNTIME)
 @Documented
 @Qualifier
-public @interface ServicesV065 {}
+public @interface ServicesV066 {}
