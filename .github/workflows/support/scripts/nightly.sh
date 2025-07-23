@@ -43,23 +43,15 @@ command -v mktemp >/dev/null || die "❌ mktemp is not available"
 # Jenkins CSRF crumbs
 #
 COOKIEJAR="$(mktemp -t cookies.XXXXXXXXX)"
-NETRC=$(mktemp -t netrc.XXXXXXXXX) || die "Failed to create netrc file" 3
-chmod 600 "${NETRC}"
-trap 'rm -f "${COOKIEJAR}" "${NETRC}"' EXIT INT TERM HUP
+trap 'rm -f "${COOKIEJAR}"' EXIT INT TERM HUP
 
-SERVER_HOST=$(awk -F/ '{print $3}' <<<"${SERVER}")
-printf "machine %s\nlogin %s\npassword %s\n" "${SERVER_HOST}" "${USERNAME}" "${PASSWORD}" > "${NETRC}"
-echo "[$SERVER_HOST]"
-
-#CRUMB=$(curl --no-progress-meter -f -u "${USERPASSWORD}" --cookie-jar "${COOKIEJAR}" \
-CRUMB=$(curl --no-progress-meter -f --netrc-file "$NETRC" --cookie-jar "${COOKIEJAR}" \
+CRUMB=$(curl --no-progress-meter -f -u "${USERPASSWORD}" --cookie-jar "${COOKIEJAR}" \
         "${SERVER}/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,%22:%22,//crumb)") \
   || die "❌ Error: Failed to fetch Jenkins crumb" 3
 
 # Start Jenkins Job
 #
-#curl --no-progress-meter -f -X POST -u "${USERPASSWORD}" --cookie "${COOKIEJAR}" \
-curl --no-progress-meter -f -X POST --netrc-file "${NETRC}" --cookie "${COOKIEJAR}" \
+curl --no-progress-meter -f -X POST -u "$USERPASSWORD" --cookie "$COOKIEJAR" \
      -H "${CRUMB:?Missing CRUMB header}"                     \
      -F "BUILD_TAG=${BUILD_TAG}"                             \
      -F "VERSION_SERVICE=${VERSION_SERVICE}"                 \
