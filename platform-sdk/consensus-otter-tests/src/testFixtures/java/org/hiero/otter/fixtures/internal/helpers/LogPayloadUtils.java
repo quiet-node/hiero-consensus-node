@@ -2,7 +2,6 @@
 package org.hiero.otter.fixtures.internal.helpers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -44,55 +43,20 @@ public class LogPayloadUtils {
      * @return the parsed payload
      */
     @NonNull
-    public static <T extends LogPayload> T parsePayload(final Class<T> type, final String data) {
+    public static <T extends LogPayload> T parsePayload(@NonNull final Class<T> type, @NonNull final String data) {
+        final int startIndex = data.indexOf('{');
+        final int endIndex = data.lastIndexOf('}') + 1;
+        final String jsonString = data.substring(startIndex, endIndex);
+
         final T payload;
         try {
-            payload = mapper.treeToValue(extractJsonData(data), type);
+            payload = mapper.readValue(jsonString, type);
         } catch (final JsonProcessingException e) {
             throw new PayloadParsingException(
                     String.format("Unable to map json data onto object%nObject:%n%s%nData:%n%s", type.getName(), data),
                     e);
         }
 
-        payload.setMessage(extractMessage(data));
-
         return payload;
-    }
-
-    /**
-     * Attempt to extract the human readable message from the data.
-     *
-     * @param data a (potentially) formatted string
-     * @return the human readable string, if present.
-     */
-    private static String extractMessage(final String data) {
-        try {
-            // The message is all of the text up until the first instance of '{', minus the ' ' that proceeds the '{'
-            final int endIndex = data.indexOf('{') - 1;
-            return data.substring(0, endIndex);
-        } catch (final IndexOutOfBoundsException ignored) {
-            // If we fail to parse the message, do not fail.
-            // Return an empty string so that other parsed data can still be used.
-            return "";
-        }
-    }
-
-    /**
-     * Extract json data from a string.
-     *
-     * @param data a (potentially) formatted string
-     * @return json data if it is present
-     * @throws PayloadParsingException thrown if well-formatted json data is not found
-     */
-    private static JsonNode extractJsonData(final String data) {
-        try {
-            // The json data will start with the first '{' and end with the last '}'
-            final int startIndex = data.indexOf('{');
-            final int endIndex = data.lastIndexOf('}') + 1;
-            final String jsonString = data.substring(startIndex, endIndex);
-            return mapper.readTree(jsonString);
-        } catch (final IndexOutOfBoundsException | JsonProcessingException e) {
-            throw new PayloadParsingException(String.format("Unable to extract json data from message:%n%s", data), e);
-        }
     }
 }
