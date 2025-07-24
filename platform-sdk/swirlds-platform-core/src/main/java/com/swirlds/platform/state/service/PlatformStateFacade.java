@@ -20,6 +20,7 @@ import com.swirlds.state.spi.ReadableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Consumer;
 import org.hiero.base.crypto.Hash;
 import org.hiero.consensus.model.hashgraph.Round;
@@ -284,7 +285,7 @@ public class PlatformStateFacade {
                         readablePlatformStateStore(state),
                         merkleNodeState.getHash(),
                         merkleNodeState.getRoot())
-                .concat(merkleNodeState.getInfoJson());
+                .concat(Objects.toString(merkleNodeState.getInfoJson(), ""));
     }
 
     private PlatformStateAccessor readablePlatformStateStore(@NonNull final State state) {

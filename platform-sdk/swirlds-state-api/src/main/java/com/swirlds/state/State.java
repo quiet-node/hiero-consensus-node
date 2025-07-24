@@ -143,6 +143,6 @@ public interface State extends FastCopyable, Hashable {
      * @return A JSON representation of the state information, or an empty string if no information is available.
      */
     default String getInfoJson() {
-        return "";
+        return null;
     }
 }
