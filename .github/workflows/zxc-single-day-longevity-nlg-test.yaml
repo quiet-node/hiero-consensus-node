@@ -537,10 +537,6 @@ jobs:
 
           nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
 
-
-          echo "DEBUG:"
-          kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log"
-          echo "NOT HANGING, continue ..."
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log"
 
           counter=0
@@ -579,6 +575,7 @@ jobs:
             rm -rf "${{ github.workspace }}"/report/*
           fi
 
+          echo "Sleeping for 7 minutes ..."
           sleep 420 # max estimate of post-completion wait for any finalization procedures in new NLG
 
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
