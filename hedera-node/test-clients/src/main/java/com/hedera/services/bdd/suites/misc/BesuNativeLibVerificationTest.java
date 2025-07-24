@@ -3,8 +3,10 @@ package com.hedera.services.bdd.suites.misc;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.PROPERTY_OVERRIDES;
 import static com.hedera.services.bdd.junit.TestTags.NOT_REPEATABLE;
+import static com.hedera.services.bdd.junit.hedera.NodeSelector.allNodes;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.utilops.FakeNmt.restartNetwork;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.assertHgcaaLogContains;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.blockingOrder;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doAdhoc;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.doingContextual;
@@ -12,14 +14,14 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.freezeOnly;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.sleepForSeconds;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitForActive;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitForAny;
+import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitForFrozenNetwork;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
-import static com.hedera.services.bdd.suites.regression.system.LifecycleTest.confirmFreezeAndShutdown;
 import static org.hiero.consensus.model.status.PlatformStatus.STARTING_UP;
 
 import com.hedera.services.bdd.junit.LeakyHapiTest;
 import com.hedera.services.bdd.junit.OrderedInIsolation;
-import com.hedera.services.bdd.junit.hedera.NodeSelector;
 import com.hedera.services.bdd.suites.regression.system.LifecycleTest;
+import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.hyperledger.besu.crypto.Blake2bfMessageDigest.Blake2bfDigest;
@@ -37,23 +39,20 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
     public Stream<DynamicTest> besuNativeLibVerificationHaltsIfLibNotPresent() {
 
         final var envOverrides = Map.of("contracts.evm.nativeLibVerification.halt.enabled", "true");
-        final var envOverridesAfterReset = Map.of("contracts.evm.nativeLibVerification.halt.enabled", "false");
 
         return hapiTest(blockingOrder(
                 freezeOnly().startingIn(5).seconds().payingWith(GENESIS).deferStatusResolution(),
-                confirmFreezeAndShutdown(),
-                sleepForSeconds(5),
+                waitForFrozenNetwork(FREEZE_TIMEOUT),
+                LifecycleTest.confirmFreezeAndShutdown(),
+                sleepForSeconds(10),
                 restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
                 doAdhoc(() -> CURRENT_CONFIG_VERSION.set(CURRENT_CONFIG_VERSION.get() + 1)),
-                doingContextual(spec -> waitForAny(NodeSelector.allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
+                doingContextual(spec -> waitForAny(allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
                 doAdhoc(Blake2bfDigest::disableNative),
-                doingContextual(spec -> waitForActive(NodeSelector.allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
-                sleepForSeconds(5),
-                confirmFreezeAndShutdown(),
-                // sleep and restore state without the native lib verification halt enabled
-                sleepForSeconds(5),
-                restartNetwork(CURRENT_CONFIG_VERSION.get() + 2, envOverridesAfterReset),
-                doAdhoc(() -> CURRENT_CONFIG_VERSION.set(CURRENT_CONFIG_VERSION.get() + 2)),
-                doingContextual(spec -> waitForActive(NodeSelector.allNodes(), RESTART_TO_ACTIVE_TIMEOUT))));
+                doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
+                assertHgcaaLogContains(allNodes(), "ERROR", Duration.ofSeconds(60)),
+                assertHgcaaLogContains(allNodes(), "Native library", Duration.ZERO),
+                assertHgcaaLogContains(
+                        allNodes(), "is not present with halt mode enabled! Shutting down node.", Duration.ZERO)));
     }
 }
