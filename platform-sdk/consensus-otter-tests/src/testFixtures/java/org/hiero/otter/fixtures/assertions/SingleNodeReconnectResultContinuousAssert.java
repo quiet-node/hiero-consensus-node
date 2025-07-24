@@ -14,7 +14,7 @@ import java.time.Duration;
 import java.util.function.Consumer;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 import org.hiero.otter.fixtures.result.LogSubscriber;
-import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResults;
+import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResult;
 import org.hiero.otter.fixtures.result.SingleNodeReconnectResult;
 
 /**
@@ -25,19 +25,19 @@ public class SingleNodeReconnectResultContinuousAssert
         extends AbstractContinuousAssertion<SingleNodeReconnectResultContinuousAssert, SingleNodeReconnectResult> {
 
     /**
-     * Creates a continuous assertion for the given {@link SingleNodePlatformStatusResults}.
+     * Creates a continuous assertion for the given {@link SingleNodePlatformStatusResult}.
      *
-     * @param actual the actual {@link SingleNodePlatformStatusResults} to assert
+     * @param actual the actual {@link SingleNodePlatformStatusResult} to assert
      */
     public SingleNodeReconnectResultContinuousAssert(@Nullable final SingleNodeReconnectResult actual) {
         super(actual, SingleNodeReconnectResultContinuousAssert.class);
     }
 
     /**
-     * Creates a continuous assertion for the given {@link SingleNodePlatformStatusResults}.
+     * Creates a continuous assertion for the given {@link SingleNodePlatformStatusResult}.
      *
-     * @param actual the {@link SingleNodePlatformStatusResults} to assert
-     * @return a continuous assertion for the given {@link SingleNodePlatformStatusResults}
+     * @param actual the {@link SingleNodePlatformStatusResult} to assert
+     * @return a continuous assertion for the given {@link SingleNodePlatformStatusResult}
      */
     @NonNull
     public static SingleNodeReconnectResultContinuousAssert assertContinuouslyThat(

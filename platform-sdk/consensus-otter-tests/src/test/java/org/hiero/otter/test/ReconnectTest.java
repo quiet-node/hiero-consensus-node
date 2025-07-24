@@ -22,7 +22,7 @@ import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.OtterTest;
 import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
-import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResults;
+import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResult;
 import org.junit.jupiter.api.Disabled;
 
 /**
@@ -56,15 +56,14 @@ public class ReconnectTest {
         final Node nodeToReconnect = network.getNodes().getLast();
 
         // Setup continuous assertions
-        assertContinuouslyThat(network.getConsensusResults()).haveEqualRounds();
-        assertContinuouslyThat(network.getReconnectResults())
+        assertContinuouslyThat(network.newConsensusResults()).haveEqualRounds();
+        assertContinuouslyThat(network.newReconnectResults())
                 .startSuppressingNode(nodeToReconnect)
                 .doNotAttemptToReconnect();
-        assertContinuouslyThat(nodeToReconnect.getReconnectResults())
+        assertContinuouslyThat(nodeToReconnect.newReconnectResult())
                 .hasNoFailedReconnects()
                 .hasMaximumReconnectTime(Duration.ofSeconds(10))
                 .hasMaximumTreeInitializationTime(Duration.ofSeconds(1));
-
         network.start();
 
         // Wait for thirty seconds minutes
@@ -74,7 +73,7 @@ public class ReconnectTest {
         nodeToReconnect.killImmediately();
 
         // Verify that the node was healthy prior to being killed
-        final SingleNodePlatformStatusResults nodeToReconnectStatusResults = nodeToReconnect.getPlatformStatusResults();
+        final SingleNodePlatformStatusResult nodeToReconnectStatusResults = nodeToReconnect.newPlatformStatusResult();
         assertThat(nodeToReconnectStatusResults)
                 .hasSteps(target(ACTIVE).requiringInterim(REPLAYING_EVENTS, OBSERVING, CHECKING));
         nodeToReconnectStatusResults.clear();
@@ -92,18 +91,16 @@ public class ReconnectTest {
         timeManager.waitFor(Duration.ofSeconds(30L));
 
         // Validations
-        assertThat(network.getLogResults()).haveNoErrorLevelMessages();
+        assertThat(network.newLogResults()).haveNoErrorLevelMessages();
 
-        assertThat(nodeToReconnect.getReconnectResults())
-                .hasNoFailedReconnects()
-                .hasExactSuccessfulReconnects(1);
+        assertThat(nodeToReconnect.newReconnectResult()).hasNoFailedReconnects().hasExactSuccessfulReconnects(1);
 
-        assertThat(network.getConsensusResults())
+        assertThat(network.newConsensusResults())
                 .haveEqualCommonRounds()
                 .haveMaxDifferenceInLastRoundNum(withPercentage(5));
 
         // All non-reconnected nodes should go through the normal status progression
-        assertThat(network.getPlatformStatusResults().suppressingNode(nodeToReconnect))
+        assertThat(network.newPlatformStatusResults().suppressingNode(nodeToReconnect))
                 .haveSteps(target(ACTIVE).requiringInterim(REPLAYING_EVENTS, OBSERVING, CHECKING));
 
         // The reconnected node should have gone through the reconnect status progression since restarting
