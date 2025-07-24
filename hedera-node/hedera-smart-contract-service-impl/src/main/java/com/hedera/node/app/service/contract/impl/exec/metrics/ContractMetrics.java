@@ -74,11 +74,7 @@ public class ContractMetrics {
     }
 
     public record TransactionProcessingSummary(
-            long durationNanos,
-            long opsDurationUnitsConsumed,
-            long gasUsed,
-            Optional<Long> gasPrice,
-            boolean success) {}
+            long durationNanos, long opsDurationUnitsConsumed, long gasUsed, OptionalLong gasPrice, boolean success) {}
 
     // Counters that are the P2 metrics, and maps that take `SystemContractMethods` into the specific counters
 

@@ -15,17 +15,16 @@ import static org.hyperledger.besu.evm.frame.ExceptionalHaltReason.INSUFFICIENT_
 import static org.hyperledger.besu.evm.frame.MessageFrame.State.EXCEPTIONAL_HALT;
 
 import com.hedera.hapi.node.base.ContractID;
-import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.streams.ContractActionType;
 import com.hedera.node.app.service.contract.impl.exec.ActionSidecarContentTracer;
 import com.hedera.node.app.service.contract.impl.exec.AddressChecks;
 import com.hedera.node.app.service.contract.impl.exec.FeatureFlags;
+import com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason;
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.HederaSystemContract;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
 import com.hedera.node.app.service.contract.impl.state.ProxyEvmContract;
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
-import com.hedera.node.app.spi.workflows.ResourceExhaustedException;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.Arrays;
@@ -37,6 +36,7 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
+import org.hyperledger.besu.evm.frame.MessageFrame.State;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
 import org.hyperledger.besu.evm.precompile.PrecompiledContract;
@@ -221,7 +221,8 @@ public class CustomMessageCallProcessor extends MessageCallProcessor {
                     * opsDurationSchedule.precompileGasBasedDurationMultiplier()
                     / opsDurationSchedule.multipliersDenominator();
             if (!opsDurationThrottle.tryConsumeOpsDurationUnits(opsDurationCost)) {
-                throw new ResourceExhaustedException(ResponseCodeEnum.THROTTLED_AT_CONSENSUS);
+                frame.setExceptionalHaltReason(Optional.of(CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED));
+                frame.setState(State.EXCEPTIONAL_HALT);
             }
             contractMetrics.opsDurationMetrics().recordPrecompileOpsDuration(precompile.getName(), opsDurationCost);
 
@@ -271,7 +272,8 @@ public class CustomMessageCallProcessor extends MessageCallProcessor {
                         * opsDurationSchedule.systemContractGasBasedDurationMultiplier()
                         / opsDurationSchedule.multipliersDenominator();
                 if (!opsDurationThrottle.tryConsumeOpsDurationUnits(opsDurationCost)) {
-                    throw new ResourceExhaustedException(ResponseCodeEnum.THROTTLED_AT_CONSENSUS);
+                    frame.setExceptionalHaltReason(Optional.of(CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED));
+                    frame.setState(State.EXCEPTIONAL_HALT);
                 }
 
                 contractMetrics

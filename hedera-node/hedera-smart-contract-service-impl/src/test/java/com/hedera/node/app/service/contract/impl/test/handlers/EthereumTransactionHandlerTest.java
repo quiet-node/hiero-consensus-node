@@ -39,7 +39,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.CustomGasCharging;
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.scope.HederaOperations;
 import com.hedera.node.app.service.contract.impl.exec.tracers.EvmActionTracer;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationCounter;
 import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethodRegistry;
 import com.hedera.node.app.service.contract.impl.handlers.EthereumTransactionHandler;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmContext;
@@ -165,7 +165,7 @@ class EthereumTransactionHandlerTest {
     private final ContractMetrics contractMetrics =
             new ContractMetrics(metrics, () -> contractsConfig, systemContractMethodRegistry);
 
-    private OpsDurationThrottleUtils opsDurationThrottleUtils;
+    private OpsDurationCounter opsDurationCounter;
 
     @BeforeEach
     void setUp() {
@@ -173,7 +173,7 @@ class EthereumTransactionHandlerTest {
         given(contractServiceComponent.contractMetrics()).willReturn(contractMetrics);
         subject = new EthereumTransactionHandler(
                 ethereumSignatures, callDataHydration, () -> factory, gasCalculator, contractServiceComponent);
-        opsDurationThrottleUtils = OpsDurationThrottleUtils.disabled();
+        opsDurationCounter = OpsDurationCounter.disabled();
     }
 
     void setUpTransactionProcessing() {
@@ -209,7 +209,7 @@ class EthereumTransactionHandlerTest {
                         hederaEvmContext,
                         tracer,
                         DEFAULT_CONFIG,
-                        opsDurationThrottleUtils))
+                        opsDurationCounter))
                 .willReturn(SUCCESS_RESULT_WITH_SIGNER_NONCE);
     }
 

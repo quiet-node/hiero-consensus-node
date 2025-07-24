@@ -386,7 +386,7 @@ public class FrameUtils {
      * @param frame the current frame
      * @return the total Hedera ops throttle
      */
-    public static OpsDurationThrottleUtils opsDurationThrottle(@NonNull final MessageFrame frame) {
+    public static OpsDurationCounter opsDurationThrottle(@NonNull final MessageFrame frame) {
         return initialFrameOf(frame).getContextVariable(OPS_DURATION_THROTTLE);
     }
 }

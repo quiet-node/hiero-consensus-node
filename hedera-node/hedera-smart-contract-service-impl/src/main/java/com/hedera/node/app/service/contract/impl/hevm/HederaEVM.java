@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.hevm;
 
-import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
-import com.hedera.node.app.spi.workflows.ResourceExhaustedException;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Optional;
 import org.hyperledger.besu.evm.EVM;
@@ -219,7 +218,8 @@ public class HederaEVM extends EVM {
                         : opsDurationByOpCode[opcode];
 
                 if (!opsDurationThrottle.tryConsumeOpsDurationUnits(opsDurationUnitsCost)) {
-                    throw new ResourceExhaustedException(ResponseCodeEnum.THROTTLED_AT_CONSENSUS);
+                    frame.setExceptionalHaltReason(Optional.of(CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED));
+                    frame.setState(State.EXCEPTIONAL_HALT);
                 }
             }
 

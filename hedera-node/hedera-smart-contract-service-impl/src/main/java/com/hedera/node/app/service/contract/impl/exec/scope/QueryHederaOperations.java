@@ -277,6 +277,7 @@ public class QueryHederaOperations implements HederaOperations {
     }
 
     @Override
+    @Nullable
     public ContractMetrics contractMetrics() {
         // As we do not have throttle adviser it makes no sense to use the metrics
         return null;

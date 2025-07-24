@@ -13,7 +13,7 @@ import com.hedera.node.app.service.contract.impl.exec.ActionSidecarContentTracer
 import com.hedera.node.app.service.contract.impl.exec.CallOutcome;
 import com.hedera.node.app.service.contract.impl.exec.ContextQueryProcessor;
 import com.hedera.node.app.service.contract.impl.exec.TransactionProcessor;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationCounter;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmContext;
 import com.hedera.node.app.service.contract.impl.infra.HevmStaticTransactionFactory;
 import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
@@ -67,7 +67,7 @@ class ContextQueryProcessorTest {
                         hederaEvmContext,
                         tracer,
                         CONFIGURATION,
-                        OpsDurationThrottleUtils.disabled()))
+                        OpsDurationCounter.disabled()))
                 .willReturn(SUCCESS_RESULT);
         given(proxyWorldUpdater.entityIdFactory()).willReturn(entityIdFactory);
         final var protoResult = SUCCESS_RESULT.asQueryResult(proxyWorldUpdater);

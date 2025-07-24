@@ -40,7 +40,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.TinybarValues;
 import com.hedera.node.app.service.contract.impl.exec.scope.HederaNativeOperations;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameBuilder;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationCounter;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmBlocks;
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater.Enhancement;
@@ -120,7 +120,7 @@ class FrameBuilderTest {
                 worldUpdater,
                 wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator, recordBuilder),
                 config,
-                OpsDurationThrottleUtils.disabled(),
+                OpsDurationCounter.disabled(),
                 featureFlags,
                 EIP_1014_ADDRESS,
                 NON_SYSTEM_LONG_ZERO_ADDRESS,
@@ -171,7 +171,7 @@ class FrameBuilderTest {
                 worldUpdater,
                 wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator),
                 config,
-                OpsDurationThrottleUtils.disabled(),
+                OpsDurationCounter.disabled(),
                 featureFlags,
                 EIP_1014_ADDRESS,
                 NON_SYSTEM_LONG_ZERO_ADDRESS,
@@ -219,7 +219,7 @@ class FrameBuilderTest {
                         worldUpdater,
                         wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator),
                         config,
-                        OpsDurationThrottleUtils.disabled(),
+                        OpsDurationCounter.disabled(),
                         featureFlags,
                         EIP_1014_ADDRESS,
                         NON_SYSTEM_LONG_ZERO_ADDRESS,
@@ -241,7 +241,7 @@ class FrameBuilderTest {
                 worldUpdater,
                 wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator),
                 config,
-                OpsDurationThrottleUtils.disabled(),
+                OpsDurationCounter.disabled(),
                 featureFlags,
                 EIP_1014_ADDRESS,
                 NON_SYSTEM_LONG_ZERO_ADDRESS,
@@ -282,7 +282,7 @@ class FrameBuilderTest {
                 worldUpdater,
                 wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator),
                 config,
-                OpsDurationThrottleUtils.disabled(),
+                OpsDurationCounter.disabled(),
                 featureFlags,
                 EIP_1014_ADDRESS,
                 NON_SYSTEM_LONG_ZERO_ADDRESS,
@@ -326,7 +326,7 @@ class FrameBuilderTest {
                 worldUpdater,
                 wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator),
                 config,
-                OpsDurationThrottleUtils.disabled(),
+                OpsDurationCounter.disabled(),
                 featureFlags,
                 EIP_1014_ADDRESS,
                 NON_SYSTEM_LONG_ZERO_ADDRESS,
@@ -372,7 +372,7 @@ class FrameBuilderTest {
                 worldUpdater,
                 wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator),
                 config,
-                OpsDurationThrottleUtils.disabled(),
+                OpsDurationCounter.disabled(),
                 featureFlags,
                 EIP_1014_ADDRESS,
                 NON_SYSTEM_LONG_ZERO_ADDRESS,

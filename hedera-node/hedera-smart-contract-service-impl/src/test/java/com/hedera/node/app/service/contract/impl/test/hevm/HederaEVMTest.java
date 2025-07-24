@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.test.hevm;
 
-import static com.hedera.hapi.node.base.ResponseCodeEnum.THROTTLED_AT_CONSENSUS;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.OPS_DURATION_THROTTLE;
 import static org.hyperledger.besu.evm.MainnetEVMs.registerShanghaiOperations;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
+import com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationCounter;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEVM;
 import com.hedera.node.app.service.contract.impl.hevm.OpsDurationSchedule;
 import com.hedera.node.app.service.contract.impl.test.TestHelpers;
-import com.hedera.node.app.spi.workflows.HandleException;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
@@ -62,24 +61,25 @@ class HederaEVMTest {
                 EvmSpecVersion.defaultVersion());
 
         // Scenario 1: less than required ops duration limit
-        final var insufficientOpsDurationThrottle = OpsDurationThrottleUtils.withInitiallyAvailableUnits(
+        final var insufficientOpsDurationThrottle = OpsDurationCounter.withInitiallyAvailableUnits(
                 opsDurationSchedule, expectedOpsDurationUnitsConsumed - 1L);
-        final var exception = assertThrows(
-                HandleException.class,
-                () -> hederaEvm.runToHalt(
-                        prepareTestFrame(loopIterations, insufficientOpsDurationThrottle), OperationTracer.NO_TRACING));
-        assertEquals(THROTTLED_AT_CONSENSUS, exception.getStatus());
+        final var frame = prepareTestFrame(loopIterations, insufficientOpsDurationThrottle);
+        hederaEvm.runToHalt(frame, OperationTracer.NO_TRACING);
+        assertEquals(State.EXCEPTIONAL_HALT, frame.getState());
+        assertEquals(
+                CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED,
+                frame.getExceptionalHaltReason().get());
 
         // Scenario 2: exactly the required amount is available
-        final var exactOpsDurationThrottle = OpsDurationThrottleUtils.withInitiallyAvailableUnits(
-                opsDurationSchedule, expectedOpsDurationUnitsConsumed);
+        final var exactOpsDurationThrottle =
+                OpsDurationCounter.withInitiallyAvailableUnits(opsDurationSchedule, expectedOpsDurationUnitsConsumed);
         final var exactFrame = prepareTestFrame(loopIterations, exactOpsDurationThrottle);
         hederaEvm.runToHalt(exactFrame, OperationTracer.NO_TRACING);
         assertEquals(expectedOpsDurationUnitsConsumed, exactOpsDurationThrottle.opsDurationUnitsConsumed());
         assertTrue(exactFrame.getRevertReason().isEmpty());
 
         // Scenario 3: more ops duration units available than necessary
-        final var excessOpsDurationThrottle = OpsDurationThrottleUtils.withInitiallyAvailableUnits(
+        final var excessOpsDurationThrottle = OpsDurationCounter.withInitiallyAvailableUnits(
                 opsDurationSchedule, expectedOpsDurationUnitsConsumed + 1L);
         final var excessFrame = prepareTestFrame(loopIterations, excessOpsDurationThrottle);
         hederaEvm.runToHalt(excessFrame, OperationTracer.NO_TRACING);
@@ -87,8 +87,7 @@ class HederaEVMTest {
         assertTrue(excessFrame.getRevertReason().isEmpty());
     }
 
-    private MessageFrame prepareTestFrame(
-            final int loopIterations, final OpsDurationThrottleUtils opsDurationThrottleUtils) {
+    private MessageFrame prepareTestFrame(final int loopIterations, final OpsDurationCounter opsDurationCounter) {
         final var byteCodeBuilder = new ByteCodeBuilder()
                 .push32(UInt256.valueOf(loopIterations)) // Initialize the local var
                 .jumpdest()
@@ -125,7 +124,7 @@ class HederaEVMTest {
                 .blockHashLookup(unused -> {
                     throw new IllegalStateException();
                 })
-                .contextVariables(Map.of(OPS_DURATION_THROTTLE, opsDurationThrottleUtils))
+                .contextVariables(Map.of(OPS_DURATION_THROTTLE, opsDurationCounter))
                 .miningBeneficiary(randomAddress())
                 .build();
         frame.setState(State.CODE_EXECUTING);

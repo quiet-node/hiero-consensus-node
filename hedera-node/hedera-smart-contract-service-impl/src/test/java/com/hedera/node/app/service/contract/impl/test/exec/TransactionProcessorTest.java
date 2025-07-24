@@ -56,7 +56,7 @@ import com.hedera.node.app.service.contract.impl.exec.gas.SystemContractGasCalcu
 import com.hedera.node.app.service.contract.impl.exec.gas.TinybarValues;
 import com.hedera.node.app.service.contract.impl.exec.processors.CustomMessageCallProcessor;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameBuilder;
-import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationThrottleUtils;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationCounter;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmBlocks;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransactionResult;
@@ -138,13 +138,13 @@ class TransactionProcessorTest {
 
     private TransactionProcessor subject;
 
-    private OpsDurationThrottleUtils opsDurationCounter;
+    private OpsDurationCounter opsDurationCounter;
 
     @BeforeEach
     void setUp() {
         subject = new TransactionProcessor(
                 frameBuilder, frameRunner, gasCharging, messageCallProcessor, contractCreationProcessor, featureFlags);
-        opsDurationCounter = OpsDurationThrottleUtils.disabled();
+        opsDurationCounter = OpsDurationCounter.disabled();
     }
 
     @Test

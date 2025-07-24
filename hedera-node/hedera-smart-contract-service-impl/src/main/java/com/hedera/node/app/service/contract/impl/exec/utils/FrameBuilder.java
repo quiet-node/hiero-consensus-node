@@ -82,7 +82,7 @@ public class FrameBuilder {
             @NonNull final HederaWorldUpdater worldUpdater,
             @NonNull final HederaEvmContext context,
             @NonNull final Configuration config,
-            @NonNull final OpsDurationThrottleUtils opsDurationThrottleUtils,
+            @NonNull final OpsDurationCounter opsDurationCounter,
             @NonNull final FeatureFlags featureFlags,
             @NonNull final Address from,
             @NonNull final Address to,
@@ -90,7 +90,7 @@ public class FrameBuilder {
         final var value = transaction.weiValue();
         final var ledgerConfig = config.getConfigData(LedgerConfig.class);
         final var nominalCoinbase = asLongZeroAddress(ledgerConfig.fundingAccount());
-        final var contextVariables = contextVariablesFrom(config, opsDurationThrottleUtils, context);
+        final var contextVariables = contextVariablesFrom(config, opsDurationCounter, context);
         final var builder = MessageFrame.builder()
                 .maxStackSize(MAX_STACK_SIZE)
                 .worldUpdater(worldUpdater.updater())
@@ -117,7 +117,7 @@ public class FrameBuilder {
 
     private Map<String, Object> contextVariablesFrom(
             @NonNull final Configuration config,
-            @NonNull final OpsDurationThrottleUtils opsDurationThrottleUtils,
+            @NonNull final OpsDurationCounter opsDurationCounter,
             @NonNull final HederaEvmContext context) {
         final Map<String, Object> contextEntries = new HashMap<>();
         contextEntries.put(CONFIG_CONTEXT_VARIABLE, config);
@@ -143,7 +143,7 @@ public class FrameBuilder {
             contextEntries.put(
                     PENDING_CREATION_BUILDER_CONTEXT_VARIABLE, context.pendingCreationRecordBuilderReference());
         }
-        contextEntries.put(OPS_DURATION_THROTTLE, opsDurationThrottleUtils);
+        contextEntries.put(OPS_DURATION_THROTTLE, opsDurationCounter);
         return contextEntries;
     }
 
