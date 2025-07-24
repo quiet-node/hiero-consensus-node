@@ -258,7 +258,7 @@ public class ContainerNode extends AbstractNode implements Node {
     @Override
     @NonNull
     public @NotNull SingleNodeReconnectResult newReconnectResult() {
-        return new SingleNodeReconnectResultImpl(selfId, newPlatformStatusResult(), newLogResult());
+        return new SingleNodeReconnectResultImpl(selfId, newLogResult());
     }
 
     /**
