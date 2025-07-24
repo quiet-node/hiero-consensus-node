@@ -479,34 +479,6 @@ public final class StateUtils {
     }
 
     /**
-     * Creates Protocol Buffer encoded byte array for a VirtualMapKey field.
-     * Follows protobuf encoding format: tag (field number + wire type), length, and value.
-     *
-     * @param serviceName       the service name
-     * @param stateKey          the state key
-     * @param keyObjectBytes    the serialized key object
-     * @return Properly encoded Protocol Buffer byte array
-     * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
-     */
-    public static byte[] createVirtualMapKeyBytesForKV(
-            @NonNull final String serviceName, @NonNull final String stateKey, byte[] keyObjectBytes) {
-        final int stateId = getValidatedStateId(serviceName, stateKey);
-        // This matches the Protocol Buffer tag format: (field_number << TAG_TYPE_BITS) | wire_type
-        int tag = (stateId << TAG_FIELD_OFFSET) | WIRE_TYPE_DELIMITED.ordinal();
-
-        ByteBuffer byteBuffer = ByteBuffer.allocate(sizeOfVarInt32(tag)
-                + sizeOfVarInt32(keyObjectBytes.length) /* length */
-                + keyObjectBytes.length /* key bytes */);
-        BufferedData bufferedData = BufferedData.wrap(byteBuffer);
-
-        bufferedData.writeVarInt(tag, false);
-        bufferedData.writeVarInt(keyObjectBytes.length, false);
-        bufferedData.writeBytes(keyObjectBytes);
-
-        return byteBuffer.array();
-    }
-
-    /**
      * Creates an instance of {@link VirtualMapValue} which is stored in a {@link com.swirlds.virtualmap.VirtualMap}.
      *
      * @param <V>         the type of the value
@@ -530,5 +502,33 @@ public final class StateUtils {
      */
     public static VirtualMapValue getQueueStateVirtualMapValue(@NonNull final QueueState queueState) {
         return new VirtualMapValue(new OneOf<>(VirtualMapValue.ValueOneOfType.QUEUE_STATE, queueState));
+    }
+
+    /**
+     * Creates Protocol Buffer encoded byte array for either a {@link VirtualMapKey} or a {@link VirtualMapValue} field.
+     * Follows protobuf encoding format: tag (field number + wire type), length, and value.
+     *
+     * @param serviceName       the service name
+     * @param stateKey          the state key
+     * @param objectBytes       the serialized key or value object
+     * @return Properly encoded Protocol Buffer byte array
+     * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
+     */
+    public static byte[] createVirtualMapBytesForKV(
+            @NonNull final String serviceName, @NonNull final String stateKey, byte[] objectBytes) {
+        final int stateId = getValidatedStateId(serviceName, stateKey);
+        // This matches the Protocol Buffer tag format: (field_number << TAG_TYPE_BITS) | wire_type
+        int tag = (stateId << TAG_FIELD_OFFSET) | WIRE_TYPE_DELIMITED.ordinal();
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(sizeOfVarInt32(tag)
+                + sizeOfVarInt32(objectBytes.length) /* length */
+                + objectBytes.length /* key bytes */);
+        BufferedData bufferedData = BufferedData.wrap(byteBuffer);
+
+        bufferedData.writeVarInt(tag, false);
+        bufferedData.writeVarInt(objectBytes.length, false);
+        bufferedData.writeBytes(objectBytes);
+
+        return byteBuffer.array();
     }
 }

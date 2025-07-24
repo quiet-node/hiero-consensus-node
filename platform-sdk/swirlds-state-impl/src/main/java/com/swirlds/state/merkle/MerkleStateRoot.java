@@ -7,11 +7,12 @@ import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
-import static com.swirlds.state.merkle.StateUtils.createVirtualMapKeyBytesForKV;
+import static com.swirlds.state.merkle.StateUtils.createVirtualMapBytesForKV;
 import static com.swirlds.state.merkle.StateUtils.decomposeLabel;
 import static com.swirlds.state.merkle.StateUtils.getQueueStateVirtualMapValue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForQueue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForSingleton;
+import static com.swirlds.state.merkle.StateUtils.getVirtualMapValue;
 import static com.swirlds.state.merkle.VirtualMapState.VM_LABEL;
 import static java.util.Objects.requireNonNull;
 
@@ -1068,10 +1069,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     logger.info(STARTUP.getMarker(), "\nMigrating {}...", singletonStateLabel);
                     long migrationStartTime = System.currentTimeMillis();
 
-                    final var codec = originalStore.getCodec();
                     final var value =
                             Objects.requireNonNull(originalStore.getValue(), "Null value is not expected here");
-                    virtualMap.put(getVirtualMapKeyForSingleton(serviceName, stateKey), value, codec);
+
+                    final Bytes key = getVirtualMapKeyForSingleton(serviceName, stateKey);
+                    final VirtualMapValue virtualMapValue = getVirtualMapValue(serviceName, stateKey, value);
+                    virtualMap.put(key, virtualMapValue, VirtualMapValue.PROTOBUF);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
                     logger.info(
@@ -1141,7 +1144,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                     long tail = 1;
 
                     for (ValueLeaf leaf : originalStore) {
-                        final var codec = leaf.getCodec();
                         final var value = Objects.requireNonNull(leaf.getValue(), "Null value is not expected here");
 
                         VirtualMap currentMap = virtualMapRef.get();
@@ -1151,7 +1153,10 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             older.release();
                             virtualMapRef.set(currentMap);
                         }
-                        virtualMapRef.get().put(getVirtualMapKeyForQueue(serviceName, stateKey, tail++), value, codec);
+
+                        final Bytes key = getVirtualMapKeyForQueue(serviceName, stateKey, tail++);
+                        final VirtualMapValue virtualMapValue = getVirtualMapValue(serviceName, stateKey, value);
+                        virtualMapRef.get().put(key, virtualMapValue, VirtualMapValue.PROTOBUF);
                     }
 
                     final var queueState = new QueueState(head, tail);
@@ -1239,9 +1244,11 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             older.release();
                             virtualMapRef.set(currentMap);
                         }
-                        final var keyBytes = Bytes.wrap(createVirtualMapKeyBytesForKV(
+                        final Bytes keyBytes = Bytes.wrap(createVirtualMapBytesForKV(
                                 serviceName, stateKey, pair.key().toByteArray()));
-                        virtualMapRef.get().putBytes(keyBytes, pair.value());
+                        final Bytes valueBytes = Bytes.wrap(createVirtualMapBytesForKV(
+                                serviceName, stateKey, pair.value().toByteArray()));
+                        virtualMapRef.get().putBytes(keyBytes, valueBytes);
                     };
 
                     try {
@@ -1305,7 +1312,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         while (merkleNodeMerkleIterator.hasNext()) {
             MerkleNode next = merkleNodeMerkleIterator.next();
             if (next instanceof VirtualLeafNode virtualLeafNode) {
-                final var keyBytes = Bytes.wrap(createVirtualMapKeyBytesForKV(
+                final var keyBytes = Bytes.wrap(createVirtualMapBytesForKV(
                         serviceName, stateKey, virtualLeafNode.getKey().toByteArray()));
                 assert virtualMap.containsKey(keyBytes);
             }
