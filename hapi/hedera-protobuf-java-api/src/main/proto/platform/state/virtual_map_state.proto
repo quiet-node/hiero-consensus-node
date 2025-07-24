@@ -1,12 +1,3 @@
-/**
- * # VirtualMapKey
- * Messages that define the type of keys used in the Virtual Map State.
- *
- * The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
- * "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
- * document are to be interpreted as described in [RFC2119](https://www.ietf.org/rfc/rfc2119)
- * and clarified in [RFC8174](https://www.ietf.org/rfc/rfc8174).
- */
 syntax = "proto3";
 
 package com.hedera.hapi.platform.state;
@@ -54,18 +45,39 @@ import "services/state/tss/tss_encryption_keys.proto";
 import "services/state/tss/tss_message_map_key.proto";
 import "services/state/tss/tss_vote_map_key.proto";
 
-// TODO: docs
+/**
+ * This message defines the Virtual Leaf.
+ */
 message VirtualLeaf {
+  /**
+   * Virtual Key.<br/>
+   * The key used to identify and locate this virtual map entry.
+   */
   VirtualMapKey key = 2;
 
+  /**
+   * Virtual Value.<br/>
+   * The actual data content stored for this virtual map entry.
+   */
   VirtualMapValue value = 3;
 
 }
 
+/**
+ * This message defines the queue state used in the Virtual Map State.
+ */
 message QueueState {
-  int64 head = 1;
+  /**
+   * A head of a queue.<br/>
+   * Points to the index of the front of a queue.
+   */
+  uint64 head = 1;
 
-  int64 tail = 2;
+  /**
+   * A tail of a queue.<br/>
+   * Points to the index where of the back of a queue.
+   */
+  uint64 tail = 2;
 
 }
 
@@ -285,7 +297,12 @@ message VirtualMapKey {
   }
 }
 
-// TODO: add docs
+/**
+ * This message defines the type of values used in the Virtual Map State.
+ * Note that `_I_` plays a role of a reliable separator between the service name
+ * and the state name, which is will be present in all types of code generation results as just underscores
+ * may be deleted and create unexpected collisions.
+ */
 message VirtualMapValue {
   oneof value{
     /**
@@ -537,7 +554,6 @@ message VirtualMapValue {
     /**
      * Metadata of the round receipts queue.
      */
-    // TODO: double check
     proto.TransactionReceiptEntries RecordCacheTransactionReceiptQueue = 126;
 
     /**
@@ -590,8 +606,10 @@ message VirtualMapValue {
      */
     proto.ProtoBytes FileService_I_UPGRADE_DATA_159 = 10010;
 
-    ////
-    QueueState queue_state = 11111;
+    /**
+     * Metadata of the queue state.
+     */
+    QueueState queue_state = 11111; // pick the number
 
   }
 }

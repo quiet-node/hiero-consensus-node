@@ -62,9 +62,10 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
     protected V readFromDataSource(@NonNull K key) {
         final VirtualMapValue virtualMapValue =
                 virtualMap.get(getVirtualMapKeyForKv(serviceName, stateKey, key), VirtualMapValue.PROTOBUF);
+        final V value = virtualMapValue != null ? virtualMapValue.value().as() : null;
         // Log to transaction state log, what was read
-        logMapGet(computeLabel(serviceName, stateKey), key, virtualMapValue);
-        return virtualMapValue != null ? virtualMapValue.value().as() : null;
+        logMapGet(computeLabel(serviceName, stateKey), key, value);
+        return value;
     }
 
     /** {@inheritDoc} */

@@ -2,16 +2,16 @@
 package com.swirlds.state.merkle.disk;
 
 import static com.swirlds.state.merkle.StateUtils.computeLabel;
+import static com.swirlds.state.merkle.StateUtils.getQueueStateVirtualMapValue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForSingleton;
-import static com.swirlds.state.merkle.StateUtils.getVirtualMapValueQueueState;
 import static com.swirlds.state.merkle.logging.StateLogger.logQueueIterate;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.platform.state.QueueState;
 import com.hedera.hapi.platform.state.VirtualMapValue;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.merkle.StateUtils;
-import com.swirlds.state.merkle.queue.QueueState;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ConcurrentModificationException;
@@ -95,9 +95,9 @@ public final class OnDiskQueueHelper<E> {
         if (state == null) {
             return EMPTY_ITERATOR;
         } else {
-            final QueueIterator it = new QueueIterator(state.getHead(), state.getTail());
+            final QueueIterator it = new QueueIterator(state.head(), state.tail());
             // Log to transaction state log, what was iterated
-            logQueueIterate(computeLabel(serviceName, stateKey), state.getTail() - state.getHead(), it);
+            logQueueIterate(computeLabel(serviceName, stateKey), state.tail() - state.head(), it);
             it.reset();
             return it;
         }
@@ -129,14 +129,14 @@ public final class OnDiskQueueHelper<E> {
     public QueueState getState() {
         final VirtualMapValue virtualMapValue =
                 virtualMap.get(getVirtualMapKeyForSingleton(serviceName, stateKey), VirtualMapValue.PROTOBUF);
-        final QueueState state = virtualMapValue != null
-                ? convertFromProto(virtualMapValue.value().as())
-                : null;
+        final QueueState state =
+                virtualMapValue != null ? virtualMapValue.value().as() : null;
         if (state == null) {
             return null;
         }
+        // TODO: check it this can be removed now
         // FUTURE WORK: optimize performance here, see https://github.com/hiero-ledger/hiero-consensus-node/issues/19670
-        return new QueueState(state.getHead(), state.getTail());
+        return state; // new QueueState(state.head(), state.tail());
     }
 
     /**
@@ -147,19 +147,18 @@ public final class OnDiskQueueHelper<E> {
     public void updateState(@NonNull final QueueState state) {
         final Bytes keyBytes = getVirtualMapKeyForSingleton(serviceName, stateKey);
 
-        final VirtualMapValue virtualMapValue = getVirtualMapValueQueueState(convertToProto(state));
+        final VirtualMapValue virtualMapValue = getQueueStateVirtualMapValue(state);
         virtualMap.put(keyBytes, virtualMapValue, VirtualMapValue.PROTOBUF);
     }
 
-    public static com.hedera.hapi.platform.state.QueueState convertToProto(QueueState state) {
-        return com.hedera.hapi.platform.state.QueueState.newBuilder()
-                .head(state.getHead())
-                .tail(state.getTail())
-                .build();
-    }
-
-    public static QueueState convertFromProto(com.hedera.hapi.platform.state.QueueState state) {
-        return new QueueState(state.head(), state.tail());
+    /**
+     * Checks if a queue is empty.
+     *
+     * @param state the queue state to check
+     * @return {@code true} if the queue is empty, {@code false} otherwise
+     */
+    public static boolean isEmpty(@NonNull final QueueState state) {
+        return state.head() == state.tail();
     }
 
     /**

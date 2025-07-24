@@ -29,36 +29,8 @@ public final class OnDiskSingletonHelper {
      */
     public static <T> T getFromStore(
             @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final VirtualMap virtualMap) {
-
         final Bytes key = getVirtualMapKeyForSingleton(serviceName, stateKey);
         final VirtualMapValue virtualMapValue = virtualMap.get(key, VirtualMapValue.PROTOBUF);
-
-        // It may be possible, but I doubt it, need to debug
-        if (virtualMapValue == null && virtualMap.containsKey(key)) {
-            //            return valueCodec.getDefaultInstance();
-
-            // Need to check this scenario, but I doubt that it will work
-            // because of possible issue w/ default instance
-            return VirtualMapValue.PROTOBUF.getDefaultInstance().value().as();
-        }
-
-        if (virtualMapValue == null) {
-            return null;
-        }
-
-        final var mapValue = virtualMapValue.value();
-        // This is more possible scenario, but still need to debug
-        if (mapValue == null && virtualMap.containsKey(key)) {
-            // Need to check this scenario, but I doubt that it will work
-            // because of possible issue w/ default instance
-            return VirtualMapValue.PROTOBUF.getDefaultInstance().value().as();
-
-            // I think this is what's needed as we're returning original value,
-            // so we need to have a codec here
-            //            return valueCodec.getDefaultInstance();
-        }
-
-        // Suppress NPE or do something with it?
-        return mapValue.as();
+        return virtualMapValue != null ? virtualMapValue.value().as() : null;
     }
 }

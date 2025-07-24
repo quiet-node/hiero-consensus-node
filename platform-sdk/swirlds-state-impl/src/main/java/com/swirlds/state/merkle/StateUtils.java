@@ -6,6 +6,7 @@ import static com.hedera.pbj.runtime.ProtoConstants.WIRE_TYPE_DELIMITED;
 import static com.hedera.pbj.runtime.ProtoParserTools.TAG_FIELD_OFFSET;
 import static com.hedera.pbj.runtime.ProtoWriterTools.sizeOfVarInt32;
 
+import com.hedera.hapi.platform.state.QueueState;
 import com.hedera.hapi.platform.state.SingletonType;
 import com.hedera.hapi.platform.state.VirtualMapKey;
 import com.hedera.hapi.platform.state.VirtualMapValue;
@@ -505,13 +506,29 @@ public final class StateUtils {
         return byteBuffer.array();
     }
 
+    /**
+     * Creates an instance of {@link VirtualMapValue} which is stored in a {@link com.swirlds.virtualmap.VirtualMap}.
+     *
+     * @param <V>         the type of the value
+     * @param serviceName the service name
+     * @param stateKey    the state key
+     * @param value       the value object
+     * @return a {@link VirtualMapValue} for a {@link com.swirlds.virtualmap.VirtualMap}
+     * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
+     */
     public static <V> VirtualMapValue getVirtualMapValue(
             @NonNull final String serviceName, @NonNull final String stateKey, final V value) {
         return new VirtualMapValue(new OneOf<>(
                 VirtualMapValue.ValueOneOfType.fromProtobufOrdinal(getValidatedStateId(serviceName, stateKey)), value));
     }
 
-    public static <V> VirtualMapValue getVirtualMapValueQueueState(final V value) {
-        return new VirtualMapValue(new OneOf<>(VirtualMapValue.ValueOneOfType.QUEUE_STATE, value));
+    /**
+     * Creates an instance of {@link VirtualMapValue} for a {@link com.hedera.hapi.platform.state.QueueState} which is stored in a {@link com.swirlds.virtualmap.VirtualMap}.
+     *
+     * @param queueState the value object
+     * @return a {@link VirtualMapValue} for {@link com.hedera.hapi.platform.state.QueueState} in a {@link com.swirlds.virtualmap.VirtualMap}
+     */
+    public static VirtualMapValue getQueueStateVirtualMapValue(@NonNull final QueueState queueState) {
+        return new VirtualMapValue(new OneOf<>(VirtualMapValue.ValueOneOfType.QUEUE_STATE, queueState));
     }
 }

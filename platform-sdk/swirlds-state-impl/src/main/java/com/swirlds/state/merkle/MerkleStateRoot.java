@@ -9,11 +9,14 @@ import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
 import static com.swirlds.state.merkle.StateUtils.createVirtualMapKeyBytesForKV;
 import static com.swirlds.state.merkle.StateUtils.decomposeLabel;
+import static com.swirlds.state.merkle.StateUtils.getQueueStateVirtualMapValue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForQueue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForSingleton;
 import static com.swirlds.state.merkle.VirtualMapState.VM_LABEL;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.platform.state.QueueState;
+import com.hedera.hapi.platform.state.VirtualMapValue;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
@@ -45,8 +48,6 @@ import com.swirlds.state.merkle.memory.InMemoryWritableKVState;
 import com.swirlds.state.merkle.queue.BackedReadableQueueState;
 import com.swirlds.state.merkle.queue.BackedWritableQueueState;
 import com.swirlds.state.merkle.queue.QueueNode;
-import com.swirlds.state.merkle.queue.QueueState;
-import com.swirlds.state.merkle.queue.QueueStateCodec;
 import com.swirlds.state.merkle.singleton.BackedReadableSingletonState;
 import com.swirlds.state.merkle.singleton.BackedWritableSingletonState;
 import com.swirlds.state.merkle.singleton.SingletonNode;
@@ -1158,8 +1159,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             .get()
                             .put(
                                     getVirtualMapKeyForSingleton(serviceName, stateKey),
-                                    queueState,
-                                    QueueStateCodec.INSTANCE);
+                                    getQueueStateVirtualMapValue(queueState),
+                                    VirtualMapValue.PROTOBUF);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
                     logger.info(

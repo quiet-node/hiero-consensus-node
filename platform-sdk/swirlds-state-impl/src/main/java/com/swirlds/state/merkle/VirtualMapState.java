@@ -4,9 +4,10 @@ package com.swirlds.state.merkle;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
-import static com.swirlds.state.merkle.disk.OnDiskQueueHelper.convertFromProto;
 import static java.util.Objects.requireNonNull;
 
+import com.hedera.hapi.platform.state.QueueState;
+import com.hedera.hapi.platform.state.VirtualMapValue;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -31,7 +32,6 @@ import com.swirlds.state.merkle.disk.OnDiskReadableSingletonState;
 import com.swirlds.state.merkle.disk.OnDiskWritableKVState;
 import com.swirlds.state.merkle.disk.OnDiskWritableQueueState;
 import com.swirlds.state.merkle.disk.OnDiskWritableSingletonState;
-import com.swirlds.state.merkle.queue.QueueState;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.EmptyReadableStates;
 import com.swirlds.state.spi.KVChangeListener;
@@ -839,8 +839,14 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                         singletonJson.put("hash", hash);
                         singletonJson.put("path", leafBytes.path());
                         try {
-                            singletonJson.put(
-                                    "value", stateDefinition.valueCodec().parse(leafBytes.valueBytes()));
+                            final VirtualMapValue virtualMapValue =
+                                    VirtualMapValue.PROTOBUF.parse(leafBytes.valueBytes());
+                            final var typedSingletonValue = stateDefinition
+                                    .valueCodec()
+                                    .getDefaultInstance()
+                                    .getClass()
+                                    .cast(virtualMapValue.value().as());
+                            singletonJson.put("value", typedSingletonValue);
                         } catch (ParseException e) {
                             singletonJson.put("value", "ParseException: " + e.getMessage());
                         }
@@ -852,12 +858,12 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                     final VirtualLeafBytes<?> leafBytes = recordAccessor.findLeafRecord(keyBytes);
                     if (leafBytes != null) {
                         try {
-                            final com.hedera.hapi.platform.state.QueueState queueStateProto =
-                                    com.hedera.hapi.platform.state.QueueState.PROTOBUF.parse(leafBytes.valueBytes());
-                            final QueueState queueState = convertFromProto(queueStateProto);
+                            final VirtualMapValue virtualMapValue =
+                                    VirtualMapValue.PROTOBUF.parse(leafBytes.valueBytes());
+                            final QueueState queueState = virtualMapValue.queueState();
                             final JSONObject queueJson = new JSONObject();
-                            queueJson.put("head", queueState.getHead());
-                            queueJson.put("tail", queueState.getTail());
+                            queueJson.put("head", queueState.head());
+                            queueJson.put("tail", queueState.tail());
                             queueJson.put("path", leafBytes.path());
                             queues.put(StateUtils.computeLabel(serviceName, stateKey), queueJson);
                         } catch (ParseException e) {
