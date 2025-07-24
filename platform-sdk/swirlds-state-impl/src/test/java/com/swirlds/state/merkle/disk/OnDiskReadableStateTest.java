@@ -28,8 +28,8 @@ class OnDiskReadableStateTest extends MerkleTestBase {
         setupFruitVirtualMap();
     }
 
-    private void add(String serviceName, String stateKey, ProtoBytes key, String value) {
-        addKvState(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, key, value);
+    private void add(String serviceName, String stateKey, ProtoBytes key, ProtoBytes value) {
+        addKvState(fruitVirtualMap, serviceName, stateKey, key, value);
     }
 
     @Nested
@@ -79,7 +79,7 @@ class OnDiskReadableStateTest extends MerkleTestBase {
     @Nested
     @DisplayName("Query Tests")
     final class QueryTest {
-        private OnDiskReadableKVState<ProtoBytes, String> state;
+        private OnDiskReadableKVState<ProtoBytes, ProtoBytes> state;
 
         @BeforeEach
         void setUp() {

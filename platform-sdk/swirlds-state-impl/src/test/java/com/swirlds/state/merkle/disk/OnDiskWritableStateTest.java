@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
+import com.hedera.hapi.platform.state.VirtualMapValue;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
@@ -83,14 +84,14 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         }
     }
 
-    private void add(String serviceName, String stateKey, ProtoBytes key, String value) {
-        addKvState(fruitVirtualMap, serviceName, stateKey, STRING_CODEC, key, value);
+    private void add(String serviceName, String stateKey, ProtoBytes key, ProtoBytes value) {
+        addKvState(fruitVirtualMap, serviceName, stateKey, key, value);
     }
 
     @Nested
     @DisplayName("Query Tests")
     final class QueryTest {
-        private OnDiskWritableKVState<ProtoBytes, String> state;
+        private OnDiskWritableKVState<ProtoBytes, ProtoBytes> state;
 
         @BeforeEach
         void setUp() {
@@ -117,9 +118,9 @@ class OnDiskWritableStateTest extends MerkleTestBase {
         @Test
         @DisplayName("Iteration includes both mutations and committed state")
         void iterateIncludesMutations() {
-            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, "Apple");
-            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, B_KEY, "Banana");
-            state.put(C_KEY, "Cherry");
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, A_KEY, APPLE);
+            add(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, B_KEY, BANANA);
+            state.put(C_KEY, toProtoBytes("Cherry"));
             final var actual = StreamSupport.stream(Spliterators.spliterator(state.keys(), 3, 0), false)
                     .toList();
             assertThat(actual).containsExactlyInAnyOrder(A_KEY, B_KEY, C_KEY);
@@ -138,7 +139,7 @@ class OnDiskWritableStateTest extends MerkleTestBase {
     @Nested
     @DisplayName("Mutation Tests")
     final class MutationTest {
-        private OnDiskWritableKVState<ProtoBytes, String> state;
+        private OnDiskWritableKVState<ProtoBytes, ProtoBytes> state;
 
         @BeforeEach
         void setUp() {
@@ -154,9 +155,10 @@ class OnDiskWritableStateTest extends MerkleTestBase {
             return fruitVirtualMap.containsKey(keyBytes);
         }
 
-        String readValueFromMerkleMap(ProtoBytes key) {
+        ProtoBytes readValueFromMerkleMap(ProtoBytes key) {
             final Bytes keyBytes = StateUtils.getVirtualMapKeyForKv(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, key);
-            return fruitVirtualMap.get(keyBytes, STRING_CODEC);
+            final VirtualMapValue virtualMapValue = fruitVirtualMap.get(keyBytes, VirtualMapValue.PROTOBUF);
+            return virtualMapValue != null ? virtualMapValue.value().as() : null;
         }
 
         @Test
