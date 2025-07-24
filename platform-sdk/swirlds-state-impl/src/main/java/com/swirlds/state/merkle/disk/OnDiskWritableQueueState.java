@@ -51,7 +51,7 @@ public class OnDiskWritableQueueState<E> extends WritableQueueStateBase<E> {
         QueueState state = onDiskQueueHelper.getState();
         if (state == null) {
             // Adding to this Queue State first time - initialize QueueState.
-            state = QueueState.newBuilder().head(1).tail(1).build();
+            state = new QueueState(1, 1);
         }
 
         final Bytes keyBytes = getVirtualMapKeyForQueue(serviceName, stateKey, state.tail());

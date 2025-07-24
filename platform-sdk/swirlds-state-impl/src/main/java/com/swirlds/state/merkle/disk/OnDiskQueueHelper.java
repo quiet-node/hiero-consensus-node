@@ -129,14 +129,7 @@ public final class OnDiskQueueHelper<E> {
     public QueueState getState() {
         final VirtualMapValue virtualMapValue =
                 virtualMap.get(getVirtualMapKeyForSingleton(serviceName, stateKey), VirtualMapValue.PROTOBUF);
-        final QueueState state =
-                virtualMapValue != null ? virtualMapValue.value().as() : null;
-        if (state == null) {
-            return null;
-        }
-        // TODO: check it this can be removed now
-        // FUTURE WORK: optimize performance here, see https://github.com/hiero-ledger/hiero-consensus-node/issues/19670
-        return state; // new QueueState(state.head(), state.tail());
+        return virtualMapValue != null ? virtualMapValue.value().as() : null;
     }
 
     /**

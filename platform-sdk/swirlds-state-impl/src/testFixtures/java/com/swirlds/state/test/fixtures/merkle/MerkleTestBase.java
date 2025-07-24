@@ -183,6 +183,7 @@ public class MerkleTestBase extends StateTestBase {
      */
     @BeforeAll
     static void init() {
+        // Static flag to bypass stateIdFor mock during calls from other mocked methods below
         AtomicBoolean bypassStateIdFor = new AtomicBoolean(false);
         stateUtilsMock = mockStatic(StateUtils.class, CALLS_REAL_METHODS);
         stateUtilsMock
