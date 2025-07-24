@@ -10,7 +10,6 @@ import com.swirlds.logging.legacy.payload.ReconnectFailurePayload;
 import com.swirlds.logging.legacy.payload.SynchronizationCompletePayload;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.hiero.otter.fixtures.result.LogSubscriber;
 import org.hiero.otter.fixtures.result.PlatformStatusSubscriber;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
@@ -79,7 +78,7 @@ public class SingleNodeReconnectResultImpl implements SingleNodeReconnectResult 
         return logResults.logs().stream()
                 .filter(log -> log.message().contains(SynchronizationCompletePayload.class.toString()))
                 .map(log -> parsePayload(SynchronizationCompletePayload.class, log.message()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

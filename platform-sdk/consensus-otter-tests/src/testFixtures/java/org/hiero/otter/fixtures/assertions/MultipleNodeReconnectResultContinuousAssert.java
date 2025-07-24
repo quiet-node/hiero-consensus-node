@@ -15,7 +15,6 @@ import java.util.function.Consumer;
 import org.hiero.otter.fixtures.logging.StructuredLog;
 import org.hiero.otter.fixtures.result.LogSubscriber;
 import org.hiero.otter.fixtures.result.MultipleNodeReconnectResults;
-import org.hiero.otter.fixtures.result.SingleNodeReconnectResult;
 
 /**
  * Continuous assertions for {@link MultipleNodeReconnectResults}.
@@ -47,9 +46,9 @@ public class MultipleNodeReconnectResultContinuousAssert
     }
 
     /**
-     * Asserts that the node has no failed reconnects.
+     * Asserts that the nodes have no failed reconnects.
      *
-     * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
+     * @return this assertion object for method chaining
      */
     @NonNull
     public MultipleNodeReconnectResultContinuousAssert hasNoFailedReconnects() {
@@ -63,16 +62,16 @@ public class MultipleNodeReconnectResultContinuousAssert
     }
 
     /**
-     * Asserts that the node does attempt to perform any reconnects.
+     * Asserts that the node does not attempt to perform any reconnects.
      *
-     * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
+     * @return this assertion object for method chaining
      */
     @NonNull
     public MultipleNodeReconnectResultContinuousAssert doNotAttemptToReconnect() {
         return checkContinuously((logEntry) -> {
             if (logEntry.message().contains(ReconnectStartPayload.class.toString())) {
                 failWithMessage(
-                        "Expected no failed reconnect, but found %s on node %s", logEntry.message(), logEntry.nodeId());
+                        "Expected no reconnect, but found %s on node %s", logEntry.message(), logEntry.nodeId());
             }
         });
     }
@@ -81,7 +80,7 @@ public class MultipleNodeReconnectResultContinuousAssert
      * Asserts that the nodes have no reconnects that take longer than the provided time.
      *
      * @param maximumReconnectTime the maximum allowed reconnect time
-     * @return a continuous assertion for the given {@link MultipleNodeReconnectResultContinuousAssert}
+     * @return this assertion object for method chaining
      */
     @NonNull
     public MultipleNodeReconnectResultContinuousAssert haveMaximumReconnectTime(
@@ -106,7 +105,7 @@ public class MultipleNodeReconnectResultContinuousAssert
      * Asserts that the nodes have a maximum tree initialization time that is less than or equal to the provided time.
      *
      * @param maximumTreeInitializationTime the maximum allowed tree initialization time
-     * @return a continuous assertion for the given {@link MultipleNodeReconnectResultContinuousAssert}
+     * @return  this assertion object for method chaining
      */
     @NonNull
     public MultipleNodeReconnectResultContinuousAssert haveMaximumTreeInitializationTime(

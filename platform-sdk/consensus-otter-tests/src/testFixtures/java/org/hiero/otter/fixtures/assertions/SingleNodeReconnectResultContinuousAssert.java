@@ -37,7 +37,7 @@ public class SingleNodeReconnectResultContinuousAssert
      * Creates a continuous assertion for the given {@link SingleNodePlatformStatusResult}.
      *
      * @param actual the {@link SingleNodePlatformStatusResult} to assert
-     * @return a continuous assertion for the given {@link SingleNodePlatformStatusResult}
+     * @return  this assertion object for method chaining
      */
     @NonNull
     public static SingleNodeReconnectResultContinuousAssert assertContinuouslyThat(
@@ -48,7 +48,7 @@ public class SingleNodeReconnectResultContinuousAssert
     /**
      * Asserts that the node has no failed reconnects.
      *
-     * @return a continuous assertion for the given {@link SingleNodeReconnectResult}
+     * @return  this assertion object for method chaining
      */
     @NonNull
     public SingleNodeReconnectResultContinuousAssert hasNoFailedReconnects() {
@@ -81,7 +81,7 @@ public class SingleNodeReconnectResultContinuousAssert
      * Asserts that the node has no reconnects that take longer than the provided time.
      *
      * @param maximumReconnectTime the maximum allowed reconnect time
-     * @return a continuous assertion for the given {@link SingleNodeReconnectResultContinuousAssert}
+     * @return  this assertion object for method chaining
      */
     @NonNull
     public SingleNodeReconnectResultContinuousAssert hasMaximumReconnectTime(
@@ -90,7 +90,7 @@ public class SingleNodeReconnectResultContinuousAssert
             if (logEntry.message().contains(SynchronizationCompletePayload.class.toString())) {
                 final SynchronizationCompletePayload payload =
                         parsePayload(SynchronizationCompletePayload.class, logEntry.message());
-                if (payload.getTimeInSeconds() > maximumReconnectTime.getSeconds()) {
+                if (payload.getTimeInSeconds() > (double) maximumReconnectTime.getSeconds()) {
                     failWithMessage(
                             "Expected maximum reconnect time to be <%s> but found <%s> on node %s",
                             maximumReconnectTime,
@@ -105,7 +105,7 @@ public class SingleNodeReconnectResultContinuousAssert
      * Asserts that the node has no reconnects that take longer than the provided time to initialize the tree.
      *
      * @param maximumTreeInitializationTime the maximum allowed tree initialization time
-     * @return a continuous assertion for the given {@link SingleNodeReconnectResultContinuousAssert}
+     * @return this assertion object for method chaining
      */
     @NonNull
     public SingleNodeReconnectResultContinuousAssert hasMaximumTreeInitializationTime(
@@ -114,7 +114,7 @@ public class SingleNodeReconnectResultContinuousAssert
             if (logEntry.message().contains(SynchronizationCompletePayload.class.toString())) {
                 final SynchronizationCompletePayload payload =
                         parsePayload(SynchronizationCompletePayload.class, logEntry.message());
-                if (payload.getInitializationTimeInSeconds() > maximumTreeInitializationTime.getSeconds()) {
+                if (payload.getInitializationTimeInSeconds() > (double) maximumTreeInitializationTime.getSeconds()) {
                     failWithMessage(
                             "Expected maximum tree initialization time to be <%s> but found <%s> on node %s",
                             maximumTreeInitializationTime,
