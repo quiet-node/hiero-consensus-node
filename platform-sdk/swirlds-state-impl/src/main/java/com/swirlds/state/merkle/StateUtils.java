@@ -479,7 +479,7 @@ public final class StateUtils {
     }
 
     /**
-     * Creates an instance of {@link VirtualMapValue} which is stored in a {@link com.swirlds.virtualmap.VirtualMap}.
+     * Creates an instance of {@link VirtualMapValue} which is stored in a state.
      *
      * @param <V>         the type of the value
      * @param serviceName the service name
@@ -495,7 +495,7 @@ public final class StateUtils {
     }
 
     /**
-     * Creates an instance of {@link VirtualMapValue} for a {@link com.hedera.hapi.platform.state.QueueState} which is stored in a {@link com.swirlds.virtualmap.VirtualMap}.
+     * Creates an instance of {@link VirtualMapValue} for a {@link com.hedera.hapi.platform.state.QueueState} which is stored in a state.
      *
      * @param queueState the value object
      * @return a {@link VirtualMapValue} for {@link com.hedera.hapi.platform.state.QueueState} in a {@link com.swirlds.virtualmap.VirtualMap}
@@ -514,21 +514,21 @@ public final class StateUtils {
      * @return Properly encoded Protocol Buffer byte array
      * @throws IllegalArgumentException if the derived state ID is not within the range [0..65535]
      */
-    public static byte[] createVirtualMapBytesForKV(
-            @NonNull final String serviceName, @NonNull final String stateKey, byte[] objectBytes) {
+    public static Bytes getVirtualMapKeyValueBytes(
+            @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final Bytes objectBytes) {
         final int stateId = getValidatedStateId(serviceName, stateKey);
         // This matches the Protocol Buffer tag format: (field_number << TAG_TYPE_BITS) | wire_type
         int tag = (stateId << TAG_FIELD_OFFSET) | WIRE_TYPE_DELIMITED.ordinal();
+        int length = Math.toIntExact(objectBytes.length());
 
-        ByteBuffer byteBuffer = ByteBuffer.allocate(sizeOfVarInt32(tag)
-                + sizeOfVarInt32(objectBytes.length) /* length */
-                + objectBytes.length /* key bytes */);
+        ByteBuffer byteBuffer =
+                ByteBuffer.allocate(sizeOfVarInt32(tag) + sizeOfVarInt32(length) /* length */ + length /* key bytes */);
         BufferedData bufferedData = BufferedData.wrap(byteBuffer);
 
         bufferedData.writeVarInt(tag, false);
-        bufferedData.writeVarInt(objectBytes.length, false);
+        bufferedData.writeVarInt(length, false);
         bufferedData.writeBytes(objectBytes);
 
-        return byteBuffer.array();
+        return Bytes.wrap(byteBuffer.array());
     }
 }

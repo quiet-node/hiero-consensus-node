@@ -1,3 +1,12 @@
+/**
+ * # Virtual Map State
+ * Messages that define the type of keys and values used in the Virtual Map State.
+ *
+ * The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+ * "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+ * document are to be interpreted as described in [RFC2119](https://www.ietf.org/rfc/rfc2119)
+ * and clarified in [RFC8174](https://www.ietf.org/rfc/rfc8174).
+ */
 syntax = "proto3";
 
 package com.hedera.hapi.platform.state;
@@ -64,18 +73,22 @@ message VirtualLeaf {
 }
 
 /**
- * This message defines the queue state used in the Virtual Map State.
+ * This message defines the internal state of a queue state.
+ * Note that queue state is not a state of type Queue (versus Singleton or KV).
+ * This state contains two pointers (longs), which indicate at what position a new element is put to the queue (tail)
+ * or removed from the queue (head). These aren't indices in any array or whatsoever, they are just numbers,
+ * which are increased on every operation, used to maintain elements order in the queue.
  */
 message QueueState {
   /**
    * A head of a queue.<br/>
-   * Points to the index of the front of a queue.
+   * Indicate at what position a new element is removed from the queue.
    */
   uint64 head = 1;
 
   /**
    * A tail of a queue.<br/>
-   * Points to the index where of the back of a queue.
+   * Indicate at what position a new element is put to the queue.
    */
   uint64 tail = 2;
 
@@ -84,7 +97,7 @@ message QueueState {
 /**
  * This message defines the type of keys used in the Virtual Map State.
  * Note that `_I_` plays a role of a reliable separator between the service name
- * and the state name, which is will be present in all types of code generation results as just underscores
+ * and the state name, which will be present in all types of code generation results as just underscores
  * may be deleted and create unexpected collisions.
  */
 message VirtualMapKey {
@@ -300,7 +313,7 @@ message VirtualMapKey {
 /**
  * This message defines the type of values used in the Virtual Map State.
  * Note that `_I_` plays a role of a reliable separator between the service name
- * and the state name, which is will be present in all types of code generation results as just underscores
+ * and the state name, which will be present in all types of code generation results as just underscores
  * may be deleted and create unexpected collisions.
  */
 message VirtualMapValue {
@@ -557,6 +570,16 @@ message VirtualMapValue {
     proto.TransactionReceiptEntries RecordCacheTransactionReceiptQueue = 126;
 
     /**
+     * Metadata of the queue state.<br/>
+     * Reasons for the field number:
+     * <ul>
+     *   <li>Intermediate state types are expected to be rare (field numbers 8000-9999 are allocated for that purpose).</li>
+     *   <li>QueueState represents internal head/tail pointers of a queue, not a standalone Queue type (as with Singleton or KV).</li>
+     * </ul>
+     */
+    QueueState queue_state = 8001;
+
+    /**
      * Metadata of the `150` upgrade file data queue.
      */
     proto.ProtoBytes FileService_I_UPGRADE_DATA_150 = 10001;
@@ -605,11 +628,6 @@ message VirtualMapValue {
      * Metadata of the `159` upgrade file data queue.
      */
     proto.ProtoBytes FileService_I_UPGRADE_DATA_159 = 10010;
-
-    /**
-     * Metadata of the queue state.
-     */
-    QueueState queue_state = 11111; // pick the number
 
   }
 }

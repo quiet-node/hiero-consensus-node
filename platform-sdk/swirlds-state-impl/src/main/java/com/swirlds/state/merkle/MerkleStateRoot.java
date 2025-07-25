@@ -7,11 +7,11 @@ import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
-import static com.swirlds.state.merkle.StateUtils.createVirtualMapBytesForKV;
 import static com.swirlds.state.merkle.StateUtils.decomposeLabel;
 import static com.swirlds.state.merkle.StateUtils.getQueueStateVirtualMapValue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForQueue;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyForSingleton;
+import static com.swirlds.state.merkle.StateUtils.getVirtualMapKeyValueBytes;
 import static com.swirlds.state.merkle.StateUtils.getVirtualMapValue;
 import static com.swirlds.state.merkle.VirtualMapState.VM_LABEL;
 import static java.util.Objects.requireNonNull;
@@ -1244,10 +1244,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             older.release();
                             virtualMapRef.set(currentMap);
                         }
-                        final Bytes keyBytes = Bytes.wrap(createVirtualMapBytesForKV(
-                                serviceName, stateKey, pair.key().toByteArray()));
-                        final Bytes valueBytes = Bytes.wrap(createVirtualMapBytesForKV(
-                                serviceName, stateKey, pair.value().toByteArray()));
+                        final Bytes keyBytes = getVirtualMapKeyValueBytes(serviceName, stateKey, pair.key());
+                        final Bytes valueBytes = getVirtualMapKeyValueBytes(serviceName, stateKey, pair.value());
                         virtualMapRef.get().putBytes(keyBytes, valueBytes);
                     };
 
@@ -1312,8 +1310,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         while (merkleNodeMerkleIterator.hasNext()) {
             MerkleNode next = merkleNodeMerkleIterator.next();
             if (next instanceof VirtualLeafNode virtualLeafNode) {
-                final var keyBytes = Bytes.wrap(createVirtualMapBytesForKV(
-                        serviceName, stateKey, virtualLeafNode.getKey().toByteArray()));
+                final var keyBytes = getVirtualMapKeyValueBytes(serviceName, stateKey, virtualLeafNode.getKey());
                 assert virtualMap.containsKey(keyBytes);
             }
         }
