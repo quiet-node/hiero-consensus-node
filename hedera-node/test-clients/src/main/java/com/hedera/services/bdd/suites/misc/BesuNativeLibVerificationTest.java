@@ -50,7 +50,7 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                 doingContextual(spec -> waitForAny(allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
                 doAdhoc(Blake2bfDigest::disableNative),
                 doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
-                assertHgcaaLogContains(allNodes(), "ERROR", Duration.ofSeconds(360)),
+                assertHgcaaLogContains(allNodes(), "ERROR", Duration.ofSeconds(420)),
                 assertHgcaaLogContains(allNodes(), "Native library", Duration.ZERO),
                 assertHgcaaLogContains(
                         allNodes(), "is not present with halt mode enabled! Shutting down node.", Duration.ZERO)));
