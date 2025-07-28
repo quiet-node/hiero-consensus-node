@@ -7,7 +7,7 @@ import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.platform.state.QueueState;
-import com.hedera.hapi.platform.state.VirtualMapValue;
+import com.hedera.hapi.platform.state.StateValue;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -831,7 +831,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                 final String stateKey = stateDefinition.stateKey();
 
                 if (stateDefinition.singleton()) {
-                    final Bytes keyBytes = StateUtils.getVirtualMapKeyForSingleton(serviceName, stateKey);
+                    final Bytes keyBytes = StateUtils.getStateKeyForSingleton(serviceName, stateKey);
                     final VirtualLeafBytes<?> leafBytes = recordAccessor.findLeafRecord(keyBytes);
                     if (leafBytes != null) {
                         final var hash = recordAccessor.findHash(leafBytes.path());
@@ -839,8 +839,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                         singletonJson.put("hash", hash);
                         singletonJson.put("path", leafBytes.path());
                         try {
-                            final VirtualMapValue virtualMapValue =
-                                    VirtualMapValue.PROTOBUF.parse(leafBytes.valueBytes());
+                            final StateValue virtualMapValue = StateValue.PROTOBUF.parse(leafBytes.valueBytes());
                             final var typedSingletonValue = stateDefinition
                                     .valueCodec()
                                     .getDefaultInstance()
@@ -854,12 +853,11 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                         singletons.put(StateUtils.computeLabel(serviceName, stateKey), singletonJson);
                     }
                 } else if (stateDefinition.queue()) {
-                    final Bytes keyBytes = StateUtils.getVirtualMapKeyForSingleton(serviceName, stateKey);
+                    final Bytes keyBytes = StateUtils.getStateKeyForSingleton(serviceName, stateKey);
                     final VirtualLeafBytes<?> leafBytes = recordAccessor.findLeafRecord(keyBytes);
                     if (leafBytes != null) {
                         try {
-                            final VirtualMapValue virtualMapValue =
-                                    VirtualMapValue.PROTOBUF.parse(leafBytes.valueBytes());
+                            final StateValue virtualMapValue = StateValue.PROTOBUF.parse(leafBytes.valueBytes());
                             final QueueState queueState = virtualMapValue.queueState();
                             final JSONObject queueJson = new JSONObject();
                             queueJson.put("head", queueState.head());
