@@ -56,10 +56,10 @@ public class FileBlockItemWriter implements BlockItemWriter {
             Comparator.comparingLong(PROOF_JSON_BLOCK_NUMBER_FN);
 
     /** The file extension for complete block files. */
-    private static final String COMPLETE_BLOCK_EXTENSION = ".blk";
+    public static final String COMPLETE_BLOCK_EXTENSION = ".blk";
 
     /** The suffix added to RECORD_EXTENSION when they are compressed. */
-    private static final String COMPRESSION_ALGORITHM_EXTENSION = ".gz";
+    public static final String COMPRESSION_ALGORITHM_EXTENSION = ".gz";
 
     /** The node-specific path to the directory where block files are written */
     private final Path nodeScopedBlockDir;

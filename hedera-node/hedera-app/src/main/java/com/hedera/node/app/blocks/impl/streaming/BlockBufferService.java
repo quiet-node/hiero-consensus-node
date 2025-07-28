@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.COMPLETE_BLOCK_EXTENSION;
+import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.COMPRESSION_ALGORITHM_EXTENSION;
+import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.longToFileName;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.block.stream.Block;
@@ -12,6 +15,7 @@ import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.S3IssConfig;
 import com.swirlds.common.s3.S3Client;
 import com.swirlds.common.s3.S3ClientInitializationException;
+import com.swirlds.common.s3.S3ResponseException;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -146,7 +150,8 @@ public class BlockBufferService {
         S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
 
         try {
-            s3Client = new S3Client(s3IssConfig.regionName(),
+            s3Client = new S3Client(
+                    s3IssConfig.regionName(),
                     s3IssConfig.endpointUrl(),
                     s3IssConfig.bucketName(),
                     s3IssConfig.accessKey(),
@@ -529,6 +534,7 @@ public class BlockBufferService {
 
         Block block = Block.newBuilder().items(blockItems).build();
 
+        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
 
@@ -542,12 +548,46 @@ public class BlockBufferService {
             // Get the compressed data
             byte[] compressedData = byteArrayOutputStream.toByteArray();
 
-            S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-
-            s3Client.uploadFile(s3IssConfig.basePath() + "/" + networkInfo.selfNodeInfo().nodeId() + "/iss/");
-
+            s3Client.uploadFile(
+                    s3IssConfig.basePath() + "/" + networkInfo.selfNodeInfo().nodeId() + "/ISS/"
+                            + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
+                            + COMPRESSION_ALGORITHM_EXTENSION,
+                    s3IssConfig.storageClass(),
+                    new ByteArrayIterator(compressedData),
+                    "application/gzip");
+            logger.info(
+                    "Successfully uploaded ISS Block {} to GCP bucket {} at path: {}/ISS/{}",
+                    blockState.blockNumber(),
+                    s3IssConfig.bucketName(),
+                    s3IssConfig.basePath(),
+                    longToFileName(blockState.blockNumber()));
         } catch (IOException e) {
-            logger.warn("Failed to upload Block {} to GCP bucket: {}", blockState.blockNumber(), e);
+            logger.warn("Failed to upload Block {} to GCP bucket {}: {}", blockState.blockNumber(), s3IssConfig.bucketName(), e);
+        } catch (S3ResponseException e) {
+            logger.warn(
+                    "Failed to upload Block {} to GCP bucket {} due to an exceptional response: {}",
+                    blockState.blockNumber(),
+                    s3IssConfig.bucketName(),
+                    e.getMessage(),
+                    e);
+        }
+    }
+
+    private static class ByteArrayIterator implements Iterator<byte[]> {
+        private final byte[] byteArray;
+
+        ByteArrayIterator(byte[] byteArray) {
+            this.byteArray = byteArray;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return byteArray.length > 0;
+        }
+
+        @Override
+        public byte[] next() {
+            return byteArray;
         }
     }
 

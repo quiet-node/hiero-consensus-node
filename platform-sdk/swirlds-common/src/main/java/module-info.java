@@ -91,6 +91,7 @@ module com.swirlds.common {
             com.fasterxml.jackson.databind;
     opens com.swirlds.common.units to
             com.fasterxml.jackson.databind;
+
     exports com.swirlds.common.s3;
 
     requires transitive com.swirlds.base;
