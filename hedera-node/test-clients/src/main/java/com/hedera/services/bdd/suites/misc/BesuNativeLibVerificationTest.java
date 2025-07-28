@@ -25,6 +25,10 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.stream.Stream;
 import org.hyperledger.besu.crypto.Blake2bfMessageDigest.Blake2bfDigest;
+import org.hyperledger.besu.crypto.SECP256K1;
+import org.hyperledger.besu.crypto.SECP256R1;
+import org.hyperledger.besu.evm.precompile.AbstractAltBnPrecompiledContract;
+import org.hyperledger.besu.evm.precompile.BigIntegerModularExponentiationPrecompiledContract;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
@@ -47,6 +51,10 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                 sleepForSeconds(10),
                 restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
                 doAdhoc(Blake2bfDigest::disableNative),
+                doAdhoc(BigIntegerModularExponentiationPrecompiledContract::disableNative),
+                doAdhoc(AbstractAltBnPrecompiledContract::disableNative),
+                doAdhoc(() -> new SECP256K1().disableNative()),
+                doAdhoc(() -> new SECP256R1().disableNative()),
                 doAdhoc(() -> CURRENT_CONFIG_VERSION.set(CURRENT_CONFIG_VERSION.get() + 1)),
                 doingContextual(spec -> waitForAny(allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
                 doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
