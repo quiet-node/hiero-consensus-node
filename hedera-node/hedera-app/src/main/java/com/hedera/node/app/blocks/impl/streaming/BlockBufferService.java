@@ -9,17 +9,16 @@ import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockBufferConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
-import com.hedera.node.internal.network.BlockNodeConfig;
+import com.hedera.node.config.data.S3IssConfig;
+import com.swirlds.common.s3.S3Client;
+import com.swirlds.common.s3.S3ClientInitializationException;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -35,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import java.util.zip.GZIPOutputStream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -43,7 +41,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.BlockItemSet;
 import org.hiero.block.api.PublishStreamRequest;
-import com.google.auth.oauth2.GoogleCredentials;
 
 /**
  * Manages the state and lifecycle of blocks being streamed to block nodes.
@@ -126,6 +123,8 @@ public class BlockBufferService {
      */
     private boolean awaitingRecovery = false;
 
+    private S3Client s3Client;
+
     /**
      * Creates a new BlockBufferService with the given configuration.
      *
@@ -142,6 +141,18 @@ public class BlockBufferService {
         // Only start the pruning thread if we're streaming to block nodes
         if (isStreamingEnabled.get()) {
             scheduleNextPruning();
+        }
+
+        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
+
+        try {
+            s3Client = new S3Client(s3IssConfig.regionName(),
+                    s3IssConfig.endpointUrl(),
+                    s3IssConfig.bucketName(),
+                    s3IssConfig.accessKey(),
+                    s3IssConfig.secretKey());
+        } catch (S3ClientInitializationException e) {
+            logger.error("Failed to initialize S3 client for ISS Block Uploads: {}", e.getMessage(), e);
         }
     }
 
@@ -498,7 +509,8 @@ public class BlockBufferService {
      * @param blockState the block state to upload
      * @param networkInfo the networkInfo containing information about this node for the upload path
      */
-    public void uploadBlockStateToGcpBucket(@NonNull final BlockState blockState, @NonNull final NetworkInfo networkInfo) {
+    public void uploadBlockStateToGcpBucket(
+            @NonNull final BlockState blockState, @NonNull final NetworkInfo networkInfo) {
         requireNonNull(blockState, "blockState must not be null");
         requireNonNull(networkInfo, "networkInfo must not be null");
         List<BlockItem> blockItems = new ArrayList<>();
@@ -530,33 +542,10 @@ public class BlockBufferService {
             // Get the compressed data
             byte[] compressedData = byteArrayOutputStream.toByteArray();
 
-            // Load credentials
-            GoogleCredentials credentials = GoogleCredentials
-                    .fromStream(new FileInputStream("service-account.json"))
-                    .createScoped("https://www.googleapis.com/auth/devstorage.read_write");
-            credentials.refreshIfExpired();
-            String token = credentials.getAccessToken().getTokenValue();
+            S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
 
-            // Prepare upload
-            String bucketName = "your-bucket-name";
-            String objectName = "file.txt";
-            URL url = new URL("https://storage.googleapis.com/upload/storage/v1/b/" +
-                    bucketName + "/o?uploadType=media&name=" + objectName);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setDoOutput(true);
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Authorization", "Bearer " + token);
-            conn.setRequestProperty("Content-Type", "application/octet-stream");
+            s3Client.uploadFile(s3IssConfig.basePath() + "/" + networkInfo.selfNodeInfo().nodeId() + "/iss/");
 
-            // Write file content
-            OutputStream os = conn.getOutputStream();
-            os.write(compressedData);
-
-            // Handle response
-            int code = conn.getResponseCode();
-            System.out.println("Response code: " + code);
-
-            // Upload the compressed data to the GCP bucket
         } catch (IOException e) {
             logger.warn("Failed to upload Block {} to GCP bucket: {}", blockState.blockNumber(), e);
         }

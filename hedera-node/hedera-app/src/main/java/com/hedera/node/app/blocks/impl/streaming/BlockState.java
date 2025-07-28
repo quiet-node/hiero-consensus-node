@@ -410,9 +410,7 @@ public class BlockState {
      * @return a list of requests that have been created for this block
      */
     public List<PublishStreamRequest> getRequests() {
-        return requestsByIndex.values().stream()
-                .map(RequestWrapper::request)
-                .toList();
+        return requestsByIndex.values().stream().map(RequestWrapper::request).toList();
     }
 
     /**

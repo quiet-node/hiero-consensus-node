@@ -194,6 +194,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
      */
     @Nullable
     private volatile CompletableFuture<Void> fatalShutdownFuture = null;
+
     private long fatalRoundNumber = 0;
 
     /**
@@ -523,7 +524,9 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             if (blockState != null) {
                 blockBufferService.uploadBlockStateToGcpBucket(blockState, networkInfo);
             } else {
-                log.warn("BlockState for fatal ISS round {} is not available, skipping upload to GCP bucket", fatalRoundNumber);
+                log.warn(
+                        "BlockState for fatal ISS round {} is not available, skipping upload to GCP bucket",
+                        fatalRoundNumber);
             }
 
             requireNonNull(fatalShutdownFuture).complete(null);
