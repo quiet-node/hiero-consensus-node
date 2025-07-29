@@ -2,6 +2,8 @@
 package com.hedera.node.app.blocks.impl.streaming;
 
 import static java.util.Objects.requireNonNull;
+import static org.hiero.block.api.PublishStreamRequest.EndStream.Code.RESET;
+import static org.hiero.block.api.PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND;
 
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
@@ -27,7 +29,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.PublishStreamRequest;
-import org.hiero.block.api.PublishStreamRequest.EndStream;
 import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream;
@@ -264,7 +265,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         try {
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 logger.debug("[{}] Performing scheduled stream reset", this);
-                endTheStreamWith(EndStream.Code.RESET);
+                endTheStreamWith(RESET);
                 blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
             }
         } finally {
@@ -424,7 +425,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                     logger.warn("[{}] Block node is behind and block state is not available.", this);
 
                     // Indicate that the block node should recover and catch up from another trustworthy block node
-                    endTheStreamWith(EndStream.Code.TOO_FAR_BEHIND);
+                    endTheStreamWith(TOO_FAR_BEHIND);
 
                     blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
                 }
@@ -521,13 +522,13 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      *
      * @param code the code on why stream was ended
      */
-    private void endTheStreamWith(EndStream.Code code) {
+    private void endTheStreamWith(PublishStreamRequest.EndStream.Code code) {
         final var earliestBlockNumber = blockBufferService.getEarliestAvailableBlockNumber();
         final var highestAckedBlockNumber = blockBufferService.getHighestAckedBlockNumber();
 
         // Indicate that the block node should recover and catch up from another trustworthy block node
         final PublishStreamRequest endStream = PublishStreamRequest.newBuilder()
-                .endStream(EndStream.newBuilder()
+                .endStream(PublishStreamRequest.EndStream.newBuilder()
                         .endCode(code)
                         .earliestBlockNumber(earliestBlockNumber)
                         .latestBlockNumber(highestAckedBlockNumber))
