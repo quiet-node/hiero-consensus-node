@@ -2,7 +2,7 @@
 package com.hedera.statevalidation.validators.servicesstate;
 
 import static com.hedera.statevalidation.validators.ParallelProcessingUtil.VALIDATOR_FORK_JOIN_POOL;
-import static com.swirlds.state.merkle.StateUtils.extractVirtualMapKeyStateId;
+import static com.swirlds.state.merkle.StateUtils.extractVirtualMapKeyValueStateId;
 import static com.swirlds.state.merkle.StateUtils.stateIdFor;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -79,8 +79,8 @@ public class TokenRelationsIntegrity {
         InterruptableConsumer<Pair<Bytes, Bytes>> handler = pair -> {
             final Bytes keyBytes = pair.left();
             final Bytes valueBytes = pair.right();
-            final int readKeyStateId = extractVirtualMapKeyStateId(keyBytes);
-            final int readValueStateId = extractVirtualMapKeyStateId(valueBytes);
+            final int readKeyStateId = extractVirtualMapKeyValueStateId(keyBytes);
+            final int readValueStateId = extractVirtualMapKeyValueStateId(valueBytes);
             if ((readKeyStateId == targetStateId) && (readValueStateId == targetStateId)) {
                 try {
                     final VirtualMapKey parse = VirtualMapKey.PROTOBUF.parse(keyBytes);

@@ -534,20 +534,20 @@ public final class StateUtils {
     }
 
     /**
-     * Extracts the state ID from a serialized {@link com.hedera.hapi.platform.state.VirtualMapKey}.
+     * Extracts the state ID from a serialized {@link VirtualMapKey} or {@link VirtualMapValue}.
      * <p>
-     * This method reads the next protobuf field number (the one-of field number) from the key's
+     * This method reads the next protobuf field number (the one-of field number) from the key's or value's
      * sequential data, which corresponds to the embedded state ID.
      * </p>
      *
-     * @param keyBytes the serialized {@link VirtualMapKey} bytes
+     * @param objectBytes the serialized {@link VirtualMapKey} or {@link VirtualMapValue} bytes
      * @return the extracted state ID
-     * @throws NullPointerException if {@code keyBytes} is null
+     * @throws NullPointerException if {@code objectBytes} is null
      */
-    public static int extractVirtualMapKeyStateId(@NonNull final Bytes keyBytes) {
-        Objects.requireNonNull(keyBytes, "keyBytes must not be null");
-        // Rely on the fact that VirtualMapKey has a single OneOf field,
+    public static int extractVirtualMapKeyValueStateId(@NonNull final Bytes objectBytes) {
+        Objects.requireNonNull(objectBytes, "objectBytes must not be null");
+        // Rely on the fact that VirtualMapKey and VirtualMapValue has a single OneOf field,
         // so the next field number is the state ID.
-        return readNextFieldNumber(keyBytes.toReadableSequentialData());
+        return readNextFieldNumber(objectBytes.toReadableSequentialData());
     }
 }
