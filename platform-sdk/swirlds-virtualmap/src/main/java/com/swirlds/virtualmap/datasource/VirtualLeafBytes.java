@@ -239,15 +239,18 @@ public class VirtualLeafBytes<V> {
     }
 
     public int getSizeInBytesForHashing() {
-        int len = 0;
-        len += 1; // 0x00 prefix
         final Bytes kb = keyBytes();
-        len += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, Math.toIntExact(kb.length()));
+        final int keyLen = Math.toIntExact(kb.length());
+        int innerLen = ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_KEY, keyLen);
+
         final Bytes vb = valueBytes();
-        if (vb != null) {
-            len += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()));
+        final int valueLen = (vb != null) ? Math.toIntExact(vb.length()) : -1;
+        if (valueLen >= 0) {
+            innerLen += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, valueLen);
         }
-        return ProtoWriterTools.sizeOfDelimited(FIELD_MERKLELEAF_STATEITEM, len);
+
+        // `1 +` for 0x00 prefix
+        return 1 + ProtoWriterTools.sizeOfDelimited(FIELD_MERKLELEAF_STATEITEM, innerLen);
     }
 
     // Output size must be at least getSizeInBytesForHashing()
