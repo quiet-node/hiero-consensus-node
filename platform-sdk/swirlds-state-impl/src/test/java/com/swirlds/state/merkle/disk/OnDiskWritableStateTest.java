@@ -157,8 +157,8 @@ class OnDiskWritableStateTest extends MerkleTestBase {
 
         ProtoBytes readValueFromMerkleMap(ProtoBytes key) {
             final Bytes keyBytes = StateUtils.getStateKeyForKv(FRUIT_SERVICE_NAME, FRUIT_STATE_KEY, key);
-            final StateValue virtualMapValue = fruitVirtualMap.get(keyBytes, StateValue.PROTOBUF);
-            return virtualMapValue != null ? virtualMapValue.value().as() : null;
+            final StateValue stateValue = fruitVirtualMap.get(keyBytes, StateValue.PROTOBUF);
+            return stateValue != null ? stateValue.value().as() : null;
         }
 
         @Test

@@ -30,7 +30,7 @@ public final class OnDiskSingletonHelper {
     public static <T> T getFromStore(
             @NonNull final String serviceName, @NonNull final String stateKey, @NonNull final VirtualMap virtualMap) {
         final Bytes key = getStateKeyForSingleton(serviceName, stateKey);
-        final StateValue virtualMapValue = virtualMap.get(key, StateValue.PROTOBUF);
-        return virtualMapValue != null ? virtualMapValue.value().as() : null;
+        final StateValue stateValue = virtualMap.get(key, StateValue.PROTOBUF);
+        return stateValue != null ? stateValue.value().as() : null;
     }
 }

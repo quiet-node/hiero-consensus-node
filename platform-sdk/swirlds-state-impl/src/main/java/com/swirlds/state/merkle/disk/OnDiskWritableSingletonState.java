@@ -54,9 +54,9 @@ public class OnDiskWritableSingletonState<T> extends WritableSingletonStateBase<
     @Override
     protected void putIntoDataSource(@NonNull T value) {
         final Bytes keyBytes = getStateKeyForSingleton(serviceName, stateKey);
-        final StateValue virtualMapValue = getStateValue(serviceName, stateKey, value);
+        final StateValue stateValue = getStateValue(serviceName, stateKey, value);
 
-        virtualMap.put(keyBytes, virtualMapValue, StateValue.PROTOBUF);
+        virtualMap.put(keyBytes, stateValue, StateValue.PROTOBUF);
         // Log to transaction state log, what was put
         logSingletonWrite(computeLabel(serviceName, stateKey), value);
     }
@@ -64,10 +64,9 @@ public class OnDiskWritableSingletonState<T> extends WritableSingletonStateBase<
     /** {@inheritDoc} */
     @Override
     protected void removeFromDataSource() {
-        final StateValue virtualMapValue =
+        final StateValue stateValue =
                 virtualMap.remove(getStateKeyForSingleton(serviceName, stateKey), StateValue.PROTOBUF);
-        final var removedValue =
-                virtualMapValue != null ? virtualMapValue.value().as() : null;
+        final var removedValue = stateValue != null ? stateValue.value().as() : null;
         // Log to transaction state log, what was removed
         logSingletonRemove(computeLabel(serviceName, stateKey), removedValue);
     }

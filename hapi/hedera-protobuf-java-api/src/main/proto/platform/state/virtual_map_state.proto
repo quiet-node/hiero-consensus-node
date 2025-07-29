@@ -315,7 +315,7 @@ message StateKey {
  * Note that `_I_` plays a role of a reliable separator between the service name
  * and the state name, which will be present in all types of code generation results as just underscores
  * may be deleted and create unexpected collisions.<br/>
- * ID ranges for VirtualMapValue types:
+ * ID ranges for StateValue types:
  * <ol>
  *   <li>0–7999: Core state entries. Reserved for all platform states
  *       (accounts, tokens, schedules, consensus topics, etc.).</li>

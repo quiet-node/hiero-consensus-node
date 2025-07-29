@@ -500,7 +500,7 @@ public final class StateUtils {
      * @param queueState the value object
      * @return a {@link StateValue} for {@link com.hedera.hapi.platform.state.QueueState} in a {@link com.swirlds.virtualmap.VirtualMap}
      */
-    public static StateValue getQueueStateStateValue(@NonNull final QueueState queueState) {
+    public static StateValue getQueueStateValue(@NonNull final QueueState queueState) {
         return new StateValue(new OneOf<>(StateValue.ValueOneOfType.QUEUE_STATE, queueState));
     }
 
@@ -533,19 +533,19 @@ public final class StateUtils {
     }
 
     /**
-     * Extracts the state ID from a serialized {@link VirtualMapKey} or {@link VirtualMapValue}.
+     * Extracts the state ID from a serialized {@link StateKey} or {@link StateValue}.
      * <p>
      * This method reads the next protobuf field number (the one-of field number) from the key's or value's
      * sequential data, which corresponds to the embedded state ID.
      * </p>
      *
-     * @param objectBytes the serialized {@link VirtualMapKey} or {@link VirtualMapValue} bytes
+     * @param objectBytes the serialized {@link StateKey} or {@link StateValue} bytes
      * @return the extracted state ID
      * @throws NullPointerException if {@code objectBytes} is null
      */
-    public static int extractVirtualMapKeyValueStateId(@NonNull final Bytes objectBytes) {
+    public static int extractStateKeyValueStateId(@NonNull final Bytes objectBytes) {
         Objects.requireNonNull(objectBytes, "objectBytes must not be null");
-        // Rely on the fact that VirtualMapKey and VirtualMapValue has a single OneOf field,
+        // Rely on the fact that StateKey and StateValue has a single OneOf field,
         // so the next field number is the state ID.
         return readNextFieldNumber(objectBytes.toReadableSequentialData());
     }

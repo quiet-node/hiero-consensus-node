@@ -2,7 +2,7 @@
 package com.swirlds.state.merkle.disk;
 
 import static com.swirlds.state.merkle.StateUtils.computeLabel;
-import static com.swirlds.state.merkle.StateUtils.getQueueStateStateValue;
+import static com.swirlds.state.merkle.StateUtils.getQueueStateValue;
 import static com.swirlds.state.merkle.StateUtils.getStateKeyForSingleton;
 import static com.swirlds.state.merkle.logging.StateLogger.logQueueIterate;
 import static java.util.Objects.requireNonNull;
@@ -112,9 +112,9 @@ public final class OnDiskQueueHelper<E> {
      */
     @NonNull
     public E getFromStore(final long index) {
-        final StateValue virtualMapValue =
+        final StateValue stateValue =
                 virtualMap.get(StateUtils.getStateKeyForQueue(serviceName, stateKey, index), StateValue.PROTOBUF);
-        final E value = virtualMapValue != null ? virtualMapValue.value().as() : null;
+        final E value = stateValue != null ? stateValue.value().as() : null;
         if (value == null) {
             throw new IllegalStateException("Can't find queue element at index " + index + " in the store");
         }
@@ -127,9 +127,9 @@ public final class OnDiskQueueHelper<E> {
      * @return The current state of the queue.
      */
     public QueueState getState() {
-        final StateValue virtualMapValue =
+        final StateValue stateValue =
                 virtualMap.get(getStateKeyForSingleton(serviceName, stateKey), StateValue.PROTOBUF);
-        return virtualMapValue != null ? virtualMapValue.value().as() : null;
+        return stateValue != null ? stateValue.value().as() : null;
     }
 
     /**
@@ -140,8 +140,8 @@ public final class OnDiskQueueHelper<E> {
     public void updateState(@NonNull final QueueState state) {
         final Bytes keyBytes = getStateKeyForSingleton(serviceName, stateKey);
 
-        final StateValue virtualMapValue = getQueueStateStateValue(state);
-        virtualMap.put(keyBytes, virtualMapValue, StateValue.PROTOBUF);
+        final StateValue queueStateValue = getQueueStateValue(state);
+        virtualMap.put(keyBytes, queueStateValue, StateValue.PROTOBUF);
     }
 
     /**

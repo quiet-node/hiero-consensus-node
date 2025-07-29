@@ -8,7 +8,7 @@ import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
 import static com.swirlds.state.lifecycle.StateMetadata.computeLabel;
 import static com.swirlds.state.merkle.StateUtils.decomposeLabel;
-import static com.swirlds.state.merkle.StateUtils.getQueueStateStateValue;
+import static com.swirlds.state.merkle.StateUtils.getQueueStateValue;
 import static com.swirlds.state.merkle.StateUtils.getStateKeyForQueue;
 import static com.swirlds.state.merkle.StateUtils.getStateKeyForSingleton;
 import static com.swirlds.state.merkle.StateUtils.getStateKeyValueBytes;
@@ -1073,8 +1073,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             Objects.requireNonNull(originalStore.getValue(), "Null value is not expected here");
 
                     final Bytes key = getStateKeyForSingleton(serviceName, stateKey);
-                    final StateValue virtualMapValue = getStateValue(serviceName, stateKey, value);
-                    virtualMap.put(key, virtualMapValue, StateValue.PROTOBUF);
+                    final StateValue stateValue = getStateValue(serviceName, stateKey, value);
+                    virtualMap.put(key, stateValue, StateValue.PROTOBUF);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;
                     logger.info(
@@ -1155,8 +1155,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                         }
 
                         final Bytes key = getStateKeyForQueue(serviceName, stateKey, tail++);
-                        final StateValue virtualMapValue = getStateValue(serviceName, stateKey, value);
-                        virtualMapRef.get().put(key, virtualMapValue, StateValue.PROTOBUF);
+                        final StateValue stateValue = getStateValue(serviceName, stateKey, value);
+                        virtualMapRef.get().put(key, stateValue, StateValue.PROTOBUF);
                     }
 
                     final var queueState = new QueueState(head, tail);
@@ -1164,7 +1164,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                             .get()
                             .put(
                                     getStateKeyForSingleton(serviceName, stateKey),
-                                    getQueueStateStateValue(queueState),
+                                    getQueueStateValue(queueState),
                                     StateValue.PROTOBUF);
 
                     long migrationTimeMs = System.currentTimeMillis() - migrationStartTime;

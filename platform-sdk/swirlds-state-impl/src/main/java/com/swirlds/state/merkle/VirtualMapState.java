@@ -839,12 +839,12 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                         singletonJson.put("hash", hash);
                         singletonJson.put("path", leafBytes.path());
                         try {
-                            final StateValue virtualMapValue = StateValue.PROTOBUF.parse(leafBytes.valueBytes());
+                            final StateValue stateValue = StateValue.PROTOBUF.parse(leafBytes.valueBytes());
                             final var typedSingletonValue = stateDefinition
                                     .valueCodec()
                                     .getDefaultInstance()
                                     .getClass()
-                                    .cast(virtualMapValue.value().as());
+                                    .cast(stateValue.value().as());
                             singletonJson.put("value", typedSingletonValue);
                         } catch (ParseException e) {
                             singletonJson.put("value", "ParseException: " + e.getMessage());
@@ -857,8 +857,8 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
                     final VirtualLeafBytes<?> leafBytes = recordAccessor.findLeafRecord(keyBytes);
                     if (leafBytes != null) {
                         try {
-                            final StateValue virtualMapValue = StateValue.PROTOBUF.parse(leafBytes.valueBytes());
-                            final QueueState queueState = virtualMapValue.queueState();
+                            final StateValue stateValue = StateValue.PROTOBUF.parse(leafBytes.valueBytes());
+                            final QueueState queueState = stateValue.queueState();
                             final JSONObject queueJson = new JSONObject();
                             queueJson.put("head", queueState.head());
                             queueJson.put("tail", queueState.tail());

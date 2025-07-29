@@ -60,9 +60,8 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
      */
     @Override
     protected V readFromDataSource(@NonNull K key) {
-        final StateValue virtualMapValue =
-                virtualMap.get(getStateKeyForKv(serviceName, stateKey, key), StateValue.PROTOBUF);
-        final V value = virtualMapValue != null ? virtualMapValue.value().as() : null;
+        final StateValue stateValue = virtualMap.get(getStateKeyForKv(serviceName, stateKey, key), StateValue.PROTOBUF);
+        final V value = stateValue != null ? stateValue.value().as() : null;
         // Log to transaction state log, what was read
         logMapGet(computeLabel(serviceName, stateKey), key, value);
         return value;
@@ -83,9 +82,9 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
         assert keyCodec.toBytes(key) != null;
 
         final Bytes keyBytes = getStateKeyForKv(serviceName, stateKey, key);
-        final StateValue virtualMapValue = getStateValue(serviceName, stateKey, value);
+        final StateValue stateValue = getStateValue(serviceName, stateKey, value);
 
-        virtualMap.put(keyBytes, virtualMapValue, StateValue.PROTOBUF);
+        virtualMap.put(keyBytes, stateValue, StateValue.PROTOBUF);
         // Log to transaction state log, what was put
         logMapPut(computeLabel(serviceName, stateKey), key, value);
     }
@@ -93,10 +92,9 @@ public final class OnDiskWritableKVState<K, V> extends WritableKVStateBase<K, V>
     /** {@inheritDoc} */
     @Override
     protected void removeFromDataSource(@NonNull K key) {
-        final StateValue virtualMapValue =
+        final StateValue stateValue =
                 virtualMap.remove(getStateKeyForKv(serviceName, stateKey, key), StateValue.PROTOBUF);
-        final var removedValue =
-                virtualMapValue != null ? virtualMapValue.value().as() : null;
+        final var removedValue = stateValue != null ? stateValue.value().as() : null;
         // Log to transaction state log, what was removed
         logMapRemove(computeLabel(serviceName, stateKey), key, removedValue);
     }
