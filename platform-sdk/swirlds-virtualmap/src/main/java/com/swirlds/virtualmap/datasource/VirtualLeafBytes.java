@@ -44,7 +44,7 @@ import java.util.Objects;
  */
 public class VirtualLeafBytes<V> {
 
-    public static final FieldDefinition FIELD_ONE_OF_STATE_ITEM =
+    public static final FieldDefinition FIELD_MERKLELEAF_STATEITEM =
             new FieldDefinition("state_item", FieldType.MESSAGE, false, false, true, 3);
     public static final FieldDefinition FIELD_LEAFRECORD_PATH =
             new FieldDefinition("path", FieldType.FIXED64, false, true, false, 1);
@@ -247,7 +247,7 @@ public class VirtualLeafBytes<V> {
         if (vb != null) {
             len += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, Math.toIntExact(vb.length()));
         }
-        return ProtoWriterTools.sizeOfDelimited(FIELD_ONE_OF_STATE_ITEM, len);
+        return ProtoWriterTools.sizeOfDelimited(FIELD_MERKLELEAF_STATEITEM, len);
     }
 
     // Output size must be at least getSizeInBytesForHashing()
@@ -268,7 +268,7 @@ public class VirtualLeafBytes<V> {
             innerLen += ProtoWriterTools.sizeOfDelimited(FIELD_LEAFRECORD_VALUE, valueLen);
         }
 
-        ProtoWriterTools.writeDelimited(out, FIELD_ONE_OF_STATE_ITEM, innerLen, innerOut -> {
+        ProtoWriterTools.writeDelimited(out, FIELD_MERKLELEAF_STATEITEM, innerLen, innerOut -> {
             ProtoWriterTools.writeDelimited(innerOut, FIELD_LEAFRECORD_KEY, keyLen, kb::writeTo);
             if (vb != null) {
                 ProtoWriterTools.writeDelimited(innerOut, FIELD_LEAFRECORD_VALUE, valueLen, vb::writeTo);
