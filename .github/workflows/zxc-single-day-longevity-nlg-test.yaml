@@ -7,14 +7,13 @@ on:
       test-asset:
         required: true
         default: "SDLT2"
-        description: "Performance test on given Longevity Machine (Longevity3, 4)"
+        description: "Performance test on given Longevity Machine (SDLT2)"
         type: string
       ref:
         required: true
         default: "main"
         description: "Version of hiero-consensus-node: branch, tag, commit"
         type: string
-      # TODO: Update solo-version when we move to CN to use solo tagged versions instead of helm charts.
       solo-version:
         required: true
         default: "v0.41.0"
@@ -22,12 +21,12 @@ on:
         type: string
       nlg-accounts: #'-R -c 32 -a 100000000 -T 1000 -n 100000 -S hot -p 50 -tt 1m
         required: true
-        default: "100000"
+        default: "100000000"
         description: "Number of Accounts and NFT tokens (100000, 1000000, 20000000, 100000000, 500000000, 1000000000)"
         type: string
       nlg-time: #'-R -c 32 -a 100000000 -T 1000 -n 100000 -S hot -p 50 -tt 1m
         required: true
-        default: "3"
+        default: "960"
         description: "Test execution time, mins (3, 9, 21, 180, 330)"
         type: string
       add-app-props:
@@ -59,7 +58,6 @@ permissions:
 env:
   NAMESPACE_PREFIX: solo-sdlt-n
   TIMEOUT_24H_LIMIT: 1460
-  #2 weeks and 20 min
   GS_ROOT_DIR: gs://performance-engineering-reports/ephemeral/test_runs
   GS_ROOT_HTTPS: https://perf.analytics.eng.hashgraph.io/ephemeral/test_runs
   #Release version from jFrog
@@ -85,6 +83,7 @@ jobs:
       Cryptoscore: ${{ steps.CryptoTransferLoadTestLogs.outputs.value }}
       HCSscore: ${{ steps.HCSLoadTestLogs.outputs.value }}
       Smartscore: ${{ steps.SmartContractLoadTestLogs.outputs.value }}
+      namespace: ${{ steps.set-namespace.outputs.namespace }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
@@ -94,7 +93,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ inputs.ref }}
 
       - name: Install KubeCtl
         uses: step-security/setup-kubectl@2edbf6aff97d814e9dc52827498ac51fe972e6d0 # v4.0.0
@@ -186,7 +185,7 @@ jobs:
         run: |
           echo "inputs.test-asset=${{ env.run_namespace }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.ref=${{ env.RUN_HCN_VERSION }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
-          echo "inputs.solo-version=${{ env.run_soloversion }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
+          echo "inputs.solo-version=${{ inputs.run_soloversion }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.nlg-accounts=${{ env.run_NLG_Accounts }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.nlg-time=${{ env.run_NLG_Time }}m" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.add-app-props=${{ env.run_AddAppProps }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
@@ -196,14 +195,11 @@ jobs:
 
       - name: Set hederahash sha value
         run: |
-          hederahash=`git rev-parse HEAD`
+          hederahash="$(git rev-parse HEAD)"
           echo "hederahash=${hederahash}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
 
       - name: Compile
-        run: |
-          cd "${{ github.workspace }}"/
-          ./gradlew clean assemble
-          cd "${{ github.workspace }}"
+        run: ./gradlew clean assemble
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -356,20 +352,20 @@ jobs:
         run: |
           set +x
           set +e
-          cd "${{ github.workspace }}"/solo/examples/performance-tuning/latitude
-          helm upgrade --install --set appName=nlg nlg oci://swirldslabs.jfrog.io/load-generator-helm-release-local/network-load-generator --version "${{ env.NLG_VERSION }}" --values nlg-values.yaml -n "${{ env.namespace }}"
+          cd "${{ github.workspace }}"/solo
+          helm upgrade --install --set appName=nlg nlg oci://swirldslabs.jfrog.io/load-generator-helm-release-local/network-load-generator --version "${{ env.NLG_VERSION }}" --values nlg-values.yaml -n "${{ steps.set-namespace.outputs.namespace }}"
           sleep 180
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods
-          nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" get pods
+          nlgpod="$(sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}')"
 
           # Copy run version
           echo "run_number=${{ github.run_number }}" | tee -a "${{ github.workspace }}"/version_run.txt
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp "${{ github.workspace }}"/version_run.txt ${nlgpod}:/app/
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" cp "${{ github.workspace }}"/version_run.txt ${nlgpod}:/app/
 
       - name: Start Longevity test
         run: |
           run_NLGDebugparams="" # e.g. -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
-          nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
+          nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
           n=`expr ${{ env.run_NLG_Accounts }} / 1000`
           NLG_c=32
 
@@ -377,11 +373,11 @@ jobs:
 
           NLGargs="-K ECDSA -R -c ${NLG_c} -a ${{ env.run_NLG_Accounts }}  -n ${n} -T 1000 -S hot -p 50"
 
-          echo kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
+          echo kubectl -n "${{ needs.performance-tests-start.outputs.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
             ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${test} \
             ${NLGargs} -tt ${{ env.run_NLG_Time }}m > client.log 2>&1 &"
 
-          kubectl -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
+          kubectl -n "${{ needs.performance-tests-start.outputs.namespace }}" exec ${nlgpod} -c nlg -- bash -c "nohup /usr/bin/env java -Xmx30g \
             ${run_NLGDebugparams} -cp /app/lib/*:\$(ls -1 /app/network-load-generator-*.jar) com.hedera.benchmark.${test} \
             ${NLGargs} -tt ${{ env.run_NLG_Time }}m > client.log 2>&1 &"
           sleep 30
@@ -414,33 +410,33 @@ jobs:
 
           sleep 60
 
-          nlgpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}'`
+          nlgpod="$(sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" get pods | grep nlg-network-load-generator| awk '{print $1}')"
 
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log"
 
           counter=0
           start_time=`date +%s`
-          max_counter=${{ env.TIMEOUT_24H_LIMIT }}  #max_counter=2 weeks + 20 mins
+          max_counter=${{ env.TIMEOUT_24H_LIMIT }}
 
           ec=2
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
           isRunning=${?}
 
           while [ \( ${isRunning} -eq 0 \) -a \( ${counter} -le ${max_counter} \) ]
           do
 
            sleep 60
-           current_time=`date +%s`
-           counter=`expr "${current_time}" - "${start_time}"`
-           counter=`expr "${counter}" \/ 60`
+           current_time=$(date +%s)
+           counter=$(expr "${current_time}" - "${start_time}")
+           counter=$(expr "${counter}" \/ 60)
 
-           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log" > client.log
+           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" exec ${nlgpod} -c nlg -- bash -c "tail /app/client.log" > client.log
            tail -n 1 client.log
 
-           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
+           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" exec ${nlgpod} -c nlg -- bash -c "ps -aef | grep -w java | grep 'com.hedera.benchmark' | grep -v grep" | grep -w java > /dev/null
            isRunning=${?}
 
-           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${nlgpod} -c nlg -- bash -c "grep -E 'ERROR com.hedera.benchmark|Finished .*Test' /app/client.log" > client_state.log
+           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" exec ${nlgpod} -c nlg -- bash -c "grep -E 'ERROR com.hedera.benchmark|Finished .*Test' /app/client.log" > client_state.log
            check_status client_state.log
            ec=${?}
            if [ ${ec} -lt 2 ] #any terminal states 0 or 1, ec=2 is to continue
@@ -454,13 +450,12 @@ jobs:
             rm -rf "${{ github.workspace }}"/report/*
           fi
 
-          echo "Sleeping for 7 minutes ..."
           sleep 60
 
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ env.namespace }}"
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
-          cp -r podlog_"${{ env.namespace }}" "${{ github.workspace }}"/report/
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" cp ${nlgpod}:/app/client.log "${{ github.workspace }}"/report/client.log
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/getClusterErrors.sh "${{ needs.performance-tests-start.outputs.namespace }}"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ needs.performance-tests-start.outputs.namespace }}" cp ${nlgpod}:/app/version_run.txt "${{ github.workspace }}"/report/version_run.txt
+          cp -r podlog_"${{ needs.performance-tests-start.outputs.namespace }}" "${{ github.workspace }}"/report/
 
           check_status "${{ github.workspace }}"/report/client.log
           ec=${?}
@@ -515,7 +510,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
 
       - name: Publish logs
-        if: ${{ always() }}
+        if: ${{ !cancelled() }}
         run: |
           cd "${{ github.workspace }}"/
 
@@ -533,7 +528,7 @@ jobs:
           echo Done: see results in "${{ env.GS_ROOT_HTTPS }}/${{ env.RUN_HCN_VERSION }}_${{ env.run_namespace }}_${{ github.run_number }}/report/longevity"
 
           echo "Truncating logs for next test..."
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/resetCNlogs.sh "${{ env.namespace }}"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/resetCNlogs.sh "${{ needs.performance-tests-start.outputs.namespace }}"
 
   # Send this output back to the caller workflow
   single-day-performance-test-result:
