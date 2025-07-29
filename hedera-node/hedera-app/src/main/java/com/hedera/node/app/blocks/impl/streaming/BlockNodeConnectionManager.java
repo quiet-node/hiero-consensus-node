@@ -43,7 +43,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -153,11 +152,6 @@ public class BlockNodeConnectionManager {
      * Flag that indicates if streaming to block nodes is enabled. This flag is set once upon startup and cannot change.
      */
     private final AtomicBoolean isStreamingEnabled = new AtomicBoolean(false);
-
-    /**
-     * Lock
-     */
-    private final ReadWriteLock connectionStateLock = new ReentrantReadWriteLock();
 
     /**
      * Creates a new BlockNodeConnectionManager with the given configuration from disk.
@@ -310,8 +304,14 @@ public class BlockNodeConnectionManager {
 
         logger.warn("[{}] Rescheduling connection for reconnect attempt", connection);
 
-        // Schedule retry for the failed connection after a delay (initialDelay)
-        scheduleConnectionAttempt(connection, initialDelay, null, false);
+        connection.acquireLock().writeLock().lock();
+        try {
+            // Schedule retry for the failed connection after a delay (initialDelay)
+            scheduleConnectionAttempt(connection, initialDelay, null, false);
+        } finally {
+            connection.acquireLock().writeLock().unlock();
+        }
+
         // Immediately try to find and connect to the next available node
         selectNewBlockNodeForStreaming(false);
     }
@@ -392,6 +392,7 @@ public class BlockNodeConnectionManager {
         while (it.hasNext()) {
             final Map.Entry<BlockNodeConfig, BlockNodeConnection> entry = it.next();
             final BlockNodeConnection connection = entry.getValue();
+            connection.acquireLock().writeLock().lock();
             try {
                 connection.close();
             } catch (final RuntimeException e) {
@@ -399,6 +400,8 @@ public class BlockNodeConnectionManager {
                         "[{}] Error while closing connection during connection manager shutdown; ignoring",
                         connection,
                         e);
+            } finally {
+                connection.acquireLock().writeLock().unlock();
             }
             it.remove();
         }
@@ -440,7 +443,13 @@ public class BlockNodeConnectionManager {
             return false;
         }
 
-        connectionStateLock.readLock().lock();
+        List<BlockNodeConnection> lockedConnections = new ArrayList<>();
+        // Lock all existing connections to ensure state consistency
+        connections.values().forEach(connection -> {
+            connection.acquireLock().writeLock().lock();
+            lockedConnections.add(connection);
+        });
+
         try {
             final BlockNodeConfig selectedNode = getNextPriorityBlockNode();
             if (selectedNode == null) {
@@ -452,10 +461,14 @@ public class BlockNodeConnectionManager {
                     "Selected block node {}:{} for connection attempt", selectedNode.address(), selectedNode.port());
             // If we selected a node, schedule the connection attempt.
             connectToNode(selectedNode, force);
+
+            return true;
         } finally {
-            connectionStateLock.readLock().unlock();
+            // Release all acquired locks in reverse order
+            for (int i = lockedConnections.size() - 1; i >= 0; i--) {
+                lockedConnections.get(i).acquireLock().writeLock().unlock();
+            }
         }
-        return true;
     }
 
     /**
@@ -648,11 +661,11 @@ public class BlockNodeConnectionManager {
                     requestIndex);
             final PublishStreamRequest publishStreamRequest = blockState.getRequest(requestIndex);
             if (publishStreamRequest != null) {
-                connectionStateLock.readLock().lock();
+                connection.acquireLock().writeLock().lock();
                 try {
                     connection.sendRequest(publishStreamRequest);
                 } finally {
-                    connectionStateLock.readLock().unlock();
+                    connection.acquireLock().writeLock().unlock();
                 }
 
                 blockState.markRequestSent(requestIndex);
@@ -702,7 +715,7 @@ public class BlockNodeConnectionManager {
      */
     @NonNull
     public ReadWriteLock acquireConnectionLock() {
-        return connectionStateLock;
+        return null;
     }
 
     /**
@@ -758,7 +771,6 @@ public class BlockNodeConnectionManager {
                 return;
             }
 
-            connectionStateLock.writeLock().lock();
             try {
                 logger.debug("[{}] Running connection task...", connection);
                 final BlockNodeConnection activeConnection = activeConnectionRef.get();
@@ -826,8 +838,6 @@ public class BlockNodeConnectionManager {
             } catch (final Exception e) {
                 logger.warn("[{}] Failed to establish connection to block node; will schedule a retry", connection);
                 reschedule();
-            } finally {
-                connectionStateLock.writeLock().unlock();
             }
         }
 

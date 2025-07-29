@@ -40,8 +40,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.hiero.block.api.PublishStreamRequest;
 import org.junit.jupiter.api.AfterEach;
@@ -119,8 +119,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
     private BlockStreamMetrics metrics;
     private ScheduledExecutorService executorService;
 
-    private Lock readLock;
-    private Lock writeLock;
+    private ReadWriteLock lock;
 
     @BeforeEach
     void beforeEach() {
@@ -130,8 +129,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         executorService = mock(ScheduledExecutorService.class);
 
         connectionManager = new BlockNodeConnectionManager(configProvider, bufferService, metrics, executorService);
-        readLock = new ReentrantReadWriteLock().readLock();
-        writeLock = new ReentrantReadWriteLock().writeLock();
+        lock = new ReentrantReadWriteLock();
 
         resetMocks();
     }
@@ -164,6 +162,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
     void testRescheduleAndSelectNode() {
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
         final Duration delay = Duration.ofSeconds(1);
+        doReturn(lock).when(connection).acquireLock();
 
         connectionManager.rescheduleAndSelectNewNode(connection, delay);
 
@@ -246,6 +245,10 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final Thread dummyWorkerThread = mock(Thread.class);
         final AtomicReference<Thread> workerThreadRef = workerThread();
         workerThreadRef.set(dummyWorkerThread);
+
+        doReturn(lock).when(node1Conn).acquireLock();
+        doReturn(lock).when(node2Conn).acquireLock();
+        doReturn(lock).when(node3Conn).acquireLock();
 
         try {
             connectionManager.shutdown();
@@ -409,6 +412,9 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         connections.put(node1Config, node1Conn);
         connections.put(node2Config, node2Conn);
 
+        doReturn(lock).when(node1Conn).acquireLock();
+        doReturn(lock).when(node2Conn).acquireLock();
+
         final boolean isScheduled = connectionManager.selectNewBlockNodeForStreaming(false);
 
         assertThat(isScheduled).isFalse();
@@ -434,6 +440,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         availableNodes.add(node2Config);
         availableNodes.add(node3Config);
         activeConnection.set(node2Conn);
+
+        doReturn(lock).when(node2Conn).acquireLock();
 
         final boolean isScheduled = connectionManager.selectNewBlockNodeForStreaming(false);
 
@@ -477,6 +485,9 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         availableNodes.add(node2Config);
         availableNodes.add(node3Config);
         activeConnection.set(node2Conn);
+
+        doReturn(lock).when(node1Conn).acquireLock();
+        doReturn(lock).when(node2Conn).acquireLock();
 
         final boolean isScheduled = connectionManager.selectNewBlockNodeForStreaming(false);
 
@@ -523,6 +534,9 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         availableNodes.add(node3Config);
         availableNodes.add(node4Config);
         activeConnection.set(node2Conn);
+
+        doReturn(lock).when(node1Conn).acquireLock();
+        doReturn(lock).when(node2Conn).acquireLock();
 
         final boolean isScheduled = connectionManager.selectNewBlockNodeForStreaming(false);
 
@@ -988,6 +1002,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(null).when(bufferService).getBlockState(10L);
         doReturn(11L).when(bufferService).getLastBlockNumberProduced();
 
+        doReturn(lock).when(connection).acquireLock();
+
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
 
         assertThat(shouldSleep).isTrue();
@@ -1066,6 +1082,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(1).when(blockState).numRequestsCreated();
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
+        doReturn(lock).when(connection).acquireLock();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
         assertThat(shouldSleep).isTrue(); // there is nothing in the queue left to process, so we should sleep
@@ -1094,6 +1111,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(true).when(blockState).isBlockProofSent();
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
+        doReturn(lock).when(connection).acquireLock();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
         assertThat(shouldSleep)
@@ -1124,6 +1142,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(false).when(blockState).isBlockProofSent();
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
+        doReturn(lock).when(connection).acquireLock();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
         assertThat(shouldSleep).isFalse(); // there is nothing in the queue left to process, so we should sleep
@@ -1167,6 +1186,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(true).when(blockState).isBlockProofSent();
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
+        doReturn(lock).when(connection).acquireLock();
 
         final CountDownLatch doneLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> errorRef = new AtomicReference<>();
@@ -1221,6 +1241,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(true).when(blockState).isBlockProofSent();
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
+        doReturn(lock).when(connection).acquireLock();
         when(bufferService.getBlockState(10L))
                 .thenThrow(new RuntimeException("foobar"))
                 .thenReturn(blockState);

@@ -101,7 +101,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testCreateRequestObserver() {
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.createRequestObserver();
 
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.PENDING);
@@ -110,7 +109,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
 
     @Test
     void testCreateRequestObserver_alreadyExists() {
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.createRequestObserver();
         connection.createRequestObserver();
 
@@ -154,7 +152,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final ConnectionState preState = connection.getConnectionState();
         assertThat(preState).isEqualTo(ConnectionState.ACTIVE);
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.handleStreamFailure();
 
         final ConnectionState postState = connection.getConnectionState();
@@ -277,7 +274,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         eosTimestamps.add(now.minusSeconds(2));
         eosTimestamps.add(now.minusSeconds(1));
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onNext(response);
 
         assertThat(eosTimestamps).hasSize(6);
@@ -299,8 +295,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnNext_endOfStream_blockNodeInternalError(final EndOfStream.Code responseCode) {
         openConnectionAndResetMocks();
         final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
-
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(responseCode);
@@ -320,8 +314,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnNext_endOfStream_clientFailures(final EndOfStream.Code responseCode) {
         openConnectionAndResetMocks();
         final PublishStreamResponse response = createEndOfStreamResponse(responseCode, 10L);
-
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(responseCode);
@@ -339,8 +331,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         openConnectionAndResetMocks();
         // STREAM_ITEMS_SUCCESS is sent when the block node is gracefully shutting down
         final PublishStreamResponse response = createEndOfStreamResponse(Code.SUCCESS, 10L);
-
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(Code.SUCCESS);
@@ -359,7 +349,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
         when(stateManager.getBlockState(11L)).thenReturn(new BlockState(11L));
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(Code.BEHIND);
@@ -379,7 +368,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final PublishStreamResponse response = createEndOfStreamResponse(Code.BEHIND, 10L);
         when(stateManager.getBlockState(11L)).thenReturn(null);
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.updateConnectionState(ConnectionState.ACTIVE);
         connection.onNext(response);
 
@@ -406,8 +394,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnNext_endOfStream_itemsUnknown() {
         openConnectionAndResetMocks();
         final PublishStreamResponse response = createEndOfStreamResponse(Code.UNKNOWN, 10L);
-
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(Code.UNKNOWN);
@@ -474,7 +460,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final PublishStreamResponse response = createResendBlock(10L);
         when(stateManager.getBlockState(10L)).thenReturn(null);
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onNext(response);
 
         verify(metrics).incrementResendBlockCount();
@@ -526,7 +511,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final BlockItem item = BlockItem.newBuilder().blockHeader(blockHeader).build();
         final PublishStreamRequest request = createRequest(item);
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.createRequestObserver();
         connection.updateConnectionState(ConnectionState.PENDING);
         connection.sendRequest(request);
@@ -608,7 +592,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnError() {
         openConnectionAndResetMocks();
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.onError(new RuntimeException("oh bother"));
 
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
@@ -642,7 +625,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testOnCompleted_streamClosingNotInProgress() {
         openConnectionAndResetMocks();
 
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         // don't call close so we do not mark the connection as closing
         connection.onCompleted();
 
