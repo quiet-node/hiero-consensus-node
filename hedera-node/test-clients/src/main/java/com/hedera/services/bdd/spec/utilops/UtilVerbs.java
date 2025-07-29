@@ -39,6 +39,7 @@ import static com.hedera.services.bdd.spec.utilops.pauses.HapiSpecWaitUntil.unti
 import static com.hedera.services.bdd.spec.utilops.pauses.HapiSpecWaitUntil.untilStartOfNextStakingPeriod;
 import static com.hedera.services.bdd.spec.utilops.streams.LogContainmentOp.Containment.CONTAINS;
 import static com.hedera.services.bdd.spec.utilops.streams.LogContainmentOp.Containment.DOES_NOT_CONTAIN;
+import static com.hedera.services.bdd.spec.utilops.streams.assertions.VisibleItemsAssertion.ALL_TX_IDS;
 import static com.hedera.services.bdd.suites.HapiSuite.APP_PROPERTIES;
 import static com.hedera.services.bdd.suites.HapiSuite.EXCHANGE_RATE_CONTROL;
 import static com.hedera.services.bdd.suites.HapiSuite.FEE_SCHEDULE;
@@ -1367,11 +1368,10 @@ public class UtilVerbs {
         return ValidContractIdsAssertion::new;
     }
 
-    public static Function<HapiSpec, RecordStreamAssertion> visibleItems(
-            @NonNull final VisibleItemsValidator validator, @NonNull final String... specTxnIds) {
-        requireNonNull(specTxnIds);
+    public static Function<HapiSpec, RecordStreamAssertion> allVisibleItems(
+            @NonNull final VisibleItemsValidator validator) {
         requireNonNull(validator);
-        return spec -> new VisibleItemsAssertion(spec, validator, SkipSynthItems.NO, specTxnIds);
+        return spec -> new VisibleItemsAssertion(spec, validator, SkipSynthItems.NO, ALL_TX_IDS);
     }
 
     public static Function<HapiSpec, RecordStreamAssertion> selectedItems(
@@ -2076,6 +2076,28 @@ public class UtilVerbs {
     }
 
     /**
+     * Validates that the gas charge for an inner transaction (inside Atomic Batch)
+     * is within the allowedPercentDiff of expected gas in USD.
+     *
+     * @param txn txn to be validated
+     * @param expectedUsdForGas expected gas charge in usd
+     * @param allowedPercentDiff allowed percentage difference
+     */
+    public static CustomSpecAssert validateChargedUsdForGasOnlyForInnerTxn(
+            String txn, String parent, double expectedUsdForGas, double allowedPercentDiff) {
+        return assertionsHold((spec, assertLog) -> {
+            final var gasCharged = getChargedGasForInnerTxn(spec, txn, parent);
+            assertEquals(
+                    expectedUsdForGas,
+                    gasCharged,
+                    (allowedPercentDiff / 100.0) * expectedUsdForGas,
+                    String.format(
+                            "%s gas charge (%s) more than %.2f percent different than expected!",
+                            sdec(expectedUsdForGas, 4), txn, allowedPercentDiff));
+        });
+    }
+
+    /**
      * Validates that an amount is within a certain percentage of an expected value.
      * @param expected expected value
      * @param actual actual value
@@ -2669,6 +2691,31 @@ public class UtilVerbs {
                 / ONE_HBAR
                 / rcd.getReceipt().getExchangeRate().getCurrentRate().getHbarEquiv()
                 * rcd.getReceipt().getExchangeRate().getCurrentRate().getCentEquiv()
+                / 100;
+    }
+
+    /**
+     * Returns the charged gas for an inner transaction (inside Atomic Batch) in USD, assuming a standard cost of
+     * 71 tinybars per gas unit.
+     *
+     * @param spec the spec
+     * @param txn the transaction
+     * @return the charged gas in USD
+     */
+    private static double getChargedGasForInnerTxn(
+            @NonNull final HapiSpec spec, @NonNull final String txn, @NonNull final String parent) {
+        requireNonNull(spec);
+        requireNonNull(txn);
+        var subOp = getTxnRecord(txn).logged();
+        var parentOp = getTxnRecord(parent);
+        allRunFor(spec, subOp, parentOp);
+        final var rcd = subOp.getResponseRecord();
+        final var parentRcd = parentOp.getResponseRecord();
+        final var gasUsed = rcd.getContractCallResult().getGasUsed();
+        return (gasUsed * 71.0)
+                / ONE_HBAR
+                / parentRcd.getReceipt().getExchangeRate().getCurrentRate().getHbarEquiv()
+                * parentRcd.getReceipt().getExchangeRate().getCurrentRate().getCentEquiv()
                 / 100;
     }
 

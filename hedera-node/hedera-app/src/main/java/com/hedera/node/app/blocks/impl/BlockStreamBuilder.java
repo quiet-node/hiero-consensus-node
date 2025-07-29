@@ -2,6 +2,7 @@
 package com.hedera.node.app.blocks.impl;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.CRYPTO_CREATE;
+import static com.hedera.hapi.node.base.HederaFunctionality.TOKEN_UPDATE;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.IDENTICAL_SCHEDULE_ALREADY_CREATED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.OK;
 import static com.hedera.hapi.util.HapiUtils.asTimestamp;
@@ -22,10 +23,12 @@ import com.hedera.hapi.block.stream.output.StateChanges;
 import com.hedera.hapi.block.stream.output.TransactionOutput;
 import com.hedera.hapi.block.stream.output.TransactionResult;
 import com.hedera.hapi.block.stream.output.UtilPrngOutput;
+import com.hedera.hapi.block.stream.trace.AutoAssociateTraceData;
 import com.hedera.hapi.block.stream.trace.ContractInitcode;
 import com.hedera.hapi.block.stream.trace.ContractSlotUsage;
 import com.hedera.hapi.block.stream.trace.EVMTraceData;
 import com.hedera.hapi.block.stream.trace.EvmTransactionLog;
+import com.hedera.hapi.block.stream.trace.SubmitMessageTraceData;
 import com.hedera.hapi.block.stream.trace.TraceData;
 import com.hedera.hapi.node.base.AccountAmount;
 import com.hedera.hapi.node.base.AccountID;
@@ -55,7 +58,6 @@ import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
 import com.hedera.hapi.platform.event.EventTransaction;
-import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractAction;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
@@ -324,6 +326,12 @@ public class BlockStreamBuilder
     private List<ContractNonceInfo> changedNonceInfos;
 
     /**
+     * If set, the ids of contracts that were created in the EVM transaction.
+     */
+    @Nullable
+    private List<ContractID> createdContractIds;
+
+    /**
      * If set, the EVM logs resulting from the transaction.
      */
     @Nullable
@@ -409,11 +417,6 @@ public class BlockStreamBuilder
      * How the transaction should be customized before externalization to the stream.
      */
     private final TransactionCustomizer customizer;
-
-    /**
-     * The builder {@link EventTransaction}'s role in a state changes "group".
-     */
-    private TransactionGroupRole role = TransactionGroupRole.STANDALONE;
 
     /**
      * the total duration of contract operations as calculated using the Hedera ops duration schedule
@@ -552,10 +555,10 @@ public class BlockStreamBuilder
 
     /**
      * Builds the list of block items with their translation contexts.
-     *
+     * @param topLevel if true, indicates the output should always include a following {@link StateChanges} item
      * @return the list of block items
      */
-    public Output build() {
+    public Output build(final boolean topLevel, final boolean includeAdditionalTraceData) {
         final var blockItems = new ArrayList<BlockItem>();
         // Construct the context here to capture any additional Ethereum transaction details needed
         // for the legacy record before they are removed from the block stream output item
@@ -566,7 +569,6 @@ public class BlockStreamBuilder
             blockItems.add(BlockItem.newBuilder()
                     .eventTransaction(EventTransaction.newBuilder()
                             .applicationTransaction(getSerializedTransaction())
-                            .transactionGroupRole(role)
                             .build())
                     .build());
         }
@@ -590,7 +592,30 @@ public class BlockStreamBuilder
                     .traceData(TraceData.newBuilder().evmTraceData(builder))
                     .build());
         }
-        if (!stateChanges.isEmpty()) {
+
+        // Add trace data for batch inner transaction fields, that are normally computed by state changes
+        if (includeAdditionalTraceData) {
+            // automatic token association trace data
+            if (!automaticTokenAssociations.isEmpty() && TOKEN_UPDATE.equals(functionality)) {
+                final var builder = AutoAssociateTraceData.newBuilder()
+                        .automaticTokenAssociations(
+                                automaticTokenAssociations.getLast().accountId());
+                blockItems.add(BlockItem.newBuilder()
+                        .traceData(TraceData.newBuilder().autoAssociateTraceData(builder))
+                        .build());
+            }
+            // message submit trace data
+            if (sequenceNumber > 0 || runningHash != Bytes.EMPTY) {
+                final var builder = SubmitMessageTraceData.newBuilder()
+                        .sequenceNumber(sequenceNumber)
+                        .runningHash(runningHash);
+                blockItems.add(BlockItem.newBuilder()
+                        .traceData(TraceData.newBuilder().submitMessageTraceData(builder))
+                        .build());
+            }
+        }
+
+        if (!stateChanges.isEmpty() || topLevel) {
             blockItems.add(BlockItem.newBuilder()
                     .stateChanges(StateChanges.newBuilder()
                             .consensusTimestamp(asTimestamp(consensusNow))
@@ -599,11 +624,6 @@ public class BlockStreamBuilder
                     .build());
         }
         return new Output(blockItems, translationContext);
-    }
-
-    @Override
-    public void setTransactionGroupRole(@NonNull final TransactionGroupRole role) {
-        this.role = requireNonNull(role);
     }
 
     @Override
@@ -756,6 +776,13 @@ public class BlockStreamBuilder
     @Override
     public BlockStreamBuilder changedNonceInfo(@NonNull final List<ContractNonceInfo> nonceInfos) {
         this.changedNonceInfos = requireNonNull(nonceInfos);
+        return this;
+    }
+
+    @NonNull
+    @Override
+    public ContractOperationStreamBuilder createdContractIds(@NonNull final List<ContractID> contractIds) {
+        this.createdContractIds = requireNonNull(contractIds);
         return this;
     }
 
@@ -1356,7 +1383,7 @@ public class BlockStreamBuilder
                         contractId,
                         evmAddress.length() > 0 ? evmAddress : null,
                         changedNonceInfos,
-                        stateChanges,
+                        createdContractIds,
                         senderNonce,
                         evmTransactionResult == null ? null : evmTransactionResult.internalCallContext(),
                         ethereumHash);

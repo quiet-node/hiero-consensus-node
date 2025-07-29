@@ -31,7 +31,6 @@ import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.builder.PlatformBuilder;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
-import com.swirlds.platform.listeners.PlatformStatusChangeListener;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -53,6 +52,9 @@ import org.hiero.consensus.roster.RosterUtils;
 import org.hiero.otter.fixtures.AsyncNodeActions;
 import org.hiero.otter.fixtures.Node;
 import org.hiero.otter.fixtures.NodeConfiguration;
+import org.hiero.otter.fixtures.TransactionFactory;
+import org.hiero.otter.fixtures.app.OtterApp;
+import org.hiero.otter.fixtures.app.OtterAppState;
 import org.hiero.otter.fixtures.internal.AbstractNode;
 import org.hiero.otter.fixtures.internal.result.NodeResultsCollector;
 import org.hiero.otter.fixtures.internal.result.SingleNodeLogResultImpl;
@@ -60,11 +62,11 @@ import org.hiero.otter.fixtures.internal.result.SingleNodePcesResultImpl;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
 import org.hiero.otter.fixtures.result.SingleNodePcesResult;
-import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResults;
-import org.hiero.otter.fixtures.turtle.app.TurtleApp;
-import org.hiero.otter.fixtures.turtle.app.TurtleAppState;
+import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResult;
+import org.hiero.otter.fixtures.result.SingleNodeReconnectResult;
 import org.hiero.otter.fixtures.turtle.gossip.SimulatedGossip;
 import org.hiero.otter.fixtures.turtle.gossip.SimulatedNetwork;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A node in the turtle network.
@@ -83,8 +85,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
     private final TurtleLogging logging;
     private final TurtleNodeConfiguration nodeConfiguration;
     private final NodeResultsCollector resultsCollector;
-    private final PlatformStatusChangeListener platformStatusChangeListener;
-    private final AsyncNodeActions asyncNodeActions = new TurtleAcyncNodeActions();
+    private final AsyncNodeActions asyncNodeActions = new TurtleAsyncNodeActions();
 
     private PlatformContext platformContext;
 
@@ -99,6 +100,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
 
     /**
      * Constructor of {@link TurtleNode}.
+     *
      * @param randotron the random number generator
      * @param time the time provider
      * @param selfId the node ID of the node
@@ -117,7 +119,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
             @NonNull final SimulatedNetwork network,
             @NonNull final TurtleLogging logging,
             @NonNull final Path outputDirectory) {
-        super(selfId);
+        super(selfId, roster);
         logging.addNodeLogging(selfId, outputDirectory);
         try {
             ThreadContext.put(THREAD_CONTEXT_NODE_ID, this.selfId.toString());
@@ -128,13 +130,8 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
             this.keysAndCerts = requireNonNull(keysAndCerts);
             this.network = requireNonNull(network);
             this.logging = requireNonNull(logging);
-            this.nodeConfiguration = new TurtleNodeConfiguration(outputDirectory);
+            this.nodeConfiguration = new TurtleNodeConfiguration(() -> lifeCycle, outputDirectory);
             this.resultsCollector = new NodeResultsCollector(selfId);
-            this.platformStatusChangeListener = data -> {
-                final PlatformStatus newStatus = data.getNewStatus();
-                TurtleNode.this.platformStatus = newStatus;
-                resultsCollector.addPlatformStatus(newStatus);
-            };
 
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
@@ -154,6 +151,26 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
         } finally {
             ThreadContext.remove(THREAD_CONTEXT_NODE_ID);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This method is not supported in TurtleNode and will throw an {@link UnsupportedOperationException}.
+     */
+    @Override
+    public void startSyntheticBottleneck(@NotNull final Duration delayPerRound) {
+        throw new UnsupportedOperationException("Synthetic bottleneck is not supported in TurtleNode.");
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This method is not supported in TurtleNode and will throw an {@link UnsupportedOperationException}.
+     */
+    @Override
+    public void stopSyntheticBottleneck() {
+        throw new UnsupportedOperationException("Synthetic bottleneck is not supported in TurtleNode.");
     }
 
     /**
@@ -217,7 +234,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
      */
     @Override
     @NonNull
-    public SingleNodeConsensusResult getConsensusResult() {
+    public SingleNodeConsensusResult newConsensusResult() {
         return resultsCollector.getConsensusResult();
     }
 
@@ -226,7 +243,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
      */
     @NonNull
     @Override
-    public SingleNodeLogResult getLogResult() {
+    public SingleNodeLogResult newLogResult() {
         return new SingleNodeLogResultImpl(selfId, Set.of());
     }
 
@@ -235,7 +252,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
      */
     @Override
     @NonNull
-    public SingleNodePlatformStatusResults getPlatformStatusResults() {
+    public SingleNodePlatformStatusResult newPlatformStatusResult() {
         return resultsCollector.getStatusProgression();
     }
 
@@ -244,8 +261,18 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
      */
     @Override
     @NonNull
-    public SingleNodePcesResult getPcesResult() {
-        return new SingleNodePcesResultImpl(selfId(), platformContext);
+    public SingleNodePcesResult newPcesResult() {
+        return new SingleNodePcesResultImpl(selfId(), platformContext.getConfiguration());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>This method is not supported in TurtleNode and will throw an {@link UnsupportedOperationException}.
+     */
+    @Override
+    public @NotNull SingleNodeReconnectResult newReconnectResult() {
+        throw new UnsupportedOperationException("Reconnect is not supported in TurtleNode.");
     }
 
     /**
@@ -299,7 +326,7 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
 
     private void doStartNode() {
 
-        final Configuration currentConfiguration = nodeConfiguration.createConfiguration();
+        final Configuration currentConfiguration = nodeConfiguration.current();
         final org.hiero.consensus.model.node.NodeId legacyNodeId =
                 org.hiero.consensus.model.node.NodeId.of(selfId.id());
 
@@ -328,12 +355,13 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
         final HashedReservedSignedState reservedState = loadInitialState(
                 recycleBin,
                 version,
-                () -> TurtleAppState.createGenesisState(currentConfiguration, roster, version),
+                () -> OtterAppState.createGenesisState(currentConfiguration, roster, metrics, version),
                 APP_NAME,
                 SWIRLD_NAME,
                 legacyNodeId,
                 platformStateFacade,
-                platformContext);
+                platformContext,
+                OtterAppState::new);
         final ReservedSignedState initialState = reservedState.state();
 
         final State state = initialState.get().getState();
@@ -345,11 +373,12 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
                         SWIRLD_NAME,
                         version,
                         initialState,
-                        TurtleApp.INSTANCE,
+                        OtterApp.INSTANCE,
                         legacyNodeId,
                         eventStreamLoc,
                         rosterHistory,
-                        platformStateFacade)
+                        platformStateFacade,
+                        OtterAppState::new)
                 .withPlatformContext(platformContext)
                 .withConfiguration(currentConfiguration)
                 .withKeysAndCerts(keysAndCerts)
@@ -372,20 +401,28 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
 
         platformWiring
                 .getConsensusEngineOutputWire()
-                .solderTo("nodeResultCollector", "consensusRounds", resultsCollector::addConsensusRounds);
+                .solderTo("nodeConsensusRoundsCollector", "consensusRounds", resultsCollector::addConsensusRounds);
+
+        platformWiring
+                .getStatusStateMachineOutputWire()
+                .solderTo("nodePlatformStatusCollector", "platformStatus", this::handlePlatformStatusChange);
 
         platform = platformComponentBuilder.build();
         platformStatus = PlatformStatus.STARTING_UP;
-        platform.getNotificationEngine().register(PlatformStatusChangeListener.class, platformStatusChangeListener);
         platform.start();
 
         lifeCycle = RUNNING;
     }
 
+    private void handlePlatformStatusChange(@NonNull final PlatformStatus platformStatus) {
+        this.platformStatus = requireNonNull(platformStatus);
+        resultsCollector.addPlatformStatus(platformStatus);
+    }
+
     /**
      * Turtle-specific implementation of {@link AsyncNodeActions}.
      */
-    private class TurtleAcyncNodeActions implements AsyncNodeActions {
+    private class TurtleAsyncNodeActions implements AsyncNodeActions {
 
         /**
          * {@inheritDoc}
@@ -393,6 +430,22 @@ public class TurtleNode extends AbstractNode implements Node, TurtleTimeManager.
         @Override
         public void killImmediately() throws InterruptedException {
             TurtleNode.this.killImmediately();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void startSyntheticBottleneck(@NonNull final Duration delayPerRound) {
+            throw new UnsupportedOperationException("startSyntheticBottleneck is not supported in TurtleNode.");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void stopSyntheticBottleneck() {
+            throw new UnsupportedOperationException("stopSyntheticBottleneck is not supported in TurtleNode.");
         }
 
         /**

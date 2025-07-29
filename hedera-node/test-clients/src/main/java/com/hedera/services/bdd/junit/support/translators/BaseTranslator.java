@@ -3,14 +3,11 @@ package com.hedera.services.bdd.junit.support.translators;
 
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_ACCOUNTS;
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_CONTRACT_BYTECODE;
+import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CALL;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.ETHEREUM_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.ENDING_PARENT;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.PARENT;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.STANDALONE;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.STARTING_PARENT;
 import static com.hedera.hapi.util.HapiUtils.CONTRACT_ID_COMPARATOR;
 import static com.hedera.hapi.util.HapiUtils.asInstant;
 import static com.hedera.node.app.hapi.utils.EntityType.ACCOUNT;
@@ -57,7 +54,6 @@ import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.PendingAirdropRecord;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
-import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChange;
@@ -78,7 +74,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -99,16 +94,10 @@ import org.hyperledger.besu.evm.log.Log;
 public class BaseTranslator {
     private static final Logger log = LogManager.getLogger(BaseTranslator.class);
 
-    private static final org.apache.tuweni.bytes.Bytes EIP_1014_PREFIX =
-            org.apache.tuweni.bytes.Bytes.fromHexString("0xFF");
-
     private static final Comparator<ContractID> CONTRACT_ID_NUM_COMPARATOR =
             Comparator.comparingLong(ContractID::contractNumOrThrow);
     private static final Comparator<ContractNonceInfo> NONCE_INFO_CONTRACT_ID_COMPARATOR =
             Comparator.comparing(ContractNonceInfo::contractIdOrThrow, CONTRACT_ID_NUM_COMPARATOR);
-
-    public static final Set<TransactionGroupRole> PARENT_ROLES =
-            EnumSet.of(STANDALONE, PARENT, ENDING_PARENT, STARTING_PARENT);
 
     /**
      * These fields are context maintained for the full lifetime of the translator.
@@ -797,6 +786,7 @@ public class BaseTranslator {
     }
 
     private void scanUnit(@NonNull final BlockTransactionalUnit unit) {
+        final Map<TokenID, List<Long>> deletedSerialNos = new HashMap<>();
         unit.stateChanges().forEach(stateChange -> {
             if (stateChange.hasMapDelete()) {
                 final var mapDelete = stateChange.mapDeleteOrThrow();
@@ -804,6 +794,15 @@ public class BaseTranslator {
                 if (key.hasScheduleIdKey()) {
                     purgedScheduleIds.add(key.scheduleIdKeyOrThrow());
                 }
+                // burn and wipe in batch can hide mints
+                if (key.hasNftIdKey()) {
+                    final var nftId = key.nftIdKeyOrThrow();
+                    final var tokenId = nftId.tokenId();
+                    deletedSerialNos
+                            .computeIfAbsent(tokenId, ignore -> new LinkedList<>())
+                            .add(nftId.serialNumber());
+                }
+
             } else if (stateChange.hasMapUpdate()) {
                 final var mapUpdate = stateChange.mapUpdateOrThrow();
                 final var key = mapUpdate.keyOrThrow();
@@ -859,11 +858,9 @@ public class BaseTranslator {
                     final var value = mapUpdate.valueOrThrow();
                     if (value.hasNodeValue()) {
                         final long nodeId = key.entityNumberKeyOrThrow();
-                        if (nodeId > highestKnownNodeId) {
-                            nextCreatedNums
-                                    .computeIfAbsent(NODE, ignore -> new LinkedList<>())
-                                    .add(nodeId);
-                        }
+                        nextCreatedNums
+                                .computeIfAbsent(NODE, ignore -> new LinkedList<>())
+                                .add(nodeId);
                     }
                 } else if (key.hasNftIdKey()) {
                     final var nftId = key.nftIdKeyOrThrow();
@@ -876,7 +873,7 @@ public class BaseTranslator {
         });
         userTimestamp = null;
         unit.blockTransactionParts().forEach(parts -> {
-            if (PARENT_ROLES.contains(parts.role())) {
+            if (parts.isTopLevel()) {
                 userTimestamp = asInstant(parts.consensusTimestamp());
             }
             if (parts.functionality() == HederaFunctionality.TOKEN_MINT) {
@@ -890,6 +887,9 @@ public class BaseTranslator {
                 }
             }
         });
+        // in batch deleted serials will overwrite minted state changes
+        // and those serials will be missed in highestPutSerialNos
+        maybeDeletedSerialsInBatch(unit, deletedSerialNos);
     }
 
     private static boolean isContractOp(@NonNull final BlockTransactionParts parts) {
@@ -927,5 +927,61 @@ public class BaseTranslator {
                 .map(change -> change.valueOrThrow().accountValueOrThrow())
                 .filter(account -> account.accountIdOrThrow().equals(accountId))
                 .findFirst();
+    }
+
+    /**
+     * This method tries to identify missing mapUpdate state changes with NftID, in case of mixed mint, burn, and wipe
+     * transactions in atomic batch. If such, it will use mapDelete changes to fill missing ones.
+     *
+     * @param unit The block transactional unit.
+     * @param deletedMintSerialNos Map derived from all mapDelete state changes with NftID key in the given unit.
+     */
+    private void maybeDeletedSerialsInBatch(
+            BlockTransactionalUnit unit, Map<TokenID, List<Long>> deletedMintSerialNos) {
+        // if this unit is an atomic batch and not all mints are found in mapUpdate state changes,
+        // try to identify the missing ones in mapDelete state changes
+        if (isBatch(unit) && !allMintsAreFound()) {
+            final Map<TokenID, List<Long>> possibleMintSerialNos = new HashMap<>();
+            deletedMintSerialNos.forEach((tokenID, serials) -> {
+                if (numMints.containsKey(tokenID)) {
+                    possibleMintSerialNos.put(tokenID, serials);
+                }
+            });
+
+            // if possible minted serials found, merge them in highestPutSerialNos
+            if (!possibleMintSerialNos.isEmpty()) {
+                possibleMintSerialNos.forEach((token, serials) -> {
+                    // add missing token serials
+                    highestPutSerialNos.computeIfAbsent(token, ignore -> serials);
+                    // merge serials for present tokens
+                    highestPutSerialNos.computeIfPresent(token, (key, list) -> {
+                        Set<Long> mergedSet = new HashSet<>(list);
+                        mergedSet.addAll(serials);
+                        return new ArrayList<>(mergedSet);
+                    });
+                });
+            }
+        }
+    }
+
+    private boolean isBatch(BlockTransactionalUnit unit) {
+        return unit.blockTransactionParts().stream().anyMatch(part -> part.functionality() == ATOMIC_BATCH);
+    }
+
+    private boolean allMintsAreFound() {
+        // compare number of token mints
+        if (numMints.size() != highestPutSerialNos.size()) {
+            return false;
+        }
+        // compare number of serials
+        for (Map.Entry<TokenID, Integer> entry : numMints.entrySet()) {
+            TokenID token = entry.getKey();
+            Integer count = entry.getValue();
+            final var serials = highestPutSerialNos.get(token);
+            if (serials != null && serials.size() != count) {
+                return false;
+            }
+        }
+        return true;
     }
 }
