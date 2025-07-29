@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.contract.impl.test.hevm;
 
-import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.OPS_DURATION_THROTTLE;
+import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.OPS_DURATION_COUNTER;
 import static org.hyperledger.besu.evm.MainnetEVMs.registerShanghaiOperations;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -124,7 +124,7 @@ class HederaEVMTest {
                 .blockHashLookup(unused -> {
                     throw new IllegalStateException();
                 })
-                .contextVariables(Map.of(OPS_DURATION_THROTTLE, opsDurationCounter))
+                .contextVariables(Map.of(OPS_DURATION_COUNTER, opsDurationCounter))
                 .miningBeneficiary(randomAddress())
                 .build();
         frame.setState(State.CODE_EXECUTING);

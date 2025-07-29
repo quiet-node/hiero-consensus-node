@@ -218,12 +218,9 @@ public class ThrottleAccumulator {
         }
         if (!contractOpsDurationThrottle.allow(now, opsDurationUnitsToConsume)) {
             // This indicates a bug - the execution somehow consumed more ops duration than was really available.
-            // Consume the available amount as a fallback and bump the metrics (which should trigger an alert).
-            log.error("More ops duration capacity consumed than available, which should be impossible");
+            // Consume the available amount as a fallback and log a warning.
+            log.warn("More ops duration capacity consumed than available, which should be impossible");
             contractOpsDurationThrottle.allow(now, contractOpsDurationThrottle.capacityFree(now));
-            if (throttleMetrics != null) {
-                throttleMetrics.incOpsDurationInvalidConsumeCalls();
-            }
         }
     }
 

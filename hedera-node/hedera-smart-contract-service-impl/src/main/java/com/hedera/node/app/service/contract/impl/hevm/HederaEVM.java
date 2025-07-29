@@ -3,6 +3,7 @@ package com.hedera.node.app.service.contract.impl.hevm;
 
 import com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
+import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationCounter;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Optional;
 import org.hyperledger.besu.evm.EVM;
@@ -96,11 +97,11 @@ public class HederaEVM extends EVM {
         byte[] code = frame.getCode().getBytes().toArrayUnsafe();
         Operation[] operationArray = this.operations.getOperations();
 
-        final var opsDurationThrottle = FrameUtils.opsDurationThrottle(frame);
-        final var opsDurationSchedule = opsDurationThrottle.schedule();
-        final var opsDurationByOpCode = opsDurationSchedule.opsDurationByOpCode();
-        final var opsDurationMultiplier = opsDurationSchedule.opsGasBasedDurationMultiplier();
-        final var opsDurationDenominator = opsDurationSchedule.multipliersDenominator();
+        final OpsDurationCounter opsDurationCounter = FrameUtils.opsDurationCounter(frame);
+        final OpsDurationSchedule opsDurationSchedule = opsDurationCounter.schedule();
+        final long[] opsDurationByOpCode = opsDurationSchedule.opsDurationByOpCode();
+        final long opsDurationMultiplier = opsDurationSchedule.opsGasBasedDurationMultiplier();
+        final long opsDurationDenominator = opsDurationSchedule.multipliersDenominator();
 
         while (frame.getState() == State.CODE_EXECUTING) {
             int pc = frame.getPC();
@@ -217,7 +218,7 @@ public class HederaEVM extends EVM {
                         ? result.getGasCost() * opsDurationMultiplier / opsDurationDenominator
                         : opsDurationByOpCode[opcode];
 
-                if (!opsDurationThrottle.tryConsumeOpsDurationUnits(opsDurationUnitsCost)) {
+                if (!opsDurationCounter.tryConsumeOpsDurationUnits(opsDurationUnitsCost)) {
                     frame.setExceptionalHaltReason(Optional.of(CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED));
                     frame.setState(State.EXCEPTIONAL_HALT);
                 }

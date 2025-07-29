@@ -3,9 +3,7 @@ package com.hedera.node.app.service.contract.impl.exec.processors;
 
 import static com.hedera.hapi.streams.ContractActionType.PRECOMPILE;
 import static com.hedera.hapi.streams.ContractActionType.SYSTEM;
-import static com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason.INSUFFICIENT_CHILD_RECORDS;
-import static com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason.INVALID_CONTRACT_ID;
-import static com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason.INVALID_SIGNATURE;
+import static com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason.*;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.hts.create.CreateCommons.createMethodsSet;
 import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.*;
 import static com.hedera.node.app.service.contract.impl.hevm.HevmPropagatedCallFailure.MISSING_RECEIVER_SIGNATURE;
@@ -19,7 +17,6 @@ import com.hedera.hapi.streams.ContractActionType;
 import com.hedera.node.app.service.contract.impl.exec.ActionSidecarContentTracer;
 import com.hedera.node.app.service.contract.impl.exec.AddressChecks;
 import com.hedera.node.app.service.contract.impl.exec.FeatureFlags;
-import com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason;
 import com.hedera.node.app.service.contract.impl.exec.metrics.ContractMetrics;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.HederaSystemContract;
 import com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils;
@@ -36,7 +33,6 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.EVM;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
 import org.hyperledger.besu.evm.frame.MessageFrame;
-import org.hyperledger.besu.evm.frame.MessageFrame.State;
 import org.hyperledger.besu.evm.operation.Operation;
 import org.hyperledger.besu.evm.precompile.PrecompileContractRegistry;
 import org.hyperledger.besu.evm.precompile.PrecompiledContract;
@@ -215,20 +211,20 @@ public class CustomMessageCallProcessor extends MessageCallProcessor {
         } else {
             frame.decrementRemainingGas(gasRequirement);
 
-            final var opsDurationThrottle = FrameUtils.opsDurationThrottle(frame);
-            final var opsDurationSchedule = opsDurationThrottle.schedule();
+            final var opsDurationCounter = FrameUtils.opsDurationCounter(frame);
+            final var opsDurationSchedule = opsDurationCounter.schedule();
             final var opsDurationCost = gasRequirement
                     * opsDurationSchedule.precompileGasBasedDurationMultiplier()
                     / opsDurationSchedule.multipliersDenominator();
-            if (!opsDurationThrottle.tryConsumeOpsDurationUnits(opsDurationCost)) {
-                frame.setExceptionalHaltReason(Optional.of(CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED));
-                frame.setState(State.EXCEPTIONAL_HALT);
-            }
-            contractMetrics.opsDurationMetrics().recordPrecompileOpsDuration(precompile.getName(), opsDurationCost);
+            if (!opsDurationCounter.tryConsumeOpsDurationUnits(opsDurationCost)) {
+                result = PrecompileContractResult.halt(Bytes.EMPTY, Optional.of(OPS_DURATION_LIMIT_REACHED));
+            } else {
+                contractMetrics.opsDurationMetrics().recordPrecompileOpsDuration(precompile.getName(), opsDurationCost);
 
-            result = precompile.computePrecompile(frame.getInputData(), frame);
-            if (result.isRefundGas()) {
-                frame.incrementRemainingGas(gasRequirement);
+                result = precompile.computePrecompile(frame.getInputData(), frame);
+                if (result.isRefundGas()) {
+                    frame.incrementRemainingGas(gasRequirement);
+                }
             }
         }
         // We must always call tracePrecompileResult() to ensure the tracer is in a consistent
@@ -265,23 +261,22 @@ public class CustomMessageCallProcessor extends MessageCallProcessor {
         } else {
             if (!fullResult.isRefundGas()) {
                 frame.decrementRemainingGas(gasRequirement);
+            }
 
-                final var opsDurationThrottle = FrameUtils.opsDurationThrottle(frame);
-                final var opsDurationSchedule = opsDurationThrottle.schedule();
-                final var opsDurationCost = gasRequirement
-                        * opsDurationSchedule.systemContractGasBasedDurationMultiplier()
-                        / opsDurationSchedule.multipliersDenominator();
-                if (!opsDurationThrottle.tryConsumeOpsDurationUnits(opsDurationCost)) {
-                    frame.setExceptionalHaltReason(Optional.of(CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED));
-                    frame.setState(State.EXCEPTIONAL_HALT);
-                }
-
+            final var opsDurationCounter = FrameUtils.opsDurationCounter(frame);
+            final var opsDurationSchedule = opsDurationCounter.schedule();
+            final var opsDurationCost = gasRequirement
+                    * opsDurationSchedule.systemContractGasBasedDurationMultiplier()
+                    / opsDurationSchedule.multipliersDenominator();
+            if (!opsDurationCounter.tryConsumeOpsDurationUnits(opsDurationCost)) {
+                result = PrecompileContractResult.halt(Bytes.EMPTY, Optional.of(OPS_DURATION_LIMIT_REACHED));
+            } else {
                 contractMetrics
                         .opsDurationMetrics()
                         .recordSystemContractOpsDuration(
                                 systemContract.getName(), systemContractAddress.toHexString(), opsDurationCost);
+                result = fullResult.result();
             }
-            result = fullResult.result();
         }
         finishPrecompileExecution(frame, result, SYSTEM, (ActionSidecarContentTracer) tracer);
     }

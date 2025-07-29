@@ -149,7 +149,7 @@ class FrameBuilderTest {
         assertNotNull(accessTrackerFor(frame));
         assertSame(tinybarValues, tinybarValuesFor(frame));
         assertSame(recordBuilder, selfDestructBeneficiariesFor(frame));
-        assertEquals(0L, FrameUtils.opsDurationThrottle(frame).opsDurationUnitsConsumed());
+        assertEquals(0L, FrameUtils.opsDurationCounter(frame).opsDurationUnitsConsumed());
     }
 
     @Test

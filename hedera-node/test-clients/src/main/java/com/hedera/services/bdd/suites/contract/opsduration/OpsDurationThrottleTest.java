@@ -46,13 +46,13 @@ import org.junit.jupiter.api.Tag;
 @HapiTestLifecycle
 @OrderedInIsolation
 public class OpsDurationThrottleTest {
-    private static final String OPS_DURATION_THROTTLE = "OpsDurationThrottle";
+    private static final String OPS_DURATION_COUNTER = "OpsDurationThrottle";
     private static final String SYSTEM_CONTRACT_TRANSFER = "HtsTransferFrom";
     private static final String SENDER = "sender";
     private static final String RECEIVER = "receiver";
     private static final String TOKEN = "token";
     protected static final String THROTTLE_THROTTLE_BY_OPS_DURATION = "contracts.throttle.throttleByOpsDuration";
-    protected static final String OPS_DURATION_THROTTLE_BURST_SECONDS = "contracts.opsDurationThrottleBurstSeconds";
+    protected static final String OPS_DURATION_COUNTER_BURST_SECONDS = "contracts.opsDurationThrottleBurstSeconds";
     protected static final String MAX_OPS_DURATION = "contracts.maxOpsDuration";
     protected static final String DURATION_PERIOD = "10000";
     protected static final String SMALLER_DURATION_PERIOD = "10";
@@ -76,13 +76,13 @@ public class OpsDurationThrottleTest {
         return hapiTest(
                 overriding(MAX_OPS_DURATION, DURATION_PERIOD),
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 450)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "run")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "run")
                                             .gas(200_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
@@ -100,13 +100,13 @@ public class OpsDurationThrottleTest {
         final AtomicDouble duration = new AtomicDouble(0.0);
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 5)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "run")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "run")
                                             .gas(200_000L)
                                             .collectMaxOpsDuration(duration)))
                                     .toArray(HapiSpecOperation[]::new)));
@@ -214,13 +214,13 @@ public class OpsDurationThrottleTest {
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
                 overriding(MAX_OPS_DURATION, DURATION_PERIOD),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 400)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "opsRun")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "opsRun")
                                             .gas(400_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
@@ -238,13 +238,13 @@ public class OpsDurationThrottleTest {
         final AtomicDouble duration = new AtomicDouble(0.0);
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 400)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "opsRun")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "opsRun")
                                             .gas(400_000L)
                                             .collectMaxOpsDuration(duration)))
                                     .toArray(HapiSpecOperation[]::new)));
@@ -260,13 +260,13 @@ public class OpsDurationThrottleTest {
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
                 overriding(MAX_OPS_DURATION, DURATION_PERIOD),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 400)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "opsRunRevert")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "opsRunRevert")
                                             .gas(400_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.CONTRACT_REVERT_EXECUTED,
@@ -285,13 +285,13 @@ public class OpsDurationThrottleTest {
         final AtomicDouble duration = new AtomicDouble(0.0);
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 400)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "opsRunRevert")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "opsRunRevert")
                                             .gas(400_000L)
                                             .hasKnownStatus(ResponseCodeEnum.CONTRACT_REVERT_EXECUTED)
                                             .collectMaxOpsDuration(duration)))
@@ -308,13 +308,13 @@ public class OpsDurationThrottleTest {
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
                 overriding(MAX_OPS_DURATION, DURATION_PERIOD),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 400)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "opsRunHalt")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "opsRunHalt")
                                             .gas(400_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.CONTRACT_REVERT_EXECUTED,
@@ -333,13 +333,13 @@ public class OpsDurationThrottleTest {
         final AtomicDouble duration = new AtomicDouble(0.0);
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 400)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "opsRunHalt")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "opsRunHalt")
                                             .gas(400_000L)
                                             .hasKnownStatus(ResponseCodeEnum.CONTRACT_REVERT_EXECUTED)
                                             .collectMaxOpsDuration(duration)))
@@ -356,23 +356,23 @@ public class OpsDurationThrottleTest {
         final AtomicLong postSuccessCounter = new AtomicLong(0);
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 withOpContext((spec, opLog) -> {
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 800)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "run")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "run")
                                             .gas(200_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
                                             .countingSuccessfulTransactionTo(preSuccessCounter)))
                                     .toArray(HapiSpecOperation[]::new)));
-                    overriding(OPS_DURATION_THROTTLE_BURST_SECONDS, "2");
+                    overriding(OPS_DURATION_COUNTER_BURST_SECONDS, "2");
                     allRunFor(
                             spec,
                             inParallel(IntStream.range(0, 800)
-                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "run")
+                                    .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_COUNTER, "run")
                                             .gas(200_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
@@ -380,7 +380,7 @@ public class OpsDurationThrottleTest {
                                     .toArray(HapiSpecOperation[]::new)));
                     burstIncreasesThroughputBy(preSuccessCounter.get(), postSuccessCounter.get(), 200L);
                 }),
-                restoreDefault(OPS_DURATION_THROTTLE_BURST_SECONDS));
+                restoreDefault(OPS_DURATION_COUNTER_BURST_SECONDS));
     }
 
     @HapiTest
@@ -389,18 +389,18 @@ public class OpsDurationThrottleTest {
     public Stream<DynamicTest> nestedExceedOpsDuration() {
         return hapiTest(
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
+                uploadInitCode(OPS_DURATION_COUNTER),
+                contractCreate(OPS_DURATION_COUNTER).gas(2_000_000L),
                 overriding(MAX_OPS_DURATION, RUN_MULTI_DURATION_PERIOD),
                 withOpContext((spec, opLog) -> allRunFor(
                         spec,
-                        contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(5L))
+                        contractCall(OPS_DURATION_COUNTER, "runMulti", BigInteger.valueOf(5L))
                                 .gas(10_000_000L)
                                 .hasKnownStatus(ResponseCodeEnum.SUCCESS),
-                        contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(1000000000))
+                        contractCall(OPS_DURATION_COUNTER, "runMulti", BigInteger.valueOf(1000000000))
                                 .gas(10_000_000L)
                                 .hasKnownStatus(ResponseCodeEnum.THROTTLED_AT_CONSENSUS))),
-                restoreDefault(OPS_DURATION_THROTTLE_BURST_SECONDS),
+                restoreDefault(OPS_DURATION_COUNTER_BURST_SECONDS),
                 restoreDefault(MAX_OPS_DURATION));
     }
 }

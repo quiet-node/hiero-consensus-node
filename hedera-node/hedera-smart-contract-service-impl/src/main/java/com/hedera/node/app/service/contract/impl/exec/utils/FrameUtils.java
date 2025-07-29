@@ -36,7 +36,7 @@ public class FrameUtils {
     public static final String PROPAGATED_CALL_FAILURE_CONTEXT_VARIABLE = "propagatedCallFailure";
     public static final String SYSTEM_CONTRACT_GAS_CALCULATOR_CONTEXT_VARIABLE = "systemContractGasCalculator";
     public static final String PENDING_CREATION_BUILDER_CONTEXT_VARIABLE = "pendingCreationBuilder";
-    public static final String OPS_DURATION_THROTTLE = "opsDurationThrottle";
+    public static final String OPS_DURATION_COUNTER = "opsDurationCounter";
 
     public enum EntityType {
         TOKEN,
@@ -386,7 +386,7 @@ public class FrameUtils {
      * @param frame the current frame
      * @return the total Hedera ops throttle
      */
-    public static OpsDurationCounter opsDurationThrottle(@NonNull final MessageFrame frame) {
-        return initialFrameOf(frame).getContextVariable(OPS_DURATION_THROTTLE);
+    public static OpsDurationCounter opsDurationCounter(@NonNull final MessageFrame frame) {
+        return initialFrameOf(frame).getContextVariable(OPS_DURATION_COUNTER);
     }
 }

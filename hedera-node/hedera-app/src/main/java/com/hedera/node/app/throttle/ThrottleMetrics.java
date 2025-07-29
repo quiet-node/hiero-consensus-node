@@ -9,7 +9,6 @@ import com.hedera.node.app.hapi.utils.throttles.LeakyBucketDeterministicThrottle
 import com.hedera.node.app.throttle.ThrottleAccumulator.ThrottleType;
 import com.hedera.node.config.data.StatsConfig;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.DoubleGauge;
 import com.swirlds.metrics.api.DoubleGauge.Config;
 import com.swirlds.metrics.api.Metrics;
@@ -39,7 +38,6 @@ public class ThrottleMetrics {
     private List<MetricPair> liveMetricPairs = List.of();
     private MetricPair gasThrottleMetricPair;
     private MetricPair opsDurationThrottleMetricPair;
-    private Counter opsDurationInvalidConsumeCalls;
 
     /**
      * Constructs a {@link ThrottleMetrics} instance.
@@ -121,11 +119,6 @@ public class ThrottleMetrics {
         final var throttlesToSample = throttlesToSampleSupplier.apply(statsConfig);
         opsDurationThrottleMetricPair =
                 throttlesToSample.contains(OPS_DURATION_ID) ? setupLiveMetricPair(opsDurationThrottle) : null;
-        opsDurationInvalidConsumeCalls =
-                metrics.getOrCreate(new Counter.Config("app", "consOpsDurationInvalidConsumeCalls")
-                        .withDescription("A count of invalid ops duration throttle consume calls "
-                                + "(i.e. when the execution consumes more ops duration "
-                                + "than was available) - indicating a possible bug."));
     }
 
     /**
@@ -143,10 +136,6 @@ public class ThrottleMetrics {
                     .gauge()
                     .set(opsDurationThrottleMetricPair.throttle().instantaneousPercentUsed());
         }
-    }
-
-    public void incOpsDurationInvalidConsumeCalls() {
-        this.opsDurationInvalidConsumeCalls.add(1);
     }
 
     private MetricPair setupLiveMetricPair(@NonNull final CongestibleThrottle throttle) {
