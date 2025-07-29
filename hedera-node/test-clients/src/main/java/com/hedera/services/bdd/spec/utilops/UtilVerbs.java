@@ -39,6 +39,7 @@ import static com.hedera.services.bdd.spec.utilops.pauses.HapiSpecWaitUntil.unti
 import static com.hedera.services.bdd.spec.utilops.pauses.HapiSpecWaitUntil.untilStartOfNextStakingPeriod;
 import static com.hedera.services.bdd.spec.utilops.streams.LogContainmentOp.Containment.CONTAINS;
 import static com.hedera.services.bdd.spec.utilops.streams.LogContainmentOp.Containment.DOES_NOT_CONTAIN;
+import static com.hedera.services.bdd.spec.utilops.streams.assertions.VisibleItemsAssertion.ALL_TX_IDS;
 import static com.hedera.services.bdd.suites.HapiSuite.APP_PROPERTIES;
 import static com.hedera.services.bdd.suites.HapiSuite.EXCHANGE_RATE_CONTROL;
 import static com.hedera.services.bdd.suites.HapiSuite.FEE_SCHEDULE;
@@ -150,7 +151,6 @@ import com.hedera.services.bdd.spec.utilops.mod.TxnModification;
 import com.hedera.services.bdd.spec.utilops.pauses.HapiSpecSleep;
 import com.hedera.services.bdd.spec.utilops.pauses.HapiSpecWaitUntil;
 import com.hedera.services.bdd.spec.utilops.pauses.HapiSpecWaitUntilNextBlock;
-import com.hedera.services.bdd.spec.utilops.streams.BlockStreamValidationOp;
 import com.hedera.services.bdd.spec.utilops.streams.LogContainmentOp;
 import com.hedera.services.bdd.spec.utilops.streams.LogContainmentTimeframeOp;
 import com.hedera.services.bdd.spec.utilops.streams.LogValidationOp;
@@ -391,15 +391,6 @@ public class UtilVerbs {
                 .map(Integer::parseInt)
                 .orElse(0);
         return new StreamValidationOp(proofsToWaitFor, HISTORY_PROOF_WAIT_TIMEOUT);
-    }
-
-    /**
-     * Returns an operation that validates the streams of the target network with dynamic validators
-     *
-     * @return the operation that validates the streams
-     */
-    public static BlockStreamValidationOp validateBlockStream() {
-        return new BlockStreamValidationOp();
     }
 
     /**
@@ -1367,11 +1358,10 @@ public class UtilVerbs {
         return ValidContractIdsAssertion::new;
     }
 
-    public static Function<HapiSpec, RecordStreamAssertion> visibleItems(
-            @NonNull final VisibleItemsValidator validator, @NonNull final String... specTxnIds) {
-        requireNonNull(specTxnIds);
+    public static Function<HapiSpec, RecordStreamAssertion> allVisibleItems(
+            @NonNull final VisibleItemsValidator validator) {
         requireNonNull(validator);
-        return spec -> new VisibleItemsAssertion(spec, validator, SkipSynthItems.NO, specTxnIds);
+        return spec -> new VisibleItemsAssertion(spec, validator, SkipSynthItems.NO, ALL_TX_IDS);
     }
 
     public static Function<HapiSpec, RecordStreamAssertion> selectedItems(
@@ -2076,6 +2066,28 @@ public class UtilVerbs {
     }
 
     /**
+     * Validates that the gas charge for an inner transaction (inside Atomic Batch)
+     * is within the allowedPercentDiff of expected gas in USD.
+     *
+     * @param txn txn to be validated
+     * @param expectedUsdForGas expected gas charge in usd
+     * @param allowedPercentDiff allowed percentage difference
+     */
+    public static CustomSpecAssert validateChargedUsdForGasOnlyForInnerTxn(
+            String txn, String parent, double expectedUsdForGas, double allowedPercentDiff) {
+        return assertionsHold((spec, assertLog) -> {
+            final var gasCharged = getChargedGasForInnerTxn(spec, txn, parent);
+            assertEquals(
+                    expectedUsdForGas,
+                    gasCharged,
+                    (allowedPercentDiff / 100.0) * expectedUsdForGas,
+                    String.format(
+                            "%s gas charge (%s) more than %.2f percent different than expected!",
+                            sdec(expectedUsdForGas, 4), txn, allowedPercentDiff));
+        });
+    }
+
+    /**
      * Validates that an amount is within a certain percentage of an expected value.
      * @param expected expected value
      * @param actual actual value
@@ -2410,9 +2422,8 @@ public class UtilVerbs {
             final var items = block.items();
             for (int i = 0, n = items.size(); i < n; i++) {
                 final var item = items.get(i);
-                if (item.hasEventTransaction()) {
-                    final var parts =
-                            TransactionParts.from(item.eventTransactionOrThrow().applicationTransactionOrThrow());
+                if (item.hasSignedTransaction()) {
+                    final var parts = TransactionParts.from(item.signedTransactionOrThrow());
                     if (parts.transactionIdOrThrow().equals(executionTxnId)) {
                         for (int j = i + 1; j < n; j++) {
                             final var followingItem = items.get(j);
@@ -2672,6 +2683,31 @@ public class UtilVerbs {
                 / 100;
     }
 
+    /**
+     * Returns the charged gas for an inner transaction (inside Atomic Batch) in USD, assuming a standard cost of
+     * 71 tinybars per gas unit.
+     *
+     * @param spec the spec
+     * @param txn the transaction
+     * @return the charged gas in USD
+     */
+    private static double getChargedGasForInnerTxn(
+            @NonNull final HapiSpec spec, @NonNull final String txn, @NonNull final String parent) {
+        requireNonNull(spec);
+        requireNonNull(txn);
+        var subOp = getTxnRecord(txn).logged();
+        var parentOp = getTxnRecord(parent);
+        allRunFor(spec, subOp, parentOp);
+        final var rcd = subOp.getResponseRecord();
+        final var parentRcd = parentOp.getResponseRecord();
+        final var gasUsed = rcd.getContractCallResult().getGasUsed();
+        return (gasUsed * 71.0)
+                / ONE_HBAR
+                / parentRcd.getReceipt().getExchangeRate().getCurrentRate().getHbarEquiv()
+                * parentRcd.getReceipt().getExchangeRate().getCurrentRate().getCentEquiv()
+                / 100;
+    }
+
     private static double getChargedUsdFromChild(@NonNull final HapiSpec spec, @NonNull final String txn) {
         requireNonNull(spec);
         requireNonNull(txn);
@@ -2715,7 +2751,7 @@ public class UtilVerbs {
                 waitTimeout);
     }
 
-    private static final class DurationConverter implements ConfigConverter<Duration> {
+    public static final class DurationConverter implements ConfigConverter<Duration> {
 
         /**
          * Regular expression for parsing durations. Looks for a number (with our without a decimal) followed by a unit.
@@ -2751,7 +2787,7 @@ public class UtilVerbs {
          * @return a Duration
          * @throws IllegalArgumentException if there is a problem parsing the string
          */
-        private static Duration parseDuration(final String str) {
+        public static Duration parseDuration(final String str) {
 
             final Matcher matcher = DURATION_REGEX.matcher(str);
 

@@ -790,12 +790,12 @@ message AccountAmount {
    */
   oneof hook_call {
     /**
-     * A single call made before attempting the CryptoTransfer, to a 
+     * A single call made before attempting the CryptoTransfer, to a
      * method with logical signature allow(HookContext, ProposedTransfers)
      */
     HookCall pre_tx_allowance_hook = 4;
     /**
-     * Two calls, the first call before attempting the CryptoTransfer, to a 
+     * Two calls, the first call before attempting the CryptoTransfer, to a
      * method with logical signature allowPre(HookContext, ProposedTransfers);
      * and the second call after attempting the CryptoTransfer, to a method
      * with logical signature allowPost(HookContext, ProposedTransfers).
@@ -812,12 +812,12 @@ message NftTransfer {
    */
   oneof sender_allowance_hook_call {
     /**
-     * A single call made before attempting the CryptoTransfer, to a 
+     * A single call made before attempting the CryptoTransfer, to a
      * method with logical signature allow(HookContext, ProposedTransfers)
      */
     HookCall pre_tx_sender_allowance_hook = 5;
     /**
-     * Two calls, the first call before attempting the CryptoTransfer, to a 
+     * Two calls, the first call before attempting the CryptoTransfer, to a
      * method with logical signature allowPre(HookContext, ProposedTransfers);
      * and the second call after attempting the CryptoTransfer, to a method
      * with logical signature allowPost(HookContext, ProposedTransfers).
@@ -831,12 +831,12 @@ message NftTransfer {
    */
   oneof receiver_allowance_hook_call {
     /**
-     * A single call made before attempting the CryptoTransfer, to a 
+     * A single call made before attempting the CryptoTransfer, to a
      * method with logical signature allow(HookContext, ProposedTransfers)
      */
     HookCall pre_tx_receiver_allowance_hook = 7;
     /**
-     * Two calls, the first call before attempting the CryptoTransfer, to a 
+     * Two calls, the first call before attempting the CryptoTransfer, to a
      * method with logical signature allowPre(HookContext, ProposedTransfers);
      * and the second call after attempting the CryptoTransfer, to a method
      * with logical signature allowPost(HookContext, ProposedTransfers).
@@ -939,7 +939,7 @@ interface IHieroAccountAllowancePrePostHook {
       IHieroHook.HookContext calldata context,
       ProposedTransfers memory proposedTransfers
    ) external payable returns (bool);
-   
+
    /// Decides if the proposed transfers are allowed AFTER the CryptoTransfer
    /// business logic is performed, optionally in the presence of additional
    /// context encoded by the transaction payer in the extra calldata.
