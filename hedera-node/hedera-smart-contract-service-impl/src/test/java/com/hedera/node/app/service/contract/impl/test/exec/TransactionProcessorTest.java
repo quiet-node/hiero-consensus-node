@@ -5,6 +5,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INSUFFICIENT_BALANCES_F
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_ACCOUNT_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_CONTRACT_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TRANSACTION_BODY;
+import static com.hedera.node.app.service.contract.impl.exec.utils.FrameUtils.TRACKER_CONTEXT_VARIABLE;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CALLED_CONTRACT_ID;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CALL_DATA;
 import static com.hedera.node.app.service.contract.impl.test.TestHelpers.CHARGING_RESULT;
@@ -35,12 +36,12 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -60,17 +61,21 @@ import com.hedera.node.app.service.contract.impl.exec.utils.OpsDurationCounter;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmBlocks;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransaction;
 import com.hedera.node.app.service.contract.impl.hevm.HederaEvmTransactionResult;
-import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
+import com.hedera.node.app.service.contract.impl.infra.StorageAccessTracker;
 import com.hedera.node.app.service.contract.impl.records.ContractOperationStreamBuilder;
 import com.hedera.node.app.service.contract.impl.state.HederaEvmAccount;
+import com.hedera.node.app.service.contract.impl.state.ProxyWorldUpdater;
+import com.hedera.node.app.service.contract.impl.state.TxStorageUsage;
 import com.hedera.node.app.service.contract.impl.utils.ConversionUtils;
 import com.hedera.node.app.spi.workflows.HandleException;
 import com.hedera.node.app.spi.workflows.ResourceExhaustedException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.config.api.Configuration;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.Set;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.frame.MessageFrame;
@@ -108,7 +113,7 @@ class TransactionProcessorTest {
     private TinybarValues tinybarValues;
 
     @Mock
-    private HederaWorldUpdater worldUpdater;
+    private ProxyWorldUpdater worldUpdater;
 
     @Mock
     private ActionSidecarContentTracer tracer;
@@ -118,6 +123,9 @@ class TransactionProcessorTest {
 
     @Mock
     private HederaEvmAccount senderAccount;
+
+    @Mock
+    private StorageAccessTracker tracker;
 
     @Mock
     private HederaEvmAccount relayerAccount;
@@ -185,6 +193,7 @@ class TransactionProcessorTest {
     void lazyCreationAttemptWithValidAddress() {
         givenSenderAccount();
         givenRelayerAccount();
+        givenAccessTracker(mock(StorageAccessTracker.class));
         final var transaction = new HederaEvmTransaction(
                 SENDER_ID,
                 RELAYER_ID,
@@ -228,7 +237,7 @@ class TransactionProcessorTest {
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
 
-        assertSame(SUCCESS_RESULT, result);
+        assertEquals(SUCCESS_RESULT.withTxStorageUsage(new TxStorageUsage(List.of(), null)), result);
         verify(worldUpdater).setupTopLevelLazyCreate(expectedToAddress);
     }
 
@@ -236,6 +245,8 @@ class TransactionProcessorTest {
     void lazyCreationAttemptCanCallNotExistingFeatureFlagOn() {
         givenSenderAccount();
         givenRelayerAccount();
+        given(tracker.getJustReads()).willReturn(List.of());
+        givenAccessTracker(tracker);
         final var transaction = new HederaEvmTransaction(
                 SENDER_ID,
                 RELAYER_ID,
@@ -282,7 +293,7 @@ class TransactionProcessorTest {
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
 
-        assertSame(SUCCESS_RESULT, result);
+        assertEquals(SUCCESS_RESULT.withTxStorageUsage(new TxStorageUsage(List.of(), null)), result);
         verify(worldUpdater).setupTopLevelLazyCreate(expectedToAddress);
     }
 
@@ -290,6 +301,7 @@ class TransactionProcessorTest {
     void callWithNoValueAndCanCallNotExistingFeatureFlagOn() {
         givenSenderAccount();
         givenRelayerAccount();
+        givenAccessTracker(mock(StorageAccessTracker.class));
         final var transaction = new HederaEvmTransaction(
                 SENDER_ID,
                 RELAYER_ID,
@@ -336,7 +348,7 @@ class TransactionProcessorTest {
         final var result =
                 subject.processTransaction(transaction, worldUpdater, context, tracer, config, opsDurationCounter);
 
-        assertSame(SUCCESS_RESULT, result);
+        assertEquals(SUCCESS_RESULT.withTxStorageUsage(new TxStorageUsage(List.of(), null)), result);
     }
 
     @Test
@@ -410,6 +422,7 @@ class TransactionProcessorTest {
 
         givenSenderAccount();
         givenRelayerAccount();
+        givenAccessTracker(mock(StorageAccessTracker.class));
 
         final var context = wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator);
         final var transaction = wellKnownRelayedHapiCreate();
@@ -479,7 +492,7 @@ class TransactionProcessorTest {
                         worldUpdater);
         inOrder.verify(worldUpdater).deleteAccount(NON_SYSTEM_LONG_ZERO_ADDRESS);
         inOrder.verify(worldUpdater).commit();
-        assertSame(SUCCESS_RESULT, result);
+        assertEquals(SUCCESS_RESULT.withTxStorageUsage(new TxStorageUsage(List.of(), null)), result);
     }
 
     @Test
@@ -488,6 +501,7 @@ class TransactionProcessorTest {
         final var inOrder = inOrder(worldUpdater, frameBuilder, frameRunner, gasCharging, senderAccount);
 
         givenSenderAccount();
+        givenAccessTracker(mock(StorageAccessTracker.class));
 
         final var context = wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator);
         final var transaction = wellKnownHapiCreate();
@@ -546,7 +560,7 @@ class TransactionProcessorTest {
                 .maybeRefundGiven(GAS_LIMIT - SUCCESS_RESULT.gasUsed(), 0, senderAccount, null, context, worldUpdater);
         inOrder.verify(worldUpdater).deleteAccount(NON_SYSTEM_LONG_ZERO_ADDRESS);
         inOrder.verify(worldUpdater).commit();
-        assertSame(SUCCESS_RESULT, result);
+        assertEquals(SUCCESS_RESULT.withTxStorageUsage(new TxStorageUsage(List.of(), null)), result);
         verify(senderAccount, never()).incrementNonce();
     }
 
@@ -559,6 +573,7 @@ class TransactionProcessorTest {
         givenSenderAccount();
         givenRelayerAccount();
         givenReceiverAccount();
+        givenAccessTracker(mock(StorageAccessTracker.class));
 
         final var context = wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator, recordBuilder);
         final var transaction = wellKnownRelayedHapiCall(0);
@@ -622,7 +637,7 @@ class TransactionProcessorTest {
                         worldUpdater);
         inOrder.verify(worldUpdater).deleteAccount(NON_SYSTEM_LONG_ZERO_ADDRESS);
         inOrder.verify(worldUpdater).commit();
-        assertSame(SUCCESS_RESULT, result);
+        assertEquals(SUCCESS_RESULT.withTxStorageUsage(new TxStorageUsage(List.of(), null)), result);
     }
 
     @Test
@@ -634,6 +649,7 @@ class TransactionProcessorTest {
         givenSenderAccount();
         givenRelayerAccount();
         givenReceiverAccount();
+        givenAccessTracker(mock(StorageAccessTracker.class));
 
         final var context = wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator, recordBuilder);
         final var transaction = wellKnownRelayedHapiCall(0);
@@ -700,7 +716,7 @@ class TransactionProcessorTest {
                         worldUpdater);
         inOrder.verify(worldUpdater).deleteAccount(NON_SYSTEM_LONG_ZERO_ADDRESS);
         inOrder.verify(worldUpdater).commit();
-        assertSame(SUCCESS_RESULT, result);
+        assertEquals(SUCCESS_RESULT.withTxStorageUsage(new TxStorageUsage(List.of(), null)), result);
     }
 
     @Test
@@ -709,6 +725,7 @@ class TransactionProcessorTest {
         givenSenderAccount();
         givenRelayerAccount();
         givenReceiverAccount();
+        givenAccessTracker(mock(StorageAccessTracker.class));
 
         final var context = wellKnownContextWith(blocks, tinybarValues, systemContractGasCalculator, recordBuilder);
         final var transaction = wellKnownRelayedHapiCall(0);
@@ -791,5 +808,12 @@ class TransactionProcessorTest {
     private void givenReceiverAccount() {
         given(worldUpdater.getHederaAccount(CALLED_CONTRACT_ID)).willReturn(receiverAccount);
         given(receiverAccount.hederaId()).willReturn(RECEIVER_ID);
+    }
+
+    private void givenAccessTracker(@Nullable final StorageAccessTracker tracker) {
+        final Deque<MessageFrame> stack = new ArrayDeque<>();
+        given(initialFrame.getMessageFrameStack()).willReturn(stack);
+        stack.push(initialFrame);
+        given(initialFrame.getContextVariable(TRACKER_CONTEXT_VARIABLE)).willReturn(tracker);
     }
 }

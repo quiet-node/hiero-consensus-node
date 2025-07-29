@@ -4,7 +4,6 @@ package com.hedera.node.app.service.contract.impl.exec;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.*;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.stream.trace.ContractInitcode;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.ContractID;
 import com.hedera.hapi.streams.ContractBytecode;
@@ -169,11 +168,6 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                         .initcode(hevmTransaction.payload())
                         .build();
                 requireNonNull(hederaEvmContext.streamBuilder()).addContractBytecode(contractBytecode, false);
-                // No-op for the RecordStreamBuilder
-                final var initcode = ContractInitcode.newBuilder()
-                        .failedInitcode(hevmTransaction.payload())
-                        .build();
-                requireNonNull(hederaEvmContext.streamBuilder()).addInitcode(initcode);
             }
             final var callData = (hydratedEthTxData != null && hydratedEthTxData.ethTxData() != null)
                     ? Bytes.wrap(hydratedEthTxData.ethTxData().callData())
