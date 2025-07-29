@@ -57,6 +57,7 @@ jmhModuleInfo {
     requires("com.hedera.node.app.spi.test.fixtures")
     requires("com.hedera.node.app.test.fixtures")
     requires("com.hedera.node.hapi")
+    requires("com.hedera.pbj.grpc.client.helidon")
     requires("com.hedera.pbj.runtime")
     requires("jmh.core")
     requires("org.hiero.base.crypto")

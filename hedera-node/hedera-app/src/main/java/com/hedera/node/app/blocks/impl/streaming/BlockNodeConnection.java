@@ -7,15 +7,17 @@ import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
+import com.hedera.pbj.runtime.grpc.GrpcCall;
+import com.hedera.pbj.runtime.grpc.GrpcClient;
+import com.hedera.pbj.runtime.grpc.Pipeline;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import io.grpc.stub.StreamObserver;
-import io.helidon.webclient.grpc.GrpcServiceClient;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Flow;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +34,8 @@ import org.hiero.block.api.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
 import org.hiero.block.api.PublishStreamResponse.ResendBlock;
 import org.hiero.block.api.PublishStreamResponse.SkipBlock;
+import org.hiero.block.api.codec.PublishStreamRequestProtoCodec;
+import org.hiero.block.api.codec.PublishStreamResponseProtoCodec;
 
 /**
  * Manages a single gRPC bidirectional streaming connection to a block node. Each connection:
@@ -45,7 +49,7 @@ import org.hiero.block.api.PublishStreamResponse.SkipBlock;
  * The connection goes through multiple states defined in {@link ConnectionState} and
  * uses exponential backoff for retries when errors occur.
  */
-public class BlockNodeConnection implements StreamObserver<PublishStreamResponse> {
+public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
 
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
 
@@ -60,7 +64,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     /**
      * The gRPC client to use for creating bi-directional streams between the consensus node and block node.
      */
-    private final GrpcServiceClient grpcServiceClient;
+    private final GrpcClient grpcServiceClient;
     /**
      * The "parent" connection manager that manages the lifecycle of this connection.
      */
@@ -107,7 +111,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
     /**
      * Stream observer used to send messages to the block node.
      */
-    private StreamObserver<PublishStreamRequest> blockNodeStreamObserver;
+    private GrpcCall<PublishStreamRequest, PublishStreamResponse> grpcCall;
 
     private final Object observerLock = new Object();
 
@@ -175,7 +179,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockBufferService blockBufferService,
-            @NonNull final GrpcServiceClient grpcServiceClient,
+            @NonNull final GrpcClient grpcServiceClient,
             @NonNull final BlockStreamMetrics blockStreamMetrics,
             @NonNull final String grpcEndpoint,
             @NonNull final ScheduledExecutorService executorService) {
@@ -204,8 +208,12 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     public void createRequestObserver() {
         synchronized (observerLock) {
-            if (blockNodeStreamObserver == null) {
-                blockNodeStreamObserver = grpcServiceClient.bidi(grpcEndpoint, this);
+            if (grpcCall == null) {
+                grpcCall = grpcServiceClient.createCall(
+                        grpcEndpoint,
+                        new PublishStreamRequestProtoCodec(),
+                        new PublishStreamResponseProtoCodec(),
+                        this);
 
                 connectionStateLock.writeLock().lock();
                 try {
@@ -538,8 +546,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         requireNonNull(request, "request must not be null");
 
         synchronized (observerLock) {
-            if (getConnectionState() == ConnectionState.ACTIVE && blockNodeStreamObserver != null) {
-                blockNodeStreamObserver.onNext(request);
+            if (getConnectionState() == ConnectionState.ACTIVE && grpcCall != null) {
+                grpcCall.sendRequest(request, false);
             }
         }
     }
@@ -562,17 +570,17 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
     private void closeObserver() {
         synchronized (observerLock) {
-            if (blockNodeStreamObserver != null) {
+            if (grpcCall != null) {
                 logger.debug("[{}] Closing request observer for block node", this);
                 streamShutdownInProgress.set(true);
 
                 try {
-                    blockNodeStreamObserver.onCompleted();
+                    grpcCall.completeRequests();
                     logger.debug("[{}] Request observer successfully closed", this);
                 } catch (final Exception e) {
                     logger.warn("[{}] Error while completing request observer", this, e);
                 }
-                blockNodeStreamObserver = null;
+                grpcCall = null;
             }
         }
     }
@@ -610,6 +618,14 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         logger.debug("[{}] Jumping to block {}", this, blockNumber);
         // Set the target block for the worker loop to pick up
         blockNodeConnectionManager.jumpToBlock(blockNumber);
+    }
+
+    @Override
+    public void onSubscribe(Flow.Subscription subscription) {}
+
+    @Override
+    public void clientEndStreamReceived() {
+        Pipeline.super.clientEndStreamReceived();
     }
 
     /**
@@ -659,12 +675,8 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         handleStreamFailure();
     }
 
-    /**
-     * Handles normal stream completion or termination.
-     * Triggers reconnection if completion was not initiated by this side.
-     */
     @Override
-    public void onCompleted() {
+    public void onComplete() {
         if (streamShutdownInProgress.get()) {
             logger.debug("[{}] Stream completed (stream close was in progress)", this);
             streamShutdownInProgress.set(false);

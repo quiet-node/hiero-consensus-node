@@ -14,16 +14,15 @@ import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.node.internal.network.BlockNodeConnectionInfo;
+import com.hedera.pbj.grpc.client.helidon.PbjGrpcClient;
+import com.hedera.pbj.grpc.client.helidon.PbjGrpcClientConfig;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import io.helidon.common.tls.Tls;
-import io.helidon.webclient.grpc.GrpcClient;
-import io.helidon.webclient.grpc.GrpcClientMethodDescriptor;
+import io.helidon.webclient.api.WebClient;
 import io.helidon.webclient.grpc.GrpcClientProtocolConfig;
-import io.helidon.webclient.grpc.GrpcServiceClient;
-import io.helidon.webclient.grpc.GrpcServiceDescriptor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,7 +48,6 @@ import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.PublishStreamRequest;
-import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 
 /**
@@ -259,10 +258,25 @@ public class BlockNodeConnectionManager {
      * @param nodeConfig the configuration to use for a specific block node to connect to
      * @return a gRPC client
      */
-    private @NonNull GrpcServiceClient createNewGrpcClient(@NonNull final BlockNodeConfig nodeConfig) {
+    private @NonNull PbjGrpcClient createNewGrpcClient(@NonNull final BlockNodeConfig nodeConfig) {
         requireNonNull(nodeConfig);
 
-        final GrpcClient client = GrpcClient.builder()
+        final PbjGrpcClientConfig grpcConfig = new PbjGrpcClientConfig(
+                Duration.ofSeconds(1L), Tls.builder().enabled(false).build(), Optional.of(""), "");
+
+        final WebClient webClient = WebClient.builder()
+                .baseUri("http://" + nodeConfig.address() + ":" + nodeConfig.port())
+                .tls(Tls.builder().enabled(false).build())
+                .protocolConfigs(List.of(GrpcClientProtocolConfig.builder()
+                        .abortPollTimeExpired(false)
+                        .pollWaitTime(Duration.ofSeconds(30))
+                        .build()))
+                .keepAlive(true)
+                .build();
+
+        return new PbjGrpcClient(webClient, grpcConfig);
+
+        /*final GrpcClient client = GrpcClient.builder()
                 .tls(Tls.builder().enabled(false).build())
                 .baseUri("http://" + nodeConfig.address() + ":" + nodeConfig.port())
                 .protocolConfig(GrpcClientProtocolConfig.builder()
@@ -282,7 +296,7 @@ public class BlockNodeConnectionManager {
                                 .responseType(PublishStreamResponse.class)
                                 .marshallerSupplier(new RequestResponseMarshaller.Supplier())
                                 .build())
-                .build());
+                .build());*/
     }
 
     /**
@@ -534,7 +548,7 @@ public class BlockNodeConnectionManager {
         logger.info("Scheduling connection attempt for block node {}:{}", nodeConfig.address(), nodeConfig.port());
 
         // Create the connection object
-        final GrpcServiceClient grpcClient = createNewGrpcClient(nodeConfig);
+        final PbjGrpcClient grpcClient = createNewGrpcClient(nodeConfig);
         final BlockNodeConnection connection = new BlockNodeConnection(
                 configProvider,
                 nodeConfig,
