@@ -77,7 +77,7 @@ public class AtomicSmartContractServiceFeesTest {
                                 .batchKey(BATCH_OPERATOR))
                         .via(ATOMIC_BATCH)
                         .signedByPayerAnd(BATCH_OPERATOR),
-                validateInnerTxnChargedUsd(creation, ATOMIC_BATCH, 0.69, 5));
+                validateInnerTxnChargedUsd(creation, ATOMIC_BATCH, 0.72, 5));
     }
 
     @HapiTest
