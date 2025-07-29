@@ -844,11 +844,6 @@ public class RecordStreamBuilder
         return this.contractFunctionResult.gasUsed();
     }
 
-    @Override
-    public long getOpsDurationForContractTxn() {
-        return opsDuration;
-    }
-
     /**
      * Sets the receipt accountID.
      *
