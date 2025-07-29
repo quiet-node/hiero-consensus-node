@@ -6,7 +6,29 @@ This guide walks you through writing your first consensus test using the Otter f
 
 Create your first test:
 
-https://github.com/hiero-ledger/hiero-consensus-node/blob/main/platform-sdk/consensus-otter-tests/src/test/java/org/hiero/otter/test/DocExampleTest.java#L19-L42
+```java
+    @OtterTest
+    void testConsensus(@NonNull final TestEnvironment env) throws InterruptedException {
+        // 1. Get the network and time manager
+        final Network network = env.network();
+        final TimeManager timeManager = env.timeManager();
+
+        // 2. Create a 4-node network
+        network.addNodes(4);
+
+        // 3. Start the network
+        network.start();
+
+        // 4. Wait 30 seconds while the network is running
+        timeManager.waitFor(Duration.ofSeconds(30));
+
+        // 5. Verify consensus was reached and advanced past round 2
+        assertThat(network.getConsensusResults()).haveEqualCommonRounds().haveAdvancedSinceRound(2);
+
+        // 6. Check for no error-level log messages
+        assertThat(network.getLogResults()).haveNoErrorLevelMessages();
+    }
+```
 
 ### Key Components Explained
 

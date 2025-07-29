@@ -3,14 +3,12 @@ package com.hedera.services.bdd.junit.support.translators;
 
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_ACCOUNTS;
 import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_CONTRACT_BYTECODE;
+import static com.hedera.hapi.block.stream.output.StateIdentifier.STATE_ID_CONTRACT_STORAGE;
+import static com.hedera.hapi.node.base.HederaFunctionality.ATOMIC_BATCH;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CALL;
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CREATE;
 import static com.hedera.hapi.node.base.HederaFunctionality.ETHEREUM_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.ENDING_PARENT;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.PARENT;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.STANDALONE;
-import static com.hedera.hapi.platform.event.TransactionGroupRole.STARTING_PARENT;
 import static com.hedera.hapi.util.HapiUtils.CONTRACT_ID_COMPARATOR;
 import static com.hedera.hapi.util.HapiUtils.asInstant;
 import static com.hedera.node.app.hapi.utils.EntityType.ACCOUNT;
@@ -34,7 +32,9 @@ import com.hedera.hapi.block.stream.output.MapChangeKey;
 import com.hedera.hapi.block.stream.output.MapUpdateChange;
 import com.hedera.hapi.block.stream.output.StateChange;
 import com.hedera.hapi.block.stream.output.StateIdentifier;
+import com.hedera.hapi.block.stream.trace.ContractSlotUsage;
 import com.hedera.hapi.block.stream.trace.EvmTransactionLog;
+import com.hedera.hapi.block.stream.trace.ExecutedInitcode;
 import com.hedera.hapi.block.stream.trace.TraceData;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.ContractID;
@@ -57,7 +57,6 @@ import com.hedera.hapi.node.transaction.ExchangeRateSet;
 import com.hedera.hapi.node.transaction.PendingAirdropRecord;
 import com.hedera.hapi.node.transaction.TransactionReceipt;
 import com.hedera.hapi.node.transaction.TransactionRecord;
-import com.hedera.hapi.platform.event.TransactionGroupRole;
 import com.hedera.hapi.streams.ContractActions;
 import com.hedera.hapi.streams.ContractBytecode;
 import com.hedera.hapi.streams.ContractStateChange;
@@ -78,7 +77,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -99,24 +97,15 @@ import org.hyperledger.besu.evm.log.Log;
 public class BaseTranslator {
     private static final Logger log = LogManager.getLogger(BaseTranslator.class);
 
-    private static final org.apache.tuweni.bytes.Bytes EIP_1014_PREFIX =
-            org.apache.tuweni.bytes.Bytes.fromHexString("0xFF");
-
     private static final Comparator<ContractID> CONTRACT_ID_NUM_COMPARATOR =
             Comparator.comparingLong(ContractID::contractNumOrThrow);
     private static final Comparator<ContractNonceInfo> NONCE_INFO_CONTRACT_ID_COMPARATOR =
             Comparator.comparing(ContractNonceInfo::contractIdOrThrow, CONTRACT_ID_NUM_COMPARATOR);
 
-    public static final Set<TransactionGroupRole> PARENT_ROLES =
-            EnumSet.of(STANDALONE, PARENT, ENDING_PARENT, STARTING_PARENT);
-
     /**
      * These fields are context maintained for the full lifetime of the translator.
      */
     private long highestKnownEntityNum = 0L;
-
-    private long highestKnownNodeId =
-            -1L; // Default to negative value so that we allow for nodeId with 0 value to be created
 
     private boolean externalizeNonces = true;
 
@@ -129,6 +118,8 @@ public class BaseTranslator {
     private final Map<ScheduleID, TransactionID> scheduleTxnIds = new HashMap<>();
     private final Set<TokenAssociation> knownAssociations = new HashSet<>();
     private final Map<PendingAirdropId, PendingAirdropValue> pendingAirdrops = new HashMap<>();
+    private final Map<Long, Bytes> userFileContents = new HashMap<>();
+    private final Map<Timestamp, ExecutedInitcode> initcodes = new HashMap<>();
 
     /**
      * These fields are used to translate a single "unit" of block items connected to a {@link TransactionID}.
@@ -155,6 +146,55 @@ public class BaseTranslator {
      */
     public BaseTranslator() {
         // Using default field values
+    }
+
+    /**
+     * Sets the contents of a file identified by the given number.
+     * @param num the file number
+     * @param content the content to set
+     */
+    public void setFile(long num, @NonNull final Bytes content) {
+        requireNonNull(content);
+        userFileContents.put(num, content);
+    }
+
+    /**
+     * Appends content to a file identified by the given number.
+     * @param num the file number
+     * @param content the content to append
+     */
+    public void appendToFile(long num, @NonNull final Bytes content) {
+        requireNonNull(content);
+        userFileContents.merge(num, content, Bytes::append);
+    }
+
+    /**
+     * Retrieves the contents of a file identified by the given number.
+     * @param num the file number
+     * @return the contents of the file, or an empty Bytes if not found
+     */
+    public Bytes getFileContents(final long num) {
+        return userFileContents.getOrDefault(num, Bytes.EMPTY);
+    }
+
+    /**
+     * Checks if the contents of a file identified by the given number are known.
+     * @param num the file number
+     * @return true if the contents are known, false otherwise
+     */
+    public boolean knowsFileContents(final long num) {
+        return userFileContents.containsKey(num);
+    }
+
+    /**
+     * Tracks the initcode for a contract creation at the given time.
+     * @param now the consensus timestamp of the transaction
+     * @param initcode the initcode
+     */
+    public void trackInitcode(@NonNull final Timestamp now, @NonNull final ExecutedInitcode initcode) {
+        requireNonNull(now);
+        requireNonNull(initcode);
+        initcodes.put(now, initcode);
     }
 
     /**
@@ -220,9 +260,6 @@ public class BaseTranslator {
             serialNos.addAll(mintedHere.subList(0, numMints.getOrDefault(tokenId, 0)));
             serialNos.sort(Comparator.naturalOrder());
         });
-        if (nextCreatedNums.containsKey(NODE)) {
-            highestKnownNodeId = nextCreatedNums.get(NODE).getLast();
-        }
         highestKnownEntityNum =
                 nextCreatedNums.values().stream().mapToLong(List::getLast).max().orElse(highestKnownEntityNum);
     }
@@ -328,7 +365,7 @@ public class BaseTranslator {
      * @return the next created entity number
      */
     public long nextCreatedNum(@NonNull final EntityType type) {
-        final var createdNums = nextCreatedNums.getOrDefault(type, Collections.emptyList());
+        final var createdNums = nextCreatedNums.getOrDefault(type, emptyList());
         if (createdNums.isEmpty()) {
             log.error("No created numbers found for entity type {}", type);
             return -1L;
@@ -511,7 +548,7 @@ public class BaseTranslator {
             rebuiltSidecars = emptyList();
         }
         return new SingleTransactionRecord(
-                parts.transactionParts().wrapper(),
+                requireNonNull(parts.transactionParts()).wrapper(),
                 recordBuilder.receipt(receiptBuilder.build()).build(),
                 rebuiltSidecars,
                 new SingleTransactionRecord.TransactionOutputs(null));
@@ -553,7 +590,7 @@ public class BaseTranslator {
                 for (final var slotUsage : slotUsages) {
                     final var contractId = slotUsage.contractIdOrThrow();
                     final List<StorageChange> recoveredChanges = new ArrayList<>();
-                    final var writes = slotUsage.writtenSlotKeys();
+                    final var writes = writtenKeysFrom(slotUsage, remainingStateChanges);
                     slotUsage.slotReads().forEach(read -> {
                         final var builder = StorageChange.newBuilder().valueRead(read.readValue());
                         if (read.hasIndex()) {
@@ -564,13 +601,12 @@ public class BaseTranslator {
                                 final var nextTracedWriteUsage = nextEvmTraceData.contractSlotUsages().stream()
                                         .filter(nextUsages ->
                                                 nextUsages.contractIdOrThrow().equals(contractId)
-                                                        && nextUsages.writtenSlotKeys().stream()
+                                                        && writtenKeysFrom(nextUsages, remainingStateChanges).stream()
                                                                 .anyMatch(nextWrite -> nextWrite.equals(writtenKey)))
                                         .findFirst();
                                 if (nextTracedWriteUsage.isPresent()) {
-                                    final int finalWriteIndex = nextTracedWriteUsage
-                                            .get()
-                                            .writtenSlotKeys()
+                                    final int finalWriteIndex = writtenKeysFrom(
+                                                    nextTracedWriteUsage.get(), remainingStateChanges)
                                             .indexOf(writtenKey);
                                     final var nextRead = nextTracedWriteUsage.get().slotReads().stream()
                                             .filter(r -> r.hasIndex() && r.indexOrThrow() == finalWriteIndex)
@@ -608,54 +644,85 @@ public class BaseTranslator {
                         .actions(new ContractActions(actions))
                         .build());
             }
-            if (!evmTraceData.initcodes().isEmpty()) {
-                for (final var initcode : evmTraceData.initcodes()) {
-                    if (initcode.hasFailedInitcode()) {
-                        sidecars.add(TransactionSidecarRecord.newBuilder()
-                                .consensusTimestamp(now)
-                                .bytecode(ContractBytecode.newBuilder()
-                                        .initcode(initcode.failedInitcodeOrThrow())
-                                        .build())
-                                .build());
-                    } else {
-                        final var executedInitcode = initcode.executedInitcodeOrThrow();
-                        final var contractId = executedInitcode.contractIdOrThrow();
-                        final var bytecodeBuilder =
-                                ContractBytecode.newBuilder().contractId(contractId);
-                        final var bytecode = remainingStateChanges.stream()
-                                .filter(StateChange::hasMapUpdate)
-                                .filter(update -> update.stateId() == STATE_ID_CONTRACT_BYTECODE.protoOrdinal())
-                                .filter(update -> update.mapUpdateOrThrow()
-                                        .keyOrThrow()
-                                        .contractIdKeyOrThrow()
-                                        .equals(contractId))
-                                .map(update ->
-                                        update.mapUpdateOrThrow().valueOrThrow().bytecodeValueOrThrow())
-                                .findAny();
-                        // Runtime bytecode should always be recoverable from the state changes
-                        if (bytecode.isEmpty()) {
-                            throw new IllegalStateException("No bytecode state change found for contract " + contractId
-                                    + " in " + remainingStateChanges + " (parts were " + parts + ")");
-                        }
-                        final var runtimeBytecode = bytecode.get().code();
-                        bytecodeBuilder.runtimeBytecode(runtimeBytecode);
-                        if (executedInitcode.hasExplicitInitcode()) {
-                            bytecodeBuilder.initcode(executedInitcode.explicitInitcodeOrThrow());
-                        } else if (executedInitcode.hasInitcodeBookends()) {
-                            final var bookends = executedInitcode.initcodeBookendsOrThrow();
-                            bytecodeBuilder.initcode(Bytes.merge(
-                                    bookends.deployBytecode(),
-                                    Bytes.merge(runtimeBytecode, bookends.metadataBytecode())));
-                        }
-                        sidecars.add(TransactionSidecarRecord.newBuilder()
-                                .consensusTimestamp(now)
-                                .bytecode(bytecodeBuilder)
-                                .build());
+            if (evmTraceData.hasExecutedInitcode() || initcodes.containsKey(now)) {
+                final var executedInitcode = evmTraceData.hasExecutedInitcode()
+                        ? evmTraceData.executedInitcodeOrThrow()
+                        : initcodes.get(now);
+                if (!executedInitcode.hasContractId()) {
+                    sidecars.add(TransactionSidecarRecord.newBuilder()
+                            .consensusTimestamp(now)
+                            .bytecode(ContractBytecode.newBuilder()
+                                    .initcode(executedInitcode.explicitInitcodeOrThrow())
+                                    .build())
+                            .build());
+                } else {
+                    final var contractId = executedInitcode.contractIdOrThrow();
+                    final var bytecodeBuilder = ContractBytecode.newBuilder().contractId(contractId);
+                    final var bytecode = remainingStateChanges.stream()
+                            .filter(StateChange::hasMapUpdate)
+                            .filter(update -> update.stateId() == STATE_ID_CONTRACT_BYTECODE.protoOrdinal())
+                            .filter(update -> update.mapUpdateOrThrow()
+                                    .keyOrThrow()
+                                    .contractIdKeyOrThrow()
+                                    .equals(contractId))
+                            .map(update ->
+                                    update.mapUpdateOrThrow().valueOrThrow().bytecodeValueOrThrow())
+                            .findAny();
+                    // Runtime bytecode should always be recoverable from the state changes
+                    if (bytecode.isEmpty()) {
+                        throw new IllegalStateException("No bytecode state change found for contract " + contractId
+                                + " in " + remainingStateChanges + " (parts were " + parts + ")");
                     }
+                    final var runtimeBytecode = bytecode.get().code();
+                    bytecodeBuilder.runtimeBytecode(runtimeBytecode);
+                    if (executedInitcode.hasExplicitInitcode()) {
+                        bytecodeBuilder.initcode(executedInitcode.explicitInitcodeOrThrow());
+                    } else if (executedInitcode.hasInitcodeBookends()) {
+                        final var bookends = executedInitcode.initcodeBookendsOrThrow();
+                        bytecodeBuilder.initcode(Bytes.merge(
+                                bookends.deployBytecode(), Bytes.merge(runtimeBytecode, bookends.metadataBytecode())));
+                    }
+                    sidecars.add(TransactionSidecarRecord.newBuilder()
+                            .consensusTimestamp(now)
+                            .bytecode(bytecodeBuilder)
+                            .build());
                 }
             }
         }
         return sidecars;
+    }
+
+    /**
+     * Returns the written keys from the given {@link ContractSlotUsage}.
+     *
+     * @param slotUsage the contract slot usage to extract written keys from
+     * @param stateChanges the state changes to search for written keys
+     * @return a list of written keys
+     */
+    private static List<Bytes> writtenKeysFrom(
+            @NonNull final ContractSlotUsage slotUsage, @NonNull final List<StateChange> stateChanges) {
+        if (slotUsage.hasWrittenSlotKeys()) {
+            return slotUsage.writtenSlotKeysOrThrow().keys();
+        } else {
+            final List<Bytes> writtenKeys = new LinkedList<>();
+            final var contractId = slotUsage.contractIdOrThrow();
+            for (final var stateChange : stateChanges) {
+                if (stateChange.stateId() != STATE_ID_CONTRACT_STORAGE.protoOrdinal()) {
+                    continue;
+                }
+                SlotKey slotKey = null;
+                if (stateChange.hasMapUpdate()
+                        && !stateChange.mapUpdateOrThrow().identical()) {
+                    slotKey = stateChange.mapUpdateOrThrow().keyOrThrow().slotKeyKeyOrThrow();
+                } else if (stateChange.hasMapDelete()) {
+                    slotKey = stateChange.mapDeleteOrThrow().keyOrThrow().slotKeyKeyOrThrow();
+                }
+                if (slotKey != null && contractId.equals(slotKey.contractIDOrThrow())) {
+                    writtenKeys.add(sansLeadingZeros(slotKey.key()));
+                }
+            }
+            return writtenKeys;
+        }
     }
 
     /**
@@ -797,6 +864,7 @@ public class BaseTranslator {
     }
 
     private void scanUnit(@NonNull final BlockTransactionalUnit unit) {
+        final Map<TokenID, List<Long>> deletedSerialNos = new HashMap<>();
         unit.stateChanges().forEach(stateChange -> {
             if (stateChange.hasMapDelete()) {
                 final var mapDelete = stateChange.mapDeleteOrThrow();
@@ -804,6 +872,15 @@ public class BaseTranslator {
                 if (key.hasScheduleIdKey()) {
                     purgedScheduleIds.add(key.scheduleIdKeyOrThrow());
                 }
+                // burn and wipe in batch can hide mints
+                if (key.hasNftIdKey()) {
+                    final var nftId = key.nftIdKeyOrThrow();
+                    final var tokenId = nftId.tokenId();
+                    deletedSerialNos
+                            .computeIfAbsent(tokenId, ignore -> new LinkedList<>())
+                            .add(nftId.serialNumber());
+                }
+
             } else if (stateChange.hasMapUpdate()) {
                 final var mapUpdate = stateChange.mapUpdateOrThrow();
                 final var key = mapUpdate.keyOrThrow();
@@ -874,7 +951,7 @@ public class BaseTranslator {
         });
         userTimestamp = null;
         unit.blockTransactionParts().forEach(parts -> {
-            if (PARENT_ROLES.contains(parts.role())) {
+            if (parts.isTopLevel()) {
                 userTimestamp = asInstant(parts.consensusTimestamp());
             }
             if (parts.functionality() == HederaFunctionality.TOKEN_MINT) {
@@ -888,6 +965,9 @@ public class BaseTranslator {
                 }
             }
         });
+        // in batch deleted serials will overwrite minted state changes
+        // and those serials will be missed in highestPutSerialNos
+        maybeDeletedSerialsInBatch(unit, deletedSerialNos);
     }
 
     private static boolean isContractOp(@NonNull final BlockTransactionParts parts) {
@@ -925,5 +1005,61 @@ public class BaseTranslator {
                 .map(change -> change.valueOrThrow().accountValueOrThrow())
                 .filter(account -> account.accountIdOrThrow().equals(accountId))
                 .findFirst();
+    }
+
+    /**
+     * This method tries to identify missing mapUpdate state changes with NftID, in case of mixed mint, burn, and wipe
+     * transactions in atomic batch. If such, it will use mapDelete changes to fill missing ones.
+     *
+     * @param unit The block transactional unit.
+     * @param deletedMintSerialNos Map derived from all mapDelete state changes with NftID key in the given unit.
+     */
+    private void maybeDeletedSerialsInBatch(
+            BlockTransactionalUnit unit, Map<TokenID, List<Long>> deletedMintSerialNos) {
+        // if this unit is an atomic batch and not all mints are found in mapUpdate state changes,
+        // try to identify the missing ones in mapDelete state changes
+        if (isBatch(unit) && !allMintsAreFound()) {
+            final Map<TokenID, List<Long>> possibleMintSerialNos = new HashMap<>();
+            deletedMintSerialNos.forEach((tokenID, serials) -> {
+                if (numMints.containsKey(tokenID)) {
+                    possibleMintSerialNos.put(tokenID, serials);
+                }
+            });
+
+            // if possible minted serials found, merge them in highestPutSerialNos
+            if (!possibleMintSerialNos.isEmpty()) {
+                possibleMintSerialNos.forEach((token, serials) -> {
+                    // add missing token serials
+                    highestPutSerialNos.computeIfAbsent(token, ignore -> serials);
+                    // merge serials for present tokens
+                    highestPutSerialNos.computeIfPresent(token, (key, list) -> {
+                        Set<Long> mergedSet = new HashSet<>(list);
+                        mergedSet.addAll(serials);
+                        return new ArrayList<>(mergedSet);
+                    });
+                });
+            }
+        }
+    }
+
+    private boolean isBatch(BlockTransactionalUnit unit) {
+        return unit.blockTransactionParts().stream().anyMatch(part -> part.functionality() == ATOMIC_BATCH);
+    }
+
+    private boolean allMintsAreFound() {
+        // compare number of token mints
+        if (numMints.size() != highestPutSerialNos.size()) {
+            return false;
+        }
+        // compare number of serials
+        for (Map.Entry<TokenID, Integer> entry : numMints.entrySet()) {
+            TokenID token = entry.getKey();
+            Integer count = entry.getValue();
+            final var serials = highestPutSerialNos.get(token);
+            if (serials != null && serials.size() != count) {
+                return false;
+            }
+        }
+        return true;
     }
 }

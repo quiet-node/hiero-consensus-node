@@ -20,12 +20,12 @@ import com.swirlds.merkledb.KeyRange;
 import com.swirlds.merkledb.MerkleDbDataSource;
 import com.swirlds.merkledb.collections.LongList;
 import com.swirlds.merkledb.collections.LongListHeap;
+import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.merkledb.files.DataFileCollection;
 import com.swirlds.merkledb.files.DataFileIterator;
 import com.swirlds.merkledb.files.DataFileReader;
 import com.swirlds.virtualmap.datasource.VirtualHashRecord;
 import com.swirlds.virtualmap.datasource.VirtualLeafBytes;
-import com.swirlds.virtualmap.datasource.VirtualLeafRecord;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -53,17 +53,13 @@ public class StateAnalyzer {
     @ArgumentsSource(VirtualMapAndDataSourceProvider.class)
     public void calculateDuplicatesForPathToKeyValueStorage(VirtualMapAndDataSourceRecord labelAndDs, Report report) {
         MerkleDbDataSource vds = labelAndDs.dataSource();
-        final var keySerializer = labelAndDs.keySerializer();
-        final var valueSerializer = labelAndDs.valueSerializer();
         updateReport(
                 labelAndDs,
                 report,
                 new MemoryIndexDiskKeyValueStoreW<>(vds.getPathToKeyValue()).getFileCollection(),
                 VirtualMapReport::setPathToKeyValueReport,
-                v -> {
-                    VirtualLeafBytes virtualLeafBytes = VirtualLeafBytes.parseFrom(v);
-                    return virtualLeafBytes.toRecord(keySerializer, valueSerializer);
-                });
+                VirtualLeafBytes::parseFrom);
+        System.out.println("[Report] Duplicates for path to key value storage:\n" + report);
     }
 
     @ParameterizedTest
@@ -76,6 +72,7 @@ public class StateAnalyzer {
                 new MemoryIndexDiskKeyValueStoreW<>(vds.getHashStoreDisk()).getFileCollection(),
                 VirtualMapReport::setPathToHashReport,
                 VirtualHashRecord::parseFrom);
+        System.out.println("[Report] Duplicates for path to hash storage:\n" + report);
     }
 
     @ParameterizedTest
@@ -102,7 +99,11 @@ public class StateAnalyzer {
     }
 
     private static StorageReport createStoreReport(DataFileCollection dfc, Function<ReadableSequentialData, ?> deser) {
-        LongList itemCountByPath = new LongListHeap(50_000_000, CONFIGURATION);
+        MerkleDbConfig merkleDbConfig = CONFIGURATION.getConfigData(MerkleDbConfig.class);
+        int goodAverageBucketEntryCount = merkleDbConfig.goodAverageBucketEntryCount();
+        long bucketIndexCapacity = merkleDbConfig.maxNumOfKeys() * 2 / goodAverageBucketEntryCount;
+
+        LongList itemCountByPath = new LongListHeap(bucketIndexCapacity, CONFIGURATION);
         List<DataFileReader> readers = dfc.getAllCompletedFiles();
 
         AtomicInteger duplicateItemCount = new AtomicInteger();
@@ -131,14 +132,14 @@ public class StateAnalyzer {
                         if (dataItemData instanceof VirtualHashRecord hashRecord) {
                             itemSize = hashRecord.hash().getSerializedLength() + /*path*/ Long.BYTES;
                             path = hashRecord.path();
-                        } else if (dataItemData instanceof VirtualLeafRecord<?, ?> leafRecord) {
-                            path = leafRecord.getPath();
+                        } else if (dataItemData instanceof VirtualLeafBytes leafRecord) {
+                            path = leafRecord.path();
                             SerializableDataOutputStream outputStream =
                                     new SerializableDataOutputStream(arrayOutputStream);
-                            leafRecord.getKey().serialize(outputStream);
+                            outputStream.writeByteArray(leafRecord.keyBytes().toByteArray());
                             itemSize += outputStream.size();
                             arrayOutputStream.reset();
-                            leafRecord.getValue().serialize(outputStream);
+                            outputStream.writeByteArray(leafRecord.valueBytes().toByteArray());
                             itemSize += outputStream.size() + /*path*/ Long.BYTES;
                             arrayOutputStream.reset();
                         } else {

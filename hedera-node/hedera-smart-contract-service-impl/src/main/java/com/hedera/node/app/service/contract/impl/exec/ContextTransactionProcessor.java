@@ -5,7 +5,6 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_CONTRACT_ID;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.TRANSACTION_OVERSIZE;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.stream.trace.ContractInitcode;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.ContractID;
 import com.hedera.hapi.streams.ContractBytecode;
@@ -142,11 +141,6 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                         .initcode(hevmTransaction.payload())
                         .build();
                 requireNonNull(hederaEvmContext.streamBuilder()).addContractBytecode(contractBytecode, false);
-                // No-op for the RecordStreamBuilder
-                final var initcode = ContractInitcode.newBuilder()
-                        .failedInitcode(hevmTransaction.payload())
-                        .build();
-                requireNonNull(hederaEvmContext.streamBuilder()).addInitcode(initcode);
             }
             final var callData = (hydratedEthTxData != null && hydratedEthTxData.ethTxData() != null)
                     ? Bytes.wrap(hydratedEthTxData.ethTxData().callData())
@@ -155,6 +149,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                     result.asProtoResultOf(ethTxDataIfApplicable(), rootProxyWorldUpdater, callData),
                     result.asEvmTxResultOf(ethTxDataIfApplicable(), callData),
                     result.isSuccess() ? rootProxyWorldUpdater.getUpdatedContractNonces() : null,
+                    result.isSuccess() ? rootProxyWorldUpdater.getCreatedContractIds() : null,
                     result.isSuccess() ? result.evmAddressIfCreatedIn(rootProxyWorldUpdater) : null,
                     result);
         } catch (HandleException e) {
@@ -218,6 +213,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
         return CallOutcome.fromResultsWithoutSidecars(
                 result.asProtoResultOf(ethTxDataIfApplicable(), rootProxyWorldUpdater, ethCallData),
                 result.asEvmTxResultOf(ethTxDataIfApplicable(), ethCallData),
+                null,
                 null,
                 null,
                 result);
