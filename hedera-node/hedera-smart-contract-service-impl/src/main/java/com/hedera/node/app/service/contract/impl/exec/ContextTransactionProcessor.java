@@ -2,6 +2,7 @@
 package com.hedera.node.app.service.contract.impl.exec;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.*;
+import static com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -120,7 +121,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                     null,
                     contractsConfig.chargeGasOnEvmHandleException());
 
-            final var elapsedNanos = System.currentTimeMillis() - startTimeNanos;
+            final var elapsedNanos = System.nanoTime() - startTimeNanos;
             recordProcessedTransactionToMetrics(hevmTransaction, outcome, elapsedNanos, 0L);
 
             return outcome;
@@ -169,6 +170,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                         .build();
                 requireNonNull(hederaEvmContext.streamBuilder()).addContractBytecode(contractBytecode, false);
             }
+
             final var callData = (hydratedEthTxData != null && hydratedEthTxData.ethTxData() != null)
                     ? Bytes.wrap(hydratedEthTxData.ethTxData().callData())
                     : null;
@@ -180,15 +182,18 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                     result.isSuccess() ? result.evmAddressIfCreatedIn(rootProxyWorldUpdater) : null,
                     result);
 
-            final var elapsedMs = System.nanoTime() - startTimeNanos;
-
             // Update the ops duration throttle
             if (opsDurationThrottleEnabled) {
                 throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationCounter.opsDurationUnitsConsumed());
             }
 
+            if (OPS_DURATION_LIMIT_REACHED.equals(result.haltReason())) {
+                contractMetrics.opsDurationMetrics().recordTransactionThrottledByOpsDuration();
+            }
+
+            final var elapsedNanos = System.nanoTime() - startTimeNanos;
             recordProcessedTransactionToMetrics(
-                    hevmTransaction, outcome, elapsedMs, opsDurationCounter.opsDurationUnitsConsumed());
+                    hevmTransaction, outcome, elapsedNanos, opsDurationCounter.opsDurationUnitsConsumed());
 
             return outcome;
         } catch (HandleException e) {
@@ -204,10 +209,6 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
             // Update the ops duration throttle
             if (opsDurationThrottleEnabled) {
                 throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationCounter.opsDurationUnitsConsumed());
-            }
-
-            if (e.getStatus() == THROTTLED_AT_CONSENSUS) {
-                contractMetrics.opsDurationMetrics().recordTransactionThrottledByOpsDuration();
             }
 
             final var elapsedNanos = System.nanoTime() - startTimeNanos;
