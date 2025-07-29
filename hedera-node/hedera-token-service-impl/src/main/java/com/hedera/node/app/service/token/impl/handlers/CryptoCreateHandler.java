@@ -43,7 +43,7 @@ import static com.hedera.node.app.spi.workflows.HandleException.validateSuccess;
 import static com.hedera.node.app.spi.workflows.HandleException.validateTrue;
 import static com.hedera.node.app.spi.workflows.PreCheckException.validateFalsePreCheck;
 import static com.hedera.node.app.spi.workflows.PreCheckException.validateTruePreCheck;
-import static com.hedera.node.app.spi.workflows.record.StreamBuilder.TransactionCustomizer.NOOP_TRANSACTION_CUSTOMIZER;
+import static com.hedera.node.app.spi.workflows.record.StreamBuilder.SignedTxCustomizer.NOOP_SIGNED_TX_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -304,7 +304,7 @@ public class CryptoCreateHandler extends BaseCryptoHandler implements Transactio
                             .build())
                     .build();
             final var dispatchBuilder = context.dispatch(DispatchOptions.stepDispatch(
-                    context.payer(), body, StreamBuilder.class, NOOP_TRANSACTION_CUSTOMIZER));
+                    context.payer(), body, StreamBuilder.class, NOOP_SIGNED_TX_CUSTOMIZER));
             validateSuccess(dispatchBuilder.status());
             nextIndex = creationDetails.hookId();
         }

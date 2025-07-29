@@ -559,7 +559,7 @@ public class HapiCryptoTransfer extends HapiBaseTransfer<HapiCryptoTransfer> {
                             .setSenderAccountID(asId(sender, spec))
                             .setReceiverAccountID(asId(receiver, spec))
                             .setSerialNumber(serialNo)
-                            .setSenderAllowanceHookCall(fromPbj(hookCall))
+                            .setPreTxSenderAllowanceHook(fromPbj(hookCall))
                             .build())
                     .build());
         }
