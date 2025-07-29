@@ -2,7 +2,6 @@
 package com.hedera.node.app.service.contract.impl.exec;
 
 import static com.hedera.hapi.node.base.ResponseCodeEnum.*;
-import static com.hedera.node.app.service.contract.impl.exec.failure.CustomExceptionalHaltReason.OPS_DURATION_LIMIT_REACHED;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -187,7 +186,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
                 throttleAdviser.consumeOpsDurationThrottleCapacity(opsDurationCounter.opsDurationUnitsConsumed());
             }
 
-            if (OPS_DURATION_LIMIT_REACHED.equals(result.haltReason())) {
+            if (opsDurationCounter.limitReached()) {
                 contractMetrics.opsDurationMetrics().recordTransactionThrottledByOpsDuration();
             }
 
