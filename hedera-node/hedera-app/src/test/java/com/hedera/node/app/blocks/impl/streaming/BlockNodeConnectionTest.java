@@ -4,7 +4,6 @@ package com.hedera.node.app.blocks.impl.streaming;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -640,7 +639,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     // Utilities
 
     private void openConnectionAndResetMocks() {
-        doReturn(readWriteLock).when(connectionManager).acquireConnectionLock();
         connection.createRequestObserver();
         // reset the mocks interactions to remove tracked interactions as a result of starting the connection
         resetMocks();

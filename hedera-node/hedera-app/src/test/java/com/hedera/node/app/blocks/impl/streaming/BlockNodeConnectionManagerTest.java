@@ -718,6 +718,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConnection newConnection = mock(BlockNodeConnection.class);
         final BlockNodeConfig newConnectionConfig = new BlockNodeConfig("localhost", 8081, 2);
         doReturn(newConnectionConfig).when(newConnection).getNodeConfig();
+        doReturn(lock).when(activeConnection).acquireLock();
+        doReturn(lock).when(newConnection).acquireLock();
 
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), null, false).run();
 
@@ -745,6 +747,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConnection newConnection = mock(BlockNodeConnection.class);
         final BlockNodeConfig newConnectionConfig = new BlockNodeConfig("localhost", 8081, 2);
         doReturn(newConnectionConfig).when(newConnection).getNodeConfig();
+        doReturn(lock).when(activeConnection).acquireLock();
+        doReturn(lock).when(newConnection).acquireLock();
 
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), null, true).run();
 
@@ -778,6 +782,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConnection newConnection = mock(BlockNodeConnection.class);
         final BlockNodeConfig newConnectionConfig = new BlockNodeConfig("localhost", 8081, 1);
         doReturn(newConnectionConfig).when(newConnection).getNodeConfig();
+        doReturn(lock).when(activeConnection).acquireLock();
+        doReturn(lock).when(newConnection).acquireLock();
 
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), 30L, false).run();
 
@@ -823,6 +829,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         final BlockNodeConnection newConnection = mock(BlockNodeConnection.class);
 
+        doReturn(lock).when(newConnection).acquireLock();
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), null, false).run();
 
         assertThat(jumpTarget).hasValue(10L);
@@ -853,6 +860,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConnection newConnection = mock(BlockNodeConnection.class);
         final BlockNodeConfig newConnectionConfig = new BlockNodeConfig("localhost", 8081, 1);
         doReturn(newConnectionConfig).when(newConnection).getNodeConfig();
+        doReturn(lock).when(activeConnection).acquireLock();
+        doReturn(lock).when(newConnection).acquireLock();
 
         connectionManager.new BlockNodeConnectionTask(newConnection, Duration.ofSeconds(1), 30L, false).run();
 
@@ -881,6 +890,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
         doThrow(new RuntimeException("are you seeing this?")).when(connection).createRequestObserver();
+        doReturn(lock).when(connection).acquireLock();
 
         final BlockNodeConnectionTask task =
                 connectionManager.new BlockNodeConnectionTask(connection, Duration.ZERO, 10L, false);
@@ -904,6 +914,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
         doThrow(new RuntimeException("are you seeing this?")).when(connection).createRequestObserver();
+        doReturn(lock).when(connection).acquireLock();
 
         final BlockNodeConnectionTask task =
                 connectionManager.new BlockNodeConnectionTask(connection, Duration.ofSeconds(10), 10L, false);
@@ -936,6 +947,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         connections.clear();
         connections.put(nodeConfig, connection);
+
+        doReturn(lock).when(connection).acquireLock();
 
         final BlockNodeConnectionTask task =
                 connectionManager.new BlockNodeConnectionTask(connection, Duration.ofSeconds(10), 10L, false);
@@ -1001,7 +1014,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         currentStreamingBlock.set(10L);
         doReturn(null).when(bufferService).getBlockState(10L);
         doReturn(11L).when(bufferService).getLastBlockNumberProduced();
-
         doReturn(lock).when(connection).acquireLock();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
@@ -1031,6 +1043,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         currentStreamingBlock.set(10L);
         doReturn(null).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
+        doReturn(lock).when(connection).acquireLock();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
 
@@ -1039,7 +1052,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         verify(bufferService).getBlockState(10L);
         verify(bufferService).getLastBlockNumberProduced();
 
-        verifyNoInteractions(connection);
         verifyNoMoreInteractions(bufferService);
         verifyNoInteractions(executorService);
         verifyNoInteractions(metrics);
@@ -1055,6 +1067,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockState blockState = new BlockState(10L);
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
+        doReturn(lock).when(connection).acquireLock();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode();
 
@@ -1063,7 +1076,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         verify(bufferService).getBlockState(10L);
         verify(bufferService).getLastBlockNumberProduced();
 
-        verifyNoInteractions(connection);
         verifyNoMoreInteractions(bufferService);
         verifyNoInteractions(executorService);
         verifyNoInteractions(metrics);

@@ -42,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -563,13 +562,18 @@ public class BlockNodeConnectionManager {
         }
 
         final BlockNodeConnection activeConnection = activeConnectionRef.get();
-        if (activeConnection == null) {
-            logger.warn("No active connections available for streaming block {}", blockNumber);
-            return;
-        }
+        activeConnection.acquireLock().readLock().lock();
+        try {
+            if (activeConnection == null) {
+                logger.warn("No active connections available for streaming block {}", blockNumber);
+                return;
+            }
 
-        if (streamingBlockNumber.get() == -1) {
-            jumpTargetBlock.set(blockNumber);
+            if (streamingBlockNumber.get() == -1) {
+                jumpTargetBlock.set(blockNumber);
+            }
+        } finally {
+            activeConnection.acquireLock().readLock().unlock();
         }
     }
 
@@ -622,66 +626,64 @@ public class BlockNodeConnectionManager {
      */
     private boolean processStreamingToBlockNode() {
         final BlockNodeConnection connection = activeConnectionRef.get();
-        if (connection == null) {
-            return true;
-        }
-
-        final long currentStreamingBlockNumber = streamingBlockNumber.get();
-        final BlockState blockState = blockBufferService.getBlockState(currentStreamingBlockNumber);
-        final long latestBlockNumber = blockBufferService.getLastBlockNumberProduced();
-
-        if (blockState == null && latestBlockNumber > currentStreamingBlockNumber) {
-            logger.debug(
-                    "[{}] Block {} not found in buffer (latestBlock={}); connection will be closed",
-                    connection,
-                    currentStreamingBlockNumber,
-                    latestBlockNumber);
-            rescheduleAndSelectNewNode(connection, LONGER_RETRY_DELAY);
-            return true;
-        }
-
-        if (blockState == null) {
-            return true;
-        }
-
-        blockState.processPendingItems(blockItemBatchSize());
-
-        if (blockState.numRequestsCreated() == 0) {
-            // the block was not found or there are no requests available to send, so return true (safe to sleep)
-            return true;
-        }
-
-        if (requestIndex < blockState.numRequestsCreated()) {
-            logger.trace(
-                    "[{}] Processing block {} (isBlockProofSent={}, totalBlockRequests={}, currentRequestIndex={})",
-                    connection,
-                    streamingBlockNumber,
-                    blockState.isBlockProofSent(),
-                    blockState.numRequestsCreated(),
-                    requestIndex);
-            final PublishStreamRequest publishStreamRequest = blockState.getRequest(requestIndex);
-            if (publishStreamRequest != null) {
-                connection.acquireLock().writeLock().lock();
-                try {
-                    connection.sendRequest(publishStreamRequest);
-                } finally {
-                    connection.acquireLock().writeLock().unlock();
-                }
-
-                blockState.markRequestSent(requestIndex);
-                requestIndex++;
+        connection.acquireLock().writeLock().lock();
+        try {
+            if (connection == null) {
+                return true;
             }
-        }
+            final long currentStreamingBlockNumber = streamingBlockNumber.get();
+            final BlockState blockState = blockBufferService.getBlockState(currentStreamingBlockNumber);
+            final long latestBlockNumber = blockBufferService.getLastBlockNumberProduced();
 
-        if (requestIndex == blockState.numRequestsCreated() && blockState.isBlockProofSent()) {
-            final long nextBlockNumber = streamingBlockNumber.incrementAndGet();
-            requestIndex = 0;
-            logger.trace("[{}] Moving to next block number: {}", connection, nextBlockNumber);
-            // we've moved to another block, don't sleep and instead immediately check if there is anything to send
-            return false;
-        }
+            if (blockState == null && latestBlockNumber > currentStreamingBlockNumber) {
+                logger.debug(
+                        "[{}] Block {} not found in buffer (latestBlock={}); connection will be closed",
+                        connection,
+                        currentStreamingBlockNumber,
+                        latestBlockNumber);
+                rescheduleAndSelectNewNode(connection, LONGER_RETRY_DELAY);
+                return true;
+            }
 
-        return requestIndex >= blockState.numRequestsCreated(); // Don't sleep if there are more requests to process
+            if (blockState == null) {
+                return true;
+            }
+
+            blockState.processPendingItems(blockItemBatchSize());
+
+            if (blockState.numRequestsCreated() == 0) {
+                // the block was not found or there are no requests available to send, so return true (safe to sleep)
+                return true;
+            }
+
+            if (requestIndex < blockState.numRequestsCreated()) {
+                logger.trace(
+                        "[{}] Processing block {} (isBlockProofSent={}, totalBlockRequests={}, currentRequestIndex={})",
+                        connection,
+                        streamingBlockNumber,
+                        blockState.isBlockProofSent(),
+                        blockState.numRequestsCreated(),
+                        requestIndex);
+                final PublishStreamRequest publishStreamRequest = blockState.getRequest(requestIndex);
+                if (publishStreamRequest != null) {
+                    connection.sendRequest(publishStreamRequest);
+                    blockState.markRequestSent(requestIndex);
+                    requestIndex++;
+                }
+            }
+
+            if (requestIndex == blockState.numRequestsCreated() && blockState.isBlockProofSent()) {
+                final long nextBlockNumber = streamingBlockNumber.incrementAndGet();
+                requestIndex = 0;
+                logger.trace("[{}] Moving to next block number: {}", connection, nextBlockNumber);
+                // we've moved to another block, don't sleep and instead immediately check if there is anything to send
+                return false;
+            }
+
+            return requestIndex >= blockState.numRequestsCreated(); // Don't sleep if there are more requests to process
+        } finally {
+            connection.acquireLock().writeLock().unlock();
+        }
     }
 
     /**
@@ -708,14 +710,6 @@ public class BlockNodeConnectionManager {
      */
     public long currentStreamingBlockNumber() {
         return streamingBlockNumber.get();
-    }
-
-    /**
-     * @return the lock used to synchronize the connection state
-     */
-    @NonNull
-    public ReadWriteLock acquireConnectionLock() {
-        return null;
     }
 
     /**
@@ -771,73 +765,80 @@ public class BlockNodeConnectionManager {
                 return;
             }
 
+            connection.acquireLock().writeLock().lock();
             try {
                 logger.debug("[{}] Running connection task...", connection);
                 final BlockNodeConnection activeConnection = activeConnectionRef.get();
-
-                if (activeConnection != null) {
-                    if (activeConnection.equals(connection)) {
-                        // not sure how the active connection is in a connectivity task... ignoring
-                        return;
-                    } else if (force) {
-                        final BlockNodeConfig newConnConfig = connection.getNodeConfig();
-                        final BlockNodeConfig oldConnConfig = activeConnection.getNodeConfig();
-                        logger.debug(
-                                "New connection ({}:{} priority={}) is being forced as the new connection (old: {}:{} priority={})",
-                                newConnConfig.address(),
-                                newConnConfig.port(),
-                                newConnConfig.priority(),
-                                oldConnConfig.address(),
-                                oldConnConfig.port(),
-                                oldConnConfig.priority());
-                    } else if (activeConnection.getNodeConfig().priority()
-                            <= connection.getNodeConfig().priority()) {
-                        // this new connection has a lower (or equal) priority than the existing active connection
-                        // this connection task should thus be cancelled/ignored
-                        logger.debug(
-                                "The existing active connection ({}) has an equal or higher priority than the "
-                                        + "connection ({}) we are attempting to connect to and this new connection attempt will be ignored",
-                                activeConnection,
-                                connection);
-                        return;
+                activeConnection.acquireLock().readLock().lock();
+                try {
+                    if (activeConnection != null) {
+                        if (activeConnection.equals(connection)) {
+                            // not sure how the active connection is in a connectivity task... ignoring
+                            return;
+                        } else if (force) {
+                            final BlockNodeConfig newConnConfig = connection.getNodeConfig();
+                            final BlockNodeConfig oldConnConfig = activeConnection.getNodeConfig();
+                            logger.debug(
+                                    "New connection ({}:{} priority={}) is being forced as the new connection (old: {}:{} priority={})",
+                                    newConnConfig.address(),
+                                    newConnConfig.port(),
+                                    newConnConfig.priority(),
+                                    oldConnConfig.address(),
+                                    oldConnConfig.port(),
+                                    oldConnConfig.priority());
+                        } else if (activeConnection.getNodeConfig().priority()
+                                <= connection.getNodeConfig().priority()) {
+                            // this new connection has a lower (or equal) priority than the existing active connection
+                            // this connection task should thus be cancelled/ignored
+                            logger.debug(
+                                    "The existing active connection ({}) has an equal or higher priority than the "
+                                            + "connection ({}) we are attempting to connect to and this new connection attempt will be ignored",
+                                    activeConnection,
+                                    connection);
+                            return;
+                        }
                     }
-                }
 
-                /*
-                If we have got to this point, it means there is no active connection or it means there is an active
-                connection, but the active connection has a lower priority than the connection in this task. In either
-                case, we want to elevate this connection to be the new active connection.
-                 */
+                    /*
+                    If we have got to this point, it means there is no active connection or it means there is an active
+                    connection, but the active connection has a lower priority than the connection in this task. In either
+                    case, we want to elevate this connection to be the new active connection.
+                     */
 
-                connection.createRequestObserver();
+                    connection.createRequestObserver();
 
-                if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
-                    // we were able to elevate this connection to the new active one
+                    if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
+                        // we were able to elevate this connection to the new active one
 
-                    connection.updateConnectionState(ConnectionState.ACTIVE);
+                        connection.updateConnectionState(ConnectionState.ACTIVE);
 
-                    final long blockToJumpTo =
-                            blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
-                    jumpTargetBlock.set(blockToJumpTo);
-                } else {
-                    // Another connection task has preempted this task... reschedule and try again
-                    reschedule();
-                }
-
-                if (activeConnection != null) {
-                    // close the old active connection
-                    try {
-                        activeConnection.close();
-                    } catch (final RuntimeException e) {
-                        logger.warn(
-                                "[{}] Failed to shutdown connection (shutdown reason: another connection was elevated to active)",
-                                activeConnection,
-                                e);
+                        final long blockToJumpTo =
+                                blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
+                        jumpTargetBlock.set(blockToJumpTo);
+                    } else {
+                        // Another connection task has preempted this task... reschedule and try again
+                        reschedule();
                     }
+
+                    if (activeConnection != null) {
+                        // close the old active connection
+                        try {
+                            activeConnection.close();
+                        } catch (final RuntimeException e) {
+                            logger.warn(
+                                    "[{}] Failed to shutdown connection (shutdown reason: another connection was elevated to active)",
+                                    activeConnection,
+                                    e);
+                        }
+                    }
+                } finally {
+                    activeConnection.acquireLock().readLock().unlock();
                 }
             } catch (final Exception e) {
                 logger.warn("[{}] Failed to establish connection to block node; will schedule a retry", connection);
                 reschedule();
+            } finally {
+                connection.acquireLock().writeLock().unlock();
             }
         }
 
