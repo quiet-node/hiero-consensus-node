@@ -5,12 +5,11 @@ on:
     inputs:
       test-asset:
         required: true
-        default: "Longevity3"
-        description: "Performance test on given namespace"
+        default: "SDLT2"
+        description: "Performance test on given Longevity Machine (SDLT2)"
         type: choice
         options:
-          - Longevity3
-          - Longevity4
+          - SDLT2
       ref:
         required: true
         default: "main"
@@ -18,9 +17,9 @@ on:
         type: string
       solo-version:
         required: true
-        default: "latest_tested_solo-charts0.59"
-        description: "Use: latest_tested_solo-charts if Hedera code <=0.58, latest_tested_solo-charts0.59 if >= 0.59"
+        default: "v0.41.0"
         type: string
+        description: 'Solo Version:'
       nlg-accounts: #'-R -c 32 -a 100000000 -T 1000 -n 100000 -S hot -p 50 -tt 1m
         required: true
         default: "100000"

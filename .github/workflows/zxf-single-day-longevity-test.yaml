@@ -66,13 +66,13 @@ jobs:
     needs:
       - verify-tag
     uses: ./.github/workflows/zxc-single-day-longevity-nlg-test.yaml
-    if: ${{ needs.verify-tag.result == 'success' || inputs.disable-notifications == true }}
+    if: ${{ needs.verify-tag.result == 'success' }}
     with:
-      test-asset: "Longevity4"
+      test-asset: "SDLT2"
       ref: "${{ inputs.ref }}"
-      solo-version: "latest_tested_solo-charts0.59"
-      nlg-accounts: "100000"
-      nlg-time: "3"
+      solo-version: "${{ vars.CITR_SOLO_VERSION }}"
+      nlg-accounts: "100000000"
+      nlg-time: "960"
       add-app-props: ""
       add-settings: ""
     secrets:
@@ -84,7 +84,7 @@ jobs:
     needs:
       - run-single-day-longevity-nlg-test
       - verify-tag
-    if: ${{ needs.run-single-day-longevity-nlg-test.outputs.result  == 'success' && inputs.disable-notifications != true }}
+    if: ${{ needs.run-single-day-longevity-nlg-test.outputs.result  == 'success' }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
@@ -120,7 +120,6 @@ jobs:
   get-commit-info:
     name: Get Commit Information
     runs-on: hiero-citr-linux-medium
-    if: ${{ inputs.disable-notifications != true }}
     needs:
       - verify-tag
     outputs:
@@ -177,7 +176,7 @@ jobs:
       needs.tag-sdlt-passing.result == 'success' &&
       needs.run-single-day-longevity-nlg-test.outputs.result == 'success' &&
       needs.get-commit-info.result == 'success') &&
-      inputs.disable-notifications != true && !cancelled() }}
+      !cancelled() }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
@@ -301,7 +300,7 @@ jobs:
       needs.tag-sdlt-passing.result != 'success' ||
       needs.run-single-day-longevity-nlg-test.outputs.result != 'success' ||
       needs.get-commit-info.result != 'success') &&
-      inputs.disable-notifications != true && !cancelled() && always() }}
+      !cancelled() && always() }}
 
     steps:
       - name: Harden Runner
