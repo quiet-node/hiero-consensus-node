@@ -71,7 +71,6 @@ jobs:
     env:
       run_namespace: ${{ inputs.test-asset }}
       RUN_HCN_VERSION: ${{ inputs.ref }}
-      run_soloversion: ${{ inputs.solo-version }}
       run_NLG_Accounts: ${{ inputs.nlg-accounts }}
       run_NLG_Time: ${{ inputs.nlg-time }}
       run_AddAppProps: ${{ inputs.add-app-props }}
@@ -185,7 +184,7 @@ jobs:
         run: |
           echo "inputs.test-asset=${{ env.run_namespace }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.ref=${{ env.RUN_HCN_VERSION }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
-          echo "inputs.solo-version=${{ inputs.run_soloversion }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
+          echo "inputs.solo-version=${{ inputs.solo-version }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.nlg-accounts=${{ env.run_NLG_Accounts }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.nlg-time=${{ env.run_NLG_Time }}m" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
           echo "inputs.add-app-props=${{ env.run_AddAppProps }}" | tee -a "${GITHUB_STEP_SUMMARY}" "${{ github.workspace }}"/version_run.txt
