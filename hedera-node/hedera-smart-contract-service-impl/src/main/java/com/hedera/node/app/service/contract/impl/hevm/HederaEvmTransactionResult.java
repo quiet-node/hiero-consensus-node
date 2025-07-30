@@ -498,8 +498,7 @@ public record HederaEvmTransactionResult(
     }
 
     /**
-     * Returns a copy of this result with the given gas used.  Currently, this is only used when the ops duration limit
-     * has been reached
+     * Returns a copy of this result with the given gas used.
      *
      * @param gasUsed the gas used
      * @return a new HederaEvmTransactionResult with the updated gas used
