@@ -592,6 +592,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         streamingBlockNumber.set(99);
         jumpTargetBlock.set(-1);
 
+        doReturn(lock).when(connection).acquireLock();
+
         connectionManager.openBlock(100L);
 
         assertThat(streamingBlockNumber).hasValue(99L);
@@ -612,6 +614,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         activeConnection.set(connection);
         streamingBlockNumber.set(-1L);
         jumpTargetBlock.set(-1);
+
+        doReturn(lock).when(connection).acquireLock();
 
         connectionManager.openBlock(100L);
 

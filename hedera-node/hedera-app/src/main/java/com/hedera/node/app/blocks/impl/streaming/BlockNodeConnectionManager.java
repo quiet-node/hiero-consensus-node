@@ -48,7 +48,6 @@ import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.PublishStreamRequest;
-import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 
 /**
  * Manages connections to block nodes in a Hedera network, handling connection lifecycle, node selection,
@@ -78,10 +77,6 @@ public class BlockNodeConnectionManager {
      * The maximum delay used for reties.
      */
     private static final Duration MAX_RETRY_DELAY = Duration.ofSeconds(10);
-    /**
-     * The gRPC endpoint used to establish communication between the consensus node and block node.
-     */
-    private final String grpcEndpoint;
     /**
      * Tracks what the last verified block for each connection is. Note: The data maintained here is based on what the
      * block node has informed the consensus node of. If a block node is not actively connected, then this data may be
@@ -170,9 +165,6 @@ public class BlockNodeConnectionManager {
         this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
         this.sharedExecutorService = requireNonNull(sharedExecutorService, "sharedExecutorService must not be null");
 
-        final String endpoint =
-                BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getBareMethodName();
-        grpcEndpoint = requireNonNull(endpoint, "gRPC endpoint is missing");
         isStreamingEnabled.set(isStreamingEnabled());
 
         if (isStreamingEnabled.get()) {
@@ -262,7 +254,10 @@ public class BlockNodeConnectionManager {
         requireNonNull(nodeConfig);
 
         final PbjGrpcClientConfig grpcConfig = new PbjGrpcClientConfig(
-                Duration.ofSeconds(1L), Tls.builder().enabled(false).build(), Optional.of(""), "");
+                Duration.ofSeconds(10),
+                Tls.builder().enabled(false).build(),
+                Optional.of(""),
+                "application/grpc+proto");
 
         final WebClient webClient = WebClient.builder()
                 .baseUri("http://" + nodeConfig.address() + ":" + nodeConfig.port())
@@ -556,7 +551,6 @@ public class BlockNodeConnectionManager {
                 blockBufferService,
                 grpcClient,
                 blockStreamMetrics,
-                grpcEndpoint,
                 sharedExecutorService);
 
         connections.put(nodeConfig, connection);
@@ -576,13 +570,13 @@ public class BlockNodeConnectionManager {
         }
 
         final BlockNodeConnection activeConnection = activeConnectionRef.get();
+        if (activeConnection == null) {
+            logger.warn("No active connections available for streaming block {}", blockNumber);
+            return;
+        }
+
         activeConnection.acquireLock().readLock().lock();
         try {
-            if (activeConnection == null) {
-                logger.warn("No active connections available for streaming block {}", blockNumber);
-                return;
-            }
-
             if (streamingBlockNumber.get() == -1) {
                 jumpTargetBlock.set(blockNumber);
             }
@@ -640,11 +634,11 @@ public class BlockNodeConnectionManager {
      */
     private boolean processStreamingToBlockNode() {
         final BlockNodeConnection connection = activeConnectionRef.get();
+        if (connection == null) {
+            return true;
+        }
         connection.acquireLock().writeLock().lock();
         try {
-            if (connection == null) {
-                return true;
-            }
             final long currentStreamingBlockNumber = streamingBlockNumber.get();
             final BlockState blockState = blockBufferService.getBlockState(currentStreamingBlockNumber);
             final long latestBlockNumber = blockBufferService.getLastBlockNumberProduced();
@@ -783,9 +777,9 @@ public class BlockNodeConnectionManager {
             try {
                 logger.debug("[{}] Running connection task...", connection);
                 final BlockNodeConnection activeConnection = activeConnectionRef.get();
-                activeConnection.acquireLock().readLock().lock();
-                try {
-                    if (activeConnection != null) {
+                if (activeConnection != null) {
+                    activeConnection.acquireLock().readLock().lock();
+                    try {
                         if (activeConnection.equals(connection)) {
                             // not sure how the active connection is in a connectivity task... ignoring
                             return;
@@ -811,42 +805,42 @@ public class BlockNodeConnectionManager {
                                     connection);
                             return;
                         }
+                    } finally {
+                        activeConnection.acquireLock().readLock().unlock();
                     }
+                }
 
-                    /*
-                    If we have got to this point, it means there is no active connection or it means there is an active
-                    connection, but the active connection has a lower priority than the connection in this task. In either
-                    case, we want to elevate this connection to be the new active connection.
-                     */
+                /*
+                If we have got to this point, it means there is no active connection or it means there is an active
+                connection, but the active connection has a lower priority than the connection in this task. In either
+                case, we want to elevate this connection to be the new active connection.
+                 */
 
-                    connection.createRequestObserver();
+                connection.createRequestObserver();
 
-                    if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
-                        // we were able to elevate this connection to the new active one
+                if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
+                    // we were able to elevate this connection to the new active one
 
-                        connection.updateConnectionState(ConnectionState.ACTIVE);
+                    connection.updateConnectionState(ConnectionState.ACTIVE);
 
-                        final long blockToJumpTo =
-                                blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
-                        jumpTargetBlock.set(blockToJumpTo);
-                    } else {
-                        // Another connection task has preempted this task... reschedule and try again
-                        reschedule();
+                    final long blockToJumpTo =
+                            blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
+                    jumpTargetBlock.set(blockToJumpTo);
+                } else {
+                    // Another connection task has preempted this task... reschedule and try again
+                    reschedule();
+                }
+
+                if (activeConnection != null) {
+                    // close the old active connection
+                    try {
+                        activeConnection.close();
+                    } catch (final RuntimeException e) {
+                        logger.warn(
+                                "[{}] Failed to shutdown connection (shutdown reason: another connection was elevated to active)",
+                                activeConnection,
+                                e);
                     }
-
-                    if (activeConnection != null) {
-                        // close the old active connection
-                        try {
-                            activeConnection.close();
-                        } catch (final RuntimeException e) {
-                            logger.warn(
-                                    "[{}] Failed to shutdown connection (shutdown reason: another connection was elevated to active)",
-                                    activeConnection,
-                                    e);
-                        }
-                    }
-                } finally {
-                    activeConnection.acquireLock().readLock().unlock();
                 }
             } catch (final Exception e) {
                 logger.warn("[{}] Failed to establish connection to block node; will schedule a retry", connection);

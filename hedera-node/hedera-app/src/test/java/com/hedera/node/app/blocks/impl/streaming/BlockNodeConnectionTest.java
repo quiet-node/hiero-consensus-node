@@ -31,8 +31,6 @@ import java.time.Instant;
 import java.util.Queue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.hiero.block.api.PublishStreamRequest;
 import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream;
@@ -71,7 +69,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     private final String grpcEndpoint = "foo";
     private GrpcCall requestObserver;
     private ScheduledExecutorService executorService;
-    private ReadWriteLock readWriteLock;
 
     @BeforeEach
     void beforeEach() {
@@ -83,7 +80,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         metrics = mock(BlockStreamMetrics.class);
         requestObserver = mock(GrpcCall.class);
         executorService = mock(ScheduledExecutorService.class);
-        readWriteLock = new ReentrantReadWriteLock();
 
         connection = new BlockNodeConnection(
                 configProvider,
@@ -92,7 +88,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
                 stateManager,
                 grpcServiceClient,
                 metrics,
-                grpcEndpoint,
                 executorService);
 
         lenient()

@@ -9,7 +9,7 @@ import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
-import com.hedera.pbj.runtime.grpc.GrpcCall;
+import com.hedera.pbj.grpc.client.helidon.PbjGrpcCall;
 import com.hedera.pbj.runtime.grpc.GrpcClient;
 import com.hedera.pbj.runtime.grpc.Pipeline;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -37,6 +37,7 @@ import org.hiero.block.api.PublishStreamResponse.ResendBlock;
 import org.hiero.block.api.PublishStreamResponse.SkipBlock;
 import org.hiero.block.api.codec.PublishStreamRequestProtoCodec;
 import org.hiero.block.api.codec.PublishStreamResponseProtoCodec;
+import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 
 /**
  * Manages a single gRPC bidirectional streaming connection to a block node. Each connection:
@@ -112,7 +113,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     /**
      * Stream observer used to send messages to the block node.
      */
-    private GrpcCall<PublishStreamRequest, PublishStreamResponse> grpcCall;
+    private PbjGrpcCall<PublishStreamRequest, PublishStreamResponse> grpcCall;
 
     private final Object observerLock = new Object();
 
@@ -129,7 +130,9 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     /**
      * The gRPC endpoint used to establish bi-directional communication between the consensus node and block node.
      */
-    private final String grpcEndpoint;
+    private static final String grpcEndpoint =
+            BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getFullMethodName();
+    ;
     /**
      * Scheduled executor service that is used to schedule periodic reset of the stream to help ensure stream health.
      */
@@ -172,7 +175,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * @param blockBufferService the block stream state manager for block node connections
      * @param grpcServiceClient the gRPC client to establish the bidirectional streaming to block node connections
      * @param blockStreamMetrics the block stream metrics for block node connections
-     * @param grpcEndpoint the gRPC endpoint to connect to the block node
      * @param executorService the scheduled executor service used to perform async connection reconnects
      */
     public BlockNodeConnection(
@@ -182,7 +184,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             @NonNull final BlockBufferService blockBufferService,
             @NonNull final GrpcClient grpcServiceClient,
             @NonNull final BlockStreamMetrics blockStreamMetrics,
-            @NonNull final String grpcEndpoint,
             @NonNull final ScheduledExecutorService executorService) {
         requireNonNull(configProvider, "configProvider must not be null");
         this.blockNodeConfig = requireNonNull(nodeConfig, "nodeConfig must not be null");
@@ -192,7 +193,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
         this.connectionState = ConnectionState.UNINITIALIZED;
-        this.grpcEndpoint = requireNonNull(grpcEndpoint, "grpcEndpoint must not be null");
         this.executorService = requireNonNull(executorService, "executorService must not be null");
 
         final var blockNodeConnectionConfig =
@@ -210,8 +210,9 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     public void createRequestObserver() {
         synchronized (observerLock) {
             if (grpcCall == null) {
-                grpcCall = grpcServiceClient.createCall(
+                grpcCall = (PbjGrpcCall<PublishStreamRequest, PublishStreamResponse>) grpcServiceClient.createCall(
                         grpcEndpoint,
+                        // PublishStreamRequest.PROTOBUF,
                         new PublishStreamRequestProtoCodec(),
                         new PublishStreamResponseProtoCodec(),
                         this);
@@ -622,7 +623,9 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     }
 
     @Override
-    public void onSubscribe(Flow.Subscription subscription) {}
+    public void onSubscribe(Flow.Subscription subscription) {
+        subscription.request(Long.MAX_VALUE);
+    }
 
     @Override
     public void clientEndStreamReceived() {
@@ -718,7 +721,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             return false;
         }
         final BlockNodeConnection that = (BlockNodeConnection) o;
-        return Objects.equals(blockNodeConfig, that.blockNodeConfig) && Objects.equals(grpcEndpoint, that.grpcEndpoint);
+        return Objects.equals(blockNodeConfig, that.blockNodeConfig);
     }
 
     @Override
