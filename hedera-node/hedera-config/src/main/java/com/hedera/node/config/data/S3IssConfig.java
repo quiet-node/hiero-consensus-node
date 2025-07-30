@@ -15,5 +15,5 @@ public record S3IssConfig(
         @ConfigProperty(defaultValue = "") @NodeProperty String bucketName,
         @ConfigProperty(defaultValue = "") @NodeProperty String accessKey,
         @ConfigProperty(defaultValue = "") @NodeProperty String secretKey,
-        @ConfigProperty(defaultValue = "") @NodeProperty String basePath,
+        @ConfigProperty(defaultValue = "blocks") @NodeProperty String basePath,
         @ConfigProperty(defaultValue = "STANDARD") @NodeProperty String storageClass) {}

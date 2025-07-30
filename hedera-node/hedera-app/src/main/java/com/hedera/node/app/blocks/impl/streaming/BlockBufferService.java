@@ -1,33 +1,20 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
-import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.COMPLETE_BLOCK_EXTENSION;
-import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.COMPRESSION_ALGORITHM_EXTENSION;
-import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.longToFileName;
 import static java.util.Objects.requireNonNull;
 
-import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockBufferConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
-import com.hedera.node.config.data.S3IssConfig;
-import com.swirlds.common.s3.S3Client;
-import com.swirlds.common.s3.S3ClientInitializationException;
-import com.swirlds.common.s3.S3ResponseException;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,13 +25,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.zip.GZIPOutputStream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.block.api.BlockItemSet;
-import org.hiero.block.api.PublishStreamRequest;
 
 /**
  * Manages the state and lifecycle of blocks being streamed to block nodes.
@@ -127,8 +111,6 @@ public class BlockBufferService {
      */
     private boolean awaitingRecovery = false;
 
-    private S3Client s3Client;
-
     /**
      * Creates a new BlockBufferService with the given configuration.
      *
@@ -145,19 +127,6 @@ public class BlockBufferService {
         // Only start the pruning thread if we're streaming to block nodes
         if (isStreamingEnabled.get()) {
             scheduleNextPruning();
-        }
-
-        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-
-        try {
-            s3Client = new S3Client(
-                    s3IssConfig.regionName(),
-                    s3IssConfig.endpointUrl(),
-                    s3IssConfig.bucketName(),
-                    s3IssConfig.accessKey(),
-                    s3IssConfig.secretKey());
-        } catch (S3ClientInitializationException e) {
-            logger.error("Failed to initialize S3 client for ISS Block Uploads: {}", e.getMessage(), e);
         }
     }
 
@@ -507,88 +476,6 @@ public class BlockBufferService {
         blockStreamMetrics.setOldestUnacknowledgedBlockTime(oldestUnackedMillis);
 
         return new PruneResult(idealMaxBufferSize, numChecked, numPendingAck, numPruned);
-    }
-
-    /**
-     * Uploads the block state to the GCP bucket.
-     * @param blockState the block state to upload
-     * @param networkInfo the networkInfo containing information about this node for the upload path
-     */
-    public void uploadBlockStateToGcpBucket(
-            @NonNull final BlockState blockState, @NonNull final NetworkInfo networkInfo) {
-        requireNonNull(blockState, "blockState must not be null");
-        requireNonNull(networkInfo, "networkInfo must not be null");
-        List<BlockItem> blockItems = new ArrayList<>();
-
-        // Add all BlockItems from the Requests in the BlockState
-        List<PublishStreamRequest> requests = blockState.getRequests();
-        for (PublishStreamRequest request : requests) {
-            if (request.blockItems() != null) {
-                BlockItemSet blockItemSet = request.blockItems();
-                blockItems.addAll(blockItemSet.blockItems());
-            }
-        }
-        if (blockState.closedTimestamp() == null) {
-            blockItems.addAll(blockState.getPendingItems().stream().toList());
-        }
-
-        Block block = Block.newBuilder().items(blockItems).build();
-
-        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
-
-            // Serialize the Block object into bytes
-            byte[] blockBytes = Block.PROTOBUF.toBytes(block).toByteArray();
-
-            // Write the serialized bytes to the GZIPOutputStream
-            gzipOutputStream.write(blockBytes);
-            gzipOutputStream.close();
-
-            // Get the compressed data
-            byte[] compressedData = byteArrayOutputStream.toByteArray();
-
-            s3Client.uploadFile(
-                    s3IssConfig.basePath() + "/" + networkInfo.selfNodeInfo().nodeId() + "/ISS/"
-                            + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
-                            + COMPRESSION_ALGORITHM_EXTENSION,
-                    s3IssConfig.storageClass(),
-                    new ByteArrayIterator(compressedData),
-                    "application/gzip");
-            logger.info(
-                    "Successfully uploaded ISS Block {} to GCP bucket {} at path: {}/ISS/{}",
-                    blockState.blockNumber(),
-                    s3IssConfig.bucketName(),
-                    s3IssConfig.basePath(),
-                    longToFileName(blockState.blockNumber()));
-        } catch (IOException e) {
-            logger.warn("Failed to upload Block {} to GCP bucket {}: {}", blockState.blockNumber(), s3IssConfig.bucketName(), e);
-        } catch (S3ResponseException e) {
-            logger.warn(
-                    "Failed to upload Block {} to GCP bucket {} due to an exceptional response: {}",
-                    blockState.blockNumber(),
-                    s3IssConfig.bucketName(),
-                    e.getMessage(),
-                    e);
-        }
-    }
-
-    private static class ByteArrayIterator implements Iterator<byte[]> {
-        private final byte[] byteArray;
-
-        ByteArrayIterator(byte[] byteArray) {
-            this.byteArray = byteArray;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return byteArray.length > 0;
-        }
-
-        @Override
-        public byte[] next() {
-            return byteArray;
-        }
     }
 
     /**
