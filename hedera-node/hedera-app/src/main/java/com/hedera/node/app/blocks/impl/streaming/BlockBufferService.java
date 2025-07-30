@@ -314,8 +314,11 @@ public class BlockBufferService {
      */
     public @Nullable BlockState getBlockStateForRoundNumber(final long roundNumber) {
         for (final BlockState blockState : blockBuffer.values()) {
-            if (roundNumber >= blockState.getLowestRoundNumber() && roundNumber <= blockState.getHighestRoundNumber()) {
-                return blockState;
+            if (blockState.getLowestRoundNumber() != null) {
+                if (roundNumber >= blockState.getLowestRoundNumber()
+                        && roundNumber <= blockState.getHighestRoundNumber()) {
+                    return blockState;
+                }
             }
         }
         return null;
