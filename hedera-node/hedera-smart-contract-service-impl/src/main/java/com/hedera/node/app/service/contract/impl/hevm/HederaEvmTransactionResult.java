@@ -496,4 +496,29 @@ public record HederaEvmTransactionResult(
                 signerNonce,
                 txStorageUsage);
     }
+
+    /**
+     * Returns a copy of this result with the given gas used.  Currently, this is only used when the ops duration limit
+     * has been reached
+     *
+     * @param gasUsed the gas used
+     * @return a new HederaEvmTransactionResult with the updated gas used
+     */
+    public HederaEvmTransactionResult withGasUsed(final long gasUsed) {
+        return new HederaEvmTransactionResult(
+                gasUsed,
+                gasPrice,
+                senderId,
+                recipientId,
+                recipientEvmAddress,
+                output,
+                haltReason,
+                revertReason,
+                logs,
+                evmLogs,
+                finalStatus,
+                actions,
+                signerNonce,
+                txStorageUsage);
+    }
 }
