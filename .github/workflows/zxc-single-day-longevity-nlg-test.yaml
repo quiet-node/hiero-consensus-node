@@ -43,9 +43,6 @@ on:
       slack-report-webhook:
         required: true
         description: "Slack webhook for SDLT outputs notifications"
-      nlg-access-token:
-        required: true
-        description: "NLG Access Token"
     outputs:
       result:
         description: "Result of the SDLT Run"
@@ -204,16 +201,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20.18.0
-
-      - name: Setup Kind
-        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
-        with:
-          install_only: true
-          node_image: kindest/node:v1.31.4@sha256:2cb39f7295fe7eafee0842b1052a599a4fb0f8bcf3f83d96c7f4864c357c6c30
-          version: v0.26.0
-          kubectl_version: v1.31.4
-          verbosity: 3
-          wait: 120s
 
       - name: Install Solo
         run: |

@@ -9,17 +9,15 @@ on:
         description: "Performance test on given Longevity Machine (SDLT2)"
         type: choice
         options:
+          - AdHoc5
+          - AdHoc6
+          - AdHoc7
           - SDLT2
       ref:
         required: true
         default: "main"
         description: "Version of hiero-consensus-node: branch, tag, commit"
         type: string
-      solo-version:
-        required: true
-        default: "v0.41.0"
-        type: string
-        description: "Solo Version:"
       nlg-accounts: #'-R -c 32 -a 100000000 -T 1000 -n 100000 -S hot -p 50 -tt 1m
         required: true
         default: "100000"
@@ -125,14 +123,13 @@ jobs:
     with:
       test-asset: "${{ inputs.test-asset }}"
       ref: "${{ inputs.ref }}"
-      solo-version: "${{ inputs.solo-version }}"
+      solo-version: "${{ vars.CITR_SOLO_VERSION }}"
       nlg-accounts: "${{ inputs.nlg-accounts }}"
       nlg-time: "${{ inputs.nlg-time }}"
       add-app-props: "${{ inputs.add-app-props }}"
       add-settings: "${{ inputs.add-settings }}"
     secrets:
       slack-report-webhook: ${{ secrets.SLACK_CITR_DETAILED_REPORTS_WEBHOOK }}
-      nlg-access-token: ${{ secrets.NLG_ACCESS_TOKEN }}
   tag-sdlt-passing:
     name: Tag SDLT Passing
     runs-on: hiero-citr-linux-medium

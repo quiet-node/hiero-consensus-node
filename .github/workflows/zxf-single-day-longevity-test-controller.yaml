@@ -77,7 +77,6 @@ jobs:
       add-settings: ""
     secrets:
       slack-report-webhook: ${{ secrets.SLACK_CITR_DETAILED_REPORTS_WEBHOOK }}
-      nlg-access-token: ${{ secrets.NLG_ACCESS_TOKEN }}
   tag-sdlt-passing:
     name: Tag SDLT Passing
     runs-on: hiero-citr-linux-medium
