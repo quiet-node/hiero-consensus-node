@@ -425,23 +425,22 @@ public class OpsDurationThrottleTest {
                 cryptoTransfer(tinyBarsFromAccountToAlias(GENESIS, SECP_256K1_SOURCE_KEY, ONE_HUNDRED_HBARS)),
                 overriding(THROTTLE_THROTTLE_BY_OPS_DURATION, "true"),
                 overriding(MAX_OPS_DURATION, RUN_MULTI_DURATION_PERIOD),
-                withOpContext((spec, opLog) -> {
-                            allRunFor(
-                                    spec,
-                                    ethereumCall(KECCAK_HASHER, "repeatedKeccak256", BigInteger.valueOf(24000L))
-                                            .type(EthTxData.EthTransactionType.EIP1559)
-                                            .signingWith(SECP_256K1_SOURCE_KEY)
-                                            .payingWith(RELAYER)
-                                            .nonce(0L)
-                                            .gasPrice(10L)
-                                            .gasLimit(15_000_000L)
-                                            .via("exhaustOpsDuration")
-                                            .hasKnownStatusFrom(THROTTLED_AT_CONSENSUS));
-                        })
+                withOpContext((spec, opLog) -> allRunFor(
+                                spec,
+                                ethereumCall(KECCAK_HASHER, "repeatedKeccak256", BigInteger.valueOf(24000L))
+                                        .type(EthTxData.EthTransactionType.EIP1559)
+                                        .signingWith(SECP_256K1_SOURCE_KEY)
+                                        .payingWith(RELAYER)
+                                        .nonce(0L)
+                                        .gasPrice(10L)
+                                        .gasLimit(15_000_000L)
+                                        .via("exhaustOpsDuration")
+                                        .hasKnownStatusFrom(THROTTLED_AT_CONSENSUS)))
                         .logged(),
                 getTxnRecord("exhaustOpsDuration")
                         .logged()
                         .hasPriority(
-                                recordWith().contractCallResult(resultWith().gasUsed(21216))));
+                                recordWith().contractCallResult(resultWith().gasUsed(21216))),
+                restoreDefault(MAX_OPS_DURATION));
     }
 }
