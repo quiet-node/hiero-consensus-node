@@ -233,7 +233,6 @@ public class ConfigManager {
 
     private void assertDefaultPayerIsKnown() {
         final var normalizedPayer = normalizePossibleIdLiteral(this, yahcli.getPayer());
-        //        if (normalizedPayer == null && targetNet.getDefaultPayer() == null) {
         if (normalizedPayer == null
                 && (targetNet.getDefaultPayer() == null
                         || targetNet.getDefaultPayer().isBlank())) {
