@@ -175,8 +175,8 @@ public interface Network {
      * @return the created ThrottledClique object
      */
     @NonNull
-    ThrottledClique createCliqueWithThrottledExternal(@NonNull Collection<Node> clique,
-            @NonNull BandwidthLimit externalBandwidth);
+    ThrottledClique createCliqueWithThrottledExternal(
+            @NonNull Collection<Node> clique, @NonNull BandwidthLimit externalBandwidth);
 
     /**
      * Creates a clique with increased latency to external connections. Nodes within the clique have normal

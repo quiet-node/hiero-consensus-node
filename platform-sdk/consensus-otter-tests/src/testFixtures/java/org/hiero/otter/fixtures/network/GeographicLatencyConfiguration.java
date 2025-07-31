@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.fixtures.network;
 
 import static org.assertj.core.data.Percentage.withPercentage;
@@ -31,8 +32,7 @@ public record GeographicLatencyConfiguration(
             withPercentage(40.0),
             LatencyRange.SAME_REGION_DEFAULT,
             LatencyRange.SAME_CONTINENT_DEFAULT,
-            LatencyRange.INTERCONTINENTAL_DEFAULT
-    );
+            LatencyRange.INTERCONTINENTAL_DEFAULT);
 
     /**
      * Creates a GeographicLatencyConfiguration with specified parameters.
@@ -65,8 +65,10 @@ public record GeographicLatencyConfiguration(
      * @return a new {@code GeographicLatencyConfiguration} with the specified distribution
      */
     @NonNull
-    public GeographicLatencyConfiguration withDistribution(@NonNull final Percentage sameRegionPercent, @NonNull final Percentage sameContinentPercent) {
-        return new GeographicLatencyConfiguration(sameRegionPercent, sameContinentPercent, sameRegion, sameContinent, intercontinental);
+    public GeographicLatencyConfiguration withDistribution(
+            @NonNull final Percentage sameRegionPercent, @NonNull final Percentage sameContinentPercent) {
+        return new GeographicLatencyConfiguration(
+                sameRegionPercent, sameContinentPercent, sameRegion, sameContinent, intercontinental);
     }
 
     /**
@@ -77,7 +79,8 @@ public record GeographicLatencyConfiguration(
      */
     @NonNull
     public GeographicLatencyConfiguration withSameRegionLatency(@NonNull final LatencyRange range) {
-        return new GeographicLatencyConfiguration(sameRegionPercent, sameContinentPercent, range, sameContinent, intercontinental);
+        return new GeographicLatencyConfiguration(
+                sameRegionPercent, sameContinentPercent, range, sameContinent, intercontinental);
     }
 
     /**
@@ -88,7 +91,8 @@ public record GeographicLatencyConfiguration(
      */
     @NonNull
     public GeographicLatencyConfiguration withSameContinentLatency(@NonNull final LatencyRange range) {
-        return new GeographicLatencyConfiguration(sameRegionPercent, sameContinentPercent, sameRegion, range, intercontinental);
+        return new GeographicLatencyConfiguration(
+                sameRegionPercent, sameContinentPercent, sameRegion, range, intercontinental);
     }
 
     /**
@@ -99,6 +103,7 @@ public record GeographicLatencyConfiguration(
      */
     @NonNull
     public GeographicLatencyConfiguration withIntercontinentalLatency(@NonNull final LatencyRange range) {
-        return new GeographicLatencyConfiguration(sameRegionPercent, sameContinentPercent, sameRegion, sameContinent, range);
+        return new GeographicLatencyConfiguration(
+                sameRegionPercent, sameContinentPercent, sameRegion, sameContinent, range);
     }
 }

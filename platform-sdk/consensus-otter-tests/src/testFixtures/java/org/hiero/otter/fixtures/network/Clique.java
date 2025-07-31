@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.fixtures.network;
 
 import static java.util.Objects.requireNonNull;
@@ -24,8 +25,8 @@ public abstract class Clique {
      * @return a new ThrottledClique object
      */
     @NonNull
-    public static ThrottledClique of(@NonNull final Collection<Node> nodes,
-            @NonNull final BandwidthLimit externalBandwidth) {
+    public static ThrottledClique of(
+            @NonNull final Collection<Node> nodes, @NonNull final BandwidthLimit externalBandwidth) {
         return new ThrottledClique(nodes, externalBandwidth);
     }
 
@@ -89,8 +90,8 @@ public abstract class Clique {
 
         private final BandwidthLimit externalBandwidth;
 
-        private ThrottledClique(@NonNull final Collection<Node> nodes,
-                @NonNull final BandwidthLimit externalBandwidth) {
+        private ThrottledClique(
+                @NonNull final Collection<Node> nodes, @NonNull final BandwidthLimit externalBandwidth) {
             super(nodes);
             if (externalBandwidth.isUnlimited()) {
                 throw new IllegalArgumentException("External bandwidth cannot be unlimited");

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.fixtures.network;
 
 import static java.util.Objects.requireNonNull;
@@ -14,12 +15,12 @@ import org.assertj.core.data.Percentage;
 @SuppressWarnings("unused")
 public record LatencyRange(@NonNull Duration min, @NonNull Duration max, @NonNull Percentage jitterPercent) {
 
-    public static final LatencyRange SAME_REGION_DEFAULT = LatencyRange.of(Duration.ofMillis(5), Duration.ofMillis(30),
-            withPercentage(7.5));
-    public static final LatencyRange SAME_CONTINENT_DEFAULT = LatencyRange.of(Duration.ofMillis(30), Duration.ofMillis(80),
-            withPercentage(10));
-    public static final LatencyRange INTERCONTINENTAL_DEFAULT = LatencyRange.of(Duration.ofMillis(80), Duration.ofMillis(300),
-            withPercentage(12.5));
+    public static final LatencyRange SAME_REGION_DEFAULT =
+            LatencyRange.of(Duration.ofMillis(5), Duration.ofMillis(30), withPercentage(7.5));
+    public static final LatencyRange SAME_CONTINENT_DEFAULT =
+            LatencyRange.of(Duration.ofMillis(30), Duration.ofMillis(80), withPercentage(10));
+    public static final LatencyRange INTERCONTINENTAL_DEFAULT =
+            LatencyRange.of(Duration.ofMillis(80), Duration.ofMillis(300), withPercentage(12.5));
 
     /**
      * Creates a latency range with specified minimum and maximum durations and jitter percentage.
@@ -33,9 +34,7 @@ public record LatencyRange(@NonNull Duration min, @NonNull Duration max, @NonNul
      */
     @NonNull
     public static LatencyRange of(
-            @NonNull final Duration min,
-            @NonNull final Duration max,
-            @NonNull final Percentage jitterPercent) {
+            @NonNull final Duration min, @NonNull final Duration max, @NonNull final Percentage jitterPercent) {
         return new LatencyRange(min, max, jitterPercent);
     }
 
