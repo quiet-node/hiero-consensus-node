@@ -21,8 +21,7 @@ import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.pbj.runtime.OneOf;
-import com.hedera.pbj.runtime.grpc.GrpcCall;
-import com.hedera.pbj.runtime.grpc.GrpcClient;
+import com.hedera.pbj.runtime.grpc.Pipeline;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.VarHandle;
@@ -31,13 +30,12 @@ import java.time.Instant;
 import java.util.Queue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.hiero.block.api.BlockStreamPublishServiceInterface.BlockStreamPublishServiceClient;
 import org.hiero.block.api.PublishStreamRequest;
 import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
 import org.hiero.block.api.PublishStreamResponse.ResponseOneOfType;
-import org.hiero.block.api.codec.PublishStreamRequestProtoCodec;
-import org.hiero.block.api.codec.PublishStreamResponseProtoCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,10 +62,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
 
     private BlockNodeConnectionManager connectionManager;
     private BlockBufferService stateManager;
-    private GrpcClient grpcServiceClient;
+    private BlockStreamPublishServiceClient grpcServiceClient;
     private BlockStreamMetrics metrics;
-    private final String grpcEndpoint = "foo";
-    private GrpcCall requestObserver;
+    private Pipeline<? super PublishStreamRequest> requestPipeline;
     private ScheduledExecutorService executorService;
 
     @BeforeEach
@@ -76,9 +73,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConfig nodeConfig = new BlockNodeConfig("localhost", 8080, 1);
         connectionManager = mock(BlockNodeConnectionManager.class);
         stateManager = mock(BlockBufferService.class);
-        grpcServiceClient = mock(GrpcClient.class);
+        grpcServiceClient = mock(BlockStreamPublishServiceClient.class);
         metrics = mock(BlockStreamMetrics.class);
-        requestObserver = mock(GrpcCall.class);
+        requestPipeline = mock(Pipeline.class);
         executorService = mock(ScheduledExecutorService.class);
 
         connection = new BlockNodeConnection(
@@ -90,14 +87,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
                 metrics,
                 executorService);
 
-        lenient()
-                .doReturn(requestObserver)
-                .when(grpcServiceClient)
-                .createCall(
-                        grpcEndpoint,
-                        new PublishStreamRequestProtoCodec(),
-                        new PublishStreamResponseProtoCodec(),
-                        connection);
+        lenient().doReturn(requestPipeline).when(grpcServiceClient).publishBlockStream(connection);
     }
 
     @Test
@@ -107,12 +97,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.createRequestObserver();
 
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.PENDING);
-        verify(grpcServiceClient)
-                .createCall(
-                        grpcEndpoint,
-                        new PublishStreamRequestProtoCodec(),
-                        new PublishStreamResponseProtoCodec(),
-                        connection);
+        verify(grpcServiceClient).publishBlockStream(connection);
     }
 
     @Test
@@ -120,12 +105,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.createRequestObserver();
         connection.createRequestObserver();
 
-        verify(grpcServiceClient)
-                .createCall(
-                        grpcEndpoint,
-                        new PublishStreamRequestProtoCodec(),
-                        new PublishStreamResponseProtoCodec(),
-                        connection); // should only be called once
+        verify(grpcServiceClient).publishBlockStream(connection); // should only be called once
         verifyNoMoreInteractions(grpcServiceClient);
     }
 
@@ -170,10 +150,10 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final ConnectionState postState = connection.getConnectionState();
         assertThat(postState).isEqualTo(ConnectionState.UNINITIALIZED);
 
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verify(connectionManager).jumpToBlock(-1L);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
     }
 
@@ -292,11 +272,11 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         assertThat(eosTimestamps).hasSize(6);
 
         verify(metrics).incrementEndOfStreamCount(Code.BEHIND);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(eq(connection), any(Duration.class));
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -311,11 +291,11 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(responseCode);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -330,11 +310,11 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(responseCode);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verify(connectionManager).scheduleConnectionAttempt(connection, Duration.ofSeconds(1), 11L);
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -347,11 +327,11 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(Code.SUCCESS);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -365,12 +345,12 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(Code.BEHIND);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verify(connectionManager).scheduleConnectionAttempt(connection, Duration.ofSeconds(1), 11L);
         verify(stateManager).getBlockState(11L);
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoMoreInteractions(stateManager);
     }
@@ -389,18 +369,16 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(stateManager, times(1)).getHighestAckedBlockNumber();
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verify(stateManager).getBlockState(11L);
-        verify(requestObserver)
-                .sendRequest(
-                        PublishStreamRequest.newBuilder()
-                                .endStream(PublishStreamRequest.EndStream.newBuilder()
-                                        .endCode(PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
-                                        .build())
-                                .build(),
-                        false);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline)
+                .onNext(PublishStreamRequest.newBuilder()
+                        .endStream(PublishStreamRequest.EndStream.newBuilder()
+                                .endCode(PublishStreamRequest.EndStream.Code.TOO_FAR_BEHIND)
+                                .build())
+                        .build());
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoMoreInteractions(stateManager);
     }
@@ -412,11 +390,11 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onNext(response);
 
         verify(metrics).incrementEndOfStreamCount(Code.UNKNOWN);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -432,7 +410,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(connectionManager).jumpToBlock(26L); // jump to the response block number + 1
         verify(connectionManager).currentStreamingBlockNumber();
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -447,7 +425,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(metrics).incrementSkipBlockCount();
         verify(connectionManager).currentStreamingBlockNumber();
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -463,7 +441,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(connectionManager).jumpToBlock(10L);
         verify(stateManager).getBlockState(10L);
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoMoreInteractions(stateManager);
     }
@@ -478,12 +456,12 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onNext(response);
 
         verify(metrics).incrementResendBlockCount();
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).jumpToBlock(-1L);
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verify(stateManager).getBlockState(10L);
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoMoreInteractions(stateManager);
     }
@@ -497,7 +475,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(metrics).incrementUnknownResponseCount();
 
         verifyNoMoreInteractions(metrics);
-        verifyNoInteractions(requestObserver);
+        verifyNoInteractions(requestPipeline);
         verifyNoInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -513,9 +491,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.updateConnectionState(ConnectionState.ACTIVE);
         connection.sendRequest(request);
 
-        verify(requestObserver).sendRequest(request, false);
+        verify(requestPipeline).onNext(request);
         verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -531,7 +509,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.sendRequest(request);
 
         verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -547,7 +525,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.sendRequest(request);
 
         verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -570,9 +548,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
 
         verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -580,7 +558,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     @Test
     void testClose_failure() {
         openConnectionAndResetMocks();
-        doThrow(new RuntimeException("oh no!")).when(requestObserver).completeRequests();
+        doThrow(new RuntimeException("oh no!")).when(requestPipeline).onComplete();
         connection.updateConnectionState(ConnectionState.ACTIVE);
 
         // Verify task was scheduled to periodically reset the stream
@@ -596,9 +574,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
 
         verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verifyNoInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -614,10 +592,10 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         verify(metrics).incrementOnErrorCount();
 
         verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -631,7 +609,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onComplete();
 
         verifyNoInteractions(metrics);
-        verifyNoInteractions(requestObserver);
+        verifyNoInteractions(requestPipeline);
         verifyNoInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -644,10 +622,10 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         connection.onComplete();
 
         verify(connectionManager).jumpToBlock(-1L);
-        verify(requestObserver).completeRequests();
+        verify(requestPipeline).onComplete();
         verify(connectionManager).rescheduleAndSelectNewNode(connection, Duration.ofSeconds(30));
         verifyNoMoreInteractions(metrics);
-        verifyNoMoreInteractions(requestObserver);
+        verifyNoMoreInteractions(requestPipeline);
         verifyNoMoreInteractions(connectionManager);
         verifyNoInteractions(stateManager);
     }
@@ -661,6 +639,6 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     }
 
     private void resetMocks() {
-        reset(connectionManager, requestObserver, stateManager, metrics);
+        reset(connectionManager, requestPipeline, stateManager, metrics);
     }
 }

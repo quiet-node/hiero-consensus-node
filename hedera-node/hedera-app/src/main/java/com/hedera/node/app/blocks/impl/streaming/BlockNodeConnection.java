@@ -9,16 +9,12 @@ import com.hedera.node.app.metrics.BlockStreamMetrics;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.internal.network.BlockNodeConfig;
-import com.hedera.pbj.grpc.client.helidon.PbjGrpcCall;
-import com.hedera.pbj.runtime.grpc.GrpcClient;
 import com.hedera.pbj.runtime.grpc.Pipeline;
-import com.hedera.pbj.runtime.grpc.ServiceInterface;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Flow;
@@ -31,7 +27,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.BlockStreamPublishServiceInterface.BlockStreamPublishServiceClient;
-import org.hiero.block.api.BlockStreamPublishServiceInterface.BlockStreamPublishServiceMethod;
 import org.hiero.block.api.PublishStreamRequest;
 import org.hiero.block.api.PublishStreamResponse;
 import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
@@ -39,8 +34,6 @@ import org.hiero.block.api.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
 import org.hiero.block.api.PublishStreamResponse.ResendBlock;
 import org.hiero.block.api.PublishStreamResponse.SkipBlock;
-import org.hiero.block.api.codec.PublishStreamRequestProtoCodec;
-import org.hiero.block.api.codec.PublishStreamResponseProtoCodec;
 import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 
 /**
@@ -59,11 +52,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
 
     private static final Logger logger = LogManager.getLogger(BlockNodeConnection.class);
 
-    private record Options(Optional<String> authority, String contentType) implements ServiceInterface.RequestOptions {}
-
-    private static final Options OPTIONS =
-            new Options(Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC);
-
     /**
      * A longer retry delay for when the connection encounters an error.
      */
@@ -72,10 +60,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * The configuration specific to the block node this connection is for.
      */
     private final BlockNodeConfig blockNodeConfig;
-    /**
-     * The gRPC client to use for creating bi-directional streams between the consensus node and block node.
-     */
-    private final GrpcClient grpcServiceClient;
     /**
      * The "parent" connection manager that manages the lifecycle of this connection.
      */
@@ -122,10 +106,13 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     /**
      * Stream observer used to send messages to the block node.
      */
-    private BlockStreamPublishServiceClient blockStreamPublishServiceClient;
-    private Pipeline<? super PublishStreamRequest> requestPipeline;
+    private final BlockStreamPublishServiceClient blockStreamPublishServiceClient;
 
-    private final Object observerLock = new Object();
+    private Pipeline<? super PublishStreamRequest> requestPipeline;
+    /**
+     * Lock used to synchronize access to the connection state.
+     */
+    private final ReadWriteLock pipelineLock = new ReentrantReadWriteLock();
 
     /**
      * Reference to the current state of this connection.
@@ -192,7 +179,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             @NonNull final BlockNodeConfig nodeConfig,
             @NonNull final BlockNodeConnectionManager blockNodeConnectionManager,
             @NonNull final BlockBufferService blockBufferService,
-            @NonNull final GrpcClient grpcServiceClient,
+            @NonNull final BlockStreamPublishServiceClient grpcServiceClient,
             @NonNull final BlockStreamMetrics blockStreamMetrics,
             @NonNull final ScheduledExecutorService executorService) {
         requireNonNull(configProvider, "configProvider must not be null");
@@ -200,7 +187,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         this.blockNodeConnectionManager =
                 requireNonNull(blockNodeConnectionManager, "blockNodeConnectionManager must not be null");
         this.blockBufferService = requireNonNull(blockBufferService, "blockBufferService must not be null");
-        this.grpcServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
+        this.blockStreamPublishServiceClient = requireNonNull(grpcServiceClient, "grpcServiceClient must not be null");
         this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
         this.connectionState = ConnectionState.UNINITIALIZED;
         this.executorService = requireNonNull(executorService, "executorService must not be null");
@@ -212,21 +199,25 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         this.endOfStreamTimeFrame = blockNodeConnectionConfig.endOfStreamTimeFrame();
         this.endOfStreamScheduleDelay = blockNodeConnectionConfig.endOfStreamScheduleDelay();
         this.streamResetPeriod = blockNodeConnectionConfig.streamResetPeriod();
-        this.blockStreamPublishServiceClient = new BlockStreamPublishServiceClient(grpcServiceClient, OPTIONS);
     }
 
     /**
      * Creates a new bidi request observer for this block node connection.
      */
     public void createRequestObserver() {
-        synchronized (observerLock) {
-            connectionStateLock.writeLock().lock();
-            try {
-                updateConnectionState(ConnectionState.PENDING);
-                requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
-            } finally {
-                connectionStateLock.writeLock().unlock();
+        pipelineLock.writeLock().lock();
+        try {
+            if (requestPipeline == null) {
+                connectionStateLock.writeLock().lock();
+                try {
+                    updateConnectionState(ConnectionState.PENDING);
+                    requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
+                } finally {
+                    connectionStateLock.writeLock().unlock();
+                }
             }
+        } finally {
+            pipelineLock.writeLock().unlock();
         }
     }
 
@@ -549,11 +540,17 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request, "request must not be null");
-
-        synchronized (observerLock) {
-            if (getConnectionState() == ConnectionState.ACTIVE) {
-                requestPipeline.onNext(request);
+        pipelineLock.writeLock().lock();
+        try {
+            if (getConnectionState() == ConnectionState.ACTIVE && requestPipeline != null) {
+                try {
+                    requestPipeline.onNext(request);
+                } catch (Throwable t) {
+                    // call close() without calling closeObserver()
+                }
             }
+        } finally {
+            pipelineLock.writeLock().unlock();
         }
     }
 
@@ -574,16 +571,22 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     }
 
     private void closeObserver() {
-        synchronized (observerLock) {
-            logger.debug("[{}] Closing request observer for block node", this);
-            streamShutdownInProgress.set(true);
+        pipelineLock.writeLock().lock();
+        try {
+            if (requestPipeline != null) {
+                logger.debug("[{}] Closing request observer for block node", this);
+                streamShutdownInProgress.set(true);
 
-            try {
-                requestPipeline.onComplete();
-                logger.debug("[{}] Request observer successfully closed", this);
-            } catch (final Exception e) {
-                logger.warn("[{}] Error while completing request observer", this, e);
+                try {
+                    requestPipeline.onComplete();
+                    logger.debug("[{}] Request observer successfully closed", this);
+                } catch (final Exception e) {
+                    logger.warn("[{}] Error while completing request observer", this, e);
+                }
+                requestPipeline = null;
             }
+        } finally {
+            pipelineLock.writeLock().unlock();
         }
     }
 
