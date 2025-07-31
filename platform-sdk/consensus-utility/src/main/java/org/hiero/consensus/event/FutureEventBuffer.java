@@ -52,7 +52,8 @@ public class FutureEventBuffer {
     public FutureEventBuffer(
             @NonNull final Configuration configuration,
             @NonNull final Metrics metrics,
-            @NonNull final FutureEventBufferingOption bufferingOption) {
+            @NonNull final FutureEventBufferingOption bufferingOption,
+            String name) {
         this.bufferingOption = bufferingOption;
         final AncientMode ancientMode =
                 configuration.getConfigData(EventConfig.class).getAncientMode();
@@ -60,7 +61,7 @@ public class FutureEventBuffer {
         eventWindow = EventWindow.getGenesisEventWindow(ancientMode);
 
         metrics.getOrCreate(
-                new FunctionGauge.Config<>("platform", "futureEventBuffer", Long.class, bufferedEventCount::get)
+                new FunctionGauge.Config<>("platform", "futureEventBuffer_"+name, Long.class, bufferedEventCount::get)
                         .withDescription("the number of events sitting in the future event buffer")
                         .withUnit("count"));
     }
