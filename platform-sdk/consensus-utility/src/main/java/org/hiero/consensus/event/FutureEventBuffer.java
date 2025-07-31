@@ -5,6 +5,8 @@ import static org.hiero.consensus.model.hashgraph.ConsensusConstants.ROUND_FIRST
 
 import com.swirlds.common.metrics.FunctionGauge;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.LongGauge;
+import com.swirlds.metrics.api.LongGauge.Config;
 import com.swirlds.metrics.api.Metrics;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -45,7 +47,7 @@ public class FutureEventBuffer {
             new StandardSequenceMap<>(ROUND_FIRST, 8, true, x -> x);
 
     private final AtomicLong bufferedEventCount = new AtomicLong(0);
-
+    final LongGauge maxBr;
     /**
      * Constructor.
      */
@@ -61,9 +63,14 @@ public class FutureEventBuffer {
         eventWindow = EventWindow.getGenesisEventWindow(ancientMode);
 
         metrics.getOrCreate(
-                new FunctionGauge.Config<>("platform", "futureEventBuffer_"+name, Long.class, bufferedEventCount::get)
+                new FunctionGauge.Config<>("platform", "feb_%s_size".formatted(name), Long.class, bufferedEventCount::get)
                         .withDescription("the number of events sitting in the future event buffer")
                         .withUnit("count"));
+
+        maxBr = metrics.getOrCreate(
+                new Config("platform", "feb_%s_maxBR".formatted(name))
+                        .withDescription("max BR")
+                        .withUnit("BR"));
     }
 
     /**
@@ -85,6 +92,7 @@ public class FutureEventBuffer {
         // this is a future event, buffer it
         futureEvents.computeIfAbsent(event.getBirthRound(), BUILD_LIST).add(event);
         bufferedEventCount.incrementAndGet();
+        maxBr.set(Math.max(maxBr.get(), event.getBirthRound()));
         return null;
     }
 
@@ -123,5 +131,6 @@ public class FutureEventBuffer {
      */
     public void clear() {
         futureEvents.clear();
+        maxBr.set(-1);
     }
 }
