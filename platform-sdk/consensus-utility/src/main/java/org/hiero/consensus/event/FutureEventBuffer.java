@@ -62,15 +62,14 @@ public class FutureEventBuffer {
 
         eventWindow = EventWindow.getGenesisEventWindow(ancientMode);
 
-        metrics.getOrCreate(
-                new FunctionGauge.Config<>("platform", "feb_%s_size".formatted(name), Long.class, bufferedEventCount::get)
-                        .withDescription("the number of events sitting in the future event buffer")
-                        .withUnit("count"));
+        metrics.getOrCreate(new FunctionGauge.Config<>(
+                        "platform", "feb_%s_size".formatted(name), Long.class, bufferedEventCount::get)
+                .withDescription("the number of events sitting in the future event buffer")
+                .withUnit("count"));
 
-        maxBr = metrics.getOrCreate(
-                new Config("platform", "feb_%s_maxBR".formatted(name))
-                        .withDescription("max BR")
-                        .withUnit("BR"));
+        maxBr = metrics.getOrCreate(new Config("platform", "feb_%s_maxBR".formatted(name))
+                .withDescription("max BR")
+                .withUnit("BR"));
     }
 
     /**

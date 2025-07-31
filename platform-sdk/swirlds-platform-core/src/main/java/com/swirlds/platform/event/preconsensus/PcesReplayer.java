@@ -189,7 +189,8 @@ public class PcesReplayer {
 
         final Duration elapsedTime = Duration.between(start, time.now());
 
-        logReplayInfo(timestampBeforeReplay, roundBeforeReplay, eventCount, transactionCount, elapsedTime, maxBirthRound);
+        logReplayInfo(
+                timestampBeforeReplay, roundBeforeReplay, eventCount, transactionCount, elapsedTime, maxBirthRound);
 
         return NoInput.getInstance();
     }

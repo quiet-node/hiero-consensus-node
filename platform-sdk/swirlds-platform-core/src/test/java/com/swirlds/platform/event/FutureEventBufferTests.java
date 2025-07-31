@@ -416,8 +416,10 @@ class FutureEventBufferTests {
     @Test
     @DisplayName("Tests both future event buffering options")
     void eventBufferingOptions() {
-        final FutureEventBuffer pendingBuffer = new FutureEventBuffer(CONFIGURATION, METRICS, PENDING_CONSENSUS_ROUND, "name");
-        final FutureEventBuffer birthRoundBuffer = new FutureEventBuffer(CONFIGURATION, METRICS, EVENT_BIRTH_ROUND, "name");
+        final FutureEventBuffer pendingBuffer =
+                new FutureEventBuffer(CONFIGURATION, METRICS, PENDING_CONSENSUS_ROUND, "name");
+        final FutureEventBuffer birthRoundBuffer =
+                new FutureEventBuffer(CONFIGURATION, METRICS, EVENT_BIRTH_ROUND, "name");
 
         final long latestConsensusRound = 1;
         // the latest consensus round is 1, which means pending round is 2
