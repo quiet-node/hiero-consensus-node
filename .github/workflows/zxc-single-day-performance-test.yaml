@@ -439,6 +439,14 @@ jobs:
 
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${merklebenchpod} -c nlg -- bash -c "cd /app; rm -rf lib network-load-generator-*.jar; ls -l; tar xvfz /app/SwirldsMerkleDB.tgz; ls -l"
 
+
+      - name: Distribution of pods and nodes
+        run: |
+          set +x
+          set +e
+
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName
+
       - name: Start SwirldsMerkleDB test
         run: |
           set +x
@@ -1044,9 +1052,13 @@ jobs:
           set +e
           cd "${{ github.workspace }}"
           merklebenchpod=`sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" get pods | grep merklebench | awk '{print $1}'`
-          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${merklebenchpod}:/app/swirlds-benchmarks.log ./swirlds-benchmarks.log
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" exec ${merklebenchpod} -- bash -c "cd /app; tar cfz swirlds-benchmarks_logs.tgz swirlds-benchmarks.log output ./*/BenchmarkMetrics.csv"
+          sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" cp ${merklebenchpod}:/app/swirlds-benchmarks_logs.tgz ./swirlds-benchmarks_logs.tgz
           rm -rf "${{ github.workspace }}"/report/*
-          cp swirlds-benchmarks.log "${{ github.workspace }}"/report/swirlds-benchmarks.log
+          cp swirlds-benchmarks_logs.tgz "${{ github.workspace }}"/report/swirlds-benchmarks_logs.tgz
+          cd "${{ github.workspace }}"/report
+          tar xfz swirlds-benchmarks_logs.tgz
+          cd "${{ github.workspace }}"
           sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ env.namespace }}" delete deployment merklebench-network-load-generator
 
       - name: Extract benchmark score of CryptoBenchMerkleDb test
