@@ -251,6 +251,10 @@ public class BlockNodeConnectionManager {
         }
     }
 
+    private boolean isOnlyOneBlockNodeConfigured() {
+        return availableBlockNodes.size() == 1;
+    }
+
     /**
      * Creates a new gRPC client based on the specified configuration.
      *
@@ -297,16 +301,26 @@ public class BlockNodeConnectionManager {
 
         logger.warn("[{}] Rescheduling connection for reconnect attempt", connection);
 
-        connection.acquireLock().writeLock().lock();
+        connection.getLock().writeLock().lock();
         try {
-            // Schedule retry for the failed connection after a delay (initialDelay)
-            scheduleConnectionAttempt(connection, initialDelay, null, false);
+            if (isOnlyOneBlockNodeConfigured()) {
+                // If there is only one block node configured, we will not try to select a new node
+                // Schedule a retry for the failed connection with no delay
+                scheduleConnectionAttempt(connection, Duration.ofSeconds(0), null, false);
+            } else {
+                // Schedule retry for the failed connection after a delay (initialDelay)
+                scheduleConnectionAttempt(connection, initialDelay, null, false);
+            }
         } finally {
-            connection.acquireLock().writeLock().unlock();
+            connection.getLock().writeLock().unlock();
         }
 
-        // Immediately try to find and connect to the next available node
-        selectNewBlockNodeForStreaming(false);
+        // Doing it that way allows us to avoid deadlocks in the case
+        // where the connection's lock is held while trying to select a new node.
+        if (!isOnlyOneBlockNodeConfigured()) {
+            // Immediately try to find and connect to the next available node
+            selectNewBlockNodeForStreaming(false);
+        }
     }
 
     /**
@@ -385,7 +399,7 @@ public class BlockNodeConnectionManager {
         while (it.hasNext()) {
             final Map.Entry<BlockNodeConfig, BlockNodeConnection> entry = it.next();
             final BlockNodeConnection connection = entry.getValue();
-            connection.acquireLock().writeLock().lock();
+            connection.getLock().writeLock().lock();
             try {
                 connection.close();
             } catch (final RuntimeException e) {
@@ -394,7 +408,7 @@ public class BlockNodeConnectionManager {
                         connection,
                         e);
             } finally {
-                connection.acquireLock().writeLock().unlock();
+                connection.getLock().writeLock().unlock();
             }
             it.remove();
         }
@@ -439,7 +453,7 @@ public class BlockNodeConnectionManager {
         List<BlockNodeConnection> lockedConnections = new ArrayList<>();
         // Lock all existing connections to ensure state consistency
         connections.values().forEach(connection -> {
-            connection.acquireLock().writeLock().lock();
+            connection.getLock().writeLock().lock();
             lockedConnections.add(connection);
         });
 
@@ -459,7 +473,7 @@ public class BlockNodeConnectionManager {
         } finally {
             // Release all acquired locks in reverse order
             for (int i = lockedConnections.size() - 1; i >= 0; i--) {
-                lockedConnections.get(i).acquireLock().writeLock().unlock();
+                lockedConnections.get(i).getLock().writeLock().unlock();
             }
         }
     }
@@ -560,13 +574,13 @@ public class BlockNodeConnectionManager {
             return;
         }
 
-        activeConnection.acquireLock().readLock().lock();
+        activeConnection.getLock().readLock().lock();
         try {
             if (streamingBlockNumber.get() == -1) {
                 jumpTargetBlock.set(blockNumber);
             }
         } finally {
-            activeConnection.acquireLock().readLock().unlock();
+            activeConnection.getLock().readLock().unlock();
         }
     }
 
@@ -592,11 +606,23 @@ public class BlockNodeConnectionManager {
 
     private void blockStreamWorkerLoop() {
         while (isConnectionManagerActive.get()) {
+            final BlockNodeConnection activeConnection = activeConnectionRef.get();
+            if (activeConnection == null) {
+                try {
+                    Thread.sleep(workerLoopSleepDuration());
+                } catch (final InterruptedException e) {
+                    logger.error("Block stream worker interrupted while waiting for active connection", e);
+                    Thread.currentThread().interrupt();
+                }
+                continue;
+            }
+
+            activeConnection.getLock().writeLock().lock();
             try {
                 // If signaled to jump to a specific block, do so
                 jumpToBlockIfNeeded();
 
-                final boolean shouldSleep = processStreamingToBlockNode();
+                final boolean shouldSleep = processStreamingToBlockNode(activeConnection);
 
                 // Sleep for a short duration to avoid busy waiting
                 if (shouldSleep) {
@@ -607,6 +633,9 @@ public class BlockNodeConnectionManager {
                 Thread.currentThread().interrupt();
             } catch (final Exception e) {
                 logger.error("Block stream worker encountered an error", e);
+                activeConnection.onComplete();
+            } finally {
+                activeConnection.getLock().writeLock().unlock();
             }
         }
     }
@@ -617,66 +646,57 @@ public class BlockNodeConnectionManager {
      * @return true if the worker thread should sleep because of a lack of work to do, else false (the worker thread
      * should NOT sleep)
      */
-    private boolean processStreamingToBlockNode() {
-        final BlockNodeConnection connection = activeConnectionRef.get();
-        if (connection == null) {
+    private boolean processStreamingToBlockNode(@NonNull final BlockNodeConnection connection) {
+        final long currentStreamingBlockNumber = streamingBlockNumber.get();
+        final BlockState blockState = blockBufferService.getBlockState(currentStreamingBlockNumber);
+        final long latestBlockNumber = blockBufferService.getLastBlockNumberProduced();
+
+        if (blockState == null && latestBlockNumber > currentStreamingBlockNumber) {
+            logger.debug(
+                    "[{}] Block {} not found in buffer (latestBlock={}); connection will be closed",
+                    connection,
+                    currentStreamingBlockNumber,
+                    latestBlockNumber);
+            rescheduleAndSelectNewNode(connection, LONGER_RETRY_DELAY);
             return true;
         }
-        connection.acquireLock().writeLock().lock();
-        try {
-            final long currentStreamingBlockNumber = streamingBlockNumber.get();
-            final BlockState blockState = blockBufferService.getBlockState(currentStreamingBlockNumber);
-            final long latestBlockNumber = blockBufferService.getLastBlockNumberProduced();
 
-            if (blockState == null && latestBlockNumber > currentStreamingBlockNumber) {
-                logger.debug(
-                        "[{}] Block {} not found in buffer (latestBlock={}); connection will be closed",
-                        connection,
-                        currentStreamingBlockNumber,
-                        latestBlockNumber);
-                rescheduleAndSelectNewNode(connection, LONGER_RETRY_DELAY);
-                return true;
-            }
-
-            if (blockState == null) {
-                return true;
-            }
-
-            blockState.processPendingItems(blockItemBatchSize());
-
-            if (blockState.numRequestsCreated() == 0) {
-                // the block was not found or there are no requests available to send, so return true (safe to sleep)
-                return true;
-            }
-
-            if (requestIndex < blockState.numRequestsCreated()) {
-                logger.trace(
-                        "[{}] Processing block {} (isBlockProofSent={}, totalBlockRequests={}, currentRequestIndex={})",
-                        connection,
-                        streamingBlockNumber,
-                        blockState.isBlockProofSent(),
-                        blockState.numRequestsCreated(),
-                        requestIndex);
-                final PublishStreamRequest publishStreamRequest = blockState.getRequest(requestIndex);
-                if (publishStreamRequest != null) {
-                    connection.sendRequest(publishStreamRequest);
-                    blockState.markRequestSent(requestIndex);
-                    requestIndex++;
-                }
-            }
-
-            if (requestIndex == blockState.numRequestsCreated() && blockState.isBlockProofSent()) {
-                final long nextBlockNumber = streamingBlockNumber.incrementAndGet();
-                requestIndex = 0;
-                logger.trace("[{}] Moving to next block number: {}", connection, nextBlockNumber);
-                // we've moved to another block, don't sleep and instead immediately check if there is anything to send
-                return false;
-            }
-
-            return requestIndex >= blockState.numRequestsCreated(); // Don't sleep if there are more requests to process
-        } finally {
-            connection.acquireLock().writeLock().unlock();
+        if (blockState == null) {
+            return true;
         }
+
+        blockState.processPendingItems(blockItemBatchSize());
+
+        if (blockState.numRequestsCreated() == 0) {
+            // the block was not found or there are no requests available to send, so return true (safe to sleep)
+            return true;
+        }
+
+        if (requestIndex < blockState.numRequestsCreated()) {
+            logger.trace(
+                    "[{}] Processing block {} (isBlockProofSent={}, totalBlockRequests={}, currentRequestIndex={})",
+                    connection,
+                    streamingBlockNumber,
+                    blockState.isBlockProofSent(),
+                    blockState.numRequestsCreated(),
+                    requestIndex);
+            final PublishStreamRequest publishStreamRequest = blockState.getRequest(requestIndex);
+            if (publishStreamRequest != null) {
+                connection.sendRequest(publishStreamRequest);
+                blockState.markRequestSent(requestIndex);
+                requestIndex++;
+            }
+        }
+
+        if (requestIndex == blockState.numRequestsCreated() && blockState.isBlockProofSent()) {
+            final long nextBlockNumber = streamingBlockNumber.incrementAndGet();
+            requestIndex = 0;
+            logger.trace("[{}] Moving to next block number: {}", connection, nextBlockNumber);
+            // we've moved to another block, don't sleep and instead immediately check if there is anything to send
+            return false;
+        }
+
+        return requestIndex >= blockState.numRequestsCreated(); // Don't sleep if there are more requests to process
     }
 
     /**
@@ -758,12 +778,12 @@ public class BlockNodeConnectionManager {
                 return;
             }
 
-            connection.acquireLock().writeLock().lock();
+            connection.getLock().writeLock().lock();
             try {
                 logger.debug("[{}] Running connection task...", connection);
                 final BlockNodeConnection activeConnection = activeConnectionRef.get();
                 if (activeConnection != null) {
-                    activeConnection.acquireLock().readLock().lock();
+                    activeConnection.getLock().readLock().lock();
                     try {
                         if (activeConnection.equals(connection)) {
                             // not sure how the active connection is in a connectivity task... ignoring
@@ -791,7 +811,7 @@ public class BlockNodeConnectionManager {
                             return;
                         }
                     } finally {
-                        activeConnection.acquireLock().readLock().unlock();
+                        activeConnection.getLock().readLock().unlock();
                     }
                 }
 
@@ -831,7 +851,7 @@ public class BlockNodeConnectionManager {
                 logger.warn("[{}] Failed to establish connection to block node; will schedule a retry", connection);
                 reschedule();
             } finally {
-                connection.acquireLock().writeLock().unlock();
+                connection.getLock().writeLock().unlock();
             }
         }
 

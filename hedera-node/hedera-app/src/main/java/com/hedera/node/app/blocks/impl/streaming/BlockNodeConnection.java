@@ -34,7 +34,6 @@ import org.hiero.block.api.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream.Code;
 import org.hiero.block.api.PublishStreamResponse.ResendBlock;
 import org.hiero.block.api.PublishStreamResponse.SkipBlock;
-import org.hiero.block.api.protoc.BlockStreamPublishServiceGrpc;
 
 /**
  * Manages a single gRPC bidirectional streaming connection to a block node. Each connection:
@@ -123,13 +122,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * Lock used to synchronize access to the connection state.
      */
     private final ReadWriteLock connectionStateLock = new ReentrantReadWriteLock();
-
-    /**
-     * The gRPC endpoint used to establish bi-directional communication between the consensus node and block node.
-     */
-    private static final String grpcEndpoint =
-            BlockStreamPublishServiceGrpc.getPublishBlockStreamMethod().getFullMethodName();
-    ;
     /**
      * Scheduled executor service that is used to schedule periodic reset of the stream to help ensure stream health.
      */
@@ -545,8 +537,11 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             if (getConnectionState() == ConnectionState.ACTIVE && requestPipeline != null) {
                 try {
                     requestPipeline.onNext(request);
-                } catch (Throwable t) {
-                    // call close() without calling closeObserver()
+                } catch (final Exception e) {
+                    logger.warn("[{}] Error while sending request", this, e);
+                    updateConnectionState(ConnectionState.UNINITIALIZED);
+                    jumpToBlock(-1L);
+                    blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
                 }
             }
         } finally {
@@ -709,7 +704,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * @return the lock of the connection state
      */
     @NonNull
-    public ReadWriteLock acquireLock() {
+    public ReadWriteLock getLock() {
         return connectionStateLock;
     }
 
@@ -729,6 +724,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(blockNodeConfig, grpcEndpoint);
+        return Objects.hash(blockNodeConfig);
     }
 }

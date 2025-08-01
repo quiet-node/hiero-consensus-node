@@ -18,6 +18,7 @@ mainModuleInfo {
     runtimeOnly("io.helidon.webclient")
     runtimeOnly("io.helidon.webclient.grpc")
     runtimeOnly("com.hedera.pbj.grpc.client.helidon")
+    runtimeOnly("com.hedera.pbj.grpc.helidon")
 }
 
 testModuleInfo {
