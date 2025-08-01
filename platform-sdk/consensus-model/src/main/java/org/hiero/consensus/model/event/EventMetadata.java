@@ -196,7 +196,7 @@ public class EventMetadata extends AbstractHashable {
             }
 
             descriptor = new EventDescriptorWrapper(
-                    new EventDescriptor(getHash().getBytes(), creatorId.id(), getBirthRound()));
+                    new EventDescriptor(getHash().getBytes(), creatorId.id(), getBirthRound(), 0));
         }
 
         return descriptor;
