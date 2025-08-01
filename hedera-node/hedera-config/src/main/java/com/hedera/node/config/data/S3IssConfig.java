@@ -10,6 +10,7 @@ import com.swirlds.config.api.ConfigProperty;
  */
 @ConfigData("s3IssConfig")
 public record S3IssConfig(
+        @ConfigProperty(defaultValue = "false") @NodeProperty boolean enabled,
         @ConfigProperty(defaultValue = "us-east-1") @NodeProperty String regionName,
         @ConfigProperty(defaultValue = "") @NodeProperty String endpointUrl,
         @ConfigProperty(defaultValue = "") @NodeProperty String bucketName,

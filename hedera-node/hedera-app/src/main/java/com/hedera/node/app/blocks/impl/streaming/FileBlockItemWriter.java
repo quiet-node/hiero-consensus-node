@@ -398,6 +398,14 @@ public class FileBlockItemWriter implements BlockItemWriter {
         }
     }
 
+    @Override
+    public long blockNumber() {
+        if (!state.equals(State.OPEN)) {
+            throw new IllegalStateException("Cannot get block number from a FileBlockItemWriter that is not open");
+        }
+        return blockNumber;
+    }
+
     /**
      * Get the path for a block file with the block number.
      *

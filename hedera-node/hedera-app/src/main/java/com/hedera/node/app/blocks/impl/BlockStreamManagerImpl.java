@@ -9,12 +9,9 @@ import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.NONE;
 import static com.hedera.node.app.blocks.BlockStreamManager.PendingWork.POST_UPGRADE_WORK;
 import static com.hedera.node.app.blocks.impl.BlockImplUtils.appendHash;
 import static com.hedera.node.app.blocks.impl.BlockImplUtils.combine;
-import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.COMPLETE_BLOCK_EXTENSION;
-import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.COMPRESSION_ALGORITHM_EXTENSION;
 import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.blockDirFor;
 import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.cleanUpPendingBlock;
 import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.loadContiguousPendingBlocks;
-import static com.hedera.node.app.blocks.impl.streaming.FileBlockItemWriter.longToFileName;
 import static com.hedera.node.app.blocks.schemas.V0560BlockStreamSchema.BLOCK_STREAM_INFO_KEY;
 import static com.hedera.node.app.hapi.utils.CommonUtils.sha384DigestOrThrow;
 import static com.hedera.node.app.records.BlockRecordService.EPOCH;
@@ -23,7 +20,6 @@ import static com.hedera.node.app.workflows.handle.HandleWorkflow.ALERT_MESSAGE;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.block.stream.BlockProof;
 import com.hedera.hapi.block.stream.MerkleSiblingHash;
@@ -42,7 +38,7 @@ import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.StreamingTreeHasher;
 import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
-import com.hedera.node.app.blocks.impl.streaming.BlockState;
+import com.hedera.node.app.cache.RecordBlockCache;
 import com.hedera.node.app.hapi.utils.CommonUtils;
 import com.hedera.node.app.info.DiskStartupNetworks;
 import com.hedera.node.app.info.DiskStartupNetworks.InfoType;
@@ -52,15 +48,11 @@ import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockRecordStreamConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
-import com.hedera.node.config.data.S3IssConfig;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.node.config.types.DiskNetworkExport;
 import com.hedera.node.internal.network.PendingProof;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.s3.S3Client;
-import com.swirlds.common.s3.S3ClientInitializationException;
-import com.swirlds.common.s3.S3ResponseException;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.Metrics;
@@ -74,8 +66,6 @@ import com.swirlds.state.lifecycle.info.NetworkInfo;
 import com.swirlds.state.spi.CommittableWritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -85,8 +75,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,15 +88,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.zip.GZIPOutputStream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.concurrent.AbstractTask;
 import org.hiero.base.crypto.Hash;
-import org.hiero.block.api.BlockItemSet;
-import org.hiero.block.api.PublishStreamRequest;
 import org.hiero.consensus.model.hashgraph.Round;
 
 @Singleton
@@ -133,11 +118,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private final PlatformStateFacade platformStateFacade;
 
     private final BlockBufferService blockBufferService;
-    private final BlockStateBuffer blockStateBuffer = new BlockStateBuffer(BLOCK_BUFFER_CAPACITY);
+    private final RecordBlockCache recordBlockCache;
     private final Lifecycle lifecycle;
     private final BlockHashManager blockHashManager;
     private final RunningHashManager runningHashManager;
-    private S3Client s3Client;
     private final boolean streamToBlockNodes;
 
     // The status of pending work
@@ -242,7 +226,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final Lifecycle lifecycle,
             @NonNull final Metrics metrics,
-            @NonNull final BlockBufferService blockBufferService) {
+            @NonNull final BlockBufferService blockBufferService,
+            @NonNull final RecordBlockCache recordBlockCache) {
         this.blockHashSigner = requireNonNull(blockHashSigner);
         this.networkInfo = requireNonNull(networkInfo);
         this.version = requireNonNull(version);
@@ -266,6 +251,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.blockHashManager = new BlockHashManager(config);
         this.runningHashManager = new RunningHashManager();
         this.lastRoundOfPrevBlock = initialStateHash.roundNum();
+        this.recordBlockCache = recordBlockCache;
         final var hashFuture = initialStateHash.hashFuture();
         endRoundStateHashes.put(lastRoundOfPrevBlock, hashFuture);
         indirectProofCounter = requireNonNull(metrics)
@@ -276,20 +262,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 lastRoundOfPrevBlock,
                 hashFuture.isDone() ? hashFuture.join().toHex() : "<PENDING>");
         this.blockBufferService = requireNonNull(blockBufferService);
-
-        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-        if (!s3IssConfig.endpointUrl().isEmpty()) {
-            try {
-                s3Client = new S3Client(
-                        s3IssConfig.regionName(),
-                        s3IssConfig.endpointUrl(),
-                        s3IssConfig.bucketName(),
-                        s3IssConfig.accessKey(),
-                        s3IssConfig.secretKey());
-            } catch (S3ClientInitializationException e) {
-                log.error("Failed to initialize S3 client for ISS Block Uploads: {}", e.getMessage(), e);
-            }
-        }
     }
 
     @Override
@@ -337,7 +309,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             traceDataHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
 
             blockNumber = blockStreamInfo.blockNumber() + 1;
-            blockStateBuffer.put(blockNumber);
+            recordBlockCache.createBlock(blockNumber);
             if (hintsEnabled && !hasCheckedForPendingBlocks) {
                 final var hasBeenFrozen = requireNonNull(state.getReadableStates(PlatformStateService.NAME)
                                 .<PlatformState>getSingleton(V0540PlatformStateSchema.PLATFORM_STATE_KEY)
@@ -661,11 +633,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var proofItem = BlockItem.newBuilder().blockProof(proof).build();
             block.writer().writePbjItemAndBytes(proofItem, BlockItem.PROTOBUF.toBytes(proofItem));
             block.writer().closeCompleteBlock();
-            BlockState blockState = blockStateBuffer.get(blockNumber);
-            if (blockState != null) {
-                blockState.addItem(proofItem);
-                blockStateBuffer.get(blockNumber).closeBlock();
-            }
+            recordBlockCache.addBlockItem(blockNumber, proofItem);
             if (block.number() != blockNumber) {
                 siblingHashes.removeFirst();
             }
@@ -831,10 +799,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             }
 
             writer.writePbjItemAndBytes(item, serialized);
-            BlockState blockState = blockStateBuffer.get(blockNumber);
-            if (blockState != null) {
-                blockState.addItem(item);
-            }
+            recordBlockCache.addBlockItem(writer.blockNumber(), item);
 
             next.send();
             return true;
@@ -985,23 +950,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 .completeOnTimeout(null, timeout.toSeconds(), TimeUnit.SECONDS)
                 .join();
         log.fatal("Block stream fatal shutdown complete");
-        if (s3Client != null) {
-            BlockState blockState = null;
-            if (streamToBlockNodes) {
-                blockState = blockBufferService.getBlockStateForRoundNumber(fatalRoundNumber);
-            } else {
-                blockState = blockStateBuffer.getBlockStateForRoundNumber(fatalRoundNumber);
-            }
-            if (blockState != null) {
-                uploadBlockStateToGcpBucket(blockState);
-            } else {
-                log.warn(
-                        "BlockState for fatal ISS round {} is not available, skipping upload to GCP bucket",
-                        fatalRoundNumber);
-            }
-        } else {
-            log.info("Skipping upload of ISS Block to GCP bucket as S3 endpoint URL is not configured");
-        }
     }
 
     @Override
@@ -1012,139 +960,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     @Override
     public Optional<Integer> getEventIndex(@NonNull Hash eventHash) {
         return Optional.ofNullable(eventIndexInBlock.get(eventHash));
-    }
-
-    /**
-     * Uploads the block state to the GCP bucket.
-     * @param blockState the block state to upload
-     */
-    public void uploadBlockStateToGcpBucket(@NonNull final BlockState blockState) {
-        requireNonNull(blockState, "blockState must not be null");
-        requireNonNull(networkInfo, "networkInfo must not be null");
-        List<BlockItem> blockItems = new ArrayList<>();
-
-        // Add all BlockItems from the Requests in the BlockState
-        List<PublishStreamRequest> requests = blockState.getRequests();
-        for (PublishStreamRequest request : requests) {
-            if (request.blockItems() != null) {
-                BlockItemSet blockItemSet = request.blockItems();
-                blockItems.addAll(blockItemSet.blockItems());
-            }
-        }
-        if (blockState.closedTimestamp() == null) {
-            blockItems.addAll(blockState.getPendingItems().stream().toList());
-        }
-
-        Block block = Block.newBuilder().items(blockItems).build();
-
-        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
-
-            // Serialize the Block object into bytes
-            byte[] blockBytes = Block.PROTOBUF.toBytes(block).toByteArray();
-
-            // Write the serialized bytes to the GZIPOutputStream
-            gzipOutputStream.write(blockBytes);
-            gzipOutputStream.close();
-
-            s3Client.uploadFile(
-                    s3IssConfig.basePath() + "/node"
-                            + networkInfo.selfNodeInfo().nodeId() + "/ISS/"
-                            + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
-                            + COMPRESSION_ALGORITHM_EXTENSION,
-                    s3IssConfig.storageClass(),
-                    new ByteArrayIterator(byteArrayOutputStream.toByteArray()),
-                    "application/gzip");
-            log.info(
-                    "Successfully uploaded ISS Block {} to GCP bucket {} at path: {}/ISS/{}",
-                    blockState.blockNumber(),
-                    s3IssConfig.bucketName(),
-                    s3IssConfig.basePath(),
-                    longToFileName(blockState.blockNumber()));
-        } catch (IOException e) {
-            log.warn(
-                    "Failed to upload Block {} to GCP bucket {}: {}",
-                    blockState.blockNumber(),
-                    s3IssConfig.bucketName(),
-                    e);
-        } catch (S3ResponseException e) {
-            log.warn(
-                    "Failed to upload Block {} to GCP bucket {} due to an exceptional response: {}",
-                    blockState.blockNumber(),
-                    s3IssConfig.bucketName(),
-                    e.getMessage(),
-                    e);
-        }
-    }
-
-    private class ByteArrayIterator implements Iterator<byte[]> {
-
-        private byte[] byteArray;
-        private boolean hasNext = true;
-
-        ByteArrayIterator(byte[] byteArray) {
-            this.byteArray = byteArray;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return hasNext;
-        }
-
-        @Override
-        public byte[] next() {
-            hasNext = false;
-            return byteArray;
-        }
-    }
-
-    /**
-     * A buffer for BlockState objects, allowing efficient retrieval and insertion
-     */
-    public static class BlockStateBuffer extends LinkedHashMap<Long, BlockState> {
-        private final int capacity;
-
-        public BlockStateBuffer(int capacity) {
-            super(capacity + 1, 0.75f, false); // insertion-order
-            this.capacity = capacity;
-        }
-
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Long, BlockState> eldest) {
-            return size() > capacity;
-        }
-
-        /**
-         * Get an existing BlockState by block number, or null if not present.
-         */
-        public BlockState get(long blockNumber) {
-            return super.get(blockNumber);
-        }
-
-        /**
-         * Add a new BlockState if not already present. Returns true if added.
-         */
-        public void put(long blockNumber) {
-            put(blockNumber, new BlockState(blockNumber));
-        }
-
-        /**
-         * Get the BlockState for a given round number, if it exists.
-         * @param roundNumber the round number to look up
-         * @return the BlockState for the round number, or null if not found
-         */
-        public BlockState getBlockStateForRoundNumber(long roundNumber) {
-            for (final BlockState blockState : values()) {
-                if (blockState.getLowestRoundNumber() != null) {
-                    if (roundNumber >= blockState.getLowestRoundNumber()
-                            && roundNumber <= blockState.getHighestRoundNumber()) {
-                        return blockState;
-                    }
-                }
-            }
-            return null;
-        }
     }
 
     private BlockItem flushChangesFromListener(@NonNull final BoundaryStateChangeListener boundaryStateChangeListener) {
