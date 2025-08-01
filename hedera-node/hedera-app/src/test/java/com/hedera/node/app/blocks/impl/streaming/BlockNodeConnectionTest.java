@@ -91,19 +91,19 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     }
 
     @Test
-    void testCreateRequestObserver() {
+    void testCreateRequestPipeline() {
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.UNINITIALIZED);
 
-        connection.createRequestObserver();
+        connection.createRequestPipeline();
 
         assertThat(connection.getConnectionState()).isEqualTo(ConnectionState.PENDING);
         verify(grpcServiceClient).publishBlockStream(connection);
     }
 
     @Test
-    void testCreateRequestObserver_alreadyExists() {
-        connection.createRequestObserver();
-        connection.createRequestObserver();
+    void testCreateRequestPipeline_alreadyExists() {
+        connection.createRequestPipeline();
+        connection.createRequestPipeline();
 
         verify(grpcServiceClient).publishBlockStream(connection); // should only be called once
         verifyNoMoreInteractions(grpcServiceClient);
@@ -504,7 +504,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final BlockItem item = BlockItem.newBuilder().blockHeader(blockHeader).build();
         final PublishStreamRequest request = createRequest(item);
 
-        connection.createRequestObserver();
+        connection.createRequestPipeline();
         connection.updateConnectionState(ConnectionState.PENDING);
         connection.sendRequest(request);
 
@@ -633,7 +633,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     // Utilities
 
     private void openConnectionAndResetMocks() {
-        connection.createRequestObserver();
+        connection.createRequestPipeline();
         // reset the mocks interactions to remove tracked interactions as a result of starting the connection
         resetMocks();
     }

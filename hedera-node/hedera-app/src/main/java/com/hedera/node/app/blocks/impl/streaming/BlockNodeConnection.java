@@ -103,7 +103,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     private final AtomicBoolean streamShutdownInProgress = new AtomicBoolean(false);
     /**
-     * Stream observer used to send messages to the block node.
+     * Publish gRPC client used to send messages to the block node.
      */
     private final BlockStreamPublishServiceClient blockStreamPublishServiceClient;
 
@@ -138,11 +138,11 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     public enum ConnectionState {
         /**
-         * bidi RequestObserver needs to be created.
+         * bidi Pipeline needs to be created.
          */
         UNINITIALIZED,
         /**
-         * bidi RequestObserver is established but this connection has not been chosen as the active one (priority based).
+         * bidi Pipeline is established but this connection has not been chosen as the active one (priority based).
          */
         PENDING,
         /**
@@ -194,9 +194,9 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     }
 
     /**
-     * Creates a new bidi request observer for this block node connection.
+     * Creates a new bidi request pipeline for this block node connection.
      */
-    public void createRequestObserver() {
+    public void createRequestPipeline() {
         pipelineLock.writeLock().lock();
         try {
             if (requestPipeline == null) {
@@ -557,7 +557,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         try {
             logger.debug("[{}] Closing connection...", this);
             updateConnectionState(ConnectionState.UNINITIALIZED);
-            closeObserver();
+            closePipeline();
             jumpToBlock(-1L);
             logger.debug("[{}] Connection successfully closed", this);
         } catch (final RuntimeException e) {
@@ -565,18 +565,18 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         }
     }
 
-    private void closeObserver() {
+    private void closePipeline() {
         pipelineLock.writeLock().lock();
         try {
             if (requestPipeline != null) {
-                logger.debug("[{}] Closing request observer for block node", this);
+                logger.debug("[{}] Closing request pipeline for block node", this);
                 streamShutdownInProgress.set(true);
 
                 try {
                     requestPipeline.onComplete();
-                    logger.debug("[{}] Request observer successfully closed", this);
+                    logger.debug("[{}] Request pipeline successfully closed", this);
                 } catch (final Exception e) {
-                    logger.warn("[{}] Error while completing request observer", this, e);
+                    logger.warn("[{}] Error while completing request pipeline", this, e);
                 }
                 requestPipeline = null;
             }

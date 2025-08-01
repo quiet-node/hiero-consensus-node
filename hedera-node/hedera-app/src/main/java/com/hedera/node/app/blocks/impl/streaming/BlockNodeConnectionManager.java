@@ -821,7 +821,7 @@ public class BlockNodeConnectionManager {
                 case, we want to elevate this connection to be the new active connection.
                  */
 
-                connection.createRequestObserver();
+                connection.createRequestPipeline();
 
                 if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
                     // we were able to elevate this connection to the new active one
