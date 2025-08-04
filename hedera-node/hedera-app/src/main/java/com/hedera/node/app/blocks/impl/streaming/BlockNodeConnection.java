@@ -117,7 +117,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * Reference to the current state of this connection.
      */
     private ConnectionState connectionState;
-
     /**
      * Lock used to synchronize access to the connection state.
      */
@@ -202,8 +201,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             if (requestPipeline == null) {
                 connectionStateLock.writeLock().lock();
                 try {
-                    updateConnectionState(ConnectionState.PENDING);
                     requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
+                    updateConnectionState(ConnectionState.PENDING);
                 } finally {
                     connectionStateLock.writeLock().unlock();
                 }
@@ -535,14 +534,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         pipelineLock.writeLock().lock();
         try {
             if (getConnectionState() == ConnectionState.ACTIVE && requestPipeline != null) {
-                try {
-                    requestPipeline.onNext(request);
-                } catch (final Exception e) {
-                    logger.warn("[{}] Error while sending request", this, e);
-                    updateConnectionState(ConnectionState.UNINITIALIZED);
-                    jumpToBlock(-1L);
-                    blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
-                }
+                requestPipeline.onNext(request);
             }
         } finally {
             pipelineLock.writeLock().unlock();
@@ -556,9 +548,11 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     public void close() {
         try {
             logger.debug("[{}] Closing connection...", this);
+
             updateConnectionState(ConnectionState.UNINITIALIZED);
             closePipeline();
             jumpToBlock(-1L);
+
             logger.debug("[{}] Connection successfully closed", this);
         } catch (final RuntimeException e) {
             logger.warn("[{}] Error occurred while attempting to close connection", this);

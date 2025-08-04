@@ -69,8 +69,8 @@ public class BlockNodeConnectionManager {
 
     private record Options(Optional<String> authority, String contentType) implements ServiceInterface.RequestOptions {}
 
-    private static final BlockNodeConnectionManager.Options OPTIONS =
-            new BlockNodeConnectionManager.Options(Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC);
+    private static final BlockNodeConnectionManager.Options OPTIONS = new BlockNodeConnectionManager.Options(
+            Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC_PROTO);
 
     /**
      * Initial retry delay for connection attempts.
@@ -354,7 +354,6 @@ public class BlockNodeConnectionManager {
         logger.info("[{}] Scheduling reconnection for node at block {} in {} ms", connection, blockNumber, delayMillis);
 
         activeConnectionRef.compareAndSet(connection, null); // if this was the active connection, remove it
-
         connection.updateConnectionState(ConnectionState.CONNECTING);
 
         // Schedule the first attempt using the connectionExecutor
@@ -633,7 +632,6 @@ public class BlockNodeConnectionManager {
                 Thread.currentThread().interrupt();
             } catch (final Exception e) {
                 logger.error("Block stream worker encountered an error", e);
-                activeConnection.onComplete();
             } finally {
                 activeConnection.getLock().writeLock().unlock();
             }
