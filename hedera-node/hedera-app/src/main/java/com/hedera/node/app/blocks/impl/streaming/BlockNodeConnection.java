@@ -202,7 +202,6 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
      */
     private void handleAcknowledgement(@NonNull final BlockAcknowledgement acknowledgement) {
         final long acknowledgedBlockNumber = acknowledgement.blockNumber();
-        final boolean blockAlreadyExists = acknowledgement.blockAlreadyExists();
         final long currentBlockStreaming = blockNodeConnectionManager.currentStreamingBlockNumber();
         final long currentBlockProducing = blockBufferService.getLastBlockNumberProduced();
 
@@ -217,11 +216,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
             return;
         }
 
-        logger.debug(
-                "[{}] Acknowledgement received for block {} (alreadyExists={})",
-                this,
-                acknowledgedBlockNumber,
-                blockAlreadyExists);
+        logger.debug("[{}] BlockAcknowledgement received for Block {}", this, acknowledgedBlockNumber);
 
         if (acknowledgedBlockNumber > currentBlockProducing || acknowledgedBlockNumber > currentBlockStreaming) {
             /*
@@ -276,7 +271,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
         }
 
         switch (responseCode) {
-            case Code.INTERNAL_ERROR, Code.PERSISTENCE_FAILED -> {
+            case Code.ERROR, Code.PERSISTENCE_FAILED -> {
                 close();
                 // The block node had an end of stream error and cannot continue processing.
                 // We should wait for a short period before attempting to retry
@@ -288,7 +283,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
 
                 blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
             }
-            case Code.TIMEOUT, Code.DUPLICATE_BLOCK, Code.BAD_BLOCK_PROOF -> {
+            case Code.TIMEOUT, Code.DUPLICATE_BLOCK, Code.BAD_BLOCK_PROOF, Code.INVALID_REQUEST -> {
                 close();
                 // We should restart the stream at the block immediately
                 // following the last verified and persisted block number

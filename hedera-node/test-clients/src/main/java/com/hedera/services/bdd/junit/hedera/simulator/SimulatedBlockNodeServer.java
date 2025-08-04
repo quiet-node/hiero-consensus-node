@@ -280,7 +280,7 @@ public class SimulatedBlockNodeServer {
                                             blockNumber,
                                             responseObserver.hashCode(),
                                             port);
-                                    buildAndSendBlockAcknowledgement(blockNumber, responseObserver, true);
+                                    buildAndSendBlockAcknowledgement(blockNumber, responseObserver);
                                     // Continue to the next BlockItem in the request
                                     continue;
                                 }
@@ -372,7 +372,7 @@ public class SimulatedBlockNodeServer {
                                         port);
                                 for (final StreamObserver<PublishStreamResponse> observer : activeStreams) {
                                     // Send Ack with blockAlreadyExists=false
-                                    buildAndSendBlockAcknowledgement(blockNumber, observer, false);
+                                    buildAndSendBlockAcknowledgement(blockNumber, observer);
                                 }
 
                                 // Reset currentBlockNumber for this stream, as it finished sending this block
@@ -646,26 +646,19 @@ public class SimulatedBlockNodeServer {
      *
      * @param blockNumber The block number being acknowledged.
      * @param responseObserver The observer to send the acknowledgment to.
-     * @param blockAlreadyExists Indicates if the block was already fully processed.
      */
     private void buildAndSendBlockAcknowledgement(
-            final long blockNumber,
-            final StreamObserver<PublishStreamResponse> responseObserver,
-            final boolean blockAlreadyExists) {
+            final long blockNumber, final StreamObserver<PublishStreamResponse> responseObserver) {
         final PublishStreamResponse.BlockAcknowledgement ack = PublishStreamResponse.BlockAcknowledgement.newBuilder()
                 .setBlockNumber(blockNumber)
-                .setBlockNumber(
-                        lastVerifiedBlockNumber.get()) // TODO: why is the block number set twice? which is correct?
-                .setBlockAlreadyExists(blockAlreadyExists) // Set based on the parameter
                 .build();
         final PublishStreamResponse response =
                 PublishStreamResponse.newBuilder().setAcknowledgement(ack).build();
         try {
             responseObserver.onNext(response);
             log.debug(
-                    "Sent BlockAcknowledgement for block {} (exists={}) to stream {} on port {}. Last verified: {}",
+                    "Sent BlockAcknowledgement for block {} to stream {} on port {}. Last verified: {}",
                     blockNumber,
-                    blockAlreadyExists,
                     responseObserver.hashCode(),
                     port,
                     lastVerifiedBlockNumber.get());
