@@ -47,7 +47,7 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
             @NonNull final Event event,
             @NonNull final OtterAppState state,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> callback) {
-        // No pre-handling required yet
+        consistencyStateService.recordPreHandleTransactions(event);
     }
 
     /**

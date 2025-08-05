@@ -8,6 +8,7 @@ import static org.hiero.otter.fixtures.app.V1ConsistencyStateSchema.CONSISTENCY_
 import com.swirlds.state.spi.WritableSingletonState;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.hiero.consensus.model.event.Event;
 import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.transaction.Transaction;
 import org.hiero.otter.fixtures.app.state.ConsistencyState;
@@ -16,7 +17,11 @@ import org.hiero.otter.fixtures.app.state.ConsistencyState;
  * A service that ensures the consistency of rounds and transactions sent by the platform to the execution layer for
  * handling. It checks these aspects of consistency:
  * <ol>
- *     <li></li>
+ *     <li>Consensus rounds increase in number monotonically</li>
+ *     <li>Consensus rounds are received only once</li>
+ *     <li>Differences in rounds or transactions sent to {@link #recordRoundContents} on different nodes will cause an ISS</li>
+ *     <li>Consensus transactions were previous received in preHandle</li>
+ *     <li>After a restart, any rounds that reach consensus in PCES replay exactly match the rounds calculated previously.</li>
  * </ol>
  */
 public class ConsistencyStateService {
@@ -62,12 +67,17 @@ public class ConsistencyStateService {
         // disk so that we can verify that the same rounds reach consensus after a restart during PCES replay.
 
         // FUTURE WORK: Compare the round to rounds previous recorded in memory and do basic validations, like
-        // checking that the round number is one greate than the previous round number, and that all transactions
+        // checking that the round number is one greater than the previous round number, and that all transactions
         // were previously received in prehandle.
     }
 
     public void initialize() {
         // FUTURE WORK: Read round data from disk (written in recordRound()) into in-memory structure.
+    }
+
+    public void recordPreHandleTransactions(@NonNull final Event event) {
+        // FUTURE WORK: Record the prehandle transactions so that we can verify all
+        // consensus transactions were previously sent to prehandle.
     }
 
     private static long getTransactionContents(@NonNull final Transaction transaction) {
