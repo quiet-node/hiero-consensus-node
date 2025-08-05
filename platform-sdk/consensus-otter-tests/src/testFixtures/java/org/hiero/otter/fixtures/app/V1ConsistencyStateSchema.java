@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.fixtures.app;
 
 import com.hedera.hapi.node.base.SemanticVersion;
@@ -10,7 +11,8 @@ import org.jetbrains.annotations.NotNull;
 
 public class V1ConsistencyStateSchema extends Schema {
 
-    public static final String CONSISTENCY_STATE_KEY = "CONSISTENCY_STATE";
+    /** Defines the section of the state that is for the Consistency State Service */
+    public static final String CONSISTENCY_STATE_SINGLETON_KEY = "CONSISTENCY_STATE_SINGLETON";
 
     /**
      * Create a new instance
@@ -24,6 +26,6 @@ public class V1ConsistencyStateSchema extends Schema {
     @NonNull
     @Override
     public Set<StateDefinition> statesToCreate() {
-        return Set.of(StateDefinition.singleton(CONSISTENCY_STATE_KEY, ConsistencyState.PROTOBUF));
+        return Set.of(StateDefinition.singleton(CONSISTENCY_STATE_SINGLETON_KEY, ConsistencyState.PROTOBUF));
     }
 }

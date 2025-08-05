@@ -101,7 +101,7 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
     @NonNull
     public ISSTestingToolState newStateRoot() {
         final ISSTestingToolState state = new ISSTestingToolState();
-        TestingAppStateInitializer.DEFAULT.initStates(state);
+        TestingAppStateInitializer.DEFAULT.initConsensusModuleStates(state);
         return state;
     }
 

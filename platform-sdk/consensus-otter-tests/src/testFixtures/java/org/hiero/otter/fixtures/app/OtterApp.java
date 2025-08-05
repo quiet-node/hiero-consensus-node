@@ -16,7 +16,6 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import org.hiero.consensus.model.event.ConsensusEvent;
 import org.hiero.consensus.model.event.Event;
 import org.hiero.consensus.model.hashgraph.Round;
 import org.hiero.consensus.model.roster.AddressBook;
@@ -38,6 +37,8 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
      */
     private final AtomicLong syntheticBottleneckMillis = new AtomicLong(0);
 
+    private final ConsistencyStateService consistencyStateService = new ConsistencyStateService();
+
     /**
      * {@inheritDoc}
      */
@@ -57,17 +58,21 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
             @NonNull final Round round,
             @NonNull final OtterAppState state,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> callback) {
-        for (final ConsensusEvent event : round) {
-            event.forEachTransaction(txn -> {
-                final Bytes payload = txn.getApplicationTransaction();
-                try {
-                    final OtterTransaction transaction = OtterTransaction.parseFrom(payload.toInputStream());
-                    handleTransaction(state, event, transaction, callback);
-                } catch (final IOException ex) {
-                    fail("Failed to parse transaction: " + payload, ex);
-                }
-            });
-        }
+
+        consistencyStateService.recordRoundContents(state.getWritableStates(ConsistencyStateService.NAME), round);
+
+        round.forEachEventTransaction((event, txn) -> {
+            final Bytes payload = txn.getApplicationTransaction();
+            try {
+                final OtterTransaction transaction = OtterTransaction.parseFrom(payload.toInputStream());
+                handleTransaction(state, event, transaction, callback);
+            } catch (final IOException ex) {
+                fail("Failed to parse transaction: " + payload, ex);
+            }
+        });
+
+        state.commitSingletons(); // TODO is this right?
+
         maybeDoBottleneck();
     }
 
@@ -103,7 +108,7 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
             @NonNull final Platform platform,
             @NonNull final InitTrigger trigger,
             @Nullable final SemanticVersion previousVersion) {
-        // No initialization required yet
+        consistencyStateService.initialize();
     }
 
     /**

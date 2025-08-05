@@ -52,11 +52,17 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
             @NonNull final Roster roster,
             @NonNull final Metrics metrics,
             @NonNull final SemanticVersion version) {
+
+        // Setup the parts of the state required by the consensus module.
         final TestingAppStateInitializer initializer = new TestingAppStateInitializer(configuration);
         final OtterAppState state = new OtterAppState(CONFIGURATION, metrics);
-        initializer.initStates(state);
+        initializer.initConsensusModuleStates(state);
         RosterUtils.setActiveRoster(state, roster, 0L);
         DEFAULT_PLATFORM_STATE_FACADE.setCreationSoftwareVersionTo(state, version);
+
+        // Setup the parts of the state required by the Otter app.
+        final OtterStateInitializer otterStateInitializer = new OtterStateInitializer();
+        otterStateInitializer.initOtterAppState(state);
         return state;
     }
 
@@ -75,7 +81,7 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
     }
 
     @Override
-    protected OtterAppState newInstance(@NonNull VirtualMap virtualMap) {
+    protected OtterAppState newInstance(@NonNull final VirtualMap virtualMap) {
         return new OtterAppState(virtualMap);
     }
 }

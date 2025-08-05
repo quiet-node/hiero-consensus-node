@@ -101,7 +101,7 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
     @NonNull
     public ConsistencyTestingToolState newStateRoot() {
         final ConsistencyTestingToolState state = new ConsistencyTestingToolState();
-        TestingAppStateInitializer.DEFAULT.initStates(state);
+        TestingAppStateInitializer.DEFAULT.initConsensusModuleStates(state);
 
         return state;
     }

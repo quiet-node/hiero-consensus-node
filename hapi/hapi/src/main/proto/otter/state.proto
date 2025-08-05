@@ -9,8 +9,8 @@ option java_multiple_files = true;
 
 // Represents the part of state that ensures transaction consistency
 message ConsistencyState {
-  // A running hash of every consensus transaction
-  uint64 running_transaction_hash = 1;
+  // A running hash of every consensus transaction and round number
+  uint64 running_hash = 1;
 
   // The number of rounds handled
   uint64 rounds_handled = 2;

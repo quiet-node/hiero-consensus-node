@@ -861,7 +861,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
     @NonNull
     public PlatformTestingToolState newStateRoot() {
         final PlatformTestingToolState state = new PlatformTestingToolState();
-        TestingAppStateInitializer.DEFAULT.initStates(state);
+        TestingAppStateInitializer.DEFAULT.initConsensusModuleStates(state);
         return state;
     }
 
