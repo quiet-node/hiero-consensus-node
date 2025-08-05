@@ -24,7 +24,7 @@ import org.hiero.otter.fixtures.app.state.ConsistencyState;
  *     <li>After a restart, any rounds that reach consensus in PCES replay exactly match the rounds calculated previously.</li>
  * </ol>
  */
-public class ConsistencyStateService {
+public class ConsistencyService {
     public static final String NAME = "ConsistencyStateService";
 
     private Long stateRunningHash = null;

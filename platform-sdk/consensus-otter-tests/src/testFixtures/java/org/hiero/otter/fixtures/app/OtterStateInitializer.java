@@ -20,7 +20,7 @@ public class OtterStateInitializer {
                 .sorted(Comparator.comparing(StateDefinition::stateKey))
                 .forEach(def -> {
                     // the metadata associates the state definition with the service
-                    final var stateMetadata = new StateMetadata<>(ConsistencyStateService.NAME, schema, def);
+                    final var stateMetadata = new StateMetadata<>(ConsistencyService.NAME, schema, def);
                     state.initializeState(stateMetadata);
                 });
     }

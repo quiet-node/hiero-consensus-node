@@ -37,7 +37,7 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
      */
     private final AtomicLong syntheticBottleneckMillis = new AtomicLong(0);
 
-    private final ConsistencyStateService consistencyStateService = new ConsistencyStateService();
+    private final ConsistencyService consistencyService = new ConsistencyService();
 
     /**
      * {@inheritDoc}
@@ -47,7 +47,7 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
             @NonNull final Event event,
             @NonNull final OtterAppState state,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> callback) {
-        consistencyStateService.recordPreHandleTransactions(event);
+        consistencyService.recordPreHandleTransactions(event);
     }
 
     /**
@@ -59,7 +59,7 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
             @NonNull final OtterAppState state,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> callback) {
 
-        consistencyStateService.recordRoundContents(state.getWritableStates(ConsistencyStateService.NAME), round);
+        consistencyService.recordRoundContents(state.getWritableStates(ConsistencyService.NAME), round);
 
         round.forEachEventTransaction((event, txn) -> {
             final Bytes payload = txn.getApplicationTransaction();
@@ -108,7 +108,7 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
             @NonNull final Platform platform,
             @NonNull final InitTrigger trigger,
             @Nullable final SemanticVersion previousVersion) {
-        consistencyStateService.initialize();
+        consistencyService.initialize();
     }
 
     /**
