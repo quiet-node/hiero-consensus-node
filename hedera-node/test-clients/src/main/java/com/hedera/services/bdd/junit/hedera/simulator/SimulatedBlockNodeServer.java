@@ -275,6 +275,12 @@ public class SimulatedBlockNodeServer {
                             sendEndOfStream(replies, config.responseCode(), config.blockNumber());
                             return;
                         }
+
+                        if (request.hasEndStream()) {
+                            serviceImpl.removeStreamFromTracking(replies);
+                            return;
+                        }
+
                         // Iterate through each BlockItem in the request
                         for (final BlockItem item : request.blockItems().blockItems()) {
                             if (item.hasBlockHeader()) {
