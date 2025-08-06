@@ -76,6 +76,15 @@ public enum OtterApp implements ConsensusStateEventHandler<OtterAppState> {
         maybeDoBottleneck();
     }
 
+    public static OtterTransaction from(@NonNull final Bytes transactionBytes) {
+        try {
+            return OtterTransaction.parseFrom(transactionBytes.toInputStream());
+        } catch (final IOException ex) {
+            fail("Failed to parse transaction: " + transactionBytes, ex);
+        }
+        return null;
+    }
+
     /**
      * Engages a bottleneck by sleeping for the configured number of milliseconds. Does nothing if the number of
      * milliseconds to sleep is zero or negative.
