@@ -742,6 +742,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 // to ensure that no unhandled exceptions from the native libs are thrown
                 // so that we prevent possibly catastrophic failures.
                 shutdown();
+                System.exit(1);
             }
         }
     }
