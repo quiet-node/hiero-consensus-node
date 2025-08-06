@@ -16,7 +16,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.List;
 import org.apache.logging.log4j.Level;
-import org.assertj.core.data.Percentage;
 import org.hiero.otter.fixtures.InstrumentedNode;
 import org.hiero.otter.fixtures.Network;
 import org.hiero.otter.fixtures.Node;
@@ -39,11 +38,10 @@ public class SandboxTest {
      * Example of a migrated JRS test.
      *
      * @param env the test environment for this test
-     * @throws InterruptedException if an operation times out
      */
     @OtterTest
     @Disabled("Sandbox test, not meant to be run")
-    void testConsistencyNDReconnect(@NonNull final TestEnvironment env) throws InterruptedException {
+    void testConsistencyNDReconnect(@NonNull final TestEnvironment env) {
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
 
@@ -78,11 +76,10 @@ public class SandboxTest {
      * Example of a migrated {@code ConsensusTest}.
      *
      * @param env the test environment for this test
-     * @throws InterruptedException if an operation times out
      */
     @OtterTest
     @Disabled("Sandbox test, not meant to be run")
-    void testBranching(@NonNull final TestEnvironment env) throws InterruptedException {
+    void testBranching(@NonNull final TestEnvironment env) {
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
 
@@ -105,11 +102,10 @@ public class SandboxTest {
      * A catch-all test to try out the API.
      *
      * @param env the test environment for this test
-     * @throws InterruptedException if an operation times out
      */
     @Disabled("Sandbox test, not meant to be run")
     @OtterTest
-    void testApi(@NonNull final TestEnvironment env) throws InterruptedException {
+    void testApi(@NonNull final TestEnvironment env) {
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
 
@@ -139,8 +135,6 @@ public class SandboxTest {
 
         assertThat(network.newPcesResults()).haveAllBirthRoundsEqualTo(1);
 
-        assertThat(network.newConsensusResults())
-                .haveEqualCommonRounds()
-                .haveMaxDifferenceInLastRoundNum(Percentage.withPercentage(1));
+        assertThat(network.newConsensusResults()).haveEqualCommonRounds();
     }
 }

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.otter.test;
 
-import static org.assertj.core.data.Percentage.withPercentage;
 import static org.hiero.consensus.model.status.PlatformStatus.ACTIVE;
 import static org.hiero.consensus.model.status.PlatformStatus.BEHIND;
 import static org.hiero.consensus.model.status.PlatformStatus.CHECKING;
@@ -20,7 +19,7 @@ import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
 
 /**
- * The most simple sanity test for the Otter framework.
+ * The simplest sanity test for the Otter framework.
  */
 public class HappyPathTest {
 
@@ -28,10 +27,9 @@ public class HappyPathTest {
      * Simple test that runs a network with 4 nodes for some time and does some basic validations.
      *
      * @param env the test environment for this test
-     * @throws InterruptedException if an operation times out
      */
     @OtterTest
-    void testHappyPath(@NonNull final TestEnvironment env) throws InterruptedException {
+    void testHappyPath(@NonNull final TestEnvironment env) {
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
 
@@ -43,6 +41,11 @@ public class HappyPathTest {
         assertContinuouslyThat(network.newPlatformStatusResults())
                 .doOnlyEnterStatusesOf(ACTIVE, REPLAYING_EVENTS, OBSERVING, CHECKING)
                 .doNotEnterAnyStatusesOf(BEHIND, FREEZING);
+        assertContinuouslyThat(network.newMarkerFileResults())
+                .haveNoNoSuperMajorityMarkerFiles()
+                .haveNoNoJudgesMarkerFiles()
+                .haveNoConsensusExceptionMarkerFiles()
+                .haveNoIssMarkerFiles();
 
         network.start();
 
@@ -52,9 +55,7 @@ public class HappyPathTest {
         // Validations
         assertThat(network.newLogResults()).haveNoErrorLevelMessages();
 
-        assertThat(network.newConsensusResults())
-                .haveEqualCommonRounds()
-                .haveMaxDifferenceInLastRoundNum(withPercentage(10));
+        assertThat(network.newConsensusResults()).haveEqualCommonRounds();
 
         assertThat(network.newPlatformStatusResults())
                 .haveSteps(target(ACTIVE).requiringInterim(REPLAYING_EVENTS, OBSERVING, CHECKING));

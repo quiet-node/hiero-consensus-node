@@ -14,6 +14,7 @@ import com.hedera.node.app.service.contract.impl.exec.utils.SystemContractMethod
 import com.hedera.node.app.service.contract.impl.handlers.ContractHandlers;
 import com.hedera.node.app.service.contract.impl.nativelibverification.NativeLibVerifier;
 import com.hedera.node.app.service.contract.impl.schemas.V0490ContractSchema;
+import com.hedera.node.app.service.contract.impl.schemas.V065ContractSchema;
 import com.hedera.node.app.spi.AppContext;
 import com.hedera.node.config.data.ContractsConfig;
 import com.swirlds.metrics.api.Metrics;
@@ -87,7 +88,7 @@ public class ContractServiceImpl implements ContractService {
 
     @Override
     public void registerSchemas(@NonNull final SchemaRegistry registry) {
-        registry.register(new V0490ContractSchema());
+        registry.registerAll(new V0490ContractSchema(), new V065ContractSchema());
     }
 
     public void createMetrics() {

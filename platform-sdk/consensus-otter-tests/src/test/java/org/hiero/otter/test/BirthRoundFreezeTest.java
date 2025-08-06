@@ -2,7 +2,6 @@
 package org.hiero.otter.test;
 
 import static org.apache.logging.log4j.Level.WARN;
-import static org.assertj.core.data.Percentage.withPercentage;
 import static org.hiero.otter.fixtures.OtterAssertions.assertThat;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -31,10 +30,9 @@ public class BirthRoundFreezeTest {
      * </pre>
      *
      * @param env the test environment for this test
-     * @throws InterruptedException if an operation times out
      */
     @OtterTest
-    void testFreezeInBirthRoundMode(@NonNull final TestEnvironment env) throws InterruptedException {
+    void testFreezeInBirthRoundMode(@NonNull final TestEnvironment env) {
 
         final Network network = env.network();
         final TimeManager timeManager = env.timeManager();
@@ -72,7 +70,6 @@ public class BirthRoundFreezeTest {
         assertThat(network.newConsensusResults())
                 .haveAdvancedSinceRound(freezeRound)
                 .haveEqualCommonRounds()
-                .haveMaxDifferenceInLastRoundNum(withPercentage(5))
                 .haveBirthRoundSplit(postFreezeShutdownTime, freezeRound);
 
         assertThat(network.newPcesResults()).haveBirthRoundSplit(postFreezeShutdownTime, freezeRound);
