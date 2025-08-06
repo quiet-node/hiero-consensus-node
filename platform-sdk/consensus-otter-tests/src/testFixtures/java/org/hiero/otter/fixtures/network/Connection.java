@@ -10,9 +10,19 @@ import org.hiero.otter.fixtures.Node;
 @SuppressWarnings("unused")
 public interface Connection {
 
+    /**
+     * Gets the first node of the connection.
+     *
+     * @return the first node in the connection
+     */
     @NonNull
     Node node1();
 
+    /**
+     * Gets the second node of the connection.
+     *
+     * @return the second node in the connection
+     */
     @NonNull
     Node node2();
 
@@ -36,6 +46,34 @@ public interface Connection {
     boolean isConnected();
 
     /**
+     * Sets the latency range for bidirectional communication between two nodes.
+     *
+     * @param latencyRange the latency range to apply
+     */
+    void setLatencyRange(@NonNull LatencyRange latencyRange);
+
+    /**
+     * Sets asymmetric latency ranges between two nodes.
+     *
+     * @param fromNode1 latency range from first to second node
+     * @param fromNode2 latency range from second to first node
+     */
+    void setAsymmetricLatencyRange(@NonNull LatencyRange fromNode1, @NonNull LatencyRange fromNode2);
+
+    /**
+     * Restores the original latency for the connection.
+     */
+    void restoreLatencyRange();
+
+    /**
+     * Gets the current latency range between two nodes.
+     *
+     * @return the current latency range
+     */
+    @NonNull
+    LatencyRange latencyRange();
+
+    /**
      * Sets the bandwidth limit for bidirectional communication between two nodes.
      *
      * @param bandwidthLimit the bandwidth limit to apply
@@ -51,10 +89,9 @@ public interface Connection {
     void setAsymmetricBandwidthLimit(@NonNull BandwidthLimit fromNode1, @NonNull BandwidthLimit fromNode2);
 
     /**
-     * Restores unlimited bandwidth for bidirectional communication between two nodes. Removes any previously set
-     * bandwidth limits.
+     * Restores the original bandwidth for a connection.
      */
-    void removeBandwidthLimit();
+    void restoreBandwidthLimit();
 
     /**
      * Gets the current bandwidth limit between two nodes.
@@ -62,5 +99,5 @@ public interface Connection {
      * @return the current bandwidth limit
      */
     @NonNull
-    BandwidthLimit getBandwidthLimit();
+    BandwidthLimit bandwidthLimit();
 }

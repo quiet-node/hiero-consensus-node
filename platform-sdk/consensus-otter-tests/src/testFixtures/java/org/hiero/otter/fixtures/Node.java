@@ -36,22 +36,6 @@ public interface Node {
     NodeId selfId();
 
     /**
-     * Gets the continent of the node.
-     *
-     * @return the continent of the node
-     */
-    @NonNull
-    String continent();
-
-    /**
-     * Gets the region of the node.
-     *
-     * @return the region of the node
-     */
-    @NonNull
-    String region();
-
-    /**
      * Kill the node without prior cleanup.
      *
      * <p>This method simulates a sudden failure of the node. No attempt to finish ongoing work,

@@ -10,6 +10,13 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 @SuppressWarnings("unused")
 public class BandwidthLimit {
 
+    private static final long UNLIMITED_BYTES_PER_SECOND = Long.MAX_VALUE;
+
+    /**
+     * Represents an unlimited bandwidth limit.
+     */
+    public static final BandwidthLimit UNLIMITED = new BandwidthLimit(UNLIMITED_BYTES_PER_SECOND);
+
     private final long bytesPerSecond;
 
     private BandwidthLimit(final long bytesPerSecond) {
@@ -53,16 +60,6 @@ public class BandwidthLimit {
     }
 
     /**
-     * Creates an unlimited bandwidth specification.
-     *
-     * @return a BandwidthLimit object representing unlimited bandwidth
-     */
-    @NonNull
-    public static BandwidthLimit unlimited() {
-        return new BandwidthLimit(Long.MAX_VALUE);
-    }
-
-    /**
      * Converts this bandwidth to bytes per second.
      *
      * @return the bandwidth in bytes per second
@@ -77,6 +74,6 @@ public class BandwidthLimit {
      * @return {@code true} if the bandwidth is unlimited, {@code false} otherwise
      */
     public boolean isUnlimited() {
-        return bytesPerSecond == Long.MAX_VALUE;
+        return bytesPerSecond == UNLIMITED_BYTES_PER_SECOND;
     }
 }

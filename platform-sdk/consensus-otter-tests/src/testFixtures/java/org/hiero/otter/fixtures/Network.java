@@ -12,11 +12,12 @@ import java.util.List;
 import java.util.Set;
 import org.hiero.otter.fixtures.network.BandwidthLimit;
 import org.hiero.otter.fixtures.network.Clique;
-import org.hiero.otter.fixtures.network.Clique.SlowClique;
-import org.hiero.otter.fixtures.network.Clique.ThrottledClique;
 import org.hiero.otter.fixtures.network.Connection;
-import org.hiero.otter.fixtures.network.GeographicLatencyConfiguration;
+import org.hiero.otter.fixtures.network.GeoMeshTopology;
+import org.hiero.otter.fixtures.network.LatencyRange;
+import org.hiero.otter.fixtures.network.MeshTopology;
 import org.hiero.otter.fixtures.network.Partition;
+import org.hiero.otter.fixtures.network.Topology;
 import org.hiero.otter.fixtures.result.MultipleNodeConsensusResults;
 import org.hiero.otter.fixtures.result.MultipleNodeLogResults;
 import org.hiero.otter.fixtures.result.MultipleNodeMarkerFileResults;
@@ -35,46 +36,27 @@ public interface Network {
     /**
      * Adds a single node to the network.
      *
-     * <p>The node is automatically assigned to a continent and region to help approximate the configured target
-     * distribution.
+     * <p>How the node is connected to existing nodes and its latency, jitter, and bandwidth depend on the current topology.
      *
      * @return the created node
      */
     @NonNull
-    Node addNode();
+    default Node addNode() {
+        return topology().addNode();
+    }
 
     /**
      * Adds multiple nodes to the network.
      *
-     * <p>Nodes are automatically assigned to continents and regions to approximate the configured target distribution
-     * percentages.
+     * <p>How the node is connected to existing nodes and its latency, jitter, and bandwidth depend on current topology.
      *
      * @param count the number of nodes to add
      * @return list of created nodes
      */
     @NonNull
-    List<Node> addNodes(int count);
-
-    /**
-     * Adds a single node to the network in the specified geographic location.
-     *
-     * @param continent the continent for the new node
-     * @param region the region within the continent for the new node
-     * @return the created node
-     */
-    @NonNull
-    Node addNode(@NonNull String continent, @NonNull String region);
-
-    /**
-     * Adds multiple nodes to the network in the specified geographic location.
-     *
-     * @param count the number of nodes to add
-     * @param continent the continent for the new nodes
-     * @param region the region within the continent for the new nodes
-     * @return list of created nodes
-     */
-    @NonNull
-    List<Node> addNodes(int count, @NonNull String continent, @NonNull String region);
+    default List<Node> addNodes(final int count) {
+        return topology().addNodes(count);
+    }
 
     /**
      * Sets the weight generator for the network. The weight generator is used to assign weights to nodes.
@@ -84,17 +66,6 @@ public interface Network {
      * @param weightGenerator the weight generator to use
      */
     void setWeightGenerator(@NonNull WeightGenerator weightGenerator);
-
-    /**
-     * Sets realistic latency and jitter based on geographic distribution. Applies different latency characteristics for
-     * same-region, same-continent, and intercontinental connections based on the provided configuration.
-     *
-     * <p>If no {@link GeographicLatencyConfiguration} is set, the default
-     * {@link GeographicLatencyConfiguration#DEFAULT} is used.
-     *
-     * @param config the geographic latency configuration to apply
-     */
-    void setGeographicLatencyConfiguration(@NonNull GeographicLatencyConfiguration config);
 
     /**
      * Start the network with the currently configured setup.
@@ -109,15 +80,38 @@ public interface Network {
     void start() throws InterruptedException;
 
     /**
-     * Add an instrumented node to the network.
+     * Returns the {@link Topology} of the network.
      *
-     * <p>This method is used to add a node that has additional instrumentation for testing purposes.
-     * For example, it can exhibit malicious or erroneous behavior.
-     *
-     * @return the added instrumented node
+     * @return the topology of the network
      */
     @NonNull
-    InstrumentedNode addInstrumentedNode();
+    Topology topology();
+
+    /**
+     * Sets the {@link Topology} of the network.
+     *
+     * <p>This method replaces the current topology with the specified one. It is recommended to call this method before
+     * adding any nodes to ensure that the nodes are included in the new topology.
+     *
+     * @param topology the new topology to set for the network
+     */
+    void setTopology(@NonNull Topology topology);
+
+    /**
+     * Creates a new {@link MeshTopology} for the network.
+     *
+     * @return a new instance of {@link MeshTopology} representing the mesh topology
+     */
+    @NonNull
+    MeshTopology createMeshTopology();
+
+    /**
+     * Creates a new {@link GeoMeshTopology} for the network.
+     *
+     * @return a new instance of {@link GeoMeshTopology} representing the geographic mesh topology
+     */
+    @NonNull
+    GeoMeshTopology createGeoMeshTopology();
 
     /**
      * Get the list of nodes in the network.
@@ -129,7 +123,9 @@ public interface Network {
      * @return a list of nodes in the network
      */
     @NonNull
-    List<Node> getNodes();
+    default List<Node> getNodes() {
+        return topology().getNodes();
+    }
 
     /**
      * Creates a network partition containing the specified nodes. Nodes within the partition remain connected to each
@@ -175,19 +171,37 @@ public interface Network {
      * @return the created ThrottledClique object
      */
     @NonNull
-    ThrottledClique createCliqueWithThrottledExternal(
-            @NonNull Collection<Node> clique, @NonNull BandwidthLimit externalBandwidth);
+    default Clique createClique(@NonNull final Collection<Node> clique, @NonNull final BandwidthLimit externalBandwidth) {
+        return createClique(clique, null, externalBandwidth);
+    }
 
     /**
      * Creates a clique with increased latency to external connections. Nodes within the clique have normal
      * connectivity, while connections to external nodes have additional latency.
      *
      * @param clique the nodes to include in the clique
-     * @param externalLatency the additional latency for external connections
+     * @param externalLatencyRange the latency range for external connections
      * @return the created SlowClique object
      */
     @NonNull
-    SlowClique createCliqueWithSlowExternal(@NonNull Collection<Node> clique, @NonNull Duration externalLatency);
+    default Clique createClique(@NonNull final Collection<Node> clique, @NonNull final LatencyRange externalLatencyRange) {
+        return createClique(clique, externalLatencyRange, null);
+    }
+
+    /**
+     * Creates a clique with increased latency and throttled bandwidth to external connections. Nodes within the clique
+     * have normal connectivity, while connections to external nodes have additional latency and bandwidth limits.
+     *
+     * @param clique the nodes to include in the clique
+     * @param externalLatencyRange the latency range for external connections, can be {@code null} if the current value
+     * is desired
+     * @param externalBandwidth the bandwidth limit for external connections, can be {@code null} if the current value
+     * is desired
+     * @return the created SlowClique object
+     */
+    @NonNull
+    Clique createClique(@NonNull Collection<Node> clique, @Nullable final LatencyRange externalLatencyRange,
+            @Nullable final BandwidthLimit externalBandwidth);
 
     /**
      * Removes a clique and restores normal connectivity for its nodes. Only restores changes that were made by creating
@@ -248,6 +262,24 @@ public interface Network {
     boolean isIsolated(@NonNull Node node);
 
     /**
+     * Sets the latency range for all connections from this node.
+     *
+     * <p>This method sets the latency for all connections from the specified node to the given latency range. If a
+     * connection already has a custom latency set, it will be overridden by this method.
+     *
+     * @param node the node for which to set the latency
+     * @param latencyRange the latency range to apply to all connections
+     */
+    void setLatencyForAllConnections(@NonNull Node node, @NonNull LatencyRange latencyRange);
+
+    /**
+     * Restores the default latency for all connections from this node. The default is determined by the topology.
+     *
+     * @param node the node for which to remove custom latencies
+     */
+    void restoreLatencyForAllConnections(@NonNull Node node);
+
+    /**
      * Sets the bandwidth limit for all connections from this node.
      *
      * @param node the node for which to set the bandwidth limit
@@ -256,18 +288,17 @@ public interface Network {
     void setBandwidthForAllConnections(@NonNull Node node, @NonNull BandwidthLimit bandwidthLimit);
 
     /**
-     * Restores unlimited bandwidth for all connections from this node. Removes any previously set bandwidth limits on
-     * all connections.
+     * Restores the default bandwidth limit for all connections from this node. The default is determined by the topology.
      *
      * @param node the node for which to remove bandwidth limits
      */
-    void removeBandwidthLimitsForAllConnections(@NonNull Node node);
+    void restoreBandwidthLimitsForAllConnections(@NonNull Node node);
 
     /**
-     * Resets the network connectivity to its original/default state. Removes all partitions, cliques, and custom
-     * bandwidth settings.
+     * Restore the network connectivity to its original/default state. Removes all partitions, cliques, and custom
+     * connection settings.
      */
-    void resetConnectivity();
+    void restoreConnectivity();
 
     /**
      * Gets the total weight of the network. Always positive.
