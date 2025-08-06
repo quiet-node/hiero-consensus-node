@@ -4,7 +4,6 @@ package com.hedera.node.app.fixtures.state;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
-import static com.swirlds.state.merkle.VirtualMapState.VM_LABEL;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.HederaVirtualMapState;
@@ -18,6 +17,7 @@ import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
+import com.swirlds.state.merkle.VirtualMapState;
 import com.swirlds.state.spi.EmptyReadableStates;
 import com.swirlds.state.spi.EmptyWritableStates;
 import com.swirlds.state.spi.KVChangeListener;
@@ -61,6 +61,12 @@ public class FakeState implements MerkleNodeState {
      */
     private final List<StateChangeListener> listeners = new ArrayList<>();
 
+    private final HederaVirtualMapState hederaVirtualMapState;
+
+    public FakeState() {
+        hederaVirtualMapState = new HederaVirtualMapState(VirtualMapUtils.createVirtualMap(VirtualMapState.VM_LABEL));
+    }
+
     /**
      * Exposes the underlying states for direct manipulation in tests.
      *
@@ -72,7 +78,7 @@ public class FakeState implements MerkleNodeState {
 
     @Override
     public MerkleNode getRoot() {
-        return new HederaVirtualMapState(VirtualMapUtils.createVirtualMap(VM_LABEL)).getRoot();
+        return hederaVirtualMapState.getRoot();
     }
 
     /**

@@ -73,7 +73,7 @@ public final class SignedStateFileReader {
                     return in.readSerializable();
                 });
 
-        MerkleNodeState merkleNodeState;
+        final MerkleNodeState merkleNodeState;
         final VirtualMap virtualMap = (VirtualMap) data.stateRoot();
         final Metrics metrics = platformContext.getMetrics();
         virtualMap.registerMetrics(metrics);

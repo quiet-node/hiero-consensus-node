@@ -3,6 +3,8 @@ package com.swirlds.platform;
 
 import static com.swirlds.common.io.utility.FileUtils.throwIfFileExists;
 import static com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader.SIGNED_STATE_FILE_NAME;
+import static com.swirlds.platform.StateFileManagerTests.hashState;
+import static com.swirlds.platform.StateFileManagerTests.makeImmutable;
 import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStateFile;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.CURRENT_ROSTER_FILE_NAME;
 import static com.swirlds.platform.state.snapshot.SignedStateFileUtils.HASH_INFO_FILE_NAME;
@@ -130,7 +132,7 @@ class SignedStateFileReadWriteTest {
 
         State state = signedState.getState();
         state.copy().release();
-        signedState.getState().getRoot().getHash();
+        hashState(signedState);
         state.createSnapshot(testDirectory);
         writeSignatureSetFile(testDirectory, signedState);
 
@@ -142,7 +144,7 @@ class SignedStateFileReadWriteTest {
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile, TestVirtualMapState::new, TEST_PLATFORM_STATE_FACADE, PlatformContext.create(configuration));
-        deserializedSignedState.reservedSignedState().get().getState().getRoot().getHash();
+        hashState(deserializedSignedState.reservedSignedState().get());
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
         assertEquals(signedState.getState().getHash(), deserializedSignedState.originalHash(), "hash should match");
@@ -176,9 +178,8 @@ class SignedStateFileReadWriteTest {
                 .withConfiguration(configuration)
                 .build();
 
-        // make immutable
-        signedState.getState().copy().release();
-        signedState.getState().getRoot().getHash();
+        makeImmutable(signedState);
+        hashState(signedState);
 
         writeSignedStateToDisk(
                 platformContext,

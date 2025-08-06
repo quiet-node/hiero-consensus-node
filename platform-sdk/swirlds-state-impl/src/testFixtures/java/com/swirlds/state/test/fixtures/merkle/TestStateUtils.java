@@ -2,10 +2,10 @@
 package com.swirlds.state.test.fixtures.merkle;
 
 import com.swirlds.state.lifecycle.StateMetadata;
-import com.swirlds.state.merkle.disk.OnDiskKey;
-import com.swirlds.state.merkle.disk.OnDiskKeySerializer;
-import com.swirlds.state.merkle.disk.OnDiskValue;
-import com.swirlds.state.merkle.disk.OnDiskValueSerializer;
+import com.swirlds.state.test.fixtures.merkle.disk.OnDiskKey;
+import com.swirlds.state.test.fixtures.merkle.disk.OnDiskKeySerializer;
+import com.swirlds.state.test.fixtures.merkle.disk.OnDiskValue;
+import com.swirlds.state.test.fixtures.merkle.disk.OnDiskValueSerializer;
 import com.swirlds.state.test.fixtures.merkle.memory.InMemoryValue;
 import com.swirlds.state.test.fixtures.merkle.memory.InMemoryWritableKVState;
 import com.swirlds.state.test.fixtures.merkle.queue.QueueNode;
