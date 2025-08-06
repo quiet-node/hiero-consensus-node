@@ -19,7 +19,6 @@ open module com.swirlds.state.impl.test.fixtures {
     requires com.swirlds.logging;
     requires com.swirlds.merkledb.test.fixtures;
     requires com.swirlds.merkledb;
-    requires org.hiero.base.concurrent;
     requires org.hiero.base.crypto;
     requires org.mockito;
     requires static transitive com.github.spotbugs.annotations;
