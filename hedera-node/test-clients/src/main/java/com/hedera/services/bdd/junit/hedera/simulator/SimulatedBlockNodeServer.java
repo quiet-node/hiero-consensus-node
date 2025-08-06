@@ -3,9 +3,11 @@ package com.hedera.services.bdd.junit.hedera.simulator;
 
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.pbj.grpc.helidon.PbjRouting;
+import com.hedera.pbj.grpc.helidon.config.PbjConfig;
 import com.hedera.pbj.runtime.grpc.Pipeline;
 import com.hedera.pbj.runtime.grpc.ServiceInterface;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import io.helidon.webserver.ConnectionConfig;
 import io.helidon.webserver.WebServer;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -98,9 +100,18 @@ public class SimulatedBlockNodeServer {
         this.port = port;
         this.serviceImpl = new MockBlockStreamServiceImpl();
 
+        final PbjConfig pbjConfig =
+                PbjConfig.builder().name("pbj").maxMessageSizeBytes(4_194_304).build();
+        final ConnectionConfig connectionConfig = ConnectionConfig.builder()
+                .sendBufferSize(32768)
+                .receiveBufferSize(32768)
+                .build();
+
         this.webServer = WebServer.builder()
                 .port(port)
                 .addRouting(PbjRouting.builder().service(serviceImpl))
+                .addProtocol(pbjConfig)
+                .connectionConfig(connectionConfig)
                 .build();
     }
 

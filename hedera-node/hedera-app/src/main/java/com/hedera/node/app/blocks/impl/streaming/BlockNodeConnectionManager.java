@@ -69,8 +69,8 @@ public class BlockNodeConnectionManager {
 
     private record Options(Optional<String> authority, String contentType) implements ServiceInterface.RequestOptions {}
 
-    private static final BlockNodeConnectionManager.Options OPTIONS = new BlockNodeConnectionManager.Options(
-            Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC_PROTO);
+    private static final BlockNodeConnectionManager.Options OPTIONS =
+            new BlockNodeConnectionManager.Options(Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC);
 
     /**
      * Initial retry delay for connection attempts.
@@ -264,20 +264,18 @@ public class BlockNodeConnectionManager {
     private @NonNull BlockStreamPublishServiceClient createNewGrpcClient(@NonNull final BlockNodeConfig nodeConfig) {
         requireNonNull(nodeConfig);
 
-        final PbjGrpcClientConfig grpcConfig = new PbjGrpcClientConfig(
-                Duration.ofSeconds(10),
-                Tls.builder().enabled(false).build(),
-                Optional.of(""),
-                "application/grpc+proto");
+        final Tls tls = Tls.builder().enabled(false).build();
+        final PbjGrpcClientConfig grpcConfig =
+                new PbjGrpcClientConfig(Duration.ofSeconds(10), tls, Optional.of(""), "application/grpc");
 
         final WebClient webClient = WebClient.builder()
                 .baseUri("http://" + nodeConfig.address() + ":" + nodeConfig.port())
-                .tls(Tls.builder().enabled(false).build())
+                .tls(tls)
                 .protocolConfigs(List.of(GrpcClientProtocolConfig.builder()
                         .abortPollTimeExpired(false)
                         .pollWaitTime(Duration.ofSeconds(30))
                         .build()))
-                .keepAlive(true)
+                .connectTimeout(Duration.ofSeconds(10))
                 .build();
 
         return new BlockStreamPublishServiceClient(new PbjGrpcClient(webClient, grpcConfig), OPTIONS);

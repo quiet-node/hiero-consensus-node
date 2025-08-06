@@ -616,11 +616,13 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
 
     @Override
     public void onSubscribe(Flow.Subscription subscription) {
+        logger.debug("[{}] onSubscribe", this);
         subscription.request(Long.MAX_VALUE);
     }
 
     @Override
     public void clientEndStreamReceived() {
+        logger.debug("[{}] Client end stream received", this);
         Pipeline.super.clientEndStreamReceived();
     }
 
