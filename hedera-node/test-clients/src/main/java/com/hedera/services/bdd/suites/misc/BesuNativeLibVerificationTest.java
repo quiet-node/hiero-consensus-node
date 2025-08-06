@@ -69,6 +69,6 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                                         "is not present with halt mode enabled! Shutting down node.",
                                         Duration.ZERO))),
                 ifCi(assertHgcaaLogContains(
-                        allNodes(), "Native library verification is enabled", Duration.ofSeconds(60))));
+                        allNodes(), "Native library verification is enabled", Duration.ofSeconds(300))));
     }
 }

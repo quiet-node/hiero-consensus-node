@@ -57,7 +57,7 @@ public final class NativeLibVerifier {
      */
     public void verifyNativeLibs() {
         final var nodeHaltEnabled = contractsConfigSupplier.get().nativeLibVerificationHaltEnabled();
-        LOGGER.info("Native library verification is {}", nodeHaltEnabled ? "enabled" : "disabled");
+        LOGGER.info("Native library verification Halt mode is {}", nodeHaltEnabled ? "enabled" : "disabled");
         getDefaultNativeLibs().stream()
                 .filter(lib -> !lib.isNative().get())
                 .peek(lib -> LOGGER.warn("Native library {} is not present", lib.name()))
