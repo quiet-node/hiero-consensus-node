@@ -11,8 +11,8 @@ import org.jetbrains.annotations.NotNull;
 
 public class V1ConsistencyStateSchema extends Schema {
 
-    /** Defines the section of the state that is for the Consistency State Service */
-    public static final String CONSISTENCY_STATE_SINGLETON_KEY = "CONSISTENCY_STATE_SINGLETON";
+    /** Defines the section of the state that is for the Consistency Service */
+    public static final String CONSISTENCY_SINGLETON_KEY = "CONSISTENCY_SINGLETON";
 
     /**
      * Create a new instance
@@ -26,6 +26,6 @@ public class V1ConsistencyStateSchema extends Schema {
     @NonNull
     @Override
     public Set<StateDefinition> statesToCreate() {
-        return Set.of(StateDefinition.singleton(CONSISTENCY_STATE_SINGLETON_KEY, ConsistencyState.PROTOBUF));
+        return Set.of(StateDefinition.singleton(CONSISTENCY_SINGLETON_KEY, ConsistencyState.PROTOBUF));
     }
 }
