@@ -77,6 +77,7 @@ open module com.hedera.node.test.clients {
     requires com.hedera.node.app.service.addressbook.impl;
     requires com.hedera.node.app.service.addressbook;
     requires com.hedera.node.app.service.contract.impl;
+    requires com.hedera.node.app.service.contract;
     requires com.hedera.node.app.service.schedule.impl;
     requires com.hedera.node.app.service.schedule;
     requires com.hedera.node.app.service.token.impl;
@@ -93,6 +94,7 @@ open module com.hedera.node.test.clients {
     requires com.swirlds.config.api;
     requires com.swirlds.merkledb;
     requires com.swirlds.metrics.api;
+    requires com.swirlds.metrics.impl;
     requires com.swirlds.platform.core.test.fixtures;
     requires com.swirlds.platform.core;
     requires com.swirlds.state.api;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.spi.workflows.record;
 
+import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.BATCH_INNER;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.CHILD;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.NODE;
 import static com.hedera.node.app.spi.workflows.HandleContext.TransactionCategory.PRECEDING;
@@ -103,12 +104,6 @@ public interface StreamBuilder {
      * @return the gas used
      */
     long getGasUsedForContractTxn();
-
-    /**
-     * Returns the evm ops duration already set in construction of this builder.
-     * @return the evm ops duration
-     */
-    long getOpsDurationForContractTxn();
 
     /**
      * Returns the status that is currently set in the record builder.
@@ -239,7 +234,7 @@ public interface StreamBuilder {
      * @return true if this transaction is internal
      */
     default boolean isUserDispatch() {
-        return category() == USER || category() == SCHEDULED || category() == NODE;
+        return category() == USER || category() == SCHEDULED || category() == NODE || category() == BATCH_INNER;
     }
 
     /**
