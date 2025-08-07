@@ -146,6 +146,7 @@ import org.apache.tuweni.bytes.Bytes;
 import org.hiero.base.utility.CommonUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Order;
 
@@ -155,7 +156,6 @@ import org.junit.jupiter.api.Order;
 @OrderedInIsolation
 @HapiTestLifecycle
 public class AtomicLeakyContractTestsSuite {
-
     public static final String CREATE_TX = "createTX";
     public static final String CREATE_TX_REC = "createTXRec";
     public static final String FALSE = "false";
@@ -436,16 +436,16 @@ public class AtomicLeakyContractTestsSuite {
                         .payingWith(longLivedPayer)));
     }
 
-    @LeakyHapiTest(overrides = {"contracts.maxGasPerSec"})
+    @LeakyHapiTest(overrides = {"contracts.maxGasPerTransaction"})
     final Stream<DynamicTest> gasLimitOverMaxGasLimitFailsPrecheck() {
         return hapiTest(
                 uploadInitCode(SIMPLE_UPDATE_CONTRACT),
                 uploadInitCode(EMPTY_CONSTRUCTOR_CONTRACT),
                 contractCreate(SIMPLE_UPDATE_CONTRACT).gas(300_000L),
-                overriding("contracts.maxGasPerSec", "100"),
+                overriding("contracts.maxGasPerTransaction", "100"),
                 atomicBatch(contractCall(SIMPLE_UPDATE_CONTRACT, "set", BigInteger.valueOf(5), BigInteger.valueOf(42))
                                 .gas(23_000L)
-                                .hasPrecheck(MAX_GAS_LIMIT_EXCEEDED)
+                                .hasKnownStatus(MAX_GAS_LIMIT_EXCEEDED)
                                 .batchKey(BATCH_OPERATOR))
                         .payingWith(BATCH_OPERATOR)
                         .hasKnownStatus(INNER_TRANSACTION_FAILED),
@@ -721,8 +721,8 @@ public class AtomicLeakyContractTestsSuite {
                 }));
     }
 
-    // @LeakyHapiTest(overrides = {"contracts.evm.version"}) This will be fixed in
-    // https://github.com/hiero-ledger/hiero-consensus-node/issues/19993
+    @Disabled
+    @LeakyHapiTest(overrides = {"contracts.evm.version"})
     final Stream<DynamicTest> evmLazyCreateViaSolidityCall() {
         final var LAZY_CREATE_CONTRACT = "NestedLazyCreateContract";
         final var ECDSA_KEY = "ECDSAKey";
@@ -1235,7 +1235,7 @@ public class AtomicLeakyContractTestsSuite {
                                         .nonce(0)
                                         .gasPrice(0L)
                                         .gasLimit(1_000_000L)
-                                        .hasPrecheck(INVALID_CONTRACT_ID)
+                                        .hasKnownStatus(INVALID_CONTRACT_ID)
                                         .batchKey(BATCH_OPERATOR))
                                 .payingWith(BATCH_OPERATOR)
                                 .hasKnownStatus(INNER_TRANSACTION_FAILED))));
