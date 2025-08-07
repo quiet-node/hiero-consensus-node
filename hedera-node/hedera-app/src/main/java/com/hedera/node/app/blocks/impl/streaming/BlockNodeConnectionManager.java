@@ -322,6 +322,26 @@ public class BlockNodeConnectionManager {
     }
 
     /**
+     * Connection initiated a periodic reset of the stream
+     * @param connection the connection that initiated the reset of the stream
+     */
+    public void connectionResetsTheStream(
+            @NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay) {
+        if (!isStreamingEnabled.get()) {
+            return;
+        }
+        requireNonNull(connection);
+
+        logger.warn("[{}] Connection intentionally performed reset of the stream", connection);
+
+        connections.remove(connection.getNodeConfig());
+        activeConnectionRef.compareAndSet(connection, null);
+
+        // Immediately try to find and connect to the next available node
+        selectNewBlockNodeForStreaming(false);
+    }
+
+    /**
      * Schedules a connection attempt (or retry) for the given Block Node connection
      * after the specified delay. Handles adding/removing the connection from the retry map.
      *
@@ -464,7 +484,10 @@ public class BlockNodeConnectionManager {
             logger.debug(
                     "Selected block node {}:{} for connection attempt", selectedNode.address(), selectedNode.port());
             // If we selected a node, schedule the connection attempt.
-            connectToNode(selectedNode, force);
+            final BlockNodeConnection connection = connectToNode(selectedNode, force);
+
+            // Immediately schedule the FIRST connection attempt.
+            scheduleConnectionAttempt(connection, Duration.ZERO, null, force);
 
             return true;
         } finally {
@@ -534,7 +557,8 @@ public class BlockNodeConnectionManager {
      *
      * @param nodeConfig the configuration of the node to connect to.
      */
-    private void connectToNode(@NonNull final BlockNodeConfig nodeConfig, final boolean force) {
+    @NonNull
+    private BlockNodeConnection connectToNode(@NonNull final BlockNodeConfig nodeConfig, final boolean force) {
         requireNonNull(nodeConfig);
         logger.info("Scheduling connection attempt for block node {}:{}", nodeConfig.address(), nodeConfig.port());
 
@@ -550,8 +574,7 @@ public class BlockNodeConnectionManager {
                 sharedExecutorService);
 
         connections.put(nodeConfig, connection);
-        // Immediately schedule the FIRST connection attempt.
-        scheduleConnectionAttempt(connection, Duration.ZERO, null, force);
+        return connection;
     }
 
     /**
@@ -629,7 +652,7 @@ public class BlockNodeConnectionManager {
                 logger.error("Block stream worker interrupted", e);
                 Thread.currentThread().interrupt();
             } catch (final Exception e) {
-                logger.error("Block stream worker encountered an error", e);
+                rescheduleAndSelectNewNode(activeConnection, LONGER_RETRY_DELAY);
             } finally {
                 activeConnection.getLock().writeLock().unlock();
             }

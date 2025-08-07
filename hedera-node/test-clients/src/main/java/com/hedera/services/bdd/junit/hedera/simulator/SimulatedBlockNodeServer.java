@@ -296,7 +296,6 @@ public class SimulatedBlockNodeServer {
                         if (request.hasEndStream()) {
                             log.debug("Received end of stream from stream {}", replies.hashCode());
                             serviceImpl.removeStreamFromTracking(replies);
-                            clientEndStreamReceived();
                         } else if (request.hasBlockItems()) {
                             // Iterate through each BlockItem in the request
                             for (final BlockItem item : request.blockItems().blockItems()) {
@@ -438,15 +437,6 @@ public class SimulatedBlockNodeServer {
                     log.info("Block stream completed on port {} for stream {}", port, replies.hashCode());
                     // Just remove the stream normally on completion, no resend needed.
                     removeStreamFromTracking(replies);
-                    try {
-                        // replies.onComplete();
-                    } catch (final Exception e) {
-                        log.warn(
-                                "Exception calling onCompleted for stream {} on port {}: {}",
-                                replies.hashCode(),
-                                port,
-                                e.getMessage());
-                    }
                 }
 
                 @Override
