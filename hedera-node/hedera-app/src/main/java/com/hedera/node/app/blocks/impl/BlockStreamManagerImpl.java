@@ -936,9 +936,8 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     }
 
     @Override
-    public void notifyFatalEvent(final long roundNumber) {
+    public void notifyFatalEvent() {
         fatalShutdownFuture = new CompletableFuture<>();
-        fatalRoundNumber = roundNumber;
     }
 
     @Override

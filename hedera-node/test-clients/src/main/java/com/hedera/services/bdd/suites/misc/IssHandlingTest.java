@@ -82,7 +82,9 @@ class IssHandlingTest implements LifecycleTest {
                                             "s3IssConfig.accessKey",
                                             MINIO_ROOT_USER,
                                             "s3IssConfig.secretKey",
-                                            MINIO_ROOT_PASSWORD));
+                                            MINIO_ROOT_PASSWORD,
+                                            "s3IssConfig.enabled",
+                                            "true"));
                         }))),
                 assertHgcaaLogContains(
                         NodeSelector.byNodeId(ISS_NODE_ID), "ledger.transfers.maxLen = 5", Duration.ofSeconds(10)),

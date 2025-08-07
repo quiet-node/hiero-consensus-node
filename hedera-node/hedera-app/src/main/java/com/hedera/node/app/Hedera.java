@@ -650,6 +650,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                         .getConfiguration()
                         .getConfigData(S3IssConfig.class)
                         .enabled()) {
+                    logger.info("CATASTROPHIC_FAILURE - Uploading ISS context to S3");
                     daggerApp.recordBlockCache().uploadIssContextToS3();
                 }
             }
