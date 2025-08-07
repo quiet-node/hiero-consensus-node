@@ -86,7 +86,7 @@ public class ReconnectProtocol implements Protocol {
         platformStatus.set(status);
     }
 
-    public ReservedSignedState doReconnect(final MerkleNodeState currentState) {
-        return null;
+    public ReservedSignedState doReconnect(final MerkleNodeState currentState) throws InterruptedException {
+        return reconnectSyncHelper.receiveSignedState(null, currentState);
     }
 }

@@ -43,5 +43,5 @@ public interface Gossip {
             @NonNull BindableInputWire<Duration, Void> systemHealthInput,
             @NonNull BindableInputWire<PlatformStatus, Void> platformStatusInput);
 
-    ReservedSignedState doReconnect(MerkleNodeState currentState);
+    ReservedSignedState doReconnect(MerkleNodeState currentState) throws InterruptedException;
 }

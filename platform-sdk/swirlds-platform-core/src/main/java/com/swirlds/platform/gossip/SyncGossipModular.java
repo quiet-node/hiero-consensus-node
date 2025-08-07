@@ -91,7 +91,6 @@ public class SyncGossipModular implements Gossip {
      * @param roster                        the current roster
      * @param selfId                        this node's ID
      * @param appVersion                    the version of the app
-     * @param swirldStateManager            manages the mutable state
      * @param latestCompleteState           holds the latest signed state that has enough signatures to be verifiable
      * @param loadReconnectState            a method that should be called when a state from reconnect is obtained
      * @param clearAllPipelinesForReconnect this method should be called to clear all pipelines prior to a reconnect
@@ -106,7 +105,6 @@ public class SyncGossipModular implements Gossip {
             @NonNull final Roster roster,
             @NonNull final NodeId selfId,
             @NonNull final SemanticVersion appVersion,
-            @NonNull final SwirldStateManager swirldStateManager,
             @NonNull final Supplier<ReservedSignedState> latestCompleteState,
             @NonNull final Consumer<SignedState> loadReconnectState,
             @NonNull final Runnable clearAllPipelinesForReconnect,
@@ -185,7 +183,6 @@ public class SyncGossipModular implements Gossip {
                 threadManager,
                 latestCompleteState,
                 roster,
-                swirldStateManager,
                 selfId,
                 platformStateFacade,
                 stateRootFunction);
@@ -208,7 +205,6 @@ public class SyncGossipModular implements Gossip {
      * @param threadManager                 the thread manager
      * @param latestCompleteState           holds the latest signed state that has enough signatures to be verifiable
      * @param roster                        the current roster
-     * @param swirldStateManager            manages the mutable state
      * @param selfId                        this node's ID
      * @param platformStateFacade           the facade to access the platform state
      * @param stateRootFunction             a function to instantiate the state root object from a Virtual Map
@@ -219,7 +215,6 @@ public class SyncGossipModular implements Gossip {
             @NonNull final ThreadManager threadManager,
             @NonNull final Supplier<ReservedSignedState> latestCompleteState,
             @NonNull final Roster roster,
-            @NonNull final SwirldStateManager swirldStateManager,
             @NonNull final NodeId selfId,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final Function<VirtualMap, MerkleNodeState> stateRootFunction) {
@@ -247,7 +242,6 @@ public class SyncGossipModular implements Gossip {
                 new ReconnectLearnerThrottle(platformContext.getTime(), selfId, reconnectConfig);
 
         final ReconnectSyncHelper reconnectNetworkHelper = new ReconnectSyncHelper(
-                swirldStateManager::getConsensusState,
                 getRoundSupplier,
                 new ReconnectLearnerFactory(
                         platformContext,
@@ -325,7 +319,7 @@ public class SyncGossipModular implements Gossip {
     }
 
     @Override
-    public ReservedSignedState doReconnect(final MerkleNodeState currentState) {
+    public ReservedSignedState doReconnect(final MerkleNodeState currentState) throws InterruptedException {
         return reconnectProtocol.doReconnect(currentState);
     }
 }

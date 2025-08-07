@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.reconnect;
 
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedStateValidator;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -16,5 +17,5 @@ public interface ReconnectNetworkHelper {
      * @throws ReconnectException if any error occurs during the reconnect attempt
      */
     @NonNull
-    ReservedSignedState receiveSignedState(SignedStateValidator signedStateValidator) throws InterruptedException;
+    ReservedSignedState receiveSignedState(SignedStateValidator signedStateValidator, final MerkleNodeState currentState) throws InterruptedException;
 }

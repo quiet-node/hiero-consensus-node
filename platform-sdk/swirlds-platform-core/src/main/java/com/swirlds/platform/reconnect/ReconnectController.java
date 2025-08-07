@@ -105,7 +105,7 @@ public class ReconnectController implements Runnable {
         logger.info(RECONNECT.getMarker(), "waiting for reconnect connection");
         try {
             logger.info(RECONNECT.getMarker(), "acquired reconnect connection");
-            try (final ReservedSignedState reservedState = networkHelper.receiveSignedState(validator)) {
+            try (final ReservedSignedState reservedState = networkHelper.receiveSignedState(validator, null)) {
                 SignedStateFileReader.registerServiceStates(reservedState.get());
                 reconnectLearnerThrottle.successfulReconnect();
 

@@ -958,7 +958,6 @@ public class PlatformComponentBuilder {
                     blocks.rosterHistory().getCurrentRoster(),
                     blocks.selfId(),
                     blocks.appVersion(),
-                    blocks.swirldStateManager(),
                     () -> blocks.getLatestCompleteStateReference().get().get(),
                     state -> blocks.loadReconnectStateReference().get().accept(state),
                     () -> blocks.clearAllPipelinesForReconnectReference().get().run(),

@@ -224,7 +224,6 @@ class ReconnectPeerProtocolTests {
         when(fallenBehindManager.shouldReconnectFrom(any())).thenReturn(false);
 
         var networkHelper = new ReconnectSyncHelper(
-                mock(Supplier.class),
                 mock(LongSupplier.class),
                 mock(ReconnectLearnerFactory.class),
                 mock(StateConfig.class),
