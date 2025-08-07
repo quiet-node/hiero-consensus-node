@@ -168,7 +168,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
 
@@ -210,7 +209,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
         assertEquals(
@@ -255,7 +253,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 networkHelper,
-                fallenBehindManager,
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
         // the ReconnectController must be running in order to provide permits
@@ -305,7 +302,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 () -> ACTIVE,
                 Time.getCurrent(),
                 TEST_PLATFORM_STATE_FACADE);
@@ -325,7 +321,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 () -> ACTIVE,
                 Time.getCurrent(),
                 TEST_PLATFORM_STATE_FACADE);
@@ -368,7 +363,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
@@ -411,7 +405,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
@@ -447,7 +440,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
@@ -476,7 +468,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                fallenBehindManager,
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(CHECKING);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
@@ -501,7 +492,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                mock(FallenBehindManager.class),
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));
@@ -546,7 +536,6 @@ class ReconnectPeerProtocolTests {
                 Duration.of(100, ChronoUnit.MILLIS),
                 reconnectMetrics,
                 reconnectNetworkHelper,
-                mock(FallenBehindManager.class),
                 TEST_PLATFORM_STATE_FACADE);
         reconnectProtocol.updatePlatformStatus(ACTIVE);
         final PeerProtocol peerProtocol = reconnectProtocol.createPeerInstance(NodeId.of(0));

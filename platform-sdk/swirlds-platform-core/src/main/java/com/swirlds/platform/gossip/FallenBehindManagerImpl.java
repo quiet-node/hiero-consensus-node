@@ -35,12 +35,9 @@ public class FallenBehindManagerImpl implements FallenBehindManager {
     private boolean previouslyFallenBehind;
 
     public FallenBehindManagerImpl(
-            @NonNull final NodeId selfId,
             final int numNeighbors,
             @NonNull final StatusActionSubmitter statusActionSubmitter,
             @NonNull final ReconnectConfig config) {
-        Objects.requireNonNull(selfId, "selfId");
-
         this.numNeighbors = numNeighbors;
 
         this.statusActionSubmitter = Objects.requireNonNull(statusActionSubmitter);

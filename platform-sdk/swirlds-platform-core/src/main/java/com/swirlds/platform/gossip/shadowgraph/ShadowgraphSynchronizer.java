@@ -16,6 +16,7 @@ import com.swirlds.common.threading.framework.Stoppable;
 import com.swirlds.common.threading.framework.Stoppable.StopBehavior;
 import com.swirlds.common.threading.pool.ParallelExecutionException;
 import com.swirlds.common.threading.pool.ParallelExecutor;
+import com.swirlds.platform.components.PlatfromReconnecter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.SyncException;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
@@ -64,7 +65,7 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
      * @param numberOfNodes        number of nodes in the network
      * @param syncMetrics          metrics for sync
      * @param receivedEventHandler events that are received are passed here
-     * @param fallenBehindManager  tracks if we have fallen behind
+     * @param platfromReconnecter  tracks if we have fallen behind
      * @param intakeEventCounter   used for tracking events in the intake pipeline per peer
      * @param executor             for executing read/write tasks in parallel
      */
@@ -74,7 +75,7 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
             final int numberOfNodes,
             @NonNull final SyncMetrics syncMetrics,
             @NonNull final Consumer<PlatformEvent> receivedEventHandler,
-            @NonNull final FallenBehindManager fallenBehindManager,
+            @NonNull final PlatfromReconnecter platfromReconnecter,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final ParallelExecutor executor) {
 
@@ -84,7 +85,7 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
                 numberOfNodes,
                 syncMetrics,
                 receivedEventHandler,
-                fallenBehindManager,
+                platfromReconnecter,
                 intakeEventCounter);
         this.executor = Objects.requireNonNull(executor);
 

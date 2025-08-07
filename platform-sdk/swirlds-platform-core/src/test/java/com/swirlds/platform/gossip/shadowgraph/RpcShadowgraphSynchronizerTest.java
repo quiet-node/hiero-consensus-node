@@ -77,7 +77,7 @@ class RpcShadowgraphSynchronizerTest {
         this.selfId = NodeId.of(1);
         this.statusSubmitter = mock(StatusActionSubmitter.class);
         this.fallenBehindManager = new FallenBehindManagerImpl(
-                selfId, NUM_NODES - 1, statusSubmitter, configuration.getConfigData(ReconnectConfig.class));
+                NUM_NODES - 1, statusSubmitter, configuration.getConfigData(ReconnectConfig.class));
 
         this.eventHandler = mock(Consumer.class);
         this.gossipSender = mock(GossipRpcSender.class);

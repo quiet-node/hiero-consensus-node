@@ -224,7 +224,7 @@ public class SyncNode {
                 numNodes,
                 mock(SyncMetrics.class),
                 eventHandler,
-                syncManager,
+                null,
                 mock(IntakeEventCounter.class),
                 executor);
     }

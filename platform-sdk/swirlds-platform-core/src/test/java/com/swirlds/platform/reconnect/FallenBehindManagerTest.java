@@ -35,7 +35,7 @@ class FallenBehindManagerTest {
             .getConfigData(ReconnectConfig.class);
     final List<PeerInfo> peers = Utilities.createPeerInfoList(roster, selfId);
     private final FallenBehindManager manager =
-            new FallenBehindManagerImpl(selfId, peers.size(), mock(StatusActionSubmitter.class), config);
+            new FallenBehindManagerImpl(peers.size(), mock(StatusActionSubmitter.class), config);
 
     @Test
     void test() {

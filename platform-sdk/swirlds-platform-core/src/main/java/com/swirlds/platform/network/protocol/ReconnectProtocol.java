@@ -8,6 +8,7 @@ import com.swirlds.platform.metrics.ReconnectMetrics;
 import com.swirlds.platform.reconnect.ReconnectPeerProtocol;
 import com.swirlds.platform.reconnect.ReconnectSyncHelper;
 import com.swirlds.platform.reconnect.ReconnectThrottle;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -29,7 +30,6 @@ public class ReconnectProtocol implements Protocol {
     private final Duration reconnectSocketTimeout;
     private final ReconnectMetrics reconnectMetrics;
     private final ThreadManager threadManager;
-    private final FallenBehindManager fallenBehindManager;
     private final PlatformStateFacade platformStateFacade;
 
     private final Time time;
@@ -45,7 +45,6 @@ public class ReconnectProtocol implements Protocol {
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics reconnectMetrics,
             @NonNull final ReconnectSyncHelper reconnectSyncHelper,
-            @NonNull final FallenBehindManager fallenBehindManager,
             @NonNull final PlatformStateFacade platformStateFacade) {
 
         this.platformContext = Objects.requireNonNull(platformContext);
@@ -55,7 +54,6 @@ public class ReconnectProtocol implements Protocol {
         this.reconnectSocketTimeout = Objects.requireNonNull(reconnectSocketTimeout);
         this.reconnectMetrics = Objects.requireNonNull(reconnectMetrics);
         this.reconnectSyncHelper = Objects.requireNonNull(reconnectSyncHelper);
-        this.fallenBehindManager = Objects.requireNonNull(fallenBehindManager);
         this.platformStateFacade = platformStateFacade;
         this.time = Objects.requireNonNull(platformContext.getTime());
     }
@@ -75,7 +73,6 @@ public class ReconnectProtocol implements Protocol {
                 reconnectSocketTimeout,
                 reconnectMetrics,
                 reconnectSyncHelper,
-                fallenBehindManager,
                 platformStatus::get,
                 time,
                 platformStateFacade);
@@ -87,5 +84,9 @@ public class ReconnectProtocol implements Protocol {
     @Override
     public void updatePlatformStatus(@NonNull final PlatformStatus status) {
         platformStatus.set(status);
+    }
+
+    public ReservedSignedState doReconnect(final MerkleNodeState currentState) {
+        return null;
     }
 }

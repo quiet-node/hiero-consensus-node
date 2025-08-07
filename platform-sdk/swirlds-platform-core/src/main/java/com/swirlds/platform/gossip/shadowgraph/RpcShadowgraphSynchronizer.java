@@ -70,7 +70,7 @@ public class RpcShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer 
                 numberOfNodes,
                 syncMetrics,
                 receivedEventHandler,
-                fallenBehindManager,
+                null,
                 intakeEventCounter);
         final SyncConfig syncConfig = platformContext.getConfiguration().getConfigData(SyncConfig.class);
 

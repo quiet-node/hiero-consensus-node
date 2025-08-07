@@ -4,6 +4,8 @@ package com.swirlds.platform.wiring.components;
 import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
+import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.wiring.NoInput;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
@@ -40,4 +42,6 @@ public interface Gossip {
             @NonNull BindableInputWire<NoInput, Void> clearInput,
             @NonNull BindableInputWire<Duration, Void> systemHealthInput,
             @NonNull BindableInputWire<PlatformStatus, Void> platformStatusInput);
+
+    ReservedSignedState doReconnect(MerkleNodeState currentState);
 }

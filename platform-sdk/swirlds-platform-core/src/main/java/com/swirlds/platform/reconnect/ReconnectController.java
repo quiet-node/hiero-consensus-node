@@ -38,8 +38,6 @@ public class ReconnectController implements Runnable {
     /** throttles reconnect learner attempts */
     private final ReconnectLearnerThrottle reconnectLearnerThrottle;
 
-    private final AtomicReference<PlatformStatus> platformStatus = new AtomicReference<>(PlatformStatus.STARTING_UP);
-
     /**
      * @param reconnectConfig configuration for reconnect
      * @param threadManager   responsible for creating and managing threads
@@ -123,19 +121,5 @@ public class ReconnectController implements Runnable {
         }
         resumeGossip.run();
         return true;
-    }
-
-    /**
-     * Called from the wiring when platform status is changing
-     *
-     * @param status new platform status
-     */
-    public void updatePlatformStatus(@NonNull final PlatformStatus status) {
-        final PlatformStatus previousState = platformStatus.getAndSet(status);
-        if (status != previousState) {
-            if (PlatformStatus.BEHIND == status) {
-                start();
-            }
-        }
     }
 }

@@ -6,6 +6,7 @@ import static com.swirlds.platform.gossip.shadowgraph.SyncUtils.filterLikelyDupl
 
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.platform.components.PlatfromReconnecter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
 import com.swirlds.platform.metrics.SyncMetrics;
@@ -21,7 +22,6 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.crypto.Hash;
-import org.hiero.consensus.gossip.FallenBehindManager;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.NodeId;
@@ -57,7 +57,7 @@ public class AbstractShadowgraphSynchronizer {
     /**
      * manages sync related decisions
      */
-    private final FallenBehindManager fallenBehindManager;
+    private final PlatfromReconnecter platfromReconnecter;
 
     /**
      * Keeps track of how many events from each peer have been received, but haven't yet made it through the intake
@@ -96,7 +96,7 @@ public class AbstractShadowgraphSynchronizer {
      * @param numberOfNodes        number of nodes in the network
      * @param syncMetrics          metrics for sync
      * @param receivedEventHandler events that are received are passed here
-     * @param fallenBehindManager  tracks if we have fallen behind
+     * @param platfromReconnecter  tracks if we have fallen behind
      * @param intakeEventCounter   used for tracking events in the intake pipeline per peer
      */
     public AbstractShadowgraphSynchronizer(
@@ -105,7 +105,7 @@ public class AbstractShadowgraphSynchronizer {
             final int numberOfNodes,
             @NonNull final SyncMetrics syncMetrics,
             @NonNull final Consumer<PlatformEvent> receivedEventHandler,
-            @NonNull final FallenBehindManager fallenBehindManager,
+            @NonNull final PlatfromReconnecter platfromReconnecter,
             @NonNull final IntakeEventCounter intakeEventCounter) {
         Objects.requireNonNull(platformContext);
 
@@ -113,7 +113,7 @@ public class AbstractShadowgraphSynchronizer {
         this.shadowGraph = Objects.requireNonNull(shadowGraph);
         this.numberOfNodes = numberOfNodes;
         this.syncMetrics = Objects.requireNonNull(syncMetrics);
-        this.fallenBehindManager = Objects.requireNonNull(fallenBehindManager);
+        this.platfromReconnecter = Objects.requireNonNull(platfromReconnecter);
         this.intakeEventCounter = Objects.requireNonNull(intakeEventCounter);
 
         this.eventHandler = Objects.requireNonNull(receivedEventHandler);
@@ -149,9 +149,9 @@ public class AbstractShadowgraphSynchronizer {
 
         final SyncFallenBehindStatus status = SyncFallenBehindStatus.getStatus(self, other);
         if (status == SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
-            fallenBehindManager.reportFallenBehind(nodeId);
+            platfromReconnecter.reportFallenBehind(nodeId);
         } else {
-            fallenBehindManager.clearFallenBehind(nodeId);
+            platfromReconnecter.clearFallenBehind(nodeId);
         }
 
         if (status != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {

@@ -7,6 +7,8 @@ import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
 import com.swirlds.platform.gossip.IntakeEventCounter;
+import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.wiring.NoInput;
 import com.swirlds.platform.wiring.components.Gossip;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -83,5 +85,10 @@ public class SimulatedGossip implements Gossip {
             intakeEventCounter.eventEnteredIntakePipeline(event.getSenderId());
         }
         eventOutput.forward(event);
+    }
+
+    @Override
+    public ReservedSignedState doReconnect(final MerkleNodeState currentState) {
+        throw  new UnsupportedOperationException();
     }
 }

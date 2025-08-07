@@ -47,7 +47,6 @@ public class ReconnectPeerProtocol implements PeerProtocol {
     private final CountPerSecond reconnectRejectionMetrics;
     private InitiatedBy initiatedBy = InitiatedBy.NO_ONE;
     private final ThreadManager threadManager;
-    private final FallenBehindManager fallenBehindManager;
 
     /**
      * Provides the platform status.
@@ -84,7 +83,6 @@ public class ReconnectPeerProtocol implements PeerProtocol {
      * @param reconnectSocketTimeout  the socket timeout to use when executing a reconnect
      * @param reconnectMetrics        tracks reconnect metrics
      * @param reconnectHelperNetwork     controls reconnecting as a learner
-     * @param fallenBehindManager     maintains this node's behind status
      * @param platformStatusSupplier  provides the platform status
      * @param time                    the time object to use
      * @param platformStateFacade     provides access to the platform state
@@ -98,7 +96,6 @@ public class ReconnectPeerProtocol implements PeerProtocol {
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics reconnectMetrics,
             @NonNull final ReconnectSyncHelper reconnectHelperNetwork,
-            @NonNull final FallenBehindManager fallenBehindManager,
             @NonNull final Supplier<PlatformStatus> platformStatusSupplier,
             @NonNull final Time time,
             @NonNull final PlatformStateFacade platformStateFacade) {
@@ -111,7 +108,6 @@ public class ReconnectPeerProtocol implements PeerProtocol {
         this.reconnectSocketTimeout = Objects.requireNonNull(reconnectSocketTimeout);
         this.reconnectMetrics = Objects.requireNonNull(reconnectMetrics);
         this.reconnectHelperNetwork = Objects.requireNonNull(reconnectHelperNetwork);
-        this.fallenBehindManager = Objects.requireNonNull(fallenBehindManager);
         this.platformStatusSupplier = Objects.requireNonNull(platformStatusSupplier);
         this.configuration = Objects.requireNonNull(platformContext.getConfiguration());
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
@@ -141,11 +137,6 @@ public class ReconnectPeerProtocol implements PeerProtocol {
      */
     @Override
     public boolean shouldInitiate() {
-        // if this neighbor has not told me I have fallen behind, I will not reconnect with him
-        if (!fallenBehindManager.shouldReconnectFrom(peerId)) {
-            return false;
-        }
-
         // if a permit is acquired, it will be released by either initiateFailed or runProtocol
         final boolean acquiredPermit = reconnectHelperNetwork.acquireLearnerPermit();
         if (acquiredPermit) {
@@ -169,7 +160,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
     @Override
     public boolean shouldAccept() {
         // we should not be the teacher if we have fallen behind
-        if (fallenBehindManager.hasFallenBehind()) {
+        if (platformStatusSupplier.get() == PlatformStatus.BEHIND) {
             fallenBehindLogger.info(
                     RECONNECT.getMarker(),
                     "Rejecting reconnect request from node {} because this node has fallen behind",
