@@ -76,8 +76,9 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
         public static final int OLD_CHILD_COUNT = 3;
     }
 
-    public MigrationTestingToolState(@NonNull final PlatformContext platformContext) {
-        super(platformContext);
+    public MigrationTestingToolState() {
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
     }
 
     private MigrationTestingToolState(final MigrationTestingToolState that) {

@@ -41,7 +41,6 @@ import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.common.utility.StopWatch;
-import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.demo.merkle.map.FCMConfig;
 import com.swirlds.demo.merkle.map.MapValueData;
 import com.swirlds.demo.merkle.map.MapValueFCQ;
@@ -141,10 +140,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
             logger.info(STARTUP.getMarker(), "Registering PlatformTestingToolState with ConstructableRegistry");
             ConstructableRegistry.getInstance()
                     .registerConstructable(new ClassConstructorPair(PlatformTestingToolState.class, () -> {
-                        final PlatformTestingToolState ptt =
-                                new PlatformTestingToolState(PlatformContext.create(ConfigurationBuilder.create()
-                                        .autoDiscoverExtensions()
-                                        .build()));
+                        final PlatformTestingToolState ptt = new PlatformTestingToolState();
                         return ptt;
                     }));
             logger.info(
@@ -865,7 +861,7 @@ public class PlatformTestingToolMain implements SwirldMain<PlatformTestingToolSt
     @Override
     @NonNull
     public PlatformTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
-        final PlatformTestingToolState state = new PlatformTestingToolState(platformContext);
+        final PlatformTestingToolState state = new PlatformTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
     }

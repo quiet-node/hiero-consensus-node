@@ -11,6 +11,7 @@ import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.state.test.fixtures.merkle.singleton.StringLeaf;
@@ -83,8 +84,9 @@ public class ConsistencyTestingToolState extends MerkleStateRoot<ConsistencyTest
     /**
      * Constructor
      */
-    public ConsistencyTestingToolState(@NonNull final PlatformContext platformContext) {
-        super(platformContext);
+    public ConsistencyTestingToolState() {
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
         transactionHandlingHistory = new TransactionHandlingHistory();
         transactionsAwaitingPostHandle = ConcurrentHashMap.newKeySet();
         logger.info(STARTUP.getMarker(), "New State Constructed.");

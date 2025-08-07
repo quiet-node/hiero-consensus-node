@@ -165,9 +165,10 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         // Copy the Merkle route from the source instance
         super(from);
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
+        this.platformContext = from.platformContext;
         this.merkleCryptography = from.merkleCryptography;
         this.roundSupplier = from.roundSupplier;
-        this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.platformContext.getMetrics());
         this.listeners.addAll(from.listeners);
 
         // Copy over the metadata

@@ -12,6 +12,7 @@ package com.swirlds.demo.stats;
  */
 
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -46,9 +47,10 @@ public class StatsDemoState extends MerkleStateRoot<StatsDemoState> implements M
 
     private static final long CLASS_ID = 0xc550a1cd94e91ca3L;
 
-    public StatsDemoState(@NonNull final PlatformContext platformContext) {
+    public StatsDemoState() {
         // no op
-        super(platformContext);
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
     }
 
     private StatsDemoState(final StatsDemoState sourceState) {

@@ -8,7 +8,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.Platform;
@@ -44,10 +43,7 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(
                     new ClassConstructorPair(ConsistencyTestingToolState.class, () -> {
-                        ConsistencyTestingToolState consistencyTestingToolState =
-                                new ConsistencyTestingToolState(PlatformContext.create(ConfigurationBuilder.create()
-                                        .autoDiscoverExtensions()
-                                        .build()));
+                        ConsistencyTestingToolState consistencyTestingToolState = new ConsistencyTestingToolState();
                         // Don't call FAKE_MERKLE_STATE_LIFECYCLES.initStates(consistencyTestingToolState) here.
                         // The stub states are automatically initialized upon loading the state from disk,
                         // or after finishing a reconnect.
@@ -105,7 +101,7 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
     @Override
     @NonNull
     public ConsistencyTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
-        final ConsistencyTestingToolState state = new ConsistencyTestingToolState(platformContext);
+        final ConsistencyTestingToolState state = new ConsistencyTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
 
         return state;

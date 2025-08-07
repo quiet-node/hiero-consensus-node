@@ -14,7 +14,6 @@ import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.config.StateCommonConfig;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
@@ -56,9 +55,7 @@ public class ConsistencyTestingToolStateTest {
 
     @BeforeAll
     static void initState() {
-        PlatformContext platformContext = mock(PlatformContext.class);
-        when(platformContext.getMetrics()).thenReturn(mock(Metrics.class));
-        state = new ConsistencyTestingToolState(platformContext);
+        state = new ConsistencyTestingToolState();
         stateLifecycle = new ConsistencyTestingToolConsensusStateEventHandler(DEFAULT_PLATFORM_STATE_FACADE);
         TestingAppStateInitializer.DEFAULT.initStates(state);
     }

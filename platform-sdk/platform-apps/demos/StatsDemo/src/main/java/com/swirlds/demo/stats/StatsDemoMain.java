@@ -19,7 +19,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.common.threading.framework.StoppableThread;
 import com.swirlds.common.threading.framework.config.StoppableThreadConfiguration;
 import com.swirlds.platform.ParameterProvider;
@@ -62,8 +61,7 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
         try {
             final ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(new ClassConstructorPair(StatsDemoState.class, () -> {
-                final StatsDemoState statsDemoState =
-                        new StatsDemoState(TestPlatformContextBuilder.create().build());
+                final StatsDemoState statsDemoState = new StatsDemoState();
                 return statsDemoState;
             }));
             registerMerkleStateRootClassIds();
@@ -130,7 +128,7 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
     @NonNull
     @Override
     public StatsDemoState newStateRoot(@NonNull final PlatformContext platformContext) {
-        final StatsDemoState state = new StatsDemoState(platformContext);
+        final StatsDemoState state = new StatsDemoState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
     }

@@ -10,6 +10,7 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.utility.ThresholdLimitingHandler;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.demo.merkle.map.FCMConfig;
 import com.swirlds.demo.merkle.map.FCMFamily;
 import com.swirlds.demo.merkle.map.internal.ExpectedFCMFamily;
@@ -92,8 +93,9 @@ public class PlatformTestingToolState extends MerkleStateRoot<PlatformTestingToo
      */
     private NodeId selfId;
 
-    public PlatformTestingToolState(@NonNull final PlatformContext platformContext) {
-        super(platformContext);
+    public PlatformTestingToolState() {
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
         expectedFCMFamily = new ExpectedFCMFamilyImpl();
         referenceNftLedger = new ReferenceNftLedger(NFT_TRACKING_FRACTION);
     }

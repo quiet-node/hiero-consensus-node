@@ -17,6 +17,7 @@ import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitialize
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.platform.system.Platform;
@@ -80,8 +81,9 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
      */
     private List<PlannedLogError> plannedLogErrorList = new LinkedList<>();
 
-    public ISSTestingToolState(@NonNull final PlatformContext platformContext) {
-        super(platformContext);
+    public ISSTestingToolState() {
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
     }
 
     public void initState(InitTrigger trigger, Platform platform) {
