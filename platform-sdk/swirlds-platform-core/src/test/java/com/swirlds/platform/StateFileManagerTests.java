@@ -30,7 +30,6 @@ import com.swirlds.platform.components.DefaultSavedStateController;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.eventhandling.StateWithHashComplexity;
-import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.snapshot.DefaultStateSnapshotManager;
@@ -152,7 +151,7 @@ class StateFileManagerTests {
                 TEST_PLATFORM_STATE_FACADE,
                 PlatformContext.create(configuration));
         SignedState signedState = deserializedSignedState.reservedSignedState().get();
-        signedState.getState().getRoot().getHash();
+        hashState(signedState);
 
         assertNotNull(deserializedSignedState.originalHash(), "hash should not be null");
         assertNotSame(signedState, originalState, "deserialized object should not be the same");
@@ -169,7 +168,7 @@ class StateFileManagerTests {
     void standardOperationTest(final boolean successExpected) throws IOException {
         final SignedState signedState = new RandomSignedStateGenerator().build();
         makeImmutable(signedState);
-        hashState((signedState.getState()));
+        hashState(signedState);
 
         if (!successExpected) {
             // To make the save fail, create a file with the name of the directory the state will try to be saved to
@@ -201,7 +200,7 @@ class StateFileManagerTests {
                 context, MAIN_CLASS_NAME, SELF_ID, SWIRLD_NAME, TEST_PLATFORM_STATE_FACADE);
         signedState.markAsStateToSave(ISS);
         makeImmutable(signedState);
-        hashState((signedState.getState()));
+        hashState(signedState);
         manager.dumpStateTask(StateDumpRequest.create(signedState.reserve("test")));
 
         final Path stateDirectory = testDirectory.resolve("iss").resolve("node1234_round" + signedState.getRound());
@@ -283,7 +282,7 @@ class StateFileManagerTests {
 
             controller.markSavedState(new StateWithHashComplexity(reservedSignedState, 1));
             makeImmutable(reservedSignedState.get());
-            hashState(signedState.getState());
+            hashState(signedState);
 
             if (signedState.isStateToSave()) {
                 assertTrue(
@@ -386,7 +385,7 @@ class StateFileManagerTests {
                 new RandomSignedStateGenerator(random).setRound(issRound).build();
         makeImmutable(issState);
         issState.markAsStateToSave(ISS);
-        hashState((issState.getState()));
+        hashState(issState);
         manager.dumpStateTask(StateDumpRequest.create(issState.reserve("test")));
         validateSavingOfState(issState, issDirectory);
 
@@ -400,7 +399,7 @@ class StateFileManagerTests {
         final SignedState fatalState =
                 new RandomSignedStateGenerator(random).setRound(fatalRound).build();
         makeImmutable(fatalState);
-        hashState(fatalState.getState());
+        hashState(fatalState);
         fatalState.markAsStateToSave(FATAL_ERROR);
         manager.dumpStateTask(StateDumpRequest.create(fatalState.reserve("test")));
         validateSavingOfState(fatalState, fatalDirectory);
@@ -414,7 +413,7 @@ class StateFileManagerTests {
             issState.markAsStateToSave(PERIODIC_SNAPSHOT);
             states.add(signedState);
             makeImmutable(signedState);
-            hashState(signedState.getState());
+            hashState(signedState);
             manager.saveStateTask(signedState.reserve("test"));
 
             // Verify that the states we want to be on disk are still on disk
@@ -442,11 +441,12 @@ class StateFileManagerTests {
         }
     }
 
-    private static void hashState(MerkleNodeState state) {
-        state.getRoot().getHash();
+    // Ensures the state is hashed by calling getHash, which hashes the state if it hasn't been hashed yet
+    static void hashState(SignedState signedState) {
+        signedState.getState().getRoot().getHash();
     }
 
-    private static void makeImmutable(SignedState signedState) {
+    static void makeImmutable(SignedState signedState) {
         signedState.getState().copy().release();
     }
 }

@@ -2,7 +2,6 @@
 package com.swirlds.platform.test.fixtures.state;
 
 import static com.swirlds.state.test.fixtures.merkle.TestStateUtils.registerWithSystem;
-import static java.util.Objects.requireNonNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
@@ -63,22 +62,10 @@ public class TestingAppStateInitializer {
             .withConfigDataType(FileSystemManagerConfig.class)
             .build();
 
-    public static final TestingAppStateInitializer DEFAULT = new TestingAppStateInitializer(CONFIGURATION);
-
-    private final Configuration configuration;
+    public static final TestingAppStateInitializer DEFAULT = new TestingAppStateInitializer();
 
     /**
-     * Constructor for {@link TestingAppStateInitializer}
-     *
-     * @param configuration the configuration to use for the initialized state
-     */
-    public TestingAppStateInitializer(@NonNull final Configuration configuration) {
-        this.configuration = requireNonNull(configuration);
-    }
-
-    /**
-     * Register the class IDs, specifically those
-     * used by the {@link PlatformStateService} and {@code RosterService}.
+     * Register the class IDs, specifically those by the {@link PlatformStateService} and {@code RosterService}.
      */
     public static void registerMerkleStateRootClassIds() {
         try {

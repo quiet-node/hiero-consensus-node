@@ -14,7 +14,6 @@ import com.hedera.hapi.node.state.token.Token;
 import com.hedera.hapi.node.state.token.TokenRelation;
 import com.hedera.hapi.platform.state.StateKey;
 import com.hedera.hapi.platform.state.StateValue;
-import com.hedera.node.app.HederaVirtualMapState;
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.ReadableEntityIdStoreImpl;
 import com.hedera.node.app.service.token.impl.TokenServiceImpl;
@@ -28,6 +27,7 @@ import com.hedera.statevalidation.reporting.Report;
 import com.hedera.statevalidation.reporting.SlackReportGenerator;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.threading.manager.AdHocThreadManager;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.state.spi.ReadableKVState;
 import com.swirlds.virtualmap.VirtualMap;
@@ -48,18 +48,18 @@ public class TokenRelationsIntegrity {
 
     @Test
     void validate(DeserializedSignedState deserializedState, Report report) throws InterruptedException {
-        final HederaVirtualMapState servicesState = (HederaVirtualMapState)
+        final MerkleNodeState merkleNodeState =
                 deserializedState.reservedSignedState().get().getState();
 
-        final VirtualMap virtualMap = (VirtualMap) servicesState.getRoot();
+        final VirtualMap virtualMap = (VirtualMap) merkleNodeState.getRoot();
         assertNotNull(virtualMap);
 
         final ReadableEntityIdStore entityCounters =
-                new ReadableEntityIdStoreImpl(servicesState.getReadableStates(EntityIdService.NAME));
+                new ReadableEntityIdStoreImpl(merkleNodeState.getReadableStates(EntityIdService.NAME));
         final ReadableKVState<AccountID, Account> tokenAccounts =
-                servicesState.getReadableStates(TokenServiceImpl.NAME).get(V0490TokenSchema.ACCOUNTS_KEY);
+                merkleNodeState.getReadableStates(TokenServiceImpl.NAME).get(V0490TokenSchema.ACCOUNTS_KEY);
         final ReadableKVState<TokenID, Token> tokenTokens =
-                servicesState.getReadableStates(TokenServiceImpl.NAME).get(V0490TokenSchema.TOKENS_KEY);
+                merkleNodeState.getReadableStates(TokenServiceImpl.NAME).get(V0490TokenSchema.TOKENS_KEY);
 
         assertNotNull(entityCounters);
         assertNotNull(tokenAccounts);

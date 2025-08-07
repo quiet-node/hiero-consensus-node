@@ -194,7 +194,7 @@ public class ReconnectLearner {
         final ReconnectConfig reconnectConfig =
                 platformContext.getConfiguration().getConfigData(ReconnectConfig.class);
 
-        // make sure that the state is hashed
+        // Ensures the state is hashed by calling getHash, which hashes the state if it hasn't been hashed yet.
         currentState.getRoot().getHash();
 
         final LearningSynchronizer synchronizer = new LearningSynchronizer(
@@ -208,11 +208,10 @@ public class ReconnectLearner {
                 platformContext.getMetrics());
         synchronizer.synchronize();
 
-        MerkleNodeState merkleNodeState;
         final VirtualMap virtualMap = (VirtualMap) synchronizer.getRoot();
         final Metrics metrics = platformContext.getMetrics();
         virtualMap.registerMetrics(metrics);
-        merkleNodeState = stateRootFunction.apply(virtualMap);
+        final MerkleNodeState merkleNodeState = stateRootFunction.apply(virtualMap);
 
         final SignedState newSignedState = new SignedState(
                 platformContext.getConfiguration(),
