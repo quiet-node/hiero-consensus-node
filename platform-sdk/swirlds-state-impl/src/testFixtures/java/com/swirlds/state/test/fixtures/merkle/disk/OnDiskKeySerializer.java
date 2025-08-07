@@ -6,6 +6,7 @@ import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.ReadableSequentialData;
 import com.hedera.pbj.runtime.io.WritableSequentialData;
 import com.hedera.pbj.runtime.io.buffer.BufferedData;
+import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.serialize.KeySerializer;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -23,8 +24,11 @@ import org.hiero.base.io.SelfSerializable;
  * <p>However, this class does, itself, need to be {@link SelfSerializable} because it is part of
  * the structure of a {@link VirtualMap} and needs to be restored when loaded from saved-state.
  *
+ * @deprecated This class should be removed together with {@link MerkleStateRoot}.
+ *
  * @param <K>
  */
+@Deprecated
 public final class OnDiskKeySerializer<K> implements KeySerializer<OnDiskKey<K>> {
 
     /**

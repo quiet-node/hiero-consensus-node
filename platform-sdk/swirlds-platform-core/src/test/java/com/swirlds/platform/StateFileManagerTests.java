@@ -436,6 +436,7 @@ class StateFileManagerTests {
         }
     }
 
+    // Ensures the state is hashed by calling getHash, which hashes the state if it hasn't been hashed yet
     static void hashState(SignedState signedState) {
         signedState.getState().getRoot().getHash();
     }

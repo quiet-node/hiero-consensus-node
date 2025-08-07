@@ -9,6 +9,7 @@ import com.hedera.hapi.node.base.TopicID;
 import com.hedera.pbj.runtime.Codec;
 import com.hedera.pbj.runtime.ParseException;
 import com.swirlds.fcqueue.FCQueue;
+import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.state.test.fixtures.merkle.memory.InMemoryKey;
 import com.swirlds.state.test.fixtures.merkle.memory.InMemoryValue;
 import com.swirlds.state.test.fixtures.merkle.queue.QueueNode;
@@ -31,7 +32,11 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * This utility class provides convenient methods for logging state operations for different types of state types.
+ * Contains duplicated code from {@code StateLogger}, but this class is intended for text fixtures only,
+ * so it is conscious choice for convenience, and anyway this class will be deleted soon.
+ * @deprecated This class should be removed together with {@link MerkleStateRoot}.
  */
+@Deprecated
 public class TestStateLogger {
     /** The logger we are using for the State log */
     private static final Logger logger = LogManager.getLogger(TestStateLogger.class);

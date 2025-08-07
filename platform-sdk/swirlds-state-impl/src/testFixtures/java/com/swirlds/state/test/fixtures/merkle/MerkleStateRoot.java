@@ -151,12 +151,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     private final RuntimeObjectRecord registryRecord;
 
     /**
-     * Used to track the status of the Platform.
-     * It is set to {@code true} if Platform status is not {@code PlatformStatus.ACTIVE}
-     */
-    private boolean startupMode = true;
-
-    /**
      * Create a new instance. This constructor must be used for all creations of this class.
      *
      */
@@ -189,7 +183,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
         this.listeners.addAll(from.listeners);
         this.roundSupplier = from.roundSupplier;
-        this.startupMode = from.startupMode;
 
         // Copy over the metadata
         for (final var entry : from.services.entrySet()) {
@@ -207,16 +200,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         }
     }
 
-    public void disableStartupMode() {
-        startupMode = false;
-    }
-
     /**
      * {@inheritDoc}
      */
     @Override
     public boolean isStartUpMode() {
-        return startupMode;
+        return false;
     }
 
     /**
@@ -706,23 +695,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             this.serviceName = requireNonNull(serviceName);
         }
 
-        /**
-         * Copies and releases the {@link VirtualMap} for the given state key. This ensures
-         * data is continually flushed to disk
-         *
-         * @param stateKey the state key
-         */
-        public void copyAndReleaseVirtualMap(@NonNull final String stateKey) {
-            final var md = stateMetadata.get(stateKey);
-            final VirtualMap virtualMap = findNode(md).cast();
-            final var mutableCopy = virtualMap.copy();
-            if (metrics != null) {
-                mutableCopy.registerMetrics(metrics);
-            }
-            setChild(findNodeIndex(serviceName, stateKey), mutableCopy);
-            kvInstances.put(stateKey, createReadableKVState(md, mutableCopy));
-        }
-
         @NonNull
         @Override
         public <K, V> WritableKVState<K, V> get(@NonNull String stateKey) {
@@ -809,10 +781,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             for (final ReadableKVState kv : kvInstances.values()) {
                 ((WritableKVStateBase) kv).commit();
             }
-            if (startupMode) {
-                for (final ReadableSingletonState s : singletonInstances.values()) {
-                    ((WritableSingletonStateBase) s).commit();
-                }
+            for (final ReadableSingletonState s : singletonInstances.values()) {
+                ((WritableSingletonStateBase) s).commit();
             }
             for (final ReadableQueueState q : queueInstances.values()) {
                 ((WritableQueueStateBase) q).commit();
@@ -881,22 +851,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @NonNull
     private static String extractStateKey(@NonNull final StateMetadata<?, ?> md) {
         return md.stateDefinition().stateKey();
-    }
-
-    /**
-     * Commit all singleton states for every registered service.
-     */
-    @SuppressWarnings("DuplicatedCode")
-    public void commitSingletons() {
-        services.forEach((serviceKey, serviceStates) -> serviceStates.entrySet().stream()
-                .filter(stateMetadata ->
-                        stateMetadata.getValue().stateDefinition().singleton())
-                .forEach(service -> {
-                    WritableStates writableStates = getWritableStates(serviceKey);
-                    WritableSingletonStateBase<?> writableSingleton =
-                            (WritableSingletonStateBase<?>) writableStates.getSingleton(service.getKey());
-                    writableSingleton.commit();
-                }));
     }
 
     /**

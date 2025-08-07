@@ -208,11 +208,10 @@ public class ReconnectLearner {
                 platformContext.getMetrics());
         synchronizer.synchronize();
 
-        final MerkleNodeState merkleNodeState;
         final VirtualMap virtualMap = (VirtualMap) synchronizer.getRoot();
         final Metrics metrics = platformContext.getMetrics();
         virtualMap.registerMetrics(metrics);
-        merkleNodeState = stateRootFunction.apply(virtualMap);
+        final MerkleNodeState merkleNodeState = stateRootFunction.apply(virtualMap);
 
         final SignedState newSignedState = new SignedState(
                 platformContext.getConfiguration(),
