@@ -48,8 +48,7 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
             @NonNull final PlatformContext platformContext,
             @NonNull final Roster roster,
             @NonNull final SemanticVersion version) {
-        final TestingAppStateInitializer initializer =
-                new TestingAppStateInitializer(platformContext.getConfiguration());
+        final TestingAppStateInitializer initializer = new TestingAppStateInitializer();
         final OtterAppState state = new OtterAppState(platformContext);
         initializer.initStates(state);
         RosterUtils.setActiveRoster(state, roster, 0L);

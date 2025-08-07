@@ -2,13 +2,13 @@
 package com.swirlds.demo.consistency;
 
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.Platform;
@@ -45,7 +45,9 @@ public class ConsistencyTestingToolMain implements SwirldMain<ConsistencyTesting
             constructableRegistry.registerConstructable(
                     new ClassConstructorPair(ConsistencyTestingToolState.class, () -> {
                         ConsistencyTestingToolState consistencyTestingToolState =
-                                new ConsistencyTestingToolState(PlatformContext.create(CONFIGURATION));
+                                new ConsistencyTestingToolState(PlatformContext.create(ConfigurationBuilder.create()
+                                        .autoDiscoverExtensions()
+                                        .build()));
                         // Don't call FAKE_MERKLE_STATE_LIFECYCLES.initStates(consistencyTestingToolState) here.
                         // The stub states are automatically initialized upon loading the state from disk,
                         // or after finishing a reconnect.

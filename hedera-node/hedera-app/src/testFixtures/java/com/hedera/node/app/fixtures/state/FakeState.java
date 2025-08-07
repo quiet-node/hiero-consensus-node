@@ -66,7 +66,7 @@ public class FakeState implements MerkleNodeState {
 
     @Override
     public MerkleNode getRoot() {
-        return new TestVirtualMapState().getRoot();
+        return new TestVirtualMapState(TestPlatformContextBuilder.create().build()).getRoot();
     }
 
     /**

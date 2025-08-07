@@ -2,13 +2,13 @@
 package com.swirlds.demo.iss;
 
 import static com.swirlds.logging.legacy.LogMarker.STARTUP;
-import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
@@ -48,8 +48,8 @@ public class ISSTestingToolMain implements SwirldMain<ISSTestingToolState> {
             logger.info(STARTUP.getMarker(), "Registering ISSTestingToolState with ConstructableRegistry");
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(new ClassConstructorPair(ISSTestingToolState.class, () -> {
-                ISSTestingToolState issTestingToolState =
-                        new ISSTestingToolState(PlatformContext.create(CONFIGURATION));
+                ISSTestingToolState issTestingToolState = new ISSTestingToolState(PlatformContext.create(
+                        ConfigurationBuilder.create().autoDiscoverExtensions().build()));
                 return issTestingToolState;
             }));
             registerMerkleStateRootClassIds();

@@ -10,7 +10,7 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.fcqueue.FCQueueStatistics;
 import com.swirlds.logging.legacy.payload.ApplicationFinishedPayload;
 import com.swirlds.merkle.map.MerkleMapMetrics;
@@ -47,8 +47,10 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(
                     new ClassConstructorPair(MigrationTestingToolState.class, () -> {
-                        MigrationTestingToolState migrationTestingToolState = new MigrationTestingToolState(
-                                TestPlatformContextBuilder.create().build());
+                        MigrationTestingToolState migrationTestingToolState =
+                                new MigrationTestingToolState(PlatformContext.create(ConfigurationBuilder.create()
+                                        .autoDiscoverExtensions()
+                                        .build()));
                         return migrationTestingToolState;
                     }));
             registerMerkleStateRootClassIds();
