@@ -19,7 +19,6 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.platform.event.EventCore;
 import com.hedera.hapi.platform.event.EventDescriptor;
-import com.hedera.hapi.platform.event.EventTransaction;
 import com.hedera.hapi.platform.state.NodeId;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import java.io.File;
@@ -226,9 +225,7 @@ public class BlockTestUtils {
     }
 
     public static BlockItem newEventTransaction() {
-        final EventTransaction tx =
-                EventTransaction.newBuilder().applicationTransaction(APP_TX).build();
-        return BlockItem.newBuilder().eventTransaction(tx).build();
+        return BlockItem.newBuilder().signedTransaction(APP_TX).build();
     }
 
     public static BlockItem newRoundHeader(final long roundNumber) {
