@@ -9,6 +9,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.utility.Threshold;
 import com.swirlds.platform.gossip.shadowgraph.SyncFallenBehindStatus;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -26,16 +27,19 @@ import org.hiero.otter.fixtures.TimeManager;
 import org.hiero.otter.fixtures.TransactionGenerator;
 import org.hiero.otter.fixtures.internal.result.MultipleNodeConsensusResultsImpl;
 import org.hiero.otter.fixtures.internal.result.MultipleNodeLogResultsImpl;
+import org.hiero.otter.fixtures.internal.result.MultipleNodeMarkerFileResultsImpl;
 import org.hiero.otter.fixtures.internal.result.MultipleNodePcesResultsImpl;
 import org.hiero.otter.fixtures.internal.result.MultipleNodePlatformStatusResultsImpl;
 import org.hiero.otter.fixtures.internal.result.MultipleNodeReconnectResultsImpl;
 import org.hiero.otter.fixtures.result.MultipleNodeConsensusResults;
 import org.hiero.otter.fixtures.result.MultipleNodeLogResults;
+import org.hiero.otter.fixtures.result.MultipleNodeMarkerFileResults;
 import org.hiero.otter.fixtures.result.MultipleNodePcesResults;
 import org.hiero.otter.fixtures.result.MultipleNodePlatformStatusResults;
 import org.hiero.otter.fixtures.result.MultipleNodeReconnectResults;
 import org.hiero.otter.fixtures.result.SingleNodeConsensusResult;
 import org.hiero.otter.fixtures.result.SingleNodeLogResult;
+import org.hiero.otter.fixtures.result.SingleNodeMarkerFileResult;
 import org.hiero.otter.fixtures.result.SingleNodePcesResult;
 import org.hiero.otter.fixtures.result.SingleNodePlatformStatusResult;
 import org.hiero.otter.fixtures.result.SingleNodeReconnectResult;
@@ -128,7 +132,7 @@ public abstract class AbstractNetwork implements Network {
      * {@inheritDoc}
      */
     @Override
-    public void freeze() throws InterruptedException {
+    public void freeze() {
         defaultFreezeAction.freeze();
     }
 
@@ -144,7 +148,57 @@ public abstract class AbstractNetwork implements Network {
      * {@inheritDoc}
      */
     @Override
-    public void shutdown() throws InterruptedException {
+    @NonNull
+    public Network setConfigValue(@NonNull final String key, @NonNull final String value) {
+        getNodes().forEach(node -> node.configuration().set(key, value));
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public Network setConfigValue(@NonNull final String key, final int value) {
+        getNodes().forEach(node -> node.configuration().set(key, value));
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public Network setConfigValue(@NonNull final String key, final long value) {
+        getNodes().forEach(node -> node.configuration().set(key, value));
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public Network setConfigValue(@NonNull final String key, @NonNull final Path value) {
+        getNodes().forEach(node -> node.configuration().set(key, value));
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public Network setConfigValue(@NonNull final String key, final boolean value) {
+        getNodes().forEach(node -> node.configuration().set(key, value));
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void shutdown() {
         defaultShutdownAction.shutdown();
     }
 
@@ -153,9 +207,7 @@ public abstract class AbstractNetwork implements Network {
      */
     @Override
     public void setVersion(@NonNull final SemanticVersion version) {
-        for (final Node node : getNodes()) {
-            node.setVersion(version);
-        }
+        getNodes().forEach(node -> node.setVersion(version));
     }
 
     /**
@@ -163,9 +215,7 @@ public abstract class AbstractNetwork implements Network {
      */
     @Override
     public void bumpConfigVersion() {
-        for (final Node node : getNodes()) {
-            node.bumpConfigVersion();
-        }
+        getNodes().forEach(Node::bumpConfigVersion);
     }
 
     /**
@@ -222,6 +272,17 @@ public abstract class AbstractNetwork implements Network {
         final List<SingleNodePcesResult> results =
                 getNodes().stream().map(Node::newPcesResult).toList();
         return new MultipleNodePcesResultsImpl(results);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NonNull
+    public MultipleNodeMarkerFileResults newMarkerFileResults() {
+        final List<SingleNodeMarkerFileResult> results =
+                getNodes().stream().map(Node::newMarkerFileResult).toList();
+        return new MultipleNodeMarkerFileResultsImpl(results);
     }
 
     /**
@@ -366,7 +427,7 @@ public abstract class AbstractNetwork implements Network {
          * {@inheritDoc}
          */
         @Override
-        public void shutdown() throws InterruptedException {
+        public void shutdown() {
             throwIfInState(State.INIT, "Network has not been started yet.");
             throwIfInState(State.SHUTDOWN, "Network has already been shut down.");
 
