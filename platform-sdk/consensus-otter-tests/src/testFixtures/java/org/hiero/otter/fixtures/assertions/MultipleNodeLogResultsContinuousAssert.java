@@ -25,7 +25,7 @@ public class MultipleNodeLogResultsContinuousAssert
         extends AbstractMultipleNodeContinuousAssertion<
                 MultipleNodeLogResultsContinuousAssert, MultipleNodeLogResults> {
 
-    protected final Set<Marker> suppressedLogMarkers = ConcurrentHashMap.newKeySet();
+    private final Set<Marker> suppressedLogMarkers = ConcurrentHashMap.newKeySet();
 
     /**
      * Creates a continuous assertion for the given {@link MultipleNodeLogResults}.
@@ -124,7 +124,7 @@ public class MultipleNodeLogResultsContinuousAssert
 
         final LogSubscriber subscriber = logEntry -> switch (state) {
             case ACTIVE -> {
-                if (!suppressedNodeIds.contains(logEntry.nodeId())
+                if ((logEntry.nodeId() == null || !suppressedNodeIds.contains(logEntry.nodeId()))
                         && !suppressedLogMarkers.contains(logEntry.marker())) {
                     check.accept(logEntry);
                 }

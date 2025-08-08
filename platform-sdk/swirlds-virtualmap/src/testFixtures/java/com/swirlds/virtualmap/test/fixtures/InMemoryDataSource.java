@@ -120,7 +120,7 @@ public class InMemoryDataSource implements VirtualDataSource {
      * 		If there was a problem reading the leaf record
      */
     @Override
-    public VirtualLeafBytes loadLeafRecord(final Bytes key, final int keyHashCode) throws IOException {
+    public VirtualLeafBytes loadLeafRecord(final Bytes key) throws IOException {
         Objects.requireNonNull(key, "Key cannot be null");
         final Long path = keyToPathMap.get(key);
         if (path == null) {
@@ -168,13 +168,12 @@ public class InMemoryDataSource implements VirtualDataSource {
     /**
      * Find the path of the given key
      * @param key the key for a path
-     * @param keyHashCode the key hash code
      * @return the path or INVALID_PATH if not stored
      * @throws IOException
      * 		If there was a problem locating the key
      */
     @Override
-    public long findKey(final Bytes key, final int keyHashCode) throws IOException {
+    public long findKey(final Bytes key) throws IOException {
         final Long path = keyToPathMap.get(key);
         return (path == null) ? INVALID_PATH : path;
     }
@@ -257,7 +256,6 @@ public class InMemoryDataSource implements VirtualDataSource {
             final var rec = itr.next();
             final var path = rec.path();
             final var key = Objects.requireNonNull(rec.keyBytes(), "Key cannot be null");
-            final var keyHashCode = rec.keyHashCode();
             final var value = rec.valueBytes(); // Not sure if this can be null or not.
 
             if (path < firstLeafPath) {
@@ -269,7 +267,7 @@ public class InMemoryDataSource implements VirtualDataSource {
                         "Leaf record for " + path + " is bogus. It cannot be > last leaf path " + lastLeafPath);
             }
 
-            this.leafRecords.put(path, new VirtualLeafBytes(path, key, keyHashCode, value));
+            this.leafRecords.put(path, new VirtualLeafBytes(path, key, value));
             this.keyToPathMap.put(key, path);
         }
     }

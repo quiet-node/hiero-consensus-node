@@ -4,10 +4,6 @@ package com.swirlds.demo.migration;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
-import com.swirlds.demo.migration.virtual.AccountVirtualMapKey;
-import com.swirlds.demo.migration.virtual.AccountVirtualMapKeySerializer;
-import com.swirlds.demo.migration.virtual.AccountVirtualMapValue;
-import com.swirlds.demo.migration.virtual.AccountVirtualMapValueSerializer;
 import com.swirlds.merkle.map.MerkleMap;
 import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.config.MerkleDbConfig;
@@ -121,13 +117,14 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
     }
 
     @Override
-    public MerkleNode migrate(int version) {
+    public MerkleNode migrate(@NonNull final Configuration configuration, int version) {
         if (version == ClassVersion.VIRTUAL_MAP) {
             TestingAppStateInitializer.DEFAULT.initRosterState(this);
             return this;
         }
 
-        return super.migrate(version);
+        // FUTURE WORK: https://github.com/hiero-ledger/hiero-consensus-node/issues/19002
+        return this;
     }
 
     /**
@@ -161,14 +158,14 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
     /**
      * Get a {@link VirtualMap} that contains various data.
      */
-    VirtualMap<AccountVirtualMapKey, AccountVirtualMapValue> getVirtualMap() {
+    VirtualMap getVirtualMap() {
         return getChild(ChildIndices.VIRTUAL_MAP);
     }
 
     /**
      * Set a {@link VirtualMap} that contains various data.
      */
-    protected void setVirtualMap(final VirtualMap<AccountVirtualMapKey, AccountVirtualMapValue> map) {
+    protected void setVirtualMap(final VirtualMap map) {
         setChild(ChildIndices.VIRTUAL_MAP, map);
     }
 
@@ -182,12 +179,7 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
         final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
         final VirtualDataSourceBuilder dsBuilder = new MerkleDbDataSourceBuilder(
                 configuration, INITIAL_ACCOUNTS_HINT, merkleDbConfig.hashesRamToDiskThreshold());
-        setVirtualMap(new VirtualMap<>(
-                "virtualMap",
-                new AccountVirtualMapKeySerializer(),
-                new AccountVirtualMapValueSerializer(),
-                dsBuilder,
-                configuration));
+        setVirtualMap(new VirtualMap("virtualMap", dsBuilder, configuration));
     }
 
     /**

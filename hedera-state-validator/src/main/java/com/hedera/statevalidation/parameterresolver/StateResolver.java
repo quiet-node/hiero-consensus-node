@@ -7,8 +7,7 @@ import static com.hedera.statevalidation.parameterresolver.InitUtils.initService
 import static com.hedera.statevalidation.parameterresolver.InitUtils.initServiceRegistry;
 import static com.swirlds.platform.state.snapshot.SignedStateFileReader.readStateFile;
 
-import com.hedera.hapi.node.base.SemanticVersion;
-import com.hedera.node.app.HederaStateRoot;
+import com.hedera.node.app.HederaVirtualMapState;
 import com.hedera.node.app.roster.RosterService;
 import com.hedera.node.app.services.ServicesRegistryImpl;
 import com.hedera.statevalidation.validators.Constants;
@@ -29,17 +28,10 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
 import com.swirlds.platform.util.BootstrapUtils;
 import com.swirlds.state.State;
-import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.constructable.ConstructableUtils;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hiero.base.concurrent.ExecutorFactory;
-import org.hiero.base.constructable.ClassConstructorPair;
 import org.hiero.base.constructable.ConstructableRegistry;
 import org.hiero.base.constructable.ConstructableRegistryException;
 import org.hiero.base.crypto.config.CryptoConfig;
@@ -50,10 +42,6 @@ import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 
 public class StateResolver implements ParameterResolver {
-
-    private static final Logger log = LogManager.getLogger(StateResolver.class);
-
-    private static final Pattern VERSION_PATTERN = Pattern.compile("^VERSION=(\\d+)\\.(\\d+)\\.(\\d+)(?:\\n.*)*$");
 
     static DeserializedSignedState deserializedSignedState;
 
@@ -74,6 +62,7 @@ public class StateResolver implements ParameterResolver {
                 throw new RuntimeException(e);
             }
         }
+
         return deserializedSignedState;
     }
 
@@ -85,42 +74,18 @@ public class StateResolver implements ParameterResolver {
                 new RosterService(roster -> true, (r, b) -> {}, StateResolver::getState, platformStateFacade));
         final PlatformContext platformContext = createPlatformContext();
         deserializedSignedState = readStateFile(
-                Path.of(Constants.STATE_DIR, "SignedState.swh").toAbsolutePath(), platformStateFacade, platformContext);
-        final MerkleStateRoot servicesState = (MerkleStateRoot)
-                deserializedSignedState.reservedSignedState().get().getState();
+                Path.of(Constants.STATE_DIR, "SignedState.swh").toAbsolutePath(),
+                HederaVirtualMapState::new,
+                platformStateFacade,
+                platformContext);
 
-        initServiceMigrator(servicesState, platformContext, serviceRegistry);
+        initServiceMigrator(getState(), platformContext, serviceRegistry);
 
         return deserializedSignedState;
     }
 
     public static State getState() {
         return deserializedSignedState.reservedSignedState().get().getState();
-    }
-
-    public static SemanticVersion readVersion() {
-        final Path versionFile = Path.of(Constants.STATE_DIR, "VERSION");
-
-        String versionFileContent;
-        try {
-            versionFileContent = Files.readString(versionFile);
-        } catch (IOException e) {
-            throw new IllegalStateException("Cannot read version file content", e);
-        }
-
-        Matcher matcher = VERSION_PATTERN.matcher(versionFileContent);
-        if (matcher.find()) {
-            SemanticVersion semanticVersion = new SemanticVersion(
-                    Integer.parseInt(matcher.group(1)),
-                    Integer.parseInt(matcher.group(2)),
-                    Integer.parseInt(matcher.group(3)),
-                    null,
-                    null);
-            log.info("State version found: {}", semanticVersion);
-            return semanticVersion;
-        }
-
-        throw new IllegalArgumentException("Invalid version file content: " + versionFileContent);
     }
 
     private static PlatformContext createPlatformContext() throws ConstructableRegistryException {
@@ -132,10 +97,6 @@ public class StateResolver implements ParameterResolver {
 
         ConstructableUtils.registerVirtualMapConstructables(getConfiguration());
         BootstrapUtils.setupConstructableRegistryWithConfiguration(getConfiguration());
-        final SemanticVersion servicesVersion = readVersion();
-
-        ConstructableRegistry.getInstance()
-                .registerConstructable(new ClassConstructorPair(MerkleStateRoot.class, HederaStateRoot::new));
 
         return new PlatformContext() {
 

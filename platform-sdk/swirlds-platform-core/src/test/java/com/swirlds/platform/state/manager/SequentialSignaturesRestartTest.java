@@ -20,6 +20,7 @@ import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
+import com.swirlds.platform.test.fixtures.state.TestMerkleStateRoot;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,6 +102,8 @@ public class SequentialSignaturesRestartTest extends AbstractStateSignatureColle
                 .setRoster(roster)
                 .setRound(firstRound)
                 .setSignatures(signatures)
+                .setCalculateHash(true)
+                .setState(new TestMerkleStateRoot()) // FUTURE WORK: remove this line to use TestHederaVirtualMapState
                 .build();
         stateFromDisk.getState().setHash(stateHash);
 
@@ -117,6 +120,7 @@ public class SequentialSignaturesRestartTest extends AbstractStateSignatureColle
             final SignedState signedState = new RandomSignedStateGenerator(random)
                     .setRoster(roster)
                     .setRound(round)
+                    .setCalculateHash(true)
                     .setSignatures(new HashMap<>())
                     .build();
 
