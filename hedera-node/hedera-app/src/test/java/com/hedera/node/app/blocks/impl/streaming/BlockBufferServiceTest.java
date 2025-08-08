@@ -260,7 +260,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withConfigDataType(BlockStreamConfig.class)
                 .withValue("blockStream.writerMode", "GRPC")
                 .withValue("blockStream.blockItemBatchSize", 5)
-                .withValue("blockStream.buffer.isPruningEnabled", false) // disable auto pruning
                 .withValue("blockStream.buffer.isBufferPersistenceEnabled", false)
                 .getOrCreateConfig();
         given(configProvider.getConfiguration()).willReturn(new VersionedConfigImpl(mockConfig, 1));
@@ -419,7 +418,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
                 .withValue("blockStream.blockItemBatchSize", 3)
                 .withValue("blockStream.buffer.blockTtl", blockTtl)
-                .withValue("blockStream.buffer.isPruningEnabled", false) // disable auto pruning
                 .withValue("blockStream.buffer.isBufferPersistenceEnabled", false)
                 .getOrCreateConfig();
         when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
@@ -541,7 +539,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.writerMode", "GRPC")
                 .withValue("blockStream.blockItemBatchSize", 3)
                 .withValue("blockStream.buffer.blockTtl", blockTtl)
-                .withValue("blockStream.buffer.isPruningEnabled", false) // disable auto pruning
                 .withValue("blockStream.buffer.isBufferPersistenceEnabled", false)
                 .getOrCreateConfig();
         when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
@@ -618,6 +615,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
 
         blockBufferService = new BlockBufferService(configProvider, blockStreamMetrics);
         blockBufferService.setBlockNodeConnectionManager(connectionManager);
+        blockBufferService.start();
 
         final CountDownLatch startLatch = new CountDownLatch(1);
         final CountDownLatch doneLatch = new CountDownLatch(1);
@@ -1157,7 +1155,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.blockItemBatchSize", batchSize)
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
                 .withValue("blockStream.buffer.blockTtl", Duration.ofSeconds(10))
-                .withValue("blockStream.buffer.isPruningEnabled", false)
                 .withValue("blockStream.buffer.actionStageThreshold", 50.0)
                 .withValue("blockStream.buffer.actionGracePeriod", Duration.ofSeconds(2))
                 .withValue("blockStream.buffer.recoveryThreshold", 100.0)
@@ -1175,6 +1172,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
 
         blockBufferService = new BlockBufferService(configProvider, blockStreamMetrics);
         blockBufferService.setBlockNodeConnectionManager(connectionManager);
+        blockBufferService.start();
 
         final ConcurrentMap<Long, BlockState> buffer = blockBuffer(blockBufferService);
         assertThat(buffer).hasSize(10);
@@ -1204,7 +1202,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.blockItemBatchSize", batchSize)
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
                 .withValue("blockStream.buffer.blockTtl", Duration.ofSeconds(10))
-                .withValue("blockStream.buffer.isPruningEnabled", false)
                 .withValue("blockStream.buffer.actionStageThreshold", 50.0)
                 .withValue("blockStream.buffer.actionGracePeriod", Duration.ofSeconds(2))
                 .withValue("blockStream.buffer.recoveryThreshold", 100.0)
@@ -1228,7 +1225,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withConfigDataType(BlockBufferConfig.class)
                 .withValue("blockStream.writerMode", "FILE")
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
-                .withValue("blockStream.buffer.isPruningEnabled", false)
                 .withValue("blockStream.buffer.isBufferPersistenceEnabled", false)
                 .getOrCreateConfig();
         final Configuration config2 = HederaTestConfigBuilder.create()
@@ -1237,7 +1233,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.writerMode", "GRPC")
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
                 .withValue("blockStream.buffer.blockTtl", Duration.ofSeconds(10))
-                .withValue("blockStream.buffer.isPruningEnabled", true)
                 .withValue("blockStream.buffer.actionStageThreshold", 50.0)
                 .withValue("blockStream.buffer.actionGracePeriod", Duration.ofSeconds(2))
                 .withValue("blockStream.buffer.recoveryThreshold", 100.0)
@@ -1347,7 +1342,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withConfigDataType(BlockBufferConfig.class)
                 .withValue("blockStream.writerMode", "FILE")
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
-                .withValue("blockStream.buffer.isPruningEnabled", false)
                 .withValue("blockStream.buffer.isBufferPersistenceEnabled", false)
                 .getOrCreateConfig();
         when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
@@ -1387,7 +1381,6 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.writerMode", "GRPC")
                 .withValue("blockStream.blockPeriod", Duration.ofSeconds(1))
                 .withValue("blockStream.buffer.blockTtl", Duration.ofSeconds(10))
-                .withValue("blockStream.buffer.isPruningEnabled", false)
                 .withValue("blockStream.buffer.actionStageThreshold", 50.0)
                 .withValue("blockStream.buffer.actionGracePeriod", Duration.ofSeconds(2))
                 .withValue("blockStream.buffer.recoveryThreshold", 100.0)

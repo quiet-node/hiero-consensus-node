@@ -120,6 +120,10 @@ public class BlockBufferService {
      * Utility for managing reading and writing block buffer to disk.
      */
     private final BlockBufferIO bufferIO;
+    /**
+     * Flag indicating if the buffer service has been started.
+     */
+    private final AtomicBoolean isStarted = new AtomicBoolean(false);
 
     /**
      * Creates a new BlockBufferService with the given configuration.
@@ -134,9 +138,15 @@ public class BlockBufferService {
         this.blockStreamMetrics = blockStreamMetrics;
         isStreamingEnabled.set(streamToBlockNodesEnabled());
         this.bufferIO = new BlockBufferIO(bufferDirectory());
+    }
 
+    /**
+     * If block streaming is enabled, then this method will attempt to load the latest buffer from disk and start the
+     * background worker thread. Calling this method multiple times on the same instance will do nothing.
+     */
+    public void start() {
         // Initialize buffer and start worker thread if streaming is enabled
-        if (isStreamingEnabled.get()) {
+        if (isStreamingEnabled.get() && isStarted.compareAndSet(false, true)) {
             loadBufferFromDisk();
             scheduleNextWorkerTask();
         }
@@ -231,16 +241,6 @@ public class BlockBufferService {
                 .getConfiguration()
                 .getConfigData(BlockBufferConfig.class)
                 .isBufferPersistenceEnabled();
-    }
-
-    /**
-     * @return true if buffer pruning is enabled, else false
-     */
-    private boolean isPruningEnabled() {
-        return configProvider
-                .getConfiguration()
-                .getConfigData(BlockBufferConfig.class)
-                .isPruningEnabled();
     }
 
     /**
@@ -845,9 +845,7 @@ public class BlockBufferService {
         @Override
         public void run() {
             try {
-                if (isPruningEnabled()) {
-                    checkBuffer();
-                }
+                checkBuffer();
             } catch (final RuntimeException e) {
                 logger.warn("Periodic buffer worker task failed", e);
             } finally {

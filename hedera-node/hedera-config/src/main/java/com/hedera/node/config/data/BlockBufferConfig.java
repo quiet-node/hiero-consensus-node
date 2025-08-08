@@ -14,7 +14,6 @@ import java.time.Duration;
  * @param blockTtl the TTL for entries in the block buffer
  * @param workerInterval interval to perform periodic tasks related to the block buffer (e.g. pruning and persisting
  *                       buffer to disk)
- * @param isPruningEnabled true if block buffer pruning will be performed, else false
  * @param actionStageThreshold the threshold (as a percentage from 0.0 to 100.0) at which proactive measures are
  *                             taken to attempt faster buffer recovery. This threshold is measured against the
  *                             current saturation level of the buffer. (For example, a value of '20.0' means
@@ -35,7 +34,6 @@ import java.time.Duration;
 public record BlockBufferConfig(
         @ConfigProperty(defaultValue = "5m") @Min(0) @NetworkProperty Duration blockTtl,
         @ConfigProperty(defaultValue = "1s") @Min(1) @NetworkProperty Duration workerInterval,
-        @ConfigProperty(defaultValue = "true") @NodeProperty boolean isPruningEnabled,
         @ConfigProperty(defaultValue = "50.0") @Min(0) @NetworkProperty double actionStageThreshold,
         @ConfigProperty(defaultValue = "20s") @Min(0) @NetworkProperty Duration actionGracePeriod,
         @ConfigProperty(defaultValue = "85.0") @Min(0) @NetworkProperty double recoveryThreshold,
