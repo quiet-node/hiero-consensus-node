@@ -103,9 +103,13 @@ class IssHandlingTest implements LifecycleTest {
                         NodeSelector.byNodeId(ISS_NODE_ID),
                         "Block stream fatal shutdown complete",
                         Duration.ofSeconds(30)),
-                // Verify the ISS Block was written to S3 bucket
+                // Verify the ISS Record Stream and Block Stream block files were written to S3 bucket
                 assertHgcaaLogContains(
                         NodeSelector.byNodeId(ISS_NODE_ID), "Successfully uploaded ISS Block", Duration.ofSeconds(30)),
+                assertHgcaaLogContains(
+                        NodeSelector.byNodeId(ISS_NODE_ID),
+                        "Successfully uploaded ISS Record Stream file",
+                        Duration.ofSeconds(30)),
                 // Submit a freeze
                 freezeOnly().startingIn(2).seconds(),
                 waitForFrozenNetwork(FREEZE_TIMEOUT, NodeSelector.exceptNodeIds(ISS_NODE_ID)),

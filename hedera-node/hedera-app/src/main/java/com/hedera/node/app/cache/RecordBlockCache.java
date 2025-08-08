@@ -10,7 +10,6 @@ import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.streams.HashObject;
-import com.hedera.node.app.blocks.impl.BlockStreamManagerImpl;
 import com.hedera.node.app.blocks.impl.streaming.BlockState;
 import com.hedera.node.app.records.impl.producers.BlockRecordWriter;
 import com.hedera.node.app.records.impl.producers.BlockRecordWriterFactory;
@@ -43,18 +42,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.BlockItemSet;
 import org.hiero.block.api.PublishStreamRequest;
-import org.jspecify.annotations.Nullable;
 
 /**
- * An in-memory cache of the last X record stream record files and block stream Block files.
+ * An in-memory cache of the last X record stream record files and block stream block files.
+ * This class also handles the uploading of ISS contextual blocks and record files to an S3 bucket.
  */
 @Singleton
 public class RecordBlockCache {
 
-    private static final Logger log = LogManager.getLogger(BlockStreamManagerImpl.class);
+    private static final Logger log = LogManager.getLogger(RecordBlockCache.class);
 
-    private final BlockStreamBuffer blockStreamCache;
-    private final RecordStreamBuffer recordStreamCache;
+    private final StreamBuffer<BlockState> blockStreamCache;
+    private final StreamBuffer<RecordStreamMetadata> recordStreamCache;
 
     private final ConfigProvider configProvider;
     private final NetworkInfo networkInfo;
@@ -69,6 +68,7 @@ public class RecordBlockCache {
      * Constructor for RecordBlockCache.
      * @param configProvider the configuration provider to access S3 ISS configuration
      * @param networkInfo the network information to access self node info
+     * @param blockRecordWriterFactory the factory to create BlockRecordWriter instances
      */
     @Inject
     public RecordBlockCache(
@@ -79,8 +79,8 @@ public class RecordBlockCache {
                 .getConfiguration()
                 .getConfigData(S3IssConfig.class)
                 .recordBlockBufferSize();
-        this.blockStreamCache = new BlockStreamBuffer(capacity);
-        this.recordStreamCache = new RecordStreamBuffer(capacity);
+        this.blockStreamCache = new StreamBuffer<>(capacity);
+        this.recordStreamCache = new StreamBuffer<>(capacity);
         this.configProvider = configProvider;
         this.networkInfo = networkInfo;
         this.blockRecordWriterFactory = blockRecordWriterFactory;
@@ -91,7 +91,7 @@ public class RecordBlockCache {
      * @param blockNumber the block number to create a BlockState for
      */
     public void createBlock(long blockNumber) {
-        blockStreamCache.put(blockNumber);
+        blockStreamCache.put(blockNumber, new BlockState(blockNumber));
     }
 
     /**
@@ -104,15 +104,6 @@ public class RecordBlockCache {
         if (blockState != null) {
             blockState.addItem(blockItem);
         }
-    }
-
-    /**
-     * Retrieves the BlockState for a given block number.
-     * @param blockNumber the block number to look up
-     * @return the BlockState for the block number, or null if not found
-     */
-    public @Nullable BlockState getBlockState(long blockNumber) {
-        return blockStreamCache.get(blockNumber);
     }
 
     /**
@@ -152,13 +143,13 @@ public class RecordBlockCache {
     }
 
     /**
-     * Uploads the block stream Block for the ISS round number to the S3 bucket.
+     * Uploads the block stream Block for the ISS round number to the S3 bucket and writes it to local disk.
      */
-    public void uploadBlockStreamIssBlock() {
+    public void handleBlockStreamIssBlock() {
         if (s3Client != null) {
             BlockState blockState = getBlockStateForRoundNumber(issRoundNumber);
             if (blockState != null) {
-                uploadBlockStateToS3Bucket(blockState);
+                uploadBlockStateToS3BucketAndWriteToDisk(blockState);
             } else {
                 log.info(
                         "BlockState for round {} in which ISS was reported is not available, skipping upload to S3 bucket",
@@ -175,34 +166,20 @@ public class RecordBlockCache {
     public void uploadIssContextToS3() {
         initializeS3Client();
         if (s3Client != null) {
-            if (configProvider
-                                    .getConfiguration()
-                                    .getConfigData(BlockStreamConfig.class)
-                                    .streamMode()
-                            == StreamMode.BOTH
-                    || configProvider
-                                    .getConfiguration()
-                                    .getConfigData(BlockStreamConfig.class)
-                                    .streamMode()
-                            == StreamMode.BLOCKS) {
-                uploadBlockStreamIssBlock();
+            StreamMode streamMode = configProvider
+                    .getConfiguration()
+                    .getConfigData(BlockStreamConfig.class)
+                    .streamMode();
+            if (streamMode == StreamMode.BOTH || streamMode == StreamMode.BLOCKS) {
+                handleBlockStreamIssBlock();
             }
-            if (configProvider
-                                    .getConfiguration()
-                                    .getConfigData(BlockStreamConfig.class)
-                                    .streamMode()
-                            == StreamMode.BOTH
-                    || configProvider
-                                    .getConfiguration()
-                                    .getConfigData(BlockStreamConfig.class)
-                                    .streamMode()
-                            == StreamMode.RECORDS) {
-                uploadRecordStreamIssRecordFiles();
+            if (streamMode == StreamMode.BOTH || streamMode == StreamMode.RECORDS) {
+                handleRecordStreamIssRecordFiles();
             }
         }
     }
 
-    private void uploadRecordStreamIssRecordFiles() {
+    private void handleRecordStreamIssRecordFiles() {
         if (s3Client != null) {
             for (final RecordStreamMetadata recordFileMetadata : recordStreamCache.values()) {
                 uploadRecordFileToS3(recordFileMetadata);
@@ -253,7 +230,7 @@ public class RecordBlockCache {
                                 new ByteArrayIterator(Files.readAllBytes(path)),
                                 "application/gzip");
                         log.info(
-                                "Successfully uploaded Record Stream file {} for Block number {} to S3 bucket {} at path: {}",
+                                "Successfully uploaded ISS Record Stream file {} for Block number {} to S3 bucket {} at path: {}",
                                 fileName,
                                 recordFileMetadata.getBlockNumber(),
                                 s3IssConfig.bucketName(),
@@ -373,52 +350,24 @@ public class RecordBlockCache {
         }
     }
 
-    private static class RecordStreamBuffer extends LinkedHashMap<Long, RecordStreamMetadata> {
+    private static class StreamBuffer<T> extends LinkedHashMap<Long, T> {
         private final int capacity;
 
-        public RecordStreamBuffer(int capacity) {
+        public StreamBuffer(int capacity) {
             super(capacity + 1, 0.75f, false); // insertion-order
             this.capacity = capacity;
         }
 
         @Override
-        protected boolean removeEldestEntry(Map.Entry<Long, RecordStreamMetadata> eldest) {
+        protected boolean removeEldestEntry(Map.Entry<Long, T> eldest) {
             return size() > capacity;
         }
 
         /**
-         * Get an existing RecordFileMetadata by block number, or null if not present.
+         * Get an existing item by block number, or null if not present.
          */
-        public RecordStreamMetadata get(long blockNumber) {
+        public T get(long blockNumber) {
             return super.get(blockNumber);
-        }
-    }
-
-    private static class BlockStreamBuffer extends LinkedHashMap<Long, BlockState> {
-        private final int capacity;
-
-        public BlockStreamBuffer(int capacity) {
-            super(capacity + 1, 0.75f, false); // insertion-order
-            this.capacity = capacity;
-        }
-
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Long, BlockState> eldest) {
-            return size() > capacity;
-        }
-
-        /**
-         * Get an existing BlockState by block number, or null if not present.
-         */
-        public BlockState get(long blockNumber) {
-            return super.get(blockNumber);
-        }
-
-        /**
-         * Add a new BlockState if not already present. Returns true if added.
-         */
-        public void put(long blockNumber) {
-            put(blockNumber, new BlockState(blockNumber));
         }
     }
 
@@ -426,7 +375,7 @@ public class RecordBlockCache {
      * Uploads the block state to the GCP bucket.
      * @param blockState the block state to upload
      */
-    public void uploadBlockStateToS3Bucket(@NonNull final BlockState blockState) {
+    public void uploadBlockStateToS3BucketAndWriteToDisk(@NonNull final BlockState blockState) {
         requireNonNull(blockState, "blockState must not be null");
         requireNonNull(networkInfo, "networkInfo must not be null");
         List<BlockItem> blockItems = new ArrayList<>();
@@ -457,6 +406,22 @@ public class RecordBlockCache {
             gzipOutputStream.close();
 
             // Also write Block File to local disk
+            Path issBlockFilePath = Paths.get(s3IssConfig.diskPath())
+                    .resolve(issRoundNumber
+                            + "/blockStream" + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
+                            + COMPRESSION_ALGORITHM_EXTENSION);
+            try {
+                // Ensure the parent directories exist
+                Files.createDirectories(issBlockFilePath.getParent());
+                Files.write(issBlockFilePath, byteArrayOutputStream.toByteArray());
+            } catch (IOException e) {
+                log.error(
+                        "Failed to write Block {} to local disk at path {}: {}",
+                        blockState.blockNumber(),
+                        issBlockFilePath,
+                        e.getMessage(),
+                        e);
+            }
 
             String blockKey = s3IssConfig.basePath() + "/node"
                     + networkInfo.selfNodeInfo().nodeId() + "/ISS/"
