@@ -179,7 +179,8 @@ final class BlockRecordManagerTest extends AppTestBase {
                         ForkJoinPool.commonPool(),
                         app.hapiVersion(),
                         recordBlockCache)
-                : new StreamFileProducerSingleThreaded(blockRecordFormat, blockRecordWriterFactory, app.hapiVersion());
+                : new StreamFileProducerSingleThreaded(
+                        blockRecordFormat, blockRecordWriterFactory, app.hapiVersion(), recordBlockCache);
         Bytes finalRunningHash;
         try (final var blockRecordManager = new BlockRecordManagerImpl(
                 app.configProvider(), app.workingStateAccessor().getState(), producer)) {
@@ -263,8 +264,8 @@ final class BlockRecordManagerTest extends AppTestBase {
 
         final Random random = new Random(82792874);
         final var merkleState = app.workingStateAccessor().getState();
-        final var producer =
-                new StreamFileProducerSingleThreaded(blockRecordFormat, blockRecordWriterFactory, app.hapiVersion());
+        final var producer = new StreamFileProducerSingleThreaded(
+                blockRecordFormat, blockRecordWriterFactory, app.hapiVersion(), recordBlockCache);
         Bytes finalRunningHash;
         try (final var blockRecordManager = new BlockRecordManagerImpl(
                 app.configProvider(), app.workingStateAccessor().getState(), producer)) {

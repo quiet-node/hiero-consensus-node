@@ -15,6 +15,6 @@ final class StreamFileProducerSingleThreadedTest extends StreamFileProducerTest 
     @Override
     BlockRecordStreamProducer createStreamProducer(
             @NonNull final BlockRecordWriterFactory factory, @NonNull final RecordBlockCache recordBlockCache) {
-        return new StreamFileProducerSingleThreaded(BlockRecordFormatV6.INSTANCE, factory, VERSION);
+        return new StreamFileProducerSingleThreaded(BlockRecordFormatV6.INSTANCE, factory, VERSION, recordBlockCache);
     }
 }
