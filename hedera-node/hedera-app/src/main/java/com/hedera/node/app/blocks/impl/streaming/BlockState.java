@@ -142,8 +142,8 @@ public class BlockState {
      */
     private final ItemInfo preProofItemInfo = new ItemInfo();
 
-    private Long lowestRoundNumber = null;
-    private Long highestRoundNumber = null;
+    private Long lowestRoundNumber;
+    private Long highestRoundNumber;
 
     /**
      * Create a new block state for the specified block number.

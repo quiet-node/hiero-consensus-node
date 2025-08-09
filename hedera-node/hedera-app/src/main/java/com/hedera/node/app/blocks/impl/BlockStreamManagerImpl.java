@@ -633,7 +633,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var proofItem = BlockItem.newBuilder().blockProof(proof).build();
             block.writer().writePbjItemAndBytes(proofItem, BlockItem.PROTOBUF.toBytes(proofItem));
             block.writer().closeCompleteBlock();
-            recordBlockCache.addBlockItem(blockNumber, proofItem);
+            recordBlockCache.addBlockItem(block.number(), proofItem);
             if (block.number() != blockNumber) {
                 siblingHashes.removeFirst();
             }

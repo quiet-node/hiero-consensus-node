@@ -75,7 +75,7 @@ public class RecordBlockCache {
             @NonNull ConfigProvider configProvider,
             @NonNull NetworkInfo networkInfo,
             @NonNull BlockRecordWriterFactory blockRecordWriterFactory) {
-        int capacity = configProvider
+        final int capacity = configProvider
                 .getConfiguration()
                 .getConfigData(S3IssConfig.class)
                 .recordBlockBufferSize();
@@ -100,7 +100,7 @@ public class RecordBlockCache {
      * @param blockItem the BlockItem to add to the BlockState
      */
     public void addBlockItem(long blockNumber, @NonNull BlockItem blockItem) {
-        BlockState blockState = blockStreamCache.get(blockNumber);
+        final BlockState blockState = blockStreamCache.get(blockNumber);
         if (blockState != null) {
             blockState.addItem(blockItem);
         }
@@ -213,14 +213,14 @@ public class RecordBlockCache {
         blockRecordWriter.close(recordFileMetadata.getLastRunningHash());
 
         // Upload all the record block files in S3IssConfig::diskPath
-        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-        Path issRecordFilePath = Paths.get(s3IssConfig.diskPath());
+        final S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
+        final Path issRecordFilePath = Paths.get(s3IssConfig.diskPath());
         try (Stream<Path> stream = Files.walk(issRecordFilePath)) {
             stream.filter(Files::isRegularFile).forEach(path -> {
-                Path fileName = path.getFileName();
+                final Path fileName = path.getFileName();
                 if (fileName != null) {
                     try {
-                        String fileKey = s3IssConfig.basePath() + "/ISS" + "/node"
+                        final String fileKey = s3IssConfig.basePath() + "/ISS" + "/node"
                                 + networkInfo.selfNodeInfo().nodeId() + "/" + issRoundNumber + "/"
                                 + fileName;
                         // Upload the file to S3 bucket
@@ -284,7 +284,7 @@ public class RecordBlockCache {
         requireNonNull(startRunningHash, "startRunningHash must not be null");
         requireNonNull(startConsensusTime, "startConsensusTime must not be null");
 
-        RecordStreamMetadata recordStreamMetadata = new RecordStreamMetadata(blockNumber);
+        final RecordStreamMetadata recordStreamMetadata = new RecordStreamMetadata(blockNumber);
         recordStreamMetadata.setStartRunningHash(startRunningHash);
         recordStreamMetadata.setConsensusTime(startConsensusTime);
         recordStreamMetadata.setHapiProtoVersion(hapiVersion);
@@ -299,9 +299,9 @@ public class RecordBlockCache {
         private SemanticVersion hapiProtoVersion;
         private final List<SerializedSingleTransactionRecord> recordItems = new ArrayList<>();
 
-        private HashObject lastRunningHash = null;
+        private HashObject lastRunningHash;
 
-        public RecordStreamMetadata(long blockNumber) {
+        public RecordStreamMetadata(final long blockNumber) {
             this.blockNumber = blockNumber;
         }
 
@@ -392,7 +392,7 @@ public class RecordBlockCache {
             blockItems.addAll(blockState.getPendingItems().stream().toList());
         }
 
-        Block block = Block.newBuilder().items(blockItems).build();
+        final Block block = Block.newBuilder().items(blockItems).build();
 
         S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();

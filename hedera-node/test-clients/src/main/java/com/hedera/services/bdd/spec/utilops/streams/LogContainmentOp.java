@@ -13,6 +13,8 @@ import com.hedera.services.bdd.spec.utilops.UtilOp;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
 
 /**
@@ -31,6 +33,8 @@ public class LogContainmentOp extends UtilOp {
     private final String pattern;
     private final Duration delay;
 
+    private AtomicReference<List<String>> matchingLines = new AtomicReference<>(List.of());
+
     public LogContainmentOp(
             @NonNull final NodeSelector selector,
             @NonNull final ExternalPath path,
@@ -47,12 +51,23 @@ public class LogContainmentOp extends UtilOp {
         this.containment = requireNonNull(containment);
     }
 
+    /**
+     * Sets the reference to the list of matching lines in the log files.
+     * @param matchingLines the reference to the list of matching lines
+     */
+    public LogContainmentOp exposingLines(AtomicReference<List<String>> matchingLines) {
+        this.matchingLines = requireNonNull(matchingLines, "matchingLines must not be null");
+        return this;
+    }
+
     @Override
     protected boolean submitOp(@NonNull final HapiSpec spec) throws Throwable {
         doIfNotInterrupted(() -> MILLISECONDS.sleep(delay.toMillis()));
         spec.targetNetworkOrThrow().nodesFor(selector).forEach(node -> {
             final var logContents = rethrowIO(() -> Files.readString(node.getExternalPath(path)));
             final var isThere = logContents.contains(pattern);
+            matchingLines.set(
+                    logContents.lines().filter(line -> line.contains(pattern)).toList());
             if (isThere && containment == Containment.DOES_NOT_CONTAIN) {
                 Assertions.fail("Log for node '" + node.getName() + "' contains '" + pattern + "' and should not");
             } else if (!isThere && containment == Containment.CONTAINS) {
