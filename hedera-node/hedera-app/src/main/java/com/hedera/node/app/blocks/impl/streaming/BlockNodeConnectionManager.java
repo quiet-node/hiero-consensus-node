@@ -303,7 +303,7 @@ public class BlockNodeConnectionManager {
         try {
             connection.close();
             activeConnectionRef.compareAndSet(connection, null);
-            final var newConn = fromNodeConfig(connection.getNodeConfig(), false);
+            final var newConn = createConnection(connection.getNodeConfig());
 
             if (isOnlyOneBlockNodeConfigured()) {
                 // If there is only one block node configured, we will not try to select a new node
@@ -487,7 +487,7 @@ public class BlockNodeConnectionManager {
             logger.debug(
                     "Selected block node {}:{} for connection attempt", selectedNode.address(), selectedNode.port());
             // If we selected a node, schedule the connection attempt.
-            final BlockNodeConnection connection = fromNodeConfig(selectedNode, force);
+            final BlockNodeConnection connection = createConnection(selectedNode);
 
             // Immediately schedule the FIRST connection attempt.
             scheduleConnectionAttempt(connection, Duration.ZERO, null, force);
@@ -561,7 +561,7 @@ public class BlockNodeConnectionManager {
      * @param nodeConfig the configuration of the node to connect to.
      */
     @NonNull
-    private BlockNodeConnection fromNodeConfig(@NonNull final BlockNodeConfig nodeConfig, final boolean force) {
+    private BlockNodeConnection createConnection(@NonNull final BlockNodeConfig nodeConfig) {
         requireNonNull(nodeConfig);
 
         // Create the connection object
