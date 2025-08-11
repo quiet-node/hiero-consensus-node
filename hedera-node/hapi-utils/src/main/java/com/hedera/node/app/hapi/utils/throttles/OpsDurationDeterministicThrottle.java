@@ -14,7 +14,7 @@ import java.time.Instant;
 /**
  * Main class responsible for throttling the transactions by "ops duration".
  * Keeps track of the instance the last decision was made and calculates the time elapsed since then.
- * It uses a {@link DiscreteLeakyBucket} underneath of a specified nominal capacity and a brimful capacity of {@link Long.MAX_VALUE}.
+ * It uses a {@link DiscreteLeakyBucket} underneath of a specified nominal capacity and a brimful capacity of Long.MAX_VALUE.
  */
 public class OpsDurationDeterministicThrottle implements CongestibleThrottle {
     private final String throttleName;
