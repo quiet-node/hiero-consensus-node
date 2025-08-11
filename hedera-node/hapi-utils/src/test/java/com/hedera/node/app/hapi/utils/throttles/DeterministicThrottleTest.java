@@ -46,28 +46,28 @@ class DeterministicThrottleTest {
         final var fromMtpsAndBurstPeriodMsNamed =
                 DeterministicThrottle.withMtpsAndBurstPeriodMsNamed(tps / 2 * MTPS_PER_TPS, 2_000, name);
 
-        assertEquals(expectedCapacity, fromTps.delegate().bucket().totalCapacity());
-        assertEquals(expectedCapacity, fromMtps.delegate().bucket().totalCapacity());
-        assertEquals(expectedCapacity, fromTpsAndBurstPeriod.delegate().bucket().totalCapacity());
+        assertEquals(expectedCapacity, fromTps.delegate().bucket().nominalCapacity());
+        assertEquals(expectedCapacity, fromMtps.delegate().bucket().nominalCapacity());
+        assertEquals(expectedCapacity, fromTpsAndBurstPeriod.delegate().bucket().nominalCapacity());
         assertEquals(
-                expectedCapacity, fromTpsAndBurstPeriodMs.delegate().bucket().totalCapacity());
+                expectedCapacity, fromTpsAndBurstPeriodMs.delegate().bucket().nominalCapacity());
         assertEquals(
-                expectedCapacity, fromMtpsAndBurstPeriod.delegate().bucket().totalCapacity());
+                expectedCapacity, fromMtpsAndBurstPeriod.delegate().bucket().nominalCapacity());
         assertEquals(
-                expectedCapacity, fromMtpsAndBurstPeriodMs.delegate().bucket().totalCapacity());
-        assertEquals(expectedCapacity, fromTpsNamed.delegate().bucket().totalCapacity());
-        assertEquals(expectedCapacity, fromMtpsNamed.delegate().bucket().totalCapacity());
+                expectedCapacity, fromMtpsAndBurstPeriodMs.delegate().bucket().nominalCapacity());
+        assertEquals(expectedCapacity, fromTpsNamed.delegate().bucket().nominalCapacity());
+        assertEquals(expectedCapacity, fromMtpsNamed.delegate().bucket().nominalCapacity());
         assertEquals(
-                expectedCapacity, fromTpsAndBurstPeriodNamed.delegate().bucket().totalCapacity());
-        assertEquals(
-                expectedCapacity,
-                fromTpsAndBurstPeriodMsNamed.delegate().bucket().totalCapacity());
+                expectedCapacity, fromTpsAndBurstPeriodNamed.delegate().bucket().nominalCapacity());
         assertEquals(
                 expectedCapacity,
-                fromMtpsAndBurstPeriodNamed.delegate().bucket().totalCapacity());
+                fromTpsAndBurstPeriodMsNamed.delegate().bucket().nominalCapacity());
         assertEquals(
                 expectedCapacity,
-                fromMtpsAndBurstPeriodMsNamed.delegate().bucket().totalCapacity());
+                fromMtpsAndBurstPeriodNamed.delegate().bucket().nominalCapacity());
+        assertEquals(
+                expectedCapacity,
+                fromMtpsAndBurstPeriodMsNamed.delegate().bucket().nominalCapacity());
 
         assertEquals(tps * MTPS_PER_TPS, fromTps.mtps());
         assertEquals(tps * MTPS_PER_TPS, fromMtps.mtps());
@@ -157,7 +157,7 @@ class DeterministicThrottleTest {
         assertEquals(now, instantFrom(subject.lastDecisionTime()));
         assertEquals(
                 internalCapacity - CAPACITY_UNITS_PER_TXN,
-                subject.delegate().bucket().capacityFree());
+                subject.delegate().bucket().nominalCapacityFree());
     }
 
     @Test
@@ -184,7 +184,7 @@ class DeterministicThrottleTest {
         final var requiredPartialCapacity = subject.clampedCapacityRequiredFor(5);
         assertEquals(CAPACITY_UNITS_PER_TXN * 5, requiredPartialCapacity);
 
-        final var totalCapacity = subject.delegate().bucket().totalCapacity();
+        final var totalCapacity = subject.delegate().bucket().nominalCapacity();
         final var requiredClampedCapacity = subject.clampedCapacityRequiredFor(500);
         final var requiredSillyCapacity = subject.clampedCapacityRequiredFor(Integer.MAX_VALUE);
         assertEquals(totalCapacity, requiredClampedCapacity);
@@ -208,7 +208,7 @@ class DeterministicThrottleTest {
         assertEquals(now, instantFrom(subject.lastDecisionTime()));
         assertEquals(
                 internalCapacity - 2 * CAPACITY_UNITS_PER_TXN + 1_000 * elapsedNanos,
-                subject.delegate().bucket().capacityFree());
+                subject.delegate().bucket().nominalCapacityFree());
     }
 
     @Test

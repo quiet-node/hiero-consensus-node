@@ -68,19 +68,19 @@ class LeakyBucketThrottleTest {
     @Test
     void withExcessElapsedNanosCompletelyEmptiesBucket() {
         assertTrue(subject.allow(BUCKET_CAPACITY, Long.MAX_VALUE));
-        assertEquals(0, subject.bucket().capacityFree());
+        assertEquals(0, subject.bucket().nominalCapacityFree());
     }
 
     @Test
     void withZeroElapsedNanosSimplyAdjustsCapacityFree() {
         assertTrue(subject.allow(BUCKET_CAPACITY / 2, 0L));
-        assertEquals(BUCKET_CAPACITY / 2, subject.bucket().capacityFree());
+        assertEquals(BUCKET_CAPACITY / 2, subject.bucket().nominalCapacityFree());
     }
 
     @Test
     void withZeroElapsedNanosRejectsUnavailableCapacity() {
         assertFalse(subject.allow(BEYOND_CAPACITY, 0L));
-        assertEquals(BUCKET_CAPACITY, subject.bucket().capacityFree());
+        assertEquals(BUCKET_CAPACITY, subject.bucket().nominalCapacityFree());
     }
 
     @Test
@@ -89,9 +89,9 @@ class LeakyBucketThrottleTest {
         subject.resetLastAllowedUse();
         assertTrue(subject.allow(BUCKET_CAPACITY / 3, 0L));
         subject.reclaimLastAllowedUse();
-        assertEquals(BUCKET_CAPACITY - (BUCKET_CAPACITY / 3), subject.bucket().capacityFree());
+        assertEquals(BUCKET_CAPACITY - (BUCKET_CAPACITY / 3), subject.bucket().nominalCapacityFree());
         subject.reclaimLastAllowedUse();
-        assertEquals(BUCKET_CAPACITY - (BUCKET_CAPACITY / 3), subject.bucket().capacityFree());
+        assertEquals(BUCKET_CAPACITY - (BUCKET_CAPACITY / 3), subject.bucket().nominalCapacityFree());
     }
 
     @Test
@@ -99,9 +99,9 @@ class LeakyBucketThrottleTest {
         assertTrue(subject.allow(BUCKET_CAPACITY / 2, 0L));
         assertFalse(subject.allow(BUCKET_CAPACITY, 0L));
         subject.reclaimLastAllowedUse();
-        assertEquals(BUCKET_CAPACITY, subject.bucket().capacityFree());
+        assertEquals(BUCKET_CAPACITY, subject.bucket().nominalCapacityFree());
         subject.reclaimLastAllowedUse();
-        assertEquals(BUCKET_CAPACITY, subject.bucket().capacityFree());
+        assertEquals(BUCKET_CAPACITY, subject.bucket().nominalCapacityFree());
     }
 
     @Test
@@ -111,7 +111,7 @@ class LeakyBucketThrottleTest {
         subject.resetLastAllowedUse();
         subject.reclaimLastAllowedUse();
         assertEquals(
-                BUCKET_CAPACITY - ((BUCKET_CAPACITY / 3) * 2), subject.bucket().capacityFree());
+                BUCKET_CAPACITY - ((BUCKET_CAPACITY / 3) * 2), subject.bucket().nominalCapacityFree());
     }
 
     @Test
