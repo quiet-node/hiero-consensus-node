@@ -704,7 +704,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final Instant sendTime = Instant.now().minus(Duration.ofMillis(100));
         blockSendTimestamps.put(1L, sendTime);
 
-        final PublishStreamResponse response = createBlockAckResponse(1L, false);
+        final PublishStreamResponse response = createBlockAckResponse(1L);
 
         connection.onNext(response);
 
@@ -724,7 +724,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         final Instant sendTime = Instant.now().minus(Duration.ofMillis(1000));
         blockSendTimestamps.put(1L, sendTime);
 
-        final PublishStreamResponse response = createBlockAckResponse(1L, false);
+        final PublishStreamResponse response = createBlockAckResponse(1L);
 
         connection.onNext(response);
 
@@ -748,9 +748,9 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
         blockSendTimestamps.put(2L, sendTime);
         blockSendTimestamps.put(3L, sendTime);
 
-        connection.onNext(createBlockAckResponse(1L, false));
-        connection.onNext(createBlockAckResponse(2L, false));
-        connection.onNext(createBlockAckResponse(3L, false));
+        connection.onNext(createBlockAckResponse(1L));
+        connection.onNext(createBlockAckResponse(2L));
+        connection.onNext(createBlockAckResponse(3L));
 
         verify(metrics, times(3)).incrementAcknowledgedBlockCount();
         verify(metrics, times(3)).recordAcknowledgementLatency(eq(LOCALHOST_8080), anyLong());
@@ -773,7 +773,7 @@ class BlockNodeConnectionTest extends BlockNodeCommunicationTestBase {
     void testHandleAcknowledgement_withNoTimestamp() {
         openConnectionAndResetMocks();
 
-        connection.onNext(createBlockAckResponse(1L, false));
+        connection.onNext(createBlockAckResponse(1L));
 
         verify(metrics).incrementAcknowledgedBlockCount();
         verifyNoMoreInteractions(metrics);

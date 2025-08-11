@@ -339,10 +339,7 @@ public class BlockNodeConnection implements StreamObserver<PublishStreamResponse
                     acknowledgedBlockNumber,
                     latencyMs);
         } else {
-            logger.debug(
-                    "[{}] Acknowledgement received for block {}",
-                    this,
-                    acknowledgedBlockNumber);
+            logger.debug("[{}] Acknowledgement received for block {}", this, acknowledgedBlockNumber);
         }
 
         if (currentBlockStreaming == -1) {
