@@ -176,9 +176,7 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
-                        String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.getFirst()),
-                        String.format(
-                                "[localhost:%s/UNINITIALIZED] Cancelled periodic stream reset", portNumbers.getFirst()),
+                        "onError invoked",
                         // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(1)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(1)),
@@ -199,9 +197,7 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
-                        String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(1)),
-                        String.format(
-                                "[localhost:%s/UNINITIALIZED] Cancelled periodic stream reset", portNumbers.get(1)),
+                        "onError invoked",
                         // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(2)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(2)),
@@ -222,9 +218,7 @@ public class BlockNodeSimulatorSuite {
                         connectionDropTime::get,
                         Duration.of(10, SECONDS),
                         Duration.of(45, SECONDS),
-                        String.format("[localhost:%s/ACTIVE] Stream encountered an error", portNumbers.get(2)),
-                        String.format(
-                                "[localhost:%s/UNINITIALIZED] Cancelled periodic stream reset", portNumbers.get(2)),
+                        "onError invoked",
                         // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(3)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(3)),

@@ -266,7 +266,7 @@ public class BlockNodeConnectionManager {
 
         final Tls tls = Tls.builder().enabled(false).build();
         final PbjGrpcClientConfig grpcConfig =
-                new PbjGrpcClientConfig(Duration.ofSeconds(10), tls, Optional.of(""), "application/grpc");
+                new PbjGrpcClientConfig(Duration.ofSeconds(30), tls, Optional.of(""), "application/grpc");
 
         final WebClient webClient = WebClient.builder()
                 .baseUri("http://" + nodeConfig.address() + ":" + nodeConfig.port())
@@ -301,13 +301,17 @@ public class BlockNodeConnectionManager {
 
         connection.getLock().writeLock().lock();
         try {
+            connection.close();
+            activeConnectionRef.compareAndSet(connection, null);
+            final var newConn = fromNodeConfig(connection.getNodeConfig(), false);
+
             if (isOnlyOneBlockNodeConfigured()) {
                 // If there is only one block node configured, we will not try to select a new node
                 // Schedule a retry for the failed connection with no delay
-                scheduleConnectionAttempt(connection, Duration.ofSeconds(0), null, false);
+                scheduleConnectionAttempt(newConn, Duration.ofSeconds(0), null, false);
             } else {
                 // Schedule retry for the failed connection after a delay (initialDelay)
-                scheduleConnectionAttempt(connection, initialDelay, null, false);
+                scheduleConnectionAttempt(newConn, initialDelay, null, false);
             }
         } finally {
             connection.getLock().writeLock().unlock();
@@ -325,8 +329,7 @@ public class BlockNodeConnectionManager {
      * Connection initiated a periodic reset of the stream
      * @param connection the connection that initiated the reset of the stream
      */
-    public void connectionResetsTheStream(
-            @NonNull final BlockNodeConnection connection, @NonNull final Duration initialDelay) {
+    public void connectionResetsTheStream(@NonNull final BlockNodeConnection connection) {
         if (!isStreamingEnabled.get()) {
             return;
         }
@@ -484,7 +487,7 @@ public class BlockNodeConnectionManager {
             logger.debug(
                     "Selected block node {}:{} for connection attempt", selectedNode.address(), selectedNode.port());
             // If we selected a node, schedule the connection attempt.
-            final BlockNodeConnection connection = connectToNode(selectedNode, force);
+            final BlockNodeConnection connection = fromNodeConfig(selectedNode, force);
 
             // Immediately schedule the FIRST connection attempt.
             scheduleConnectionAttempt(connection, Duration.ZERO, null, force);
@@ -558,9 +561,8 @@ public class BlockNodeConnectionManager {
      * @param nodeConfig the configuration of the node to connect to.
      */
     @NonNull
-    private BlockNodeConnection connectToNode(@NonNull final BlockNodeConfig nodeConfig, final boolean force) {
+    private BlockNodeConnection fromNodeConfig(@NonNull final BlockNodeConfig nodeConfig, final boolean force) {
         requireNonNull(nodeConfig);
-        logger.info("Scheduling connection attempt for block node {}:{}", nodeConfig.address(), nodeConfig.port());
 
         // Create the connection object
         final BlockStreamPublishServiceClient grpcClient = createNewGrpcClient(nodeConfig);
@@ -638,6 +640,17 @@ public class BlockNodeConnectionManager {
             }
 
             activeConnection.getLock().writeLock().lock();
+            if (activeConnection.getConnectionState() != ConnectionState.ACTIVE) {
+                try {
+                    logger.debug("New sleep");
+                    Thread.sleep(workerLoopSleepDuration());
+                } catch (final InterruptedException e) {
+                    logger.error("Block stream worker interrupted while waiting for active connection", e);
+                    Thread.currentThread().interrupt();
+                }
+                continue;
+            }
+
             try {
                 // If signaled to jump to a specific block, do so
                 jumpToBlockIfNeeded();
@@ -652,7 +665,7 @@ public class BlockNodeConnectionManager {
                 logger.error("Block stream worker interrupted", e);
                 Thread.currentThread().interrupt();
             } catch (final Exception e) {
-                rescheduleAndSelectNewNode(activeConnection, LONGER_RETRY_DELAY);
+                activeConnection.handleStreamFailure();
             } finally {
                 activeConnection.getLock().writeLock().unlock();
             }

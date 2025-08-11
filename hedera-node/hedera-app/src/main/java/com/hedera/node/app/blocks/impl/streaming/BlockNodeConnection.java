@@ -257,7 +257,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 logger.debug("[{}] Performing scheduled stream reset", this);
                 endTheStreamWith(RESET);
-                blockNodeConnectionManager.connectionResetsTheStream(this, LONGER_RETRY_DELAY);
+                blockNodeConnectionManager.connectionResetsTheStream(this);
             }
         } finally {
             connectionStateLock.writeLock().unlock();
@@ -566,13 +566,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             if (requestPipeline != null) {
                 logger.debug("[{}] Closing request pipeline for block node", this);
                 streamShutdownInProgress.set(true);
-
-                try {
-                    requestPipeline.onComplete();
-                    logger.debug("[{}] Request pipeline successfully closed", this);
-                } catch (final Exception e) {
-                    logger.warn("[{}] Error while completing request pipeline", this, e);
-                }
                 requestPipeline = null;
             }
         } finally {
