@@ -191,7 +191,13 @@ public final class StartupStateUtils {
         signedStateCopy.init(platformContext);
         signedStateCopy.setSigSet(initialSignedState.getSigSet());
 
-        final Hash hash = initialSignedState.getState().getRoot().getHash();
+        // FUTURE WORK: To support MerkleStateRoot in the testing apps we still need to use `digestTreeAsync` instead of
+        // just calling `initialSignedState.getState().getRoot().getHash()`. The latter option doesn't work for
+        // `MerkleStateRoot` as it doesn't cause hash recalculation. Once we get rid of `MerkleStateRoot` entirely,
+        // the following statement can be replaced.
+        final Hash hash = platformContext
+                .getMerkleCryptography()
+                .digestTreeSync(initialSignedState.getState().getRoot());
         return new HashedReservedSignedState(signedStateCopy.reserve("Copied initial state"), hash);
     }
 
