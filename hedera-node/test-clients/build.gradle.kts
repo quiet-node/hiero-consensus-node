@@ -75,6 +75,8 @@ val prCheckTags =
         "hapiTestBlockNodeCommunication" to "BLOCK_NODE_SIMULATOR",
         "hapiTestMisc" to
             "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING|ISS|BLOCK_NODE_SIMULATOR)",
+        "hapiTestMiscRecords" to
+            "!(INTEGRATION|CRYPTO|TOKEN|RESTART|UPGRADE|SMART_CONTRACT|ND_RECONNECT|LONG_RUNNING|ISS|BLOCK_NODE_SIMULATOR)",
     )
 val remoteCheckTags =
     prCheckTags
@@ -92,18 +94,19 @@ val prCheckStartPorts =
         "hapiTestIss" to "26400",
         "hapiTestMisc" to "26800",
         "hapiTestBlockNodeCommunication" to "27000",
+        "hapiTestMiscRecords" to "27200",
     )
 val prCheckPropOverrides =
     mapOf(
         "hapiTestAdhoc" to
-            "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s",
-        "hapiTestCrypto" to
-            "tss.hintsEnabled=true,blockStream.blockPeriod=1s,blockStream.writerMode=FILE_AND_GRPC",
+            "tss.hintsEnabled=false,tss.forceHandoffs=false,tss.initialCrsParties=16,blockStream.blockPeriod=2s",
+        "hapiTestCrypto" to "tss.hintsEnabled=true,blockStream.blockPeriod=1s,blockStream.writerMode=FILE_AND_GRPC",
         "hapiTestSmartContract" to "tss.historyEnabled=false",
         "hapiTestRestart" to
             "tss.hintsEnabled=true,tss.forceHandoffs=true,tss.initialCrsParties=16,blockStream.blockPeriod=1s,blockStream.writerMode=FILE_AND_GRPC",
         "hapiTestMisc" to "nodes.nodeRewardsEnabled=false",
         "hapiTestTimeConsuming" to "nodes.nodeRewardsEnabled=false",
+        "hapiTestMiscRecords" to "blockStream.streamMode=RECORDS",
     )
 val prCheckPrepareUpgradeOffsets = mapOf("hapiTestAdhoc" to "PT300S")
 val prCheckNumHistoryProofsToObserve = mapOf("hapiTestAdhoc" to "0", "hapiTestSmartContract" to "0")

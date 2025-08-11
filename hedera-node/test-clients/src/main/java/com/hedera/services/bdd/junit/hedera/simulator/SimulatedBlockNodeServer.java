@@ -831,7 +831,6 @@ public class SimulatedBlockNodeServer {
 
         final PublishStreamResponse.BlockAcknowledgement ack = PublishStreamResponse.BlockAcknowledgement.newBuilder()
                 .setBlockNumber(blockNumber)
-                .setBlockAlreadyExists(blockAlreadyExists) // Set based on the parameter
                 .build();
         final PublishStreamResponse response =
                 PublishStreamResponse.newBuilder().setAcknowledgement(ack).build();

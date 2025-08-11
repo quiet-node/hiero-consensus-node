@@ -50,8 +50,8 @@ public class TurtleNetwork extends AbstractNetwork implements TurtleTimeManager.
     private final Path rootOutputDirectory;
     private final List<TurtleNode> nodes = new ArrayList<>();
     private final TurtleTransactionGenerator transactionGenerator;
+    private final List<Node> publicNodes = Collections.unmodifiableList(nodes);
 
-    private List<Node> publicNodes = Collections.unmodifiableList(nodes);
     private ExecutorService executorService;
     private SimulatedNetwork simulatedNetwork;
 
@@ -160,7 +160,7 @@ public class TurtleNetwork extends AbstractNetwork implements TurtleTimeManager.
      */
     @Override
     @NonNull
-    public List<Node> getNodes() {
+    public List<Node> nodes() {
         return publicNodes;
     }
 
