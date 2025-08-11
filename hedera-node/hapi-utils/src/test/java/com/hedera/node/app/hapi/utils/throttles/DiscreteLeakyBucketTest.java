@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.hapi.utils.throttles;
 
-import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 class DiscreteLeakyBucketTest {
     private static final long DEFAULT_FIXED_CAPACITY = 64_000L;
@@ -105,7 +105,9 @@ class DiscreteLeakyBucketTest {
 
         // when:
         subject.useCapacity(DEFAULT_CAPACITY_USED);
-        assertThrows(IllegalArgumentException.class, () -> subject.useCapacity(1 + DEFAULT_FIXED_CAPACITY - DEFAULT_CAPACITY_USED));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> subject.useCapacity(1 + DEFAULT_FIXED_CAPACITY - DEFAULT_CAPACITY_USED));
     }
 
     @Test

@@ -138,7 +138,7 @@ public class ContextTransactionProcessor implements Callable<CallOutcome> {
             if (availableOpsDurationUnits < contractsConfig.opsDurationThrottleUnitsRequiredToExecute()) {
                 contractMetrics.opsDurationMetrics().recordTransactionThrottledByOpsDuration();
                 final var outcome = maybeChargeFeesAndReturnOutcome(
-                        hevmTransaction.withException(new ResourceExhaustedException(THROTTLED_AT_CONSENSUS)),
+                        hevmTransaction.withException(new ResourceExhaustedException(CONSENSUS_GAS_EXHAUSTED)),
                         context.body().transactionIDOrThrow().accountIDOrThrow(),
                         null,
                         true);

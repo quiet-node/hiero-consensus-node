@@ -96,7 +96,7 @@ public class OpsDurationThrottleTest {
                                     .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "run")
                                             .gas(200_000L)
                                             .hasKnownStatusFrom(
-                                                    ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
+                                                    ResponseCodeEnum.SUCCESS, ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
@@ -164,7 +164,7 @@ public class OpsDurationThrottleTest {
                                                     BigInteger.ONE)
                                             .gas(200_000L)
                                             .hasKnownStatusFrom(
-                                                    ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
+                                                    ResponseCodeEnum.SUCCESS, ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
@@ -232,7 +232,7 @@ public class OpsDurationThrottleTest {
                                     .mapToObj(i -> sourcing(() -> contractCall(OPS_DURATION_THROTTLE, "opsRun")
                                             .gas(400_000L)
                                             .hasKnownStatusFrom(
-                                                    ResponseCodeEnum.SUCCESS, ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
+                                                    ResponseCodeEnum.SUCCESS, ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
@@ -279,7 +279,7 @@ public class OpsDurationThrottleTest {
                                             .gas(400_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.CONTRACT_REVERT_EXECUTED,
-                                                    ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
+                                                    ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     // We're expecting that the throttle has been reached at least once
@@ -328,7 +328,7 @@ public class OpsDurationThrottleTest {
                                             .gas(400_000L)
                                             .hasKnownStatusFrom(
                                                     ResponseCodeEnum.CONTRACT_REVERT_EXECUTED,
-                                                    ResponseCodeEnum.THROTTLED_AT_CONSENSUS)
+                                                    ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED)
                                             .collectMaxOpsDuration(maxRecordedPercentageThrottleUtilization)))
                                     .toArray(HapiSpecOperation[]::new)));
                     allRunFor(spec, valueIsInRange(maxRecordedPercentageThrottleUtilization.get(), 100.0, 200.0));
@@ -381,7 +381,7 @@ public class OpsDurationThrottleTest {
                         // The bucket is full, so this should fail (even though it's just a single iteration)
                         contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(1))
                                 .gas(10_000_000L)
-                                .hasKnownStatus(ResponseCodeEnum.THROTTLED_AT_CONSENSUS))));
+                                .hasKnownStatus(ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED))));
     }
 
     @HapiTest
@@ -401,7 +401,7 @@ public class OpsDurationThrottleTest {
                             spec,
                             contractCall(OPS_DURATION_THROTTLE, "opsRun")
                                     .gas(400_000L)
-                                    .hasKnownStatus(ResponseCodeEnum.THROTTLED_AT_CONSENSUS));
+                                    .hasKnownStatus(ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED));
                 }),
                 // Now let's make it so that 2 units are required (i.e. exactly the capacity).
                 // The transaction should be allowed to start and execute successfully.
