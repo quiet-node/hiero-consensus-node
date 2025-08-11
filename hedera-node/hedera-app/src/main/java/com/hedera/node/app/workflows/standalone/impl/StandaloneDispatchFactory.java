@@ -10,7 +10,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.Key;
 import com.hedera.hapi.node.base.SignatureMap;
-import com.hedera.hapi.node.base.Transaction;
 import com.hedera.hapi.node.transaction.SignedTransaction;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
@@ -212,19 +211,17 @@ public class StandaloneDispatchFactory {
     }
 
     private ConsensusTransaction consensusTransactionFor(@NonNull final TransactionBody transactionBody) {
-        final var signedTransaction =
-                new SignedTransaction(TransactionBody.PROTOBUF.toBytes(transactionBody), SignatureMap.DEFAULT);
-        final var transaction = Transaction.newBuilder()
-                .signedTransactionBytes(SignedTransaction.PROTOBUF.toBytes(signedTransaction))
-                .build();
-        final var transactionBytes = Transaction.PROTOBUF.toBytes(transaction);
-        final var consensusTransaction = new TransactionWrapper(transactionBytes);
+        final var signedTx =
+                new SignedTransaction(TransactionBody.PROTOBUF.toBytes(transactionBody), SignatureMap.DEFAULT, false);
+        final var serializedSignedTx = SignedTransaction.PROTOBUF.toBytes(signedTx);
+        final var consensusTransaction = new TransactionWrapper(serializedSignedTx);
         consensusTransaction.setMetadata(temporaryPreHandleResult());
         return consensusTransaction;
     }
 
     private NodeInfo creatorInfoFor(@NonNull final TransactionBody transactionBody) {
-        return new NodeInfoImpl(0, transactionBody.nodeAccountIDOrThrow(), 0, List.of(), Bytes.EMPTY, List.of(), false);
+        return new NodeInfoImpl(
+                0, transactionBody.nodeAccountIDOrThrow(), 0, List.of(), Bytes.EMPTY, List.of(), false, null);
     }
 
     private PreHandleResult temporaryPreHandleResult() {

@@ -20,6 +20,7 @@ import com.google.protobuf.ByteString;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.node.app.info.DiskStartupNetworks;
+import com.hedera.node.app.tss.TssBlockHashSigner;
 import com.hedera.node.app.workflows.handle.HandleWorkflow;
 import com.hedera.node.internal.network.Network;
 import com.hedera.node.internal.network.NodeMetadata;
@@ -57,6 +58,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -97,7 +99,10 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private final long shard;
     private final long realm;
 
-    private List<Consumer<HederaNode>> postInitWorkingDirActions = new ArrayList<>();
+    private final List<Consumer<HederaNode>> postInitWorkingDirActions = new ArrayList<>();
+
+    @Nullable
+    private UnaryOperator<Network> overrideCustomizer = null;
 
     /**
      * Wraps a runnable, allowing us to defer running it until we know we are the privileged runner
@@ -231,13 +236,17 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                     Thread.currentThread().getName());
             final var deferredRun = new DeferredRun(() -> {
                 final var deadline = Instant.now().plus(timeout);
-                // Block until all nodes are ACTIVE
+                // Block until all nodes are ACTIVE and ready to handle transactions
                 nodes.forEach(node -> awaitStatus(node, Duration.between(Instant.now(), deadline), ACTIVE));
                 nodes.forEach(node -> node.logFuture(HandleWorkflow.SYSTEM_ENTITIES_CREATED_MSG)
                         .orTimeout(10, TimeUnit.SECONDS)
                         .join());
-                nodes.forEach(node -> node.logFuture("TSS protocol ready")
-                        .orTimeout(30, TimeUnit.MINUTES)
+                nodes.forEach(node -> CompletableFuture.anyOf(
+                                // Only the block stream uses TSS, so it is deactivated when streamMode=RECORDS
+                                node.logFuture("blockStream.streamMode = RECORDS")
+                                        .orTimeout(3, TimeUnit.MINUTES),
+                                node.logFuture(TssBlockHashSigner.SIGNER_READY_MSG)
+                                        .orTimeout(30, TimeUnit.MINUTES))
                         .join());
                 this.clients = HapiClients.clientsFor(this);
             });
@@ -271,6 +280,15 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         } else {
             pendingNodeAccounts.put(nodeId, accountId);
         }
+    }
+
+    /**
+     * Sets a one-time use customizer for use during the next {@literal override-network.json} refresh.
+     * @param overrideCustomizer the customizer to apply to the override network
+     */
+    public void setOneTimeOverrideCustomizer(@NonNull final UnaryOperator<Network> overrideCustomizer) {
+        requireNonNull(overrideCustomizer);
+        this.overrideCustomizer = overrideCustomizer;
     }
 
     /**
@@ -437,7 +455,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private void refreshOverrideNetworks(@NonNull final ReassignPorts reassignPorts) {
         log.info("Refreshing override networks for '{}' - \n{}", name(), configTxt);
         nodes.forEach(node -> {
-            final var overrideNetwork = WorkingDirUtils.networkFrom(configTxt, OnlyRoster.NO);
+            var overrideNetwork = WorkingDirUtils.networkFrom(configTxt, OnlyRoster.NO);
+            if (overrideCustomizer != null) {
+                // Apply the override customizer to the network
+                overrideNetwork = overrideCustomizer.apply(overrideNetwork);
+            }
             final var genesisNetworkPath = node.getExternalPath(DATA_CONFIG_DIR).resolve(GENESIS_NETWORK_JSON);
             final var isGenesis = genesisNetworkPath.toFile().exists();
             // Only write override-network.json if a node is not starting from genesis; otherwise it will adopt
@@ -473,6 +495,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 }
             }
         });
+        overrideCustomizer = null;
     }
 
     private NodeMetadata withReassignedPorts(
@@ -591,5 +614,10 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     @Override
     public long realm() {
         return realm;
+    }
+
+    @Override
+    public PrometheusClient prometheusClient() {
+        return PROMETHEUS_CLIENT;
     }
 }
