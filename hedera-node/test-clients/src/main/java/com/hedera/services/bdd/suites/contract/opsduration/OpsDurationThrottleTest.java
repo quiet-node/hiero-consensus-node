@@ -50,8 +50,6 @@ public class OpsDurationThrottleTest {
     private static final String OPS_DURATION_THROTTLE_CAPACITY = "contracts.opsDurationThrottleCapacity";
     private static final String OPS_DURATION_THROTTLE_UNITS_FREED_PER_SECOND =
             "contracts.opsDurationThrottleUnitsFreedPerSecond";
-    private static final String OPS_DURATION_THROTTLE_UNITS_REQUIRED_TO_EXECUTE =
-            "contracts.opsDurationThrottleUnitsRequiredToExecute";
 
     private static final long DEFAULT_OPS_DURATION_CAPACITY = 10000000;
     private static final long DEFAULT_OPS_DURATION_FREED_PER_SECOND = 10000000;
@@ -382,36 +380,5 @@ public class OpsDurationThrottleTest {
                         contractCall(OPS_DURATION_THROTTLE, "runMulti", BigInteger.valueOf(1))
                                 .gas(10_000_000L)
                                 .hasKnownStatus(ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED))));
-    }
-
-    @HapiTest
-    @Order(12)
-    @DisplayName("ops duration throttle should respect minimum units required to execute")
-    public Stream<DynamicTest> respectUnitsRequiredToExecute() {
-        return hapiTest(
-                disableOpsDurationThrottle(),
-                uploadInitCode(OPS_DURATION_THROTTLE),
-                contractCreate(OPS_DURATION_THROTTLE).gas(2_000_000L),
-                // In this scenario we require a minimum of 3 units, but throttle's capacity is only 2, so even
-                // a simple transaction should be rejected.
-                enableOpsDurationThrottle(2L, 0L),
-                overriding(OPS_DURATION_THROTTLE_UNITS_REQUIRED_TO_EXECUTE, "3"),
-                withOpContext((spec, opLog) -> {
-                    allRunFor(
-                            spec,
-                            contractCall(OPS_DURATION_THROTTLE, "opsRun")
-                                    .gas(400_000L)
-                                    .hasKnownStatus(ResponseCodeEnum.CONSENSUS_GAS_EXHAUSTED));
-                }),
-                // Now let's make it so that 2 units are required (i.e. exactly the capacity).
-                // The transaction should be allowed to start and execute successfully.
-                overriding(OPS_DURATION_THROTTLE_UNITS_REQUIRED_TO_EXECUTE, "2"),
-                withOpContext((spec, opLog) -> {
-                    allRunFor(
-                            spec,
-                            contractCall(OPS_DURATION_THROTTLE, "opsRun")
-                                    .gas(400_000L)
-                                    .hasKnownStatus(ResponseCodeEnum.SUCCESS));
-                }));
     }
 }
