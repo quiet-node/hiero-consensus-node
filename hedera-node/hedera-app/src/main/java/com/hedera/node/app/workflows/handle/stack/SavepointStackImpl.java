@@ -533,7 +533,7 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                 break;
             }
         }
-        List<StateChange> batchStateChanges = isBatch ? baseBuilder.getStateChanges() : null;
+
         int nextNonceOffset = 1;
         var parentConsensusTime = consensusTime;
         for (int i = 0; i < n; i++) {
@@ -594,10 +594,13 @@ public class SavepointStackImpl implements HandleContext.SavepointStack, State {
                             nextRecord.transactionRecord().transactionIDOrThrow(),
                             nextRecord.transactionRecord().receiptOrThrow()));
                 }
-                case BLOCKS ->
+                case BLOCKS -> {
+                    List<StateChange> batchStateChanges = isBatch ? baseBuilder.getStateChanges() : null;
                     requireNonNull(outputs)
                             .add(((BlockStreamBuilder) builder).build(builder == baseBuilder, batchStateChanges));
+                }
                 case BOTH -> {
+                    List<StateChange> batchStateChanges = isBatch ? baseBuilder.getStateChanges() : null;
                     final var pairedBuilder = (PairedStreamBuilder) builder;
                     records.add(pairedBuilder.recordStreamBuilder().build());
                     requireNonNull(outputs)
