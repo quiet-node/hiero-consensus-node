@@ -104,10 +104,6 @@ public class OpsDurationDeterministicThrottle implements CongestibleThrottle {
         bucket.resetUsed(usageSnapshot.used());
     }
 
-    public void resetUsage() {
-        bucket.resetUsed(0);
-    }
-
     private long effectiveLeak(final long elapsedNanos) {
         return productWouldOverflow(elapsedNanos, capacityFreedPerSecond)
                 ? Long.MAX_VALUE / SECONDS_TO_NANOSECONDS
