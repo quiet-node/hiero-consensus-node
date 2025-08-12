@@ -313,7 +313,7 @@ public class SimulatedBlockNodeServer {
                                     // Requirement 3: Check if block already exists (header AND proof received)
                                     if (blocksWithProofs.contains(blockNumber)) {
                                         log.warn(
-                                                "Block {} already fully received (header+proof). Sending BlockAcknowledgement(exists=true) to stream {} on port {}.",
+                                                "Block {} already fully received (header+proof). Sending BlockAcknowledgement to stream {} on port {}.",
                                                 blockNumber,
                                                 replies.hashCode(),
                                                 port);
@@ -407,12 +407,11 @@ public class SimulatedBlockNodeServer {
 
                                     // Requirement 2: Send BlockAcknowledgement to ALL connected pipelines
                                     log.info(
-                                            "Broadcasting BlockAcknowledgement for block {} (exists=false) to {} active streams on port {}",
+                                            "Broadcasting BlockAcknowledgement for block {} to {} active streams on port {}",
                                             blockNumber,
                                             activeStreams.size(),
                                             port);
                                     for (final Pipeline<? super PublishStreamResponse> pipeline : activeStreams) {
-                                        // Send Ack with blockAlreadyExists=false
                                         buildAndSendBlockAcknowledgement(blockNumber, pipeline);
                                     }
 

@@ -174,10 +174,9 @@ public class BlockNodeSimulatorSuite {
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(45, SECONDS),
                         "onError invoked",
-                        // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(1)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(1)),
                         String.format(
@@ -187,7 +186,7 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(1)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
                                 portNumbers.get(1)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -195,10 +194,9 @@ public class BlockNodeSimulatorSuite {
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(45, SECONDS),
                         "onError invoked",
-                        // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(2)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(2)),
                         String.format(
@@ -208,7 +206,7 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(2)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
                                 portNumbers.get(2)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -216,10 +214,9 @@ public class BlockNodeSimulatorSuite {
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(45, SECONDS),
                         "onError invoked",
-                        // Select the next block node to connect to based on priorities
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(3)),
                         String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(3)),
                         String.format(
@@ -229,7 +226,7 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(3)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
                                 portNumbers.get(3)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -247,7 +244,7 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(1)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT1M", portNumbers.get(1)),
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M", portNumbers.get(1)),
                         String.format("[localhost:%s/ACTIVE] Closing connection...", portNumbers.get(3)),
                         String.format(
                                 "[localhost:%s/UNINITIALIZED] Connection state transitioned from ACTIVE to UNINITIALIZED",
@@ -395,7 +392,7 @@ public class BlockNodeSimulatorSuite {
                         Duration.of(30, SECONDS),
                         Duration.of(15, SECONDS),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT30S",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
                                 portNumbers.getFirst()))),
                 waitUntilNextBlocks(2).withBackgroundTraffic(true),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(

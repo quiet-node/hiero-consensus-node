@@ -642,7 +642,6 @@ public class BlockNodeConnectionManager {
             activeConnection.getLock().writeLock().lock();
             if (activeConnection.getConnectionState() != ConnectionState.ACTIVE) {
                 try {
-                    logger.debug("New sleep");
                     Thread.sleep(workerLoopSleepDuration());
                 } catch (final InterruptedException e) {
                     logger.error("Block stream worker interrupted while waiting for active connection", e);
