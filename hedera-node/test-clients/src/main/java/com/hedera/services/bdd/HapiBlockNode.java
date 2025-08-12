@@ -53,5 +53,7 @@ public @interface HapiBlockNode {
         long[] blockNodeIds() default {};
 
         long[] blockNodePriorities() default {};
+
+        String[] applicationPropertiesOverrides() default {};
     }
 }
