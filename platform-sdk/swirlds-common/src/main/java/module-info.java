@@ -107,7 +107,6 @@ module com.swirlds.common {
     requires com.hedera.pbj.runtime;
     requires com.swirlds.logging;
     requires java.desktop;
-    requires java.net.http;
     requires jdk.httpserver;
     requires jdk.management;
     requires org.apache.logging.log4j.core;

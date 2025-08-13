@@ -37,7 +37,6 @@ import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.StreamingTreeHasher;
-import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
 import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.hapi.utils.CommonUtils;
 import com.hedera.node.app.info.DiskStartupNetworks;
@@ -116,13 +115,10 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private final Supplier<BlockItemWriter> writerSupplier;
     private final BoundaryStateChangeListener boundaryStateChangeListener;
     private final PlatformStateFacade platformStateFacade;
-
-    private final BlockBufferService blockBufferService;
     private final ExecutionOutputCache executionOutputCache;
     private final Lifecycle lifecycle;
     private final BlockHashManager blockHashManager;
     private final RunningHashManager runningHashManager;
-    private final boolean streamToBlockNodes;
 
     // The status of pending work
     private PendingWork pendingWork = NONE;
@@ -204,8 +200,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     @Nullable
     private volatile CompletableFuture<Void> fatalShutdownFuture = null;
 
-    private long fatalRoundNumber = 0;
-
     /**
      * False until the node has tried to recover any blocks pending TSS signature still on disk.
      */
@@ -228,7 +222,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final Lifecycle lifecycle,
             @NonNull final Metrics metrics,
-            @NonNull final BlockBufferService blockBufferService,
             @NonNull final ExecutionOutputCache executionOutputCache) {
         this.blockHashSigner = requireNonNull(blockHashSigner);
         this.networkInfo = requireNonNull(networkInfo);
@@ -263,7 +256,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
                 "Initialized BlockStreamManager from round {} with end-of-round hash {}",
                 lastRoundOfPrevBlock,
                 hashFuture.isDone() ? hashFuture.join().toHex() : "<PENDING>");
-        this.blockBufferService = requireNonNull(blockBufferService);
     }
 
     @Override
