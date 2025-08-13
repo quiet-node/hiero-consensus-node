@@ -197,7 +197,7 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(1)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(1)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -217,7 +217,7 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(2)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(2)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -237,7 +237,7 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(3)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(3)))),
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
@@ -255,7 +255,8 @@ public class BlockNodeSimulatorSuite {
                                 "[localhost:%s/ACTIVE] Connection state transitioned from PENDING to ACTIVE",
                                 portNumbers.get(1)),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M", portNumbers.get(1)),
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
+                                portNumbers.get(1)),
                         String.format("[localhost:%s/ACTIVE] Closing connection...", portNumbers.get(3)),
                         String.format(
                                 "[localhost:%s/UNINITIALIZED] Connection state transitioned from ACTIVE to UNINITIALIZED",
@@ -408,7 +409,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0, 1},
                         blockNodePriorities = {0, 1},
                         applicationPropertiesOverrides = {
-                            "blockNode.streamResetPeriod", "1m",
+                            "blockNode.streamResetPeriod", "10s",
                             "blockStream.streamMode", "BOTH",
                             "blockStream.writerMode", "FILE_AND_GRPC"
                         })
@@ -428,9 +429,9 @@ public class BlockNodeSimulatorSuite {
                         Duration.of(30, SECONDS),
                         Duration.of(15, SECONDS),
                         String.format(
-                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT2M",
+                                "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT10S",
                                 portNumbers.getFirst()))),
-                waitUntilNextBlocks(2).withBackgroundTraffic(true),
+                waitUntilNextBlocks(6).withBackgroundTraffic(true),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,

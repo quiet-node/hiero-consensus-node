@@ -717,8 +717,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
 
     @Override
     public String toString() {
-        return blockNodeConfig.address() + ":" + blockNodeConfig.port() + "/" + getConnectionState() + " "
-                + instanceCount;
+        return blockNodeConfig.address() + ":" + blockNodeConfig.port() + "/" + getConnectionState();
     }
 
     @Override
