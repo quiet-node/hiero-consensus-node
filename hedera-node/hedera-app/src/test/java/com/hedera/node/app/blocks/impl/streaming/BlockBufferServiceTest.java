@@ -1286,8 +1286,7 @@ class BlockBufferServiceTest extends BlockNodeCommunicationTestBase {
                 .withValue("blockStream.buffer.bufferDirectory", testDir)
                 .withValue("blockStream.blockItemBatchSize", batchSize)
                 .getOrCreateConfig();
-        when(configProvider.getConfiguration())
-                .thenReturn(new VersionedConfigImpl(config, 1));
+        when(configProvider.getConfiguration()).thenReturn(new VersionedConfigImpl(config, 1));
 
         Files.createDirectories(testDirFile.toPath());
 

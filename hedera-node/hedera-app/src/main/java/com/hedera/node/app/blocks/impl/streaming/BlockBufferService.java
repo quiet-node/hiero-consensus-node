@@ -141,7 +141,8 @@ public class BlockBufferService {
         this.blockStreamMetrics = blockStreamMetrics;
         this.bufferIO = new BlockBufferIO(bufferDirectory());
 
-        final BlockStreamConfig blockStreamConfig = configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
+        final BlockStreamConfig blockStreamConfig =
+                configProvider.getConfiguration().getConfigData(BlockStreamConfig.class);
         this.grpcStreamingEnabled = blockStreamConfig.writerMode() != BlockStreamWriterMode.FILE;
         this.backpressureEnabled = (blockStreamConfig.streamMode() == StreamMode.BLOCKS && grpcStreamingEnabled);
     }
@@ -156,7 +157,6 @@ public class BlockBufferService {
             loadBufferFromDisk();
             scheduleNextWorkerTask();
         }
-
 
         // Only start the pruning thread if gRPC streaming is enabled
         if (grpcStreamingEnabled) {
