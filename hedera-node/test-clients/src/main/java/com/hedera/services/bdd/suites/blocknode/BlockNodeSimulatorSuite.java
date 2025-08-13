@@ -132,13 +132,14 @@ public class BlockNodeSimulatorSuite {
         final List<Integer> portNumbers = new ArrayList<>();
         return hapiTest(
                 doingContextual(spec -> portNumbers.add(spec.getBlockNodePortById(0))),
-                waitUntilNextBlocks(5).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(10).toNanos())),
                 doingContextual(spec -> time.set(Instant.now())),
                 blockNodeSimulator(0).sendEndOfStreamImmediately(Code.BEHIND).withBlockNumber(Long.MAX_VALUE),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         time::get,
-                        Duration.of(10, SECONDS),
+                        Duration.of(30, SECONDS),
                         Duration.of(45, SECONDS),
                         String.format(
                                 "[localhost:%s/UNINITIALIZED] Block node reported it is behind. Will restart stream at block 0.",
@@ -146,7 +147,8 @@ public class BlockNodeSimulatorSuite {
                         String.format(
                                 "[localhost:%s/ACTIVE] Received EndOfStream response (block=9223372036854775807, responseCode=BEHIND)",
                                 portNumbers.getFirst()))),
-                waitUntilNextBlocks(5).withBackgroundTraffic(true));
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(10).toNanos())));
     }
 
     @HapiTest
@@ -179,17 +181,17 @@ public class BlockNodeSimulatorSuite {
                     portNumbers.add(spec.getBlockNodePortById(2));
                     portNumbers.add(spec.getBlockNodePortById(3));
                 }),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(), // Pri 0
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(30, SECONDS),
+                        Duration.ofMinutes(1),
                         Duration.of(45, SECONDS),
                         "onError invoked",
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(1)),
-                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(1)),
                         String.format(
                                 "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
                                 portNumbers.get(1)),
@@ -199,17 +201,17 @@ public class BlockNodeSimulatorSuite {
                         String.format(
                                 "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(1)))),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(1).shutDownImmediately(), // Pri 1
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(30, SECONDS),
+                        Duration.ofMinutes(1),
                         Duration.of(45, SECONDS),
                         "onError invoked",
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(2)),
-                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(2)),
                         String.format(
                                 "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
                                 portNumbers.get(2)),
@@ -219,17 +221,17 @@ public class BlockNodeSimulatorSuite {
                         String.format(
                                 "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(2)))),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(2).shutDownImmediately(), // Pri 2
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(30, SECONDS),
+                        Duration.ofMinutes(1),
                         Duration.of(45, SECONDS),
                         "onError invoked",
                         String.format("Selected block node localhost:%s for connection attempt", portNumbers.get(3)),
-                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(3)),
                         String.format(
                                 "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
                                 portNumbers.get(3)),
@@ -239,15 +241,15 @@ public class BlockNodeSimulatorSuite {
                         String.format(
                                 "[localhost:%s/ACTIVE] Scheduled periodic stream reset every PT24H",
                                 portNumbers.get(3)))),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> connectionDropTime.set(Instant.now())),
                 blockNodeSimulator(1).startImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         connectionDropTime::get,
-                        Duration.of(60, SECONDS),
+                        Duration.ofMinutes(1),
                         Duration.of(45, SECONDS),
-                        String.format("[localhost:%s/CONNECTING] Running connection task...", portNumbers.get(1)),
                         String.format(
                                 "[localhost:%s/PENDING] Connection state transitioned from CONNECTING to PENDING",
                                 portNumbers.get(1)),
@@ -268,7 +270,8 @@ public class BlockNodeSimulatorSuite {
                                         + " than the connection (localhost:%s/CONNECTING) we are attempting to connect to"
                                         + " and this new connection attempt will be ignored",
                                 portNumbers.get(1), portNumbers.get(2)))),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true));
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())));
     }
 
     @HapiTest

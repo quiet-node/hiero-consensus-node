@@ -16,7 +16,6 @@ import java.time.Instant;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Flow;
 import java.util.concurrent.ScheduledExecutorService;
@@ -60,8 +59,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * The configuration specific to the block node this connection is for.
      */
     private final BlockNodeConfig blockNodeConfig;
-
-    private final int instanceCount;
     /**
      * The "parent" connection manager that manages the lifecycle of this connection.
      */
@@ -193,8 +190,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         this.endOfStreamTimeFrame = blockNodeConnectionConfig.endOfStreamTimeFrame();
         this.endOfStreamScheduleDelay = blockNodeConnectionConfig.endOfStreamScheduleDelay();
         this.streamResetPeriod = blockNodeConnectionConfig.streamResetPeriod();
-        final var random = new Random();
-        this.instanceCount = random.nextInt(1000);
     }
 
     /**
