@@ -48,7 +48,7 @@ import com.hedera.node.app.blocks.BlockStreamManager;
 import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.service.networkadmin.impl.FreezeServiceImpl;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.VersionedConfigImpl;
@@ -69,7 +69,6 @@ import com.swirlds.state.spi.WritableStates;
 import com.swirlds.state.test.fixtures.FunctionWritableSingletonState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import io.minio.MinioClient;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -175,7 +174,7 @@ class BlockStreamManagerImplTest {
     private BlockBufferService blockBufferService;
 
     @Mock
-    private RecordBlockCache recordBlockCache;
+    private ExecutionOutputCache executionOutputCache;
 
     private final AtomicReference<Bytes> lastAItem = new AtomicReference<>();
     private final AtomicReference<Bytes> lastBItem = new AtomicReference<>();
@@ -185,12 +184,6 @@ class BlockStreamManagerImplTest {
     private WritableSingletonStateBase<BlockStreamInfo> blockStreamInfoState;
 
     private BlockStreamManagerImpl subject;
-
-    private static final String BUCKET_NAME = "test-bucket";
-    private static final int MINIO_ROOT_PORT = 9000;
-    private static final String MINIO_ROOT_USER = "minioadmin";
-    private static final String MINIO_ROOT_PASSWORD = "minioadmin";
-    private MinioClient minioClient;
 
     @BeforeEach
     void setUp() {
@@ -260,7 +253,7 @@ class BlockStreamManagerImplTest {
                 lifecycle,
                 metrics,
                 blockBufferService,
-                recordBlockCache);
+                executionOutputCache);
         assertSame(Instant.EPOCH, subject.lastIntervalProcessTime());
         subject.setLastIntervalProcessTime(CONSENSUS_NOW);
         assertEquals(CONSENSUS_NOW, subject.lastIntervalProcessTime());
@@ -286,7 +279,7 @@ class BlockStreamManagerImplTest {
                 lifecycle,
                 metrics,
                 blockBufferService,
-                recordBlockCache);
+                executionOutputCache);
         assertThrows(IllegalStateException.class, () -> subject.startRound(round, state));
     }
 
@@ -971,7 +964,7 @@ class BlockStreamManagerImplTest {
                 lifecycle,
                 metrics,
                 blockBufferService,
-                recordBlockCache);
+                executionOutputCache);
         given(state.getReadableStates(any())).willReturn(readableStates);
         given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
         lenient().when(state.getReadableStates(FreezeServiceImpl.NAME)).thenReturn(readableStates);

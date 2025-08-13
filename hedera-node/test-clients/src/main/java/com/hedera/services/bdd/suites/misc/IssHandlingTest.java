@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.suites.misc;
 
-import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.MINIO_BUCKET_NAME;
-import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.MINIO_ROOT_PASSWORD;
-import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.MINIO_ROOT_PORT;
-import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.MINIO_ROOT_USER;
 import static com.hedera.services.bdd.junit.TestTags.ISS;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.APPLICATION_PROPERTIES;
 import static com.hedera.services.bdd.junit.hedera.NodeSelector.byNodeId;
@@ -23,7 +19,6 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.waitForFrozenNetwor
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.crypto.ParseableIssBlockStreamValidationOp.ISS_NODE_ID;
 import static com.hedera.services.bdd.suites.regression.system.LifecycleTest.configVersionOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.hedera.hapi.block.stream.Block;
 import com.hedera.hapi.block.stream.BlockItem;
@@ -31,25 +26,18 @@ import com.hedera.hapi.node.base.Transaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.hedera.NodeSelector;
-import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.suites.crypto.ParseableIssBlockStreamValidationOp;
 import com.hedera.services.bdd.suites.regression.system.LifecycleTest;
 import com.hederahashgraph.api.proto.java.SemanticVersion;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import io.minio.GetObjectArgs;
-import io.minio.GetObjectResponse;
-import io.minio.ListObjectsArgs;
-import io.minio.MinioClient;
 import java.io.ByteArrayInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import java.util.zip.GZIPInputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -72,8 +60,6 @@ class IssHandlingTest implements LifecycleTest {
     final Stream<DynamicTest> simulateIss() {
         final AtomicReference<SemanticVersion> startVersion = new AtomicReference<>();
         final AtomicReference<List<String>> matchingLines = new AtomicReference<>(List.of());
-        final String endpoint = "http://" + HapiSpec.MINIO_CONTAINER.getHost() + ":"
-                + HapiSpec.MINIO_CONTAINER.getMappedPort(MINIO_ROOT_PORT);
         return hapiTest(
                 getVersionInfo().exposingServicesVersionTo(startVersion::set),
                 // Wait long enough for node1 to have typically written round 1 snapshot
@@ -89,21 +75,7 @@ class IssHandlingTest implements LifecycleTest {
                                     .get((int) ISS_NODE_ID)
                                     .getExternalPath(APPLICATION_PROPERTIES);
                             log.info("Setting artificial transfer limit @ {}", loc);
-                            updateBootstrapProperties(
-                                    loc,
-                                    Map.of(
-                                            "ledger.transfers.maxLen",
-                                            "5",
-                                            "s3IssConfig.endpointUrl",
-                                            endpoint,
-                                            "s3IssConfig.bucketName",
-                                            MINIO_BUCKET_NAME,
-                                            "s3IssConfig.accessKey",
-                                            MINIO_ROOT_USER,
-                                            "s3IssConfig.secretKey",
-                                            MINIO_ROOT_PASSWORD,
-                                            "s3IssConfig.enabled",
-                                            "true"));
+                            updateBootstrapProperties(loc, Map.of("ledger.transfers.maxLen", "5"));
                         }))),
                 assertHgcaaLogContains(
                         NodeSelector.byNodeId(ISS_NODE_ID), "ledger.transfers.maxLen = 5", Duration.ofSeconds(10)),
@@ -126,15 +98,15 @@ class IssHandlingTest implements LifecycleTest {
                 // Verify the ISS Record Stream and Block Stream block files were written to S3 bucket
                 assertHgcaaLogContains(
                                 NodeSelector.byNodeId(ISS_NODE_ID),
-                                "Successfully uploaded ISS Block",
+                                "Successfully wrote Block Stream file",
                                 Duration.ofSeconds(30))
                         .exposingLines(matchingLines),
                 assertHgcaaLogContains(
                         NodeSelector.byNodeId(ISS_NODE_ID),
-                        "Successfully uploaded ISS Record Stream file",
+                        "Successfully wrote Record Stream file",
                         Duration.ofSeconds(30)),
-                doingContextual(spec -> verifyIssTransactionBytesInS3BucketISSBlocks(
-                        matchingLines, endpoint, spec.registry().getBytes("issTransfer"))),
+                doingContextual(spec -> verifyIssTransactionBytesInBlockStreamBlock(
+                        matchingLines, spec.registry().getBytes("issTransfer"))),
                 // Submit a freeze
                 freezeOnly().startingIn(2).seconds(),
                 waitForFrozenNetwork(FREEZE_TIMEOUT, NodeSelector.exceptNodeIds(ISS_NODE_ID)),
@@ -142,32 +114,20 @@ class IssHandlingTest implements LifecycleTest {
                 new ParseableIssBlockStreamValidationOp());
     }
 
-    private void verifyIssTransactionBytesInS3BucketISSBlocks(
-            AtomicReference<List<String>> matchingLines, String endpoint, byte[] issCryptoTransferBytes) {
+    private void verifyIssTransactionBytesInBlockStreamBlock(
+            AtomicReference<List<String>> matchingLines, byte[] issCryptoTransferBytes) {
         if (!matchingLines.get().isEmpty()) {
             try {
-                MinioClient minioClient = MinioClient.builder()
-                        .endpoint(endpoint)
-                        .credentials(MINIO_ROOT_USER, MINIO_ROOT_PASSWORD)
-                        .build();
-                // Extract the path from the log line "Successfully uploaded ISS Block {} (Rounds {}-{}) to GCP bucket
-                // {} at path: {}"
+                // Extract the path from the log line
                 final String blockPath =
                         matchingLines.get().getFirst().split("path: ")[1].trim();
                 log.info("Verifying ISS Block file exists at path: {}", blockPath);
-                // Verify the ISS Block file exists in the S3 bucket
 
-                final Set<String> allObjects = getAllObjects(minioClient);
-                allObjects.forEach(System.out::println);
-                assertTrue(allObjects.contains(blockPath));
+                // Read file bytes into memory
+                byte[] fileBytes = Files.readAllBytes(Path.of(blockPath));
 
-                GetObjectResponse response = minioClient.getObject(GetObjectArgs.builder()
-                        .bucket(MINIO_BUCKET_NAME)
-                        .object(blockPath)
-                        .build());
-                byte[] storedObject = response.readAllBytes();
                 // First Uncompress the gzipped content
-                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(storedObject);
+                ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(fileBytes);
                 GZIPInputStream gzipInputStream = new GZIPInputStream(byteArrayInputStream);
                 byte[] decompressedData = gzipInputStream.readAllBytes();
                 gzipInputStream.close();
@@ -190,7 +150,6 @@ class IssHandlingTest implements LifecycleTest {
                         }
                     }
                 }
-                // TODO verify TransactionResult
                 log.error("ISS SignedTransaction Bytes not found in ISS Block file at path: {}", blockPath);
                 throw new RuntimeException(
                         "ISS SignedTransaction Bytes not found in ISS Block Stream Block file in S3 bucket");
@@ -199,34 +158,6 @@ class IssHandlingTest implements LifecycleTest {
                 throw new RuntimeException(
                         "Failed to verify ISS Transaction Bytes present in ISS Block files in S3 bucket", e);
             }
-        }
-    }
-
-    /**
-     * Get all the objects in the bucket.
-     *
-     * @return Set of object names, aka full path
-     */
-    private Set<String> getAllObjects(@NonNull final MinioClient minioClient) {
-        try {
-            return StreamSupport.stream(
-                            minioClient
-                                    .listObjects(ListObjectsArgs.builder()
-                                            .bucket(MINIO_BUCKET_NAME)
-                                            .recursive(true)
-                                            .build())
-                                    .spliterator(),
-                            false)
-                    .map(result -> {
-                        try {
-                            return result.get().objectName();
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
-                    .collect(Collectors.toSet());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 }

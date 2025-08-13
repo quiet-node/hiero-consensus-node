@@ -109,8 +109,8 @@ import com.hedera.node.config.Utils;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.HederaConfig;
+import com.hedera.node.config.data.IssContextConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
-import com.hedera.node.config.data.S3IssConfig;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.node.config.data.VersionConfig;
 import com.hedera.node.config.types.StreamMode;
@@ -645,13 +645,13 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 // Wait for the block stream to close any pending or current blocks–-we may need them for triage
                 blockStreamManager().awaitFatalShutdown(SHUTDOWN_TIMEOUT);
 
-                // Upload the Record and Block files containing the ISS round
+                // Write the contextual Record and Block Stream files containing the ISS round
                 if (configProvider
                         .getConfiguration()
-                        .getConfigData(S3IssConfig.class)
+                        .getConfigData(IssContextConfig.class)
                         .enabled()) {
-                    logger.info("CATASTROPHIC_FAILURE - Uploading ISS context to S3");
-                    daggerApp.recordBlockCache().uploadIssContextToS3();
+                    logger.info("CATASTROPHIC_FAILURE - Writing ISS contextual Blocks to disk");
+                    daggerApp.executionOutputCache().handleIssContextualBlocks();
                 }
             }
             case REPLAYING_EVENTS, STARTING_UP, OBSERVING, RECONNECT_COMPLETE, CHECKING, FREEZING, BEHIND -> {

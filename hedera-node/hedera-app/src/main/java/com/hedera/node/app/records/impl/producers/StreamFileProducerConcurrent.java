@@ -9,7 +9,7 @@ import com.hedera.hapi.node.state.blockrecords.RunningHashes;
 import com.hedera.hapi.streams.HashAlgorithm;
 import com.hedera.hapi.streams.HashObject;
 import com.hedera.node.app.annotations.CommonExecutor;
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.records.impl.BlockRecordStreamProducer;
 import com.hedera.node.app.state.SingleTransactionRecord;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
@@ -67,7 +67,7 @@ public final class StreamFileProducerConcurrent implements BlockRecordStreamProd
     /** Set in {@link #switchBlocks(long, long, Instant)}, keeps track of the current block number. */
     private long currentBlockNumber;
 
-    private final RecordBlockCache recordBlockCache;
+    private final ExecutionOutputCache executionOutputCache;
 
     /**
      * Construct {@link StreamFileProducerConcurrent}
@@ -82,12 +82,12 @@ public final class StreamFileProducerConcurrent implements BlockRecordStreamProd
             @NonNull final BlockRecordWriterFactory writerFactory,
             @CommonExecutor @NonNull final ExecutorService executorService,
             @NonNull final SemanticVersion hapiVersion,
-            @NonNull final RecordBlockCache recordBlockCache) {
+            @NonNull final ExecutionOutputCache executionOutputCache) {
         this.writerFactory = requireNonNull(writerFactory);
         this.format = requireNonNull(format);
         this.hapiVersion = requireNonNull(hapiVersion);
         this.executorService = requireNonNull(executorService);
-        this.recordBlockCache = requireNonNull(recordBlockCache);
+        this.executionOutputCache = requireNonNull(executionOutputCache);
     }
 
     // =================================================================================================================
@@ -236,7 +236,7 @@ public final class StreamFileProducerConcurrent implements BlockRecordStreamProd
                                 serializedItems.forEach(item -> {
                                     try {
                                         writer.writeItem(item);
-                                        recordBlockCache.addRecordStreamItem(writer.getBlockNumber(), item);
+                                        executionOutputCache.addRecordStreamItem(writer.getBlockNumber(), item);
                                     } catch (final Exception e) {
                                         logger.error("Error writing record item to file", e);
                                     }
@@ -289,7 +289,8 @@ public final class StreamFileProducerConcurrent implements BlockRecordStreamProd
             final var writer = writerFactory.create(null);
             final var startRunningHash = asHashObject(lastRunningHash);
             writer.init(hapiVersion, startRunningHash, startConsensusTime, blockNumber);
-            recordBlockCache.createRecordStreamBlock(hapiVersion, startRunningHash, startConsensusTime, blockNumber);
+            executionOutputCache.createRecordStreamBlock(
+                    hapiVersion, startRunningHash, startConsensusTime, blockNumber);
             return writer;
         } catch (final Exception e) {
             logger.error("Error creating record file writer", e);
@@ -302,7 +303,7 @@ public final class StreamFileProducerConcurrent implements BlockRecordStreamProd
         // move forward with the next block.
         try {
             writer.close(asHashObject(lastRunningHash));
-            recordBlockCache.closeRecordStreamFile(writer.getBlockNumber(), asHashObject(lastRunningHash));
+            executionOutputCache.closeRecordStreamFile(writer.getBlockNumber(), asHashObject(lastRunningHash));
         } catch (final Exception e) {
             logger.error("Error closing record file writer", e);
         }

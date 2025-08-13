@@ -11,8 +11,8 @@ import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.impl.BoundaryStateChangeListener;
 import com.hedera.node.app.blocks.impl.ImmediateStateChangeListener;
 import com.hedera.node.app.blocks.impl.streaming.BlockNodeConnectionManager;
-import com.hedera.node.app.cache.RecordBlockCache;
-import com.hedera.node.app.cache.RecordBlockCacheModule;
+import com.hedera.node.app.cache.ExecutionOutputCache;
+import com.hedera.node.app.cache.ExecutionOutputCacheModule;
 import com.hedera.node.app.components.IngestInjectionComponent;
 import com.hedera.node.app.config.BootstrapConfigProviderImpl;
 import com.hedera.node.app.config.ConfigProviderImpl;
@@ -89,7 +89,7 @@ import javax.inject.Singleton;
             InfoInjectionModule.class,
             BlockRecordInjectionModule.class,
             BlockStreamModule.class,
-            RecordBlockCacheModule.class,
+            ExecutionOutputCacheModule.class,
             PlatformModule.class,
             ThrottleServiceModule.class,
             FacilityInitModule.class
@@ -154,7 +154,7 @@ public interface HederaInjectionComponent {
 
     CurrentPlatformStatus currentPlatformStatus();
 
-    RecordBlockCache recordBlockCache();
+    ExecutionOutputCache executionOutputCache();
 
     @Component.Builder
     interface Builder {

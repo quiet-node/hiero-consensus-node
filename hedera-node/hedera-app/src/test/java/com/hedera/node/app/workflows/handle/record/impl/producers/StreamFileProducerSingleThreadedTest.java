@@ -3,7 +3,7 @@ package com.hedera.node.app.workflows.handle.record.impl.producers;
 
 import static com.hedera.node.app.records.RecordTestData.VERSION;
 
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.records.impl.BlockRecordStreamProducer;
 import com.hedera.node.app.records.impl.producers.BlockRecordWriterFactory;
 import com.hedera.node.app.records.impl.producers.StreamFileProducerSingleThreaded;
@@ -14,7 +14,8 @@ final class StreamFileProducerSingleThreadedTest extends StreamFileProducerTest 
 
     @Override
     BlockRecordStreamProducer createStreamProducer(
-            @NonNull final BlockRecordWriterFactory factory, @NonNull final RecordBlockCache recordBlockCache) {
-        return new StreamFileProducerSingleThreaded(BlockRecordFormatV6.INSTANCE, factory, VERSION, recordBlockCache);
+            @NonNull final BlockRecordWriterFactory factory, @NonNull final ExecutionOutputCache executionOutputCache) {
+        return new StreamFileProducerSingleThreaded(
+                BlockRecordFormatV6.INSTANCE, factory, VERSION, executionOutputCache);
     }
 }

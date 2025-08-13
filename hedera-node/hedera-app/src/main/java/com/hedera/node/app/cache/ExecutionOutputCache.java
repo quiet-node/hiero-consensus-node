@@ -16,25 +16,23 @@ import com.hedera.node.app.records.impl.producers.BlockRecordWriterFactory;
 import com.hedera.node.app.records.impl.producers.SerializedSingleTransactionRecord;
 import com.hedera.node.config.ConfigProvider;
 import com.hedera.node.config.data.BlockStreamConfig;
-import com.hedera.node.config.data.S3IssConfig;
+import com.hedera.node.config.data.IssContextConfig;
 import com.hedera.node.config.types.StreamMode;
-import com.swirlds.common.s3.S3Client;
-import com.swirlds.common.s3.S3ClientInitializationException;
-import com.swirlds.common.s3.S3ResponseException;
 import com.swirlds.state.lifecycle.info.NetworkInfo;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -44,43 +42,41 @@ import org.hiero.block.api.BlockItemSet;
 import org.hiero.block.api.PublishStreamRequest;
 
 /**
- * An in-memory cache of the last X record stream record files and block stream block files.
- * This class also handles the uploading of ISS contextual blocks and record files to an S3 bucket.
+ * An in-memory cache of the last X record stream record files and block stream block files produced
+ * by the Execution layer. This class also handles writing these files to disk.
  */
 @Singleton
-public class RecordBlockCache {
+public class ExecutionOutputCache {
 
-    private static final Logger log = LogManager.getLogger(RecordBlockCache.class);
+    private static final Logger log = LogManager.getLogger(ExecutionOutputCache.class);
 
-    private final StreamBuffer<BlockState> blockStreamCache;
-    private final StreamBuffer<RecordStreamMetadata> recordStreamCache;
+    private final EvictingLinkedHashMap<BlockState> blockStreamCache;
+    private final EvictingLinkedHashMap<RecordStreamMetadata> recordStreamCache;
 
     private final ConfigProvider configProvider;
     private final NetworkInfo networkInfo;
 
     private long issRoundNumber;
 
-    private S3Client s3Client = null;
-
     private final BlockRecordWriterFactory blockRecordWriterFactory;
 
     /**
-     * Constructor for RecordBlockCache.
+     * Constructor for ExecutionOutputCache.
      * @param configProvider the configuration provider to access S3 ISS configuration
      * @param networkInfo the network information to access self node info
      * @param blockRecordWriterFactory the factory to create BlockRecordWriter instances
      */
     @Inject
-    public RecordBlockCache(
+    public ExecutionOutputCache(
             @NonNull ConfigProvider configProvider,
             @NonNull NetworkInfo networkInfo,
             @NonNull BlockRecordWriterFactory blockRecordWriterFactory) {
         final int capacity = configProvider
                 .getConfiguration()
-                .getConfigData(S3IssConfig.class)
+                .getConfigData(IssContextConfig.class)
                 .recordBlockBufferSize();
-        this.blockStreamCache = new StreamBuffer<>(capacity);
-        this.recordStreamCache = new StreamBuffer<>(capacity);
+        this.blockStreamCache = new EvictingLinkedHashMap<>(capacity);
+        this.recordStreamCache = new EvictingLinkedHashMap<>(capacity);
         this.configProvider = configProvider;
         this.networkInfo = networkInfo;
         this.blockRecordWriterFactory = blockRecordWriterFactory;
@@ -124,131 +120,83 @@ public class RecordBlockCache {
     }
 
     /**
-     * Initializes the S3 client for uploading ISS Blocks to the S3 bucket.
-     */
-    public void initializeS3Client() {
-        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-        if (!s3IssConfig.endpointUrl().isEmpty()) {
-            try {
-                s3Client = new S3Client(
-                        s3IssConfig.regionName(),
-                        s3IssConfig.endpointUrl(),
-                        s3IssConfig.bucketName(),
-                        s3IssConfig.accessKey(),
-                        s3IssConfig.secretKey());
-            } catch (S3ClientInitializationException e) {
-                log.error("Failed to initialize S3 client for uploading contextual ISS Blocks: {}", e.getMessage(), e);
-            }
-        }
-    }
-
-    /**
-     * Uploads the block stream Block for the ISS round number to the S3 bucket and writes it to local disk.
+     * Writes the block stream Block for the ISS round number to the S3 bucket and writes it to local disk.
      */
     public void handleBlockStreamIssBlock() {
-        if (s3Client != null) {
-            BlockState blockState = getBlockStateForRoundNumber(issRoundNumber);
-            if (blockState != null) {
-                uploadBlockStateToS3BucketAndWriteToDisk(blockState);
-            } else {
-                log.info(
-                        "BlockState for round {} in which ISS was reported is not available, skipping upload to S3 bucket",
-                        issRoundNumber);
-            }
+        BlockState blockState = getBlockStateForRoundNumber(issRoundNumber);
+        if (blockState != null) {
+            writeBlockStateToToDisk(blockState);
         } else {
-            log.info("Skipping upload of ISS Block to GCP bucket as S3 Client was not initialized properly");
+            log.error(
+                    "BlockState for round {} in which ISS was reported is not available, skipping writing to disk",
+                    issRoundNumber);
         }
     }
 
     /**
-     * Uploads the ISS context to S3, including the block stream Block and record stream record files.
+     * Write ISS Contextual Information to disk, including the block stream Block and record stream record files.
      */
-    public void uploadIssContextToS3() {
-        initializeS3Client();
-        if (s3Client != null) {
-            StreamMode streamMode = configProvider
-                    .getConfiguration()
-                    .getConfigData(BlockStreamConfig.class)
-                    .streamMode();
-            if (streamMode == StreamMode.BOTH || streamMode == StreamMode.BLOCKS) {
-                handleBlockStreamIssBlock();
-            }
-            if (streamMode == StreamMode.BOTH || streamMode == StreamMode.RECORDS) {
-                handleRecordStreamIssRecordFiles();
-            }
+    public void handleIssContextualBlocks() {
+        StreamMode streamMode = configProvider
+                .getConfiguration()
+                .getConfigData(BlockStreamConfig.class)
+                .streamMode();
+        if (streamMode == StreamMode.BOTH || streamMode == StreamMode.BLOCKS) {
+            handleBlockStreamIssBlock();
+        }
+        if (streamMode == StreamMode.BOTH || streamMode == StreamMode.RECORDS) {
+            handleRecordStreamIssRecordFiles();
         }
     }
 
     private void handleRecordStreamIssRecordFiles() {
-        if (s3Client != null) {
-            for (final RecordStreamMetadata recordFileMetadata : recordStreamCache.values()) {
-                uploadRecordFileToS3(recordFileMetadata);
-            }
+        if (recordStreamCache.isEmpty()) {
+            log.error(
+                    "No record stream files found in cache for ISS round {}. Skipping writing to disk.",
+                    issRoundNumber);
+            return;
+        }
+        for (final RecordStreamMetadata recordFileMetadata : recordStreamCache.values()) {
+            writeRecordFilesToDisk(recordFileMetadata);
         }
     }
 
-    private void uploadRecordFileToS3(RecordStreamMetadata recordFileMetadata) {
+    private void writeRecordFilesToDisk(RecordStreamMetadata recordFileMetadata) {
         List<SerializedSingleTransactionRecord> serializedSingleTransactionRecords =
                 recordFileMetadata.getRecordItems();
         if (serializedSingleTransactionRecords.isEmpty()) {
-            log.info(
-                    "No SerializedSingleTransactionRecord's found for Block number {}. Skipping upload to S3 bucket.",
+            log.error(
+                    "No SerializedSingleTransactionRecord's found for Block number {}. Skipping writing to disk.",
                     recordFileMetadata.getBlockNumber());
             return;
         }
+        try {
+            BlockRecordWriter blockRecordWriter = blockRecordWriterFactory.create(
+                    configProvider
+                                    .getConfiguration()
+                                    .getConfigData(IssContextConfig.class)
+                                    .diskPath() + issRoundNumber + "/");
+            blockRecordWriter.init(
+                    recordFileMetadata.getHapiProtoVersion(),
+                    recordFileMetadata.getStartRunningHash(),
+                    recordFileMetadata.getConsensusTime(),
+                    recordFileMetadata.getBlockNumber());
+            for (SerializedSingleTransactionRecord rec : serializedSingleTransactionRecords) {
+                blockRecordWriter.writeItem(rec);
+            }
+            blockRecordWriter.close(recordFileMetadata.getLastRunningHash());
 
-        BlockRecordWriter blockRecordWriter = blockRecordWriterFactory.create(
-                configProvider
-                                .getConfiguration()
-                                .getConfigData(S3IssConfig.class)
-                                .diskPath() + "/" + issRoundNumber + "/");
-        blockRecordWriter.init(
-                recordFileMetadata.getHapiProtoVersion(),
-                recordFileMetadata.getStartRunningHash(),
-                recordFileMetadata.getConsensusTime(),
-                recordFileMetadata.getBlockNumber());
-        for (SerializedSingleTransactionRecord rec : serializedSingleTransactionRecords) {
-            blockRecordWriter.writeItem(rec);
-        }
-        blockRecordWriter.close(recordFileMetadata.getLastRunningHash());
-
-        // Upload all the record block files in S3IssConfig::diskPath
-        final S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
-        final Path issRecordFilePath = Paths.get(s3IssConfig.diskPath());
-        try (Stream<Path> stream = Files.walk(issRecordFilePath)) {
-            stream.filter(Files::isRegularFile).forEach(path -> {
-                final Path fileName = path.getFileName();
-                if (fileName != null) {
-                    try {
-                        final String fileKey = s3IssConfig.basePath() + "/ISS" + "/node"
-                                + networkInfo.selfNodeInfo().nodeId() + "/" + issRoundNumber + "/"
-                                + fileName;
-                        // Upload the file to S3 bucket
-                        s3Client.uploadFile(
-                                fileKey,
-                                s3IssConfig.storageClass(),
-                                new ByteArrayIterator(Files.readAllBytes(path)),
-                                "application/gzip");
-                        log.info(
-                                "Successfully uploaded ISS Record Stream file {} for Block number {} to S3 bucket {} at path: {}",
-                                fileName,
-                                recordFileMetadata.getBlockNumber(),
-                                s3IssConfig.bucketName(),
-                                fileKey);
-                    } catch (Exception e) {
-                        log.error(
-                                "Failed to upload Record Stream files for Block number {} to S3 bucket {} due to: {}",
-                                recordFileMetadata.getBlockNumber(),
-                                s3IssConfig.bucketName(),
-                                e.getMessage(),
-                                e);
-                    }
-                }
-            });
-        } catch (IOException e) {
+            log.info(
+                    "Successfully wrote Record Stream file for Block number {} to disk at path: {}",
+                    recordFileMetadata.getBlockNumber(),
+                    configProvider
+                                    .getConfiguration()
+                                    .getConfigData(IssContextConfig.class)
+                                    .diskPath() + issRoundNumber + "/");
+        } catch (UncheckedIOException e) {
             log.error(
-                    "Failed to read Record Stream files from disk path {} due to: {}",
-                    issRecordFilePath,
+                    "Failed to write Record Stream file for Block number {} to disk: {}",
+                    recordFileMetadata.getBlockNumber(),
                     e.getMessage(),
                     e);
         }
@@ -278,6 +226,13 @@ public class RecordBlockCache {
         }
     }
 
+    /**
+     * Creates a new RecordStreamMetadata for the given block number and initializes it with the provided parameters.
+     * @param hapiVersion the HAPI version to set for the record stream metadata
+     * @param startRunningHash the starting running hash for the record stream metadata
+     * @param startConsensusTime the starting consensus time for the record stream metadata
+     * @param blockNumber the block number for which to create the record stream metadata
+     */
     public void createRecordStreamBlock(
             SemanticVersion hapiVersion, HashObject startRunningHash, Instant startConsensusTime, long blockNumber) {
         requireNonNull(hapiVersion, "hapiVersion must not be null");
@@ -350,32 +305,56 @@ public class RecordBlockCache {
         }
     }
 
-    private static class StreamBuffer<T> extends LinkedHashMap<Long, T> {
-        private final int capacity;
+    private static class EvictingLinkedHashMap<T> {
+        private HashMap<Long, T> buffer = null;
 
-        public StreamBuffer(int capacity) {
-            super(capacity + 1, 0.75f, false); // insertion-order
-            this.capacity = capacity;
-        }
-
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Long, T> eldest) {
-            return size() > capacity;
+        public EvictingLinkedHashMap(int capacity) {
+            this.buffer = new LinkedHashMap<>(capacity, 0.75f, true) {
+                protected boolean removeEldestEntry(Map.Entry<Long, T> eldest) {
+                    return size() > capacity;
+                }
+            };
         }
 
         /**
-         * Get an existing item by block number, or null if not present.
+         * Get an existing item by key/index, or null if not present.
          */
-        public T get(long blockNumber) {
-            return super.get(blockNumber);
+        public T get(long key) {
+            return buffer.get(key);
+        }
+
+        /**
+         * Check if the map is empty.
+         * @return true if the map is empty, false otherwise
+         */
+        public boolean isEmpty() {
+            return buffer.isEmpty();
+        }
+
+        /**
+         * Put an item into the map, evicting the oldest item if the capacity is exceeded.
+         * @param key the key for the item
+         * @param value the item to put into the map
+         */
+        public void put(long key, T value) {
+            requireNonNull(value, "value must not be null");
+            buffer.put(key, value);
+        }
+
+        /**
+         * Get all values in the map.
+         * @return a collection of all values in the map
+         */
+        public Collection<T> values() {
+            return buffer.values();
         }
     }
 
     /**
-     * Uploads the block state to the GCP bucket.
-     * @param blockState the block state to upload
+     * Writes the block state to disk.
+     * @param blockState the block state
      */
-    public void uploadBlockStateToS3BucketAndWriteToDisk(@NonNull final BlockState blockState) {
+    public void writeBlockStateToToDisk(@NonNull final BlockState blockState) {
         requireNonNull(blockState, "blockState must not be null");
         requireNonNull(networkInfo, "networkInfo must not be null");
         List<BlockItem> blockItems = new ArrayList<>();
@@ -394,7 +373,7 @@ public class RecordBlockCache {
 
         final Block block = Block.newBuilder().items(blockItems).build();
 
-        S3IssConfig s3IssConfig = configProvider.getConfiguration().getConfigData(S3IssConfig.class);
+        IssContextConfig issContextConfig = configProvider.getConfiguration().getConfigData(IssContextConfig.class);
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream)) {
 
@@ -406,14 +385,19 @@ public class RecordBlockCache {
             gzipOutputStream.close();
 
             // Also write Block File to local disk
-            Path issBlockFilePath = Paths.get(s3IssConfig.diskPath())
+            Path issBlockFilePath = Paths.get(issContextConfig.diskPath())
                     .resolve(issRoundNumber
-                            + "/blockStream" + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
+                            + "/blockStream/" + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
                             + COMPRESSION_ALGORITHM_EXTENSION);
             try {
                 // Ensure the parent directories exist
                 Files.createDirectories(issBlockFilePath.getParent());
                 Files.write(issBlockFilePath, byteArrayOutputStream.toByteArray());
+
+                log.info(
+                        "Successfully wrote Block Stream file for Block number {} to disk at path: {}",
+                        blockState.blockNumber(),
+                        issBlockFilePath);
             } catch (IOException e) {
                 log.error(
                         "Failed to write Block {} to local disk at path {}: {}",
@@ -422,57 +406,12 @@ public class RecordBlockCache {
                         e.getMessage(),
                         e);
             }
-
-            String blockKey = s3IssConfig.basePath() + "/node"
-                    + networkInfo.selfNodeInfo().nodeId() + "/ISS/"
-                    + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
-                    + COMPRESSION_ALGORITHM_EXTENSION;
-            s3Client.uploadFile(
-                    blockKey,
-                    s3IssConfig.storageClass(),
-                    new ByteArrayIterator(byteArrayOutputStream.toByteArray()),
-                    "application/gzip");
-            log.info(
-                    "Successfully uploaded ISS Block {} (Rounds {}-{}) to GCP bucket {} at path: {}",
-                    blockState.blockNumber(),
-                    blockState.getLowestRoundNumber(),
-                    blockState.getHighestRoundNumber(),
-                    s3IssConfig.bucketName(),
-                    blockKey);
         } catch (IOException e) {
-            log.info(
-                    "Failed to upload Block {} to GCP bucket {}: {}",
+            log.error(
+                    "Failed to write Block Stream file for Block number {} to disk: {}",
                     blockState.blockNumber(),
-                    s3IssConfig.bucketName(),
-                    e);
-        } catch (S3ResponseException e) {
-            log.info(
-                    "Failed to upload Block {} to GCP bucket {} due to an exceptional response: {}",
-                    blockState.blockNumber(),
-                    s3IssConfig.bucketName(),
                     e.getMessage(),
                     e);
-        }
-    }
-
-    private static class ByteArrayIterator implements Iterator<byte[]> {
-
-        private final byte[] byteArray;
-        private boolean hasNext = true;
-
-        ByteArrayIterator(byte[] byteArray) {
-            this.byteArray = byteArray;
-        }
-
-        @Override
-        public boolean hasNext() {
-            return hasNext;
-        }
-
-        @Override
-        public byte[] next() {
-            hasNext = false;
-            return byteArray;
         }
     }
 

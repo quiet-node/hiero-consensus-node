@@ -24,7 +24,7 @@ import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.hapi.node.state.blockrecords.BlockInfo;
 import com.hedera.hapi.node.state.blockrecords.RunningHashes;
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.fixtures.AppTestBase;
 import com.hedera.node.app.info.NodeInfoImpl;
 import com.hedera.node.app.records.BlockRecordService;
@@ -92,7 +92,7 @@ final class BlockRecordManagerTest extends AppTestBase {
     private BlockRecordWriterFactory blockRecordWriterFactory;
 
     @Mock
-    private RecordBlockCache recordBlockCache;
+    private ExecutionOutputCache executionOutputCache;
 
     @BeforeEach
     void setUpEach() throws Exception {
@@ -178,9 +178,9 @@ final class BlockRecordManagerTest extends AppTestBase {
                         blockRecordWriterFactory,
                         ForkJoinPool.commonPool(),
                         app.hapiVersion(),
-                        recordBlockCache)
+                        executionOutputCache)
                 : new StreamFileProducerSingleThreaded(
-                        blockRecordFormat, blockRecordWriterFactory, app.hapiVersion(), recordBlockCache);
+                        blockRecordFormat, blockRecordWriterFactory, app.hapiVersion(), executionOutputCache);
         Bytes finalRunningHash;
         try (final var blockRecordManager = new BlockRecordManagerImpl(
                 app.configProvider(), app.workingStateAccessor().getState(), producer)) {
@@ -265,7 +265,7 @@ final class BlockRecordManagerTest extends AppTestBase {
         final Random random = new Random(82792874);
         final var merkleState = app.workingStateAccessor().getState();
         final var producer = new StreamFileProducerSingleThreaded(
-                blockRecordFormat, blockRecordWriterFactory, app.hapiVersion(), recordBlockCache);
+                blockRecordFormat, blockRecordWriterFactory, app.hapiVersion(), executionOutputCache);
         Bytes finalRunningHash;
         try (final var blockRecordManager = new BlockRecordManagerImpl(
                 app.configProvider(), app.workingStateAccessor().getState(), producer)) {

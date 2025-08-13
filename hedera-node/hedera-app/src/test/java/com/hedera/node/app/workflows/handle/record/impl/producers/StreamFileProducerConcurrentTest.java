@@ -3,7 +3,7 @@ package com.hedera.node.app.workflows.handle.record.impl.producers;
 
 import static com.hedera.node.app.records.RecordTestData.VERSION;
 
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.records.impl.BlockRecordStreamProducer;
 import com.hedera.node.app.records.impl.producers.BlockRecordWriterFactory;
 import com.hedera.node.app.records.impl.producers.StreamFileProducerConcurrent;
@@ -14,8 +14,8 @@ import java.util.concurrent.ForkJoinPool;
 final class StreamFileProducerConcurrentTest extends StreamFileProducerTest {
     @Override
     BlockRecordStreamProducer createStreamProducer(
-            @NonNull final BlockRecordWriterFactory factory, @NonNull final RecordBlockCache recordBlockCache) {
+            @NonNull final BlockRecordWriterFactory factory, @NonNull final ExecutionOutputCache executionOutputCache) {
         return new StreamFileProducerConcurrent(
-                BlockRecordFormatV6.INSTANCE, factory, ForkJoinPool.commonPool(), VERSION, recordBlockCache);
+                BlockRecordFormatV6.INSTANCE, factory, ForkJoinPool.commonPool(), VERSION, executionOutputCache);
     }
 }

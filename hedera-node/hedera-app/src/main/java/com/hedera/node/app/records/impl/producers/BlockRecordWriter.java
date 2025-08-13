@@ -4,7 +4,9 @@ package com.hedera.node.app.records.impl.producers;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.streams.HashObject;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.time.Instant;
 
 /**
@@ -64,4 +66,11 @@ public interface BlockRecordWriter {
      * @return the block number
      */
     long getBlockNumber();
+
+    /**
+     * Get the path to the file being written to, if applicable.
+     * @return the path to the file being written to
+     */
+    @Nullable
+    Path getBlockRecordFilePath();
 }

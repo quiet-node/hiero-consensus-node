@@ -289,6 +289,14 @@ public final class BlockRecordWriterV6 implements BlockRecordWriter {
         return blockNumber;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Path getBlockRecordFilePath() {
+        return recordFilePath;
+    }
+
     // =================================================================================================================
     // Private implementation methods
 

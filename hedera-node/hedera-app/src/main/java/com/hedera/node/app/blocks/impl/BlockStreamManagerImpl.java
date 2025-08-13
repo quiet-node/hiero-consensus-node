@@ -38,7 +38,7 @@ import com.hedera.node.app.blocks.BlockStreamService;
 import com.hedera.node.app.blocks.InitialStateHash;
 import com.hedera.node.app.blocks.StreamingTreeHasher;
 import com.hedera.node.app.blocks.impl.streaming.BlockBufferService;
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.hapi.utils.CommonUtils;
 import com.hedera.node.app.info.DiskStartupNetworks;
 import com.hedera.node.app.info.DiskStartupNetworks.InfoType;
@@ -118,7 +118,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
     private final PlatformStateFacade platformStateFacade;
 
     private final BlockBufferService blockBufferService;
-    private final RecordBlockCache recordBlockCache;
+    private final ExecutionOutputCache executionOutputCache;
     private final Lifecycle lifecycle;
     private final BlockHashManager blockHashManager;
     private final RunningHashManager runningHashManager;
@@ -227,7 +227,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             @NonNull final Lifecycle lifecycle,
             @NonNull final Metrics metrics,
             @NonNull final BlockBufferService blockBufferService,
-            @NonNull final RecordBlockCache recordBlockCache) {
+            @NonNull final ExecutionOutputCache executionOutputCache) {
         this.blockHashSigner = requireNonNull(blockHashSigner);
         this.networkInfo = requireNonNull(networkInfo);
         this.version = requireNonNull(version);
@@ -251,7 +251,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.blockHashManager = new BlockHashManager(config);
         this.runningHashManager = new RunningHashManager();
         this.lastRoundOfPrevBlock = initialStateHash.roundNum();
-        this.recordBlockCache = recordBlockCache;
+        this.executionOutputCache = executionOutputCache;
         final var hashFuture = initialStateHash.hashFuture();
         endRoundStateHashes.put(lastRoundOfPrevBlock, hashFuture);
         indirectProofCounter = requireNonNull(metrics)
@@ -309,7 +309,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             traceDataHasher = new ConcurrentStreamingTreeHasher(executor, hashCombineBatchSize);
 
             blockNumber = blockStreamInfo.blockNumber() + 1;
-            recordBlockCache.createBlock(blockNumber);
+            executionOutputCache.createBlock(blockNumber);
             if (hintsEnabled && !hasCheckedForPendingBlocks) {
                 final var hasBeenFrozen = requireNonNull(state.getReadableStates(PlatformStateService.NAME)
                                 .<PlatformState>getSingleton(V0540PlatformStateSchema.PLATFORM_STATE_KEY)
@@ -633,7 +633,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             final var proofItem = BlockItem.newBuilder().blockProof(proof).build();
             block.writer().writePbjItemAndBytes(proofItem, BlockItem.PROTOBUF.toBytes(proofItem));
             block.writer().closeCompleteBlock();
-            recordBlockCache.addBlockItem(block.number(), proofItem);
+            executionOutputCache.addBlockItem(block.number(), proofItem);
             if (block.number() != blockNumber) {
                 siblingHashes.removeFirst();
             }
@@ -799,7 +799,7 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
             }
 
             writer.writePbjItemAndBytes(item, serialized);
-            recordBlockCache.addBlockItem(writer.blockNumber(), item);
+            executionOutputCache.addBlockItem(writer.blockNumber(), item);
 
             next.send();
             return true;

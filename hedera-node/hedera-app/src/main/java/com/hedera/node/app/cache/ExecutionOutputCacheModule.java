@@ -10,16 +10,16 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.inject.Singleton;
 
 /**
- * Dagger module for providing the {@link RecordBlockCache}.
+ * Dagger module for providing the {@link ExecutionOutputCache}.
  */
 @Module
-public interface RecordBlockCacheModule {
+public interface ExecutionOutputCacheModule {
     @Provides
     @Singleton
-    static RecordBlockCache provideRecordBlockCache(
+    static ExecutionOutputCache provideRecordBlockCache(
             @NonNull final ConfigProvider configProvider,
             @NonNull NetworkInfo networkInfo,
             @NonNull BlockRecordWriterFactory blockRecordWriterFactory) {
-        return new RecordBlockCache(configProvider, networkInfo, blockRecordWriterFactory);
+        return new ExecutionOutputCache(configProvider, networkInfo, blockRecordWriterFactory);
     }
 }

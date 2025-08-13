@@ -4,7 +4,7 @@ package com.hedera.node.app.state.listeners;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.blocks.BlockStreamManager;
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.swirlds.platform.system.state.notifications.AsyncFatalIssListener;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.inject.Inject;
@@ -20,12 +20,12 @@ public class FatalIssListenerImpl implements AsyncFatalIssListener {
 
     private final BlockStreamManager blockStreamManager;
 
-    private final RecordBlockCache recordBlockCache;
+    private final ExecutionOutputCache executionOutputCache;
 
     @Inject
     public FatalIssListenerImpl(
-            @NonNull final RecordBlockCache recordBlockCache, @NonNull BlockStreamManager blockStreamManager) {
-        this.recordBlockCache = requireNonNull(recordBlockCache);
+            @NonNull final ExecutionOutputCache executionOutputCache, @NonNull BlockStreamManager blockStreamManager) {
+        this.executionOutputCache = requireNonNull(executionOutputCache);
         this.blockStreamManager = requireNonNull(blockStreamManager);
     }
 
@@ -33,6 +33,6 @@ public class FatalIssListenerImpl implements AsyncFatalIssListener {
     public void notify(@NonNull final IssNotification data) {
         log.warn("ISS detected (type={}, round={})", data.getIssType(), data.getRound());
         blockStreamManager.notifyFatalEvent();
-        recordBlockCache.setIssRoundNumber(data.getRound());
+        executionOutputCache.setIssRoundNumber(data.getRound());
     }
 }

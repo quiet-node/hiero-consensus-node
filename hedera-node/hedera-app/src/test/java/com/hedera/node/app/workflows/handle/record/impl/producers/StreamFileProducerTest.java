@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.blockrecords.RunningHashes;
 import com.hedera.hapi.streams.HashObject;
-import com.hedera.node.app.cache.RecordBlockCache;
+import com.hedera.node.app.cache.ExecutionOutputCache;
 import com.hedera.node.app.fixtures.AppTestBase;
 import com.hedera.node.app.records.impl.BlockRecordStreamProducer;
 import com.hedera.node.app.records.impl.producers.BlockRecordWriter;
@@ -21,6 +21,7 @@ import com.hedera.node.app.records.impl.producers.formats.v6.BlockRecordFormatV6
 import com.hedera.node.app.state.SingleTransactionRecord;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -50,17 +51,17 @@ abstract class StreamFileProducerTest extends AppTestBase {
     private BlockRecordStreamProducer subject;
 
     @Mock
-    protected RecordBlockCache recordBlockCache;
+    protected ExecutionOutputCache executionOutputCache;
 
     abstract BlockRecordStreamProducer createStreamProducer(
-            @NonNull BlockRecordWriterFactory factory, @NonNull final RecordBlockCache recordBlockCache);
+            @NonNull BlockRecordWriterFactory factory, @NonNull final ExecutionOutputCache executionOutputCache);
 
     @Nested
     @DisplayName("Initialization Tests")
     final class InitTests {
         @BeforeEach
         void setUp() {
-            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), recordBlockCache);
+            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), executionOutputCache);
         }
 
         @Test
@@ -111,7 +112,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
     final class WritingTests {
         @BeforeEach
         void setUp() {
-            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), recordBlockCache);
+            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), executionOutputCache);
         }
 
         static Stream<Arguments> provideBlocks() {
@@ -193,7 +194,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
     final class SwitchingTests {
         @BeforeEach
         void setUp() {
-            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), recordBlockCache);
+            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), executionOutputCache);
         }
 
         @Test
@@ -268,7 +269,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
                             throw new RuntimeException("Close throws!");
                         }
                     },
-                    recordBlockCache);
+                    executionOutputCache);
 
             final var consensusTime = Instant.now();
             subject.initRunningHash(new RunningHashes(STARTING_RUNNING_HASH_OBJ.hash(), null, null, null));
@@ -339,6 +340,11 @@ abstract class StreamFileProducerTest extends AppTestBase {
         @Override
         public long getBlockNumber() {
             return blockNumber;
+        }
+
+        @Override
+        public Path getBlockRecordFilePath() {
+            return null;
         }
     }
 }
