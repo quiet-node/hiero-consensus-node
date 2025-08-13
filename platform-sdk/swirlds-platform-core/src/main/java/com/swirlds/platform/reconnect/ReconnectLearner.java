@@ -222,7 +222,6 @@ public class ReconnectLearner {
                 false,
                 false,
                 platformStateFacade);
-        newSignedState.setRoundSupplier();
         SignedStateFileReader.registerServiceStates(newSignedState);
         newSignedState.setSigSet(sigSet);
 

@@ -231,7 +231,6 @@ public class RandomSignedStateGenerator {
                 deleteOnBackgroundThread,
                 pcesRound,
                 platformStateFacade);
-        signedState.setRoundSupplier();
 
         final Map<NodeId, Signature> signaturesInstance;
         if (signatureSupplier != null) {

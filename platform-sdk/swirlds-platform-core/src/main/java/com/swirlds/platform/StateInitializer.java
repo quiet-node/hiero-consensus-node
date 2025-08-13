@@ -65,7 +65,6 @@ public final class StateInitializer {
             throw new IllegalStateException("Expected initial state to be unhashed");
         }
 
-        signedState.setRoundSupplier();
         consensusStateEventHandler.onStateInitialized(
                 signedState.getState(), platform, trigger, previousSoftwareVersion);
 

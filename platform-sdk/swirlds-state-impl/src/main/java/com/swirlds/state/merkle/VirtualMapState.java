@@ -84,7 +84,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     /**
      * Metrics for the snapshot creation process
      */
-    private MerkleRootSnapshotMetrics snapshotMetrics;
+    private final MerkleRootSnapshotMetrics snapshotMetrics;
 
     /**
      * Maintains information about each service, and each state of each service, known by this
@@ -111,7 +111,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
 
     private VirtualMap virtualMap;
 
-    private PlatformContext platformContext;
+    private final PlatformContext platformContext;
 
     /**
      * Used to track the status of the Platform.

@@ -204,9 +204,7 @@ public class SignedState {
         this.freezeState = freezeState;
         this.deleteOnBackgroundThread = deleteOnBackgroundThread;
         this.pcesRound = pcesRound;
-    }
 
-    public void setRoundSupplier() {
         if (state instanceof VirtualMapState<?> virtualMapState) {
             virtualMapState.setRoundSupplier(() -> {
                 final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(state);

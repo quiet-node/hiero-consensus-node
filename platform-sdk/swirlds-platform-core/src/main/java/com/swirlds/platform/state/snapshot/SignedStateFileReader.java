@@ -87,7 +87,6 @@ public final class SignedStateFileReader {
                 false,
                 false,
                 stateFacade);
-        newSignedState.setRoundSupplier();
 
         registerServiceStates(newSignedState);
 
