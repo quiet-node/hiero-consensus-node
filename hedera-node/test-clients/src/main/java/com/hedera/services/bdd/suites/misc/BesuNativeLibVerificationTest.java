@@ -46,34 +46,33 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
 
         final var envOverrides = Map.of("contracts.evm.nativeLibVerification.halt.enabled", "true");
 
-        return hapiTest(
-                blockingOrder(
-                        freezeOnly().startingIn(5).seconds().payingWith(GENESIS).deferStatusResolution(),
-                        waitForFrozenNetwork(FREEZE_TIMEOUT),
-                        LifecycleTest.confirmFreezeAndShutdown(),
-                        sleepForSeconds(10),
-                        doAdhoc(Blake2bfDigest::disableNative),
-                        doAdhoc(BigIntegerModularExponentiationPrecompiledContract::disableNative),
-                        doAdhoc(AbstractAltBnPrecompiledContract::disableNative),
-                        doAdhoc(() -> new SECP256K1().disableNative()),
-                        doAdhoc(() -> new SECP256R1().disableNative()),
-                        restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
-                        doAdhoc(() -> CURRENT_CONFIG_VERSION.set(CURRENT_CONFIG_VERSION.get() + 1)),
-                        doingContextual(spec -> waitForAny(allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
-                        doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
-                        ifNotCi(
-                                assertHgcaaLogContains(allNodes(), "ERROR", Duration.ofSeconds(60)),
-                                assertHgcaaLogContains(allNodes(), "Native library", Duration.ZERO),
-                                assertHgcaaLogContains(
-                                        allNodes(),
-                                        "is not present with halt mode enabled! Shutting down node.",
-                                        Duration.ZERO))),
+        return hapiTest(blockingOrder(
+                freezeOnly().startingIn(5).seconds().payingWith(GENESIS).deferStatusResolution(),
+                waitForFrozenNetwork(FREEZE_TIMEOUT),
+                LifecycleTest.confirmFreezeAndShutdown(),
+                sleepForSeconds(10),
+                doAdhoc(Blake2bfDigest::disableNative),
+                doAdhoc(BigIntegerModularExponentiationPrecompiledContract::disableNative),
+                doAdhoc(AbstractAltBnPrecompiledContract::disableNative),
+                doAdhoc(() -> new SECP256K1().disableNative()),
+                doAdhoc(() -> new SECP256R1().disableNative()),
+                restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
+                doAdhoc(() -> CURRENT_CONFIG_VERSION.set(CURRENT_CONFIG_VERSION.get() + 1)),
+                doingContextual(spec -> waitForAny(allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
+                doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
+                ifNotCi(
+                        assertHgcaaLogContains(allNodes(), "ERROR", Duration.ofSeconds(60)),
+                        assertHgcaaLogContains(allNodes(), "Native library", Duration.ZERO),
+                        assertHgcaaLogContains(
+                                allNodes(),
+                                "is not present with halt mode enabled! Shutting down node.",
+                                Duration.ZERO)),
                 ifCi(
                         assertHgcaaLogContains(
                                 allNodes(),
                                 "Native library verification Halt mode is enabled",
                                 Duration.ofSeconds(300)),
                         restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
-                        doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT))));
+                        doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)))));
     }
 }
