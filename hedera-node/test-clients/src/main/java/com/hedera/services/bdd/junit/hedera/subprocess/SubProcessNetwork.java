@@ -3,6 +3,7 @@ package com.hedera.services.bdd.junit.hedera.subprocess;
 
 import static com.hedera.node.app.info.DiskStartupNetworks.GENESIS_NETWORK_JSON;
 import static com.hedera.node.app.info.DiskStartupNetworks.OVERRIDE_NETWORK_JSON;
+import static com.hedera.services.bdd.junit.hedera.ExternalPath.APPLICATION_PROPERTIES;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.DATA_CONFIG_DIR;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.LOG4J2_XML;
 import static com.hedera.services.bdd.junit.hedera.NodeSelector.byNodeId;
@@ -49,6 +50,7 @@ import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -109,6 +111,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
 
     @Nullable
     private UnaryOperator<Network> overrideCustomizer = null;
+
+    private Map<Long, List<String>> applicationPropertyOverrides = new HashMap<>();
 
     /**
      * Wraps a runnable, allowing us to defer running it until we know we are the privileged runner
@@ -174,6 +178,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 Collections.max(nodes.stream().map(SubProcessNode::getNodeId).toList());
         this.configTxt = configTxtForLocal(name(), nodes(), nextInternalGossipPort, nextExternalGossipPort);
         this.genesisConfigTxt = configTxt;
+        this.postInitWorkingDirActions.add(this::configureApplicationProperties);
     }
 
     /**
@@ -612,6 +617,61 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         throw new RuntimeException("Could not find available port after 100 attempts");
     }
 
+    public void configureApplicationProperties(HederaNode node) {
+        // Update bootstrap properties for the node from bootstrapPropertyOverrides if there are any
+        final var nodeId = node.getNodeId();
+        if (applicationPropertyOverrides.containsKey(nodeId)) {
+            final var properties = applicationPropertyOverrides.get(nodeId);
+            log.info("Configuring application properties for node {}: {}", nodeId, properties);
+            Path appPropertiesPath = node.getExternalPath(APPLICATION_PROPERTIES);
+            log.info(
+                    "Attempting to update application.properties at path {} for node {}",
+                    appPropertiesPath,
+                    node.getNodeId());
+
+            try {
+                // First check if file exists and log current content
+                if (Files.exists(appPropertiesPath)) {
+                    String currentContent = Files.readString(appPropertiesPath);
+                    log.info(
+                            "Current application.properties content for node {}: {}", node.getNodeId(), currentContent);
+                } else {
+                    log.info(
+                            "application.properties does not exist yet for node {}, will create new file",
+                            node.getNodeId());
+                }
+
+                // Prepare the block stream config string
+                StringBuilder propertyBuilder = new StringBuilder();
+                for (int i = 0; i < properties.size(); i += 2) {
+                    propertyBuilder.append(properties.get(i)).append("=").append(properties.get(i + 1));
+                    if (i < properties.size() - 1) {
+                        propertyBuilder.append(System.lineSeparator());
+                    }
+                }
+
+                // Write the properties with CREATE and APPEND options
+                Files.writeString(
+                        appPropertiesPath,
+                        propertyBuilder.toString(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.APPEND);
+
+                // Verify the file was updated
+                String updatedContent = Files.readString(appPropertiesPath);
+                log.info(
+                        "application.properties content after update for node {}: {}",
+                        node.getNodeId(),
+                        updatedContent);
+            } catch (IOException e) {
+                log.error("Failed to update application.properties for node {}: {}", node.getNodeId(), e.getMessage());
+                throw new RuntimeException("Failed to update application.properties for node " + node.getNodeId(), e);
+            }
+        } else {
+            log.info("No bootstrap property overrides for node {}", nodeId);
+        }
+    }
+
     public List<Consumer<HederaNode>> getPostInitWorkingDirActions() {
         return postInitWorkingDirActions;
     }
@@ -707,5 +767,9 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         requireNonNull(mode, "Block node mode cannot be null");
         log.info("Setting block node mode from {} to {}", this.blockNodeMode, mode);
         this.blockNodeMode = mode;
+    }
+
+    public Map<Long, List<String>> getApplicationPropertyOverrides() {
+        return applicationPropertyOverrides;
     }
 }
