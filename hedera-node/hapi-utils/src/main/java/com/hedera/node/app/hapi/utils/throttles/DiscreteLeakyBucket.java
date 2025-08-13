@@ -84,9 +84,10 @@ public class DiscreteLeakyBucket {
         long newUsed = used + units;
         assertArgument(
                 newUsed >= 0 && newUsed <= brimfulCapacity,
-                String.format(
-                        "Can't use %d units. New value of %d would overflow the capacity of %d.",
-                        units, newUsed, brimfulCapacity));
+                "Can't use %d units. New value of %d would overflow the capacity of %d.",
+                units,
+                newUsed,
+                brimfulCapacity);
         used = newUsed;
     }
 
@@ -105,15 +106,16 @@ public class DiscreteLeakyBucket {
     public void resetUsed(long newUsed) {
         assertArgument(
                 newUsed >= 0 && newUsed <= brimfulCapacity,
-                String.format(
-                        "Can't set used to %d units - it overflow the capacity of %d.", newUsed, brimfulCapacity));
+                "Can't set used to %d units - it overflow the capacity of %d.",
+                newUsed,
+                brimfulCapacity);
 
         this.used = newUsed;
     }
 
-    private static void assertArgument(boolean condition, String message) {
+    private static void assertArgument(boolean condition, String format, Object... args) {
         if (!condition) {
-            throw new IllegalArgumentException(message);
+            throw new IllegalArgumentException(String.format(format, args));
         }
     }
 }

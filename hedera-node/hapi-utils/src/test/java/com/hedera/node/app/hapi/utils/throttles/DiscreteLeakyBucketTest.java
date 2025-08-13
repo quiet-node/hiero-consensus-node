@@ -22,8 +22,8 @@ class DiscreteLeakyBucketTest {
 
         // expect:
         assertEquals(0L, subject.capacityUsed());
-        assertEquals(DEFAULT_FIXED_CAPACITY, subject.nominalCapacity());
-        assertEquals(DEFAULT_FIXED_CAPACITY, subject.nominalCapacityFree());
+        assertEquals(DEFAULT_FIXED_CAPACITY, subject.brimfulCapacity());
+        assertEquals(DEFAULT_FIXED_CAPACITY, subject.brimfulCapacityFree());
     }
 
     @Test
@@ -35,7 +35,7 @@ class DiscreteLeakyBucketTest {
         subject.useCapacity(1234L);
 
         // expect:
-        assertEquals(DEFAULT_FIXED_CAPACITY, subject.nominalCapacity());
+        assertEquals(DEFAULT_FIXED_CAPACITY, subject.brimfulCapacity());
         assertEquals(1234L, subject.capacityUsed());
     }
 
@@ -50,7 +50,7 @@ class DiscreteLeakyBucketTest {
 
         // then:
         assertEquals(0, subject.capacityUsed());
-        assertEquals(DEFAULT_FIXED_CAPACITY, subject.nominalCapacityFree());
+        assertEquals(DEFAULT_FIXED_CAPACITY, subject.brimfulCapacityFree());
     }
 
     @Test
@@ -147,7 +147,7 @@ class DiscreteLeakyBucketTest {
     }
 
     @Test
-    void testNominalAndBrimfulCapacityLimits() {
+    void testbrimfulAndBrimfulCapacityLimits() {
         final var subject = DiscreteLeakyBucket.ofNominalAndBrimfulCapacity(100, 1000);
 
         assertDoesNotThrow(() -> subject.useCapacity(100L));

@@ -52,7 +52,7 @@ public class LeakyBucketThrottle {
      */
     public boolean allow(final long txLimit, final long elapsedNanos) {
         leakFor(elapsedNanos);
-        if (bucket.nominalCapacityFree() >= txLimit) {
+        if (bucket.brimfulCapacityFree() >= txLimit) {
             bucket.useCapacity(txLimit);
             lastAllowedUnits += txLimit;
             return true;
@@ -66,7 +66,7 @@ public class LeakyBucketThrottle {
     }
 
     long capacityFree() {
-        return bucket.nominalCapacityFree();
+        return bucket.brimfulCapacityFree();
     }
 
     /**
@@ -77,7 +77,7 @@ public class LeakyBucketThrottle {
      * @return the percent of the bucket that is used
      */
     double percentUsed(final long givenElapsedNanos) {
-        return 100.0 * capacityUsed(givenElapsedNanos) / bucket.nominalCapacity();
+        return 100.0 * capacityUsed(givenElapsedNanos) / bucket.brimfulCapacity();
     }
 
     /**
@@ -88,7 +88,7 @@ public class LeakyBucketThrottle {
      * @return the free capacity of the bucket
      */
     long capacityFree(final long givenElapsedNanos) {
-        return bucket.nominalCapacity() - capacityUsed(givenElapsedNanos);
+        return bucket.brimfulCapacity() - capacityUsed(givenElapsedNanos);
     }
 
     /**
@@ -109,7 +109,7 @@ public class LeakyBucketThrottle {
      * @return the percent of the bucket that is used
      */
     double instantaneousPercentUsed() {
-        return 100.0 * bucket.capacityUsed() / bucket.nominalCapacity();
+        return 100.0 * bucket.capacityUsed() / bucket.brimfulCapacity();
     }
 
     /**
@@ -120,7 +120,7 @@ public class LeakyBucketThrottle {
      */
     public long freeToUsedRatio() {
         final var used = bucket.capacityUsed();
-        return (used == 0) ? Long.MAX_VALUE : bucket.nominalCapacityFree() / used;
+        return (used == 0) ? Long.MAX_VALUE : bucket.brimfulCapacityFree() / used;
     }
 
     void resetLastAllowedUse() {
@@ -143,11 +143,11 @@ public class LeakyBucketThrottle {
 
     private long effectiveLeak(final long elapsedNanos) {
         if (elapsedNanos >= TIME_TO_EMPTY) {
-            return bucket.nominalCapacity();
+            return bucket.brimfulCapacity();
         } else {
-            return productWouldOverflow(elapsedNanos, bucket.nominalCapacity())
+            return productWouldOverflow(elapsedNanos, bucket.brimfulCapacity())
                     ? Long.MAX_VALUE / TIME_TO_EMPTY
-                    : elapsedNanos * bucket.nominalCapacity() / burstSeconds / TIME_TO_EMPTY;
+                    : elapsedNanos * bucket.brimfulCapacity() / burstSeconds / TIME_TO_EMPTY;
         }
     }
 }
