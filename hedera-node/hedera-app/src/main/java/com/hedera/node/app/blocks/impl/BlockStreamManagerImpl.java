@@ -239,7 +239,6 @@ public class BlockStreamManagerImpl implements BlockStreamManager {
         this.roundsPerBlock = blockStreamConfig.roundsPerBlock();
         this.blockPeriod = blockStreamConfig.blockPeriod();
         this.hashCombineBatchSize = blockStreamConfig.hashCombineBatchSize();
-        this.streamToBlockNodes = blockStreamConfig.streamToBlockNodes();
         final var networkAdminConfig = config.getConfigData(NetworkAdminConfig.class);
         this.diskNetworkExport = networkAdminConfig.diskNetworkExport();
         this.diskNetworkExportFile = networkAdminConfig.diskNetworkExportFile();

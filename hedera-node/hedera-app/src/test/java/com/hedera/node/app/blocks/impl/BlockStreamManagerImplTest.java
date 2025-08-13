@@ -252,7 +252,6 @@ class BlockStreamManagerImplTest {
                 TEST_PLATFORM_STATE_FACADE,
                 lifecycle,
                 metrics,
-                blockBufferService,
                 executionOutputCache);
         assertSame(Instant.EPOCH, subject.lastIntervalProcessTime());
         subject.setLastIntervalProcessTime(CONSENSUS_NOW);
@@ -278,7 +277,6 @@ class BlockStreamManagerImplTest {
                 TEST_PLATFORM_STATE_FACADE,
                 lifecycle,
                 metrics,
-                blockBufferService,
                 executionOutputCache);
         assertThrows(IllegalStateException.class, () -> subject.startRound(round, state));
     }
@@ -963,7 +961,6 @@ class BlockStreamManagerImplTest {
                 TEST_PLATFORM_STATE_FACADE,
                 lifecycle,
                 metrics,
-                blockBufferService,
                 executionOutputCache);
         given(state.getReadableStates(any())).willReturn(readableStates);
         given(readableStates.getSingleton(PLATFORM_STATE_KEY)).willReturn(platformStateReadableSingletonState);
