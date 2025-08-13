@@ -16,6 +16,8 @@ import com.swirlds.common.threading.framework.Stoppable;
 import com.swirlds.common.threading.framework.Stoppable.StopBehavior;
 import com.swirlds.common.threading.pool.ParallelExecutionException;
 import com.swirlds.common.threading.pool.ParallelExecutor;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.SyncException;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
@@ -35,9 +37,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.gossip.FallenBehindManager;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.node.NodeId;
 
 /**
  * The goal of the ShadowgraphSynchronizer is to compare graphs with a remote node, and update them so both sides have
@@ -64,7 +66,7 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
      * @param numberOfNodes        number of nodes in the network
      * @param syncMetrics          metrics for sync
      * @param receivedEventHandler events that are received are passed here
-     * @param fallenBehindManager  tracks if we have fallen behind
+     * @param fallenBehindMonitor  tracks if we have fallen behind
      * @param intakeEventCounter   used for tracking events in the intake pipeline per peer
      * @param executor             for executing read/write tasks in parallel
      */
@@ -74,7 +76,7 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
             final int numberOfNodes,
             @NonNull final SyncMetrics syncMetrics,
             @NonNull final Consumer<PlatformEvent> receivedEventHandler,
-            @NonNull final FallenBehindManager fallenBehindManager,
+            @NonNull final FallenBehindMonitor fallenBehindMonitor,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final ParallelExecutor executor) {
 
@@ -84,11 +86,10 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
                 numberOfNodes,
                 syncMetrics,
                 receivedEventHandler,
-                fallenBehindManager,
+                fallenBehindMonitor,
                 intakeEventCounter);
         this.executor = Objects.requireNonNull(executor);
 
-        final SyncConfig syncConfig = platformContext.getConfiguration().getConfigData(SyncConfig.class);
     }
 
     /**
@@ -106,6 +107,21 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
         } finally {
             logger.info(SYNC_INFO.getMarker(), "{} sync end", connection.getDescription());
         }
+    }
+
+    public SyncFallenBehindStatus checkFallenBehindStatus(
+            @NonNull final EventWindow self, @NonNull final EventWindow other, @NonNull final NodeId nodeId) {
+        Objects.requireNonNull(self);
+        Objects.requireNonNull(other);
+        Objects.requireNonNull(nodeId);
+
+        final SyncFallenBehindStatus status = SyncFallenBehindStatus.getStatus(self, other);
+        if (status == SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
+            fallenBehindMonitor.reportFallenBehind(nodeId);
+        } else {
+            fallenBehindMonitor.clearFallenBehind(nodeId);
+        }
+        return status;
     }
 
     /**
@@ -142,11 +158,13 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
 
             syncMetrics.eventWindow(myWindow, theirTipsAndEventWindow.eventWindow());
 
-            if (hasFallenBehind(myWindow, theirTipsAndEventWindow.eventWindow(), connection.getOtherId())
-                    != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
+            final SyncFallenBehindStatus status = checkFallenBehindStatus(myWindow, theirTipsAndEventWindow.eventWindow(), connection.getOtherId());
+            if (status != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
                 // aborting the sync since someone has fallen behind
+                 logger.info(SYNC_INFO.getMarker(), "Connection against {} aborting sync due to {}",  connection.getOtherId(), status);
                 return false;
             }
+
 
             // events that I know they already have
             final Set<ShadowEvent> eventsTheyHave = new HashSet<>();

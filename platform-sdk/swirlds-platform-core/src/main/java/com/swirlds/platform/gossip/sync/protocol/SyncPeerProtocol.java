@@ -21,7 +21,6 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
-import org.hiero.consensus.gossip.FallenBehindManager;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
 
@@ -42,11 +41,6 @@ public class SyncPeerProtocol implements PeerProtocol {
      * The shadow graph synchronizer, responsible for actually doing the sync
      */
     private final ShadowgraphSynchronizer synchronizer;
-
-    /**
-     * Manager to determine whether this node has fallen behind
-     */
-    private final FallenBehindManager fallenBehindManager;
 
     /**
      * Metrics tracking syncing
@@ -89,7 +83,6 @@ public class SyncPeerProtocol implements PeerProtocol {
      * @param platformContext        the platform context
      * @param peerId                 the id of the peer being synced with in this protocol
      * @param synchronizer           the shadow graph synchronizer, responsible for actually doing the sync
-     * @param fallenBehindManager    manager to determine whether this node has fallen behind
      * @param permitProvider         provides permits to sync
      * @param intakeEventCounter     keeps track of how many events have been received from each peer, but haven't yet
      *                               made it through the intake pipeline
@@ -102,7 +95,6 @@ public class SyncPeerProtocol implements PeerProtocol {
             @NonNull final PlatformContext platformContext,
             @NonNull final NodeId peerId,
             @NonNull final ShadowgraphSynchronizer synchronizer,
-            @NonNull final FallenBehindManager fallenBehindManager,
             @NonNull final SyncPermitProvider permitProvider,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final BooleanSupplier gossipHalted,
@@ -113,7 +105,6 @@ public class SyncPeerProtocol implements PeerProtocol {
         this.platformContext = Objects.requireNonNull(platformContext);
         this.peerId = Objects.requireNonNull(peerId);
         this.synchronizer = Objects.requireNonNull(synchronizer);
-        this.fallenBehindManager = Objects.requireNonNull(fallenBehindManager);
         this.permitProvider = Objects.requireNonNull(permitProvider);
         this.intakeEventCounter = Objects.requireNonNull(intakeEventCounter);
         this.gossipHalted = Objects.requireNonNull(gossipHalted);
@@ -153,7 +144,11 @@ public class SyncPeerProtocol implements PeerProtocol {
             return false;
         }
 
-        if (fallenBehindManager.hasFallenBehind()) {
+       // if (fallenBehindManager.hasFallenBehind()) {
+       //     syncMetrics.doNotSyncFallenBehind();
+       //     return false;
+      //}
+        if(platformStatusSupplier.get() == PlatformStatus.BEHIND){
             syncMetrics.doNotSyncFallenBehind();
             return false;
         }

@@ -13,13 +13,11 @@ import com.swirlds.common.merkle.synchronization.config.ReconnectConfig_;
 import com.swirlds.common.test.fixtures.Randotron;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.platform.Utilities;
-import com.swirlds.platform.gossip.FallenBehindManagerImpl;
 import com.swirlds.platform.network.PeerInfo;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import java.util.Collections;
 import java.util.List;
-import org.hiero.consensus.gossip.FallenBehindManager;
 import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.Test;
 
@@ -34,8 +32,8 @@ class FallenBehindManagerTest {
             .getOrCreateConfig()
             .getConfigData(ReconnectConfig.class);
     final List<PeerInfo> peers = Utilities.createPeerInfoList(roster, selfId);
-    private final FallenBehindManager manager =
-            new FallenBehindManagerImpl(selfId, peers.size(), mock(StatusActionSubmitter.class), config);
+    private final FallenBehindMonitor manager =
+            new FallenBehindMonitor(peers.size(), mock(StatusActionSubmitter.class), config);
 
     @Test
     void test() {

@@ -26,7 +26,7 @@ import com.swirlds.platform.network.NetworkProtocolException;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.time.Duration;
-import org.hiero.consensus.gossip.FallenBehindManager;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import org.hiero.consensus.model.node.NodeId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +40,7 @@ import org.mockito.Mockito;
 class SyncPeerProtocolFactoryTests {
     private NodeId peerId;
     private ShadowgraphSynchronizer shadowGraphSynchronizer;
-    private FallenBehindManager fallenBehindManager;
+    private FallenBehindMonitor fallenBehindManager;
     private Duration sleepAfterSync;
     private SyncMetrics syncMetrics;
     private FakeTime time;
@@ -68,7 +68,7 @@ class SyncPeerProtocolFactoryTests {
     void setup() {
         peerId = NodeId.of(1);
         shadowGraphSynchronizer = mock(ShadowgraphSynchronizer.class);
-        fallenBehindManager = mock(FallenBehindManager.class);
+        fallenBehindManager = mock(FallenBehindMonitor.class);
 
         time = new FakeTime();
         platformContext = TestPlatformContextBuilder.create().withTime(time).build();
@@ -88,7 +88,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -107,7 +106,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 Duration.ofMillis(100),
                 syncMetrics,
@@ -144,7 +142,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -163,7 +160,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -187,7 +183,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -211,7 +206,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -232,7 +226,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -252,7 +245,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -272,7 +264,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -296,7 +287,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 Duration.ofMillis(100),
                 syncMetrics,
@@ -334,7 +324,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -354,7 +343,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -380,7 +368,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -404,7 +391,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -423,7 +409,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -444,7 +429,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -465,7 +449,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -486,7 +469,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -508,7 +490,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -536,7 +517,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -563,7 +543,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,
@@ -589,7 +568,6 @@ class SyncPeerProtocolFactoryTests {
         final SyncProtocol syncProtocol = new SyncProtocol(
                 platformContext,
                 shadowGraphSynchronizer,
-                fallenBehindManager,
                 mock(IntakeEventCounter.class),
                 sleepAfterSync,
                 syncMetrics,

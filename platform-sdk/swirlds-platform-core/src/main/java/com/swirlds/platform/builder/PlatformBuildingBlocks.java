@@ -112,9 +112,6 @@ public record PlatformBuildingBlocks(
         @NonNull NotificationEngine notificationEngine,
         @NonNull AtomicReference<StatusActionSubmitter> statusActionSubmitterReference,
         @NonNull SwirldStateManager swirldStateManager,
-        @NonNull AtomicReference<Supplier<ReservedSignedState>> getLatestCompleteStateReference,
-        @NonNull AtomicReference<Consumer<SignedState>> loadReconnectStateReference,
-        @NonNull AtomicReference<Runnable> clearAllPipelinesForReconnectReference,
         boolean firstPlatform,
         @NonNull ConsensusStateEventHandler consensusStateEventHandler,
         @NonNull PlatformStateFacade platformStateFacade,
@@ -143,9 +140,6 @@ public record PlatformBuildingBlocks(
         requireNonNull(notificationEngine);
         requireNonNull(statusActionSubmitterReference);
         requireNonNull(swirldStateManager);
-        requireNonNull(getLatestCompleteStateReference);
-        requireNonNull(loadReconnectStateReference);
-        requireNonNull(clearAllPipelinesForReconnectReference);
         requireNonNull(consensusStateEventHandler);
         requireNonNull(platformStateFacade);
         requireNonNull(stateRootFunction);

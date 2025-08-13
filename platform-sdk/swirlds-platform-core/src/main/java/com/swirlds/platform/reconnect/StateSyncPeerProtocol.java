@@ -13,41 +13,50 @@ import com.swirlds.common.metrics.extensions.CountPerSecond;
 import com.swirlds.common.threading.manager.ThreadManager;
 import com.swirlds.common.utility.throttle.RateLimitedLogger;
 import com.swirlds.config.api.Configuration;
+import com.swirlds.logging.legacy.payload.ReconnectFailurePayload;
+import com.swirlds.logging.legacy.payload.ReconnectFinishPayload;
+import com.swirlds.logging.legacy.payload.ReconnectStartPayload;
+import com.swirlds.platform.Utilities;
+import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.metrics.ReconnectMetrics;
 import com.swirlds.platform.network.Connection;
 import com.swirlds.platform.network.NetworkProtocolException;
+import com.swirlds.platform.network.NetworkUtils;
 import com.swirlds.platform.network.protocol.PeerProtocol;
+import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
+import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.gossip.FallenBehindManager;
+import org.hiero.base.concurrent.BlockingResourceProvider;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
 
 /**
  * Implements the reconnect protocol over a bidirectional network
  */
-public class ReconnectPeerProtocol implements PeerProtocol {
+public class StateSyncPeerProtocol implements PeerProtocol {
 
-    private static final Logger logger = LogManager.getLogger(ReconnectPeerProtocol.class);
+    private static final Logger logger = LogManager.getLogger(StateSyncPeerProtocol.class);
 
     private final NodeId peerId;
-    private final ReconnectThrottle teacherThrottle;
-    private final Supplier<ReservedSignedState> lastCompleteSignedState;
+    private final StateSyncThrottle teacherThrottle;
+    private final Function<String, ReservedSignedState> lastCompleteSignedState;
     private final Duration reconnectSocketTimeout;
     private final ReconnectMetrics reconnectMetrics;
-    private final ReconnectSyncHelper reconnectHelperNetwork;
+    private final BlockingResourceProvider<ReservedSignedState> reference;
     private final PlatformStateFacade platformStateFacade;
     private final CountPerSecond reconnectRejectionMetrics;
     private InitiatedBy initiatedBy = InitiatedBy.NO_ONE;
     private final ThreadManager threadManager;
-    private final FallenBehindManager fallenBehindManager;
 
     /**
      * Provides the platform status.
@@ -75,7 +84,10 @@ public class ReconnectPeerProtocol implements PeerProtocol {
 
     private final Time time;
     private final PlatformContext platformContext;
-
+    private Function<VirtualMap, MerkleNodeState> stateRootFunction;
+    private ReconnectMetrics statistics;
+    private SwirldStateManager swirldStateManager;
+    private StateConfig stateConfig;
     /**
      * @param threadManager           responsible for creating and managing threads
      * @param peerId                  the ID of the peer we are communicating with
@@ -83,22 +95,20 @@ public class ReconnectPeerProtocol implements PeerProtocol {
      * @param lastCompleteSignedState provides the latest completely signed state
      * @param reconnectSocketTimeout  the socket timeout to use when executing a reconnect
      * @param reconnectMetrics        tracks reconnect metrics
-     * @param reconnectHelperNetwork     controls reconnecting as a learner
-     * @param fallenBehindManager     maintains this node's behind status
+     * @param reference     controls reconnecting as a learner
      * @param platformStatusSupplier  provides the platform status
      * @param time                    the time object to use
      * @param platformStateFacade     provides access to the platform state
      */
-    public ReconnectPeerProtocol(
+    public StateSyncPeerProtocol(
             @NonNull final PlatformContext platformContext,
             @NonNull final ThreadManager threadManager,
             @NonNull final NodeId peerId,
-            @NonNull final ReconnectThrottle teacherThrottle,
-            @NonNull final Supplier<ReservedSignedState> lastCompleteSignedState,
+            @NonNull final StateSyncThrottle teacherThrottle,
+            @NonNull final Function<String, ReservedSignedState> lastCompleteSignedState,
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics reconnectMetrics,
-            @NonNull final ReconnectSyncHelper reconnectHelperNetwork,
-            @NonNull final FallenBehindManager fallenBehindManager,
+            @NonNull final BlockingResourceProvider<ReservedSignedState> reference,
             @NonNull final Supplier<PlatformStatus> platformStatusSupplier,
             @NonNull final Time time,
             @NonNull final PlatformStateFacade platformStateFacade) {
@@ -110,8 +120,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
         this.lastCompleteSignedState = Objects.requireNonNull(lastCompleteSignedState);
         this.reconnectSocketTimeout = Objects.requireNonNull(reconnectSocketTimeout);
         this.reconnectMetrics = Objects.requireNonNull(reconnectMetrics);
-        this.reconnectHelperNetwork = Objects.requireNonNull(reconnectHelperNetwork);
-        this.fallenBehindManager = Objects.requireNonNull(fallenBehindManager);
+        this.reference = Objects.requireNonNull(reference);
         this.platformStatusSupplier = Objects.requireNonNull(platformStatusSupplier);
         this.configuration = Objects.requireNonNull(platformContext.getConfiguration());
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
@@ -141,13 +150,11 @@ public class ReconnectPeerProtocol implements PeerProtocol {
      */
     @Override
     public boolean shouldInitiate() {
-        // if this neighbor has not told me I have fallen behind, I will not reconnect with him
-        if (!fallenBehindManager.shouldReconnectFrom(peerId)) {
-            return false;
-        }
+        //TODO: We should receive a list of nodes that would be better to sync with
+        // that information was queried from FallenBehindManager.
 
         // if a permit is acquired, it will be released by either initiateFailed or runProtocol
-        final boolean acquiredPermit = reconnectHelperNetwork.acquireLearnerPermit();
+        final boolean acquiredPermit = reference.acquireProvidePermit();
         if (acquiredPermit) {
             initiatedBy = InitiatedBy.SELF;
         }
@@ -159,7 +166,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
      */
     @Override
     public void initiateFailed() {
-        reconnectHelperNetwork.cancelLearnerPermit();
+        reference.releaseProvidePermit();
         initiatedBy = InitiatedBy.NO_ONE;
     }
 
@@ -169,7 +176,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
     @Override
     public boolean shouldAccept() {
         // we should not be the teacher if we have fallen behind
-        if (fallenBehindManager.hasFallenBehind()) {
+        if (platformStatusSupplier.get() == PlatformStatus.BEHIND) {
             fallenBehindLogger.info(
                     RECONNECT.getMarker(),
                     "Rejecting reconnect request from node {} because this node has fallen behind",
@@ -189,7 +196,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
         }
 
         // Check if we have a state that is legal to send to a learner.
-        teacherState = lastCompleteSignedState.get();
+        teacherState = lastCompleteSignedState.apply("get latest complete state for reconnect");
 
         if (teacherState == null || teacherState.isNull()) {
             stateNullLogger.info(
@@ -216,7 +223,8 @@ public class ReconnectPeerProtocol implements PeerProtocol {
         // this can happen if we fall behind while we are teaching
         // in this case, we want to finish teaching before we start learning
         // so we acquire the learner permit and release it when we are done teaching
-        if (!reconnectHelperNetwork.blockLearnerPermit()) {
+        //TODO maybe change to an atomic boolean teaching in progress
+        if (!reference.tryBlockProvidePermit()) {
             reconnectRejected();
             return false;
         }
@@ -225,7 +233,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
         final boolean reconnectPermittedByThrottle = teacherThrottle.initiateReconnect(peerId);
         if (!reconnectPermittedByThrottle) {
             reconnectRejected();
-            reconnectHelperNetwork.cancelLearnerPermit();
+            reference.releaseProvidePermit();
             return false;
         }
 
@@ -253,7 +261,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
         teacherState = null;
         teacherThrottle.reconnectAttemptFinished();
         // cancel the permit acquired in shouldAccept() so that we can start learning if we need to
-        reconnectHelperNetwork.cancelLearnerPermit();
+        reference.releaseProvidePermit();
     }
 
     /**
@@ -289,8 +297,42 @@ public class ReconnectPeerProtocol implements PeerProtocol {
      *
      * @param connection the connection to use for the reconnect
      */
-    private void learner(final Connection connection) throws InterruptedException {
-        reconnectHelperNetwork.provideLearnerConnection(connection);
+    private void learner(final Connection connection) {
+        try {
+
+        final StateLearner reconnect = new StateLearner(
+                platformContext, threadManager, connection, swirldStateManager.getConsensusState(),
+                reconnectSocketTimeout, statistics, platformStateFacade, stateRootFunction );
+
+            logger.info(RECONNECT.getMarker(), () -> new ReconnectStartPayload(
+                    "Starting reconnect in role of the receiver.", true,
+                    //      TODO how to get the round without sharing the current state yet in another form
+                    connection.getSelfId().id(), connection.getOtherId().id(), -1  ).toString());
+
+            final ReservedSignedState reservedSignedState = reconnect.execute();
+
+            logger.info(RECONNECT.getMarker(), () -> new ReconnectFinishPayload(
+                    "Finished reconnect in the role of the receiver.", true,
+                    connection.getSelfId().id(), connection.getOtherId().id(), reservedSignedState.get().getRound()).toString());
+            logger.info(RECONNECT.getMarker(),
+                    """
+                            Information for state received during reconnect:
+                            {}""",
+                    () -> platformStateFacade.getInfoString(reservedSignedState.get().getState(), stateConfig.debugHashDepth()));
+
+
+            reference.provide(reservedSignedState);
+
+        } catch (final RuntimeException|  InterruptedException e) {
+            if (Utilities.isOrCausedBySocketException(e)) {
+                logger.error(EXCEPTION.getMarker(), () -> new ReconnectFailurePayload(
+                        "Got socket exception while receiving a signed state! " + NetworkUtils.formatException(e),
+                        ReconnectFailurePayload.CauseOfFailure.SOCKET).toString());
+            } else if (connection != null) {
+                connection.disconnect();
+            }
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -300,7 +342,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
      */
     private void teacher(final Connection connection) {
         try (final ReservedSignedState state = teacherState) {
-            new ReconnectTeacher(
+            new StateTeacher(
                             platformContext,
                             time,
                             threadManager,
@@ -316,7 +358,7 @@ public class ReconnectPeerProtocol implements PeerProtocol {
             teacherThrottle.reconnectAttemptFinished();
             teacherState = null;
             // cancel the permit acquired in shouldAccept() so that we can start learning if we need to
-            reconnectHelperNetwork.cancelLearnerPermit();
+            reference.releaseProvidePermit();
         }
     }
 
@@ -325,4 +367,6 @@ public class ReconnectPeerProtocol implements PeerProtocol {
         SELF,
         PEER
     }
+
+
 }

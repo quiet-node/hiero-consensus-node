@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.consensus.gossip.FallenBehindManager;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
 
@@ -23,10 +22,8 @@ import org.hiero.consensus.model.status.PlatformStatus;
  */
 public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> {
 
-    private static final Logger logger = LogManager.getLogger(SyncProtocol.class);
 
     private final PlatformContext platformContext;
-    private final FallenBehindManager fallenBehindManager;
     private final Duration sleepAfterSync;
     private final SyncMetrics syncMetrics;
     private final AtomicReference<PlatformStatus> platformStatus = new AtomicReference<>(PlatformStatus.STARTING_UP);
@@ -36,7 +33,6 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
      *
      * @param platformContext     the platform context
      * @param synchronizer        the shadow graph synchronizer, responsible for actually doing the sync
-     * @param fallenBehindManager manager to determine whether this node has fallen behind
      * @param intakeEventCounter  keeps track of how many events have been received from each peer
      * @param sleepAfterSync      the amount of time to sleep after a sync
      * @param syncMetrics         metrics tracking syncing
@@ -44,7 +40,6 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
     public SyncProtocol(
             @NonNull final PlatformContext platformContext,
             @NonNull final ShadowgraphSynchronizer synchronizer,
-            @NonNull final FallenBehindManager fallenBehindManager,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final Duration sleepAfterSync,
             @NonNull final SyncMetrics syncMetrics,
@@ -52,7 +47,6 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
 
         super(synchronizer, platformContext, rosterSize, intakeEventCounter);
         this.platformContext = Objects.requireNonNull(platformContext);
-        this.fallenBehindManager = Objects.requireNonNull(fallenBehindManager);
         this.sleepAfterSync = Objects.requireNonNull(sleepAfterSync);
         this.syncMetrics = Objects.requireNonNull(syncMetrics);
     }
@@ -61,7 +55,6 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
      * Utility method for creating SyncProtocol from shared state, while staying compatible with pre-refactor code
      *
      * @param platformContext      the platform context
-     * @param fallenBehindManager  tracks if we have fallen behind
      * @param intakeEventCounter   keeps track of how many events have been received from each peer
      * @param rosterSize           estimated roster size
      * @param syncMetrics          metrics of synchronization process
@@ -70,7 +63,6 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
     public static SyncProtocol create(
             @NonNull final PlatformContext platformContext,
             @NonNull final ShadowgraphSynchronizer synchronizer,
-            @NonNull final FallenBehindManager fallenBehindManager,
             @NonNull final IntakeEventCounter intakeEventCounter,
             final int rosterSize,
             final SyncMetrics syncMetrics) {
@@ -78,7 +70,6 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
         return new SyncProtocol(
                 platformContext,
                 synchronizer,
-                fallenBehindManager,
                 intakeEventCounter,
                 Duration.ZERO,
                 syncMetrics,
@@ -95,7 +86,6 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
                 platformContext,
                 Objects.requireNonNull(peerId),
                 synchronizer,
-                fallenBehindManager,
                 permitProvider,
                 intakeEventCounter,
                 gossipHalted::get,

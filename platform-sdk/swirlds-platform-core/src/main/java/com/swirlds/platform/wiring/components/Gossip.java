@@ -4,6 +4,10 @@ package com.swirlds.platform.wiring.components;
 import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
+import com.swirlds.platform.gossip.GossipController;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
+import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.wiring.NoInput;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
@@ -14,7 +18,7 @@ import org.hiero.consensus.model.status.PlatformStatus;
 /**
  * Implements gossip with network peers.
  */
-public interface Gossip {
+public interface Gossip extends GossipController {
 
     /**
      * Bind the input wires to the gossip implementation.
@@ -39,5 +43,8 @@ public interface Gossip {
             @NonNull BindableInputWire<NoInput, Void> stopInput,
             @NonNull BindableInputWire<NoInput, Void> clearInput,
             @NonNull BindableInputWire<Duration, Void> systemHealthInput,
-            @NonNull BindableInputWire<PlatformStatus, Void> platformStatusInput);
+            @NonNull BindableInputWire<PlatformStatus, Void> platformStatusInput,
+            PlatformReconnecter platformReconnecter);
+
+    ReservedSignedState receiveSignedState();
 }

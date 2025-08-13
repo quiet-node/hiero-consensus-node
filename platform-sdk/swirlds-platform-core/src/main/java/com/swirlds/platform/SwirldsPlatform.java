@@ -16,6 +16,7 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.IOIterator;
 import com.swirlds.common.notification.NotificationEngine;
 import com.swirlds.common.stream.RunningEventHashOverride;
+import com.swirlds.common.threading.manager.AdHocThreadManager;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
 import com.swirlds.platform.builder.PlatformComponentBuilder;
@@ -35,6 +36,8 @@ import com.swirlds.platform.event.preconsensus.PcesReplayer;
 import com.swirlds.platform.metrics.RuntimeMetrics;
 import com.swirlds.platform.publisher.DefaultPlatformPublisher;
 import com.swirlds.platform.publisher.PlatformPublisher;
+import com.swirlds.platform.reconnect.DefaultSignedStateValidator;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.nexus.DefaultLatestCompleteStateNexus;
@@ -227,6 +230,17 @@ public class SwirldsPlatform implements Platform {
 
         final PlatformPublisher publisher = new DefaultPlatformPublisher(blocks.applicationCallbacks());
 
+        final PlatformReconnecter platformReconnecter = new PlatformReconnecter(
+                platformStateFacade, AdHocThreadManager.getStaticThreadManager(), currentRoster
+                , getContext().getMerkleCryptography(),
+                this,
+                platformContext,
+                platformWiring,
+                swirldStateManager,
+                latestImmutableStateNexus,
+                savedStateController,
+                consensusStateEventHandler, selfId);
+
         platformWiring.bind(
                 builder,
                 pcesReplayer,
@@ -237,7 +251,8 @@ public class SwirldsPlatform implements Platform {
                 latestCompleteStateNexus,
                 savedStateController,
                 appNotifier,
-                publisher);
+                publisher,
+                platformReconnecter);
 
         final Hash legacyRunningEventHash =
                 platformStateFacade.legacyRunningEventHashOf(initialState.getState()) == null
@@ -296,22 +311,6 @@ public class SwirldsPlatform implements Platform {
             platformWiring.overrideIssDetectorState(initialState.reserve("initialize issDetector"));
         }
 
-        blocks.getLatestCompleteStateReference()
-                .set(() -> latestCompleteStateNexus.getState("get latest complete state for reconnect"));
-
-        final ReconnectStateLoader reconnectStateLoader = new ReconnectStateLoader(
-                this,
-                platformContext,
-                platformWiring,
-                swirldStateManager,
-                latestImmutableStateNexus,
-                savedStateController,
-                currentRoster,
-                consensusStateEventHandler,
-                platformStateFacade);
-
-        blocks.loadReconnectStateReference().set(reconnectStateLoader::loadReconnectState);
-        blocks.clearAllPipelinesForReconnectReference().set(platformWiring::clear);
         blocks.latestImmutableStateProviderReference().set(latestImmutableStateNexus::getState);
 
         if (!initialState.isGenesisState()) {

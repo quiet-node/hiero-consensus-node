@@ -25,7 +25,6 @@ import com.swirlds.platform.network.SocketConnection;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
-import com.swirlds.platform.state.signed.SignedStateValidator;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
 import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
@@ -128,7 +127,7 @@ final class ReconnectTest {
             // hash the underlying VM
             signedState.getState().getRoot().getHash();
 
-            final ReconnectLearner receiver = buildReceiver(
+            final StateLearner receiver = buildReceiver(
                     signedState.getState(),
                     new DummyConnection(
                             platformContext, pairedStreams.getLearnerInput(), pairedStreams.getLearnerOutput()),
@@ -138,7 +137,7 @@ final class ReconnectTest {
             final Thread thread = new Thread(() -> {
                 try {
                     signedState.reserve("test");
-                    final ReconnectTeacher sender = buildSender(
+                    final StateTeacher sender = buildSender(
                             new DummyConnection(
                                     platformContext, pairedStreams.getTeacherInput(), pairedStreams.getTeacherOutput()),
                             reconnectMetrics,
@@ -150,12 +149,12 @@ final class ReconnectTest {
             });
 
             thread.start();
-            receiver.execute(mock(SignedStateValidator.class));
+            receiver.execute();
             thread.join();
         }
     }
 
-    private ReconnectTeacher buildSender(
+    private StateTeacher buildSender(
             final SocketConnection connection,
             final ReconnectMetrics reconnectMetrics,
             final PlatformStateFacade platformStateFacade)
@@ -167,7 +166,7 @@ final class ReconnectTest {
         final NodeId selfId = NodeId.of(0);
         final NodeId otherId = NodeId.of(3);
         final long lastRoundReceived = 100;
-        return new ReconnectTeacher(
+        return new StateTeacher(
                 platformContext,
                 Time.getCurrent(),
                 getStaticThreadManager(),
@@ -180,19 +179,16 @@ final class ReconnectTest {
                 platformStateFacade);
     }
 
-    private ReconnectLearner buildReceiver(
+    private StateLearner buildReceiver(
             final MerkleNodeState state,
             final Connection connection,
             final ReconnectMetrics reconnectMetrics,
             final PlatformStateFacade platformStateFacade) {
-        final Roster roster =
-                RandomRosterBuilder.create(getRandomPrintSeed()).withSize(5).build();
 
-        return new ReconnectLearner(
+        return new StateLearner(
                 TestPlatformContextBuilder.create().build(),
                 getStaticThreadManager(),
                 connection,
-                roster,
                 state,
                 RECONNECT_SOCKET_TIMEOUT,
                 reconnectMetrics,

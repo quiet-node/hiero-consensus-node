@@ -179,7 +179,7 @@ Change all protobuf `Roster` usages to `RosterData`. After this task is complete
 * ReconnectStateLoader support code
   * `com.swirlds.platform.ReconnectStateLoader`
   * `com.swirlds.platform.reconnect.ReconnectLearnerFactory`
-  * `com.swirlds.platform.reconnect.ReconnectLearner`
+  * `com.swirlds.platform.reconnect.StateLearner`
 
 #### Change`RosterData` to `RosterHistory` as component's construction parameter
 

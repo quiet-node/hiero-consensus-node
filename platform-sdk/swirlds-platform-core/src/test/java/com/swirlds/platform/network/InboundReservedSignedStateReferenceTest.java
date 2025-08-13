@@ -16,7 +16,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
-class InboundConnectionManagerTest {
+class InboundReservedSignedStateReferenceTest {
     @Test
     void test() throws InterruptedException {
         final int numThreads = 10;

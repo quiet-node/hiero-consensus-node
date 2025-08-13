@@ -8,6 +8,8 @@ import static org.hiero.base.CompareTo.isGreaterThanOrEqualTo;
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.base.time.Time;
 import com.swirlds.logging.legacy.LogMarker;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.permits.SyncGuard;
 import com.swirlds.platform.gossip.rpc.GossipRpcReceiver;
@@ -97,6 +99,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
     private int incomingEventsCounter = 0;
 
     private final SyncGuard syncGuard;
+    private final FallenBehindMonitor fallenBehindMonitor;
 
     /**
      * Create new state class for an RPC peer
@@ -122,7 +125,8 @@ public class RpcPeerHandler implements GossipRpcReceiver {
             @NonNull final Time time,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final Consumer<PlatformEvent> eventHandler,
-            @NonNull final SyncGuard syncGuard) {
+            @NonNull final SyncGuard syncGuard,
+            @NonNull final FallenBehindMonitor fallenBehindMonitor) {
         this.sharedShadowgraphSynchronizer = Objects.requireNonNull(sharedShadowgraphSynchronizer);
         this.sender = Objects.requireNonNull(sender);
         this.selfId = Objects.requireNonNull(selfId);
@@ -133,6 +137,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
         this.intakeEventCounter = Objects.requireNonNull(intakeEventCounter);
         this.eventHandler = Objects.requireNonNull(eventHandler);
         this.syncGuard = syncGuard;
+        this.fallenBehindMonitor = fallenBehindMonitor;
     }
 
     /**
@@ -270,7 +275,9 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
         this.syncMetrics.eventWindow(state.mySyncData.eventWindow(), remoteEventWindow);
 
-        final SyncFallenBehindStatus behindStatus = sharedShadowgraphSynchronizer.hasFallenBehind(
+        //TODO
+        PlatformReconnecter pl = null;
+        final SyncFallenBehindStatus behindStatus = pl.checkFallenBehindStatus(
                 state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow(), peerId);
         if (behindStatus != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
             logger.info(
@@ -303,7 +310,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
     private boolean tryFixSelfFallBehind(final EventWindow remoteEventWindow) {
         try (final ReservedEventWindow latestShadowWindow = sharedShadowgraphSynchronizer.reserveEventWindow()) {
-            final SyncFallenBehindStatus behindStatus = sharedShadowgraphSynchronizer.hasFallenBehind(
+            final SyncFallenBehindStatus behindStatus = checkFallenBehindStatus(
                     latestShadowWindow.getEventWindow(), remoteEventWindow, peerId);
             if (behindStatus != SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
                 // we seem to be ok after all, let's wait for another sync to happen
@@ -317,6 +324,21 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
             return false;
         }
+    }
+
+    public SyncFallenBehindStatus checkFallenBehindStatus(
+            @NonNull final EventWindow self, @NonNull final EventWindow other, @NonNull final NodeId nodeId) {
+        Objects.requireNonNull(self);
+        Objects.requireNonNull(other);
+        Objects.requireNonNull(nodeId);
+
+        final SyncFallenBehindStatus status = SyncFallenBehindStatus.getStatus(self, other);
+        if (status == SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
+            fallenBehindMonitor.reportFallenBehind(nodeId);
+        } else {
+            fallenBehindMonitor.clearFallenBehind(nodeId);
+        }
+        return status;
     }
 
     private void sendSyncData() {

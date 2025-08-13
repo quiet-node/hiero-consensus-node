@@ -8,6 +8,7 @@ import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.input.InputWire;
 import com.swirlds.component.framework.wires.output.OutputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.wiring.NoInput;
 import com.swirlds.platform.wiring.PlatformSchedulersConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -72,6 +73,7 @@ public class GossipWiring {
      */
     private final BindableInputWire<PlatformStatus, Void> platformStatusInput;
 
+
     public GossipWiring(@NonNull final PlatformContext platformContext, @NonNull final WiringModel model) {
         this.model = model;
 
@@ -98,7 +100,7 @@ public class GossipWiring {
      *
      * @param gossip the gossip implementation
      */
-    public void bind(@NonNull final Gossip gossip) {
+    public void bind(@NonNull final Gossip gossip, PlatformReconnecter reconnecter) {
         gossip.bind(
                 model,
                 eventInput,
@@ -108,7 +110,8 @@ public class GossipWiring {
                 stopInput,
                 clearInput,
                 systemHealthInput,
-                platformStatusInput);
+                platformStatusInput,
+                reconnecter);
     }
 
     /**

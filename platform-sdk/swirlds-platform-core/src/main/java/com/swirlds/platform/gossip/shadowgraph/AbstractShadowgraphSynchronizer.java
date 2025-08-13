@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.platform.gossip.shadowgraph;
 
-import static com.swirlds.logging.legacy.LogMarker.SYNC_INFO;
 import static com.swirlds.platform.gossip.shadowgraph.SyncUtils.filterLikelyDuplicates;
 
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
 import com.swirlds.platform.metrics.SyncMetrics;
@@ -21,7 +22,6 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.base.crypto.Hash;
-import org.hiero.consensus.gossip.FallenBehindManager;
 import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.NodeId;
@@ -31,8 +31,6 @@ import org.hiero.consensus.model.node.NodeId;
  * specific parts and focus on handling retrieval of events which need to be synchronized between peers
  */
 public class AbstractShadowgraphSynchronizer {
-
-    private static final Logger logger = LogManager.getLogger();
 
     /**
      * The shadow graph manager to use for this sync
@@ -57,7 +55,7 @@ public class AbstractShadowgraphSynchronizer {
     /**
      * manages sync related decisions
      */
-    private final FallenBehindManager fallenBehindManager;
+    protected final FallenBehindMonitor fallenBehindMonitor;
 
     /**
      * Keeps track of how many events from each peer have been received, but haven't yet made it through the intake
@@ -96,7 +94,7 @@ public class AbstractShadowgraphSynchronizer {
      * @param numberOfNodes        number of nodes in the network
      * @param syncMetrics          metrics for sync
      * @param receivedEventHandler events that are received are passed here
-     * @param fallenBehindManager  tracks if we have fallen behind
+     * @param fallenBehindMonitor  tracks if we have fallen behind
      * @param intakeEventCounter   used for tracking events in the intake pipeline per peer
      */
     public AbstractShadowgraphSynchronizer(
@@ -105,7 +103,7 @@ public class AbstractShadowgraphSynchronizer {
             final int numberOfNodes,
             @NonNull final SyncMetrics syncMetrics,
             @NonNull final Consumer<PlatformEvent> receivedEventHandler,
-            @NonNull final FallenBehindManager fallenBehindManager,
+            @NonNull final FallenBehindMonitor fallenBehindMonitor,
             @NonNull final IntakeEventCounter intakeEventCounter) {
         Objects.requireNonNull(platformContext);
 
@@ -113,7 +111,7 @@ public class AbstractShadowgraphSynchronizer {
         this.shadowGraph = Objects.requireNonNull(shadowGraph);
         this.numberOfNodes = numberOfNodes;
         this.syncMetrics = Objects.requireNonNull(syncMetrics);
-        this.fallenBehindManager = Objects.requireNonNull(fallenBehindManager);
+        this.fallenBehindMonitor = Objects.requireNonNull(fallenBehindMonitor);
         this.intakeEventCounter = Objects.requireNonNull(intakeEventCounter);
 
         this.eventHandler = Objects.requireNonNull(receivedEventHandler);
@@ -131,34 +129,6 @@ public class AbstractShadowgraphSynchronizer {
         syncMetrics.updateTipsPerSync(myTips.size());
         syncMetrics.updateMultiTipsPerSync(SyncUtils.computeMultiTipCount(myTips));
         return myTips;
-    }
-
-    /**
-     * Decide if we have fallen behind with respect to this peer.
-     *
-     * @param self   our event window
-     * @param other  their event window
-     * @param nodeId node id against which we have fallen behind
-     * @return status about who has fallen behind
-     */
-    protected SyncFallenBehindStatus hasFallenBehind(
-            @NonNull final EventWindow self, @NonNull final EventWindow other, @NonNull final NodeId nodeId) {
-        Objects.requireNonNull(self);
-        Objects.requireNonNull(other);
-        Objects.requireNonNull(nodeId);
-
-        final SyncFallenBehindStatus status = SyncFallenBehindStatus.getStatus(self, other);
-        if (status == SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
-            fallenBehindManager.reportFallenBehind(nodeId);
-        } else {
-            fallenBehindManager.clearFallenBehind(nodeId);
-        }
-
-        if (status != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
-            logger.info(SYNC_INFO.getMarker(), "Connection against {} aborting sync due to {}", nodeId, status);
-        }
-
-        return status;
     }
 
     /**

@@ -45,6 +45,7 @@ import com.swirlds.platform.eventhandling.TransactionHandler;
 import com.swirlds.platform.eventhandling.TransactionHandlerResult;
 import com.swirlds.platform.eventhandling.TransactionPrehandler;
 import com.swirlds.platform.publisher.PlatformPublisher;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.state.hasher.StateHasher;
 import com.swirlds.platform.state.hashlogger.HashLogger;
 import com.swirlds.platform.state.iss.IssDetector;
@@ -647,7 +648,8 @@ public class PlatformWiring {
             @NonNull final LatestCompleteStateNexus latestCompleteStateNexus,
             @NonNull final SavedStateController savedStateController,
             @NonNull final AppNotifier notifier,
-            @NonNull final PlatformPublisher platformPublisher) {
+            @NonNull final PlatformPublisher platformPublisher,
+            final PlatformReconnecter reconnecter) {
 
         eventHasherWiring.bind(builder::buildEventHasher);
         internalEventValidatorWiring.bind(builder::buildInternalEventValidator);
@@ -685,7 +687,7 @@ public class PlatformWiring {
         staleEventDetectorWiring.bind(builder::buildStaleEventDetector);
         transactionResubmitterWiring.bind(builder::buildTransactionResubmitter);
         transactionPoolWiring.bind(builder::buildTransactionPool);
-        gossipWiring.bind(builder.buildGossip());
+        gossipWiring.bind(builder.buildGossip(), reconnecter);
         branchDetectorWiring.bind(builder::buildBranchDetector);
         branchReporterWiring.bind(builder::buildBranchReporter);
     }
