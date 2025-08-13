@@ -163,6 +163,13 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
         final Duration delay = Duration.ofSeconds(1);
         doReturn(lock).when(connection).getLock();
+        doReturn(BlockNodeConfig.newBuilder()
+                        .address("localhost")
+                        .port(40840)
+                        .priority(0)
+                        .build())
+                .when(connection)
+                .getNodeConfig();
 
         connectionManager.rescheduleAndSelectNewNode(connection, delay);
 
@@ -171,8 +178,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
                 .schedule(any(BlockNodeConnectionTask.class), eq(delay.toMillis()), eq(TimeUnit.MILLISECONDS));
         // Verify task created to connect to a new node without delay
         verify(executorService).schedule(any(BlockNodeConnectionTask.class), eq(0L), eq(TimeUnit.MILLISECONDS));
-        verify(connection).updateConnectionState(ConnectionState.CONNECTING);
-        verifyNoMoreInteractions(connection);
         verifyNoInteractions(bufferService);
         verifyNoInteractions(metrics);
         verifyNoMoreInteractions(executorService);
@@ -1019,6 +1024,13 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(null).when(bufferService).getBlockState(10L);
         doReturn(11L).when(bufferService).getLastBlockNumberProduced();
         doReturn(lock).when(connection).getLock();
+        doReturn(BlockNodeConfig.newBuilder()
+                        .address("localhost")
+                        .port(40840)
+                        .priority(0)
+                        .build())
+                .when(connection)
+                .getNodeConfig();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode(connection);
 
@@ -1030,9 +1042,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         verify(executorService).schedule(any(BlockNodeConnectionTask.class), eq(30_000L), eq(TimeUnit.MILLISECONDS));
         // another task scheduled to connect to a new node immediately
         verify(executorService).schedule(any(BlockNodeConnectionTask.class), eq(0L), eq(TimeUnit.MILLISECONDS));
-        verify(connection).updateConnectionState(ConnectionState.CONNECTING);
 
-        verifyNoMoreInteractions(connection);
         verifyNoMoreInteractions(bufferService);
         verifyNoMoreInteractions(executorService);
         verifyNoInteractions(metrics);
@@ -1198,6 +1208,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
         doReturn(lock).when(connection).getLock();
+        doReturn(ConnectionState.ACTIVE).when(connection).getConnectionState();
 
         final CountDownLatch doneLatch = new CountDownLatch(1);
         final AtomicReference<Throwable> errorRef = new AtomicReference<>();
@@ -1253,6 +1264,7 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(blockState).when(bufferService).getBlockState(10L);
         doReturn(10L).when(bufferService).getLastBlockNumberProduced();
         doReturn(lock).when(connection).getLock();
+        doReturn(ConnectionState.ACTIVE).when(connection).getConnectionState();
         when(bufferService.getBlockState(10L))
                 .thenThrow(new RuntimeException("foobar"))
                 .thenReturn(blockState);
