@@ -80,7 +80,7 @@ final class BlockRecordManagerTest extends AppTestBase {
     private static final Timestamp FIRST_CONS_TIME_OF_LAST_BLOCK = new Timestamp(1682899224, 38693760);
     private static final Instant FORCED_BLOCK_SWITCH_TIME = Instant.ofEpochSecond(1682899224L, 38693760);
     private static final NodeInfoImpl NODE_INFO = new NodeInfoImpl(
-            0, AccountID.newBuilder().accountNum(3).build(), 10, List.of(), Bytes.EMPTY, List.of(), false);
+            0, AccountID.newBuilder().accountNum(3).build(), 10, List.of(), Bytes.EMPTY, List.of(), false, null);
     /**
      * Temporary in memory file system used for testing
      */
@@ -122,7 +122,7 @@ final class BlockRecordManagerTest extends AppTestBase {
                         RUNNING_HASHES_STATE_KEY, new RunningHashes(STARTING_RUNNING_HASH_OBJ.hash(), null, null, null))
                 .withSingletonState(
                         BLOCK_INFO_STATE_KEY,
-                        new BlockInfo(-1, EPOCH, STARTING_RUNNING_HASH_OBJ.hash(), null, false, EPOCH))
+                        new BlockInfo(-1, EPOCH, STARTING_RUNNING_HASH_OBJ.hash(), null, false, EPOCH, EPOCH, EPOCH))
                 .commit();
         app.stateMutator(PlatformStateService.NAME)
                 .withSingletonState(V0540PlatformStateSchema.PLATFORM_STATE_KEY, UNINITIALIZED_PLATFORM_STATE)
@@ -167,7 +167,9 @@ final class BlockRecordManagerTest extends AppTestBase {
                                     STARTING_RUNNING_HASH_OBJ.hash(),
                                     CONSENSUS_TIME,
                                     true,
-                                    FIRST_CONS_TIME_OF_LAST_BLOCK))
+                                    FIRST_CONS_TIME_OF_LAST_BLOCK,
+                                    EPOCH,
+                                    EPOCH))
                     .commit();
         }
 
@@ -259,7 +261,9 @@ final class BlockRecordManagerTest extends AppTestBase {
                                 STARTING_RUNNING_HASH_OBJ.hash(),
                                 CONSENSUS_TIME,
                                 true,
-                                FIRST_CONS_TIME_OF_LAST_BLOCK))
+                                FIRST_CONS_TIME_OF_LAST_BLOCK,
+                                EPOCH,
+                                EPOCH))
                 .commit();
 
         final Random random = new Random(82792874);
@@ -378,7 +382,7 @@ final class BlockRecordManagerTest extends AppTestBase {
     @Test
     void isDefaultConsTimeForNullConsensusTimeOfLastHandledTxn() {
         final var result = BlockRecordManagerImpl.isDefaultConsTimeOfLastHandledTxn(
-                new BlockInfo(0, CONSENSUS_TIME, Bytes.EMPTY, null, false, CONSENSUS_TIME));
+                new BlockInfo(0, CONSENSUS_TIME, Bytes.EMPTY, null, false, CONSENSUS_TIME, EPOCH, EPOCH));
         Assertions.assertThat(result).isTrue();
     }
 
@@ -388,15 +392,15 @@ final class BlockRecordManagerTest extends AppTestBase {
                 .seconds(EPOCH.seconds())
                 .nanos(EPOCH.nanos() + 1)
                 .build();
-        final var result = BlockRecordManagerImpl.isDefaultConsTimeOfLastHandledTxn(
-                new BlockInfo(0, CONSENSUS_TIME, Bytes.EMPTY, timestampAfterEpoch, false, CONSENSUS_TIME));
+        final var result = BlockRecordManagerImpl.isDefaultConsTimeOfLastHandledTxn(new BlockInfo(
+                0, CONSENSUS_TIME, Bytes.EMPTY, timestampAfterEpoch, false, CONSENSUS_TIME, EPOCH, EPOCH));
         Assertions.assertThat(result).isFalse();
     }
 
     @Test
     void isDefaultConsTimeForTimestampAtEpoch() {
         final var result = BlockRecordManagerImpl.isDefaultConsTimeOfLastHandledTxn(
-                new BlockInfo(0, CONSENSUS_TIME, Bytes.EMPTY, EPOCH, false, CONSENSUS_TIME));
+                new BlockInfo(0, CONSENSUS_TIME, Bytes.EMPTY, EPOCH, false, CONSENSUS_TIME, EPOCH, EPOCH));
         Assertions.assertThat(result).isTrue();
     }
 
@@ -406,14 +410,14 @@ final class BlockRecordManagerTest extends AppTestBase {
                 .seconds(EPOCH.seconds())
                 .nanos(EPOCH.nanos() - 1)
                 .build();
-        final var result = BlockRecordManagerImpl.isDefaultConsTimeOfLastHandledTxn(
-                new BlockInfo(0, CONSENSUS_TIME, Bytes.EMPTY, timestampBeforeEpoch, false, CONSENSUS_TIME));
+        final var result = BlockRecordManagerImpl.isDefaultConsTimeOfLastHandledTxn(new BlockInfo(
+                0, CONSENSUS_TIME, Bytes.EMPTY, timestampBeforeEpoch, false, CONSENSUS_TIME, EPOCH, EPOCH));
         Assertions.assertThat(result).isTrue();
     }
 
     @Test
     void consTimeOfLastHandledTxnIsSet() {
-        final var blockInfo = new BlockInfo(0, EPOCH, Bytes.EMPTY, CONSENSUS_TIME, false, EPOCH);
+        final var blockInfo = new BlockInfo(0, EPOCH, Bytes.EMPTY, CONSENSUS_TIME, false, EPOCH, EPOCH, EPOCH);
         final var state = simpleBlockInfoState(blockInfo);
         final var subject =
                 new BlockRecordManagerImpl(app.configProvider(), state, mock(BlockRecordStreamProducer.class));
@@ -425,7 +429,7 @@ final class BlockRecordManagerTest extends AppTestBase {
 
     @Test
     void consTimeOfLastHandledTxnIsNotSet() {
-        final var blockInfo = new BlockInfo(0, EPOCH, Bytes.EMPTY, null, false, EPOCH);
+        final var blockInfo = new BlockInfo(0, EPOCH, Bytes.EMPTY, null, false, EPOCH, EPOCH, EPOCH);
         final var state = simpleBlockInfoState(blockInfo);
         final var subject =
                 new BlockRecordManagerImpl(app.configProvider(), state, mock(BlockRecordStreamProducer.class));

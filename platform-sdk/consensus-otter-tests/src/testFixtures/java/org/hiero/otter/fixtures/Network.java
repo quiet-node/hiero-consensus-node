@@ -5,6 +5,7 @@ import com.hedera.hapi.node.base.SemanticVersion;
 import com.swirlds.common.test.fixtures.WeightGenerator;
 import com.swirlds.common.test.fixtures.WeightGenerators;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import org.hiero.otter.fixtures.result.MultipleNodeConsensusResults;
@@ -50,10 +51,8 @@ public interface Network {
      * {@link org.hiero.consensus.model.status.PlatformStatus#ACTIVE}. It will wait for a environment-specific timeout
      * before throwing an exception if the nodes do not reach the {@code ACTIVE} state. The default can be overridden by
      * calling {@link #withTimeout(Duration)}.
-     *
-     * @throws InterruptedException if the thread is interrupted while starting the network
      */
-    void start() throws InterruptedException;
+    void start();
 
     /**
      * Add an instrumented node to the network.
@@ -76,14 +75,64 @@ public interface Network {
      * @return a list of nodes in the network
      */
     @NonNull
-    List<Node> getNodes();
+    List<Node> nodes();
 
     /**
      * Gets the total weight of the network. Always positive.
      *
      * @return the network weight
      */
-    long getTotalWeight();
+    long totalWeight();
+
+    /**
+     * Updates a single property of the configuration for every node in the network. Can only be invoked when no nodes
+     * in the network are running.
+     *
+     * @param key the key of the property
+     * @param value the value of the property
+     * @return this {@code Network} instance for method chaining
+     */
+    Network withConfigValue(@NonNull String key, @NonNull String value);
+
+    /**
+     * Updates a single property of the configuration for every node in the network. Can only be invoked when no nodes
+     * in the network are running.
+     *
+     * @param key the key of the property
+     * @param value the value of the property
+     * @return this {@code Network} instance for method chaining
+     */
+    Network withConfigValue(@NonNull String key, int value);
+
+    /**
+     * Updates a single property of the configuration for every node in the network. Can only be invoked when no nodes
+     * in the network are running.
+     *
+     * @param key the key of the property
+     * @param value the value of the property
+     * @return this {@code Network} instance for method chaining
+     */
+    Network withConfigValue(@NonNull String key, long value);
+
+    /**
+     * Updates a single property of the configuration for every node in the network. Can only be invoked when no nodes
+     * in the network are running.
+     *
+     * @param key the key of the property
+     * @param value the value of the property
+     * @return this {@code Network} instance for method chaining
+     */
+    Network withConfigValue(@NonNull String key, boolean value);
+
+    /**
+     * Updates a single property of the configuration for every node in the network. Can only be invoked when no nodes
+     * in the network are running.
+     *
+     * @param key the key of the property
+     * @param value the value of the property
+     * @return this {@code Network} instance for method chaining
+     */
+    Network withConfigValue(@NonNull String key, @NonNull Path value);
 
     /**
      * Freezes the network.
@@ -94,10 +143,8 @@ public interface Network {
      *
      * <p>It will wait for a environment-specific timeout before throwing an exception if the nodes do not reach the
      * {@code FREEZE_COMPLETE} state. The default can be overridden by calling {@link #withTimeout(Duration)}.
-     *
-     * @throws InterruptedException if the thread is interrupted while waiting
      */
-    void freeze() throws InterruptedException;
+    void freeze();
 
     /**
      * Shuts down the network. The nodes are killed immediately. No attempt is made to finish any outstanding tasks or
@@ -106,10 +153,8 @@ public interface Network {
      *
      * <p>The method will wait for an environment-specific timeout before throwing an exception if the nodes cannot be
      * killed. The default can be overridden by calling {@link #withTimeout(Duration)}.
-     *
-     * @throws InterruptedException if the thread is interrupted while waiting
      */
-    void shutdown() throws InterruptedException;
+    void shutdown();
 
     /**
      * Allows to override the default timeout for network operations.
@@ -127,9 +172,9 @@ public interface Network {
      * will become effective only after a node is (re-)started.
      *
      * @param version the semantic version to set for the network
-     * @see Node#setVersion(SemanticVersion)
+     * @see Node#version(SemanticVersion)
      */
-    void setVersion(@NonNull SemanticVersion version);
+    void version(@NonNull SemanticVersion version);
 
     /**
      * This method updates the version of all nodes in the network to trigger a "config only upgrade" on the next
