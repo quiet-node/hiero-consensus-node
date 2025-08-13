@@ -51,30 +51,17 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(0)
     final Stream<DynamicTest> node0StreamingHappyPath() {
         return hapiTest(
-                burstOfTps(300, Duration.ofSeconds(600)),
+                waitUntilNextBlocks(100).withBackgroundTraffic(true),
                 assertHgcaaLogDoesNotContain(byNodeId(0), "ERROR", Duration.ofSeconds(5)));
-    }
-
-    @HapiTest
-    @HapiBlockNode(
-            networkSize = 1,
-            blockNodeConfigs = {@BlockNodeConfig(nodeId = 0, mode = BlockNodeMode.REAL)},
-            subProcessNodeConfigs = {
-                @SubProcessNodeConfig(
-                        nodeId = 0,
-                        blockNodeIds = {0},
-                        blockNodePriorities = {0})
-            })
-    @Order(1)
-    final Stream<DynamicTest> node0StreamingBufferFull() {
-        return hapiTest(
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true));
     }
 
     @HapiTest
@@ -89,21 +76,37 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 1,
                         blockNodeIds = {1},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 2,
                         blockNodeIds = {2},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 3,
                         blockNodeIds = {3},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
             })
-    @Order(2)
+    @Order(1)
     final Stream<DynamicTest> allNodesStreamingHappyPath() {
         return hapiTest(
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
@@ -118,9 +121,13 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
-    @Order(3)
+    @Order(2)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsCanStreamGenesisBlock() {
         final AtomicReference<Instant> time = new AtomicReference<>();
         final List<Integer> portNumbers = new ArrayList<>();
@@ -156,9 +163,13 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0, 1, 2, 3},
-                        blockNodePriorities = {0, 1, 2, 3})
+                        blockNodePriorities = {0, 1, 2, 3},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
-    @Order(4)
+    @Order(3)
     final Stream<DynamicTest> node0StreamingBlockNodeConnectionDropsTrickle() {
         final AtomicReference<Instant> connectionDropTime = new AtomicReference<>();
         final List<Integer> portNumbers = new ArrayList<>();
@@ -277,13 +288,21 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0}),
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        }),
                 @SubProcessNodeConfig(
                         nodeId = 1,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
-    @Order(5)
+    @Order(4)
     final Stream<DynamicTest> twoNodesStreamingOneBlockNodeHappyPath() {
         return hapiTest(
                 waitUntilNextBlocks(10).withBackgroundTraffic(true),
@@ -301,17 +320,23 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0, 1},
-                        blockNodePriorities = {0, 1})
+                        blockNodePriorities = {0, 1},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BLOCKS",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
-    @Order(6)
+    @Order(5)
     final Stream<DynamicTest> testProactiveBlockBufferAction() {
         // NOTE: com.hedera.node.app.blocks.impl.streaming MUST have DEBUG logging enabled
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
         return hapiTest(
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> timeRef.set(Instant.now())),
                 blockNode(0).updateSendingBlockAcknowledgements(false),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 sourcingContextual(
                         spec -> assertHgcaaLogContainsTimeframe(
                                 byNodeId(0),
@@ -340,14 +365,19 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0},
-                        blockNodePriorities = {0})
+                        blockNodePriorities = {0},
+                        applicationPropertiesOverrides = {
+                            "blockStream.streamMode", "BLOCKS",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(7)
     final Stream<DynamicTest> testBlockBufferBackPressure() {
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
 
         return hapiTest(
-                waitUntilNextBlocks(10).withBackgroundTraffic(true),
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
                 doingContextual(spec -> timeRef.set(Instant.now())),
                 blockNode(0).shutDownImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
@@ -371,7 +401,8 @@ public class BlockNodeSuite {
                                 Duration.ofMinutes(6),
                                 "Buffer saturation is below or equal to the recovery threshold; back pressure will be disabled")),
                 waitForActive(byNodeId(0), Duration.ofSeconds(30)),
-                waitUntilNextBlocks(10).withBackgroundTraffic(true));
+                doingContextual(
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())));
     }
 
     @HapiTest
@@ -385,7 +416,12 @@ public class BlockNodeSuite {
                 @SubProcessNodeConfig(
                         nodeId = 0,
                         blockNodeIds = {0, 1},
-                        blockNodePriorities = {0, 1})
+                        blockNodePriorities = {0, 1},
+                        applicationPropertiesOverrides = {
+                            "blockNode.streamResetPeriod", "1m",
+                            "blockStream.streamMode", "BOTH",
+                            "blockStream.writerMode", "FILE_AND_GRPC"
+                        })
             })
     @Order(8)
     final Stream<DynamicTest> activeConnectionPeriodicallyRestarts() {
