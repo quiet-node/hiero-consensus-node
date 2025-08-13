@@ -3,6 +3,7 @@ package com.hedera.services.bdd.junit.hedera.subprocess;
 
 import static com.hedera.node.app.info.DiskStartupNetworks.GENESIS_NETWORK_JSON;
 import static com.hedera.node.app.info.DiskStartupNetworks.OVERRIDE_NETWORK_JSON;
+import static com.hedera.services.bdd.junit.hedera.ExternalPath.APPLICATION_PROPERTIES;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.DATA_CONFIG_DIR;
 import static com.hedera.services.bdd.junit.hedera.NodeSelector.byNodeId;
 import static com.hedera.services.bdd.junit.hedera.subprocess.ProcessUtils.awaitStatus;
@@ -20,6 +21,7 @@ import com.google.protobuf.ByteString;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.node.app.info.DiskStartupNetworks;
+import com.hedera.node.app.tss.TssBlockHashSigner;
 import com.hedera.node.app.workflows.handle.HandleWorkflow;
 import com.hedera.node.internal.network.Network;
 import com.hedera.node.internal.network.NodeMetadata;
@@ -44,6 +46,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -57,6 +61,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -97,7 +102,12 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private final long shard;
     private final long realm;
 
-    private List<Consumer<HederaNode>> postInitWorkingDirActions = new ArrayList<>();
+    private final List<Consumer<HederaNode>> postInitWorkingDirActions = new ArrayList<>();
+
+    @Nullable
+    private UnaryOperator<Network> overrideCustomizer = null;
+
+    private Map<Long, List<String>> applicationPropertyOverrides = new HashMap<>();
 
     /**
      * Wraps a runnable, allowing us to defer running it until we know we are the privileged runner
@@ -163,6 +173,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 Collections.max(nodes.stream().map(SubProcessNode::getNodeId).toList());
         this.configTxt = configTxtForLocal(name(), nodes(), nextInternalGossipPort, nextExternalGossipPort);
         this.genesisConfigTxt = configTxt;
+        this.postInitWorkingDirActions.add(this::configureApplicationProperties);
     }
 
     /**
@@ -231,13 +242,17 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                     Thread.currentThread().getName());
             final var deferredRun = new DeferredRun(() -> {
                 final var deadline = Instant.now().plus(timeout);
-                // Block until all nodes are ACTIVE
+                // Block until all nodes are ACTIVE and ready to handle transactions
                 nodes.forEach(node -> awaitStatus(node, Duration.between(Instant.now(), deadline), ACTIVE));
                 nodes.forEach(node -> node.logFuture(HandleWorkflow.SYSTEM_ENTITIES_CREATED_MSG)
                         .orTimeout(10, TimeUnit.SECONDS)
                         .join());
-                nodes.forEach(node -> node.logFuture("TSS protocol ready")
-                        .orTimeout(30, TimeUnit.MINUTES)
+                nodes.forEach(node -> CompletableFuture.anyOf(
+                                // Only the block stream uses TSS, so it is deactivated when streamMode=RECORDS
+                                node.logFuture("blockStream.streamMode = RECORDS")
+                                        .orTimeout(3, TimeUnit.MINUTES),
+                                node.logFuture(TssBlockHashSigner.SIGNER_READY_MSG)
+                                        .orTimeout(30, TimeUnit.MINUTES))
                         .join());
                 this.clients = HapiClients.clientsFor(this);
             });
@@ -271,6 +286,15 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         } else {
             pendingNodeAccounts.put(nodeId, accountId);
         }
+    }
+
+    /**
+     * Sets a one-time use customizer for use during the next {@literal override-network.json} refresh.
+     * @param overrideCustomizer the customizer to apply to the override network
+     */
+    public void setOneTimeOverrideCustomizer(@NonNull final UnaryOperator<Network> overrideCustomizer) {
+        requireNonNull(overrideCustomizer);
+        this.overrideCustomizer = overrideCustomizer;
     }
 
     /**
@@ -437,7 +461,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     private void refreshOverrideNetworks(@NonNull final ReassignPorts reassignPorts) {
         log.info("Refreshing override networks for '{}' - \n{}", name(), configTxt);
         nodes.forEach(node -> {
-            final var overrideNetwork = WorkingDirUtils.networkFrom(configTxt, OnlyRoster.NO);
+            var overrideNetwork = WorkingDirUtils.networkFrom(configTxt, OnlyRoster.NO);
+            if (overrideCustomizer != null) {
+                // Apply the override customizer to the network
+                overrideNetwork = overrideCustomizer.apply(overrideNetwork);
+            }
             final var genesisNetworkPath = node.getExternalPath(DATA_CONFIG_DIR).resolve(GENESIS_NETWORK_JSON);
             final var isGenesis = genesisNetworkPath.toFile().exists();
             // Only write override-network.json if a node is not starting from genesis; otherwise it will adopt
@@ -473,6 +501,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 }
             }
         });
+        overrideCustomizer = null;
     }
 
     private NodeMetadata withReassignedPorts(
@@ -579,6 +608,61 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         throw new RuntimeException("Could not find available port after 100 attempts");
     }
 
+    public void configureApplicationProperties(HederaNode node) {
+        // Update bootstrap properties for the node from bootstrapPropertyOverrides if there are any
+        final var nodeId = node.getNodeId();
+        if (applicationPropertyOverrides.containsKey(nodeId)) {
+            final var properties = applicationPropertyOverrides.get(nodeId);
+            log.info("Configuring application properties for node {}: {}", nodeId, properties);
+            Path appPropertiesPath = node.getExternalPath(APPLICATION_PROPERTIES);
+            log.info(
+                    "Attempting to update application.properties at path {} for node {}",
+                    appPropertiesPath,
+                    node.getNodeId());
+
+            try {
+                // First check if file exists and log current content
+                if (Files.exists(appPropertiesPath)) {
+                    String currentContent = Files.readString(appPropertiesPath);
+                    log.info(
+                            "Current application.properties content for node {}: {}", node.getNodeId(), currentContent);
+                } else {
+                    log.info(
+                            "application.properties does not exist yet for node {}, will create new file",
+                            node.getNodeId());
+                }
+
+                // Prepare the block stream config string
+                StringBuilder propertyBuilder = new StringBuilder();
+                for (int i = 0; i < properties.size(); i += 2) {
+                    propertyBuilder.append(properties.get(i)).append("=").append(properties.get(i + 1));
+                    if (i < properties.size() - 1) {
+                        propertyBuilder.append(System.lineSeparator());
+                    }
+                }
+
+                // Write the properties with CREATE and APPEND options
+                Files.writeString(
+                        appPropertiesPath,
+                        propertyBuilder.toString(),
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.APPEND);
+
+                // Verify the file was updated
+                String updatedContent = Files.readString(appPropertiesPath);
+                log.info(
+                        "application.properties content after update for node {}: {}",
+                        node.getNodeId(),
+                        updatedContent);
+            } catch (IOException e) {
+                log.error("Failed to update application.properties for node {}: {}", node.getNodeId(), e.getMessage());
+                throw new RuntimeException("Failed to update application.properties for node " + node.getNodeId(), e);
+            }
+        } else {
+            log.info("No bootstrap property overrides for node {}", nodeId);
+        }
+    }
+
     public List<Consumer<HederaNode>> getPostInitWorkingDirActions() {
         return postInitWorkingDirActions;
     }
@@ -596,5 +680,9 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     @Override
     public PrometheusClient prometheusClient() {
         return PROMETHEUS_CLIENT;
+    }
+
+    public Map<Long, List<String>> getApplicationPropertyOverrides() {
+        return applicationPropertyOverrides;
     }
 }

@@ -22,7 +22,7 @@ import org.hiero.otter.fixtures.Network;
 import org.hiero.otter.fixtures.TestEnvironment;
 import org.hiero.otter.fixtures.TimeManager;
 import org.hiero.otter.fixtures.TransactionGenerator;
-import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
+import org.hiero.otter.fixtures.logging.internal.InMemorySubscriptionManager;
 
 /**
  * A test environment for the Turtle framework.
@@ -33,9 +33,6 @@ import org.hiero.otter.fixtures.logging.internal.InMemoryAppender;
 public class TurtleTestEnvironment implements TestEnvironment {
 
     private static final Logger log = LogManager.getLogger(TurtleTestEnvironment.class);
-
-    static final String APP_NAME = "otter";
-    static final String SWIRLD_NAME = "123";
 
     static final Duration GRANULARITY = Duration.ofMillis(10);
     static final Duration AVERAGE_NETWORK_DELAY = Duration.ofMillis(200);
@@ -129,7 +126,7 @@ public class TurtleTestEnvironment implements TestEnvironment {
      */
     @Override
     public void destroy() throws InterruptedException {
-        InMemoryAppender.reset();
+        InMemorySubscriptionManager.INSTANCE.reset();
         network.destroy();
         ConstructableRegistry.getInstance().reset();
         RuntimeObjectRegistry.reset();
