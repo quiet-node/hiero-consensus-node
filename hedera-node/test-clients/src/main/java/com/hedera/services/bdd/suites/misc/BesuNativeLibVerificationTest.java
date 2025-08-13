@@ -68,7 +68,12 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                                         allNodes(),
                                         "is not present with halt mode enabled! Shutting down node.",
                                         Duration.ZERO))),
-                ifCi(assertHgcaaLogContains(
-                        allNodes(), "Native library verification Halt mode is enabled", Duration.ofSeconds(300))));
+                ifCi(
+                        assertHgcaaLogContains(
+                                allNodes(),
+                                "Native library verification Halt mode is enabled",
+                                Duration.ofSeconds(300)),
+                        restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
+                        doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT))));
     }
 }
