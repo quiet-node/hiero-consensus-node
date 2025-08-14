@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.consensus.otter.docker.app;
 
+import static org.hiero.otter.fixtures.container.utils.ContainerConstants.CONTAINER_APP_WORKING_DIR;
+import static org.hiero.otter.fixtures.container.utils.ContainerConstants.CONTAINER_CONTROL_PORT;
+
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import java.io.IOException;
@@ -16,12 +19,6 @@ import org.hiero.consensus.otter.docker.app.logging.DockerLogConfigBuilder;
  */
 public final class DockerMain {
 
-    /** Working dir where all files should be stored */
-    public static final Path WORKING_DIR = Path.of("/opt/DockerApp");
-
-    /** Port on which the {@link org.hiero.otter.fixtures.container.proto.ContainerControlServiceGrpc} listens. */
-    private static final int CONTAINER_CONTROL_SERVICE_PORT = 8080;
-
     /** The underlying gRPC server instance. */
     private final Server grpcServer;
 
@@ -29,7 +26,7 @@ public final class DockerMain {
      * Constructs a {@link DockerMain} instance with a custom {@link ExecutorService}.
      */
     public DockerMain() {
-        grpcServer = ServerBuilder.forPort(CONTAINER_CONTROL_SERVICE_PORT)
+        grpcServer = ServerBuilder.forPort(CONTAINER_CONTROL_PORT)
                 .addService(new DockerManager())
                 .build();
     }
@@ -46,7 +43,7 @@ public final class DockerMain {
      * @throws InterruptedException if the server is interrupted while waiting for termination
      */
     public static void main(final String[] args) throws IOException, InterruptedException {
-        DockerLogConfigBuilder.configure(WORKING_DIR, null);
+        DockerLogConfigBuilder.configure(Path.of(CONTAINER_APP_WORKING_DIR), null);
         new DockerMain().startGrpcServer();
     }
 
