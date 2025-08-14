@@ -2,7 +2,7 @@
 package com.hedera.services.bdd.suites.misc;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.PROPERTY_OVERRIDES;
-import static com.hedera.services.bdd.junit.TestTags.INTEGRATION;
+import static com.hedera.services.bdd.junit.TestTags.RESTART;
 import static com.hedera.services.bdd.junit.hedera.NodeSelector.allNodes;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.utilops.FakeNmt.restartNetwork;
@@ -32,11 +32,13 @@ import org.hyperledger.besu.crypto.SECP256R1;
 import org.hyperledger.besu.evm.precompile.AbstractAltBnPrecompiledContract;
 import org.hyperledger.besu.evm.precompile.BigIntegerModularExponentiationPrecompiledContract;
 import org.junit.jupiter.api.DynamicTest;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
 
 // Order to be last as it will restart the network and halt if the lib is not present
 @OrderedInIsolation
-@Tag(INTEGRATION)
+@Order(Integer.MAX_VALUE)
+@Tag(RESTART)
 public class BesuNativeLibVerificationTest implements LifecycleTest {
 
     @LeakyHapiTest(requirement = PROPERTY_OVERRIDES)
