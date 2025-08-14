@@ -2,7 +2,7 @@
 package com.hedera.services.bdd.suites.misc;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.PROPERTY_OVERRIDES;
-import static com.hedera.services.bdd.junit.TestTags.NOT_REPEATABLE;
+import static com.hedera.services.bdd.junit.TestTags.INTEGRATION;
 import static com.hedera.services.bdd.junit.hedera.NodeSelector.allNodes;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.utilops.FakeNmt.restartNetwork;
@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Tag;
 
 // Order to be last as it will restart the network and halt if the lib is not present
 @OrderedInIsolation
-@Tag(NOT_REPEATABLE)
+@Tag(INTEGRATION)
 public class BesuNativeLibVerificationTest implements LifecycleTest {
 
     @LeakyHapiTest(requirement = PROPERTY_OVERRIDES)
