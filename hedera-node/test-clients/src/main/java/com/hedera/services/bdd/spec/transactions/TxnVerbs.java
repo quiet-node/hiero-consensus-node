@@ -29,6 +29,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import com.esaulpaugh.headlong.abi.Address;
 import com.esaulpaugh.headlong.abi.Tuple;
 import com.google.protobuf.ByteString;
+import com.hedera.hapi.node.base.HookEntityId;
 import com.hedera.services.bdd.spec.HapiPropertySource;
 import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
@@ -44,6 +45,7 @@ import com.hedera.services.bdd.spec.transactions.contract.HapiContractDelete;
 import com.hedera.services.bdd.spec.transactions.contract.HapiContractUpdate;
 import com.hedera.services.bdd.spec.transactions.contract.HapiEthereumCall;
 import com.hedera.services.bdd.spec.transactions.contract.HapiEthereumContractCreate;
+import com.hedera.services.bdd.spec.transactions.contract.HapiLambdaSStore;
 import com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoApproveAllowance;
 import com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoCreate;
 import com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoDelete;
@@ -90,6 +92,7 @@ import com.hedera.services.bdd.spec.transactions.util.HapiAtomicBatch;
 import com.hedera.services.bdd.spec.transactions.util.HapiUtilPrng;
 import com.hedera.services.bdd.spec.utilops.CustomSpecAssert;
 import com.hederahashgraph.api.proto.java.ContractCreateTransactionBody;
+import com.hederahashgraph.api.proto.java.CryptoDeleteTransactionBody;
 import com.hederahashgraph.api.proto.java.CryptoTransferTransactionBody;
 import com.hederahashgraph.api.proto.java.EthereumTransactionBody;
 import com.hederahashgraph.api.proto.java.PendingAirdropId;
@@ -118,6 +121,11 @@ public class TxnVerbs {
 
     public static HapiCryptoDelete cryptoDelete(String account) {
         return new HapiCryptoDelete(account);
+    }
+
+    public static HapiCryptoDelete cryptoDelete(
+            @NonNull final BiConsumer<HapiSpec, CryptoDeleteTransactionBody.Builder> explicitDef) {
+        return new HapiCryptoDelete(explicitDef);
     }
 
     public static HapiCryptoDelete cryptoDeleteAliased(final String alias) {
@@ -808,5 +816,9 @@ public class TxnVerbs {
 
     public static HapiAtomicBatch atomicBatch(HapiTxnOp<?>... ops) {
         return new HapiAtomicBatch(ops);
+    }
+
+    public static HapiLambdaSStore accountLambdaSStore(@NonNull final String account, final long hookId) {
+        return new HapiLambdaSStore(HookEntityId.EntityIdOneOfType.ACCOUNT_ID, account, hookId);
     }
 }

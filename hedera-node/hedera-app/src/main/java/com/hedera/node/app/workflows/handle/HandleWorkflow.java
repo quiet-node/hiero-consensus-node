@@ -15,7 +15,6 @@ import static com.hedera.node.app.workflows.handle.TransactionType.ORDINARY_TRAN
 import static com.hedera.node.app.workflows.handle.TransactionType.POST_UPGRADE_TRANSACTION;
 import static com.hedera.node.config.types.StreamMode.BLOCKS;
 import static com.hedera.node.config.types.StreamMode.RECORDS;
-import static com.swirlds.platform.consensus.ConsensusUtils.coin;
 import static com.swirlds.platform.system.InitTrigger.EVENT_STREAM_RECOVERY;
 import static java.time.Instant.EPOCH;
 import static java.util.Objects.requireNonNull;
@@ -294,7 +293,11 @@ public class HandleWorkflow {
             }
         }
         try {
-            transactionsDispatched |= handleEvents(state, round, stateSignatureTxnCallback);
+            final int receiptEntriesBatchSize = configProvider
+                    .getConfiguration()
+                    .getConfigData(BlockStreamConfig.class)
+                    .receiptEntriesBatchSize();
+            transactionsDispatched |= handleEvents(state, round, receiptEntriesBatchSize, stateSignatureTxnCallback);
             try {
                 final var lastConsTime = streamMode == RECORDS
                         ? blockRecordManager.lastUsedConsensusTime()
@@ -324,7 +327,7 @@ public class HandleWorkflow {
         } finally {
             // Even if there is an exception somewhere, we need to commit the receipts of any handled transactions
             // to the state so these transactions cannot be replayed in future rounds
-            recordCache.commitRoundReceipts(
+            recordCache.commitReceipts(
                     state, round.getConsensusTimestamp(), immediateStateChangeListener, blockStreamManager, streamMode);
         }
     }
@@ -335,11 +338,13 @@ public class HandleWorkflow {
      *
      * @param state the state to apply the effects to
      * @param round the round to apply the effects of
+     * @param receiptEntriesBatchSize The maximum number of receipts to accumulate in a batch before committing
      * @param stateSignatureTxnCallback A callback to be called when encountering a {@link StateSignatureTransaction}
      */
     private boolean handleEvents(
             @NonNull final State state,
             @NonNull final Round round,
+            final int receiptEntriesBatchSize,
             @NonNull final Consumer<ScopedSystemTransaction<StateSignatureTransaction>> stateSignatureTxnCallback) {
         boolean transactionsDispatched = false;
         final var storeFactory = new ReadableStoreFactory(state);
@@ -391,6 +396,13 @@ public class HandleWorkflow {
                             e);
                 }
             }
+            recordCache.maybeCommitReceiptsBatch(
+                    state,
+                    round.getConsensusTimestamp(),
+                    immediateStateChangeListener,
+                    receiptEntriesBatchSize,
+                    blockStreamManager,
+                    streamMode);
         }
         final boolean isGenesis =
                 switch (streamMode) {
@@ -445,7 +457,7 @@ public class HandleWorkflow {
             }
         }
         final var headerItem = BlockItem.newBuilder()
-                .eventHeader(new EventHeader(event.getEventCore(), parents, coin(event.getSignature())))
+                .eventHeader(new EventHeader(event.getEventCore(), parents))
                 .build();
         blockStreamManager.writeItem(headerItem);
     }

@@ -446,10 +446,7 @@ public class BaseTranslator {
             @NonNull final ContractFunctionResult.Builder derivedBuilder,
             @NonNull final List<StateChange> remainingStateChanges) {
         if (senderId != null) {
-            findAccount(senderId, remainingStateChanges)
-                    .ifPresentOrElse(
-                            senderAccount -> derivedBuilder.signerNonce(senderAccount.ethereumNonce()),
-                            () -> derivedBuilder.signerNonce(nonces.get(senderId.accountNumOrElse(Long.MIN_VALUE))));
+            derivedBuilder.signerNonce(getSignerNonce(senderId, remainingStateChanges));
         }
     }
 
@@ -627,7 +624,7 @@ public class BaseTranslator {
                                     throw new IllegalStateException("No written value found for write to " + slotKey
                                             + " in " + remainingStateChanges);
                                 }
-                                value = sansLeadingZeros(valueFromState);
+                                value = ConversionUtils.minimalRepresentationOf(valueFromState);
                             }
                             builder.slot(writtenKey).valueWritten(value);
                         } else {
@@ -732,7 +729,7 @@ public class BaseTranslator {
                     slotKey = stateChange.mapDeleteOrThrow().keyOrThrow().slotKeyKeyOrThrow();
                 }
                 if (slotKey != null && contractId.equals(slotKey.contractIDOrThrow())) {
-                    writtenKeys.add(sansLeadingZeros(slotKey.key()));
+                    writtenKeys.add(ConversionUtils.minimalRepresentationOf(slotKey.key()));
                 }
             }
             return writtenKeys;
@@ -818,23 +815,6 @@ public class BaseTranslator {
                 .data(log.data())
                 .topic(log.topics().stream().map(ConversionUtils::leftPad32).toList())
                 .build();
-    }
-
-    private static Bytes sansLeadingZeros(@NonNull final Bytes bytes) {
-        int i = 0;
-        int n = (int) bytes.length();
-        while (i < n && bytes.getByte(i) == 0) {
-            i++;
-        }
-        if (i == n) {
-            return Bytes.EMPTY;
-        } else if (i == 0) {
-            return bytes;
-        } else {
-            final var stripped = new byte[n - i];
-            bytes.getBytes(i, stripped, 0, n - i);
-            return Bytes.wrap(stripped);
-        }
     }
 
     /**
@@ -1075,6 +1055,37 @@ public class BaseTranslator {
             }
         }
         return true;
+    }
+
+    /**
+     * Compares the Ethereum transaction body nonce with the most recent nonce value in the state changes.
+     * In normal scenarios, these values should be equal. However, when multiple Ethereum calls exist
+     * within a single batch transaction (all modifying the same account), the final state change might
+     * contain a greater nonce value than what appears in any individual transaction body.
+     *
+     * @param accountID The Ethereum transaction sender account
+     * @param nonce The nonce value from the Ethereum transaction body
+     * @param remainingStateChanges The current state changes to examine
+     * @return true if the signer nonce from state changes is greater than the one in the transaction body
+     */
+    public boolean isNonceIncremented(
+            @NonNull final AccountID accountID, long nonce, @NonNull List<StateChange> remainingStateChanges) {
+        final var currentNonce = getSignerNonce(accountID, remainingStateChanges);
+        return currentNonce != null && currentNonce > nonce;
+    }
+
+    /**
+     * Retrieves the Ethereum nonce for a given account.
+     *
+     * @param senderId the account ID to get the nonce for
+     * @param remainingStateChanges the state changes to search for the account
+     * @return the Ethereum nonce for the account
+     */
+    public Long getSignerNonce(
+            @NonNull final AccountID senderId, @NonNull final List<StateChange> remainingStateChanges) {
+        return findAccount(senderId, remainingStateChanges)
+                .map(Account::ethereumNonce)
+                .orElseGet(() -> nonces.get(senderId.accountNumOrElse(Long.MIN_VALUE)));
     }
 
     /**

@@ -4,10 +4,14 @@ package com.swirlds.platform.test.fixtures.state;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
+import com.swirlds.state.State;
 import com.swirlds.state.merkle.VirtualMapState;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
+/**
+ * A test implementation of {@link State} backed by a single Virtual Map.
+ */
 public class TestVirtualMapState extends VirtualMapState<TestVirtualMapState> implements MerkleNodeState {
 
     public TestVirtualMapState(@NonNull final PlatformContext platformContext) {
