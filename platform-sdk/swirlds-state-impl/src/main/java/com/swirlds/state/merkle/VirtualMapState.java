@@ -124,7 +124,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     public VirtualMapState(@NonNull final Configuration configuration, @NonNull final Metrics metrics) {
         final MerkleDbDataSourceBuilder dsBuilder;
         final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
-        // FUTURE WORK: drop StateDefinition.maxKeysHint and load VM size from VirtualMapConfig.size instead
         dsBuilder = new MerkleDbDataSourceBuilder(
                 configuration, merkleDbConfig.maxNumOfKeys(), merkleDbConfig.hashesRamToDiskThreshold());
 

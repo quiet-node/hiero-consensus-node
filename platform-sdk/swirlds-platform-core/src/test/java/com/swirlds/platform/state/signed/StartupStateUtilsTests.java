@@ -95,7 +95,7 @@ public class StartupStateUtilsTests {
     }
 
     @BeforeAll
-    static void beforeAll() throws ConstructableRegistryException, IOException {
+    static void beforeAll() throws ConstructableRegistryException {
         final ConstructableRegistry registry = ConstructableRegistry.getInstance();
         registry.registerConstructables("com.swirlds");
         registry.registerConstructables("org.hiero");

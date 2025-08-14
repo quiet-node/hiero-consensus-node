@@ -158,8 +158,7 @@ public enum TestType {
 
         public MerkleDbDataSource getDataSource(final Path dbPath, final String name, final boolean enableMerging)
                 throws IOException {
-            // Assuming initial capacity and hashes RAM/disk threshold are loaded from table metadata
-            return new MerkleDbDataSource(dbPath, CONFIGURATION, name, 0, 0, enableMerging, false);
+            return new MerkleDbDataSource(dbPath, CONFIGURATION, name, enableMerging, false);
         }
 
         public VirtualHashRecord createVirtualInternalRecord(final int i) {

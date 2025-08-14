@@ -702,7 +702,7 @@ class MerkleDbDataSourceTest {
                 .withSource(new SimpleConfigSource("merkleDb.tablesToRepairHdhm", ""))
                 .build();
         final MerkleDbDataSource snapshotDataSource1 =
-                new MerkleDbDataSource(snapshotDbPath1, config1, label, 0, 0, false, false);
+                new MerkleDbDataSource(snapshotDbPath1, config1, label, false, false);
         IntStream.range(9, 19).forEach(i -> assertLeaf(testType, snapshotDataSource1, i, i, 2 * i, 3 * i));
         final Bytes staleKey = testType.dataType().createVirtualLongKey(8);
         assertEquals(8, snapshotDataSource1.findKey(staleKey));
@@ -717,7 +717,7 @@ class MerkleDbDataSourceTest {
                 .withSource(new SimpleConfigSource("merkleDb.tablesToRepairHdhm", label))
                 .build();
         final MerkleDbDataSource snapshotDataSource2 =
-                new MerkleDbDataSource(snapshotDbPath2, config2, label, 0, 0, false, false);
+                new MerkleDbDataSource(snapshotDbPath2, config2, label, false, false);
         IntStream.range(9, 19).forEach(i -> assertLeaf(testType, snapshotDataSource2, i, i, 2 * i, 3 * i));
         assertEquals(-1, snapshotDataSource2.findKey(staleKey));
         snapshotDataSource2.close();

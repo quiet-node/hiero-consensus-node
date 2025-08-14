@@ -174,6 +174,42 @@ public final class MerkleDbDataSource implements VirtualDataSource {
 
     private MerkleDbStatisticsUpdater statisticsUpdater;
 
+    /**
+     * Creates a new MerkleDb data source. The specified storage dir must exist and contain valid
+     * data source files. Initial capacity and hashes RAM/disk threshold are read from data source
+     * metadata file.
+     */
+    public MerkleDbDataSource(
+            final Path storageDir,
+            final Configuration config,
+            final String tableName,
+            final boolean compactionEnabled,
+            final boolean offlineUse)
+            throws IOException {
+        this(storageDir, config, tableName, 0, 0, compactionEnabled, offlineUse);
+    }
+
+    /**
+     * Creates a new MerkleDb data source. If the specified storage dir exists, it's considered a
+     * data source snapshot, and the data source is loaded from the existing files. If no data or
+     * metadata files are found, an exception is thrown. If the specified storage dir doesn't exist,
+     * a new empty data source is created with initial capacity and RAM/disk threshold for hashes as
+     * specified.
+     *
+     * @param storageDir Directory to store data files
+     * @param config Platform configuration
+     * @param tableName Data source label, used in logs, metrics, etc.
+     * @param initialCapacity Initial database capacity. Only used if a new database is created. If
+     *                        an existing database is loaded from the storage dir, initial capacity
+     *                        is read from MerkleDb metadata file
+     * @param hashesRamToDiskThreshold Hashes RAM/disk threshold. Only used if a new database is created.
+     *                                 If an existing database is loaded from the storage dir, threshold
+     *                                 is read from MerkleDb metadata file
+     * @param compactionEnabled Indicates whether background compaction should be running for this data
+     *                          source
+     * @param diskBasedIndices Indicates that the data source should use disk based indices
+     * @throws IOException If an I/O error occurs
+     */
     public MerkleDbDataSource(
             final Path storageDir,
             final Configuration config,
@@ -181,10 +217,10 @@ public final class MerkleDbDataSource implements VirtualDataSource {
             final long initialCapacity,
             final long hashesRamToDiskThreshold,
             final boolean compactionEnabled,
-            final boolean offlineUse)
+            final boolean diskBasedIndices)
             throws IOException {
         this.tableName = tableName;
-        this.preferDiskBasedIndices = offlineUse;
+        this.preferDiskBasedIndices = diskBasedIndices;
 
         this.merkleDbConfig = config.getConfigData(MerkleDbConfig.class);
 
@@ -381,8 +417,8 @@ public final class MerkleDbDataSource implements VirtualDataSource {
                 tableName + ":objectKeyToPath",
                 preferDiskBasedIndices);
         keyToPath.printStats();
-        // Repair keyToPath based on pathToKeyValue data, if requested and not offlineUse
-        if (!offlineUse) {
+        // Repair keyToPath based on pathToKeyValue data, if requested and not disk based indices
+        if (!preferDiskBasedIndices) {
             final String tablesToRepairHdhmConfig = merkleDbConfig.tablesToRepairHdhm();
             if (tablesToRepairHdhmConfig != null) {
                 final String[] tableNames = tablesToRepairHdhmConfig.split(",");
