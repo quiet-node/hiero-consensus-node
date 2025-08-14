@@ -59,8 +59,6 @@ public class FakeState implements MerkleNodeState {
      */
     private final List<StateChangeListener> listeners = new ArrayList<>();
 
-    public FakeState() {}
-
     /**
      * Exposes the underlying states for direct manipulation in tests.
      *
