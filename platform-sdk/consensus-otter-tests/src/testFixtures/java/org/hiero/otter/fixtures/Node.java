@@ -35,10 +35,8 @@ public interface Node {
      *
      * <p>The method will wait for a environment-specific timeout before throwing an exception if the nodes cannot be
      * killed. The default can be overridden by calling {@link #withTimeout(Duration)}.
-     *
-     * @throws InterruptedException if the thread is interrupted while waiting
      */
-    void killImmediately() throws InterruptedException;
+    void killImmediately();
 
     /**
      * Start a synthetic bottleneck on the node.
@@ -184,7 +182,7 @@ public interface Node {
      *
      * @param version the software version to set for the node
      */
-    void setVersion(@NonNull SemanticVersion version);
+    void version(@NonNull SemanticVersion version);
 
     /**
      * This method updates the version to trigger a "config only upgrade" on the next restart. This method can only be
