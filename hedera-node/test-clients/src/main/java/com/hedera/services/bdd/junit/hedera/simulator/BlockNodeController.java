@@ -397,7 +397,7 @@ public class BlockNodeController {
 
             blockNodeContainer.start();
 
-            log.info("Started container {} and waited for readiness", nodeIndex);
+            log.info("Started container {} @ {} and waited for readiness", nodeIndex, blockNodeContainer);
             blockNodeContainers.put(nodeIndex, blockNodeContainer);
             shutdownBlockNodePorts.remove(nodeIndex);
         } else {
@@ -407,8 +407,8 @@ public class BlockNodeController {
 
     public void shutdownContainer(long nodeIndex) {
         if (nodeIndex >= 0 && nodeIndex < blockNodeContainers.size()) {
-            log.info("Shutting down container {}", nodeIndex);
             final BlockNodeContainer shutdownContainer = blockNodeContainers.get(nodeIndex);
+            log.info("Shutting down container {} @ {}", nodeIndex, shutdownContainer);
 
             shutdownBlockNodePorts.put(nodeIndex, shutdownContainer.getPort());
             shutdownContainer.stop();
