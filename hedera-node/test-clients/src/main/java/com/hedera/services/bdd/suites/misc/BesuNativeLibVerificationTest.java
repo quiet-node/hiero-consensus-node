@@ -32,11 +32,9 @@ import org.hyperledger.besu.crypto.SECP256R1;
 import org.hyperledger.besu.evm.precompile.AbstractAltBnPrecompiledContract;
 import org.hyperledger.besu.evm.precompile.BigIntegerModularExponentiationPrecompiledContract;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
 
 // Order to be last as it will restart the network and halt if the lib is not present
-@Order(Integer.MAX_VALUE)
 @OrderedInIsolation
 @Tag(NOT_REPEATABLE)
 public class BesuNativeLibVerificationTest implements LifecycleTest {
@@ -45,6 +43,7 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
     public Stream<DynamicTest> besuNativeLibVerificationHaltsIfLibNotPresent() {
 
         final var envOverrides = Map.of("contracts.evm.nativeLibVerification.halt.enabled", "true");
+        final Map<String, String> envReset = Map.of();
 
         return hapiTest(blockingOrder(
                 freezeOnly().startingIn(5).seconds().payingWith(GENESIS).deferStatusResolution(),
@@ -72,7 +71,9 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                                 allNodes(),
                                 "Native library verification Halt mode is enabled",
                                 Duration.ofSeconds(300)),
-                        restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
+                        doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
+                        sleepForSeconds(10),
+                        restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envReset),
                         doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)))));
     }
 }
