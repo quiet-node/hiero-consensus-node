@@ -16,6 +16,7 @@ import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.RandomSignedStateGenerator;
@@ -200,9 +201,6 @@ class SerializationTest extends MerkleTestBase {
         final var originalTree = (TestVirtualMapState) createMerkleHederaState(schemaV1);
         final var tempDir = LegacyTemporaryFileBuilder.buildTemporaryDirectory(config);
 
-        originalTree.setRoundSupplier(() ->
-                TEST_PLATFORM_STATE_FACADE.consensusSnapshotOf(originalTree).round());
-
         // prepare the tree and create a snapshot
         originalTree.copy().release();
         originalTree.computeHash();
@@ -267,7 +265,7 @@ class SerializationTest extends MerkleTestBase {
     private TestVirtualMapState loadedMerkleTree(Schema schemaV1, byte[] serializedBytes) throws IOException {
         final VirtualMap virtualMap = parseTree(serializedBytes, dir);
         final TestVirtualMapState loadedTree = new TestVirtualMapState(
-                virtualMap, TestPlatformContextBuilder.create().build());
+                virtualMap, TestPlatformContextBuilder.create().build(), state -> PlatformStateAccessor.GENESIS_ROUND);
         initServices(schemaV1, loadedTree);
 
         return loadedTree;

@@ -8,18 +8,24 @@ import com.swirlds.state.State;
 import com.swirlds.state.merkle.VirtualMapState;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.function.Function;
 
 /**
  * A test implementation of {@link State} backed by a single Virtual Map.
  */
 public class TestVirtualMapState extends VirtualMapState<TestVirtualMapState> implements MerkleNodeState {
 
-    public TestVirtualMapState(@NonNull final PlatformContext platformContext) {
-        super(platformContext);
+    public TestVirtualMapState(
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMapState<TestVirtualMapState>, Long> extractRoundFromState) {
+        super(platformContext, extractRoundFromState);
     }
 
-    public TestVirtualMapState(@NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
-        super(virtualMap, platformContext);
+    public TestVirtualMapState(
+            @NonNull final VirtualMap virtualMap,
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMapState<TestVirtualMapState>, Long> extractRoundFromState) {
+        super(virtualMap, platformContext, extractRoundFromState);
     }
 
     protected TestVirtualMapState(@NonNull final TestVirtualMapState from) {
@@ -35,13 +41,17 @@ public class TestVirtualMapState extends VirtualMapState<TestVirtualMapState> im
 
     @Override
     protected TestVirtualMapState newInstance(
-            @NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
-        return new TestVirtualMapState(virtualMap, platformContext);
+            @NonNull final VirtualMap virtualMap,
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMapState<TestVirtualMapState>, Long> extractRoundFromState) {
+        return new TestVirtualMapState(virtualMap, platformContext, extractRoundFromState);
     }
 
     public static TestVirtualMapState createInstanceWithVirtualMapLabel(
-            @NonNull final String virtualMapLabel, PlatformContext platformContext) {
+            @NonNull final String virtualMapLabel,
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMapState<TestVirtualMapState>, Long> extractRoundFromState) {
         final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
-        return new TestVirtualMapState(virtualMap, platformContext);
+        return new TestVirtualMapState(virtualMap, platformContext, extractRoundFromState);
     }
 }

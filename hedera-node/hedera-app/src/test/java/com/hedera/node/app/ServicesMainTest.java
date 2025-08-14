@@ -20,6 +20,7 @@ import com.swirlds.platform.config.legacy.LegacyConfigProperties;
 import com.swirlds.platform.config.legacy.LegacyConfigPropertiesLoader;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.system.SystemExitUtils;
+import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import java.util.function.Function;
 import org.hiero.consensus.model.roster.AddressBook;
@@ -92,8 +93,11 @@ final class ServicesMainTest {
     void createsNewStateRoot() {
         ServicesMain.initGlobal(hedera, metrics);
         final PlatformContext platformContext = mock(PlatformContext.class);
-        given(hedera.newStateRoot(platformContext)).willReturn(state);
-        assertSame(state, subject.newStateRoot(platformContext));
+        final Function<State, Long> extractRoundFromState = mock(Function.class);
+
+        given(hedera.newStateRoot(platformContext, extractRoundFromState)).willReturn(state);
+
+        assertSame(state, subject.newStateRoot(platformContext, extractRoundFromState));
     }
 
     @Test
@@ -102,11 +106,16 @@ final class ServicesMainTest {
         final VirtualMap virtualMapMock = mock(VirtualMap.class);
         final PlatformContext platformContext = mock(PlatformContext.class);
         final Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMapMock = mock(Function.class);
+        final Function<State, Long> extractRoundFromState = mock(Function.class);
 
-        when(hedera.stateRootFromVirtualMap(platformContext)).thenReturn(stateRootFromVirtualMapMock);
+        when(hedera.stateRootFromVirtualMap(platformContext, extractRoundFromState))
+                .thenReturn(stateRootFromVirtualMapMock);
         when(stateRootFromVirtualMapMock.apply(virtualMapMock)).thenReturn(state);
 
-        assertSame(state, subject.stateRootFromVirtualMap(platformContext).apply(virtualMapMock));
+        assertSame(
+                state,
+                subject.stateRootFromVirtualMap(platformContext, extractRoundFromState)
+                        .apply(virtualMapMock));
     }
 
     private void withBadCommandLineArgs() {

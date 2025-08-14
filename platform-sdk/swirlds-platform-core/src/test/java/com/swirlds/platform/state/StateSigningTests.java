@@ -360,7 +360,7 @@ class StateSigningTests {
                 .setRoster(roster)
                 .setSignatures(new HashMap<>())
                 .setState(new TestVirtualMapState(
-                        TestPlatformContextBuilder.create().build()))
+                        TestPlatformContextBuilder.create().build(), state -> PlatformStateAccessor.GENESIS_ROUND))
                 .build();
 
         final SigSet sigSet = signedState.getSigSet();

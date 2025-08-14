@@ -30,6 +30,7 @@ import com.swirlds.platform.components.DefaultSavedStateController;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.eventhandling.StateWithHashComplexity;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.snapshot.DefaultStateSnapshotManager;
@@ -147,7 +148,8 @@ class StateFileManagerTests {
         final Configuration configuration = platformContext.getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile,
-                virtualMap -> new TestVirtualMapState(virtualMap, platformContext),
+                virtualMap -> new TestVirtualMapState(
+                        virtualMap, platformContext, state -> PlatformStateAccessor.GENESIS_ROUND),
                 TEST_PLATFORM_STATE_FACADE,
                 PlatformContext.create(configuration));
         SignedState signedState = deserializedSignedState.reservedSignedState().get();
@@ -322,7 +324,10 @@ class StateFileManagerTests {
                     final SignedState stateFromDisk = assertDoesNotThrow(
                             () -> SignedStateFileReader.readStateFile(
                                             savedStateInfo.stateFile(),
-                                            virtualMap -> new TestVirtualMapState(virtualMap, platformContext),
+                                            virtualMap -> new TestVirtualMapState(
+                                                    virtualMap,
+                                                    platformContext,
+                                                    state -> PlatformStateAccessor.GENESIS_ROUND),
                                             TEST_PLATFORM_STATE_FACADE,
                                             PlatformContext.create(configuration))
                                     .reservedSignedState()

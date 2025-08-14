@@ -27,6 +27,7 @@ import com.swirlds.platform.state.NoOpConsensusStateEventHandler;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SwirldMain;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
+import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Random;
@@ -127,7 +128,9 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
 
     @NonNull
     @Override
-    public StatsDemoState newStateRoot(@NonNull final PlatformContext platformContext) {
+    public StatsDemoState newStateRoot(
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<State, Long> extractRoundFromState) {
         final StatsDemoState state = new StatsDemoState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -141,7 +144,8 @@ public class StatsDemoMain implements SwirldMain<StatsDemoState> {
      */
     @Override
     public Function<VirtualMap, StatsDemoState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext) {
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<State, Long> extractRoundFromState) {
         throw new UnsupportedOperationException();
     }
 

@@ -67,19 +67,23 @@ public interface SwirldMain<T extends MerkleNodeState> extends Runnable {
      *     </li>
      * </ul>
      *
-     * @param platformContext the platform context
+     * @param platformContext       the platform context
+     * @param extractRoundFromState function which extracts round from the state
      * @return state root object
      */
     @NonNull
-    T newStateRoot(@NonNull final PlatformContext platformContext);
+    T newStateRoot(
+            @NonNull final PlatformContext platformContext, @NonNull final Function<State, Long> extractRoundFromState);
 
     /**
      * A function to instantiate the state root object from a Virtual Map.
      *
-     * @param platformContext the platform context
+     * @param platformContext       the platform context
+     * @param extractRoundFromState function which extracts round from the state
      * @return a function that accepts a {@code VirtualMap} and returns the state root object.
      */
-    Function<VirtualMap, T> stateRootFromVirtualMap(@NonNull final PlatformContext platformContext);
+    Function<VirtualMap, T> stateRootFromVirtualMap(
+            @NonNull final PlatformContext platformContext, @NonNull final Function<State, Long> extractRoundFromState);
 
     /**
      * Instantiate and return a new instance of the consensus state event handler for this SwirldMain object.

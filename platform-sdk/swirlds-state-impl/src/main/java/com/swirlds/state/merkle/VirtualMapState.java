@@ -64,7 +64,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -107,8 +107,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     private final List<StateChangeListener> listeners = new ArrayList<>();
 
-    private LongSupplier roundSupplier;
-
     private VirtualMap virtualMap;
 
     private final PlatformContext platformContext;
@@ -119,8 +117,19 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     private boolean startupMode = true;
 
-    public VirtualMapState(@NonNull final PlatformContext platformContext) {
+    private final Function<VirtualMapState<T>, Long> extractRoundFromState;
+
+    /**
+     * Initializes a {@link VirtualMapState}.
+     *
+     * @param platformContext       the platform context
+     * @param extractRoundFromState function which extracts round from the state
+     */
+    public VirtualMapState(
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMapState<T>, Long> extractRoundFromState) {
         this.platformContext = platformContext;
+        this.extractRoundFromState = extractRoundFromState;
 
         final Metrics metrics = platformContext.getMetrics();
         final Configuration configuration = platformContext.getConfiguration();
@@ -142,13 +151,17 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     /**
      * Initializes a {@link VirtualMapState} with the specified {@link VirtualMap}.
      *
-     * @param virtualMap      the virtual map with pre-registered metrics
-     * @param platformContext the platform context
+     * @param virtualMap            the virtual map with pre-registered metrics
+     * @param platformContext       the platform context
+     * @param extractRoundFromState function which extracts round from the state
      */
-    public VirtualMapState(@NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
+    public VirtualMapState(
+            @NonNull final VirtualMap virtualMap,
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMapState<T>, Long> extractRoundFromState) {
         this.virtualMap = virtualMap;
-
         this.platformContext = platformContext;
+        this.extractRoundFromState = extractRoundFromState;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
     }
 
@@ -160,9 +173,9 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     protected VirtualMapState(@NonNull final VirtualMapState<T> from) {
         this.virtualMap = from.virtualMap.copy();
         this.platformContext = from.platformContext;
+        this.extractRoundFromState = from.extractRoundFromState;
         this.startupMode = from.startupMode;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.platformContext.getMetrics());
-        this.roundSupplier = from.roundSupplier;
         this.listeners.addAll(from.listeners);
 
         // Copy over the metadata
@@ -180,10 +193,14 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     /**
      * Creates a new instance.
      *
-     * @param virtualMap      should have already registered metrics
-     * @param platformContext the platform context
+     * @param virtualMap            should have already registered metrics
+     * @param platformContext       the platform context
+     * @param extractRoundFromState function which extracts round from the state
      */
-    protected abstract T newInstance(@NonNull final VirtualMap virtualMap, PlatformContext platformContext);
+    protected abstract T newInstance(
+            @NonNull final VirtualMap virtualMap,
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<VirtualMapState<T>, Long> extractRoundFromState);
 
     // State interface implementation
 
@@ -251,12 +268,13 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     @Override
     public void createSnapshot(@NonNull final Path targetPath) {
         final Time time = platformContext.getTime();
+        final Long round = extractRoundFromState.apply(this);
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
         virtualMap.throwIfMutable();
         virtualMap.throwIfDestroyed();
         final long startTime = time.currentTimeMillis();
-        MerkleTreeSnapshotWriter.createSnapshot(virtualMap, targetPath, roundSupplier.getAsLong());
+        MerkleTreeSnapshotWriter.createSnapshot(virtualMap, targetPath, round);
         snapshotMetrics.updateWriteStateToDiskTimeMetric(time.currentTimeMillis() - startTime);
     }
 
@@ -278,7 +296,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
         readVirtualMap.release();
         readVirtualMap = mutableCopy;
 
-        return newInstance(readVirtualMap, platformContext);
+        return newInstance(readVirtualMap, platformContext, extractRoundFromState);
     }
 
     // MerkleNodeState interface implementation
@@ -396,10 +414,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     public MerkleNode getRoot() {
         return virtualMap;
-    }
-
-    public void setRoundSupplier(@NonNull final LongSupplier roundSupplier) {
-        this.roundSupplier = roundSupplier;
     }
 
     /**

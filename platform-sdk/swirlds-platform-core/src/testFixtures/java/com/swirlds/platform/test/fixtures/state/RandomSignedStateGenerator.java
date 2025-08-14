@@ -23,6 +23,7 @@ import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.SignatureVerifier;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.manager.SignatureVerificationTestUtils;
@@ -149,8 +150,9 @@ public class RandomSignedStateGenerator {
             final String virtualMapLabel =
                     "vm-" + RandomSignedStateGenerator.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
             stateInstance = TestVirtualMapState.createInstanceWithVirtualMapLabel(
-                    virtualMapLabel, TestPlatformContextBuilder.create().build());
-            stateInstance.setRoundSupplier(() -> platformStateFacade.roundOf(stateInstance));
+                    virtualMapLabel,
+                    TestPlatformContextBuilder.create().build(),
+                    state -> PlatformStateAccessor.GENESIS_ROUND);
         } else {
             stateInstance = state;
         }

@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.node.app.hints.impl.HintsLibraryImpl;
 import com.hedera.node.app.hints.impl.HintsServiceImpl;
 import com.hedera.node.app.history.impl.HistoryLibraryImpl;
@@ -64,6 +65,7 @@ import com.swirlds.platform.config.legacy.LegacyConfigProperties;
 import com.swirlds.platform.config.legacy.LegacyConfigPropertiesLoader;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -148,8 +150,10 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      * {@inheritDoc}
      */
     @Override
-    public @NonNull MerkleNodeState newStateRoot(@NonNull final PlatformContext platformContext) {
-        return hederaOrThrow().newStateRoot(platformContext);
+    public @NonNull MerkleNodeState newStateRoot(
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<State, Long> extractRoundFromState) {
+        return hederaOrThrow().newStateRoot(platformContext, extractRoundFromState);
     }
 
     /**
@@ -158,8 +162,9 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      */
     @Override
     public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext) {
-        return hederaOrThrow().stateRootFromVirtualMap(platformContext);
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<State, Long> extractRoundFromState) {
+        return hederaOrThrow().stateRootFromVirtualMap(platformContext, extractRoundFromState);
     }
 
     /**
@@ -193,14 +198,14 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      *     <li>Create the application's {@link Hedera} singleton, which overrides
      *     the default factory for the stable {@literal 0x8e300b0dfdafbb1a} class
      *     id of the Services Merkle tree root with a reference to its
-     *     {@link SwirldMain#newStateRoot(PlatformContext)} method.</li>
+     *     {@link SwirldMain#newStateRoot(PlatformContext, Function)} method.</li>
      *     <li>Determine this node's <b>self id</b> by searching the <i>config.txt</i>
      *     in the working directory for any address book entries with IP addresses
      *     local to this machine; if there is more than one such entry, fail unless
      *     the command line args include a {@literal -local N} arg.</li>
      *     <li>Build a {@link Platform} instance from Services application metadata
      *     and the working directory <i>settings.txt</i>, providing the same
-     *     {@link SwirldMain#newStateRoot(PlatformContext)} method reference as the genesis state
+     *     {@link SwirldMain#newStateRoot(PlatformContext, Function)} method reference as the genesis state
      *     factory. (<b>IMPORTANT:</b> This step instantiates and invokes
      *     {@link ConsensusStateEventHandler#onStateInitialized(MerkleNodeState, Platform, InitTrigger, SemanticVersion)}
      *     on a {@link MerkleNodeState} instance that delegates the call back to our
@@ -222,18 +227,18 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
      *      <li>Create a genesis state; or,</li>
      *      <li>Deserialize a saved state.</li>
      * </ol>
-     * In both cases the state object will be created by the {@link SwirldMain#newStateRoot(PlatformContext)}
+     * In both cases the state object will be created by the {@link SwirldMain#newStateRoot(PlatformContext, Function)}
      * method reference bound to our Hedera instance. Because,
      * <ol>
      *      <li>We provided this method as the genesis state factory right above; and,</li>
-     *      <li>Our Hedera instance's constructor registered its {@link SwirldMain#newStateRoot(PlatformContext)}
+     *      <li>Our Hedera instance's constructor registered its {@link SwirldMain#newStateRoot(PlatformContext, Function)}
      *      method with the {@link ConstructableRegistry} as the factory for the Services state root
      *      class id.</li>
      * </ol>
-     *  Now, note that {@link SwirldMain#newStateRoot(PlatformContext)} returns {@link MerkleNodeState}
+     *  Now, note that {@link SwirldMain#newStateRoot(PlatformContext, Function)} returns {@link MerkleNodeState}
      *  instances that delegate their lifecycle methods to an injected instance of
      *  {@link ConsensusStateEventHandler}---and the implementation of that
-     *  injected by {@link SwirldMain#newStateRoot(PlatformContext)} delegates these calls back to the Hedera
+     *  injected by {@link SwirldMain#newStateRoot(PlatformContext, Function)} delegates these calls back to the Hedera
      *  instance itself.
      * <p>
      *  Thus, the Hedera instance centralizes nearly all the setup and runtime logic for the
@@ -292,6 +297,10 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 FileSystemManager.create(platformConfig),
                 recycleBin,
                 merkleCryptography);
+        final Function<State, Long> extractRoundFromState = virtualMapState -> {
+            final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(virtualMapState);
+            return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
+        };
         hedera = newHedera(platformContext, platformStateFacade);
         final var version = hedera.getSemanticVersion();
         final AtomicReference<Network> genesisNetwork = new AtomicReference<>();
@@ -314,7 +323,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                                 hedera.bootstrapConfigProvider().getConfiguration());
                     }
                     genesisNetwork.set(network);
-                    final var genesisState = hedera.newStateRoot(platformContext);
+                    final var genesisState = hedera.newStateRoot(platformContext, extractRoundFromState);
                     hedera.initializeStatesApi(genesisState, GENESIS, platformConfig);
                     return genesisState;
                 },
@@ -323,7 +332,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 selfId,
                 platformStateFacade,
                 platformContext,
-                hedera.stateRootFromVirtualMap(platformContext));
+                hedera.stateRootFromVirtualMap(platformContext, extractRoundFromState));
         final ReservedSignedState initialState = reservedState.state();
         final MerkleNodeState state = initialState.get().getState();
         if (genesisNetwork.get() == null) {
@@ -358,7 +367,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                                 .orElseGet(() -> canonicalEventStreamLoc(selfId.id(), state)),
                         rosterHistory,
                         platformStateFacade,
-                        hedera.stateRootFromVirtualMap(platformContext))
+                        hedera.stateRootFromVirtualMap(platformContext, extractRoundFromState))
                 .withPlatformContext(platformContext)
                 .withConfiguration(platformConfig)
                 .withKeysAndCerts(keysAndCerts)
@@ -426,7 +435,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
     /**
      * Creates a canonical {@link Hedera} instance for the given node id and metrics.
      *
-     * @param platformContext the platform context
+     * @param platformContext     the platform context
      * @param platformStateFacade an object to access the platform state
      * @return the {@link Hedera} instance
      */
@@ -454,7 +463,7 @@ public class ServicesMain implements SwirldMain<MerkleNodeState> {
                 TssBlockHashSigner::new,
                 platformContext.getMetrics(),
                 platformStateFacade,
-                HederaVirtualMapState::new);
+                (pc, fn) -> new HederaVirtualMapState(pc, fn::apply));
     }
 
     /**

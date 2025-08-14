@@ -10,6 +10,7 @@ import com.hedera.node.app.state.recordcache.RecordCacheService;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.test.fixtures.state.TestVirtualMapState;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
@@ -66,7 +67,9 @@ public class FakeState implements MerkleNodeState {
 
     @Override
     public MerkleNode getRoot() {
-        return new TestVirtualMapState(TestPlatformContextBuilder.create().build()).getRoot();
+        return new TestVirtualMapState(
+                        TestPlatformContextBuilder.create().build(), state -> PlatformStateAccessor.GENESIS_ROUND)
+                .getRoot();
     }
 
     /**

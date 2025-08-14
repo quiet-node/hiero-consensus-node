@@ -26,6 +26,7 @@ import static com.swirlds.platform.util.BootstrapUtils.getNodesToRun;
 import static com.swirlds.platform.util.BootstrapUtils.loadSwirldMains;
 import static com.swirlds.platform.util.BootstrapUtils.setupBrowserWindow;
 
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.io.filesystem.FileSystemManager;
@@ -51,6 +52,7 @@ import com.swirlds.platform.gui.model.InfoMember;
 import com.swirlds.platform.gui.model.InfoSwirld;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.HashedReservedSignedState;
 import com.swirlds.platform.state.signed.ReservedSignedState;
@@ -260,13 +262,17 @@ public class Browser {
             // Each platform needs a different temporary state on disk.
             MerkleDb.resetDefaultInstancePath();
             PlatformStateFacade platformStateFacade = new PlatformStateFacade();
+            final Function<State, Long> extractRoundFromState = virtualMapState -> {
+                final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(virtualMapState);
+                return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
+            };
             // Create the initial state for the platform
             ConsensusStateEventHandler consensusStateEventHandler = appMain.newConsensusStateEvenHandler();
             final HashedReservedSignedState reservedState = getInitialState(
                     recycleBin,
                     appMain.getSemanticVersion(),
-                    () -> appMain.newStateRoot(platformContext),
-                    stateRootFromVirtualMap(appMain, platformContext),
+                    () -> appMain.newStateRoot(platformContext, extractRoundFromState),
+                    stateRootFromVirtualMap(appMain, platformContext, extractRoundFromState),
                     appMain.getClass().getName(),
                     appDefinition.getSwirldName(),
                     nodeId,
@@ -311,7 +317,7 @@ public class Browser {
                     String.valueOf(nodeId),
                     rosterHistory,
                     platformStateFacade,
-                    stateRootFromVirtualMap(appMain, platformContext));
+                    stateRootFromVirtualMap(appMain, platformContext, extractRoundFromState));
             if (showUi && index == 0) {
                 builder.withPreconsensusEventCallback(guiEventStorage::handlePreconsensusEvent);
                 builder.withConsensusSnapshotOverrideCallback(guiEventStorage::handleSnapshotOverride);
@@ -405,9 +411,13 @@ public class Browser {
      * @return a function that accepts a {@code VirtualMap} and returns the state root object.
      */
     private static Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(
-            @NonNull final SwirldMain appMain, PlatformContext platformContext) {
+            @NonNull final SwirldMain appMain,
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<State, Long> extractRoundFromState) {
         Objects.requireNonNull(appMain);
-        return (virtualMap) ->
-                (com.swirlds.platform.state.MerkleNodeState) appMain.stateRootFromVirtualMap(platformContext);
+        Objects.requireNonNull(platformContext);
+        Objects.requireNonNull(extractRoundFromState);
+        return (virtualMap) -> (com.swirlds.platform.state.MerkleNodeState)
+                appMain.stateRootFromVirtualMap(platformContext, extractRoundFromState);
     }
 }

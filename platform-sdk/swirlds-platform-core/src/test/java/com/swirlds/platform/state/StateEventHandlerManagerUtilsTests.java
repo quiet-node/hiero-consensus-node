@@ -23,7 +23,7 @@ public class StateEventHandlerManagerUtilsTests {
         final String virtualMapLabel =
                 "vm-" + StateEventHandlerManagerUtilsTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         final MerkleNodeState state = TestVirtualMapState.createInstanceWithVirtualMapLabel(
-                virtualMapLabel, TestPlatformContextBuilder.create().build());
+                virtualMapLabel, TestPlatformContextBuilder.create().build(), s -> PlatformStateAccessor.GENESIS_ROUND);
         TestingAppStateInitializer.DEFAULT.initPlatformState(state);
         state.getRoot().reserve();
         final StateMetrics stats = mock(StateMetrics.class);

@@ -30,6 +30,7 @@ import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.config.StateConfig_;
 import com.swirlds.platform.internal.SignedStateLoadingException;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.snapshot.SignedStateFilePath;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
@@ -169,7 +170,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         virtualMap -> new TestVirtualMapState(
-                                virtualMap, TestPlatformContextBuilder.create().build()),
+                                virtualMap,
+                                TestPlatformContextBuilder.create().build(),
+                                state -> PlatformStateAccessor.GENESIS_ROUND),
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -201,7 +204,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         virtualMap -> new TestVirtualMapState(
-                                virtualMap, TestPlatformContextBuilder.create().build()),
+                                virtualMap,
+                                TestPlatformContextBuilder.create().build(),
+                                state -> PlatformStateAccessor.GENESIS_ROUND),
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -237,7 +242,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         virtualMap -> new TestVirtualMapState(
-                                virtualMap, TestPlatformContextBuilder.create().build()),
+                                virtualMap,
+                                TestPlatformContextBuilder.create().build(),
+                                state -> PlatformStateAccessor.GENESIS_ROUND),
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)
@@ -285,7 +292,9 @@ public class StartupStateUtilsTests {
                         mainClassName,
                         swirldName,
                         virtualMap -> new TestVirtualMapState(
-                                virtualMap, TestPlatformContextBuilder.create().build()),
+                                virtualMap,
+                                TestPlatformContextBuilder.create().build(),
+                                state -> PlatformStateAccessor.GENESIS_ROUND),
                         currentSoftwareVersion,
                         platformStateFacade,
                         platformContext)

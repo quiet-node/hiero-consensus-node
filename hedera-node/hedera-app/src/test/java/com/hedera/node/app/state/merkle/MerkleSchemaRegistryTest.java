@@ -18,6 +18,7 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestVirtualMapState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
@@ -179,7 +180,9 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             SemanticVersion latestVersion = version(10, 0, 0);
             schemaRegistry.migrate(
                     new TestVirtualMapState(
-                            virtualMap, TestPlatformContextBuilder.create().build()),
+                            virtualMap,
+                            TestPlatformContextBuilder.create().build(),
+                            state -> PlatformStateAccessor.GENESIS_ROUND),
                     version(9, 0, 0),
                     latestVersion,
                     config,
@@ -209,7 +212,9 @@ class MerkleSchemaRegistryTest extends MerkleTestBase {
             final var virtualMapLabel =
                     "vm-" + MerkleSchemaRegistryTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
             merkleTree = TestVirtualMapState.createInstanceWithVirtualMapLabel(
-                    virtualMapLabel, TestPlatformContextBuilder.create().build());
+                    virtualMapLabel,
+                    TestPlatformContextBuilder.create().build(),
+                    state -> PlatformStateAccessor.GENESIS_ROUND);
         }
 
         @AfterEach

@@ -3,7 +3,6 @@ package com.swirlds.state.merkle;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyDoesNotThrow;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.assertAllDatabasesClosed;
-import static com.swirlds.platform.state.PlatformStateAccessor.GENESIS_ROUND;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
@@ -66,10 +65,8 @@ public class VirtualMapStateTest extends MerkleTestBase {
     void setUp() {
         MerkleDb.resetDefaultInstancePath();
         setupFruitMerkleMap();
-        virtualMapState =
-                new TestVirtualMapState(TestPlatformContextBuilder.create().build());
-
-        virtualMapState.setRoundSupplier(() -> PlatformStateAccessor.GENESIS_ROUND);
+        virtualMapState = new TestVirtualMapState(
+                TestPlatformContextBuilder.create().build(), state -> PlatformStateAccessor.GENESIS_ROUND);
     }
 
     @Nested
@@ -798,8 +795,6 @@ public class VirtualMapStateTest extends MerkleTestBase {
             final var writableStates = virtualMapState.getWritableStates(FIRST_SERVICE);
             writableStates.getQueue(STEAM_STATE_KEY).add(ART);
             ((CommittableWritableStates) writableStates).commit();
-
-            virtualMapState.setRoundSupplier(() -> GENESIS_ROUND);
         }
 
         @Test

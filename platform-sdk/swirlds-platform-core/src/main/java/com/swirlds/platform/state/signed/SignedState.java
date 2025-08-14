@@ -11,7 +11,6 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.node.state.roster.RosterEntry;
-import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.utility.ReferenceCounter;
 import com.swirlds.common.utility.RuntimeObjectRecord;
@@ -21,11 +20,9 @@ import com.swirlds.config.api.Configuration;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.SignatureVerifier;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedStateHistory.SignedStateAction;
 import com.swirlds.platform.state.snapshot.StateToDiskReason;
-import com.swirlds.state.merkle.VirtualMapState;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.security.cert.X509Certificate;
@@ -204,13 +201,6 @@ public class SignedState {
         this.freezeState = freezeState;
         this.deleteOnBackgroundThread = deleteOnBackgroundThread;
         this.pcesRound = pcesRound;
-
-        if (state instanceof VirtualMapState<?> virtualMapState) {
-            virtualMapState.setRoundSupplier(() -> {
-                final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(state);
-                return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
-            });
-        }
     }
 
     /**

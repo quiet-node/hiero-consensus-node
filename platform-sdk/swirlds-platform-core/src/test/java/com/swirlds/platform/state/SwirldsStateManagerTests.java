@@ -140,7 +140,7 @@ class SwirldsStateManagerTests {
         final String virtualMapLabel =
                 SwirldsStateManagerTests.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         final MerkleNodeState state = TestVirtualMapState.createInstanceWithVirtualMapLabel(
-                virtualMapLabel, TestPlatformContextBuilder.create().build());
+                virtualMapLabel, TestPlatformContextBuilder.create().build(), s -> PlatformStateAccessor.GENESIS_ROUND);
         TestingAppStateInitializer.DEFAULT.initPlatformState(state);
 
         platformStateFacade.setCreationSoftwareVersionTo(
