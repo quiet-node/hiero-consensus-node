@@ -28,8 +28,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,9 +47,10 @@ import org.hiero.block.api.PublishStreamRequest;
 public class ExecutionOutputCache {
 
     private static final Logger log = LogManager.getLogger(ExecutionOutputCache.class);
+    public static final float LOAD_FACTOR = 0.75f;
 
-    private final EvictingLinkedHashMap<BlockState> blockStreamCache;
-    private final EvictingLinkedHashMap<RecordStreamMetadata> recordStreamCache;
+    private final Map<Long, BlockState> blockStreamCache;
+    private final Map<Long, RecordStreamMetadata> recordStreamCache;
 
     private final ConfigProvider configProvider;
     private final NetworkInfo networkInfo;
@@ -75,8 +74,16 @@ public class ExecutionOutputCache {
                 .getConfiguration()
                 .getConfigData(IssContextConfig.class)
                 .recordBlockBufferSize();
-        this.blockStreamCache = new EvictingLinkedHashMap<>(capacity);
-        this.recordStreamCache = new EvictingLinkedHashMap<>(capacity);
+        this.blockStreamCache = new LinkedHashMap<>(capacity, LOAD_FACTOR, true) {
+            protected boolean removeEldestEntry(Map.Entry<Long, BlockState> eldest) {
+                return size() > capacity;
+            }
+        };
+        this.recordStreamCache = new LinkedHashMap<>(capacity, LOAD_FACTOR, true) {
+            protected boolean removeEldestEntry(Map.Entry<Long, RecordStreamMetadata> eldest) {
+                return size() > capacity;
+            }
+        };
         this.configProvider = configProvider;
         this.networkInfo = networkInfo;
         this.blockRecordWriterFactory = blockRecordWriterFactory;
@@ -121,20 +128,23 @@ public class ExecutionOutputCache {
 
     /**
      * Writes the block stream Block for the ISS round number to disk.
+     * @return true if the block was written to disk, false otherwise
      */
-    public void handleBlockStreamIssBlock() {
+    public boolean handleBlockStreamIssBlock() {
         BlockState blockState = getBlockStateForRoundNumber(issRoundNumber);
         if (blockState != null) {
-            writeBlockStateToToDisk(blockState);
+            return writeBlockStateToToDisk(blockState);
         } else {
             log.error(
                     "BlockState for round {} in which ISS was reported is not available, skipping writing to disk",
                     issRoundNumber);
         }
+        return false;
     }
 
     /**
      * Write ISS Contextual Information to disk, including the block stream Block and record stream record files.
+     * @param issRoundNumber the round number in which the ISS was reported
      */
     public void handleIssContextualBlocks(final long issRoundNumber) {
         this.issRoundNumber = issRoundNumber;
@@ -142,34 +152,64 @@ public class ExecutionOutputCache {
                 .getConfiguration()
                 .getConfigData(BlockStreamConfig.class)
                 .streamMode();
+        boolean wroteBlockStreamBlockToDisk = false;
+        boolean wroteRecordStreamFilesToDisk = false;
         if (streamMode == StreamMode.BOTH || streamMode == StreamMode.BLOCKS) {
-            handleBlockStreamIssBlock();
+            wroteBlockStreamBlockToDisk = handleBlockStreamIssBlock();
         }
         if (streamMode == StreamMode.BOTH || streamMode == StreamMode.RECORDS) {
-            handleRecordStreamIssRecordFiles();
+            wroteRecordStreamFilesToDisk = handleRecordStreamIssRecordFiles();
+        }
+        writeMarkerFile(issRoundNumber, wroteBlockStreamBlockToDisk || wroteRecordStreamFilesToDisk);
+    }
+
+    private void writeMarkerFile(long issRoundNumber, boolean writeMarkerFile) {
+        if (writeMarkerFile) {
+            // Write marker file
+            IssContextConfig issContextConfig =
+                    configProvider.getConfiguration().getConfigData(IssContextConfig.class);
+            Path markerFilePath = Paths.get(issContextConfig.diskPath()).resolve(String.valueOf(issRoundNumber));
+            // Write an empty marker file to indicate that the ISS contextual files have been written to disk
+            try {
+                Files.createDirectories(markerFilePath.getParent());
+                Files.createFile(markerFilePath);
+                log.info("Successfully wrote ISS marker file to disk at path: {}", markerFilePath.toAbsolutePath());
+            } catch (IOException e) {
+                log.error(
+                        "Failed to write ISS marker file to disk at path {}: {}",
+                        markerFilePath.toAbsolutePath(),
+                        e.getMessage(),
+                        e);
+            }
+        } else {
+            log.warn(
+                    "No ISS contextual files were written to disk for reported ISS round {}, skipping writing marker file.",
+                    issRoundNumber);
         }
     }
 
-    private void handleRecordStreamIssRecordFiles() {
+    private boolean handleRecordStreamIssRecordFiles() {
         if (recordStreamCache.isEmpty()) {
             log.error(
                     "No record stream files found in cache for ISS round {}. Skipping writing to disk.",
                     issRoundNumber);
-            return;
+            return false;
         }
+        boolean wroteAtLeastOne = false;
         for (final RecordStreamMetadata recordFileMetadata : recordStreamCache.values()) {
-            writeRecordFilesToDisk(recordFileMetadata);
+            wroteAtLeastOne |= writeRecordFilesToDisk(recordFileMetadata);
         }
+        return wroteAtLeastOne;
     }
 
-    private void writeRecordFilesToDisk(RecordStreamMetadata recordFileMetadata) {
+    private boolean writeRecordFilesToDisk(@NonNull final RecordStreamMetadata recordFileMetadata) {
         List<SerializedSingleTransactionRecord> serializedSingleTransactionRecords =
                 recordFileMetadata.getRecordItems();
         if (serializedSingleTransactionRecords.isEmpty()) {
             log.error(
                     "No SerializedSingleTransactionRecord's found for Block number {}. Skipping writing to disk.",
                     recordFileMetadata.getBlockNumber());
-            return;
+            return false;
         }
         try {
             String recordDir = configProvider
@@ -192,6 +232,7 @@ public class ExecutionOutputCache {
                     "Successfully wrote Record Stream file for Block number {} to disk at path: {}",
                     recordFileMetadata.getBlockNumber(),
                     blockRecordWriter.getBlockRecordFilePath().toAbsolutePath());
+            return true;
         } catch (UncheckedIOException e) {
             log.error(
                     "Failed to write Record Stream file for Block number {} to disk: {}",
@@ -199,6 +240,7 @@ public class ExecutionOutputCache {
                     e.getMessage(),
                     e);
         }
+        return false;
     }
 
     /**
@@ -304,56 +346,12 @@ public class ExecutionOutputCache {
         }
     }
 
-    private static class EvictingLinkedHashMap<T> {
-        private HashMap<Long, T> buffer = null;
-
-        public EvictingLinkedHashMap(int capacity) {
-            this.buffer = new LinkedHashMap<>(capacity, 0.75f, true) {
-                protected boolean removeEldestEntry(Map.Entry<Long, T> eldest) {
-                    return size() > capacity;
-                }
-            };
-        }
-
-        /**
-         * Get an existing item by key/index, or null if not present.
-         */
-        public T get(long key) {
-            return buffer.get(key);
-        }
-
-        /**
-         * Check if the map is empty.
-         * @return true if the map is empty, false otherwise
-         */
-        public boolean isEmpty() {
-            return buffer.isEmpty();
-        }
-
-        /**
-         * Put an item into the map, evicting the oldest item if the capacity is exceeded.
-         * @param key the key for the item
-         * @param value the item to put into the map
-         */
-        public void put(long key, T value) {
-            requireNonNull(value, "value must not be null");
-            buffer.put(key, value);
-        }
-
-        /**
-         * Get all values in the map.
-         * @return a collection of all values in the map
-         */
-        public Collection<T> values() {
-            return buffer.values();
-        }
-    }
-
     /**
      * Writes the block state to disk.
      * @param blockState the block state
+     * @return true if the block state was written to disk, false otherwise
      */
-    public void writeBlockStateToToDisk(@NonNull final BlockState blockState) {
+    public boolean writeBlockStateToToDisk(@NonNull final BlockState blockState) {
         requireNonNull(blockState, "blockState must not be null");
         requireNonNull(networkInfo, "networkInfo must not be null");
         List<BlockItem> blockItems = new ArrayList<>();
@@ -393,11 +391,11 @@ public class ExecutionOutputCache {
                 // Ensure the parent directories exist
                 Files.createDirectories(issBlockFilePath.getParent());
                 Files.write(issBlockFilePath, byteArrayOutputStream.toByteArray());
-
                 log.info(
                         "Successfully wrote Block Stream file for Block number {} to disk at path: {}",
                         blockState.blockNumber(),
                         issBlockFilePath.toAbsolutePath());
+                return true;
             } catch (IOException e) {
                 log.error(
                         "Failed to write Block {} to local disk at path {}: {}",
@@ -413,5 +411,6 @@ public class ExecutionOutputCache {
                     e.getMessage(),
                     e);
         }
+        return false;
     }
 }
