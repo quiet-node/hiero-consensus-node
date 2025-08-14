@@ -272,6 +272,11 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
     @Nullable
     private HederaNetwork targetNetwork;
     /**
+     * If non-null, the non-remote block node network to target with this spec.
+     */
+    @Nullable
+    private BlockNodeNetwork blockNodeNetwork;
+    /**
      * If non-null, an observer to receive the final state of this spec's register and key factory
      * after it has executed.
      */
@@ -441,6 +446,10 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     public void setTargetNetwork(@NonNull final HederaNetwork targetNetwork) {
         this.targetNetwork = requireNonNull(targetNetwork);
+    }
+
+    public void setBlockNodeNetwork(@NonNull final BlockNodeNetwork blockNodeNetwork) {
+        this.blockNodeNetwork = requireNonNull(blockNodeNetwork);
     }
 
     public void setSharedStates(@NonNull final List<SpecStateObserver.SpecState> sharedStates) {
@@ -638,6 +647,10 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     public List<HederaNode> getNetworkNodes() {
         return requireNonNull(targetNetwork).nodes();
+    }
+
+    public Set<Long> getBlockNodeNetworkIds() {
+        return requireNonNull(blockNodeNetwork).nodeIds();
     }
 
     public int getBlockNodePortById(final long nodeId) {

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.services.bdd.junit.hedera.simulator;
 
+import static java.util.Objects.requireNonNull;
+
 import com.hedera.hapi.block.stream.BlockItem;
 import com.hedera.pbj.grpc.helidon.PbjRouting;
 import com.hedera.pbj.grpc.helidon.config.PbjConfig;
 import com.hedera.pbj.runtime.grpc.Pipeline;
 import com.hedera.pbj.runtime.grpc.ServiceInterface;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import io.helidon.webserver.ConnectionConfig;
 import io.helidon.webserver.WebServer;
 import java.io.IOException;
@@ -32,7 +35,6 @@ import org.hiero.block.api.PublishStreamResponse.BlockAcknowledgement;
 import org.hiero.block.api.PublishStreamResponse.EndOfStream;
 import org.hiero.block.api.PublishStreamResponse.ResendBlock;
 import org.hiero.block.api.PublishStreamResponse.SkipBlock;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * A simulated block node server that implements the block streaming gRPC service.
@@ -92,6 +94,8 @@ public class SimulatedBlockNodeServer {
 
     private final Random random = new Random();
 
+    private boolean hasEverBeenShutdown = false;
+
     private final AtomicBoolean sendingAcksEnabled = new AtomicBoolean(true);
 
     /**
@@ -148,7 +152,7 @@ public class SimulatedBlockNodeServer {
     /**
      * Gets the port this server is listening on.
      *
-     * @return the port
+     * @return the port number this server is bound to
      */
     public int getPort() {
         return port;
@@ -162,10 +166,12 @@ public class SimulatedBlockNodeServer {
      * Configure the server to respond with a specific EndOfStream response code
      * on the next block item.
      *
-     * @param responseCode the response code to send
+     * @param responseCode the response code to send, must not be null
      * @param blockNumber the block number to include in the response
+     * @throws NullPointerException if responseCode is null
      */
-    public void setEndOfStreamResponse(final EndOfStream.Code responseCode, final long blockNumber) {
+    public void setEndOfStreamResponse(@NonNull final EndOfStream.Code responseCode, final long blockNumber) {
+        requireNonNull(responseCode, "responseCode cannot be null");
         endOfStreamConfig.set(new EndOfStreamConfig(responseCode, blockNumber));
         log.info("Set EndOfStream response to {} for block {} on port {}", responseCode, blockNumber, port);
     }
@@ -174,11 +180,13 @@ public class SimulatedBlockNodeServer {
      * Send an EndOfStream response immediately to all active streams.
      * This will end all active streams with the specified response code.
      *
-     * @param responseCode the response code to send
+     * @param responseCode the response code to send, must not be null
      * @param blockNumber the block number to include in the response
      * @return the last verified block number
+     * @throws NullPointerException if responseCode is null
      */
-    public long sendEndOfStreamImmediately(final EndOfStream.Code responseCode, final long blockNumber) {
+    public long sendEndOfStreamImmediately(@NonNull final EndOfStream.Code responseCode, final long blockNumber) {
+        requireNonNull(responseCode, "responseCode cannot be null");
         serviceImpl.sendEndOfStreamToAllStreams(responseCode, blockNumber);
         log.info(
                 "Sent immediate EndOfStream response with code {} for block {} on port {}",
@@ -213,7 +221,7 @@ public class SimulatedBlockNodeServer {
     /**
      * Gets the last verified block number.
      *
-     * @return the last verified block number
+     * @return the last verified block number, initially -1 if no blocks have been verified
      */
     public long getLastVerifiedBlockNumber() {
         return lastVerifiedBlockNumber.get();
@@ -221,6 +229,7 @@ public class SimulatedBlockNodeServer {
 
     /**
      * Checks if a specific block number has been fully received (header and proof) by this server.
+     * This method is thread-safe and acquires a read lock to check the block status.
      *
      * @param blockNumber the block number to check
      * @return true if the block has been fully received, false otherwise
@@ -237,9 +246,11 @@ public class SimulatedBlockNodeServer {
 
     /**
      * Gets all block numbers that have been fully received (header and proof) by this server.
+     * This method is thread-safe and acquires a read lock to access the block collection.
      *
-     * @return a set of all received block numbers
+     * @return a new immutable set of all received block numbers
      */
+    @NonNull
     public Set<Long> getReceivedBlockNumbers() {
         blockTrackingLock.readLock().lock();
         try {
@@ -250,8 +261,17 @@ public class SimulatedBlockNodeServer {
         }
     }
 
+    public void markAsBeingShutdown() {
+        this.hasEverBeenShutdown = true;
+    }
+
+    public boolean hasEverBeenShutdown() {
+        return hasEverBeenShutdown;
+    }
+
     /**
      * Reset all configured responses to default behavior.
+     * This clears any configured EndOfStream responses.
      */
     public void resetResponses() {
         endOfStreamConfig.set(null);
@@ -260,26 +280,39 @@ public class SimulatedBlockNodeServer {
 
     /**
      * Configuration for EndOfStream responses.
+     *
+     * @param responseCode the EndOfStream response code to send, never null
+     * @param blockNumber the block number to include in the response
      */
-    private record EndOfStreamConfig(EndOfStream.Code responseCode, long blockNumber) {}
+    private record EndOfStreamConfig(@NonNull EndOfStream.Code responseCode, long blockNumber) {}
 
     /**
      * Implementation of the BlockStreamService that can be configured to respond
-     * with different response codes.
+     * with different response codes. This class handles the gRPC streaming interactions
+     * with clients and manages block state tracking.
      */
     private class MockBlockStreamServiceImpl implements BlockStreamPublishServiceInterface {
         @Override
-        public @NotNull Pipeline<? super org.hiero.block.api.PublishStreamRequest> publishBlockStream(
-                @NotNull Pipeline<? super PublishStreamResponse> replies) {
+        public @NonNull Pipeline<? super org.hiero.block.api.PublishStreamRequest> publishBlockStream(
+                @NonNull Pipeline<? super PublishStreamResponse> replies) {
+            requireNonNull(replies, "replies cannot be null");
+
             // Add the new stream pipeline to the list of active streams
-            activeStreams.add(replies);
-            log.info(
-                    "New block stream connection established on port {}. Total streams: {}",
-                    port,
-                    activeStreams.size());
+            // Acquire lock to ensure consistent view when adding to activeStreams
+            blockTrackingLock.writeLock().lock();
+            try {
+                activeStreams.add(replies);
+                log.info(
+                        "New block stream connection established on port {}. Total streams: {}",
+                        port,
+                        activeStreams.size());
+            } finally {
+                blockTrackingLock.writeLock().unlock();
+            }
 
             return new Pipeline<>() {
-                private Long currentBlockNumber = null; // Track block number for this specific stream
+                // Track block number for this specific stream
+                private volatile Long currentBlockNumber = null;
 
                 @Override
                 public void onNext(final PublishStreamRequest request) {
@@ -302,6 +335,12 @@ public class SimulatedBlockNodeServer {
                                 if (item.hasBlockHeader()) {
                                     final var header = item.blockHeader();
                                     final long blockNumber = header.number();
+                                    final long lastVerifiedBlockNum = lastVerifiedBlockNumber.get();
+                                    if (blockNumber - lastVerifiedBlockNum > 1) {
+                                        handleBehindResponse(replies, blockNumber, lastVerifiedBlockNum);
+                                        return;
+                                    }
+
                                     // Set the current block number being processed by THIS stream instance
                                     currentBlockNumber = blockNumber;
                                     log.info(
@@ -452,11 +491,14 @@ public class SimulatedBlockNodeServer {
 
         /**
          * Sends an EndOfStream response to all active streams.
+         * This method will also complete and remove all streams after sending the response.
          *
-         * @param responseCode the response code to send
+         * @param responseCode the response code to send, must not be null
          * @param blockNumber the block number to include
+         * @throws NullPointerException if responseCode is null
          */
-        public void sendEndOfStreamToAllStreams(final EndOfStream.Code responseCode, final long blockNumber) {
+        public void sendEndOfStreamToAllStreams(@NonNull final EndOfStream.Code responseCode, final long blockNumber) {
+            requireNonNull(responseCode, "responseCode cannot be null");
             log.info(
                     "Sending EndOfStream ({}, block {}) to {} active streams on port {}",
                     responseCode,
@@ -486,6 +528,7 @@ public class SimulatedBlockNodeServer {
 
         /**
          * Sends a SkipBlock response to all active streams.
+         * This instructs all clients to skip processing the specified block.
          *
          * @param blockNumber the block number to skip
          */
@@ -495,20 +538,26 @@ public class SimulatedBlockNodeServer {
                     blockNumber,
                     activeStreams.size(),
                     port);
-            // No lock needed for read-only iteration on CopyOnWriteArrayList
-            for (final Pipeline<? super PublishStreamResponse> pipeline : activeStreams) {
-                try {
-                    sendSkipBlock(pipeline, blockNumber);
-                } catch (final Exception e) {
-                    log.error("Failed to send SkipBlock to stream {} on port {}", pipeline.hashCode(), port, e);
-                    // Decide if we should remove the stream on failure
-                    // removeStreamFromTracking(pipeline);
+            // Use lock for consistent locking strategy with other methods
+            blockTrackingLock.readLock().lock(); // Read lock is sufficient for iteration
+            try {
+                for (final Pipeline<? super PublishStreamResponse> pipeline : activeStreams) {
+                    try {
+                        sendSkipBlock(pipeline, blockNumber);
+                    } catch (final Exception e) {
+                        log.error("Failed to send SkipBlock to stream {} on port {}", pipeline.hashCode(), port, e);
+                        // Decide if we should remove the stream on failure
+                        // removeStreamFromTracking(pipeline);
+                    }
                 }
+            } finally {
+                blockTrackingLock.readLock().unlock();
             }
         }
 
         /**
          * Sends a ResendBlock response to all active streams.
+         * This instructs all clients to resend the specified block.
          *
          * @param blockNumber the block number to resend
          */
@@ -518,24 +567,40 @@ public class SimulatedBlockNodeServer {
                     blockNumber,
                     activeStreams.size(),
                     port);
-            // No lock needed for read-only iteration on CopyOnWriteArrayList
-            for (final Pipeline<? super PublishStreamResponse> pipeline : activeStreams) {
-                try {
-                    sendResendBlock(pipeline, blockNumber);
-                } catch (final Exception e) {
-                    log.error("Failed to send ResendBlock to stream {} on port {}", pipeline.hashCode(), port, e);
-                    // Decide if we should remove the stream on failure
-                    // removeStreamFromTracking(pipeline);
+            // Use lock for consistent locking strategy with other methods
+            blockTrackingLock.readLock().lock(); // Read lock is sufficient for iteration
+            try {
+                for (final Pipeline<? super PublishStreamResponse> pipeline : activeStreams) {
+                    try {
+                        sendResendBlock(pipeline, blockNumber);
+                    } catch (final Exception e) {
+                        log.error("Failed to send ResendBlock to stream {} on port {}", pipeline.hashCode(), port, e);
+                        // Decide if we should remove the stream on failure
+                        // removeStreamFromTracking(pipeline);
+                    }
                 }
+            } finally {
+                blockTrackingLock.readLock().unlock();
             }
         }
 
         // Helper methods for sending specific responses
 
+        /**
+         * Sends an EndOfStream response to a specific pipeline.
+         *
+         * @param pipeline the pipeline to send the response to, must not be null
+         * @param responseCode the response code to send, must not be null
+         * @param blockNumber the block number to include in the response
+         * @throws NullPointerException if pipeline or responseCode is null
+         */
         private void sendEndOfStream(
-                final Pipeline<? super PublishStreamResponse> pipeline,
-                final EndOfStream.Code responseCode,
+                @NonNull final Pipeline<? super PublishStreamResponse> pipeline,
+                @NonNull final EndOfStream.Code responseCode,
                 final long blockNumber) {
+            requireNonNull(pipeline, "pipeline cannot be null");
+            requireNonNull(responseCode, "responseCode cannot be null");
+
             final EndOfStream endOfStream = EndOfStream.newBuilder()
                     .status(responseCode)
                     .blockNumber(blockNumber)
@@ -551,7 +616,16 @@ public class SimulatedBlockNodeServer {
                     port);
         }
 
-        private void sendSkipBlock(final Pipeline<? super PublishStreamResponse> pipeline, final long blockNumber) {
+        /**
+         * Sends a SkipBlock response to a specific pipeline.
+         *
+         * @param pipeline the pipeline to send the response to, must not be null
+         * @param blockNumber the block number to skip
+         * @throws NullPointerException if pipeline is null
+         */
+        private void sendSkipBlock(
+                @NonNull final Pipeline<? super PublishStreamResponse> pipeline, final long blockNumber) {
+            requireNonNull(pipeline, "pipeline cannot be null");
             final SkipBlock skipBlock =
                     SkipBlock.newBuilder().blockNumber(blockNumber).build();
             final PublishStreamResponse response =
@@ -560,7 +634,16 @@ public class SimulatedBlockNodeServer {
             log.debug("Sent SkipBlock for block {} to stream {} on port {}", blockNumber, pipeline.hashCode(), port);
         }
 
-        private void sendResendBlock(final Pipeline<? super PublishStreamResponse> pipeline, final long blockNumber) {
+        /**
+         * Sends a ResendBlock response to a specific pipeline.
+         *
+         * @param pipeline the pipeline to send the response to, must not be null
+         * @param blockNumber the block number to resend
+         * @throws NullPointerException if pipeline is null
+         */
+        private void sendResendBlock(
+                @NonNull final Pipeline<? super PublishStreamResponse> pipeline, final long blockNumber) {
+            requireNonNull(pipeline, "pipeline cannot be null");
             final ResendBlock resendBlock =
                     ResendBlock.newBuilder().blockNumber(blockNumber).build();
             final PublishStreamResponse response =
@@ -570,12 +653,56 @@ public class SimulatedBlockNodeServer {
         }
 
         /**
+         * Handles sending a BEHIND response to a client when the block number is more than 1 ahead of the last verified block.
+         * This indicates that the client is ahead of the server and should restart streaming from an earlier block.
+         *
+         * @param pipeline The pipeline to send the response to, must not be null
+         * @param blockNumber The block number that was requested
+         * @param lastVerifiedBlockNum The last verified block number
+         * @throws NullPointerException if pipeline is null
+         */
+        private void handleBehindResponse(
+                @NonNull final Pipeline<? super PublishStreamResponse> pipeline,
+                final long blockNumber,
+                final long lastVerifiedBlockNum) {
+            requireNonNull(pipeline, "pipeline cannot be null");
+
+            final PublishStreamResponse.EndOfStream eos = PublishStreamResponse.EndOfStream.newBuilder()
+                    .blockNumber(lastVerifiedBlockNum)
+                    .status(EndOfStream.Code.BEHIND)
+                    .build();
+            final PublishStreamResponse response =
+                    PublishStreamResponse.newBuilder().endStream(eos).build();
+
+            try {
+                pipeline.onNext(response);
+                log.debug(
+                        "Sent EndOfStream BEHIND for block {} to stream {} on port {}. Last verified: {}",
+                        blockNumber,
+                        pipeline.hashCode(),
+                        port,
+                        lastVerifiedBlockNum);
+            } catch (final Exception e) {
+                log.error(
+                        "Failed to send EndOfStream BEHIND for block {} to stream {} on port {}. Removing stream.",
+                        blockNumber,
+                        pipeline.hashCode(),
+                        port,
+                        e);
+                // Clean up the stream on error
+                serviceImpl.removeStreamFromTracking(pipeline);
+            }
+        }
+
+        /**
          * Removes a stream pipeline from active tracking and cleans up any associated state.
-         * Acquires the necessary lock.
+         * Acquires the necessary write lock to ensure thread safety.
          *
          * @param pipeline The pipeline to remove.
+         * @throws NullPointerException if pipeline is null
          */
-        private void removeStreamFromTracking(final Pipeline<? super PublishStreamResponse> pipeline) {
+        private void removeStreamFromTracking(@NonNull final Pipeline<? super PublishStreamResponse> pipeline) {
+            requireNonNull(pipeline, "pipeline cannot be null");
             blockTrackingLock.writeLock().lock();
             try {
                 removeStreamFromTrackingInternal(pipeline);
@@ -586,10 +713,14 @@ public class SimulatedBlockNodeServer {
 
         /**
          * Internal helper to remove stream pipeline state. MUST be called while holding the write lock.
+         * This method removes the pipeline from active streams and cleans up any blocks that were being streamed.
          *
-         * @param pipeline The pipeline to remove.
+         * @param pipeline The pipeline to remove, must not be null
+         * @throws NullPointerException if pipeline is null
          */
-        private void removeStreamFromTrackingInternal(final Pipeline<? super PublishStreamResponse> pipeline) {
+        private void removeStreamFromTrackingInternal(@NonNull final Pipeline<? super PublishStreamResponse> pipeline) {
+            requireNonNull(pipeline, "pipeline cannot be null");
+
             if (activeStreams.remove(pipeline)) {
                 log.info(
                         "Removed stream pipeline {} from active list on port {}. Remaining: {}",
@@ -616,10 +747,14 @@ public class SimulatedBlockNodeServer {
 
         /**
          * Handles cleanup and potential resend logic when a stream encounters an error.
+         * This method attempts to find another stream to request a resend of the block that was being processed.
          *
          * @param erroredPipeline The pipeline that encountered the error.
+         * @throws NullPointerException if erroredPipeline is null
          */
-        private void handleStreamError(final Pipeline<? super PublishStreamResponse> erroredPipeline) {
+        private void handleStreamError(@NonNull final Pipeline<? super PublishStreamResponse> erroredPipeline) {
+            requireNonNull(erroredPipeline, "erroredPipeline cannot be null");
+
             Long blockNumberOnError = null;
             // Find if this pipeline was streaming a block
             blockTrackingLock.readLock().lock(); // Read lock sufficient to check streamingBlocks
@@ -646,8 +781,16 @@ public class SimulatedBlockNodeServer {
             // If an error occurred *while* this stream was sending block parts
             if (blockNumberOnError != null) {
                 // Find other active streams
-                final List<Pipeline<? super PublishStreamResponse>> otherStreams =
-                        activeStreams.stream().filter(s -> s != erroredPipeline).toList();
+                final List<Pipeline<? super PublishStreamResponse>> otherStreams;
+                // Use lock for consistent locking strategy when accessing activeStreams
+                blockTrackingLock.readLock().lock();
+                try {
+                    otherStreams = activeStreams.stream()
+                            .filter(s -> s != erroredPipeline)
+                            .toList();
+                } finally {
+                    blockTrackingLock.readLock().unlock();
+                }
 
                 if (!otherStreams.isEmpty()) {
                     // Select a random stream from the others
@@ -681,37 +824,42 @@ public class SimulatedBlockNodeServer {
         }
 
         @Override
-        public @NotNull String serviceName() {
+        public @NonNull String serviceName() {
             return BlockStreamPublishServiceInterface.super.serviceName();
         }
 
         @Override
-        public @NotNull String fullName() {
+        public @NonNull String fullName() {
             return BlockStreamPublishServiceInterface.super.fullName();
         }
 
         @Override
-        public @NotNull List<Method> methods() {
+        public @NonNull List<Method> methods() {
             return BlockStreamPublishServiceInterface.super.methods();
         }
 
         @Override
-        public @NotNull Pipeline<? super Bytes> open(
-                @NotNull ServiceInterface.Method method,
-                @NotNull ServiceInterface.RequestOptions options,
-                @NotNull Pipeline<? super Bytes> replies) {
+        public @NonNull Pipeline<? super Bytes> open(
+                @NonNull ServiceInterface.Method method,
+                @NonNull ServiceInterface.RequestOptions options,
+                @NonNull Pipeline<? super Bytes> replies) {
             return BlockStreamPublishServiceInterface.super.open(method, options, replies);
         }
     }
 
     /**
-     * Builds and sends a BlockAcknowledgement response to a specific pipeline.
+     * This method acknowledges receipt of a block and indicates whether the block was already processed.
+     * If the acknowledgment cannot be sent, the stream is removed from tracking.
      *
-     * @param blockNumber The block number being acknowledged.
-     * @param pipeline The pipeline to send the acknowledgment to.
+     * @param blockNumber The block number being acknowledged
+     * @param pipeline The pipeline to send the acknowledgment to, must not be null
+     *
+     * @throws NullPointerException if pipeline is null
      */
     private void buildAndSendBlockAcknowledgement(
-            final long blockNumber, final Pipeline<? super PublishStreamResponse> pipeline) {
+            final long blockNumber, @NonNull final Pipeline<? super PublishStreamResponse> pipeline) {
+        requireNonNull(pipeline, "pipeline cannot be null");
+
         if (!sendingAcksEnabled.get()) {
             return;
         }
@@ -728,7 +876,7 @@ public class SimulatedBlockNodeServer {
                     pipeline.hashCode(),
                     port,
                     lastVerifiedBlockNumber.get());
-        } catch (Exception e) {
+        } catch (final Exception e) {
             log.error(
                     "Failed to send BlockAcknowledgement for block {} to stream {} on port {}. Removing stream.",
                     blockNumber,
