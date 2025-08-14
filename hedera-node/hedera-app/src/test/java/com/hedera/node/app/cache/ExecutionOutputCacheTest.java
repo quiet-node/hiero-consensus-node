@@ -79,8 +79,7 @@ public class ExecutionOutputCacheTest {
                 BlockItem.newBuilder()
                         .roundHeader(RoundHeader.newBuilder().roundNumber(53).build())
                         .build());
-        executionOutputCache.setIssRoundNumber(53);
-        executionOutputCache.handleIssContextualBlocks();
+        executionOutputCache.handleIssContextualBlocks(53);
 
         // Read file bytes into memory
         byte[] fileBytes = Files.readAllBytes(tempDir.resolve("53"

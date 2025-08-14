@@ -18,11 +18,8 @@ import static com.hedera.services.bdd.junit.hedera.ExternalPath.SWIRLDS_LOG;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.WORKING_DIR;
 import static com.hedera.services.bdd.junit.hedera.NodeSelector.byNodeId;
 import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.STATE_METADATA_FILE;
-import static com.hedera.services.bdd.junit.hedera.utils.WorkingDirUtils.workingDirFor;
 import static com.hedera.services.bdd.junit.support.validators.block.BlockStreamUtils.stateNameOf;
 import static com.hedera.services.bdd.junit.support.validators.block.RootHashUtils.extractRootMnemonic;
-import static com.hedera.services.bdd.spec.HapiPropertySource.getConfigRealm;
-import static com.hedera.services.bdd.spec.HapiPropertySource.getConfigShard;
 import static com.hedera.services.bdd.spec.TargetNetworkType.SUBPROCESS_NETWORK;
 import static com.swirlds.platform.system.InitTrigger.GENESIS;
 import static java.util.Objects.requireNonNull;
@@ -84,7 +81,6 @@ import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -157,28 +153,10 @@ public class StateChangesValidator implements BlockStreamValidator {
     }
 
     public static void main(String[] args) {
-        final var node0Dir = Paths.get("hedera-node/test-clients")
-                .resolve(workingDirFor(0, "hapi"))
-                .toAbsolutePath()
-                .normalize();
-        // 3 if debugging most PR checks, 4 if debugging the HAPI (Restart) check
-        final long hintsThresholdDenominator = 3;
-        final var validator = new StateChangesValidator(
-                Bytes.fromHex(
-                        "525279ce448629033053af7fd64e1439f415c0acb5ad6819b73363807122847b2d68ded6d47db36b59920474093f0651"),
-                node0Dir,
-                node0Dir.resolve("output/swirlds.log"),
-                node0Dir.resolve("data/config/application.properties"),
-                node0Dir.resolve("data/config"),
-                16,
-                HintsEnabled.YES,
-                HistoryEnabled.NO,
-                hintsThresholdDenominator,
-                getConfigShard(),
-                getConfigRealm());
-        final var blocks =
-                BlockStreamAccess.BLOCK_STREAM_ACCESS.readBlocks(node0Dir.resolve("data/blockStreams/block-0.0.3"));
-        validator.validateBlocks(blocks);
+        final var blocks = BlockStreamAccess.BLOCK_STREAM_ACCESS.readBlocks(
+                Path.of(
+                        "/home/driley/git/hedera-services/hedera-node/test-clients/build/hapi-test/node1/output/iss/764/node1/blockStream"));
+        System.out.println("Test");
     }
 
     public static final Factory FACTORY = new Factory() {

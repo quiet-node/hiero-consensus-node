@@ -51,7 +51,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
     private BlockRecordStreamProducer subject;
 
     @Mock
-    protected ExecutionOutputCache executionOutputCache;
+    protected ExecutionOutputCache outputCache;
 
     abstract BlockRecordStreamProducer createStreamProducer(
             @NonNull BlockRecordWriterFactory factory, @NonNull final ExecutionOutputCache executionOutputCache);
@@ -61,7 +61,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
     final class InitTests {
         @BeforeEach
         void setUp() {
-            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), executionOutputCache);
+            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), outputCache);
         }
 
         @Test
@@ -112,7 +112,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
     final class WritingTests {
         @BeforeEach
         void setUp() {
-            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), executionOutputCache);
+            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), outputCache);
         }
 
         static Stream<Arguments> provideBlocks() {
@@ -194,7 +194,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
     final class SwitchingTests {
         @BeforeEach
         void setUp() {
-            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), executionOutputCache);
+            subject = createStreamProducer(recordDir -> new BlockRecordWriterDummy(), outputCache);
         }
 
         @Test
@@ -269,7 +269,7 @@ abstract class StreamFileProducerTest extends AppTestBase {
                             throw new RuntimeException("Close throws!");
                         }
                     },
-                    executionOutputCache);
+                    outputCache);
 
             final var consensusTime = Instant.now();
             subject.initRunningHash(new RunningHashes(STARTING_RUNNING_HASH_OBJ.hash(), null, null, null));

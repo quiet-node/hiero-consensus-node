@@ -109,7 +109,6 @@ import com.hedera.node.config.Utils;
 import com.hedera.node.config.data.BlockNodeConnectionConfig;
 import com.hedera.node.config.data.BlockStreamConfig;
 import com.hedera.node.config.data.HederaConfig;
-import com.hedera.node.config.data.IssContextConfig;
 import com.hedera.node.config.data.NetworkAdminConfig;
 import com.hedera.node.config.data.TssConfig;
 import com.hedera.node.config.data.VersionConfig;
@@ -205,8 +204,6 @@ import org.hiero.consensus.roster.RosterUtils;
  */
 public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatusChangeListener, AppContext.Gossip {
     private static final Logger logger = LogManager.getLogger(Hedera.class);
-
-    private static final java.time.Duration SHUTDOWN_TIMEOUT = java.time.Duration.ofSeconds(10);
 
     /**
      * The application name from the platform's perspective. This is currently locked in at the old main class name and
@@ -630,18 +627,6 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, PlatformStatus
                 if (streamToBlockNodes && isNotEmbedded()) {
                     logger.info("CATASTROPHIC_FAILURE - Shutting down connections to Block Nodes");
                     daggerApp.blockNodeConnectionManager().shutdown();
-                }
-
-                // Wait for the block stream to close any pending or current blocks–-we may need them for triage
-                blockStreamManager().awaitFatalShutdown(SHUTDOWN_TIMEOUT);
-
-                // Write the contextual Record and Block Stream files containing the ISS round
-                if (configProvider
-                        .getConfiguration()
-                        .getConfigData(IssContextConfig.class)
-                        .enabled()) {
-                    logger.info("CATASTROPHIC_FAILURE - Writing ISS contextual Blocks to disk");
-                    daggerApp.executionOutputCache().handleIssContextualBlocks();
                 }
             }
             case REPLAYING_EVENTS, STARTING_UP, OBSERVING, RECONNECT_COMPLETE, CHECKING, FREEZING, BEHIND -> {

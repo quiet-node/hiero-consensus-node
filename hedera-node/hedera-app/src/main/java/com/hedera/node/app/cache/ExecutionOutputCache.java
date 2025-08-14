@@ -62,7 +62,7 @@ public class ExecutionOutputCache {
 
     /**
      * Constructor for ExecutionOutputCache.
-     * @param configProvider the configuration provider to access S3 ISS configuration
+     * @param configProvider the configuration provider
      * @param networkInfo the network information to access self node info
      * @param blockRecordWriterFactory the factory to create BlockRecordWriter instances
      */
@@ -120,7 +120,7 @@ public class ExecutionOutputCache {
     }
 
     /**
-     * Writes the block stream Block for the ISS round number to the S3 bucket and writes it to local disk.
+     * Writes the block stream Block for the ISS round number to disk.
      */
     public void handleBlockStreamIssBlock() {
         BlockState blockState = getBlockStateForRoundNumber(issRoundNumber);
@@ -136,7 +136,8 @@ public class ExecutionOutputCache {
     /**
      * Write ISS Contextual Information to disk, including the block stream Block and record stream record files.
      */
-    public void handleIssContextualBlocks() {
+    public void handleIssContextualBlocks(final long issRoundNumber) {
+        this.issRoundNumber = issRoundNumber;
         StreamMode streamMode = configProvider
                 .getConfiguration()
                 .getConfigData(BlockStreamConfig.class)
@@ -171,11 +172,12 @@ public class ExecutionOutputCache {
             return;
         }
         try {
-            BlockRecordWriter blockRecordWriter = blockRecordWriterFactory.create(
-                    configProvider
-                                    .getConfiguration()
-                                    .getConfigData(IssContextConfig.class)
-                                    .diskPath() + issRoundNumber + "/");
+            String recordDir = configProvider
+                            .getConfiguration()
+                            .getConfigData(IssContextConfig.class)
+                            .diskPath() + issRoundNumber + "/node"
+                    + networkInfo.selfNodeInfo().nodeId() + "/";
+            BlockRecordWriter blockRecordWriter = blockRecordWriterFactory.create(recordDir);
             blockRecordWriter.init(
                     recordFileMetadata.getHapiProtoVersion(),
                     recordFileMetadata.getStartRunningHash(),
@@ -189,10 +191,7 @@ public class ExecutionOutputCache {
             log.info(
                     "Successfully wrote Record Stream file for Block number {} to disk at path: {}",
                     recordFileMetadata.getBlockNumber(),
-                    configProvider
-                                    .getConfiguration()
-                                    .getConfigData(IssContextConfig.class)
-                                    .diskPath() + issRoundNumber + "/");
+                    blockRecordWriter.getBlockRecordFilePath().toAbsolutePath());
         } catch (UncheckedIOException e) {
             log.error(
                     "Failed to write Record Stream file for Block number {} to disk: {}",
@@ -386,8 +385,9 @@ public class ExecutionOutputCache {
 
             // Also write Block File to local disk
             Path issBlockFilePath = Paths.get(issContextConfig.diskPath())
-                    .resolve(issRoundNumber
-                            + "/blockStream/" + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
+                    .resolve(issRoundNumber + "/node"
+                            + networkInfo.selfNodeInfo().nodeId() + "/blockStream/"
+                            + longToFileName(blockState.blockNumber()) + COMPLETE_BLOCK_EXTENSION
                             + COMPRESSION_ALGORITHM_EXTENSION);
             try {
                 // Ensure the parent directories exist
@@ -397,12 +397,12 @@ public class ExecutionOutputCache {
                 log.info(
                         "Successfully wrote Block Stream file for Block number {} to disk at path: {}",
                         blockState.blockNumber(),
-                        issBlockFilePath);
+                        issBlockFilePath.toAbsolutePath());
             } catch (IOException e) {
                 log.error(
                         "Failed to write Block {} to local disk at path {}: {}",
                         blockState.blockNumber(),
-                        issBlockFilePath,
+                        issBlockFilePath.toAbsolutePath(),
                         e.getMessage(),
                         e);
             }
@@ -413,13 +413,5 @@ public class ExecutionOutputCache {
                     e.getMessage(),
                     e);
         }
-    }
-
-    /**
-     * Sets the ISS round number for which the block state will be uploaded.
-     * @param issRoundNumber the ISS round number
-     */
-    public void setIssRoundNumber(long issRoundNumber) {
-        this.issRoundNumber = issRoundNumber;
     }
 }

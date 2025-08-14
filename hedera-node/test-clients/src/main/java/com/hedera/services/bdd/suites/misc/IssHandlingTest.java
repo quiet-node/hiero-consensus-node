@@ -136,12 +136,18 @@ class IssHandlingTest implements LifecycleTest {
                 Block storedBlock = Block.PROTOBUF.parse(Bytes.wrap(decompressedData));
                 Transaction issTransaction = Transaction.PROTOBUF.parse(Bytes.wrap(issCryptoTransferBytes));
 
-                log.info("Verifying ISS SignedTransaction Bytes are present in the Block Stream ISS Block file...");
+                log.info(
+                        "Verifying ISS SignedTransaction Bytes {} Transaction {} are present in the Block Stream ISS Block file...",
+                        issTransaction.signedTransactionBytes().toByteArray(),
+                        issTransaction);
 
                 // Verify the ISS Transaction Bytes are present in the ISS Block file
                 for (BlockItem item : storedBlock.items()) {
                     if (item.hasSignedTransaction()) {
                         Bytes signedTransaction = item.signedTransaction();
+                        log.info(
+                                "SignedTransaction Bytes from ISS Block: {}",
+                                Arrays.toString(signedTransaction.toByteArray()));
                         if (Arrays.equals(
                                 signedTransaction.toByteArray(),
                                 issTransaction.signedTransactionBytes().toByteArray())) {
@@ -151,12 +157,10 @@ class IssHandlingTest implements LifecycleTest {
                     }
                 }
                 log.error("ISS SignedTransaction Bytes not found in ISS Block file at path: {}", blockPath);
-                throw new RuntimeException(
-                        "ISS SignedTransaction Bytes not found in ISS Block Stream Block file in S3 bucket");
+                throw new RuntimeException("ISS SignedTransaction Bytes not found in ISS Block Stream Block file");
             } catch (Exception e) {
                 log.error("Error verifying ISS Block file in S3 bucket: {}", e.getMessage());
-                throw new RuntimeException(
-                        "Failed to verify ISS Transaction Bytes present in ISS Block files in S3 bucket", e);
+                throw new RuntimeException("Failed to verify ISS Transaction Bytes present in ISS Block file", e);
             }
         }
     }
