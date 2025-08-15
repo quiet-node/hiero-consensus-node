@@ -192,7 +192,7 @@ class PlatformStateFacadeTest {
     void testSetSnapshotTo() {
         final String virtualMapLabel =
                 "vm-" + PlatformStateFacadeTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        TestVirtualMapState randomState = TestVirtualMapState.createInstanceWithVirtualMapLabel(
+        final TestVirtualMapState randomState = TestVirtualMapState.createInstanceWithVirtualMapLabel(
                 virtualMapLabel,
                 TestPlatformContextBuilder.create().build(),
                 state -> PlatformStateAccessor.GENESIS_ROUND);

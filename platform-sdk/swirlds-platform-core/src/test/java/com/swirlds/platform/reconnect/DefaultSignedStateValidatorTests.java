@@ -321,7 +321,7 @@ class DefaultSignedStateValidatorTests {
      * @return the signed state
      */
     private SignedState stateSignedByNodes(final List<Node> signingNodes) {
-        TestVirtualMapState state = new TestVirtualMapState(
+        final TestVirtualMapState state = new TestVirtualMapState(
                 TestPlatformContextBuilder.create().build(), s -> PlatformStateAccessor.GENESIS_ROUND);
 
         final SignatureVerifier signatureVerifier = (data, signature, key) -> {

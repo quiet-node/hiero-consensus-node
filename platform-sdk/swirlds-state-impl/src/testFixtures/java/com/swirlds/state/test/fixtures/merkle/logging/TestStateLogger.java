@@ -324,8 +324,8 @@ public class TestStateLogger {
             if (size == 0) {
                 logger.debug("      ITERATE keys of {} state size 0 keys:EMPTY", label);
             } else {
-                AtomicInteger count = new AtomicInteger(0);
-                String keys = StreamSupport.stream(spliterator, false)
+                final AtomicInteger count = new AtomicInteger(0);
+                final String keys = StreamSupport.stream(spliterator, false)
                         .map(merkleNode -> {
                             if (merkleNode instanceof VirtualLeafNode leaf) {
                                 final var k = leaf.getKey();

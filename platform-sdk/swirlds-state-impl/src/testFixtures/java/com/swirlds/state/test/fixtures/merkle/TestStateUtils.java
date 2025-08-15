@@ -37,7 +37,7 @@ public class TestStateUtils {
     @SuppressWarnings({"rawtypes", "unchecked"})
     @Deprecated
     public static void registerWithSystem(
-            @NonNull final StateMetadata md, @NonNull ConstructableRegistry constructableRegistry) {
+            @NonNull final StateMetadata md, @NonNull final ConstructableRegistry constructableRegistry) {
         // Register with the system the uniqueId as the "classId" of an InMemoryValue. There can be
         // multiple id's associated with InMemoryValue. The secret is that the supplier captures the
         // various delegate writers and parsers, and so can parse/write different types of data
