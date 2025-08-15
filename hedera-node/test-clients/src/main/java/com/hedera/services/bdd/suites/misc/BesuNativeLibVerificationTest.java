@@ -62,7 +62,7 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                 doingContextual(spec -> waitForAny(allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
                 doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
                 ifNotCi(
-                        assertHgcaaLogContains(allNodes(), "ERROR", Duration.ofSeconds(60)),
+                        assertHgcaaLogContains(allNodes(), "ERROR", Duration.ofSeconds(180)),
                         assertHgcaaLogContains(allNodes(), "Native library", Duration.ZERO),
                         assertHgcaaLogContains(
                                 allNodes(),
@@ -74,7 +74,9 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                                 "Native library verification Halt mode is enabled",
                                 Duration.ofSeconds(300)),
                         doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
-                        sleepForSeconds(10),
+                        freezeOnly().startingIn(5).seconds().payingWith(GENESIS).deferStatusResolution(),
+                        waitForFrozenNetwork(FREEZE_TIMEOUT),
+                        LifecycleTest.confirmFreezeAndShutdown(),
                         restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envReset),
                         doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)))));
     }
