@@ -316,6 +316,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0, 1},
                         blockNodePriorities = {0, 1},
                         applicationPropertiesOverrides = {
+                            "blockStream.buffer.blockTtl", "1m",
                             "blockStream.streamMode", "BLOCKS",
                             "blockStream.writerMode", "FILE_AND_GRPC"
                         })
@@ -326,17 +327,17 @@ public class BlockNodeSimulatorSuite {
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
         return hapiTest(
                 doingContextual(
-                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(5).toNanos())),
                 doingContextual(spec -> timeRef.set(Instant.now())),
                 blockNodeSimulator(0).updateSendingBlockAcknowledgements(false),
                 doingContextual(
-                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
+                        spec -> LockSupport.parkNanos(Duration.ofSeconds(5).toNanos())),
                 sourcingContextual(
                         spec -> assertHgcaaLogContainsTimeframe(
                                 byNodeId(0),
                                 timeRef::get,
-                                Duration.ofMinutes(6),
-                                Duration.ofMinutes(6),
+                                Duration.ofMinutes(1),
+                                Duration.ofMinutes(1),
                                 // look for the saturation reaching the action stage (50%)
                                 "saturation=50.0%",
                                 // look for the log that shows we are forcing a reconnect to a different block node
@@ -345,8 +346,8 @@ public class BlockNodeSimulatorSuite {
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
                         byNodeId(0),
                         timeRef::get,
-                        Duration.ofMinutes(6),
-                        Duration.ofMinutes(6),
+                        Duration.ofMinutes(1),
+                        Duration.ofMinutes(1),
                         // saturation should fall back to low levels after the reconnect to the different node
                         "saturation=0.0%")));
     }

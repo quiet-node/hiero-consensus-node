@@ -381,7 +381,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             case Code.BEHIND -> {
                 // The block node is behind us, check if we have the last verified block still available in order to
                 // restart the stream from there
-                final long restartBlockNumber = blockBufferService.getHighestAckedBlockNumber();
+                final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
                 if (blockBufferService.getBlockState(restartBlockNumber) != null) {
                     close();
                     logger.warn(
@@ -551,6 +551,12 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             if (requestPipeline != null) {
                 logger.debug("[{}] Closing request pipeline for block node", this);
                 streamShutdownInProgress.set(true);
+                try {
+                    requestPipeline.onComplete();
+                    logger.debug("[{}] Request pipeline successfully closed", this);
+                } catch (final Exception e) {
+                    logger.warn("[{}] Error while completing request pipeline", this, e);
+                }
                 requestPipeline = null;
             }
         } finally {
