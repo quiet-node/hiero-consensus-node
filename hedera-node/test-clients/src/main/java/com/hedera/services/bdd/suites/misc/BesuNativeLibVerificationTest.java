@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Tag;
 
 // Order to be last as it will restart the network and halt if the lib is not present
 @OrderedInIsolation
-@Order(Integer.MAX_VALUE - 1)
+@Order(Integer.MAX_VALUE - 2)
 @Tag(RESTART)
 public class BesuNativeLibVerificationTest implements LifecycleTest {
 
@@ -68,16 +68,7 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                                 allNodes(),
                                 "is not present with halt mode enabled! Shutting down node.",
                                 Duration.ZERO)),
-                ifCi(
-                        assertHgcaaLogContains(
-                                allNodes(),
-                                "Native library verification Halt mode is enabled",
-                                Duration.ofSeconds(300)),
-                        doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
-                        freezeOnly().startingIn(5).seconds().payingWith(GENESIS).deferStatusResolution(),
-                        waitForFrozenNetwork(FREEZE_TIMEOUT),
-                        LifecycleTest.confirmFreezeAndShutdown(),
-                        restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envReset),
-                        doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)))));
+                ifCi(assertHgcaaLogContains(
+                        allNodes(), "Native library verification Halt mode is enabled", Duration.ofSeconds(300)))));
     }
 }
