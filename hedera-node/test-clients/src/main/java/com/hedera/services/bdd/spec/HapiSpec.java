@@ -7,7 +7,6 @@ import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.AC
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.STAKING_INFO_KEY;
 import static com.hedera.node.app.service.token.impl.schemas.V0490TokenSchema.TOKENS_KEY;
 import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension.REPEATABLE_KEY_GENERATOR;
-import static com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension.SHARED_NETWORK;
 import static com.hedera.services.bdd.junit.hedera.BlockNodeNetwork.BLOCK_NODE_LOCAL_PORT;
 import static com.hedera.services.bdd.junit.hedera.ExternalPath.RECORD_STREAMS_DIR;
 import static com.hedera.services.bdd.junit.support.StreamFileAccess.STREAM_FILE_ACCESS;
@@ -62,6 +61,7 @@ import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.service.schedule.impl.schemas.V0570ScheduleSchema;
 import com.hedera.node.app.service.token.TokenService;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
+import com.hedera.services.bdd.junit.extensions.HapiNetworks;
 import com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension;
 import com.hedera.services.bdd.junit.hedera.BlockNodeMode;
 import com.hedera.services.bdd.junit.hedera.BlockNodeNetwork;
@@ -125,6 +125,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
@@ -164,8 +165,10 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     @Nullable
     private static volatile DelayQueue<DelayedDuration> stakeRebalanceOffsets;
+	private Supplier<HederaNetwork> targetNetworkSelector;
+	private Consumer<HapiSpec> beforeOps = spec -> {};
 
-    /**
+	/**
      * Requests all executing specs to issue a prepare upgrade transaction if they are
      * the first to pass an offset from now in the given list.
      * @param offsets the durations to wait before issuing prepare upgrade transactions
@@ -326,6 +329,10 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
         hapiSetup.addOverrides(props);
     }
 
+	public void setBeforeOps(@NonNull final Consumer<HapiSpec> beforeOps) {
+		this.beforeOps = requireNonNull(beforeOps);
+	}
+
     /**
      * Returns the {@link KeyGenerator} used by this spec.
      *
@@ -444,6 +451,14 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
     public void setTargetNetwork(@NonNull final HederaNetwork targetNetwork) {
         this.targetNetwork = requireNonNull(targetNetwork);
     }
+
+	public static void setGlobalTargetNetwork(@NonNull final HederaNetwork targetNetwork) {
+		TARGET_NETWORK.set(requireNonNull(targetNetwork));
+	}
+
+	public void setTargetSelector(@NonNull final Supplier<HederaNetwork> targetSelector) {
+		this.targetNetworkSelector = targetSelector;
+	}
 
     public void setSharedStates(@NonNull final List<SpecStateObserver.SpecState> sharedStates) {
         this.sharedStates = sharedStates;
@@ -706,9 +721,14 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
 
     @Override
     public void execute() throws Throwable {
-        if (targetNetwork == null) {
-            buildRemoteNetwork();
-        }
+		beforeOps.accept(this);
+
+		if (targetNetwork == null && targetNetworkSelector != null) {
+			setTargetNetwork(targetNetworkSelector.get());
+		}
+		if (targetNetwork == null) {
+			buildRemoteNetwork();
+		}
         targetNetwork.awaitReady(NETWORK_ACTIVE_TIMEOUT);
         run();
         if (failure != null) {
@@ -856,9 +876,6 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
     }
 
     private boolean init() {
-        if (targetNetwork == null) {
-            buildRemoteNetwork();
-        }
         if (!propertiesToPreserve.isEmpty()) {
             final var missingProperties = propertiesToPreserve.stream()
                     .filter(p -> !startupProperties().has(p))
@@ -922,7 +939,7 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
             sidecarWatcher.ensureUnsubscribed();
         }
         // Also terminate any embedded network not being shared by multiple specs
-        if (targetNetwork instanceof EmbeddedNetwork embeddedNetwork && embeddedNetwork != SHARED_NETWORK.get()) {
+        if (targetNetwork instanceof EmbeddedNetwork embeddedNetwork && !HapiNetworks.isRegistered(embeddedNetwork)) {
             embeddedNetwork.terminate();
         }
     }
@@ -1328,18 +1345,33 @@ public class HapiSpec implements Runnable, Executable, LifecycleTest {
     }
 
     private static HapiSpec targeted(@NonNull final HapiSpec spec) {
+		// Determine target network
         final var targetNetwork = TARGET_NETWORK.get();
         if (targetNetwork != null) {
             log.info("Targeting network '{}' for spec '{}'", targetNetwork.name(), spec.name);
             doTargetSpec(spec, targetNetwork);
         }
-        Optional.ofNullable(TEST_LIFECYCLE.get())
-                .map(TestLifecycle::getSharedStates)
-                .ifPresent(spec::setSharedStates);
-        spec.throttleResource = THROTTLES_OVERRIDE.get();
-        spec.feeResource = FEES_OVERRIDE.get();
+
+		// Finalize shared resources
+		fixSharedResources(spec);
         return spec;
     }
+
+	public static void resetAllResources() {
+		HapiSpec.TARGET_NETWORK.remove();
+		HapiSpec.TARGET_BLOCK_NODE_NETWORK.remove();
+		HapiSpec.FEES_OVERRIDE.remove();
+		HapiSpec.THROTTLES_OVERRIDE.remove();
+		HapiSpec.PROPERTIES_TO_PRESERVE.remove();
+	}
+
+	public static void fixSharedResources(HapiSpec spec) {
+		Optional.ofNullable(TEST_LIFECYCLE.get())
+				.map(TestLifecycle::getSharedStates)
+				.ifPresent(spec::setSharedStates);
+		spec.throttleResource = THROTTLES_OVERRIDE.get();
+		spec.feeResource = FEES_OVERRIDE.get();
+	}
 
     /**
      * Customizes the {@link HapiSpec} to target the given network.

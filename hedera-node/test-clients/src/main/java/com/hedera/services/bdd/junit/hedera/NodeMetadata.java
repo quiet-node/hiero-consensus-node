@@ -9,6 +9,7 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import java.nio.file.Path;
 
 public record NodeMetadata(
+		String networkName,
         long nodeId,
         String name,
         AccountID accountId,
@@ -32,12 +33,14 @@ public record NodeMetadata(
      * @return a new instance with the same values as this instance, but different ports
      */
     public NodeMetadata withNewPorts(
+			String networkName,
             final int grpcPort,
             final int grpcNodeOperatorPort,
             final int internalGossipPort,
             final int externalGossipPort,
             final int prometheusPort) {
         return new NodeMetadata(
+				networkName,
                 nodeId,
                 name,
                 accountId,
@@ -58,6 +61,7 @@ public record NodeMetadata(
     public NodeMetadata withNewAccountId(@NonNull final AccountID accountId) {
         requireNonNull(accountId);
         return new NodeMetadata(
+				networkName,
                 nodeId,
                 name,
                 accountId,
@@ -69,6 +73,11 @@ public record NodeMetadata(
                 prometheusPort,
                 workingDir);
     }
+
+	public String displayIndicator() {
+		final var indicator = "n" + nodeId;
+		return (networkName != null && networkName.toLowerCase().contains("secondary")) ? "s" + indicator : indicator;
+	}
 
     /**
      * Returns the working directory for this node, or throws an exception if the working directory is null.

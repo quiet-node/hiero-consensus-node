@@ -58,7 +58,7 @@ public class RemoteNetwork extends AbstractGrpcNetwork implements HederaNetwork 
                 REMOTE_NETWORK_NAME,
                 IntStream.range(0, nodeConnectInfos.size())
                         .<HederaNode>mapToObj(
-                                nodeId -> new RemoteNode(metadataFor(nodeId, nodeConnectInfos.get(nodeId))))
+                                nodeId -> new RemoteNode(metadataFor(REMOTE_NETWORK_NAME, nodeId, nodeConnectInfos.get(nodeId))))
                         .toList(),
                 clients,
                 shard,
@@ -100,8 +100,9 @@ public class RemoteNetwork extends AbstractGrpcNetwork implements HederaNetwork 
         throw new UnsupportedOperationException("Prometheus status is not supported for remote networks");
     }
 
-    private static NodeMetadata metadataFor(final int nodeId, @NonNull final NodeConnectInfo connectInfo) {
+    private static NodeMetadata metadataFor(String networkName, final int nodeId, @NonNull final NodeConnectInfo connectInfo) {
         return new NodeMetadata(
+				networkName,
                 nodeId,
                 "node" + nodeId,
                 AccountID.newBuilder()

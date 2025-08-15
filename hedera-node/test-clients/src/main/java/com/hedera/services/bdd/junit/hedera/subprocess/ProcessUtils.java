@@ -43,7 +43,7 @@ import org.junit.jupiter.api.Assertions;
 public class ProcessUtils {
     private static final Logger log = LogManager.getLogger(ProcessUtils.class);
 
-    private static final int FIRST_AGENT_PORT = 5005;
+    public static final int FIRST_AGENT_PORT = 5005;
     private static final long NODE_ID_TO_SUSPEND = -1;
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
     public static final String SAVED_STATES_DIR = "saved";

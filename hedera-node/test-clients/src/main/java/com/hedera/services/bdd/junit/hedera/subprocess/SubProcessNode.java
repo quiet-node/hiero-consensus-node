@@ -159,9 +159,9 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
         log.info(
                 "Destroying node{} with PID '{}' (Alive? {})",
                 metadata.nodeId(),
-                processHandle.pid(),
-                processHandle.isAlive() ? "Yes" : "No");
-        if (!processHandle.destroyForcibly()) {
+                processHandle != null ? processHandle.pid() : "null",
+                processHandle != null ? (processHandle.isAlive() ? "Yes" : "No") : "No");
+        if (processHandle != null && !processHandle.destroyForcibly()) {
             log.warn("May have failed to stop node{} with PID '{}'", metadata.nodeId(), processHandle.pid());
         }
         return stopFuture;
@@ -229,12 +229,13 @@ public class SubProcessNode extends AbstractLocalNode<SubProcessNode> implements
      * @param prometheusPort the new Prometheus port
      */
     public void reassignPorts(
+			String networkName,
             final int grpcPort,
             final int grpcNodeOperatorPort,
             final int gossipPort,
             final int tlsGossipPort,
             final int prometheusPort) {
-        metadata = metadata.withNewPorts(grpcPort, grpcNodeOperatorPort, gossipPort, tlsGossipPort, prometheusPort);
+        metadata = metadata.withNewPorts(networkName, grpcPort, grpcNodeOperatorPort, gossipPort, tlsGossipPort, prometheusPort);
     }
 
     /**

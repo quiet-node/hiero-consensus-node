@@ -27,7 +27,7 @@ import com.hedera.node.internal.network.Network;
 import com.hedera.node.internal.network.NodeMetadata;
 import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.stream.ReadableStreamingData;
-import com.hedera.services.bdd.junit.extensions.NetworkTargetingExtension;
+import com.hedera.services.bdd.junit.extensions.HapiNetworks;
 import com.hedera.services.bdd.junit.hedera.AbstractGrpcNetwork;
 import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.HederaNode;
@@ -63,6 +63,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -78,20 +80,41 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     // 3 gRPC ports, 2 gossip ports, 1 Prometheus
     private static final int PORTS_PER_NODE = 6;
     private static final SplittableRandom RANDOM = new SplittableRandom();
-    private static final int FIRST_CANDIDATE_PORT = 30000;
-    private static final int LAST_CANDIDATE_PORT = 40000;
+    public static final int FIRST_CANDIDATE_PORT = 30000;
 
     private static final String SUBPROCESS_HOST = "127.0.0.1";
     private static final ByteString SUBPROCESS_ENDPOINT = asOctets(SUBPROCESS_HOST);
     private static final GrpcPinger GRPC_PINGER = new GrpcPinger();
     private static final PrometheusClient PROMETHEUS_CLIENT = new PrometheusClient();
 
-    private static int nextGrpcPort;
-    private static int nextNodeOperatorPort;
-    private static int nextInternalGossipPort;
-    private static int nextExternalGossipPort;
-    private static int nextPrometheusPort;
-    private static boolean nextPortsInitialized = false;
+	public static class PortsAssignment {
+		public int nextGrpcPort;
+		public int nextNodeOperatorPort;
+		public int nextInternalGossipPort;
+		public int nextExternalGossipPort;
+		public int nextPrometheusPort;
+
+		public PortsAssignment(int nextGrpcPort, int nextNodeOperatorPort, int nextInternalGossipPort,
+				int nextExternalGossipPort, int nextPrometheusPort) {
+			this.nextGrpcPort = nextGrpcPort;
+			this.nextNodeOperatorPort = nextNodeOperatorPort;
+			this.nextInternalGossipPort = nextInternalGossipPort;
+			this.nextExternalGossipPort = nextExternalGossipPort;
+			this.nextPrometheusPort = nextPrometheusPort;
+		}
+
+		public String toString() {
+			return "PortsAssignment{" +
+					"nextGrpcPort=" + nextGrpcPort +
+					", nextNodeOperatorPort=" + nextNodeOperatorPort +
+					", nextInternalGossipPort=" + nextInternalGossipPort +
+					", nextExternalGossipPort=" + nextExternalGossipPort +
+					", nextPrometheusPort=" + nextPrometheusPort +
+					'}';
+		}
+	}
+
+	private PortsAssignment ports;
 
     private final Map<Long, AccountID> pendingNodeAccounts = new HashMap<>();
     private final AtomicReference<DeferredRun> ready = new AtomicReference<>();
@@ -165,32 +188,26 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     }
 
     private SubProcessNetwork(
-            @NonNull final String networkName, @NonNull final List<SubProcessNode> nodes, long shard, long realm) {
+            @NonNull final String networkName, @NonNull final List<SubProcessNode> nodes, long shard, long realm, PortsAssignment ports) {
         super(networkName, nodes.stream().map(node -> (HederaNode) node).toList());
         this.shard = shard;
         this.realm = realm;
         this.maxNodeId =
                 Collections.max(nodes.stream().map(SubProcessNode::getNodeId).toList());
-        this.configTxt = configTxtForLocal(name(), nodes(), nextInternalGossipPort, nextExternalGossipPort);
+        this.configTxt = configTxtForLocal(name(), nodes(), ports.nextInternalGossipPort, ports.nextExternalGossipPort);
         this.genesisConfigTxt = configTxt;
         this.postInitWorkingDirActions.add(this::configureApplicationProperties);
+		this.ports = ports;
     }
 
-    /**
-     * Creates a shared network of sub-process nodes with the given size.
-     *
-     * @param size the number of nodes in the network
-     * @return the shared network
-     */
-    public static synchronized HederaNetwork newSharedNetwork(
-            String networkName, final int size, final long shard, final long realm) {
-        if (NetworkTargetingExtension.SHARED_NETWORK.get() != null) {
-            throw new UnsupportedOperationException("Only one shared network allowed per launcher session");
-        }
-        final var sharedNetwork = liveNetwork(networkName, size, shard, realm);
-        NetworkTargetingExtension.SHARED_NETWORK.set(sharedNetwork);
-        return sharedNetwork;
-    }
+	public record PortRequirements(Pair<Integer, Integer> bounds) {}
+
+	public static synchronized HederaNetwork newLiveNetwork(String networkName, final int size, final long shard, final long realm, PortRequirements portReqs, int startingNodeNum) {
+		if (HapiNetworks.getNetwork(networkName) != null) {
+			throw new UnsupportedOperationException("Only one network by name " + networkName + " allowed per launcher session");
+		}
+		return liveNetwork(networkName, size, shard, realm, portReqs, startingNodeNum);
+	}
 
     /**
      * Returns the network type; for now this is always
@@ -302,21 +319,21 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      * <i>candidate-roster.json</i> (if present); and reassigns ports to avoid binding conflicts.
      */
     public void refreshOverrideWithNewPorts() {
-        log.info("Reassigning ports for network '{}' starting from {}", name(), nextGrpcPort);
+        log.info("Reassigning ports for network '{}' starting from {}", name(), ports.nextGrpcPort);
         reinitializePorts();
-        log.info("  -> Network '{}' ports now starting from {}", name(), nextGrpcPort);
+        log.info("  -> Network '{}' ports now starting from {}", name(), ports.nextGrpcPort);
         nodes.forEach(node -> {
             final int nodeId = (int) node.getNodeId();
             ((SubProcessNode) node)
-                    .reassignPorts(
-                            nextGrpcPort + nodeId * 2,
-                            nextNodeOperatorPort + nodeId,
-                            nextInternalGossipPort + nodeId * 2,
-                            nextExternalGossipPort + nodeId * 2,
-                            nextPrometheusPort + nodeId);
+                    .reassignPorts(this.name(),
+                            ports.nextGrpcPort + nodeId * 2,
+                            ports.nextNodeOperatorPort + nodeId,
+                            ports.nextInternalGossipPort + nodeId * 2,
+					ports.nextExternalGossipPort + nodeId * 2,
+                            ports.nextPrometheusPort + nodeId);
         });
         final var weights = maybeLatestCandidateWeights();
-        configTxt = configTxtForLocal(networkName, nodes, nextInternalGossipPort, nextExternalGossipPort, weights);
+        configTxt = configTxtForLocal(networkName, nodes, ports.nextInternalGossipPort, ports.nextExternalGossipPort, weights);
         refreshOverrideNetworks(ReassignPorts.YES);
     }
 
@@ -340,7 +357,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         node.stopFuture();
         nodes.remove(node);
         configTxt = configTxtForLocal(
-                networkName, nodes, nextInternalGossipPort, nextExternalGossipPort, latestCandidateWeights());
+                networkName, nodes, ports.nextInternalGossipPort, ports.nextExternalGossipPort, latestCandidateWeights());
         refreshOverrideNetworks(ReassignPorts.NO);
     }
 
@@ -364,11 +381,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                         name(),
                         SUBPROCESS_HOST,
                         SHARED_NETWORK_NAME.equals(name()) ? null : name(),
-                        nextGrpcPort + (int) nodeId * 2,
-                        nextNodeOperatorPort + (int) nodeId,
-                        nextInternalGossipPort + (int) nodeId * 2,
-                        nextExternalGossipPort + (int) nodeId * 2,
-                        nextPrometheusPort + (int) nodeId,
+                        ports.nextGrpcPort + (int) nodeId * 2,
+                        ports.nextNodeOperatorPort + (int) nodeId,
+                        ports.nextInternalGossipPort + (int) nodeId * 2,
+                        ports.nextExternalGossipPort + (int) nodeId * 2,
+                        ports.nextPrometheusPort + (int) nodeId,
                         shard,
                         realm),
                 GRPC_PINGER,
@@ -379,7 +396,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         }
         nodes.add(insertionPoint, node);
         configTxt = configTxtForLocal(
-                networkName, nodes, nextInternalGossipPort, nextExternalGossipPort, latestCandidateWeights());
+                networkName, nodes, ports.nextInternalGossipPort, ports.nextExternalGossipPort, latestCandidateWeights());
         nodes.get(insertionPoint).initWorkingDir(configTxt);
         refreshOverrideNetworks(ReassignPorts.NO);
     }
@@ -393,8 +410,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
     public List<ServiceEndpoint> gossipEndpointsForNextNodeId() {
         final var nextNodeId = maxNodeId + 1;
         return List.of(
-                endpointFor(nextInternalGossipPort + (int) nextNodeId * 2),
-                endpointFor(nextExternalGossipPort + (int) nextNodeId * 2));
+                endpointFor(ports.nextInternalGossipPort + (int) nextNodeId * 2),
+                endpointFor(ports.nextExternalGossipPort + (int) nextNodeId * 2));
     }
 
     /**
@@ -405,7 +422,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      */
     public ServiceEndpoint grpcEndpointForNextNodeId() {
         final var nextNodeId = maxNodeId + 1;
-        return endpointFor(nextGrpcPort + (int) nextNodeId * 2);
+        return endpointFor(ports.nextGrpcPort + (int) nextNodeId * 2);
     }
 
     @Override
@@ -422,31 +439,29 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      * @return the network
      */
     private static synchronized HederaNetwork liveNetwork(
-            @NonNull final String name, final int size, final long shard, final long realm) {
-        if (!nextPortsInitialized) {
-            initializeNextPortsForNetwork(size);
-        }
+            @NonNull final String name, final int size, final long shard, final long realm, final PortRequirements portReqs, int startingNodeNum) {
+		final var ports = initializeNextPortsForNetwork(size, portReqs.bounds());
         final var network = new SubProcessNetwork(
                 name,
-                IntStream.range(0, size)
+                IntStream.range(startingNodeNum, size + startingNodeNum)
                         .mapToObj(nodeId -> new SubProcessNode(
                                 classicMetadataFor(
                                         nodeId,
                                         name,
                                         SUBPROCESS_HOST,
-                                        SHARED_NETWORK_NAME.equals(name) ? null : name,
-                                        nextGrpcPort,
-                                        nextNodeOperatorPort,
-                                        nextInternalGossipPort,
-                                        nextExternalGossipPort,
-                                        nextPrometheusPort,
+										SHARED_NETWORK_NAME.equals(name) ? null : name,
+                                        ports.nextGrpcPort,
+                                        ports.nextNodeOperatorPort,
+                                        ports.nextInternalGossipPort,
+                                        ports.nextExternalGossipPort,
+                                        ports.nextPrometheusPort,
                                         shard,
                                         realm),
                                 GRPC_PINGER,
                                 PROMETHEUS_CLIENT))
                         .toList(),
                 shard,
-                realm);
+                realm, ports);
         Runtime.getRuntime().addShutdownHook(new Thread(network::terminate));
         return network;
     }
@@ -523,7 +538,7 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         final var firstGrpcPort = nodes().getFirst().getGrpcPort();
         final var totalPortsUsed = effectiveSize * PORTS_PER_NODE;
         final var newFirstGrpcPort = firstGrpcPort + totalPortsUsed;
-        initializeNextPortsForNetwork(effectiveSize, newFirstGrpcPort);
+        ports = calculateNextPortsForNetwork(effectiveSize, newFirstGrpcPort);
     }
 
     private ServiceEndpoint endpointFor(final int port) {
@@ -533,8 +548,8 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
                 .build();
     }
 
-    private static void initializeNextPortsForNetwork(final int size) {
-        initializeNextPortsForNetwork(size, randomPortAfter(FIRST_CANDIDATE_PORT, size * PORTS_PER_NODE));
+    private static PortsAssignment initializeNextPortsForNetwork(final int size, final Pair<Integer, Integer> portBounds) {
+        return calculateNextPortsForNetwork(size, randomPortAfter(portBounds.getLeft(), size * PORTS_PER_NODE, portBounds.getRight()));
     }
 
     /**
@@ -543,23 +558,28 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
      * @param size the number of nodes in the network
      * @param firstGrpcPort the first gRPC port
      */
-    public static void initializeNextPortsForNetwork(final int size, final int firstGrpcPort) {
+    public static PortsAssignment calculateNextPortsForNetwork(final int size, final int firstGrpcPort) {
         // Suppose firstGrpcPort is 10000 with 4 nodes in the network, then the port assignments are,
         //   - grpcPort = 10000, 10002, 10004, 10006
         //   - nodeOperatorPort = 10008, 10009, 10010, 10011
         //   - gossipPort = 10012, 10014, 10016, 10018
         //   - gossipTlsPort = 10013, 10015, 10017, 10019
         //   - prometheusPort = 10020, 10021, 10022, 10023
-        nextGrpcPort = firstGrpcPort;
-        nextNodeOperatorPort = nextGrpcPort + 2 * size;
-        nextInternalGossipPort = nextNodeOperatorPort + size;
-        nextExternalGossipPort = nextInternalGossipPort + 1;
-        nextPrometheusPort = nextInternalGossipPort + 2 * size;
-        nextPortsInitialized = true;
+        int nextGrpcPort = firstGrpcPort;
+        int nextNodeOperatorPort = nextGrpcPort + 2 * size;
+        int nextInternalGossipPort = nextNodeOperatorPort + size;
+        int nextExternalGossipPort = nextInternalGossipPort + 1;
+        int nextPrometheusPort = nextInternalGossipPort + 2 * size;
+		return new PortsAssignment(
+				nextGrpcPort,
+				nextNodeOperatorPort,
+				nextInternalGossipPort,
+				nextExternalGossipPort,
+				nextPrometheusPort);
     }
 
-    private static int randomPortAfter(final int firstAvailable, final int numRequired) {
-        return RANDOM.nextInt(firstAvailable, LAST_CANDIDATE_PORT + 1 - numRequired);
+    private static int randomPortAfter(final int firstAvailable, final int numRequired, int upperBound) {
+        return RANDOM.nextInt(firstAvailable, upperBound + 1 - numRequired);
     }
 
     /**
@@ -594,11 +614,11 @@ public class SubProcessNetwork extends AbstractGrpcNetwork implements HederaNetw
         }
     }
 
-    public static int findAvailablePort() {
-        // Find a random available port between 30000 and 40000
+    public static int findAvailablePort(Pair<Integer, Integer> portBounds) {
+        // Find a random available port between the given bounds
         int attempts = 0;
         while (attempts < 100) {
-            int port = RANDOM.nextInt(FIRST_CANDIDATE_PORT, LAST_CANDIDATE_PORT);
+            int port = RANDOM.nextInt(portBounds.getLeft(), portBounds.getRight());
             try (ServerSocket socket = new ServerSocket(port)) {
                 return port;
             } catch (IOException e) {

@@ -21,6 +21,11 @@ public abstract class HapiBaseCall<T extends HapiTxnOp<T>> extends HapiTxnOp<T> 
     protected Optional<Supplier<String>> explicitHexedParams = Optional.empty();
     protected String privateKeyRef = SECP_256K1_SOURCE_KEY;
 
+	public T targetingSecondary() {
+		super.targetingSecondary();
+		return self();
+	}
+
     protected byte[] initializeCallData() {
         byte[] callData;
         if (explicitHexedParams.isPresent()) {

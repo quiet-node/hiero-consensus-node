@@ -21,6 +21,7 @@ import com.hedera.node.app.hapi.utils.fee.CryptoFeeBuilder;
 import com.hedera.node.app.hapi.utils.fee.FeeBuilder;
 import com.hedera.node.app.hapi.utils.fee.FileFeeBuilder;
 import com.hedera.node.app.hapi.utils.fee.SmartContractFeeBuilder;
+import com.hedera.services.bdd.junit.extensions.HapiNetworks;
 import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.HederaNode;
 import com.hedera.services.bdd.spec.keys.ControlForKey;
@@ -96,11 +97,35 @@ public abstract class HapiSpecOperation implements SpecOperation {
     protected boolean usePresetTimestamp = false;
     protected boolean asTxnWithOnlySigMap = false;
 
+	// default to the shared network
+	protected HederaNetwork targetNetwork = HapiNetworks.sharedNetwork();
+
     @Nullable
     protected HapiSpecSetup.TxnProtoStructure explicitProtoStructure = null;
 
     @Nullable
     protected BodyMutation bodyMutation = null;
+
+	public HapiSpecOperation targetingSecondary() {
+		targeting("SECONDARY");
+		return this;
+	}
+
+	public boolean targetsSecondary() {
+		return targetNetwork.name().equals("SECONDARY");
+	}
+
+	protected HapiSpecOperation targeting(String targetNetwork) {
+		if (targetNetwork == null || targetNetwork.isEmpty()) {
+			throw new IllegalStateException("Targeting requested but no network defined!");
+		} else {
+			this.targetNetwork = HapiNetworks.getNetwork(targetNetwork);
+			if (this.targetNetwork == null) {
+				log.warn("No network found for name: {}", targetNetwork);
+			}
+		}
+		return this;
+	}
 
     protected boolean asTxnWithSignedTxnBytesAndSigMap = false;
     protected boolean asTxnWithSignedTxnBytesAndBodyBytes = false;
@@ -234,6 +259,9 @@ public abstract class HapiSpecOperation implements SpecOperation {
 
     protected Consumer<TransactionBody.Builder> bodyDef(final HapiSpec spec) {
         return builder -> {
+			if (targetNetwork == null) {
+				this.targetNetwork = spec.targetNetworkOrThrow();
+			}
             if (omitTxnId) {
                 builder.clearTransactionID();
             } else {

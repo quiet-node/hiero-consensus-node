@@ -166,6 +166,7 @@ public class AddressBookUtils {
         requireNonNull(host);
         requireNonNull(networkName);
         return new NodeMetadata(
+				networkName,
                 nodeId,
                 CLASSIC_NODE_NAMES[nodeId],
                 AccountID.newBuilder()
@@ -214,6 +215,7 @@ public class AddressBookUtils {
         requireNonNull(networkName);
         requireNonNull(workingDir);
         return new NodeMetadata(
+				networkName,
                 nodeId,
                 CLASSIC_NODE_NAMES[nodeId],
                 AccountID.newBuilder()

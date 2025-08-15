@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,10 +42,12 @@ public class BlockNodeNetwork {
     public static final int BLOCK_NODE_LOCAL_PORT = 40840;
 
     private BlockNodeSimulatorController blockNodeSimulatorController;
+	private final Pair<Integer, Integer> portBounds;
 
-    public BlockNodeNetwork() {
+    public BlockNodeNetwork(Pair<Integer, Integer> portBounds) {
         // Initialize the Block Node Simulator Controller
         this.blockNodeSimulatorController = new BlockNodeSimulatorController(this);
+		this.portBounds = portBounds;
     }
 
     public void start() {
@@ -119,7 +123,7 @@ public class BlockNodeNetwork {
                 // TODO
             } else if (entry.getValue() == BlockNodeMode.SIMULATOR) {
                 // Find an available port
-                int port = findAvailablePort();
+                int port = findAvailablePort(portBounds);
                 SimulatedBlockNodeServer server = new SimulatedBlockNodeServer(port);
                 try {
                     server.start();

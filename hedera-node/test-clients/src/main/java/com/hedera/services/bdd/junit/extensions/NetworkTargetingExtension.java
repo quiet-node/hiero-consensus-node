@@ -3,7 +3,8 @@ package com.hedera.services.bdd.junit.extensions;
 
 import static com.hedera.services.bdd.junit.ContextRequirement.FEE_SCHEDULE_OVERRIDES;
 import static com.hedera.services.bdd.junit.ContextRequirement.THROTTLE_OVERRIDES;
-import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.SharedNetworkExecutionListener.sharedSubProcessNetwork;
+import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.SharedNetworkExecutionListener.ALL_CANDIDATE_PORT_REQS;
+import static com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener.SharedNetworkExecutionListener.newSubProcessNetwork;
 import static com.hedera.services.bdd.junit.extensions.ExtensionUtils.hapiTestMethodOf;
 import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.CONCURRENT;
 import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.REPEATABLE;
@@ -27,10 +28,10 @@ import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.LeakyEmbeddedHapiTest;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
 import com.hedera.services.bdd.junit.LeakyRepeatableHapiTest;
+import com.hedera.services.bdd.junit.MultiNetTest;
 import com.hedera.services.bdd.junit.SharedNetworkLauncherSessionListener;
 import com.hedera.services.bdd.junit.TargetEmbeddedMode;
 import com.hedera.services.bdd.junit.hedera.BlockNodeNetwork;
-import com.hedera.services.bdd.junit.hedera.HederaNetwork;
 import com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode;
 import com.hedera.services.bdd.junit.hedera.embedded.EmbeddedNetwork;
 import com.hedera.services.bdd.junit.hedera.subprocess.SubProcessNetwork;
@@ -65,68 +66,82 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
     private static final String SPEC_NAME = "<RESTART>";
     private static final Logger logger = LogManager.getLogger(NetworkTargetingExtension.class);
 
-    public static final AtomicReference<HederaNetwork> SHARED_NETWORK = new AtomicReference<>();
-    public static final AtomicReference<BlockNodeNetwork> SHARED_BLOCK_NODE_NETWORK = new AtomicReference<>();
-    public static final AtomicReference<RepeatableKeyGenerator> REPEATABLE_KEY_GENERATOR = new AtomicReference<>();
+	public static final AtomicReference<RepeatableKeyGenerator> REPEATABLE_KEY_GENERATOR = new AtomicReference<>();
 
-    @Override
+	@Override
     public void beforeEach(@NonNull final ExtensionContext extensionContext) {
         hapiTestMethodOf(extensionContext).ifPresent(method -> {
-            if (isAnnotated(method, GenesisHapiTest.class)) {
-                final var targetNetwork =
-                        new EmbeddedNetwork(method.getName().toUpperCase(), method.getName(), CONCURRENT);
-                final var a = method.getAnnotation(GenesisHapiTest.class);
-                final var bootstrapOverrides = Arrays.stream(a.bootstrapOverrides())
-                        .collect(toMap(ConfigOverride::key, ConfigOverride::value));
-                targetNetwork.startWith(bootstrapOverrides);
-                HapiSpec.TARGET_NETWORK.set(targetNetwork);
-            } else if (isAnnotated(method, RestartHapiTest.class)) {
-                final var targetNetwork =
-                        new EmbeddedNetwork(method.getName().toUpperCase(), method.getName(), REPEATABLE);
-                final var a = method.getAnnotation(RestartHapiTest.class);
+			final var isMultiNetTest = isAnnotated(method, MultiNetTest.class);
+			final var sharedNetPortReqs = isMultiNetTest ? SharedNetworkLauncherSessionListener.SharedNetworkExecutionListener.SHARED_CANDIDATE_PORT_REQS
+					: ALL_CANDIDATE_PORT_REQS;
+//			if (isMultiNetTest) {
+//				//do nothing? instead prefer the spec operation level?
+//			} else {
+				if (isAnnotated(method, GenesisHapiTest.class)) {
+					final var targetNetwork =
+							new EmbeddedNetwork(method.getName().toUpperCase(), method.getName(),
+									CONCURRENT);
+					final var a = method.getAnnotation(GenesisHapiTest.class);
+					final var bootstrapOverrides = Arrays.stream(a.bootstrapOverrides())
+							.collect(toMap(ConfigOverride::key, ConfigOverride::value));
+					targetNetwork.startWith(bootstrapOverrides);
+					HapiSpec.setGlobalTargetNetwork(targetNetwork);
+				}
+				else if (isAnnotated(method, RestartHapiTest.class)) {
+					final var targetNetwork =
+							new EmbeddedNetwork(method.getName().toUpperCase(), method.getName(),
+									REPEATABLE);
+					final var a = method.getAnnotation(RestartHapiTest.class);
 
-                final var setupOverrides =
-                        Arrays.stream(a.setupOverrides()).collect(toMap(ConfigOverride::key, ConfigOverride::value));
+					final var setupOverrides =
+							Arrays.stream(a.setupOverrides()).collect(
+									toMap(ConfigOverride::key, ConfigOverride::value));
 
-                final var restartOverrides =
-                        Arrays.stream(a.restartOverrides()).collect(toMap(ConfigOverride::key, ConfigOverride::value));
+					final var restartOverrides =
+							Arrays.stream(a.restartOverrides()).collect(
+									toMap(ConfigOverride::key, ConfigOverride::value));
 
-                switch (a.restartType()) {
-                    case GENESIS -> targetNetwork.startWith(restartOverrides);
-                    case SAME_VERSION -> targetNetwork.startWith(setupOverrides);
-                    case UPGRADE_BOUNDARY -> startFromPreviousVersion(targetNetwork, setupOverrides);
-                }
-                switch (a.restartType()) {
-                    case GENESIS -> {
-                        // The restart was from genesis, so nothing else to do
-                    }
-                    case SAME_VERSION, UPGRADE_BOUNDARY -> {
-                        final var state = postGenesisStateOf(targetNetwork, a);
-                        targetNetwork.restart(state, restartOverrides);
-                    }
-                }
-                HapiSpec.TARGET_NETWORK.set(targetNetwork);
-            } else if (isAnnotated(method, HapiBlockNode.class)) {
-                logger.info("HapiBlockNode annotation found on method: " + method.getName());
-                final var annotation = method.getAnnotation(HapiBlockNode.class);
-                final SubProcessNetwork targetNetwork =
-                        (SubProcessNetwork) sharedSubProcessNetwork(method.getName(), annotation.networkSize());
+					switch (a.restartType()) {
+						case GENESIS -> targetNetwork.startWith(restartOverrides);
+						case SAME_VERSION -> targetNetwork.startWith(setupOverrides);
+						case UPGRADE_BOUNDARY -> startFromPreviousVersion(targetNetwork,
+								setupOverrides);
+					}
+					switch (a.restartType()) {
+						case GENESIS -> {
+							// The restart was from genesis, so nothing else to do
+						}
+						case SAME_VERSION, UPGRADE_BOUNDARY -> {
+							final var state = postGenesisStateOf(targetNetwork, a);
+							targetNetwork.restart(state, restartOverrides);
+						}
+					}
+					HapiSpec.setGlobalTargetNetwork(targetNetwork);
+				}
+				else if (isAnnotated(method, HapiBlockNode.class)) {
+					logger.info("HapiBlockNode annotation found on method: " + method.getName());
+					final var annotation = method.getAnnotation(HapiBlockNode.class);
+					final SubProcessNetwork targetNetwork =
+							(SubProcessNetwork) newSubProcessNetwork(method.getName(),
+									annotation.networkSize(), sharedNetPortReqs, 0, 0);
 
-                final BlockNodeNetwork targetBlockNodeNetwork = new BlockNodeNetwork();
-                targetNetwork
-                        .getPostInitWorkingDirActions()
-                        .add(targetBlockNodeNetwork::configureBlockNodeConnectionInformation);
-                // Configure block node mode based on annotation
-                for (BlockNodeConfig blockNodeConfig : annotation.blockNodeConfigs()) {
-                    targetBlockNodeNetwork.getBlockNodeModeById().put(blockNodeConfig.nodeId(), blockNodeConfig.mode());
-                }
+					final BlockNodeNetwork targetBlockNodeNetwork = new BlockNodeNetwork(sharedNetPortReqs.bounds());
+					targetNetwork
+							.getPostInitWorkingDirActions()
+							.add(targetBlockNodeNetwork::configureBlockNodeConnectionInformation);
+					// Configure block node mode based on annotation
+					for (BlockNodeConfig blockNodeConfig : annotation.blockNodeConfigs()) {
+						targetBlockNodeNetwork.getBlockNodeModeById().put(blockNodeConfig.nodeId(),
+								blockNodeConfig.mode());
+					}
 
-                for (SubProcessNodeConfig subProcessNodeConfig : annotation.subProcessNodeConfigs()) {
-                    targetBlockNodeNetwork
-                            .getBlockNodeIdsBySubProcessNodeId()
-                            .put(subProcessNodeConfig.nodeId(), subProcessNodeConfig.blockNodeIds());
-                    targetBlockNodeNetwork
-                            .getBlockNodePrioritiesBySubProcessNodeId()
+					for (SubProcessNodeConfig subProcessNodeConfig : annotation.subProcessNodeConfigs()) {
+						targetBlockNodeNetwork
+								.getBlockNodeIdsBySubProcessNodeId()
+								.put(subProcessNodeConfig.nodeId(),
+										subProcessNodeConfig.blockNodeIds());
+						targetBlockNodeNetwork
+								.getBlockNodePrioritiesBySubProcessNodeId()
                             .put(subProcessNodeConfig.nodeId(), subProcessNodeConfig.blockNodePriorities());
                     if (subProcessNodeConfig.applicationPropertiesOverrides().length > 0) {
                         targetNetwork
@@ -135,33 +150,37 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
                                         subProcessNodeConfig.nodeId(),
                                         Arrays.asList(subProcessNodeConfig.applicationPropertiesOverrides()));
                     }
-                }
+					}
 
-                targetBlockNodeNetwork.start();
-                SHARED_BLOCK_NODE_NETWORK.set(targetBlockNodeNetwork);
-                targetNetwork.start();
-                SHARED_NETWORK.set(targetNetwork);
+					targetBlockNodeNetwork.start();
+					HapiNetworks.SHARED_BLOCK_NODE_NETWORK.set(targetBlockNodeNetwork);
+					targetNetwork.start();
+					HapiNetworks.setSharedNetwork(targetNetwork);
 
-                // Set both the thread-local and the static shared network reference
-                HapiSpec.TARGET_BLOCK_NODE_NETWORK.set(targetBlockNodeNetwork);
-                HapiSpec.TARGET_NETWORK.set(targetNetwork);
-            } else {
-                ensureEmbeddedNetwork(extensionContext);
-                HapiSpec.TARGET_NETWORK.set(SHARED_NETWORK.get());
-                HapiSpec.TARGET_BLOCK_NODE_NETWORK.set(SHARED_BLOCK_NODE_NETWORK.get());
-                // If there are properties to preserve or system files to override and restore, bind that info to the
-                // thread before executing the test factory
-                if (isAnnotated(method, LeakyHapiTest.class)) {
-                    final var a = method.getAnnotation(LeakyHapiTest.class);
-                    bindThreadTargets(a.requirement(), a.overrides(), a.throttles(), a.fees());
-                } else if (isAnnotated(method, LeakyEmbeddedHapiTest.class)) {
-                    final var a = method.getAnnotation(LeakyEmbeddedHapiTest.class);
-                    bindThreadTargets(a.requirement(), a.overrides(), a.throttles(), a.fees());
-                } else if (isAnnotated(method, LeakyRepeatableHapiTest.class)) {
-                    final var a = method.getAnnotation(LeakyRepeatableHapiTest.class);
-                    bindThreadTargets(new ContextRequirement[] {}, a.overrides(), a.throttles(), a.fees());
-                }
-            }
+					// Set both the thread-local and the static shared network reference
+					HapiSpec.TARGET_BLOCK_NODE_NETWORK.set(targetBlockNodeNetwork);
+					HapiSpec.setGlobalTargetNetwork(targetNetwork);
+				}
+				else {
+					ensureEmbeddedNetwork(extensionContext);
+
+					HapiSpec.setGlobalTargetNetwork(HapiNetworks.sharedNetwork());
+					HapiSpec.TARGET_BLOCK_NODE_NETWORK.set(HapiNetworks.SHARED_BLOCK_NODE_NETWORK.get());
+					// If there are properties to preserve or system files to override and restore, bind that info to the
+					// thread before executing the test factory
+					if (isAnnotated(method, LeakyHapiTest.class)) {
+						final var a = method.getAnnotation(LeakyHapiTest.class);
+						bindThreadTargets(a.requirement(), a.overrides(), a.throttles(), a.fees());
+					} else if (isAnnotated(method, LeakyEmbeddedHapiTest.class)) {
+						final var a = method.getAnnotation(LeakyEmbeddedHapiTest.class);
+						bindThreadTargets(a.requirement(), a.overrides(), a.throttles(), a.fees());
+					} else if (isAnnotated(method, LeakyRepeatableHapiTest.class)) {
+						final var a = method.getAnnotation(LeakyRepeatableHapiTest.class);
+						bindThreadTargets(new ContextRequirement[]{}, a.overrides(), a.throttles(),
+								a.fees());
+					}
+				}
+//			}
         });
     }
 
@@ -176,7 +195,7 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
                     final var validationSpec = new HapiSpec(
                             "StreamValidation",
                             new com.hedera.services.bdd.spec.utilops.streams.StreamValidationOp[] {streamValidationOp});
-                    validationSpec.setTargetNetwork(SHARED_NETWORK.get());
+                    validationSpec.setTargetNetwork(HapiNetworks.sharedNetwork());
                     // Execute the validation spec
                     try {
                         validationSpec.execute();
@@ -187,25 +206,17 @@ public class NetworkTargetingExtension implements BeforeEachCallback, AfterEachC
                     System.err.println("Error during post-test stream validation: " + e.getMessage());
                 } finally {
                     // Ensure network termination even if validation fails
-                    SHARED_NETWORK.get().terminate();
-                    SHARED_BLOCK_NODE_NETWORK.get().terminate();
+                    HapiNetworks.sharedNetwork().terminate();
+                    HapiNetworks.SHARED_BLOCK_NODE_NETWORK.get().terminate();
                     // Clear the static shared network reference as the per-method network is gone
-                    SHARED_NETWORK.set(null);
-                    SHARED_BLOCK_NODE_NETWORK.set(null);
+                    HapiNetworks.setSharedNetwork(null);
+                    HapiNetworks.SHARED_BLOCK_NODE_NETWORK.set(null);
                     // Default cleanup if no per-method network was found
-                    HapiSpec.TARGET_NETWORK.remove();
-                    HapiSpec.TARGET_BLOCK_NODE_NETWORK.remove();
-                    HapiSpec.FEES_OVERRIDE.remove();
-                    HapiSpec.THROTTLES_OVERRIDE.remove();
-                    HapiSpec.PROPERTIES_TO_PRESERVE.remove();
+					HapiSpec.resetAllResources();
                 }
             } else {
                 // Default cleanup if no per-method network was found
-                HapiSpec.TARGET_NETWORK.remove();
-                HapiSpec.TARGET_BLOCK_NODE_NETWORK.remove();
-                HapiSpec.FEES_OVERRIDE.remove();
-                HapiSpec.THROTTLES_OVERRIDE.remove();
-                HapiSpec.PROPERTIES_TO_PRESERVE.remove();
+				HapiSpec.resetAllResources();
             }
         });
     }

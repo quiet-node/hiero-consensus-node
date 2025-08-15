@@ -55,7 +55,7 @@ public class WorkingDirUtils {
     private static final X509Certificate SIG_CERT;
     public static final Bytes VALID_CERT;
 
-    static {
+	static {
         final var randomAddressBook = RandomAddressBookBuilder.create(new Random())
                 .withSize(1)
                 .withRealKeysEnabled(true)
@@ -112,7 +112,8 @@ public class WorkingDirUtils {
      * @param configTxt the contents of the <i>config.txt</i> file
      */
     public static void recreateWorkingDir(
-            @NonNull final Path workingDir, @NonNull final String configTxt, final long nodeId) {
+            @NonNull final Path workingDir, @NonNull final String configTxt, final
+			com.hedera.services.bdd.junit.hedera.NodeMetadata nodeMeta) {
         requireNonNull(workingDir);
         requireNonNull(configTxt);
 
@@ -133,7 +134,7 @@ public class WorkingDirUtils {
         // Copy the bootstrap assets into the working directory
         copyBootstrapAssets(bootstrapAssetsLoc(), workingDir);
         // Update the log4j2.xml file with the correct output directory
-        updateLog4j2XmlOutputDir(workingDir, nodeId);
+        updateLog4j2XmlOutputDir(workingDir, nodeMeta);
     }
 
     /**
@@ -198,7 +199,7 @@ public class WorkingDirUtils {
                 : Path.of(TEST_CLIENTS_BOOTSTRAP_ASSETS_LOC);
     }
 
-    private static void updateLog4j2XmlOutputDir(@NonNull final Path workingDir, long nodeId) {
+    private static void updateLog4j2XmlOutputDir(@NonNull final Path workingDir, com.hedera.services.bdd.junit.hedera.NodeMetadata nodeMeta) {
         final var path = workingDir.resolve(LOG4J2_XML);
         final var log4j2Xml = readStringUnchecked(path);
         final var updatedLog4j2Xml = log4j2Xml
@@ -234,7 +235,7 @@ public class WorkingDirUtils {
                         "output/",
                         workingDir.resolve(OUTPUT_DIR).toAbsolutePath().normalize() + "/")
                 // Differentiate between node outputs in combined logging
-                .replace(LOG4J2_DATE_FORMAT, LOG4J2_DATE_FORMAT + " &lt;" + "n" + nodeId + "&gt;");
+                .replace(LOG4J2_DATE_FORMAT, LOG4J2_DATE_FORMAT + " &lt;" + nodeMeta.displayIndicator() + "&gt;");
         writeStringUnchecked(path, updatedLog4j2Xml, StandardOpenOption.WRITE);
     }
 

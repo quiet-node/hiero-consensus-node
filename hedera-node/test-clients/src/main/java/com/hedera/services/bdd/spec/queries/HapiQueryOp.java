@@ -86,6 +86,11 @@ public abstract class HapiQueryOp<T extends HapiQueryOp<T>> extends HapiSpecOper
     protected Optional<ResponseCodeEnum> costAnswerPrecheck = Optional.empty();
     protected Optional<HapiCryptoTransfer> explicitPayment = Optional.empty();
 
+	public T targetingSecondary() {
+		super.targetingSecondary();
+		return self();
+	}
+
     protected abstract boolean needsPayment();
 
     /**

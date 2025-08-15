@@ -41,7 +41,7 @@ public abstract class AbstractLocalNode<T extends AbstractLocalNode<T>> extends 
     @Override
     public @NonNull T initWorkingDir(@NonNull final String configTxt) {
         requireNonNull(configTxt);
-        recreateWorkingDir(requireNonNull(metadata.workingDir()), configTxt, metadata.nodeId());
+        recreateWorkingDir(requireNonNull(metadata.workingDir()), configTxt, metadata);
         workingDirInitialized = true;
         return self();
     }

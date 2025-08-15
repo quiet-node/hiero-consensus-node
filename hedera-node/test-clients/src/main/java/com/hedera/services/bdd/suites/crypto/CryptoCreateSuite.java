@@ -3,6 +3,7 @@ package com.hedera.services.bdd.suites.crypto;
 
 import static com.hedera.node.app.hapi.utils.EthSigsUtils.recoverAddressFromPubKey;
 import static com.hedera.services.bdd.junit.TestTags.CRYPTO;
+import static com.hedera.services.bdd.spec.HapiSpec.doTargetSpec;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.assertions.AccountInfoAsserts.accountWith;
 import static com.hedera.services.bdd.spec.assertions.TransactionRecordAsserts.recordWith;
@@ -36,6 +37,7 @@ import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withAddressOfKey;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withLongZeroAddress;
 import static com.hedera.services.bdd.spec.utilops.UtilVerbs.withOpContext;
 import static com.hedera.services.bdd.spec.utilops.mod.ModificationUtils.withSuccessivelyVariedBodyIds;
+import static com.hedera.services.bdd.suites.HapiSuite.DEFAULT_PAYER;
 import static com.hedera.services.bdd.suites.HapiSuite.FALSE_VALUE;
 import static com.hedera.services.bdd.suites.HapiSuite.GENESIS;
 import static com.hedera.services.bdd.suites.HapiSuite.ONE_HBAR;
@@ -66,19 +68,30 @@ import com.esaulpaugh.headlong.abi.Address;
 import com.google.protobuf.ByteString;
 import com.hedera.services.bdd.junit.HapiTest;
 import com.hedera.services.bdd.junit.LeakyHapiTest;
+import com.hedera.services.bdd.junit.MultiNetTest;
+import com.hedera.services.bdd.junit.extensions.HapiNetworks;
+import com.hedera.services.bdd.spec.HapiSpec;
 import com.hedera.services.bdd.spec.HapiSpecOperation;
 import com.hedera.services.bdd.spec.dsl.annotations.Contract;
 import com.hedera.services.bdd.spec.dsl.entities.SpecContract;
 import com.hedera.services.bdd.spec.keys.KeyShape;
+import com.hedera.services.bdd.spec.props.MapPropertySource;
 import com.hedera.services.bdd.spec.transactions.crypto.HapiCryptoTransfer;
 import com.hedera.services.bdd.spec.transactions.token.HapiTokenCreate;
+import com.hedera.services.bdd.spec.transactions.token.TokenMovement;
 import com.hederahashgraph.api.proto.java.Key;
 import com.hederahashgraph.api.proto.java.KeyList;
 import com.hederahashgraph.api.proto.java.RealmID;
 import com.hederahashgraph.api.proto.java.ShardID;
 import com.hederahashgraph.api.proto.java.ThresholdKey;
+
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hiero.base.utility.CommonUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.DynamicTest;
@@ -96,12 +109,51 @@ public class CryptoCreateSuite {
     public static final String SHORT_KEY = "shortKey";
     public static final String EMPTY_KEY_STRING = "emptyKey";
     private static final String ED_KEY = "EDKEY";
+	private static final Logger log = LogManager.getLogger(CryptoCreateSuite.class);
 
     @HapiTest
     final Stream<DynamicTest> idVariantsTreatedAsExpected() {
         return hapiTest(submitModified(
                 withSuccessivelyVariedBodyIds(), () -> cryptoCreate("account").stakedAccountId(STAKED_ACCOUNT_ID)));
     }
+
+	static Consumer<HapiSpec> beforeOps = HapiSpec::fixSharedResources;
+
+	@MultiNetTest
+	final Stream<DynamicTest> basicCryptoTransferOnBothNetworksSucceeds() {
+		// hs1 targets the shared network
+		var hs1 = new HapiSpec("Net1Spec", new HapiSpecOperation[] {
+				cryptoCreate("recipient").balance(0L),
+				cryptoTransfer(TokenMovement.movingHbar(1).between(DEFAULT_PAYER, "recipient")),
+				getAccountBalance("recipient").hasTinyBars(1),
+		});
+		hs1.setBeforeOps(spec -> {
+			beforeOps.accept(spec);
+			doTargetSpec(hs1, HapiNetworks.sharedNetwork());
+		});
+
+		// hs2 targets the secondary network
+		var hs2 = new HapiSpec("Net2Spec", new MapPropertySource(Map.of("hapi.spec.default.shard", "21", "hapi.spec.default.realm", "22", "default.node", "7")), new HapiSpecOperation[] {
+				cryptoCreate("recipient").balance(0L),
+				cryptoTransfer(TokenMovement.movingHbar(1).between(DEFAULT_PAYER, "recipient")),
+				getAccountBalance("recipient").hasTinyBars(1),
+		});
+		hs2.setBeforeOps(spec -> {
+			beforeOps.accept(spec);
+			spec.setTargetSelector(() -> HapiNetworks.getNetwork("SECONDARY"));
+		});
+
+		return Stream.of(
+				DynamicTest.dynamicTest("hs1", hs1),
+				DynamicTest.dynamicTest("hs2", hs2));
+
+		// The ideal:
+//		return hapiTest(
+//				cryptoTransfer(TokenMovement.movingHbar(1).between("FUNDING", "GENESIS")).targetingSecondary(),
+//				cryptoTransfer(TokenMovement.movingHbar(1).between("FUNDING", "GENESIS")), //targeting primary
+//				getAccountBalance("GENESIS").targetingSecondary().hasTinyBars(101),
+//				getAccountBalance("GENESIS").hasTinyBars(101));
+	}
 
     @HapiTest
     public Stream<DynamicTest> cantCreateTwoAccountsWithSameAlias() {
