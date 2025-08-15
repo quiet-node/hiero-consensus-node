@@ -299,27 +299,13 @@ public class BlockNodeConnectionManager {
 
         logger.warn("[{}] Rescheduling connection for reconnect attempt", connection);
 
-        connection.getLock().writeLock().lock();
-        try {
-            connection.close();
-            activeConnectionRef.compareAndSet(connection, null);
-            final var newConn = createConnection(connection.getNodeConfig());
-
-            if (isOnlyOneBlockNodeConfigured()) {
-                // If there is only one block node configured, we will not try to select a new node
-                // Schedule a retry for the failed connection with no delay
-                scheduleConnectionAttempt(newConn, Duration.ofSeconds(0), null, false);
-            } else {
-                // Schedule retry for the failed connection after a delay (initialDelay)
-                scheduleConnectionAttempt(newConn, initialDelay, null, false);
-            }
-        } finally {
-            connection.getLock().writeLock().unlock();
-        }
-
-        // Doing it that way allows us to avoid deadlocks in the case
-        // where the connection's lock is held while trying to select a new node.
-        if (!isOnlyOneBlockNodeConfigured()) {
+        if (isOnlyOneBlockNodeConfigured()) {
+            // If there is only one block node configured, we will not try to select a new node
+            // Schedule a retry for the failed connection with no delay
+            scheduleConnectionAttempt(connection, Duration.ofSeconds(0), null, false);
+        } else {
+            // Schedule retry for the failed connection after a delay (initialDelay)
+            scheduleConnectionAttempt(connection, initialDelay, null, false);
             // Immediately try to find and connect to the next available node
             selectNewBlockNodeForStreaming(false);
         }
@@ -469,6 +455,7 @@ public class BlockNodeConnectionManager {
         if (!isStreamingEnabled.get()) {
             return false;
         }
+        logger.debug("Selecting new block node priority-wise");
 
         List<BlockNodeConnection> lockedConnections = new ArrayList<>();
         // Lock all existing connections to ensure state consistency
@@ -639,25 +626,37 @@ public class BlockNodeConnectionManager {
                 continue;
             }
 
-            activeConnection.getLock().writeLock().lock();
-            if (activeConnection.getConnectionState() != ConnectionState.ACTIVE) {
-                try {
-                    Thread.sleep(workerLoopSleepDuration());
-                } catch (final InterruptedException e) {
-                    logger.error("Block stream worker interrupted while waiting for active connection", e);
-                    Thread.currentThread().interrupt();
-                }
-                continue;
-            }
-
             try {
-                // If signaled to jump to a specific block, do so
-                jumpToBlockIfNeeded();
+                // Use tryLock to avoid blocking indefinitely, making shutdown more responsive.
+                if (activeConnection.getLock().readLock().tryLock(100, TimeUnit.MILLISECONDS)) {
+                    try {
+                        if (activeConnection.getConnectionState() != ConnectionState.ACTIVE) {
+                            try {
+                                Thread.sleep(workerLoopSleepDuration());
+                            } catch (final InterruptedException e) {
+                                logger.error("Block stream worker interrupted while waiting for active connection", e);
+                                Thread.currentThread().interrupt();
+                            }
+                            continue;
+                        }
 
-                final boolean shouldSleep = processStreamingToBlockNode(activeConnection);
+                        // If signaled to jump to a specific block, do so
+                        jumpToBlockIfNeeded();
 
-                // Sleep for a short duration to avoid busy waiting
-                if (shouldSleep) {
+                        final boolean shouldSleep = processStreamingToBlockNode(activeConnection);
+
+                        // Sleep for a short duration to avoid busy waiting
+                        if (shouldSleep) {
+                            Thread.sleep(workerLoopSleepDuration());
+                        }
+                    } finally {
+                        activeConnection.getLock().readLock().unlock();
+                    }
+                } else {
+                    logger.warn(
+                            "[{}] Could not acquire read lock in worker loop, connection may be busy or deadlocked.",
+                            activeConnection);
+                    // If we can't get the lock, sleep for a bit to prevent busy-spinning
                     Thread.sleep(workerLoopSleepDuration());
                 }
             } catch (final InterruptedException e) {
@@ -665,8 +664,6 @@ public class BlockNodeConnectionManager {
                 Thread.currentThread().interrupt();
             } catch (final Exception e) {
                 activeConnection.handleStreamFailure();
-            } finally {
-                activeConnection.getLock().writeLock().unlock();
             }
         }
     }
@@ -688,7 +685,16 @@ public class BlockNodeConnectionManager {
                     connection,
                     currentStreamingBlockNumber,
                     latestBlockNumber);
-            rescheduleAndSelectNewNode(connection, LONGER_RETRY_DELAY);
+
+            connection.getLock().readLock().unlock();
+            connection.getLock().writeLock().lock();
+            try {
+                rescheduleAndSelectNewNode(connection, LONGER_RETRY_DELAY);
+            } finally {
+                connection.getLock().writeLock().unlock();
+            }
+            connection.getLock().readLock().lock();
+
             return true;
         }
 
@@ -835,10 +841,11 @@ public class BlockNodeConnectionManager {
                             // this new connection has a lower (or equal) priority than the existing active connection
                             // this connection task should thus be cancelled/ignored
                             logger.debug(
-                                    "The existing active connection ({}) has an equal or higher priority than the "
-                                            + "connection ({}) we are attempting to connect to and this new connection attempt will be ignored",
+                                    "The existing active connection [{}] has an equal or higher priority than the "
+                                            + "connection [{}] we are attempting to connect to and this new connection attempt will be ignored",
                                     activeConnection,
                                     connection);
+                            connection.close();
                             return;
                         }
                     } finally {
@@ -847,28 +854,14 @@ public class BlockNodeConnectionManager {
                 }
 
                 /*
-                If we have got to this point, it means there is no active connection or it means there is an active
+                If we have got to this point, it means there is no active connection, or it means there is an active
                 connection, but the active connection has a lower priority than the connection in this task. In either
                 case, we want to elevate this connection to be the new active connection.
                  */
 
-                connection.createRequestPipeline();
-
-                if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
-                    // we were able to elevate this connection to the new active one
-
-                    connection.updateConnectionState(ConnectionState.ACTIVE);
-
-                    final long blockToJumpTo =
-                            blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
-                    jumpTargetBlock.set(blockToJumpTo);
-                } else {
-                    // Another connection task has preempted this task... reschedule and try again
-                    reschedule();
-                }
-
                 if (activeConnection != null) {
                     // close the old active connection
+                    activeConnection.getLock().writeLock().lock();
                     try {
                         activeConnection.close();
                     } catch (final RuntimeException e) {
@@ -876,7 +869,22 @@ public class BlockNodeConnectionManager {
                                 "[{}] Failed to shutdown connection (shutdown reason: another connection was elevated to active)",
                                 activeConnection,
                                 e);
+                    } finally {
+                        activeConnection.getLock().writeLock().unlock();
                     }
+                }
+
+                connection.createRequestPipeline();
+
+                if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
+                    // we were able to elevate this connection to the new active one
+                    connection.updateConnectionState(ConnectionState.ACTIVE);
+                    final long blockToJumpTo =
+                            blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
+                    jumpTargetBlock.set(blockToJumpTo);
+                } else {
+                    // Another connection task has preempted this task... reschedule and try again
+                    reschedule();
                 }
             } catch (final Exception e) {
                 logger.warn("[{}] Failed to establish connection to block node; will schedule a retry", connection);

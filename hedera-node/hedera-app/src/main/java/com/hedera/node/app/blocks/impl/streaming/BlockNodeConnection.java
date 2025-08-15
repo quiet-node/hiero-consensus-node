@@ -199,13 +199,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         pipelineLock.writeLock().lock();
         try {
             if (requestPipeline == null) {
-                connectionStateLock.writeLock().lock();
-                try {
-                    requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
-                    updateConnectionState(ConnectionState.PENDING);
-                } finally {
-                    connectionStateLock.writeLock().unlock();
-                }
+                requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
+                updateConnectionState(ConnectionState.PENDING);
             }
         } finally {
             pipelineLock.writeLock().unlock();
@@ -271,12 +266,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * Handles the failure of the stream by closing the connection and notifying the connection manager.
      */
     public void handleStreamFailure() {
-        connectionStateLock.writeLock().lock();
-        try {
-            close();
-        } finally {
-            connectionStateLock.writeLock().unlock();
-        }
+        close();
         blockNodeConnectionManager.rescheduleAndSelectNewNode(this, LONGER_RETRY_DELAY);
     }
 
@@ -391,7 +381,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             case Code.BEHIND -> {
                 // The block node is behind us, check if we have the last verified block still available in order to
                 // restart the stream from there
-                final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
+                final long restartBlockNumber = blockBufferService.getHighestAckedBlockNumber();
                 if (blockBufferService.getBlockState(restartBlockNumber) != null) {
                     close();
                     logger.warn(
@@ -625,29 +615,40 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     public void onNext(final @NonNull PublishStreamResponse response) {
         requireNonNull(response, "response must not be null");
 
-        connectionStateLock.writeLock().lock();
-        if (getConnectionState() == ConnectionState.ACTIVE) {
-            try {
-                if (response.hasAcknowledgement()) {
-                    blockStreamMetrics.incrementAcknowledgedBlockCount();
-                    handleAcknowledgement(response.acknowledgement());
-                } else if (response.hasEndStream()) {
-                    blockStreamMetrics.incrementEndOfStreamCount(
-                            response.endStream().status());
-                    handleEndOfStream(response.endStream());
-                } else if (response.hasSkipBlock()) {
-                    blockStreamMetrics.incrementSkipBlockCount();
-                    handleSkipBlock(response.skipBlock());
-                } else if (response.hasResendBlock()) {
-                    blockStreamMetrics.incrementResendBlockCount();
-                    handleResendBlock(response.resendBlock());
-                } else {
-                    blockStreamMetrics.incrementUnknownResponseCount();
-                    logger.warn("[{}] Unexpected response received: {}", this, response);
+        connectionStateLock.readLock().lock();
+        try {
+            if (getConnectionState() == ConnectionState.ACTIVE) {
+                connectionStateLock.readLock().unlock(); // Downgrade lock
+                connectionStateLock.writeLock().lock();
+                try {
+                    // Re-check state after acquiring write lock
+                    if (getConnectionState() != ConnectionState.ACTIVE) {
+                        return;
+                    }
+                    if (response.hasAcknowledgement()) {
+                        blockStreamMetrics.incrementAcknowledgedBlockCount();
+                        handleAcknowledgement(response.acknowledgement());
+                    } else if (response.hasEndStream()) {
+                        blockStreamMetrics.incrementEndOfStreamCount(
+                                response.endStream().status());
+                        handleEndOfStream(response.endStream());
+                    } else if (response.hasSkipBlock()) {
+                        blockStreamMetrics.incrementSkipBlockCount();
+                        handleSkipBlock(response.skipBlock());
+                    } else if (response.hasResendBlock()) {
+                        blockStreamMetrics.incrementResendBlockCount();
+                        handleResendBlock(response.resendBlock());
+                    } else {
+                        blockStreamMetrics.incrementUnknownResponseCount();
+                        logger.warn("[{}] Unexpected response received: {}", this, response);
+                    }
+                } finally {
+                    connectionStateLock.writeLock().unlock();
                 }
-            } finally {
-                connectionStateLock.writeLock().unlock();
+                connectionStateLock.readLock().lock(); // Re-acquire read lock
             }
+        } finally {
+            connectionStateLock.readLock().unlock();
         }
     }
 
@@ -660,15 +661,27 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     @Override
     public void onError(final Throwable error) {
         logger.warn("[{}] onError invoked", this, error);
-        connectionStateLock.writeLock().lock();
+        connectionStateLock.readLock().lock();
         try {
             if (getConnectionState() == ConnectionState.ACTIVE || getConnectionState() == ConnectionState.PENDING) {
-                logger.warn("[{}] onError being handled", this, error);
-                blockStreamMetrics.incrementOnErrorCount();
-                handleStreamFailure();
+                connectionStateLock.readLock().unlock();
+                connectionStateLock.writeLock().lock();
+                try {
+                    // Re-check state after acquiring write lock
+                    if (getConnectionState() != ConnectionState.ACTIVE
+                            && getConnectionState() != ConnectionState.PENDING) {
+                        return;
+                    }
+                    logger.warn("[{}] onError being handled", this, error);
+                    blockStreamMetrics.incrementOnErrorCount();
+                    handleStreamFailure();
+                } finally {
+                    connectionStateLock.writeLock().unlock();
+                }
+                connectionStateLock.readLock().lock();
             }
         } finally {
-            connectionStateLock.writeLock().unlock();
+            connectionStateLock.readLock().unlock();
         }
     }
 
@@ -677,9 +690,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         connectionStateLock.writeLock().lock();
         try {
             if (getConnectionState() == ConnectionState.ACTIVE) {
-                if (streamShutdownInProgress.get()) {
+                if (streamShutdownInProgress.getAndSet(false)) {
                     logger.debug("[{}] Stream completed (stream close was in progress)", this);
-                    streamShutdownInProgress.set(false);
                 } else {
                     logger.warn("[{}] Stream completed unexpectedly", this);
                     handleStreamFailure();

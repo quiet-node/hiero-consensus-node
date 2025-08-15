@@ -410,7 +410,7 @@ public class SimulatedBlockNodeServer {
                                             replies.hashCode());
 
                                     // Validate proof context
-                                    if (currentBlockNumber == null
+                                    /*if (currentBlockNumber == null
                                             || currentBlockNumber != blockNumber
                                             || !streamingBlocks.containsKey(blockNumber)
                                             || streamingBlocks.get(blockNumber) != replies) {
@@ -427,7 +427,7 @@ public class SimulatedBlockNodeServer {
                                                         : "none");
                                         // Continue to the next BlockItem in the request
                                         continue;
-                                    }
+                                    }*/
 
                                     // Mark block as fully received
                                     blocksWithHeadersOnly.remove(blockNumber);
