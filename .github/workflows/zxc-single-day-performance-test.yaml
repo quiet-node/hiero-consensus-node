@@ -296,6 +296,14 @@ jobs:
 
           task
           task_code=${?}
+          
+          export BLOCK_NODE_VERSION="${{ env.BlockNode_version }}"
+
+          for i in `seq 0 1 ${{ env.NUM_OF_BLOCK_NODES }}`
+          do
+           task solo:block:add
+          done
+
           task solo:node:logs
           if [ ${task_code} -ne 0 ]
           then
@@ -317,6 +325,7 @@ jobs:
           exit "${task_code}"
 
       - name: Add BlockNodes
+        if: false
         run: |
           set +x
           set +e
