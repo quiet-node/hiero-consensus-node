@@ -498,7 +498,7 @@ public class RandomSignedStateGenerator {
 
     public static void changeStateHashRandomly(@NonNull final SignedState state) {
         try {
-            Field hashField = VirtualMap.class.getDeclaredField("hash");
+            final Field hashField = VirtualMap.class.getDeclaredField("hash");
             hashField.setAccessible(true);
             AtomicReference<Hash> hashRef =
                     (AtomicReference<Hash>) hashField.get(state.getState().getRoot());

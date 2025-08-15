@@ -67,7 +67,7 @@ class StateTest {
     private static SignedState randomSignedState(boolean isSupposedToBeHashed) {
         Random random = new Random(0);
         final String virtualMapLabel = "vm-" + StateTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-        MerkleNodeState merkleNodeState = TestVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel);
+        final MerkleNodeState merkleNodeState = TestVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel);
         boolean shouldSaveToDisk = random.nextBoolean();
         SignedState signedState = new SignedState(
                 TestPlatformContextBuilder.create().build().getConfiguration(),
