@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Tag;
 
 // Order to be last as it will restart the network and halt if the lib is not present
 @OrderedInIsolation
-@Order(Integer.MAX_VALUE)
+@Order(Integer.MAX_VALUE - 1)
 @Tag(RESTART)
 public class BesuNativeLibVerificationTest implements LifecycleTest {
 
