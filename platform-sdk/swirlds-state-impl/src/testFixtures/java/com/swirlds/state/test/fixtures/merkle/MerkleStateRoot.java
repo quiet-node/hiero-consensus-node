@@ -63,7 +63,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -106,9 +106,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     // indices globally, assuming these indices do not change that often. We need to re-think index lookup,
     // but at this point all major rewrites seem to risky.
     private static final Map<String, Integer> INDEX_LOOKUP = new ConcurrentHashMap<>();
-    private LongSupplier roundSupplier;
 
-    private MerkleCryptography merkleCryptography;
+    private final MerkleCryptography merkleCryptography;
 
     public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
         return services;
@@ -117,7 +116,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     /**
      * Metrics for the snapshot creation process
      */
-    private MerkleRootSnapshotMetrics snapshotMetrics;
+    private final MerkleRootSnapshotMetrics snapshotMetrics;
 
     /**
      * Maintains information about each service, and each state of each service, known by this
@@ -144,14 +143,19 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      */
     private final RuntimeObjectRecord registryRecord;
 
-    private PlatformContext platformContext;
+    private final PlatformContext platformContext;
+
+    private final Function<MerkleStateRoot<T>, Long> extractRoundFromState;
 
     /**
      * Create a new instance. This constructor must be used for all creations of this class.
      */
-    public MerkleStateRoot(@NonNull final PlatformContext platformContext) {
+    public MerkleStateRoot(
+            @NonNull final PlatformContext platformContext,
+            @NonNull final Function<MerkleStateRoot<T>, Long> extractRoundFromState) {
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
         this.platformContext = platformContext;
+        this.extractRoundFromState = extractRoundFromState;
         this.merkleCryptography = platformContext.getMerkleCryptography();
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
     }
@@ -166,8 +170,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         super(from);
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
         this.platformContext = from.platformContext;
+        this.extractRoundFromState = from.extractRoundFromState;
         this.merkleCryptography = from.merkleCryptography;
-        this.roundSupplier = from.roundSupplier;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.platformContext.getMetrics());
         this.listeners.addAll(from.listeners);
 
@@ -185,10 +189,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
                 setChild(childIndex, childToCopy.copy());
             }
         }
-    }
-
-    public void setRoundSupplier(@NonNull final LongSupplier roundSupplier) {
-        this.roundSupplier = roundSupplier;
     }
 
     /**
@@ -873,12 +873,13 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @Override
     public void createSnapshot(@NonNull final Path targetPath) {
         final Time time = platformContext.getTime();
+        final Long round = extractRoundFromState.apply(this);
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
         throwIfMutable();
         throwIfDestroyed();
         final long startTime = time.currentTimeMillis();
-        MerkleTreeSnapshotWriter.createSnapshot(this, targetPath, roundSupplier.getAsLong());
+        MerkleTreeSnapshotWriter.createSnapshot(this, targetPath, round);
         snapshotMetrics.updateWriteStateToDiskTimeMetric(time.currentTimeMillis() - startTime);
     }
 

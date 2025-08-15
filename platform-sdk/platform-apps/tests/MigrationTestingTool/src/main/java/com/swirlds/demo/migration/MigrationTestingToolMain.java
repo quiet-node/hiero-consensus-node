@@ -46,10 +46,7 @@ public class MigrationTestingToolMain implements SwirldMain<MigrationTestingTool
             logger.info(STARTUP.getMarker(), "Registering MigrationTestingToolState with ConstructableRegistry");
             ConstructableRegistry constructableRegistry = ConstructableRegistry.getInstance();
             constructableRegistry.registerConstructable(
-                    new ClassConstructorPair(MigrationTestingToolState.class, () -> {
-                        MigrationTestingToolState migrationTestingToolState = new MigrationTestingToolState();
-                        return migrationTestingToolState;
-                    }));
+                    new ClassConstructorPair(MigrationTestingToolState.class, MigrationTestingToolState::new));
             registerMerkleStateRootClassIds();
             logger.info(STARTUP.getMarker(), "MigrationTestingToolState is registered with ConstructableRegistry");
         } catch (ConstructableRegistryException e) {

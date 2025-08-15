@@ -204,6 +204,6 @@ final class ReconnectTest {
                 reconnectMetrics,
                 platformStateFacade,
                 virtualMap -> new TestVirtualMapState(
-                        virtualMap, testPlatformContext, fn -> PlatformStateAccessor.GENESIS_ROUND));
+                        virtualMap, testPlatformContext, s -> PlatformStateAccessor.GENESIS_ROUND));
     }
 }

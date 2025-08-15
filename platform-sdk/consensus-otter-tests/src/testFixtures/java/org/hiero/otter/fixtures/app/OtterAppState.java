@@ -86,7 +86,7 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
 
     @Override
     protected OtterAppState newInstance(
-            @NonNull VirtualMap virtualMap,
+            @NonNull final VirtualMap virtualMap,
             @NonNull final PlatformContext platformContext,
             @NonNull final Function<VirtualMapState<OtterAppState>, Long> extractRoundFromState) {
         return new OtterAppState(virtualMap, platformContext, extractRoundFromState);

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.swirlds.demo.migration;
 
+import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
+
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.config.api.Configuration;
@@ -11,6 +14,7 @@ import com.swirlds.merkledb.MerkleDbDataSourceBuilder;
 import com.swirlds.merkledb.MerkleDbTableConfig;
 import com.swirlds.merkledb.config.MerkleDbConfig;
 import com.swirlds.platform.state.MerkleNodeState;
+import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
 import com.swirlds.state.test.fixtures.merkle.MerkleStateRoot;
 import com.swirlds.virtualmap.VirtualMap;
@@ -77,8 +81,14 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
     }
 
     public MigrationTestingToolState() {
-        super(PlatformContext.create(
-                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
+        super(
+                PlatformContext.create(
+                        ConfigurationBuilder.create().autoDiscoverExtensions().build()),
+                state -> {
+                    final ConsensusSnapshot consensusSnapshot =
+                            DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(state);
+                    return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
+                });
     }
 
     private MigrationTestingToolState(final MigrationTestingToolState that) {

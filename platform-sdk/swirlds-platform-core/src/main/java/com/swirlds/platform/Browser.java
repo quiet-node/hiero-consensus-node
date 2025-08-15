@@ -262,8 +262,8 @@ public class Browser {
             // Each platform needs a different temporary state on disk.
             MerkleDb.resetDefaultInstancePath();
             PlatformStateFacade platformStateFacade = new PlatformStateFacade();
-            final Function<State, Long> extractRoundFromState = virtualMapState -> {
-                final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(virtualMapState);
+            final Function<State, Long> extractRoundFromState = state -> {
+                final ConsensusSnapshot consensusSnapshot = platformStateFacade.consensusSnapshotOf(state);
                 return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
             };
             // Create the initial state for the platform
