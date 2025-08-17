@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.hiero.interledger.clpr.impl.test;
 
-import static org.hiero.interledger.clpr.impl.schemas.V0700ClprSchema.CLPR_LEDGER_CONFIGURATION_KEY;
+import static org.hiero.interledger.clpr.impl.schemas.V0650ClprSchema.CLPR_LEDGER_CONFIGURATION_KEY;
 
 import com.hedera.hapi.node.base.Timestamp;
 import com.hedera.node.app.history.ReadableHistoryStore;
+import com.hedera.node.app.spi.ids.ReadableEntityCounters;
+import com.hedera.node.app.spi.ids.WritableEntityCounters;
 import com.hedera.node.app.store.ReadableStoreFactory;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.state.spi.ReadableStates;
@@ -27,6 +29,7 @@ import org.hiero.interledger.clpr.WritableClprLedgerConfigurationStore;
 import org.hiero.interledger.clpr.impl.ReadableClprLedgerConfigurationStoreImpl;
 import org.hiero.interledger.clpr.impl.WritableClprLedgerConfigurationStoreImpl;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 
 public class ClprTestBase {
 
@@ -66,8 +69,10 @@ public class ClprTestBase {
         writableStatesMap.put(CLPR_LEDGER_CONFIGURATION_KEY, writableLedgerConfiguration);
         clprStates = new MapWritableStates(writableStatesMap);
         states = new MapReadableStates(writableStatesMap);
-        readableLedgerConfigStore = new ReadableClprLedgerConfigurationStoreImpl(states);
-        writableLedgerConfigStore = new WritableClprLedgerConfigurationStoreImpl(clprStates);
+        readableLedgerConfigStore =
+                new ReadableClprLedgerConfigurationStoreImpl(states, Mockito.mock(ReadableEntityCounters.class));
+        writableLedgerConfigStore =
+                new WritableClprLedgerConfigurationStoreImpl(clprStates, Mockito.mock(WritableEntityCounters.class));
     }
 
     private void setupScenario() {

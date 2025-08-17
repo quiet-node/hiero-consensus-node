@@ -9,7 +9,7 @@ import java.util.Set;
 import org.hiero.hapi.interledger.state.clpr.ClprLedgerConfiguration;
 import org.hiero.hapi.interledger.state.clpr.ClprLedgerId;
 
-public class V0700ClprSchema extends Schema {
+public class V0650ClprSchema extends Schema {
     public static final String CLPR_LEDGER_CONFIGURATION_KEY = "CLPR_LEDGER_CONFIGURATION";
     // TODO: Determine the appropriate max given ephemeral spheres creating definitions
     private static final long MAX_LEDGER_CONFIGURATION_ENTRIES = 50_000L;
@@ -18,12 +18,12 @@ public class V0700ClprSchema extends Schema {
      * The version of the schema.
      */
     private static final SemanticVersion VERSION =
-            SemanticVersion.newBuilder().major(0).minor(70).patch(0).build();
+            SemanticVersion.newBuilder().major(0).minor(65).patch(0).build();
 
     /**
      * Create a new instance
      */
-    public V0700ClprSchema() {
+    public V0650ClprSchema() {
         super(VERSION);
     }
 

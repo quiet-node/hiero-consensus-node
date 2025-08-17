@@ -53,8 +53,8 @@ public class ClprSetLedgerConfigurationHandler implements TransactionHandler {
      * @throws PreCheckException If any of the checks fail, indicating an invalid transaction.
      */
     private void pureChecks(@NonNull final TransactionBody txn) throws PreCheckException {
-        validateTruePreCheck(txn.hasClprLedgerConfiguration(), ResponseCodeEnum.INVALID_TRANSACTION_BODY);
-        final var configTxn = txn.clprLedgerConfigurationOrThrow();
+        validateTruePreCheck(txn.hasClprSetRemoteConfiguration(), ResponseCodeEnum.INVALID_TRANSACTION_BODY);
+        final var configTxn = txn.clprSetRemoteConfigurationOrThrow();
         validateTruePreCheck(configTxn.hasLedgerConfiguration(), ResponseCodeEnum.INVALID_TRANSACTION);
         final var ledgerConfig = configTxn.ledgerConfigurationOrThrow();
         final var ledgerId = ledgerConfig.ledgerIdOrThrow();
@@ -110,7 +110,7 @@ public class ClprSetLedgerConfigurationHandler implements TransactionHandler {
     public void handle(@NonNull final HandleContext context) throws HandleException {
         // We assume that the state proof is valid and the configuration is ready to be set.
         final var txn = context.body();
-        final var configTxn = txn.clprLedgerConfigurationOrThrow();
+        final var configTxn = txn.clprSetRemoteConfigurationOrThrow();
         final var newConfig = configTxn.ledgerConfigurationOrThrow();
         final var ledgerId = newConfig.ledgerIdOrThrow();
         final var configStore = context.storeFactory().writableStore(WritableClprLedgerConfigurationStore.class);

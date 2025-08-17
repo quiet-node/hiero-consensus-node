@@ -191,7 +191,7 @@ public class ClprSetLedgerConfigurationHandlerTest extends ClprHandlerTestBase {
                     .ledgerConfiguration(localClprConfig)
                     .build();
             return TransactionBody.newBuilder()
-                    .clprLedgerConfiguration(bodyInternals)
+                    .clprSetRemoteConfiguration(bodyInternals)
                     .build();
         }
     }
