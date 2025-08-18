@@ -31,6 +31,7 @@ import com.swirlds.platform.gossip.DefaultIntakeEventCounter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.NoOpIntakeEventCounter;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -513,7 +514,8 @@ public final class PlatformBuilder {
                 firstPlatform,
                 consensusStateEventHandler,
                 platformStateFacade,
-                stateRootFunction);
+                stateRootFunction,
+                new FallenBehindMonitor(currentRoster, configuration, platformContext.getMetrics()));
 
         return new PlatformComponentBuilder(buildingBlocks);
     }

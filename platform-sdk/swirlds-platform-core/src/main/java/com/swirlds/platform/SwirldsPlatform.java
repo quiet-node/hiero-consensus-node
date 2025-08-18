@@ -241,6 +241,7 @@ public class SwirldsPlatform implements Platform {
                 savedStateController,
                 consensusStateEventHandler, selfId);
 
+        blocks.fallenBehindMonitor().bind(platformReconnecter);
         platformWiring.bind(
                 builder,
                 pcesReplayer,
@@ -253,6 +254,8 @@ public class SwirldsPlatform implements Platform {
                 appNotifier,
                 publisher,
                 platformReconnecter);
+
+        platformWiring.startGossip();
 
         final Hash legacyRunningEventHash =
                 platformStateFacade.legacyRunningEventHashOf(initialState.getState()) == null

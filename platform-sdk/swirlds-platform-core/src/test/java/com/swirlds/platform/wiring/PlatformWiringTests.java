@@ -10,6 +10,8 @@ import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.model.WiringModelBuilder;
+import com.swirlds.component.framework.wires.input.BindableInputWire;
+import com.swirlds.component.framework.wires.output.StandardOutputWire;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.builder.ApplicationCallbacks;
 import com.swirlds.platform.builder.PlatformBuildingBlocks;
@@ -38,12 +40,16 @@ import com.swirlds.platform.state.iss.IssDetector;
 import com.swirlds.platform.state.iss.IssHandler;
 import com.swirlds.platform.state.nexus.LatestCompleteStateNexus;
 import com.swirlds.platform.state.nexus.SignedStateNexus;
+import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedStateSentinel;
 import com.swirlds.platform.state.signed.StateGarbageCollector;
 import com.swirlds.platform.state.signed.StateSignatureCollector;
 import com.swirlds.platform.state.signer.StateSigner;
 import com.swirlds.platform.state.snapshot.StateSnapshotManager;
 import com.swirlds.platform.system.status.StatusStateMachine;
+import com.swirlds.platform.wiring.components.Gossip;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import java.time.Duration;
 import java.util.stream.Stream;
 import org.hiero.consensus.crypto.EventHasher;
 import org.hiero.consensus.event.FutureEventBuffer;
@@ -51,6 +57,9 @@ import org.hiero.consensus.event.creator.impl.EventCreationManager;
 import org.hiero.consensus.event.creator.impl.pool.TransactionPool;
 import org.hiero.consensus.event.creator.impl.signing.SelfEventSigner;
 import org.hiero.consensus.event.creator.impl.stale.DefaultStaleEventDetector;
+import org.hiero.consensus.model.event.PlatformEvent;
+import org.hiero.consensus.model.hashgraph.EventWindow;
+import org.hiero.consensus.model.status.PlatformStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -125,24 +134,42 @@ class PlatformWiringTests {
         // Currently we just have a facade between gossip and the wiring framework.
         // In the future when gossip is refactored to operate within the wiring
         // framework like other components, such things will not be needed.
-        componentBuilder.withGossip(
-                (wiringModel,
-                        eventInput,
-                        eventWindowInput,
-                        eventOutput,
-                        startInput,
-                        stopInput,
-                        clearInput,
-                        systemHealthInput,
-                        platformStatusInput) -> {
-                    eventInput.bindConsumer(event -> {});
-                    eventWindowInput.bindConsumer(eventWindow -> {});
-                    startInput.bindConsumer(noInput -> {});
-                    stopInput.bindConsumer(noInput -> {});
-                    clearInput.bindConsumer(noInput -> {});
-                    systemHealthInput.bindConsumer(duration -> {});
-                    platformStatusInput.bindConsumer(platformStatus -> {});
-                });
+        componentBuilder.withGossip(new Gossip() {
+            @Override
+            public void bind(@NonNull final WiringModel model,
+                    @NonNull final BindableInputWire<PlatformEvent, Void> eventInput,
+                    @NonNull final BindableInputWire<EventWindow, Void> eventWindowInput,
+                    @NonNull final StandardOutputWire<PlatformEvent> eventOutput,
+                    @NonNull final BindableInputWire<NoInput, Void> startInput,
+                    @NonNull final BindableInputWire<NoInput, Void> stopInput,
+                    @NonNull final BindableInputWire<NoInput, Void> clearInput,
+                    @NonNull final BindableInputWire<Duration, Void> systemHealthInput,
+                    @NonNull final BindableInputWire<PlatformStatus, Void> platformStatusInput) {
+                eventInput.bindConsumer(event -> {});
+                eventWindowInput.bindConsumer(eventWindow -> {});
+                startInput.bindConsumer(noInput -> {});
+                stopInput.bindConsumer(noInput -> {});
+                clearInput.bindConsumer(noInput -> {});
+                systemHealthInput.bindConsumer(duration -> {});
+                platformStatusInput.bindConsumer(platformStatus -> {});
+
+            }
+
+            @Override
+            public ReservedSignedState receiveSignedState() {
+                return null;
+            }
+
+            @Override
+            public void pause() {
+
+            }
+
+            @Override
+            public void resume() {
+
+            }
+        });
 
         wiring.bind(
                 componentBuilder,
@@ -154,7 +181,7 @@ class PlatformWiringTests {
                 mock(LatestCompleteStateNexus.class),
                 mock(SavedStateController.class),
                 mock(AppNotifier.class),
-                mock(PlatformPublisher.class));
+                mock(PlatformPublisher.class), null);
 
         wiring.start();
         assertFalse(wiring.getModel().checkForUnboundInputWires());

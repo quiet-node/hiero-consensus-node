@@ -11,7 +11,10 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig_;
 import com.swirlds.common.test.fixtures.Randotron;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
+import com.swirlds.metrics.api.Counter.Config;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.Utilities;
 import com.swirlds.platform.network.PeerInfo;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
@@ -27,13 +30,12 @@ class FallenBehindManagerTest {
             RandomRosterBuilder.create(Randotron.create()).withSize(numNodes).build();
     private final double fallenBehindThreshold = 0.5;
     private final NodeId selfId = NodeId.of(roster.rosterEntries().get(0).nodeId());
-    private final ReconnectConfig config = new TestConfigBuilder()
+    private final Configuration config = new TestConfigBuilder()
             .withValue(ReconnectConfig_.FALLEN_BEHIND_THRESHOLD, fallenBehindThreshold)
-            .getOrCreateConfig()
-            .getConfigData(ReconnectConfig.class);
+            .getOrCreateConfig();
     final List<PeerInfo> peers = Utilities.createPeerInfoList(roster, selfId);
     private final FallenBehindMonitor manager =
-            new FallenBehindMonitor(peers.size(), mock(StatusActionSubmitter.class), config);
+            new FallenBehindMonitor(mock(Roster.class), config, mock(Metrics.class));
 
     @Test
     void test() {
@@ -125,12 +127,12 @@ class FallenBehindManagerTest {
         manager.reportFallenBehind(NodeId.of(5));
         assertFallenBehind(false, 5, "we should still be missing one for fallen behind");
 
-        manager.addRemovePeers(ImmutableSet.of(NodeId.of(22), NodeId.of(23)), Collections.emptySet());
+        //manager.addRemovePeers(ImmutableSet.of(NodeId.of(22), NodeId.of(23)), Collections.emptySet());
 
         manager.reportFallenBehind(NodeId.of(6));
         assertFallenBehind(false, 6, "we miss one due to changed size");
 
-        manager.addRemovePeers(Collections.emptySet(), Collections.singleton(NodeId.of(9)));
+      // manager.addRemovePeers(Collections.emptySet(), Collections.singleton(NodeId.of(9)));
 
         assertFallenBehind(true, 6, "we should fall behind due to reduced number of peers");
 

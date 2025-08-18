@@ -8,6 +8,7 @@ import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.Roster;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
+import com.swirlds.base.state.Startable;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
@@ -58,7 +59,7 @@ import org.hiero.consensus.roster.RosterUtils;
  * PlatformReconnecter combined with the former ReconnectStateLoader.
  * This single class handles the reconnect loop and loading the received state.
  */
-public class PlatformReconnecter {
+public class PlatformReconnecter implements Startable {
 
     private static final Logger logger = LogManager.getLogger(PlatformReconnecter.class);
 

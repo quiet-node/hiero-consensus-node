@@ -225,8 +225,7 @@ public class SyncGossipModular implements Gossip {
             @NonNull final BindableInputWire<NoInput, Void> stopInput,
             @NonNull final BindableInputWire<NoInput, Void> clearInput,
             @NonNull final BindableInputWire<Duration, Void> systemHealthInput,
-            @NonNull final BindableInputWire<PlatformStatus, Void> platformStatusInput,
-            final PlatformReconnecter platformReconnecter) {
+            @NonNull final BindableInputWire<PlatformStatus, Void> platformStatusInput) {
 
         startInput.bindConsumer(ignored -> {
             syncProtocol.start();
@@ -247,7 +246,6 @@ public class SyncGossipModular implements Gossip {
         });
 
         this.receivedEventHandler = eventOutput::forward;
-        platformReconnecter.bind(this);
     }
 
     @Override

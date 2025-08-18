@@ -91,4 +91,14 @@ public class SimulatedGossip implements Gossip {
     public ReservedSignedState receiveSignedState() {
         throw  new UnsupportedOperationException();
     }
+
+    @Override
+    public void pause() {
+
+    }
+
+    @Override
+    public void resume() {
+
+    }
 }

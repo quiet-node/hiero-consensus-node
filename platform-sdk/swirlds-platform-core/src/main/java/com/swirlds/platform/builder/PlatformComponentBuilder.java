@@ -961,7 +961,7 @@ public class PlatformComponentBuilder {
                     blocks.latestImmutableStateProviderReference().get(),
                     blocks.intakeEventCounter(),
                     blocks.platformStateFacade(),
-                    new FallenBehindMonitor(0, null, null));
+                    blocks.fallenBehindMonitor());
         }
         return gossip;
     }

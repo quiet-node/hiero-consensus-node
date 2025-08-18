@@ -100,7 +100,7 @@ public class GossipWiring {
      *
      * @param gossip the gossip implementation
      */
-    public void bind(@NonNull final Gossip gossip, PlatformReconnecter reconnecter) {
+    public void bind(@NonNull final Gossip gossip) {
         gossip.bind(
                 model,
                 eventInput,
@@ -110,8 +110,7 @@ public class GossipWiring {
                 stopInput,
                 clearInput,
                 systemHealthInput,
-                platformStatusInput,
-                reconnecter);
+                platformStatusInput);
     }
 
     /**

@@ -54,7 +54,7 @@ public class SyncNode {
     private final int numNodes;
     private final EventEmitter eventEmitter;
     private int eventsEmitted = 0;
-    private final TestingSyncManager syncManager;
+    private final Object syncManager;
     private final Shadowgraph shadowGraph;
     private ParallelExecutor executor;
     private Connection connection;
@@ -90,7 +90,7 @@ public class SyncNode {
         this.nodeId = NodeId.of(nodeId);
         this.eventEmitter = eventEmitter;
 
-        syncManager = new TestingSyncManager();
+        syncManager = new Object();
 
         receivedEventQueue = new LinkedBlockingQueue<>();
         receivedEvents = new ArrayList<>();
@@ -276,7 +276,7 @@ public class SyncNode {
         shadowGraph.updateEventWindow(eventWindow);
     }
 
-    public TestingSyncManager getSyncManager() {
+    public Object getSyncManager() {
         return syncManager;
     }
 

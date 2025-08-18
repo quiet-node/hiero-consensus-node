@@ -11,6 +11,7 @@ import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
 import com.swirlds.platform.freeze.FreezeCheckHolder;
 import com.swirlds.platform.gossip.IntakeEventCounter;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -74,13 +75,6 @@ import org.hiero.consensus.roster.RosterHistory;
  *                                               needs to be done, long term plan is to stop using static variables)
  * @param statusActionSubmitterReference         a reference to the status action submitter, this can be deleted once
  *                                               platform status management is handled by the wiring framework
- * @param getLatestCompleteStateReference        a reference to a supplier that supplies the latest immutable state,
- *                                               this is exposed here due to reconnect, can be removed once reconnect is
- *                                               made compatible with the wiring framework
- * @param loadReconnectStateReference            a reference to a consumer that loads the state for reconnect, can be
- *                                               removed once reconnect is made compatible with the wiring framework
- * @param clearAllPipelinesForReconnectReference a reference to a runnable that clears all pipelines for reconnect, can
- *                                               be removed once reconnect is made compatible with the wiring framework
  * @param swirldStateManager                     responsible for the mutable state, this is exposed here due to
  *                                               reconnect, can be removed once reconnect is made compatible with the
  *                                               wiring framework
@@ -115,7 +109,8 @@ public record PlatformBuildingBlocks(
         boolean firstPlatform,
         @NonNull ConsensusStateEventHandler consensusStateEventHandler,
         @NonNull PlatformStateFacade platformStateFacade,
-        @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction) {
+        @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction,
+        @NonNull FallenBehindMonitor fallenBehindMonitor) {
 
     public PlatformBuildingBlocks {
         requireNonNull(platformWiring);
@@ -143,5 +138,6 @@ public record PlatformBuildingBlocks(
         requireNonNull(consensusStateEventHandler);
         requireNonNull(platformStateFacade);
         requireNonNull(stateRootFunction);
+        requireNonNull(fallenBehindMonitor);
     }
 }

@@ -3,9 +3,11 @@ package com.swirlds.platform.reconnect;
 
 import static com.swirlds.metrics.api.Metrics.INTERNAL_CATEGORY;
 
+import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.base.state.Startable;
 import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.metrics.FunctionGauge;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.system.status.actions.FallenBehindAction;
@@ -32,22 +34,20 @@ public class FallenBehindMonitor {
     /**
      * Enables submitting platform status actions
      */
-    private final StatusActionSubmitter statusActionSubmitter;
+    private StatusActionSubmitter statusActionSubmitter;
 
     private final ReconnectConfig config;
     private boolean previouslyFallenBehind;
     private Startable reconnectStarter;
 
     public FallenBehindMonitor(
-            final int numNeighbors,
-            @NonNull final StatusActionSubmitter statusActionSubmitter,
-            @NonNull final ReconnectConfig config) {
-        this.numNeighbors = numNeighbors;
+            final Roster roster,
+            @NonNull final Configuration config,
+            @NonNull final Metrics metrics) {
+        this.numNeighbors = roster.rosterEntries().size();
 
-        this.statusActionSubmitter = Objects.requireNonNull(statusActionSubmitter);
-        this.config = Objects.requireNonNull(config, "config must not be null");
+        this.config = Objects.requireNonNull(config, "config must not be null").getConfigData(ReconnectConfig.class);
 
-        Metrics metrics = null; //TODO
         metrics.getOrCreate(
                 new FunctionGauge.Config<>(INTERNAL_CATEGORY, "hasFallenBehind", Object.class, this::hasFallenBehind)
                         .withDescription("has this node fallen behind?"));
@@ -131,5 +131,13 @@ public class FallenBehindMonitor {
      */
     public synchronized int numReportedFallenBehind() {
         return reportFallenBehind.size();
+    }
+
+    public void bind(Startable reconnectStarter){
+        this.reconnectStarter = reconnectStarter;
+    }
+
+    public void bind(StatusActionSubmitter statusActionSubmitter) {
+        this.statusActionSubmitter = Objects.requireNonNull(statusActionSubmitter);
     }
 }

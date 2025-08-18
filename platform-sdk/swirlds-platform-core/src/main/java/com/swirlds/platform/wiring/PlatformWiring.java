@@ -64,6 +64,7 @@ import com.swirlds.platform.system.state.notifications.StateHashedNotification;
 import com.swirlds.platform.system.status.PlatformStatusConfig;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.system.status.StatusStateMachine;
+import com.swirlds.platform.wiring.components.Gossip;
 import com.swirlds.platform.wiring.components.GossipWiring;
 import com.swirlds.platform.wiring.components.PcesReplayerWiring;
 import com.swirlds.platform.wiring.components.RunningEventHashOverrideWiring;
@@ -637,6 +638,7 @@ public class PlatformWiring {
      * @param savedStateController      the saved state controller to bind
      * @param notifier                  the notifier to bind
      * @param platformPublisher         the platform publisher to bind
+     * @param platformReconnecter
      */
     public void bind(
             @NonNull final PlatformComponentBuilder builder,
@@ -649,7 +651,7 @@ public class PlatformWiring {
             @NonNull final SavedStateController savedStateController,
             @NonNull final AppNotifier notifier,
             @NonNull final PlatformPublisher platformPublisher,
-            final PlatformReconnecter reconnecter) {
+            final PlatformReconnecter platformReconnecter) {
 
         eventHasherWiring.bind(builder::buildEventHasher);
         internalEventValidatorWiring.bind(builder::buildInternalEventValidator);
@@ -687,7 +689,9 @@ public class PlatformWiring {
         staleEventDetectorWiring.bind(builder::buildStaleEventDetector);
         transactionResubmitterWiring.bind(builder::buildTransactionResubmitter);
         transactionPoolWiring.bind(builder::buildTransactionPool);
-        gossipWiring.bind(builder.buildGossip(), reconnecter);
+        final Gossip gossip = builder.buildGossip();
+        gossipWiring.bind(gossip);
+        platformReconnecter.bind(gossip);
         branchDetectorWiring.bind(builder::buildBranchDetector);
         branchReporterWiring.bind(builder::buildBranchReporter);
     }

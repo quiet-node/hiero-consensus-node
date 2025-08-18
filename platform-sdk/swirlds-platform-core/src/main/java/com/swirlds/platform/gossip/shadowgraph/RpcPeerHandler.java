@@ -277,7 +277,7 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
         //TODO
         PlatformReconnecter pl = null;
-        final SyncFallenBehindStatus behindStatus = pl.checkFallenBehindStatus(
+        final SyncFallenBehindStatus behindStatus = checkFallenBehindStatus(
                 state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow(), peerId);
         if (behindStatus != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
             logger.info(

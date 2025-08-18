@@ -43,8 +43,7 @@ public interface Gossip extends GossipController {
             @NonNull BindableInputWire<NoInput, Void> stopInput,
             @NonNull BindableInputWire<NoInput, Void> clearInput,
             @NonNull BindableInputWire<Duration, Void> systemHealthInput,
-            @NonNull BindableInputWire<PlatformStatus, Void> platformStatusInput,
-            PlatformReconnecter platformReconnecter);
+            @NonNull BindableInputWire<PlatformStatus, Void> platformStatusInput);
 
     ReservedSignedState receiveSignedState();
 }
