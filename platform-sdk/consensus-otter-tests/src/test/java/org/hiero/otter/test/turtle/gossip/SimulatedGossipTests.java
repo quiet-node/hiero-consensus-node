@@ -110,7 +110,9 @@ class SimulatedGossipTests {
                             mock(BindableInputWire.class),
                             mock(BindableInputWire.class),
                             mock(BindableInputWire.class),
-                            mock(BindableInputWire.class));
+                            mock(BindableInputWire.class),
+                            null,
+                            null);
         }
 
         // For each event, choose a random subset of nodes that will submit the event. Our end goal is to see

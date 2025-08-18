@@ -7,7 +7,6 @@ import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
 import com.swirlds.platform.gossip.IntakeEventCounter;
-import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.wiring.NoInput;
 import com.swirlds.platform.wiring.components.Gossip;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -16,6 +15,7 @@ import org.hiero.consensus.model.event.PlatformEvent;
 import org.hiero.consensus.model.hashgraph.EventWindow;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Simulates the {@link Gossip} subsystem for a group of nodes running on a {@link SimulatedNetwork}.
@@ -53,15 +53,17 @@ public class SimulatedGossip implements Gossip {
      */
     @Override
     public void bind(
-            @NonNull final WiringModel model,
-            @NonNull final BindableInputWire<PlatformEvent, Void> eventInput,
-            @NonNull final BindableInputWire<EventWindow, Void> eventWindowInput,
-            @NonNull final StandardOutputWire<PlatformEvent> eventOutput,
-            @NonNull final BindableInputWire<NoInput, Void> startInput,
-            @NonNull final BindableInputWire<NoInput, Void> stopInput,
-            @NonNull final BindableInputWire<NoInput, Void> clearInput,
-            @NonNull final BindableInputWire<Duration, Void> systemHealthInput,
-            @NonNull final BindableInputWire<PlatformStatus, Void> platformStatusInput) {
+            @NotNull final WiringModel model,
+            @NotNull final BindableInputWire<PlatformEvent, Void> eventInput,
+            @NotNull final BindableInputWire<EventWindow, Void> eventWindowInput,
+            @NotNull final StandardOutputWire<PlatformEvent> eventOutput,
+            @NotNull final BindableInputWire<NoInput, Void> startInput,
+            @NotNull final BindableInputWire<NoInput, Void> stopInput,
+            @NotNull final BindableInputWire<NoInput, Void> clearInput,
+            @NotNull final BindableInputWire<NoInput, Void> pause,
+            @NotNull final BindableInputWire<NoInput, Void> resume,
+            @NotNull final BindableInputWire<Duration, Void> systemHealthInput,
+            @NotNull final BindableInputWire<PlatformStatus, Void> platformStatusInput) {
 
         this.eventOutput = requireNonNull(eventOutput);
         eventInput.bindConsumer(event -> network.submitEvent(selfId, event));
@@ -85,5 +87,4 @@ public class SimulatedGossip implements Gossip {
         }
         eventOutput.forward(event);
     }
-
 }
