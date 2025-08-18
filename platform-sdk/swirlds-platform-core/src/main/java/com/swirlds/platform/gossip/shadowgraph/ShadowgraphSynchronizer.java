@@ -70,6 +70,7 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
      * @param fallenBehindManager  tracks if we have fallen behind
      * @param intakeEventCounter   used for tracking events in the intake pipeline per peer
      * @param executor             for executing read/write tasks in parallel
+     * @param syncLagHandler       callback for reporting median sync lag
      */
     public ShadowgraphSynchronizer(
             @NonNull final PlatformContext platformContext,
@@ -79,7 +80,8 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
             @NonNull final Consumer<PlatformEvent> receivedEventHandler,
             @NonNull final FallenBehindManager fallenBehindManager,
             @NonNull final IntakeEventCounter intakeEventCounter,
-            @NonNull final ParallelExecutor executor) {
+            @NonNull final ParallelExecutor executor,
+            @NonNull final Consumer<Double> syncLagHandler) {
 
         super(
                 platformContext,
@@ -88,7 +90,8 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
                 syncMetrics,
                 receivedEventHandler,
                 fallenBehindManager,
-                intakeEventCounter);
+                intakeEventCounter,
+                syncLagHandler);
         this.executor = Objects.requireNonNull(executor);
     }
 
@@ -149,6 +152,8 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
             timing.setTimePoint(1);
 
             syncMetrics.eventWindow(myWindow, theirTipsAndEventWindow.eventWindow());
+
+            reportRoundDifference(myWindow, theirTipsAndEventWindow.eventWindow(), connection.getOtherId());
 
             if (hasFallenBehind(myWindow, theirTipsAndEventWindow.eventWindow(), connection.getOtherId())
                     != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
