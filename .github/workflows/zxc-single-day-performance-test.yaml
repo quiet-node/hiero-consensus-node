@@ -371,7 +371,7 @@ jobs:
               sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" cp "${{ github.workspace }}"/.github/workflows/support/citr/startPodJava.sh $i:/opt/hgcapp/services-hedera/HapiApp2.0/startPodJava.sh
               node_id=`echo ${i} | sed -e 's/network-node\([0-9][0-9]*\)-0/\1/g'`
               node_id=`expr $node_id - 1`
-              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" exec $i -c root-container -- su - hedera -c bash -c "cd /opt/hgcapp/services-hedera/HapiApp2.0; sh startPodJava.sh ${node_id}"
+              sh "${{ github.workspace }}"/.github/workflows/support/citr/kubectlt -n "${{ steps.set-namespace.outputs.namespace }}" exec $i -c root-container -- su - hedera -c bash -c "cd /opt/hgcapp/services-hedera/HapiApp2.0; sh startPodJava.sh ${node_id} clean"
           done
 
       - name: Move to Github Workspace

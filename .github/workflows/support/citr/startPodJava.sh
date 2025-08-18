@@ -9,11 +9,11 @@ then
   echo "Cleaning old data ..."
 
   cd $APP_HOME
-  rm -rf data/saved/*
+#  rm -rf data/saved/*
   rm -rf /opt/hgcapp/*Streams/*
   rm -rf output/*
-  rm -rf /opt/hgcapp/services-hedera/HapiApp2.0/.archive
-
+#  rm -rf /opt/hgcapp/services-hedera/HapiApp2.0/.archive
+  rm -rf data/saved/com.hedera.services.ServicesMain/${node_id}/123/*
   #cd $APP_HOME/data/keys
   #bash generate.sh node1
 fi
