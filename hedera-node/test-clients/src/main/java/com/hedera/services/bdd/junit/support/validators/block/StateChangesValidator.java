@@ -79,7 +79,6 @@ import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.state.lifecycle.Service;
 import com.swirlds.state.spi.CommittableWritableStates;
@@ -298,7 +297,7 @@ public class StateChangesValidator implements BlockStreamValidator {
                 recycleBin,
                 merkleCryptography);
         final var hedera = ServicesMain.newHedera(platformContext, new PlatformStateFacade());
-        this.state = hedera.newStateRoot(platformContext, state -> PlatformStateAccessor.GENESIS_ROUND);
+        this.state = hedera.newStateRoot(platformContext);
         hedera.initializeStatesApi(state, GENESIS, platformConfig);
         final var stateToBeCopied = state;
         state = state.copy();

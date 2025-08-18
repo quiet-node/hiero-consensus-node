@@ -32,7 +32,6 @@ import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.snapshot.DeserializedSignedState;
@@ -145,8 +144,7 @@ class SignedStateFileReadWriteTest {
                 TestPlatformContextBuilder.create().build().getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile,
-                virtualMap -> new TestVirtualMapState(
-                        virtualMap, PlatformContext.create(configuration), s -> PlatformStateAccessor.GENESIS_ROUND),
+                virtualMap -> new TestVirtualMapState(virtualMap, PlatformContext.create(configuration)),
                 TEST_PLATFORM_STATE_FACADE,
                 PlatformContext.create(configuration));
         hashState(deserializedSignedState.reservedSignedState().get());

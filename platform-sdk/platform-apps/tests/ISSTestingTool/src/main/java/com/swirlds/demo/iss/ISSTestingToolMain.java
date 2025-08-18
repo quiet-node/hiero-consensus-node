@@ -11,7 +11,6 @@ import com.swirlds.platform.system.DefaultSwirldMain;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.state.notifications.IssListener;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -100,9 +99,7 @@ public class ISSTestingToolMain extends DefaultSwirldMain<ISSTestingToolState> {
      */
     @Override
     @NonNull
-    public ISSTestingToolState newStateRoot(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+    public ISSTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final ISSTestingToolState state = new ISSTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -116,8 +113,7 @@ public class ISSTestingToolMain extends DefaultSwirldMain<ISSTestingToolState> {
      */
     @Override
     public Function<VirtualMap, ISSTestingToolState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

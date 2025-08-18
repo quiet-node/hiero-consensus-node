@@ -11,6 +11,9 @@ package com.swirlds.demo.stats;
  * DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
  */
 
+import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
+
+import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -50,14 +53,18 @@ public class StatsDemoState extends MerkleStateRoot<StatsDemoState> implements M
 
     public StatsDemoState() {
         // no op
-        super(
-                PlatformContext.create(
-                        ConfigurationBuilder.create().autoDiscoverExtensions().build()),
-                state -> PlatformStateAccessor.GENESIS_ROUND);
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
     }
 
     private StatsDemoState(final StatsDemoState sourceState) {
         super(sourceState);
+    }
+
+    @Override
+    protected long getRound() {
+        final ConsensusSnapshot consensusSnapshot = DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(this);
+        return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
     }
 
     /**

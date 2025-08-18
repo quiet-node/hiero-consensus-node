@@ -39,7 +39,6 @@ import com.hedera.node.app.records.schemas.V0490BlockRecordSchema;
 import com.hedera.node.config.data.BlockRecordStreamConfig;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateService;
 import com.swirlds.platform.state.service.schemas.V0540PlatformStateSchema;
 import com.swirlds.platform.test.fixtures.state.TestVirtualMapState;
@@ -436,7 +435,7 @@ final class BlockRecordManagerTest extends AppTestBase {
                 "vm-" + BlockRecordManagerTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
         return new TestVirtualMapState(
-                virtualMap, TestPlatformContextBuilder.create().build(), state -> PlatformStateAccessor.GENESIS_ROUND) {
+                virtualMap, TestPlatformContextBuilder.create().build()) {
             @NonNull
             @Override
             public ReadableStates getReadableStates(@NonNull final String serviceName) {

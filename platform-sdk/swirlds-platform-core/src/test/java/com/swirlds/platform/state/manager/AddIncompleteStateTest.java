@@ -15,7 +15,6 @@ import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.components.state.output.StateHasEnoughSignaturesConsumer;
 import com.swirlds.platform.components.state.output.StateLacksSignaturesConsumer;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.StateSignatureCollectorTester;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
@@ -108,7 +107,7 @@ class AddIncompleteStateTest extends AbstractStateSignatureCollectorTest {
                 .setRoster(roster)
                 .setRound(firstRound)
                 .setSignatures(signatures)
-                .setState(new TestVirtualMapState(platformContext, state -> PlatformStateAccessor.GENESIS_ROUND))
+                .setState(new TestVirtualMapState(platformContext))
                 .build();
 
         changeStateHashRandomly(stateFromDisk);

@@ -84,14 +84,8 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
     private List<PlannedLogError> plannedLogErrorList = new LinkedList<>();
 
     public ISSTestingToolState() {
-        super(
-                PlatformContext.create(
-                        ConfigurationBuilder.create().autoDiscoverExtensions().build()),
-                state -> {
-                    final ConsensusSnapshot consensusSnapshot =
-                            DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(state);
-                    return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
-                });
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
     }
 
     public void initState(InitTrigger trigger, Platform platform) {
@@ -193,6 +187,12 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
         throwIfImmutable();
         setImmutable(true);
         return new ISSTestingToolState(this);
+    }
+
+    @Override
+    protected long getRound() {
+        final ConsensusSnapshot consensusSnapshot = DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(this);
+        return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
     }
 
     /**

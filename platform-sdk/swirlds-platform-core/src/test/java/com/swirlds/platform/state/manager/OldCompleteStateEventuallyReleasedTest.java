@@ -11,7 +11,6 @@ import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.components.state.output.StateHasEnoughSignaturesConsumer;
 import com.swirlds.platform.components.state.output.StateLacksSignaturesConsumer;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.StateSignatureCollectorTester;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
@@ -82,7 +81,7 @@ class OldCompleteStateEventuallyReleasedTest extends AbstractStateSignatureColle
                 .setRoster(roster)
                 .setRound(0)
                 .useSignatureSupplierFromRoster()
-                .setState(new TestVirtualMapState(platformContext, state -> PlatformStateAccessor.GENESIS_ROUND))
+                .setState(new TestVirtualMapState(platformContext))
                 .build();
 
         signedStates.put(0L, stateFromDisk);

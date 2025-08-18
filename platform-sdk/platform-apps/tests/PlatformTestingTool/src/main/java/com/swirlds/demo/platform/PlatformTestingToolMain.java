@@ -75,7 +75,6 @@ import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.system.SystemExitUtils;
 import com.swirlds.platform.system.state.notifications.NewSignedStateListener;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import com.swirlds.virtualmap.internal.merkle.VirtualLeafNode;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -866,9 +865,7 @@ public class PlatformTestingToolMain extends DefaultSwirldMain<PlatformTestingTo
      */
     @Override
     @NonNull
-    public PlatformTestingToolState newStateRoot(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+    public PlatformTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final PlatformTestingToolState state = new PlatformTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -882,8 +879,7 @@ public class PlatformTestingToolMain extends DefaultSwirldMain<PlatformTestingTo
      */
     @Override
     public Function<VirtualMap, PlatformTestingToolState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

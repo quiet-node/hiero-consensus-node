@@ -154,7 +154,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -364,9 +363,9 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
     private final ImmediateStateChangeListener immediateStateChangeListener = new ImmediateStateChangeListener();
 
     /**
-     * The state root BiFunction to use platform context and round extracting function for creating a new state root.
+     * The state root function to use platform context for creating a new state root.
      */
-    private final BiFunction<PlatformContext, Function<State, Long>, MerkleNodeState> stateRootBiFunction;
+    private final Function<PlatformContext, MerkleNodeState> stateRootFunction;
 
     /**
      * The action to take, if any, when a consensus round is sealed.
@@ -443,7 +442,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
      * @param blockHashSignerFactory the factory for the block hash signer
      * @param metrics the metrics object to use for reporting
      * @param platformStateFacade the facade object to access platform state
-     * @param baseBiFunction the base BiFunction to create a new state with the platform context and round extracting function
+     * @param baseFunction the base supplier to create a new state with the platform context
      */
     public Hedera(
             @NonNull final ConstructableRegistry constructableRegistry,
@@ -456,7 +455,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
             @NonNull final BlockHashSignerFactory blockHashSignerFactory,
             @NonNull final Metrics metrics,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final BiFunction<PlatformContext, Function<State, Long>, MerkleNodeState> baseBiFunction) {
+            @NonNull final Function<PlatformContext, MerkleNodeState> baseFunction) {
         requireNonNull(registryFactory);
         requireNonNull(constructableRegistry);
         requireNonNull(hintsServiceFactory);
@@ -560,10 +559,9 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
                 .forEach(servicesRegistry::register);
         consensusStateEventHandler = new ConsensusStateEventHandlerImpl(this);
         final var blockStreamsEnabled = isBlockStreamEnabled();
-        stateRootBiFunction = blockStreamsEnabled
-                ? (platformContext, extractRoundFromState) ->
-                        withListeners(baseBiFunction.apply(platformContext, extractRoundFromState))
-                : baseBiFunction;
+        stateRootFunction = blockStreamsEnabled
+                ? (platformContext) -> withListeners(baseFunction.apply(platformContext))
+                : baseFunction;
         onSealConsensusRound = blockStreamsEnabled ? this::manageBlockEndRound : (round, state) -> true;
     }
 
@@ -590,10 +588,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
      */
     @Override
     @NonNull
-    public MerkleNodeState newStateRoot(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
-        return stateRootBiFunction.apply(platformContext, extractRoundFromState);
+    public MerkleNodeState newStateRoot(@NonNull final PlatformContext platformContext) {
+        return stateRootFunction.apply(platformContext);
     }
 
     /**
@@ -601,9 +597,8 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
      */
     @Override
     public Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
-        return virtualMap -> new HederaVirtualMapState(virtualMap, platformContext, extractRoundFromState::apply);
+            @NonNull final PlatformContext platformContext) {
+        return virtualMap -> new HederaVirtualMapState(virtualMap, platformContext);
     }
 
     /**
@@ -717,7 +712,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
 
     /**
      * Invoked by the platform when the state should be initialized. This happens <b>BEFORE</b>
-     * {@link SwirldMain#init(Platform, NodeId)} and after {@link SwirldMain#newStateRoot(PlatformContext, Function)}.
+     * {@link SwirldMain#init(Platform, NodeId)} and after {@link SwirldMain#newStateRoot(PlatformContext)}.
      */
     @SuppressWarnings("java:S1181") // catching Throwable instead of Exception when we do a direct System.exit()
     public void onStateInitialized(
@@ -815,7 +810,7 @@ public final class Hedera implements SwirldMain<MerkleNodeState>, AppContext.Gos
      * {@inheritDoc}
      *
      * <p>Called <b>AFTER</b> init and migrate have been called on the state (either the new state created from
-     * {@link SwirldMain#newStateRoot(PlatformContext, Function)} or an instance of {@link MerkleNodeState} created by the platform and
+     * {@link SwirldMain#newStateRoot(PlatformContext)} or an instance of {@link MerkleNodeState} created by the platform and
      * loaded from the saved state).
      *
      * <p>(FUTURE) Consider moving this initialization into {@link #onStateInitialized(MerkleNodeState, Platform, InitTrigger)}

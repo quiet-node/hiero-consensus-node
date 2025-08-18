@@ -10,28 +10,21 @@ import com.swirlds.common.context.PlatformContext;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.state.State;
 import com.swirlds.state.merkle.VirtualMapState;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import java.util.function.Function;
 import org.hiero.consensus.roster.RosterUtils;
 
 public class OtterAppState extends VirtualMapState<OtterAppState> implements MerkleNodeState {
 
     long state;
 
-    public OtterAppState(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<VirtualMapState<OtterAppState>, Long> extractRoundFromState) {
-        super(platformContext, extractRoundFromState);
+    public OtterAppState(@NonNull final PlatformContext platformContext) {
+        super(platformContext);
     }
 
-    public OtterAppState(
-            @NonNull final VirtualMap virtualMap,
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<VirtualMapState<OtterAppState>, Long> extractRoundFromState) {
-        super(virtualMap, platformContext, extractRoundFromState);
+    public OtterAppState(@NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
+        super(virtualMap, platformContext);
     }
 
     /**
@@ -58,12 +51,7 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
             @NonNull final Roster roster,
             @NonNull final SemanticVersion version) {
         final TestingAppStateInitializer initializer = new TestingAppStateInitializer();
-        final Function<State, Long> extractRoundFromState = virtualMapState -> {
-            final ConsensusSnapshot consensusSnapshot =
-                    DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(virtualMapState);
-            return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
-        };
-        final OtterAppState state = new OtterAppState(platformContext, extractRoundFromState::apply);
+        final OtterAppState state = new OtterAppState(platformContext);
         initializer.initStates(state);
         RosterUtils.setActiveRoster(state, roster, 0L);
         DEFAULT_PLATFORM_STATE_FACADE.setCreationSoftwareVersionTo(state, version);
@@ -86,9 +74,13 @@ public class OtterAppState extends VirtualMapState<OtterAppState> implements Mer
 
     @Override
     protected OtterAppState newInstance(
-            @NonNull final VirtualMap virtualMap,
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<VirtualMapState<OtterAppState>, Long> extractRoundFromState) {
-        return new OtterAppState(virtualMap, platformContext, extractRoundFromState);
+            @NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
+        return new OtterAppState(virtualMap, platformContext);
+    }
+
+    @Override
+    protected long getRound() {
+        final ConsensusSnapshot consensusSnapshot = DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(this);
+        return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
     }
 }

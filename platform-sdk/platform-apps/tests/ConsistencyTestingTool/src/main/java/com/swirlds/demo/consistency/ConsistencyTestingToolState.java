@@ -88,14 +88,8 @@ public class ConsistencyTestingToolState extends MerkleStateRoot<ConsistencyTest
      * Constructor
      */
     public ConsistencyTestingToolState() {
-        super(
-                PlatformContext.create(
-                        ConfigurationBuilder.create().autoDiscoverExtensions().build()),
-                state -> {
-                    final ConsensusSnapshot consensusSnapshot =
-                            DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(state);
-                    return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
-                });
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
         transactionHandlingHistory = new TransactionHandlingHistory();
         transactionsAwaitingPostHandle = ConcurrentHashMap.newKeySet();
         logger.info(STARTUP.getMarker(), "New State Constructed.");
@@ -116,6 +110,12 @@ public class ConsistencyTestingToolState extends MerkleStateRoot<ConsistencyTest
             logger.info(STARTUP.getMarker(), "State initialized with {} rounds handled.", roundsHandled);
         }
         transactionHandlingHistory.init(logFilePath);
+    }
+
+    @Override
+    protected long getRound() {
+        final ConsensusSnapshot consensusSnapshot = DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(this);
+        return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
     }
 
     /**

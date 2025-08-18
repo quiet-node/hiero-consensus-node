@@ -22,7 +22,6 @@ import com.swirlds.base.state.MutabilityException;
 import com.swirlds.common.io.utility.FileUtils;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestVirtualMapState;
 import com.swirlds.state.StateChangeListener;
@@ -65,8 +64,8 @@ public class VirtualMapStateTest extends MerkleTestBase {
     void setUp() {
         MerkleDb.resetDefaultInstancePath();
         setupFruitMerkleMap();
-        virtualMapState = new TestVirtualMapState(
-                TestPlatformContextBuilder.create().build(), state -> PlatformStateAccessor.GENESIS_ROUND);
+        virtualMapState =
+                new TestVirtualMapState(TestPlatformContextBuilder.create().build());
     }
 
     @Nested

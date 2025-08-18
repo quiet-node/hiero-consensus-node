@@ -63,7 +63,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -145,17 +144,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
 
     private final PlatformContext platformContext;
 
-    private final Function<MerkleStateRoot<T>, Long> extractRoundFromState;
-
     /**
      * Create a new instance. This constructor must be used for all creations of this class.
      */
-    public MerkleStateRoot(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<MerkleStateRoot<T>, Long> extractRoundFromState) {
+    public MerkleStateRoot(@NonNull final PlatformContext platformContext) {
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
         this.platformContext = platformContext;
-        this.extractRoundFromState = extractRoundFromState;
         this.merkleCryptography = platformContext.getMerkleCryptography();
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
     }
@@ -170,7 +164,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         super(from);
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
         this.platformContext = from.platformContext;
-        this.extractRoundFromState = from.extractRoundFromState;
         this.merkleCryptography = from.merkleCryptography;
         this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.platformContext.getMetrics());
         this.listeners.addAll(from.listeners);
@@ -190,6 +183,8 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
             }
         }
     }
+
+    protected abstract long getRound();
 
     /**
      * {@inheritDoc}
@@ -873,13 +868,12 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @Override
     public void createSnapshot(@NonNull final Path targetPath) {
         final Time time = platformContext.getTime();
-        final Long round = extractRoundFromState.apply(this);
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
         throwIfMutable();
         throwIfDestroyed();
         final long startTime = time.currentTimeMillis();
-        MerkleTreeSnapshotWriter.createSnapshot(this, targetPath, round);
+        MerkleTreeSnapshotWriter.createSnapshot(this, targetPath, getRound());
         snapshotMetrics.updateWriteStateToDiskTimeMetric(time.currentTimeMillis() - startTime);
     }
 

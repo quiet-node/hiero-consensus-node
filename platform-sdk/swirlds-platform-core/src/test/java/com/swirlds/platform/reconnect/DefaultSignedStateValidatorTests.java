@@ -14,7 +14,6 @@ import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.crypto.SignatureVerifier;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.state.signed.SignedStateInvalidException;
 import com.swirlds.platform.state.signed.SignedStateValidationData;
@@ -321,8 +320,8 @@ class DefaultSignedStateValidatorTests {
      * @return the signed state
      */
     private SignedState stateSignedByNodes(final List<Node> signingNodes) {
-        final TestVirtualMapState state = new TestVirtualMapState(
-                TestPlatformContextBuilder.create().build(), s -> PlatformStateAccessor.GENESIS_ROUND);
+        final TestVirtualMapState state =
+                new TestVirtualMapState(TestPlatformContextBuilder.create().build());
 
         final SignatureVerifier signatureVerifier = (data, signature, key) -> {
             // a signature with a 0 byte is always invalid

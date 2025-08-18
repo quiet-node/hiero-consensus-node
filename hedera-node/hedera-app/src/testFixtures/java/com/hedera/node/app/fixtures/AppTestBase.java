@@ -44,7 +44,6 @@ import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.metrics.api.Counter;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.test.fixtures.state.TestVirtualMapState;
 import com.swirlds.platform.test.fixtures.virtualmap.VirtualMapUtils;
@@ -132,27 +131,24 @@ public class AppTestBase extends TestBase implements TransactionFactory, Scenari
         final var virtualMapLabel = "vm-" + AppTestBase.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         final var virtualMap = VirtualMapUtils.createVirtualMap(virtualMapLabel);
 
-        state =
-                new TestVirtualMapState(
-                        virtualMap,
-                        TestPlatformContextBuilder.create().build(),
-                        state -> PlatformStateAccessor.GENESIS_ROUND) {
-                    @NonNull
-                    @Override
-                    public ReadableStates getReadableStates(@NonNull String serviceName) {
-                        return TokenService.NAME.equals(serviceName) || EntityIdService.NAME.equals(serviceName)
-                                ? writableStates
-                                : null;
-                    }
+        state = new TestVirtualMapState(
+                virtualMap, TestPlatformContextBuilder.create().build()) {
+            @NonNull
+            @Override
+            public ReadableStates getReadableStates(@NonNull String serviceName) {
+                return TokenService.NAME.equals(serviceName) || EntityIdService.NAME.equals(serviceName)
+                        ? writableStates
+                        : null;
+            }
 
-                    @NonNull
-                    @Override
-                    public WritableStates getWritableStates(@NonNull String serviceName) {
-                        return TokenService.NAME.equals(serviceName) || EntityIdService.NAME.equals(serviceName)
-                                ? writableStates
-                                : null;
-                    }
-                };
+            @NonNull
+            @Override
+            public WritableStates getWritableStates(@NonNull String serviceName) {
+                return TokenService.NAME.equals(serviceName) || EntityIdService.NAME.equals(serviceName)
+                        ? writableStates
+                        : null;
+            }
+        };
     }
 
     private final SemanticVersion hapiVersion =

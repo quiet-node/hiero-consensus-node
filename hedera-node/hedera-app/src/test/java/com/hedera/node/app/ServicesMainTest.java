@@ -95,9 +95,9 @@ final class ServicesMainTest {
         final PlatformContext platformContext = mock(PlatformContext.class);
         final Function<State, Long> extractRoundFromState = mock(Function.class);
 
-        given(hedera.newStateRoot(platformContext, extractRoundFromState)).willReturn(state);
+        given(hedera.newStateRoot(platformContext)).willReturn(state);
 
-        assertSame(state, subject.newStateRoot(platformContext, extractRoundFromState));
+        assertSame(state, subject.newStateRoot(platformContext));
     }
 
     @Test
@@ -108,14 +108,10 @@ final class ServicesMainTest {
         final Function<VirtualMap, MerkleNodeState> stateRootFromVirtualMapMock = mock(Function.class);
         final Function<State, Long> extractRoundFromState = mock(Function.class);
 
-        when(hedera.stateRootFromVirtualMap(platformContext, extractRoundFromState))
-                .thenReturn(stateRootFromVirtualMapMock);
+        when(hedera.stateRootFromVirtualMap(platformContext)).thenReturn(stateRootFromVirtualMapMock);
         when(stateRootFromVirtualMapMock.apply(virtualMapMock)).thenReturn(state);
 
-        assertSame(
-                state,
-                subject.stateRootFromVirtualMap(platformContext, extractRoundFromState)
-                        .apply(virtualMapMock));
+        assertSame(state, subject.stateRootFromVirtualMap(platformContext).apply(virtualMapMock));
     }
 
     private void withBadCommandLineArgs() {

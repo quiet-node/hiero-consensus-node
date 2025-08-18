@@ -17,7 +17,6 @@ import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.DefaultSwirldMain;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.security.SignatureException;
@@ -171,9 +170,7 @@ public class MigrationTestingToolMain extends DefaultSwirldMain<MigrationTesting
      */
     @NonNull
     @Override
-    public MigrationTestingToolState newStateRoot(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+    public MigrationTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final MigrationTestingToolState state = new MigrationTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -187,8 +184,7 @@ public class MigrationTestingToolMain extends DefaultSwirldMain<MigrationTesting
      */
     @Override
     public Function<VirtualMap, MigrationTestingToolState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

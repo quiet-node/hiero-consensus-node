@@ -22,7 +22,6 @@ import com.swirlds.platform.metrics.ReconnectMetrics;
 import com.swirlds.platform.network.Connection;
 import com.swirlds.platform.network.SocketConnection;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedState;
@@ -119,7 +118,7 @@ final class ReconnectTest {
                     .setRoster(roster)
                     .setSigningNodeIds(nodeIds)
                     .setState(new TestVirtualMapState(
-                            TestPlatformContextBuilder.create().build(), state -> PlatformStateAccessor.GENESIS_ROUND))
+                            TestPlatformContextBuilder.create().build()))
                     .buildWithFacade();
             final SignedState signedState = signedStateFacadePair.left();
             final PlatformStateFacade platformStateFacade = signedStateFacadePair.right();
@@ -203,7 +202,6 @@ final class ReconnectTest {
                 RECONNECT_SOCKET_TIMEOUT,
                 reconnectMetrics,
                 platformStateFacade,
-                virtualMap -> new TestVirtualMapState(
-                        virtualMap, testPlatformContext, s -> PlatformStateAccessor.GENESIS_ROUND));
+                virtualMap -> new TestVirtualMapState(virtualMap, testPlatformContext));
     }
 }

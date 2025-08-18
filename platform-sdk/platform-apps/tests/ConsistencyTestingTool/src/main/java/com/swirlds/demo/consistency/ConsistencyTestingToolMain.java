@@ -11,7 +11,6 @@ import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.system.DefaultSwirldMain;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer;
-import com.swirlds.state.State;
 import com.swirlds.virtualmap.VirtualMap;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -98,9 +97,7 @@ public class ConsistencyTestingToolMain extends DefaultSwirldMain<ConsistencyTes
      */
     @Override
     @NonNull
-    public ConsistencyTestingToolState newStateRoot(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+    public ConsistencyTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
         final ConsistencyTestingToolState state = new ConsistencyTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
 
@@ -115,8 +112,7 @@ public class ConsistencyTestingToolMain extends DefaultSwirldMain<ConsistencyTes
      */
     @Override
     public Function<VirtualMap, ConsistencyTestingToolState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext,
-            @NonNull final Function<State, Long> extractRoundFromState) {
+            @NonNull final PlatformContext platformContext) {
         throw new UnsupportedOperationException();
     }
 

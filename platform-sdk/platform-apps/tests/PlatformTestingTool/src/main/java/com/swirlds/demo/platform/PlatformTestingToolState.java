@@ -97,14 +97,8 @@ public class PlatformTestingToolState extends MerkleStateRoot<PlatformTestingToo
     private NodeId selfId;
 
     public PlatformTestingToolState() {
-        super(
-                PlatformContext.create(
-                        ConfigurationBuilder.create().autoDiscoverExtensions().build()),
-                state -> {
-                    final ConsensusSnapshot consensusSnapshot =
-                            DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(state);
-                    return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
-                });
+        super(PlatformContext.create(
+                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
         expectedFCMFamily = new ExpectedFCMFamilyImpl();
         referenceNftLedger = new ReferenceNftLedger(NFT_TRACKING_FRACTION);
     }
@@ -147,6 +141,12 @@ public class PlatformTestingToolState extends MerkleStateRoot<PlatformTestingToo
     // count invalid signature ratio
     static AtomicLong totalTransactionSignatureCount = new AtomicLong(0);
     static AtomicLong expectedInvalidSignatureCount = new AtomicLong(0);
+
+    @Override
+    protected long getRound() {
+        final ConsensusSnapshot consensusSnapshot = DEFAULT_PLATFORM_STATE_FACADE.consensusSnapshotOf(this);
+        return consensusSnapshot == null ? PlatformStateAccessor.GENESIS_ROUND : consensusSnapshot.round();
+    }
 
     /**
      * {@inheritDoc}
