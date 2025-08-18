@@ -960,7 +960,8 @@ public class PlatformComponentBuilder {
                     blocks.latestImmutableStateProviderReference().get(),
                     blocks.intakeEventCounter(),
                     blocks.platformStateFacade(),
-                    blocks.fallenBehindMonitor(), blocks.reservedSignedStatePromise(),
+                    blocks.fallenBehindMonitor(),
+                    blocks.reservedSignedStatePromise(),
                     blocks.swirldStateManager());
         }
         return gossip;

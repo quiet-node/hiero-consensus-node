@@ -41,9 +41,7 @@ public class FallenBehindMonitor {
     private Startable reconnectStarter;
 
     public FallenBehindMonitor(
-            final Roster roster,
-            @NonNull final Configuration config,
-            @NonNull final Metrics metrics) {
+            final Roster roster, @NonNull final Configuration config, @NonNull final Metrics metrics) {
         this.numNeighbors = roster.rosterEntries().size();
 
         this.config = Objects.requireNonNull(config, "config must not be null").getConfigData(ReconnectConfig.class);
@@ -52,7 +50,7 @@ public class FallenBehindMonitor {
                 new FunctionGauge.Config<>(INTERNAL_CATEGORY, "hasFallenBehind", Object.class, this::hasFallenBehind)
                         .withDescription("has this node fallen behind?"));
         metrics.getOrCreate(new FunctionGauge.Config<>(
-                INTERNAL_CATEGORY, "numReportFallenBehind", Integer.class, this::reportedSize)
+                        INTERNAL_CATEGORY, "numReportFallenBehind", Integer.class, this::reportedSize)
                 .withDescription("the number of nodes that have fallen behind")
                 .withUnit("count"));
     }
@@ -83,7 +81,6 @@ public class FallenBehindMonitor {
         }
     }
 
-
     /**
      * Have enough nodes reported that they don't have events we need, and that we have fallen behind?
      *
@@ -92,7 +89,6 @@ public class FallenBehindMonitor {
     public synchronized boolean hasFallenBehind() {
         return numNeighbors * config.fallenBehindThreshold() < reportFallenBehind.size();
     }
-
 
     /**
      * Should I attempt a reconnect with this neighbor?
@@ -126,7 +122,7 @@ public class FallenBehindMonitor {
         return reportFallenBehind.size();
     }
 
-    public void bind(Startable reconnectStarter){
+    public void bind(Startable reconnectStarter) {
         this.reconnectStarter = reconnectStarter;
     }
 

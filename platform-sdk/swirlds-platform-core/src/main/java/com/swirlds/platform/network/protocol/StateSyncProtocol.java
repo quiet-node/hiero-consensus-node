@@ -40,7 +40,6 @@ public class StateSyncProtocol implements Protocol {
     private LongSupplier lastCompleteRoundSupplier;
     private SwirldStateManager stateManager;
 
-
     public StateSyncProtocol(
             @NonNull final PlatformContext platformContext,
             @NonNull final ThreadManager threadManager,
@@ -48,8 +47,10 @@ public class StateSyncProtocol implements Protocol {
             @NonNull final Function<String, ReservedSignedState> lastCompleteSignedState,
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics reconnectMetrics,
-            @NonNull final PlatformStateFacade platformStateFacade, final ReservedSignedStatePromise promise,
-            final SwirldStateManager stateManager, final FallenBehindMonitor fallenBehindMonitor) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            final ReservedSignedStatePromise promise,
+            final SwirldStateManager stateManager,
+            final FallenBehindMonitor fallenBehindMonitor) {
 
         this.platformContext = Objects.requireNonNull(platformContext);
         this.threadManager = Objects.requireNonNull(threadManager);
@@ -82,7 +83,8 @@ public class StateSyncProtocol implements Protocol {
                 platformStatus::get,
                 time,
                 platformStateFacade,
-                stateManager, fallenBehindMonitor);
+                stateManager,
+                fallenBehindMonitor);
     }
 
     /**

@@ -8,14 +8,14 @@ import static org.hiero.base.CompareTo.isGreaterThanOrEqualTo;
 import com.hedera.hapi.platform.event.GossipEvent;
 import com.swirlds.base.time.Time;
 import com.swirlds.logging.legacy.LogMarker;
-import com.swirlds.platform.reconnect.FallenBehindMonitor;
-import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.permits.SyncGuard;
 import com.swirlds.platform.gossip.rpc.GossipRpcReceiver;
 import com.swirlds.platform.gossip.rpc.GossipRpcSender;
 import com.swirlds.platform.gossip.rpc.SyncData;
 import com.swirlds.platform.metrics.SyncMetrics;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
+import com.swirlds.platform.reconnect.PlatformReconnecter;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.List;
@@ -275,10 +275,10 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
         this.syncMetrics.eventWindow(state.mySyncData.eventWindow(), remoteEventWindow);
 
-        //TODO
+        // TODO
         PlatformReconnecter pl = null;
-        final SyncFallenBehindStatus behindStatus = checkFallenBehindStatus(
-                state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow(), peerId);
+        final SyncFallenBehindStatus behindStatus =
+                checkFallenBehindStatus(state.mySyncData.eventWindow(), state.remoteSyncData.eventWindow(), peerId);
         if (behindStatus != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
             logger.info(
                     LogMarker.RECONNECT.getMarker(),
@@ -310,8 +310,8 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
     private boolean tryFixSelfFallBehind(final EventWindow remoteEventWindow) {
         try (final ReservedEventWindow latestShadowWindow = sharedShadowgraphSynchronizer.reserveEventWindow()) {
-            final SyncFallenBehindStatus behindStatus = checkFallenBehindStatus(
-                    latestShadowWindow.getEventWindow(), remoteEventWindow, peerId);
+            final SyncFallenBehindStatus behindStatus =
+                    checkFallenBehindStatus(latestShadowWindow.getEventWindow(), remoteEventWindow, peerId);
             if (behindStatus != SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
                 // we seem to be ok after all, let's wait for another sync to happen
                 logger.info(

@@ -4,7 +4,6 @@ package com.swirlds.platform.network.protocol;
 import static com.swirlds.logging.legacy.LogMarker.FREEZE;
 
 import com.swirlds.common.context.PlatformContext;
-import com.swirlds.platform.gossip.GossipController;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.permits.SyncPermitProvider;
 import com.swirlds.platform.gossip.shadowgraph.AbstractShadowgraphSynchronizer;
@@ -21,8 +20,7 @@ import org.apache.logging.log4j.Logger;
  *
  * @param <T> specific shadowgraph synchronizer class which is used by that protocol
  */
-public abstract class AbstractSyncProtocol<T extends AbstractShadowgraphSynchronizer>
-        implements Protocol, GossipController {
+public abstract class AbstractSyncProtocol<T extends AbstractShadowgraphSynchronizer> implements Protocol {
 
     private static final Logger logger = LogManager.getLogger(AbstractSyncProtocol.class);
     protected final SyncConfig syncConfig;

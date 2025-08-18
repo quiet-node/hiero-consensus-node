@@ -15,8 +15,6 @@ import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
 import com.swirlds.platform.Utilities;
-import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
-import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.gossip.shadowgraph.AbstractShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.shadowgraph.RpcShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.shadowgraph.Shadowgraph;
@@ -30,9 +28,11 @@ import com.swirlds.platform.network.protocol.AbstractSyncProtocol;
 import com.swirlds.platform.network.protocol.HeartbeatProtocol;
 import com.swirlds.platform.network.protocol.Protocol;
 import com.swirlds.platform.network.protocol.ProtocolRunnable;
+import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
 import com.swirlds.platform.network.protocol.StateSyncProtocol;
 import com.swirlds.platform.network.protocol.SyncProtocol;
 import com.swirlds.platform.network.protocol.rpc.RpcProtocol;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.reconnect.StateSyncThrottle;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -170,8 +170,11 @@ public class SyncGossipModular implements Gossip {
         stateSyncProtocol = createReconnectProtocol(
                 platformContext,
                 threadManager,
-                latestCompleteState,platformStateFacade,
-                reservedSignedStatePromise, stateManager, fallenBehindMonitor);
+                latestCompleteState,
+                platformStateFacade,
+                reservedSignedStatePromise,
+                stateManager,
+                fallenBehindMonitor);
         this.protocols = ImmutableList.of(
                 HeartbeatProtocol.create(platformContext, this.network.getNetworkMetrics()),
                 stateSyncProtocol,
@@ -198,9 +201,10 @@ public class SyncGossipModular implements Gossip {
     public StateSyncProtocol createReconnectProtocol(
             @NonNull final PlatformContext platformContext,
             @NonNull final ThreadManager threadManager,
-            @NonNull final Function<String,ReservedSignedState> latestCompleteState,
+            @NonNull final Function<String, ReservedSignedState> latestCompleteState,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final ReservedSignedStatePromise reservedSignedStatePromise, final SwirldStateManager stateManager,
+            @NonNull final ReservedSignedStatePromise reservedSignedStatePromise,
+            final SwirldStateManager stateManager,
             final FallenBehindMonitor fallenBehindMonitor) {
 
         final ReconnectConfig reconnectConfig =
@@ -220,15 +224,16 @@ public class SyncGossipModular implements Gossip {
                 platformStateFacade,
                 reservedSignedStatePromise,
                 stateManager,
-                fallenBehindMonitor
-        );
+                fallenBehindMonitor);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void bind(@NonNull final WiringModel model, @NonNull final BindableInputWire<PlatformEvent, Void> eventInput,
+    public void bind(
+            @NonNull final WiringModel model,
+            @NonNull final BindableInputWire<PlatformEvent, Void> eventInput,
             @NonNull final BindableInputWire<EventWindow, Void> eventWindowInput,
             @NonNull final StandardOutputWire<PlatformEvent> eventOutput,
             @NonNull final BindableInputWire<NoInput, Void> startInput,
@@ -238,7 +243,6 @@ public class SyncGossipModular implements Gossip {
             @NonNull final BindableInputWire<NoInput, Void> resume,
             @NonNull final BindableInputWire<Duration, Void> systemHealthInput,
             @NonNull final BindableInputWire<PlatformStatus, Void> platformStatusInput) {
-
 
         startInput.bindConsumer(ignored -> {
             syncProtocol.start();
@@ -266,5 +270,4 @@ public class SyncGossipModular implements Gossip {
         });
         this.receivedEventHandler = eventOutput::forward;
     }
-
 }

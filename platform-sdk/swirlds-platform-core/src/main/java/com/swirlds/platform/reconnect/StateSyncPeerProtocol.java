@@ -229,7 +229,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
         // this can happen if we fall behind while we are teaching
         // in this case, we want to finish teaching before we start learning
         // so we acquire the learner permit and release it when we are done teaching
-        //TODO maybe change to an atomic boolean teaching in progress
+        // TODO maybe change to an atomic boolean teaching in progress
         if (!promise.tryBlock()) {
             reconnectRejected();
             return false;
@@ -290,8 +290,9 @@ public class StateSyncPeerProtocol implements PeerProtocol {
             switch (initiatedBy) {
                 case PEER -> teacher(connection);
                 case SELF -> learner(connection);
-                default -> throw new NetworkProtocolException(
-                        "runProtocol() called but it is unclear who the teacher and who the learner is");
+                default ->
+                    throw new NetworkProtocolException(
+                            "runProtocol() called but it is unclear who the teacher and who the learner is");
             }
         } finally {
             initiatedBy = InitiatedBy.NO_ONE;
@@ -306,34 +307,51 @@ public class StateSyncPeerProtocol implements PeerProtocol {
     private void learner(final Connection connection) {
         try {
 
-        final StateLearner reconnect = new StateLearner(
-                platformContext, threadManager, connection, swirldStateManager.getConsensusState(),
-                reconnectSocketTimeout, statistics, platformStateFacade, stateRootFunction );
+            final StateLearner reconnect = new StateLearner(
+                    platformContext,
+                    threadManager,
+                    connection,
+                    swirldStateManager.getConsensusState(),
+                    reconnectSocketTimeout,
+                    statistics,
+                    platformStateFacade,
+                    stateRootFunction);
 
             logger.info(RECONNECT.getMarker(), () -> new ReconnectStartPayload(
-                    "Starting reconnect in role of the receiver.", true,
-                    //      TODO how to get the round without sharing the current state yet in another form
-                    connection.getSelfId().id(), connection.getOtherId().id(), -1  ).toString());
+                            "Starting reconnect in role of the receiver.",
+                            true,
+                            //      TODO how to get the round without sharing the current state yet in another form
+                            connection.getSelfId().id(),
+                            connection.getOtherId().id(),
+                            -1)
+                    .toString());
 
             final ReservedSignedState reservedSignedState = reconnect.execute();
 
             logger.info(RECONNECT.getMarker(), () -> new ReconnectFinishPayload(
-                    "Finished reconnect in the role of the receiver.", true,
-                    connection.getSelfId().id(), connection.getOtherId().id(), reservedSignedState.get().getRound()).toString());
-            logger.info(RECONNECT.getMarker(),
+                            "Finished reconnect in the role of the receiver.",
+                            true,
+                            connection.getSelfId().id(),
+                            connection.getOtherId().id(),
+                            reservedSignedState.get().getRound())
+                    .toString());
+            logger.info(
+                    RECONNECT.getMarker(),
                     """
                             Information for state received during reconnect:
                             {}""",
-                    () -> platformStateFacade.getInfoString(reservedSignedState.get().getState(), stateConfig.debugHashDepth()));
-
+                    () -> platformStateFacade.getInfoString(
+                            reservedSignedState.get().getState(), stateConfig.debugHashDepth()));
 
             promise.provide(reservedSignedState);
 
-        } catch (final RuntimeException|  InterruptedException e) {
+        } catch (final RuntimeException | InterruptedException e) {
             if (Utilities.isOrCausedBySocketException(e)) {
                 logger.error(EXCEPTION.getMarker(), () -> new ReconnectFailurePayload(
-                        "Got socket exception while receiving a signed state! " + NetworkUtils.formatException(e),
-                        ReconnectFailurePayload.CauseOfFailure.SOCKET).toString());
+                                "Got socket exception while receiving a signed state! "
+                                        + NetworkUtils.formatException(e),
+                                ReconnectFailurePayload.CauseOfFailure.SOCKET)
+                        .toString());
             } else if (connection != null) {
                 connection.disconnect();
             }
@@ -373,6 +391,4 @@ public class StateSyncPeerProtocol implements PeerProtocol {
         SELF,
         PEER
     }
-
-
 }

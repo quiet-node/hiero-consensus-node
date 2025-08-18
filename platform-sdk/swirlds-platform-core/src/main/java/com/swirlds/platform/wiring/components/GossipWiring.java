@@ -8,7 +8,6 @@ import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.input.InputWire;
 import com.swirlds.component.framework.wires.output.OutputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
-import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.wiring.NoInput;
 import com.swirlds.platform.wiring.PlatformSchedulersConfig;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -56,6 +55,7 @@ public class GossipWiring {
      * This wire is used to stop gossip.
      */
     private final BindableInputWire<NoInput, Void> stopInput;
+
     private final BindableInputWire<NoInput, Void> pause;
     private final BindableInputWire<NoInput, Void> resume;
 
@@ -74,7 +74,6 @@ public class GossipWiring {
      * This wire is used to tell gossip the status of the platform.
      */
     private final BindableInputWire<PlatformStatus, Void> platformStatusInput;
-
 
     public GossipWiring(@NonNull final PlatformContext platformContext, @NonNull final WiringModel model) {
         this.model = model;
@@ -206,16 +205,15 @@ public class GossipWiring {
         scheduler.flush();
     }
 
-    public void pauseGossip(){
+    public void pauseGossip() {
         pause.inject(NoInput.getInstance());
     }
 
-    public void resumeGossip(){
+    public void resumeGossip() {
         resume.inject(NoInput.getInstance());
     }
 
     public void startGossip() {
         startInput.inject(NoInput.getInstance());
     }
-
 }

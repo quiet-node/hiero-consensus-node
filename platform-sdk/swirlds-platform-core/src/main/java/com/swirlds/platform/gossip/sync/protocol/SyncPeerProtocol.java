@@ -144,11 +144,11 @@ public class SyncPeerProtocol implements PeerProtocol {
             return false;
         }
 
-       // if (fallenBehindManager.hasFallenBehind()) {
-       //     syncMetrics.doNotSyncFallenBehind();
-       //     return false;
-      //}
-        if(platformStatusSupplier.get() == PlatformStatus.BEHIND){
+        // if (fallenBehindManager.hasFallenBehind()) {
+        //     syncMetrics.doNotSyncFallenBehind();
+        //     return false;
+        // }
+        if (platformStatusSupplier.get() == PlatformStatus.BEHIND) {
             syncMetrics.doNotSyncFallenBehind();
             return false;
         }

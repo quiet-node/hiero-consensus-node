@@ -12,8 +12,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
 
@@ -21,7 +19,6 @@ import org.hiero.consensus.model.status.PlatformStatus;
  * Implementation of a factory for sync protocol
  */
 public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> {
-
 
     private final PlatformContext platformContext;
     private final Duration sleepAfterSync;
@@ -68,12 +65,7 @@ public class SyncProtocol extends AbstractSyncProtocol<ShadowgraphSynchronizer> 
             final SyncMetrics syncMetrics) {
 
         return new SyncProtocol(
-                platformContext,
-                synchronizer,
-                intakeEventCounter,
-                Duration.ZERO,
-                syncMetrics,
-                rosterSize);
+                platformContext, synchronizer, intakeEventCounter, Duration.ZERO, syncMetrics, rosterSize);
     }
 
     /**

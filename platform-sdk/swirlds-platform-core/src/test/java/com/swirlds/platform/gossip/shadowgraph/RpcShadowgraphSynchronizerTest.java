@@ -13,18 +13,17 @@ import com.swirlds.common.io.filesystem.FileSystemManager;
 import com.swirlds.common.io.utility.NoOpRecycleBin;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
 import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
-import com.swirlds.common.merkle.synchronization.config.ReconnectConfig;
 import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.config.extensions.sources.SystemEnvironmentConfigSource;
 import com.swirlds.config.extensions.sources.SystemPropertiesConfigSource;
 import com.swirlds.metrics.api.Metrics;
-import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.gossip.NoOpIntakeEventCounter;
 import com.swirlds.platform.gossip.rpc.GossipRpcSender;
 import com.swirlds.platform.gossip.rpc.SyncData;
 import com.swirlds.platform.metrics.SyncMetrics;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.system.status.StatusActionSubmitter;
 import com.swirlds.platform.system.status.actions.FallenBehindAction;
 import java.time.Duration;
@@ -78,8 +77,7 @@ class RpcShadowgraphSynchronizerTest {
         this.syncMetrics = mock(SyncMetrics.class);
         this.selfId = NodeId.of(1);
         this.statusSubmitter = mock(StatusActionSubmitter.class);
-        this.fallenBehindManager = new FallenBehindMonitor(
-                mock(Roster.class), configuration, mock(Metrics.class));
+        this.fallenBehindManager = new FallenBehindMonitor(mock(Roster.class), configuration, mock(Metrics.class));
 
         this.eventHandler = mock(Consumer.class);
         this.gossipSender = mock(GossipRpcSender.class);

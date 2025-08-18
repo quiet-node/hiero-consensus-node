@@ -40,7 +40,6 @@ import com.swirlds.platform.state.iss.IssDetector;
 import com.swirlds.platform.state.iss.IssHandler;
 import com.swirlds.platform.state.nexus.LatestCompleteStateNexus;
 import com.swirlds.platform.state.nexus.SignedStateNexus;
-import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.state.signed.SignedStateSentinel;
 import com.swirlds.platform.state.signed.StateGarbageCollector;
 import com.swirlds.platform.state.signed.StateSignatureCollector;
@@ -136,7 +135,8 @@ class PlatformWiringTests {
         // framework like other components, such things will not be needed.
         componentBuilder.withGossip(new Gossip() {
             @Override
-            public void bind(@NonNull final WiringModel model,
+            public void bind(
+                    @NonNull final WiringModel model,
                     @NonNull final BindableInputWire<PlatformEvent, Void> eventInput,
                     @NonNull final BindableInputWire<EventWindow, Void> eventWindowInput,
                     @NonNull final StandardOutputWire<PlatformEvent> eventOutput,
@@ -155,9 +155,7 @@ class PlatformWiringTests {
                 clearInput.bindConsumer(noInput -> {});
                 systemHealthInput.bindConsumer(duration -> {});
                 platformStatusInput.bindConsumer(platformStatus -> {});
-
             }
-
         });
 
         wiring.bind(

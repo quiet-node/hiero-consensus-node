@@ -16,12 +16,12 @@ import com.swirlds.common.threading.framework.Stoppable;
 import com.swirlds.common.threading.framework.Stoppable.StopBehavior;
 import com.swirlds.common.threading.pool.ParallelExecutionException;
 import com.swirlds.common.threading.pool.ParallelExecutor;
-import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.SyncException;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
 import com.swirlds.platform.metrics.SyncMetrics;
 import com.swirlds.platform.network.Connection;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
@@ -88,7 +88,6 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
                 fallenBehindMonitor,
                 intakeEventCounter);
         this.executor = Objects.requireNonNull(executor);
-
     }
 
     /**
@@ -157,13 +156,17 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
 
             syncMetrics.eventWindow(myWindow, theirTipsAndEventWindow.eventWindow());
 
-            final SyncFallenBehindStatus status = checkFallenBehindStatus(myWindow, theirTipsAndEventWindow.eventWindow(), connection.getOtherId());
+            final SyncFallenBehindStatus status =
+                    checkFallenBehindStatus(myWindow, theirTipsAndEventWindow.eventWindow(), connection.getOtherId());
             if (status != SyncFallenBehindStatus.NONE_FALLEN_BEHIND) {
                 // aborting the sync since someone has fallen behind
-                 logger.info(SYNC_INFO.getMarker(), "Connection against {} aborting sync due to {}",  connection.getOtherId(), status);
+                logger.info(
+                        SYNC_INFO.getMarker(),
+                        "Connection against {} aborting sync due to {}",
+                        connection.getOtherId(),
+                        status);
                 return false;
             }
-
 
             // events that I know they already have
             final Set<ShadowEvent> eventsTheyHave = new HashSet<>();

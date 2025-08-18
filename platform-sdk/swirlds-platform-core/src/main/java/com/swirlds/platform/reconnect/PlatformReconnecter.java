@@ -20,10 +20,8 @@ import com.swirlds.logging.legacy.LogMarker;
 import com.swirlds.logging.legacy.payload.ReconnectFailurePayload;
 import com.swirlds.logging.legacy.payload.ReconnectLoadFailurePayload;
 import com.swirlds.logging.legacy.payload.UnableToReconnectPayload;
-import com.swirlds.platform.components.AppNotifier;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.consensus.EventWindowUtils;
-import com.swirlds.platform.listeners.ReconnectCompleteNotification;
 import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
@@ -40,7 +38,7 @@ import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.system.SystemExitUtils;
 import com.swirlds.platform.system.status.actions.ReconnectCompleteAction;
-import com.swirlds.platform.wiring.PlatformWiring;
+import com.swirlds.platform.wiring.PlatformCoordinator;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
@@ -68,7 +66,6 @@ public class PlatformReconnecter implements Startable {
     private final ThreadManager threadManager;
     private final Roster roster;
 
-
     private final SignedStateValidator validator;
     private final Duration minTimeBetweenReconnects;
     private final MerkleCryptography merkleCryptography;
@@ -77,7 +74,7 @@ public class PlatformReconnecter implements Startable {
     // --- State-management / loader dependencies (from ReconnectStateLoader) ---
     private final Platform platform;
     private final PlatformContext platformContext;
-    private final PlatformWiring platformWiring;
+    private final PlatformCoordinator platformCoordinator;
     private final SwirldStateManager swirldStateManager;
     private final SignedStateNexus latestImmutableStateNexus;
     private final SavedStateController savedStateController;
@@ -102,25 +99,25 @@ public class PlatformReconnecter implements Startable {
             // loader deps
             @NonNull final Platform platform,
             @NonNull final PlatformContext platformContext,
-            @NonNull final PlatformWiring platformWiring,
+            final PlatformCoordinator platformCoordinator,
             @NonNull final SwirldStateManager swirldStateManager,
             @NonNull final SignedStateNexus latestImmutableStateNexus,
             @NonNull final SavedStateController savedStateController,
             @NonNull final ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler,
-            final ReservedSignedStatePromise promise, final NodeId selfId) {
+            final ReservedSignedStatePromise promise,
+            final NodeId selfId) {
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
         this.threadManager = Objects.requireNonNull(threadManager);
         this.roster = Objects.requireNonNull(roster);
+        this.platformCoordinator = platformCoordinator;
         this.promise = promise;
         this.validator = new DefaultSignedStateValidator(platformContext, platformStateFacade);
         this.merkleCryptography = Objects.requireNonNull(merkleCryptography);
-        this.reconnectConfig = platformContext.getConfiguration().getConfigData(
-                ReconnectConfig.class);
+        this.reconnectConfig = platformContext.getConfiguration().getConfigData(ReconnectConfig.class);
         this.minTimeBetweenReconnects = Objects.requireNonNull(reconnectConfig).minimumTimeBetweenReconnects();
         // loader deps
         this.platform = Objects.requireNonNull(platform);
         this.platformContext = Objects.requireNonNull(platformContext);
-        this.platformWiring = Objects.requireNonNull(platformWiring);
         this.swirldStateManager = Objects.requireNonNull(swirldStateManager);
         this.latestImmutableStateNexus = Objects.requireNonNull(latestImmutableStateNexus);
         this.savedStateController = Objects.requireNonNull(savedStateController);
@@ -128,7 +125,6 @@ public class PlatformReconnecter implements Startable {
         this.time = platformContext.getTime();
         this.selfId = selfId;
         this.startupTime = time.now();
-
     }
 
     /**
@@ -212,16 +208,16 @@ public class PlatformReconnecter implements Startable {
             logger.info(RECONNECT.getMarker(), "receiving signed state failed", e);
             return false;
         }
-        platformWiring.resumeGossip();
+        platformCoordinator.resumeGossip();
         return true;
     }
 
     /** Pre-reconnect housekeeping. */
     public void prepareForReconnect(final MerkleNodeState currentState) {
         logger.info(RECONNECT.getMarker(), "Preparing for reconnect, stopping gossip");
-        platformWiring.pauseGossip();
+        platformCoordinator.pauseGossip();
         logger.info(RECONNECT.getMarker(), "Preparing for reconnect, start clearing queues");
-        platformWiring.clear();
+        platformCoordinator.clear();
         logger.info(RECONNECT.getMarker(), "Queues have been cleared");
         hashStateForReconnect(merkleCryptography, currentState);
     }
@@ -235,19 +231,21 @@ public class PlatformReconnecter implements Startable {
             logger.debug(RECONNECT.getMarker(), "`loadReconnectState` : reloading state");
 
             // keep an ISS-detector view of the state
-            platformWiring.overrideIssDetectorState(signedState.reserve("reconnect state to issDetector"));
+            platformCoordinator.overrideIssDetectorState(signedState.reserve("reconnect state to issDetector"));
 
             // Ensure initial state in the copy chain is initialized *before* further processing
             final Hash reconnectHash = signedState.getState().getHash();
             final MerkleNodeState state = signedState.getState();
             final SemanticVersion creationSoftwareVersion = platformStateFacade.creationSoftwareVersionOf(state);
             signedState.init(platformContext);
-            consensusStateEventHandler.onStateInitialized(state, platform, InitTrigger.RECONNECT, creationSoftwareVersion);
+            consensusStateEventHandler.onStateInitialized(
+                    state, platform, InitTrigger.RECONNECT, creationSoftwareVersion);
 
             if (!Objects.equals(signedState.getState().getHash(), reconnectHash)) {
                 throw new IllegalStateException(
                         "State hash is not permitted to change during a reconnect init() call. Previous hash was "
-                        + reconnectHash + ", new hash is " + signedState.getState().getHash());
+                                + reconnectHash + ", new hash is "
+                                + signedState.getState().getHash());
             }
 
             // Verify platform roster matches state roster for the specific round
@@ -255,60 +253,59 @@ public class PlatformReconnecter implements Startable {
             final Roster stateRoster = RosterRetriever.retrieveActive(state, round);
             if (!roster.equals(stateRoster)) {
                 throw new IllegalStateException("Current roster and state-based roster do not contain the same nodes "
-                                                + " (currentRoster=" + Roster.JSON.toJSON(roster) + ") (stateRoster="
-                                                + Roster.JSON.toJSON(stateRoster) + ")");
+                        + " (currentRoster=" + Roster.JSON.toJSON(roster) + ") (stateRoster="
+                        + Roster.JSON.toJSON(stateRoster) + ")");
             }
 
             // Load state into runtime holders
             swirldStateManager.loadFromSignedState(signedState);
 
             // Transition to RECONNECT_COMPLETE before persistence kicks in
-            platformWiring.getStatusActionSubmitter()
-                    .submitStatusAction(new ReconnectCompleteAction(signedState.getRound()));
+            platformCoordinator.submitStatusAction(new ReconnectCompleteAction(signedState.getRound()));
 
             latestImmutableStateNexus.setState(signedState.reserve("set latest immutable to reconnect state"));
             savedStateController.reconnectStateReceived(
                     signedState.reserve("savedStateController.reconnectStateReceived"));
 
             // Hash logging & signature collection / persistence pipeline
-            platformWiring.sendStateToHashLogger(signedState);
-            platformWiring.getSignatureCollectorStateInput()
-                    .put(signedState.reserve("loading reconnect state into sig collector"));
+            platformCoordinator.sendStateToHashLogger(signedState);
+            platformCoordinator.sendStateToSignatureCollector(
+                    signedState.reserve("loading reconnect state into sig collector"));
 
             // Consensus snapshot + roster history + event window updates
             final ConsensusSnapshot consensusSnapshot =
                     Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(state));
-            platformWiring.consensusSnapshotOverride(consensusSnapshot);
+            platformCoordinator.consensusSnapshotOverride(consensusSnapshot);
 
             final RosterHistory rosterHistory = RosterUtils.createRosterHistory(state);
-            platformWiring.getRosterHistoryInput().inject(rosterHistory);
 
-            platformWiring.updateEventWindow(
+            platformCoordinator.updateRosterHistory(rosterHistory);
+
+            platformCoordinator.updateEventWindow(
                     EventWindowUtils.createEventWindow(consensusSnapshot, platformContext.getConfiguration()));
 
             // Running hash / PCES writer updates
             final RunningEventHashOverride runningEventHashOverride =
                     new RunningEventHashOverride(platformStateFacade.legacyRunningEventHashOf(state), true);
-            platformWiring.updateRunningHash(runningEventHashOverride);
-            platformWiring.getPcesWriterRegisterDiscontinuityInput().inject(signedState.getRound());
+            platformCoordinator.updateRunningHash(runningEventHashOverride);
+            platformCoordinator.updatePcesDiscontinuityRound(signedState.getRound());
 
             // Notify app-level listeners
-            platformWiring.getNotifierWiring()
-                    .getInputWire(AppNotifier::sendReconnectCompleteNotification)
-                    .put(new ReconnectCompleteNotification(
-                            signedState.getRound(), signedState.getConsensusTimestamp(), signedState.getState()));
+            platformCoordinator.notifyListeners(signedState);
             return true;
         } catch (final RuntimeException e) {
             logger.debug(RECONNECT.getMarker(), "`loadReconnectState` : FAILED, reason: {}", e.getMessage());
-            platformWiring.clear();
-            logger.error(EXCEPTION.getMarker(),
-                    () -> new ReconnectLoadFailurePayload("Error while loading a received SignedState!").toString(), e);
-            logger.debug(RECONNECT.getMarker(),
+            platformCoordinator.clear();
+            logger.error(
+                    EXCEPTION.getMarker(),
+                    () -> new ReconnectLoadFailurePayload("Error while loading a received SignedState!").toString(),
+                    e);
+            logger.debug(
+                    RECONNECT.getMarker(),
                     "`reloadState` : reloading state, finished, failed, returning `false`: Restart the reconnection process");
             return false;
         }
     }
-
 
     @NonNull
     private Duration getTimeSinceStartup() {
@@ -343,16 +340,17 @@ public class PlatformReconnecter implements Startable {
     public void exitIfReconnectIsDisabled() {
         if (!reconnectConfig.active()) {
             logger.warn(STARTUP.getMarker(), () -> new UnableToReconnectPayload(
-                    "Node has fallen behind, reconnect is disabled, will die", selfId.id())
+                            "Node has fallen behind, reconnect is disabled, will die", selfId.id())
                     .toString());
             SystemExitUtils.exitSystem(SystemExitCode.BEHIND_RECONNECT_DISABLED);
         }
 
         if (reconnectConfig.reconnectWindowSeconds() >= 0
-            && reconnectConfig.reconnectWindowSeconds() < getTimeSinceStartup().toSeconds()) {
+                && reconnectConfig.reconnectWindowSeconds()
+                        < getTimeSinceStartup().toSeconds()) {
             logger.warn(STARTUP.getMarker(), () -> new UnableToReconnectPayload(
-                    "Node has fallen behind, reconnect is disabled outside of time window, will die",
-                    selfId.id())
+                            "Node has fallen behind, reconnect is disabled outside of time window, will die",
+                            selfId.id())
                     .toString());
             SystemExitUtils.exitSystem(SystemExitCode.BEHIND_RECONNECT_DISABLED);
         }

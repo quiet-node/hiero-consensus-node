@@ -56,7 +56,7 @@ import com.swirlds.platform.state.snapshot.StateToDiskReason;
 import com.swirlds.platform.system.Platform;
 import com.swirlds.platform.system.status.actions.DoneReplayingEventsAction;
 import com.swirlds.platform.system.status.actions.StartedReplayingEventsAction;
-import com.swirlds.platform.wiring.PlatformWiring;
+import com.swirlds.platform.wiring.PlatformCoordinator;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
@@ -142,12 +142,8 @@ public class SwirldsPlatform implements Platform {
      */
     private final TransactionPoolNexus transactionPoolNexus;
 
-    /**
-     * Encapsulated wiring for the platform.
-     */
-    private final PlatformWiring platformWiring;
-
     private final long pcesReplayLowerBound;
+    private final PlatformCoordinator platformCoordinator;
 
     /**
      * Constructor.
@@ -195,10 +191,9 @@ public class SwirldsPlatform implements Platform {
         final StateSignatureCollector stateSignatureCollector =
                 new DefaultStateSignatureCollector(platformContext, signedStateMetrics);
 
-        this.platformWiring = blocks.platformWiring();
+        this.platformCoordinator = new PlatformCoordinator(blocks.platformWiring());
 
-        blocks.statusActionSubmitterReference()
-                .set(x -> platformWiring.getStatusActionSubmitter().submitStatusAction(x));
+        blocks.statusActionSubmitterReference().set(platformCoordinator);
 
         final Duration replayHealthThreshold = platformContext
                 .getConfiguration()
@@ -206,9 +201,9 @@ public class SwirldsPlatform implements Platform {
                 .replayHealthThreshold();
         final PcesReplayer pcesReplayer = new PcesReplayer(
                 platformContext,
-                platformWiring.getPcesReplayerEventOutput(),
-                platformWiring::flushIntakePipeline,
-                platformWiring::flushTransactionHandler,
+                blocks.platformWiring().getPcesReplayerEventOutput(),
+                platformCoordinator::flushIntakePipeline,
+                platformCoordinator::flushTransactionHandler,
                 () -> latestImmutableStateNexus.getState("PCES replay"),
                 () -> isLessThan(blocks.model().getUnhealthyDuration(), replayHealthThreshold));
 
@@ -230,33 +225,36 @@ public class SwirldsPlatform implements Platform {
         final PlatformPublisher publisher = new DefaultPlatformPublisher(blocks.applicationCallbacks());
 
         final PlatformReconnecter platformReconnecter = new PlatformReconnecter(
-                platformStateFacade, AdHocThreadManager.getStaticThreadManager(), currentRoster
-                , getContext().getMerkleCryptography(),
+                platformStateFacade,
+                AdHocThreadManager.getStaticThreadManager(),
+                currentRoster,
+                getContext().getMerkleCryptography(),
                 this,
                 platformContext,
-                platformWiring,
+                platformCoordinator,
                 swirldStateManager,
                 latestImmutableStateNexus,
                 savedStateController,
-                consensusStateEventHandler,blocks.reservedSignedStatePromise(), selfId);
+                consensusStateEventHandler,
+                blocks.reservedSignedStatePromise(),
+                selfId);
 
         blocks.fallenBehindMonitor().bind(platformReconnecter);
-        blocks.fallenBehindMonitor().bind(platformWiring.getStatusActionSubmitter());
-        platformWiring.bind(
-                builder,
-                pcesReplayer,
-                stateSignatureCollector,
-                eventWindowManager,
-                inlinePcesWriter,
-                latestImmutableStateNexus,
-                latestCompleteStateNexus,
-                savedStateController,
-                appNotifier,
-                publisher
-        );
+        blocks.fallenBehindMonitor().bind(platformCoordinator);
+        blocks.platformWiring()
+                .bind(
+                        builder,
+                        pcesReplayer,
+                        stateSignatureCollector,
+                        eventWindowManager,
+                        inlinePcesWriter,
+                        latestImmutableStateNexus,
+                        latestCompleteStateNexus,
+                        savedStateController,
+                        appNotifier,
+                        publisher);
 
-
-        platformWiring.startGossip();
+        platformCoordinator.startGossip();
 
         final Hash legacyRunningEventHash =
                 platformStateFacade.legacyRunningEventHashOf(initialState.getState()) == null
@@ -264,7 +262,7 @@ public class SwirldsPlatform implements Platform {
                         : platformStateFacade.legacyRunningEventHashOf((initialState.getState()));
         final RunningEventHashOverride runningEventHashOverride =
                 new RunningEventHashOverride(legacyRunningEventHash, false);
-        platformWiring.updateRunningHash(runningEventHashOverride);
+        platformCoordinator.updateRunningHash(runningEventHashOverride);
 
         // Load the minimum generation into the pre-consensus event writer
         final String actualMainClassName = platformContext
@@ -279,7 +277,7 @@ public class SwirldsPlatform implements Platform {
             // The minimum generation of non-ancient events for the oldest state snapshot on disk.
             final long minimumGenerationNonAncientForOldestState =
                     savedStates.get(savedStates.size() - 1).metadata().minimumBirthRoundNonAncient();
-            platformWiring.getPcesMinimumGenerationToStoreInput().inject(minimumGenerationNonAncientForOldestState);
+            platformCoordinator.setPcesMinimumGeneration(minimumGenerationNonAncientForOldestState);
         }
 
         transactionPoolNexus = blocks.transactionPoolNexus();
@@ -291,28 +289,27 @@ public class SwirldsPlatform implements Platform {
         if (startedFromGenesis) {
             initialAncientThreshold = 0;
             startingRound = 0;
-            platformWiring.updateEventWindow(EventWindow.getGenesisEventWindow());
+            platformCoordinator.updateEventWindow(EventWindow.getGenesisEventWindow());
         } else {
             initialAncientThreshold = platformStateFacade.ancientThresholdOf(initialState.getState());
             startingRound = initialState.getRound();
 
-            platformWiring.sendStateToHashLogger(initialState);
-            platformWiring
-                    .getSignatureCollectorStateInput()
-                    .put(initialState.reserve("loading initial state into sig collector"));
+            platformCoordinator.sendStateToHashLogger(initialState);
+            platformCoordinator.sendStateToSignatureCollector(
+                    initialState.reserve("loading initial state into sig collector"));
 
             savedStateController.registerSignedStateFromDisk(initialState);
 
             final ConsensusSnapshot consensusSnapshot =
                     Objects.requireNonNull(platformStateFacade.consensusSnapshotOf(initialState.getState()));
-            platformWiring.consensusSnapshotOverride(consensusSnapshot);
+            platformCoordinator.consensusSnapshotOverride(consensusSnapshot);
 
             // We only load non-ancient events during start up, so the initial expired threshold will be
             // equal to the ancient threshold when the system first starts. Over time as we get more events,
             // the expired threshold will continue to expand until it reaches its full size.
-            platformWiring.updateEventWindow(
+            platformCoordinator.updateEventWindow(
                     EventWindowUtils.createEventWindow(consensusSnapshot, platformContext.getConfiguration()));
-            platformWiring.overrideIssDetectorState(initialState.reserve("initialize issDetector"));
+            platformCoordinator.overrideIssDetectorState(initialState.reserve("initialize issDetector"));
         }
 
         blocks.latestImmutableStateProviderReference().set(latestImmutableStateNexus::getState);
@@ -342,17 +339,17 @@ public class SwirldsPlatform implements Platform {
 
         platformContext.getRecycleBin().start();
         platformContext.getMetrics().start();
-        platformWiring.start();
+        platformCoordinator.start();
 
         replayPreconsensusEvents();
-        platformWiring.startGossip();
+        platformCoordinator.startGossip();
     }
 
     @Override
     public void destroy() throws InterruptedException {
         notificationEngine.shutdown();
         platformContext.getRecycleBin().stop();
-        platformWiring.stop();
+        platformCoordinator.stop();
         getMetricsProvider().removePlatformMetrics(selfId);
     }
 
@@ -368,7 +365,7 @@ public class SwirldsPlatform implements Platform {
     public void performPcesRecovery() {
         platformContext.getRecycleBin().start();
         platformContext.getMetrics().start();
-        platformWiring.start();
+        platformCoordinator.start();
 
         replayPreconsensusEvents();
         try (final ReservedSignedState reservedState = latestImmutableStateNexus.getState("Get PCES recovery state")) {
@@ -383,7 +380,8 @@ public class SwirldsPlatform implements Platform {
                 final StateDumpRequest request =
                         StateDumpRequest.create(signedState.reserve("dumping PCES recovery state"));
 
-                platformWiring.getDumpStateToDiskInput().put(request);
+                platformCoordinator.dumpStateToDisk(request);
+
                 request.waitForFinished().run();
             }
         }
@@ -393,26 +391,24 @@ public class SwirldsPlatform implements Platform {
      * Replay preconsensus events.
      */
     private void replayPreconsensusEvents() {
-        platformWiring.getStatusActionSubmitter().submitStatusAction(new StartedReplayingEventsAction());
+        platformCoordinator.submitStatusAction(new StartedReplayingEventsAction());
 
         final IOIterator<PlatformEvent> iterator =
                 initialPcesFiles.getEventIterator(pcesReplayLowerBound, startingRound);
 
         logger.info(STARTUP.getMarker(), "replaying preconsensus event stream starting at {}", pcesReplayLowerBound);
 
-        platformWiring.getPcesReplayerIteratorInput().inject(iterator);
+        platformCoordinator.replayPces(iterator);
 
         // We have to wait for all the PCES transactions to reach the ISS detector before telling it that PCES replay is
         // done. The PCES replay will flush the intake pipeline, but we have to flush the hasher
 
         // FUTURE WORK: These flushes can be done by the PCES replayer.
-        platformWiring.flushStateHasher();
-        platformWiring.signalEndOfPcesReplay();
+        platformCoordinator.flushStateHasher();
+        platformCoordinator.signalEndOfPcesReplay();
 
-        platformWiring
-                .getStatusActionSubmitter()
-                .submitStatusAction(
-                        new DoneReplayingEventsAction(platformContext.getTime().now()));
+        platformCoordinator.submitStatusAction(
+                new DoneReplayingEventsAction(platformContext.getTime().now()));
     }
 
     /**

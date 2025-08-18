@@ -122,12 +122,12 @@ class FallenBehindManagerTest {
         manager.report(NodeId.of(5));
         assertFallenBehind(false, 5, "we should still be missing one for fallen behind");
 
-        //manager.addRemovePeers(ImmutableSet.of(NodeId.of(22), NodeId.of(23)), Collections.emptySet());
+        // manager.addRemovePeers(ImmutableSet.of(NodeId.of(22), NodeId.of(23)), Collections.emptySet());
 
         manager.report(NodeId.of(6));
         assertFallenBehind(false, 6, "we miss one due to changed size");
 
-      // manager.addRemovePeers(Collections.emptySet(), Collections.singleton(NodeId.of(9)));
+        // manager.addRemovePeers(Collections.emptySet(), Collections.singleton(NodeId.of(9)));
 
         assertFallenBehind(true, 6, "we should fall behind due to reduced number of peers");
 
