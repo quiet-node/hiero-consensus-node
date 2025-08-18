@@ -336,7 +336,7 @@ public class SimulatedBlockNodeServer {
                                     final var header = item.blockHeader();
                                     final long blockNumber = header.number();
                                     final long lastVerifiedBlockNum = lastVerifiedBlockNumber.get();
-                                    if (blockNumber - lastVerifiedBlockNum > 1) {
+                                    if (lastVerifiedBlockNum != -1 && blockNumber - lastVerifiedBlockNum > 1) {
                                         handleBehindResponse(replies, blockNumber, lastVerifiedBlockNum);
                                         return;
                                     }
@@ -667,7 +667,7 @@ public class SimulatedBlockNodeServer {
                 final long lastVerifiedBlockNum) {
             requireNonNull(pipeline, "pipeline cannot be null");
 
-            final PublishStreamResponse.EndOfStream eos = PublishStreamResponse.EndOfStream.newBuilder()
+            final EndOfStream eos = EndOfStream.newBuilder()
                     .blockNumber(lastVerifiedBlockNum)
                     .status(EndOfStream.Code.BEHIND)
                     .build();

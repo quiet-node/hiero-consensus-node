@@ -213,14 +213,16 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     public void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
-        final ConnectionState oldState = connectionState;
-        connectionState = newState;
-        logger.debug("[{}] Connection state transitioned from {} to {}", this, oldState, newState);
+        if (newState != getConnectionState()) {
+            final ConnectionState oldState = getConnectionState();
+            connectionState = newState;
+            logger.debug("[{}] Connection state transitioned from {} to {}", this, oldState, newState);
 
-        if (newState == ConnectionState.ACTIVE) {
-            scheduleStreamReset();
-        } else {
-            cancelStreamReset();
+            if (newState == ConnectionState.ACTIVE) {
+                scheduleStreamReset();
+            } else {
+                cancelStreamReset();
+            }
         }
     }
 

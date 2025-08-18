@@ -266,8 +266,8 @@ public class BlockNodeSimulatorSuite {
                         String.format(
                                 "[localhost:%s/UNINITIALIZED] Connection successfully closed", portNumbers.get(3)),
                         String.format(
-                                "The existing active connection (localhost:%s/ACTIVE) has an equal or higher priority"
-                                        + " than the connection (localhost:%s/CONNECTING) we are attempting to connect to"
+                                "The existing active connection [localhost:%s/ACTIVE] has an equal or higher priority"
+                                        + " than the connection [localhost:%s/CONNECTING] we are attempting to connect to"
                                         + " and this new connection attempt will be ignored",
                                 portNumbers.get(1), portNumbers.get(2)))),
                 doingContextual(

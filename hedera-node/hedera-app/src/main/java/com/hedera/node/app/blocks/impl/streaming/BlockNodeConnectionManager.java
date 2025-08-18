@@ -859,6 +859,20 @@ public class BlockNodeConnectionManager {
                 case, we want to elevate this connection to be the new active connection.
                  */
 
+                connection.createRequestPipeline();
+
+                if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
+                    // we were able to elevate this connection to the new active one
+                    connection.updateConnectionState(ConnectionState.ACTIVE);
+
+                    final long blockToJumpTo =
+                            blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
+                    jumpTargetBlock.set(blockToJumpTo);
+                } else {
+                    // Another connection task has preempted this task... reschedule and try again
+                    reschedule();
+                }
+
                 if (activeConnection != null) {
                     // close the old active connection
                     activeConnection.getLock().writeLock().lock();
@@ -872,19 +886,6 @@ public class BlockNodeConnectionManager {
                     } finally {
                         activeConnection.getLock().writeLock().unlock();
                     }
-                }
-
-                connection.createRequestPipeline();
-
-                if (activeConnectionRef.compareAndSet(activeConnection, connection)) {
-                    // we were able to elevate this connection to the new active one
-                    connection.updateConnectionState(ConnectionState.ACTIVE);
-                    final long blockToJumpTo =
-                            blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
-                    jumpTargetBlock.set(blockToJumpTo);
-                } else {
-                    // Another connection task has preempted this task... reschedule and try again
-                    reschedule();
                 }
             } catch (final Exception e) {
                 logger.warn("[{}] Failed to establish connection to block node; will schedule a retry", connection);
