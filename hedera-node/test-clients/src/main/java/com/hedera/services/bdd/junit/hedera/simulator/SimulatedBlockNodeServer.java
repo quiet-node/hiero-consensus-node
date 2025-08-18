@@ -103,7 +103,7 @@ public class SimulatedBlockNodeServer {
      *
      * @param port the port to listen on
      */
-    public SimulatedBlockNodeServer(final int port) {
+    public SimulatedBlockNodeServer(final int port, final long lastVerifiedBlockNumber) {
         this.port = port;
         this.serviceImpl = new MockBlockStreamServiceImpl();
 
@@ -122,6 +122,7 @@ public class SimulatedBlockNodeServer {
                 .addProtocol(pbjConfig)
                 .connectionConfig(connectionConfig)
                 .build();
+        this.lastVerifiedBlockNumber.set(lastVerifiedBlockNumber);
     }
 
     /**

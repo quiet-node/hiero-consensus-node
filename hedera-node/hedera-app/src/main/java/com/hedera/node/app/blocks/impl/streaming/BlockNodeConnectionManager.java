@@ -632,18 +632,7 @@ public class BlockNodeConnectionManager {
         while (it.hasNext()) {
             final Map.Entry<BlockNodeConfig, BlockNodeConnection> entry = it.next();
             final BlockNodeConnection connection = entry.getValue();
-            connection.getLock().writeLock().lock();
-            try {
-                connection.close();
-            } catch (final RuntimeException e) {
-                logger.warn(
-                        "{} [{}] Error while closing connection during connection manager shutdown; ignoring",
-                        threadInfo(),
-                        connection,
-                        e);
-            } finally {
-                connection.getLock().writeLock().unlock();
-            }
+            connection.close();
             it.remove();
         }
     }
@@ -688,7 +677,7 @@ public class BlockNodeConnectionManager {
         List<BlockNodeConnection> lockedConnections = new ArrayList<>();
         // Lock all existing connections to ensure state consistency
         connections.values().forEach(connection -> {
-            connection.getLock().writeLock().lock();
+            connection.getLock().lock();
             lockedConnections.add(connection);
         });
 
@@ -714,7 +703,7 @@ public class BlockNodeConnectionManager {
         } finally {
             // Release all acquired locks in reverse order
             for (int i = lockedConnections.size() - 1; i >= 0; i--) {
-                lockedConnections.get(i).getLock().writeLock().unlock();
+                lockedConnections.get(i).getLock().unlock();
             }
         }
     }
@@ -813,13 +802,8 @@ public class BlockNodeConnectionManager {
             return;
         }
 
-        activeConnection.getLock().readLock().lock();
-        try {
-            if (streamingBlockNumber.get() == -1) {
-                jumpTargetBlock.set(blockNumber);
-            }
-        } finally {
-            activeConnection.getLock().readLock().unlock();
+        if (streamingBlockNumber.get() == -1) {
+            jumpTargetBlock.set(blockNumber);
         }
     }
 
@@ -974,7 +958,7 @@ public class BlockNodeConnectionManager {
 
             try {
                 // Use tryLock to avoid blocking indefinitely, making shutdown more responsive.
-                if (activeConnection.getLock().readLock().tryLock(100, TimeUnit.MILLISECONDS)) {
+                if (activeConnection.getLock().tryLock(100, TimeUnit.MILLISECONDS)) {
                     try {
                         if (activeConnection.getConnectionState() != ConnectionState.ACTIVE) {
                             try {
@@ -999,7 +983,7 @@ public class BlockNodeConnectionManager {
                             Thread.sleep(workerLoopSleepDuration());
                         }
                     } finally {
-                        activeConnection.getLock().readLock().unlock();
+                        activeConnection.getLock().unlock();
                     }
                 } else {
                     logger.warn(
@@ -1038,12 +1022,7 @@ public class BlockNodeConnectionManager {
                     currentStreamingBlockNumber,
                     latestBlockNumber);
 
-            connection.getLock().writeLock().lock();
-            try {
-                closeConnectionAndReschedule(connection, LONGER_RETRY_DELAY);
-            } finally {
-                connection.getLock().writeLock().unlock();
-            }
+            closeConnectionAndReschedule(connection, LONGER_RETRY_DELAY);
             return true;
         }
 
@@ -1166,12 +1145,12 @@ public class BlockNodeConnectionManager {
                 return;
             }
 
-            connection.getLock().writeLock().lock();
+            connection.getLock().lock();
             try {
                 logger.debug("{} [{}] Running connection task...", threadInfo(), connection);
                 final BlockNodeConnection activeConnection = activeConnectionRef.get();
                 if (activeConnection != null) {
-                    activeConnection.getLock().readLock().lock();
+                    activeConnection.getLock().lock();
                     try {
                         if (activeConnection.equals(connection)) {
                             // not sure how the active connection is in a connectivity task... ignoring
@@ -1202,7 +1181,7 @@ public class BlockNodeConnectionManager {
                             return;
                         }
                     } finally {
-                        activeConnection.getLock().readLock().unlock();
+                        activeConnection.getLock().unlock();
                     }
                 }
 
@@ -1221,7 +1200,7 @@ public class BlockNodeConnectionManager {
                 final BlockNodeConnection currentActiveConnection = activeConnectionRef.get();
                 if (currentActiveConnection != null) {
                     // close the old active connection
-                    currentActiveConnection.getLock().writeLock().lock();
+                    currentActiveConnection.getLock().lock();
                     try {
                         // Double-check that this connection is still active after acquiring the lock
                         if (activeConnectionRef.get() == currentActiveConnection) {
@@ -1237,7 +1216,7 @@ public class BlockNodeConnectionManager {
                                 currentActiveConnection,
                                 e);
                     } finally {
-                        currentActiveConnection.getLock().writeLock().unlock();
+                        currentActiveConnection.getLock().unlock();
                     }
                 }
 
@@ -1262,7 +1241,7 @@ public class BlockNodeConnectionManager {
                         connection);
                 reschedule();
             } finally {
-                connection.getLock().writeLock().unlock();
+                connection.getLock().unlock();
             }
         }
 

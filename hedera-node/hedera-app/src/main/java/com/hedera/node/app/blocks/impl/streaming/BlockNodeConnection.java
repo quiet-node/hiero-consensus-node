@@ -19,8 +19,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.concurrent.GuardedBy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.BlockStreamPublishServiceInterface.BlockStreamPublishServiceClient;
@@ -91,20 +92,16 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     private final BlockStreamPublishServiceClient blockStreamPublishServiceClient;
 
+    @GuardedBy("stateLock")
     private Pipeline<? super PublishStreamRequest> requestPipeline;
-    /**
-     * Lock used to synchronize access to the connection state.
-     */
-    private final ReadWriteLock pipelineLock = new ReentrantReadWriteLock();
 
     /**
      * Reference to the current state of this connection.
      */
+    @GuardedBy("stateLock")
     private ConnectionState connectionState;
-    /**
-     * Lock used to synchronize access to the connection state.
-     */
-    private final ReadWriteLock connectionStateLock = new ReentrantReadWriteLock();
+
+    private final Lock stateLock = new ReentrantLock();
     /**
      * Scheduled executor service that is used to schedule periodic reset of the stream to help ensure stream health.
      */
@@ -177,15 +174,10 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     /**
      * Creates a new bidi request pipeline for this block node connection.
      */
-    public void createRequestPipeline() {
-        pipelineLock.writeLock().lock();
-        try {
-            if (requestPipeline == null) {
-                requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
-                updateConnectionState(ConnectionState.PENDING);
-            }
-        } finally {
-            pipelineLock.writeLock().unlock();
+    public synchronized void createRequestPipeline() {
+        if (requestPipeline == null) {
+            requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
+            updateConnectionState(ConnectionState.PENDING);
         }
     }
 
@@ -193,22 +185,16 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * Updates the connection's state in a thread-safe manner.
      * @param newState the new state to transition to
      */
-    public void updateConnectionState(@NonNull final ConnectionState newState) {
+    public synchronized void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
+        final ConnectionState oldState = connectionState;
+        connectionState = newState;
+        logger.debug("{} [{}] Connection state transitioned from {} to {}", threadInfo(), this, oldState, newState);
 
-        connectionStateLock.writeLock().lock();
-        try {
-            final ConnectionState oldState = connectionState;
-            connectionState = newState;
-            logger.debug("{} [{}] Connection state transitioned from {} to {}", threadInfo(), this, oldState, newState);
-
-            if (newState == ConnectionState.ACTIVE) {
-                scheduleStreamReset();
-            } else {
-                cancelStreamReset();
-            }
-        } finally {
-            connectionStateLock.writeLock().unlock();
+        if (newState == ConnectionState.ACTIVE) {
+            scheduleStreamReset();
+        } else {
+            cancelStreamReset();
         }
     }
 
@@ -230,15 +216,15 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     }
 
     private void performStreamReset() {
-        connectionStateLock.writeLock().lock();
         try {
+            stateLock.lock();
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 logger.debug("{} [{}] Performing scheduled stream reset", threadInfo(), this);
                 endTheStreamWith(RESET);
                 blockNodeConnectionManager.connectionResetsTheStream(this);
             }
         } finally {
-            connectionStateLock.writeLock().unlock();
+            stateLock.unlock();
         }
     }
 
@@ -345,95 +331,105 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     private void handleEndOfStream(@NonNull final EndOfStream endOfStream) {
         requireNonNull(endOfStream, "endOfStream must not be null");
-        final long blockNumber = endOfStream.blockNumber();
-        final EndOfStream.Code responseCode = endOfStream.status();
+        stateLock.lock();
+        try {
+            final long blockNumber = endOfStream.blockNumber();
+            final EndOfStream.Code responseCode = endOfStream.status();
 
-        logger.debug(
-                "{} [{}] Received EndOfStream response (block={}, responseCode={})",
-                threadInfo(),
-                this,
-                blockNumber,
-                responseCode);
-
-        // Record this EndOfStream response with the connection manager for persistent health tracking
-        final Instant now = Instant.now();
-        blockNodeConnectionManager.recordEndOfStream(blockNodeConfig, now);
-
-        // Check if we've exceeded the EndOfStream rate limit using manager's persistent tracking
-        if (blockNodeConnectionManager.hasExceededEndOfStreamLimit(blockNodeConfig)) {
-            final Duration scheduleDelay = blockNodeConnectionManager.getEndOfStreamScheduleDelay();
-            logger.warn(
-                    "{} [{}] Block node has exceeded the allowed number of EndOfStream responses; "
-                            + "reconnection scheduled for {}",
+            logger.debug(
+                    "{} [{}] Received EndOfStream response (block={}, responseCode={})",
                     threadInfo(),
                     this,
-                    scheduleDelay);
+                    blockNumber,
+                    responseCode);
 
-            // Schedule delayed retry through connection manager
-            closeAndReschedule(scheduleDelay);
-            return;
-        }
+            // Record this EndOfStream response with the connection manager for persistent health tracking
+            final Instant now = Instant.now();
+            blockNodeConnectionManager.recordEndOfStream(blockNodeConfig, now);
 
-        switch (responseCode) {
-            case Code.ERROR, Code.PERSISTENCE_FAILED -> {
-                // The block node had an end of stream error and cannot continue processing.
-                // We should wait for a short period before attempting to retry
-                // to avoid overwhelming the node if it's having issues
+            // Check if we've exceeded the EndOfStream rate limit using manager's persistent tracking
+            if (blockNodeConnectionManager.hasExceededEndOfStreamLimit(blockNodeConfig)) {
+                final Duration scheduleDelay = blockNodeConnectionManager.getEndOfStreamScheduleDelay();
                 logger.warn(
-                        "{} [{}] Block node reported an error at block {}. Will attempt to reestablish the stream later.",
+                        "{} [{}] Block node has exceeded the allowed number of EndOfStream responses; "
+                                + "reconnection scheduled for {}",
                         threadInfo(),
                         this,
-                        blockNumber);
+                        scheduleDelay);
 
-                closeAndReschedule(LONGER_RETRY_DELAY);
+                // Schedule delayed retry through connection manager
+                closeAndReschedule(scheduleDelay);
+                return;
             }
-            case Code.TIMEOUT, Code.DUPLICATE_BLOCK, Code.BAD_BLOCK_PROOF, Code.INVALID_REQUEST -> {
-                // We should restart the stream at the block immediately
-                // following the last verified and persisted block number
-                final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
-                logger.warn(
-                        "{} [{}] Block node reported status indicating immediate restart should be attempted. "
-                                + "Will restart stream at block {}.",
-                        threadInfo(),
-                        this,
-                        restartBlockNumber);
 
-                closeAndRestart(restartBlockNumber);
-            }
-            case Code.SUCCESS -> {
-                // The block node orderly ended the stream. In this case, no errors occurred.
-                // We should wait for a longer period before attempting to retry.
-                logger.warn("{} [{}] Block node orderly ended the stream at block {}", threadInfo(), this, blockNumber);
-                closeAndReschedule(LONGER_RETRY_DELAY);
-            }
-            case Code.BEHIND -> {
-                // The block node is behind us, check if we have the last verified block still available in order to
-                // restart the stream from there
-                final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
-                if (blockBufferService.getBlockState(restartBlockNumber) != null) {
+            switch (responseCode) {
+                case Code.ERROR, Code.PERSISTENCE_FAILED -> {
+                    // The block node had an end of stream error and cannot continue processing.
+                    // We should wait for a short period before attempting to retry
+                    // to avoid overwhelming the node if it's having issues
                     logger.warn(
-                            "{} [{}] Block node reported it is behind. Will restart stream at block {}.",
+                            "{} [{}] Block node reported an error at block {}. Will attempt to reestablish the stream later.",
+                            threadInfo(),
+                            this,
+                            blockNumber);
+
+                    closeAndReschedule(LONGER_RETRY_DELAY);
+                }
+                case Code.TIMEOUT, Code.DUPLICATE_BLOCK, Code.BAD_BLOCK_PROOF, Code.INVALID_REQUEST -> {
+                    // We should restart the stream at the block immediately
+                    // following the last verified and persisted block number
+                    final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
+                    logger.warn(
+                            "{} [{}] Block node reported status indicating immediate restart should be attempted. "
+                                    + "Will restart stream at block {}.",
                             threadInfo(),
                             this,
                             restartBlockNumber);
 
                     closeAndRestart(restartBlockNumber);
-                } else {
-                    // If we don't have the block state, we schedule retry for this connection
-                    // and establish new one with a different block node
-                    logger.warn("{} [{}] Block node is behind and block state is not available.", threadInfo(), this);
+                }
+                case Code.SUCCESS -> {
+                    // The block node orderly ended the stream. In this case, no errors occurred.
+                    // We should wait for a longer period before attempting to retry.
+                    logger.warn(
+                            "{} [{}] Block node orderly ended the stream at block {}", threadInfo(), this, blockNumber);
+                    closeAndReschedule(LONGER_RETRY_DELAY);
+                }
+                case Code.BEHIND -> {
+                    // The block node is behind us, check if we have the last verified block still available in order to
+                    // restart the stream from there
+                    final long restartBlockNumber = blockNumber == Long.MAX_VALUE ? 0 : blockNumber + 1;
+                    if (blockBufferService.getBlockState(restartBlockNumber) != null) {
+                        logger.warn(
+                                "{} [{}] Block node reported it is behind. Will restart stream at block {}.",
+                                threadInfo(),
+                                this,
+                                restartBlockNumber);
 
-                    // Indicate that the block node should recover and catch up from another trustworthy block node
-                    endStreamAndReschedule(TOO_FAR_BEHIND, LONGER_RETRY_DELAY);
+                        closeAndRestart(restartBlockNumber);
+                    } else {
+                        // If we don't have the block state, we schedule retry for this connection
+                        // and establish new one with a different block node
+                        logger.warn(
+                                "{} [{}] Block node is behind and block state is not available.", threadInfo(), this);
+
+                        // Indicate that the block node should recover and catch up from another trustworthy block node
+                        endStreamAndReschedule(TOO_FAR_BEHIND, LONGER_RETRY_DELAY);
+                    }
+                }
+                case Code.UNKNOWN -> {
+                    // This should never happen, but if it does, schedule this connection for a retry attempt
+                    // and in the meantime select a new node to stream to
+                    logger.error(
+                            "{} [{}] Block node reported an unknown error at block {}.",
+                            threadInfo(),
+                            this,
+                            blockNumber);
+                    closeAndReschedule(LONGER_RETRY_DELAY);
                 }
             }
-            case Code.UNKNOWN -> {
-                // This should never happen, but if it does, schedule this connection for a retry attempt
-                // and in the meantime select a new node to stream to
-                logger.error(
-                        "{} [{}] Block node reported an unknown error at block {}.", threadInfo(), this, blockNumber);
-                closeAndReschedule(LONGER_RETRY_DELAY);
-            }
+        } finally {
+            stateLock.unlock();
         }
     }
 
@@ -506,8 +502,14 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                 .build();
 
         logger.debug("{} [{}] Sending PublishStreamRequest with EndStream Code : {}", threadInfo(), this, code);
-        sendRequest(endStream);
-        close();
+        // Ensure sendRequest() and close() compound action is thread-safe
+        try {
+            stateLock.lock();
+            sendRequest(endStream);
+            close();
+        } finally {
+            stateLock.unlock();
+        }
     }
 
     /**
@@ -521,8 +523,9 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     public void sendRequest(@NonNull final PublishStreamRequest request) {
         requireNonNull(request, "request must not be null");
-        pipelineLock.writeLock().lock();
+
         try {
+            stateLock.lock();
             final ConnectionState state = getConnectionState();
             if (state == ConnectionState.ACTIVE && requestPipeline != null) {
                 logger.debug("{} [{}] Sending request with size {}B", threadInfo(), this, request.protobufSize());
@@ -531,7 +534,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                 logger.debug("{} [{}] Ignoring request - connection is closed", threadInfo(), this);
             }
         } finally {
-            pipelineLock.writeLock().unlock();
+            stateLock.unlock();
         }
     }
 
@@ -541,6 +544,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     public void close() {
         try {
+            stateLock.lock();
             logger.debug("{} [{}] Closing connection...", threadInfo(), this);
 
             closePipeline();
@@ -550,20 +554,27 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             logger.debug("{} [{}] Connection successfully closed", threadInfo(), this);
         } catch (final RuntimeException e) {
             logger.warn("{} [{}] Error occurred while attempting to close connection", threadInfo(), this);
+        } finally {
+            stateLock.unlock();
         }
     }
 
     private void closePipeline() {
-        pipelineLock.writeLock().lock();
         try {
+            stateLock.lock();
             if (requestPipeline != null) {
                 logger.debug("{} [{}] Closing request pipeline for block node", threadInfo(), this);
                 streamShutdownInProgress.set(true);
                 try {
                     if (connectionState == ConnectionState.ACTIVE) {
                         requestPipeline.onComplete();
+                        logger.debug("{} [{}] Request pipeline successfully closed", threadInfo(), this);
+                    } else {
+                        logger.debug(
+                                "{} [{}] Request pipeline closed without onComplete - connection not active",
+                                threadInfo(),
+                                this);
                     }
-                    logger.debug("{} [{}] Request pipeline successfully closed", threadInfo(), this);
                 } catch (final Exception e) {
                     logger.warn("{} [{}] Error while completing request pipeline", threadInfo(), this, e);
                 }
@@ -572,7 +583,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                 requestPipeline = null;
             }
         } finally {
-            pipelineLock.writeLock().unlock();
+            stateLock.unlock();
         }
     }
 
@@ -647,15 +658,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             handleAcknowledgement(response.acknowledgement());
         } else if (response.hasEndStream()) {
             blockStreamMetrics.incrementEndOfStreamCount(response.endStream().status());
-            // EndOfStream may change state, so acquire write lock only when needed
-            connectionStateLock.writeLock().lock();
-            try {
-                if (getConnectionState() == ConnectionState.ACTIVE) {
-                    handleEndOfStream(response.endStream());
-                }
-            } finally {
-                connectionStateLock.writeLock().unlock();
-            }
+            handleEndOfStream(response.endStream());
         } else if (response.hasSkipBlock()) {
             blockStreamMetrics.incrementSkipBlockCount();
             handleSkipBlock(response.skipBlock());
@@ -668,13 +671,13 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                 handleResendBlock(response.resendBlock());
             } else {
                 // Block doesn't exist, will need to close connection (state change)
-                connectionStateLock.writeLock().lock();
                 try {
+                    stateLock.lock();
                     if (getConnectionState() == ConnectionState.ACTIVE) {
                         handleResendBlock(response.resendBlock());
                     }
                 } finally {
-                    connectionStateLock.writeLock().unlock();
+                    stateLock.unlock();
                 }
             }
         } else {
@@ -700,8 +703,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
         }
 
         // Handle the error - this will change state, so acquire write lock
-        connectionStateLock.writeLock().lock();
         try {
+            stateLock.lock();
             // Re-check state after acquiring write lock
             if (getConnectionState() == ConnectionState.ACTIVE || getConnectionState() == ConnectionState.PENDING) {
                 logger.warn("{} [{}] onError being handled", threadInfo(), this, error);
@@ -709,14 +712,14 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                 handleStreamFailure();
             }
         } finally {
-            connectionStateLock.writeLock().unlock();
+            stateLock.unlock();
         }
     }
 
     @Override
     public void onComplete() {
-        connectionStateLock.writeLock().lock();
         try {
+            stateLock.lock();
             if (getConnectionState() == ConnectionState.ACTIVE) {
                 if (streamShutdownInProgress.getAndSet(false)) {
                     logger.debug("{} [{}] Stream completed (stream close was in progress)", threadInfo(), this);
@@ -726,7 +729,7 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                 }
             }
         } finally {
-            connectionStateLock.writeLock().unlock();
+            stateLock.unlock();
         }
     }
 
@@ -746,8 +749,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * @return the lock of the connection state
      */
     @NonNull
-    public ReadWriteLock getLock() {
-        return connectionStateLock;
+    public Lock getLock() {
+        return stateLock;
     }
 
     @Override

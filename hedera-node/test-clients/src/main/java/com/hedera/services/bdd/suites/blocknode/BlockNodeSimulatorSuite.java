@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Stream;
@@ -339,6 +338,7 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         blockNodePriorities = {0},
                         applicationPropertiesOverrides = {
+                            "blockStream.buffer.blockTtl", "30s",
                             "blockStream.streamMode", "BLOCKS",
                             "blockStream.writerMode", "FILE_AND_GRPC"
                         })
@@ -348,8 +348,7 @@ public class BlockNodeSimulatorSuite {
         final AtomicReference<Instant> timeRef = new AtomicReference<>();
 
         return hapiTest(
-                doingContextual(
-                        spec -> LockSupport.parkNanos(Duration.ofSeconds(20).toNanos())),
+                waitUntilNextBlocks(5).withBackgroundTraffic(true),
                 doingContextual(spec -> timeRef.set(Instant.now())),
                 blockNodeSimulator(0).shutDownImmediately(),
                 sourcingContextual(spec -> assertHgcaaLogContainsTimeframe(
@@ -359,10 +358,6 @@ public class BlockNodeSimulatorSuite {
                         Duration.ofMinutes(6),
                         "Block buffer is saturated; backpressure is being enabled",
                         "!!! Block buffer is saturated; blocking thread until buffer is no longer saturated")),
-                doingContextual(spec -> {
-                    timeRef.set(Instant.now());
-                    LockSupport.parkNanos(TimeUnit.SECONDS.toNanos(20));
-                }),
                 waitForAny(byNodeId(0), Duration.ofSeconds(30), PlatformStatus.CHECKING),
                 blockNodeSimulator(0).startImmediately(),
                 sourcingContextual(
