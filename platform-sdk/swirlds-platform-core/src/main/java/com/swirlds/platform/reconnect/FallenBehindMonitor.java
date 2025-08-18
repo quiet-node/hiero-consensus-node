@@ -52,7 +52,7 @@ public class FallenBehindMonitor {
                 new FunctionGauge.Config<>(INTERNAL_CATEGORY, "hasFallenBehind", Object.class, this::hasFallenBehind)
                         .withDescription("has this node fallen behind?"));
         metrics.getOrCreate(new FunctionGauge.Config<>(
-                INTERNAL_CATEGORY, "numReportFallenBehind", Integer.class, this::numReportedFallenBehind)
+                INTERNAL_CATEGORY, "numReportFallenBehind", Integer.class, this::reportedSize)
                 .withDescription("the number of nodes that have fallen behind")
                 .withUnit("count"));
     }
@@ -63,7 +63,7 @@ public class FallenBehindMonitor {
      *
      * @param id the id of the node who is providing us with up to date events
      */
-    public synchronized void clearFallenBehind(@NonNull final NodeId id) {
+    public synchronized void clear(@NonNull final NodeId id) {
         reportFallenBehind.remove(id);
     }
 
@@ -73,22 +73,15 @@ public class FallenBehindMonitor {
      *
      * @param id the id of the node who says we have fallen behind
      */
-    public synchronized void reportFallenBehind(@NonNull final NodeId id) {
+    public synchronized void report(@NonNull final NodeId id) {
         if (reportFallenBehind.add(id)) {
-            checkAndNotifyFallingBehind();
+            if (!previouslyFallenBehind && hasFallenBehind()) {
+                statusActionSubmitter.submitStatusAction(new FallenBehindAction());
+                previouslyFallenBehind = true;
+                reconnectStarter.start();
+            }
         }
     }
-
-
-
-    private void checkAndNotifyFallingBehind() {
-        if (!previouslyFallenBehind && hasFallenBehind()) {
-            statusActionSubmitter.submitStatusAction(new FallenBehindAction());
-            previouslyFallenBehind = true;
-            reconnectStarter.start();
-        }
-    }
-
 
 
     /**
@@ -107,7 +100,7 @@ public class FallenBehindMonitor {
      * @param peerId the ID of the neighbor
      * @return true if I should attempt a reconnect
      */
-    public boolean shouldReconnectFrom(@NonNull final NodeId peerId) {
+    public boolean hasPeerReported(@NonNull final NodeId peerId) {
         if (!hasFallenBehind()) {
             return false;
         }
@@ -121,7 +114,7 @@ public class FallenBehindMonitor {
      * We have determined that we have not fallen behind, or we have reconnected, so reset everything to the initial
      * state
      */
-    public synchronized void resetFallenBehind() {
+    public synchronized void reset() {
         reportFallenBehind.clear();
         previouslyFallenBehind = false;
     }
@@ -129,7 +122,7 @@ public class FallenBehindMonitor {
     /**
      * @return the number of nodes that have told us we have fallen behind
      */
-    public synchronized int numReportedFallenBehind() {
+    public synchronized int reportedSize() {
         return reportFallenBehind.size();
     }
 

@@ -11,7 +11,6 @@ import com.swirlds.common.merkle.utility.SerializableLong;
 import com.swirlds.common.threading.manager.AdHocThreadManager;
 import com.swirlds.component.framework.component.ComponentWiring;
 import com.swirlds.platform.SwirldsPlatform;
-import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.components.appcomm.DefaultLatestCompleteStateNotifier;
 import com.swirlds.platform.components.appcomm.LatestCompleteStateNotifier;
 import com.swirlds.platform.components.consensus.ConsensusEngine;
@@ -961,7 +960,8 @@ public class PlatformComponentBuilder {
                     blocks.latestImmutableStateProviderReference().get(),
                     blocks.intakeEventCounter(),
                     blocks.platformStateFacade(),
-                    blocks.fallenBehindMonitor());
+                    blocks.fallenBehindMonitor(), blocks.reservedSignedStatePromise(),
+                    blocks.swirldStateManager());
         }
         return gossip;
     }

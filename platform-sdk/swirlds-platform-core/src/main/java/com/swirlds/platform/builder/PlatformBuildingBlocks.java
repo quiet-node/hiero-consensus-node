@@ -11,6 +11,7 @@ import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.platform.event.preconsensus.PcesFileTracker;
 import com.swirlds.platform.freeze.FreezeCheckHolder;
 import com.swirlds.platform.gossip.IntakeEventCounter;
+import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
 import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -110,7 +111,8 @@ public record PlatformBuildingBlocks(
         @NonNull ConsensusStateEventHandler consensusStateEventHandler,
         @NonNull PlatformStateFacade platformStateFacade,
         @NonNull Function<VirtualMap, MerkleNodeState> stateRootFunction,
-        @NonNull FallenBehindMonitor fallenBehindMonitor) {
+        @NonNull FallenBehindMonitor fallenBehindMonitor,
+        @NonNull ReservedSignedStatePromise reservedSignedStatePromise) {
 
     public PlatformBuildingBlocks {
         requireNonNull(platformWiring);
@@ -139,5 +141,6 @@ public record PlatformBuildingBlocks(
         requireNonNull(platformStateFacade);
         requireNonNull(stateRootFunction);
         requireNonNull(fallenBehindMonitor);
+        requireNonNull(reservedSignedStatePromise);
     }
 }

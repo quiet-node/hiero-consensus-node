@@ -334,9 +334,9 @@ public class RpcPeerHandler implements GossipRpcReceiver {
 
         final SyncFallenBehindStatus status = SyncFallenBehindStatus.getStatus(self, other);
         if (status == SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
-            fallenBehindMonitor.reportFallenBehind(nodeId);
+            fallenBehindMonitor.report(nodeId);
         } else {
-            fallenBehindMonitor.clearFallenBehind(nodeId);
+            fallenBehindMonitor.clear(nodeId);
         }
         return status;
     }

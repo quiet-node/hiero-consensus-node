@@ -143,8 +143,11 @@ class PlatformWiringTests {
                     @NonNull final BindableInputWire<NoInput, Void> startInput,
                     @NonNull final BindableInputWire<NoInput, Void> stopInput,
                     @NonNull final BindableInputWire<NoInput, Void> clearInput,
+                    @NonNull final BindableInputWire<NoInput, Void> pause,
+                    @NonNull final BindableInputWire<NoInput, Void> resume,
                     @NonNull final BindableInputWire<Duration, Void> systemHealthInput,
                     @NonNull final BindableInputWire<PlatformStatus, Void> platformStatusInput) {
+
                 eventInput.bindConsumer(event -> {});
                 eventWindowInput.bindConsumer(eventWindow -> {});
                 startInput.bindConsumer(noInput -> {});
@@ -155,20 +158,6 @@ class PlatformWiringTests {
 
             }
 
-            @Override
-            public ReservedSignedState receiveSignedState() {
-                return null;
-            }
-
-            @Override
-            public void pause() {
-
-            }
-
-            @Override
-            public void resume() {
-
-            }
         });
 
         wiring.bind(
@@ -181,7 +170,7 @@ class PlatformWiringTests {
                 mock(LatestCompleteStateNexus.class),
                 mock(SavedStateController.class),
                 mock(AppNotifier.class),
-                mock(PlatformPublisher.class), null);
+                mock(PlatformPublisher.class));
 
         wiring.start();
         assertFalse(wiring.getModel().checkForUnboundInputWires());

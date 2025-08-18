@@ -18,7 +18,7 @@ import org.hiero.consensus.model.status.PlatformStatus;
 /**
  * Implements gossip with network peers.
  */
-public interface Gossip extends GossipController {
+public interface Gossip {
 
     /**
      * Bind the input wires to the gossip implementation.
@@ -42,8 +42,9 @@ public interface Gossip extends GossipController {
             @NonNull BindableInputWire<NoInput, Void> startInput,
             @NonNull BindableInputWire<NoInput, Void> stopInput,
             @NonNull BindableInputWire<NoInput, Void> clearInput,
+            @NonNull BindableInputWire<NoInput, Void> pause,
+            @NonNull BindableInputWire<NoInput, Void> resume,
             @NonNull BindableInputWire<Duration, Void> systemHealthInput,
             @NonNull BindableInputWire<PlatformStatus, Void> platformStatusInput);
 
-    ReservedSignedState receiveSignedState();
 }

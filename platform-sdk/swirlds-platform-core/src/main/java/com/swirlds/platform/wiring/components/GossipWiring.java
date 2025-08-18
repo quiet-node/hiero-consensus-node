@@ -56,6 +56,8 @@ public class GossipWiring {
      * This wire is used to stop gossip.
      */
     private final BindableInputWire<NoInput, Void> stopInput;
+    private final BindableInputWire<NoInput, Void> pause;
+    private final BindableInputWire<NoInput, Void> resume;
 
     /**
      * This wire is used to clear internal gossip state.
@@ -90,6 +92,8 @@ public class GossipWiring {
 
         startInput = scheduler.buildInputWire("start");
         stopInput = scheduler.buildInputWire("stop");
+        pause = scheduler.buildInputWire("pause");
+        resume = scheduler.buildInputWire("resume");
         clearInput = scheduler.buildInputWire("clear");
         systemHealthInput = scheduler.buildInputWire("health info");
         platformStatusInput = scheduler.buildInputWire("PlatformStatus");
@@ -109,6 +113,8 @@ public class GossipWiring {
                 startInput,
                 stopInput,
                 clearInput,
+                pause,
+                resume,
                 systemHealthInput,
                 platformStatusInput);
     }
@@ -199,4 +205,17 @@ public class GossipWiring {
     public void flush() {
         scheduler.flush();
     }
+
+    public void pauseGossip(){
+        pause.inject(NoInput.getInstance());
+    }
+
+    public void resumeGossip(){
+        resume.inject(NoInput.getInstance());
+    }
+
+    public void startGossip() {
+        startInput.inject(NoInput.getInstance());
+    }
+
 }

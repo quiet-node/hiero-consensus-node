@@ -31,6 +31,7 @@ import com.swirlds.platform.gossip.DefaultIntakeEventCounter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.NoOpIntakeEventCounter;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
+import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
 import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.scratchpad.Scratchpad;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
@@ -515,7 +516,8 @@ public final class PlatformBuilder {
                 consensusStateEventHandler,
                 platformStateFacade,
                 stateRootFunction,
-                new FallenBehindMonitor(currentRoster, configuration, platformContext.getMetrics()));
+                new FallenBehindMonitor(currentRoster, configuration, platformContext.getMetrics()),
+                new ReservedSignedStatePromise());
 
         return new PlatformComponentBuilder(buildingBlocks);
     }

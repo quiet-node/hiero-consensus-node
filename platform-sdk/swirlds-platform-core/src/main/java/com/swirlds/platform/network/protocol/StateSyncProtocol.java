@@ -4,10 +4,11 @@ package com.swirlds.platform.network.protocol;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.threading.manager.ThreadManager;
-import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.metrics.ReconnectMetrics;
+import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.reconnect.StateSyncPeerProtocol;
 import com.swirlds.platform.reconnect.StateSyncThrottle;
+import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -16,9 +17,6 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.hiero.base.concurrent.BlockingResourceProvider;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
 
@@ -26,7 +24,6 @@ import org.hiero.consensus.model.status.PlatformStatus;
  * Implementation of a factory for reconnect protocol
  */
 public class StateSyncProtocol implements Protocol {
-    private static final Logger logger = LogManager.getLogger(StateSyncProtocol.class);
     private final StateSyncThrottle stateSyncThrottle;
     private final Function<String, ReservedSignedState> lastCompleteSignedState;
     private final Duration reconnectSocketTimeout;
@@ -37,12 +34,12 @@ public class StateSyncProtocol implements Protocol {
     private final Time time;
     private final PlatformContext platformContext;
     private final AtomicReference<PlatformStatus> platformStatus = new AtomicReference<>(PlatformStatus.STARTING_UP);
-    private final BlockingResourceProvider<ReservedSignedState> reservedSignedStateBlockingResourceProvider = new BlockingResourceProvider<>();
+    private final ReservedSignedStatePromise promise;
+    private final FallenBehindMonitor fallenBehindMonitor;
 
     private LongSupplier lastCompleteRoundSupplier;
-    private ReconnectMetrics statistics;
+    private SwirldStateManager stateManager;
 
-    private StateConfig stateConfig;
 
     public StateSyncProtocol(
             @NonNull final PlatformContext platformContext,
@@ -51,7 +48,8 @@ public class StateSyncProtocol implements Protocol {
             @NonNull final Function<String, ReservedSignedState> lastCompleteSignedState,
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics reconnectMetrics,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade, final ReservedSignedStatePromise promise,
+            final SwirldStateManager stateManager, final FallenBehindMonitor fallenBehindMonitor) {
 
         this.platformContext = Objects.requireNonNull(platformContext);
         this.threadManager = Objects.requireNonNull(threadManager);
@@ -61,6 +59,9 @@ public class StateSyncProtocol implements Protocol {
         this.reconnectMetrics = Objects.requireNonNull(reconnectMetrics);
         this.platformStateFacade = platformStateFacade;
         this.time = Objects.requireNonNull(platformContext.getTime());
+        this.promise = promise;
+        this.stateManager = stateManager;
+        this.fallenBehindMonitor = fallenBehindMonitor;
     }
 
     /**
@@ -77,10 +78,11 @@ public class StateSyncProtocol implements Protocol {
                 lastCompleteSignedState,
                 reconnectSocketTimeout,
                 reconnectMetrics,
-                reservedSignedStateBlockingResourceProvider,
+                promise,
                 platformStatus::get,
                 time,
-                platformStateFacade);
+                platformStateFacade,
+                stateManager, fallenBehindMonitor);
     }
 
     /**
@@ -89,14 +91,5 @@ public class StateSyncProtocol implements Protocol {
     @Override
     public void updatePlatformStatus(@NonNull final PlatformStatus status) {
         platformStatus.set(status);
-    }
-
-
-    public ReservedSignedState obtainReservedState() {
-        try(var a = reservedSignedStateBlockingResourceProvider.waitForResource()){
-            return a.getResource();
-        }catch(InterruptedException e){
-            throw new RuntimeException(e);
-        }
     }
 }

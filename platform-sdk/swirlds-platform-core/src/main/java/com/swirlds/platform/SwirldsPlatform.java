@@ -36,7 +36,6 @@ import com.swirlds.platform.event.preconsensus.PcesReplayer;
 import com.swirlds.platform.metrics.RuntimeMetrics;
 import com.swirlds.platform.publisher.DefaultPlatformPublisher;
 import com.swirlds.platform.publisher.PlatformPublisher;
-import com.swirlds.platform.reconnect.DefaultSignedStateValidator;
 import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.SwirldStateManager;
@@ -239,9 +238,10 @@ public class SwirldsPlatform implements Platform {
                 swirldStateManager,
                 latestImmutableStateNexus,
                 savedStateController,
-                consensusStateEventHandler, selfId);
+                consensusStateEventHandler,blocks.reservedSignedStatePromise(), selfId);
 
         blocks.fallenBehindMonitor().bind(platformReconnecter);
+        blocks.fallenBehindMonitor().bind(platformWiring.getStatusActionSubmitter());
         platformWiring.bind(
                 builder,
                 pcesReplayer,
@@ -252,8 +252,9 @@ public class SwirldsPlatform implements Platform {
                 latestCompleteStateNexus,
                 savedStateController,
                 appNotifier,
-                publisher,
-                platformReconnecter);
+                publisher
+        );
+
 
         platformWiring.startGossip();
 

@@ -17,7 +17,6 @@ import com.swirlds.common.threading.framework.Stoppable.StopBehavior;
 import com.swirlds.common.threading.pool.ParallelExecutionException;
 import com.swirlds.common.threading.pool.ParallelExecutor;
 import com.swirlds.platform.reconnect.FallenBehindMonitor;
-import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.gossip.IntakeEventCounter;
 import com.swirlds.platform.gossip.SyncException;
 import com.swirlds.platform.gossip.sync.config.SyncConfig;
@@ -117,9 +116,9 @@ public class ShadowgraphSynchronizer extends AbstractShadowgraphSynchronizer {
 
         final SyncFallenBehindStatus status = SyncFallenBehindStatus.getStatus(self, other);
         if (status == SyncFallenBehindStatus.SELF_FALLEN_BEHIND) {
-            fallenBehindMonitor.reportFallenBehind(nodeId);
+            fallenBehindMonitor.report(nodeId);
         } else {
-            fallenBehindMonitor.clearFallenBehind(nodeId);
+            fallenBehindMonitor.clear(nodeId);
         }
         return status;
     }

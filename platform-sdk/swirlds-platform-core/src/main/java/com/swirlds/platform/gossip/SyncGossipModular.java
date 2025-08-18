@@ -15,6 +15,7 @@ import com.swirlds.component.framework.model.WiringModel;
 import com.swirlds.component.framework.wires.input.BindableInputWire;
 import com.swirlds.component.framework.wires.output.StandardOutputWire;
 import com.swirlds.platform.Utilities;
+import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
 import com.swirlds.platform.reconnect.FallenBehindMonitor;
 import com.swirlds.platform.gossip.shadowgraph.AbstractShadowgraphSynchronizer;
 import com.swirlds.platform.gossip.shadowgraph.RpcShadowgraphSynchronizer;
@@ -32,8 +33,8 @@ import com.swirlds.platform.network.protocol.ProtocolRunnable;
 import com.swirlds.platform.network.protocol.StateSyncProtocol;
 import com.swirlds.platform.network.protocol.SyncProtocol;
 import com.swirlds.platform.network.protocol.rpc.RpcProtocol;
-import com.swirlds.platform.reconnect.PlatformReconnecter;
 import com.swirlds.platform.reconnect.StateSyncThrottle;
+import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.service.PlatformStateFacade;
 import com.swirlds.platform.state.signed.ReservedSignedState;
 import com.swirlds.platform.wiring.NoInput;
@@ -75,15 +76,16 @@ public class SyncGossipModular implements Gossip {
     /**
      * Builds the gossip engine, depending on which flavor is requested in the configuration.
      *
-     * @param platformContext               the platform context
-     * @param threadManager                 the thread manager
-     * @param ownKeysAndCerts               private keys and public certificates for this node
-     * @param roster                        the current roster
-     * @param selfId                        this node's ID
-     * @param appVersion                    the version of the app
-     * @param latestCompleteState           holds the latest signed state that has enough signatures to be verifiable
-     * @param intakeEventCounter            keeps track of the number of events in the intake pipeline from each peer
-     * @param platformStateFacade           the facade to access the platform state
+     * @param platformContext            the platform context
+     * @param threadManager              the thread manager
+     * @param ownKeysAndCerts            private keys and public certificates for this node
+     * @param roster                     the current roster
+     * @param selfId                     this node's ID
+     * @param appVersion                 the version of the app
+     * @param latestCompleteState        holds the latest signed state that has enough signatures to be verifiable
+     * @param intakeEventCounter         keeps track of the number of events in the intake pipeline from each peer
+     * @param platformStateFacade        the facade to access the platform state
+     * @param reservedSignedStatePromise
      */
     public SyncGossipModular(
             @NonNull final PlatformContext platformContext,
@@ -95,7 +97,9 @@ public class SyncGossipModular implements Gossip {
             @NonNull final Function<String, ReservedSignedState> latestCompleteState,
             @NonNull final IntakeEventCounter intakeEventCounter,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final FallenBehindMonitor fallenBehindMonitor) {
+            @NonNull final FallenBehindMonitor fallenBehindMonitor,
+            final ReservedSignedStatePromise reservedSignedStatePromise,
+            final SwirldStateManager stateManager) {
 
         final RosterEntry selfEntry = RosterUtils.getRosterEntry(roster, selfId.id());
         final X509Certificate selfCert = RosterUtils.fetchGossipCaCertificate(selfEntry);
@@ -166,7 +170,8 @@ public class SyncGossipModular implements Gossip {
         stateSyncProtocol = createReconnectProtocol(
                 platformContext,
                 threadManager,
-                latestCompleteState,platformStateFacade);
+                latestCompleteState,platformStateFacade,
+                reservedSignedStatePromise, stateManager, fallenBehindMonitor);
         this.protocols = ImmutableList.of(
                 HeartbeatProtocol.create(platformContext, this.network.getNetworkMetrics()),
                 stateSyncProtocol,
@@ -182,17 +187,21 @@ public class SyncGossipModular implements Gossip {
     /**
      * Utility method for creating ReconnectProtocol from shared state, while staying compatible with pre-refactor code
      *
-     * @param platformContext               the platform context
-     * @param threadManager                 the thread manager
-     * @param latestCompleteState           holds the latest signed state that has enough signatures to be verifiable
-     * @param platformStateFacade           the facade to access the platform state
+     * @param platformContext     the platform context
+     * @param threadManager       the thread manager
+     * @param latestCompleteState holds the latest signed state that has enough signatures to be verifiable
+     * @param platformStateFacade the facade to access the platform state
+     * @param stateManager
+     * @param fallenBehindMonitor
      * @return constructed ReconnectProtocol
      */
     public StateSyncProtocol createReconnectProtocol(
             @NonNull final PlatformContext platformContext,
             @NonNull final ThreadManager threadManager,
             @NonNull final Function<String,ReservedSignedState> latestCompleteState,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            @NonNull final ReservedSignedStatePromise reservedSignedStatePromise, final SwirldStateManager stateManager,
+            final FallenBehindMonitor fallenBehindMonitor) {
 
         final ReconnectConfig reconnectConfig =
                 platformContext.getConfiguration().getConfigData(ReconnectConfig.class);
@@ -208,7 +217,10 @@ public class SyncGossipModular implements Gossip {
                 latestCompleteState,
                 reconnectConfig.asyncStreamTimeout(),
                 reconnectMetrics,
-                platformStateFacade
+                platformStateFacade,
+                reservedSignedStatePromise,
+                stateManager,
+                fallenBehindMonitor
         );
     }
 
@@ -216,16 +228,17 @@ public class SyncGossipModular implements Gossip {
      * {@inheritDoc}
      */
     @Override
-    public void bind(
-            @NonNull final WiringModel model,
-            @NonNull final BindableInputWire<PlatformEvent, Void> eventInput,
+    public void bind(@NonNull final WiringModel model, @NonNull final BindableInputWire<PlatformEvent, Void> eventInput,
             @NonNull final BindableInputWire<EventWindow, Void> eventWindowInput,
             @NonNull final StandardOutputWire<PlatformEvent> eventOutput,
             @NonNull final BindableInputWire<NoInput, Void> startInput,
             @NonNull final BindableInputWire<NoInput, Void> stopInput,
             @NonNull final BindableInputWire<NoInput, Void> clearInput,
+            @NonNull final BindableInputWire<NoInput, Void> pause,
+            @NonNull final BindableInputWire<NoInput, Void> resume,
             @NonNull final BindableInputWire<Duration, Void> systemHealthInput,
             @NonNull final BindableInputWire<PlatformStatus, Void> platformStatusInput) {
+
 
         startInput.bindConsumer(ignored -> {
             syncProtocol.start();
@@ -245,21 +258,13 @@ public class SyncGossipModular implements Gossip {
             protocols.forEach(protocol -> protocol.updatePlatformStatus(status));
         });
 
+        pause.bindConsumer(ignored -> {
+            syncProtocol.pause();
+        });
+        resume.bindConsumer(ignored -> {
+            syncProtocol.resume();
+        });
         this.receivedEventHandler = eventOutput::forward;
     }
 
-    @Override
-    public ReservedSignedState receiveSignedState() {
-        return stateSyncProtocol.obtainReservedState();
-    }
-
-    @Override
-    public void pause() {
-        syncProtocol.pause();
-    }
-
-    @Override
-    public void resume() {
-        syncProtocol.resume();
-    }
 }

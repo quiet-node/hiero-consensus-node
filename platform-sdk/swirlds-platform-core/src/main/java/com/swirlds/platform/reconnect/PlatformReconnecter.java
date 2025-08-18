@@ -24,6 +24,7 @@ import com.swirlds.platform.components.AppNotifier;
 import com.swirlds.platform.components.SavedStateController;
 import com.swirlds.platform.consensus.EventWindowUtils;
 import com.swirlds.platform.listeners.ReconnectCompleteNotification;
+import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.SwirldStateManager;
@@ -40,7 +41,6 @@ import com.swirlds.platform.system.SystemExitCode;
 import com.swirlds.platform.system.SystemExitUtils;
 import com.swirlds.platform.system.status.actions.ReconnectCompleteAction;
 import com.swirlds.platform.wiring.PlatformWiring;
-import com.swirlds.platform.wiring.components.Gossip;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
@@ -74,9 +74,6 @@ public class PlatformReconnecter implements Startable {
     private final MerkleCryptography merkleCryptography;
     private final Semaphore threadRunning = new Semaphore(1);
 
-    // bound at runtime by wiring/bind()
-    private Gossip gossip;
-
     // --- State-management / loader dependencies (from ReconnectStateLoader) ---
     private final Platform platform;
     private final PlatformContext platformContext;
@@ -84,9 +81,9 @@ public class PlatformReconnecter implements Startable {
     private final SwirldStateManager swirldStateManager;
     private final SignedStateNexus latestImmutableStateNexus;
     private final SavedStateController savedStateController;
-    private final ConsensusStateEventHandler consensusStateEventHandler;
+    private final ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler;
 
-
+    private final ReservedSignedStatePromise promise;
     // throttle deps
     private final NodeId selfId;
     private final ReconnectConfig reconnectConfig;
@@ -109,10 +106,12 @@ public class PlatformReconnecter implements Startable {
             @NonNull final SwirldStateManager swirldStateManager,
             @NonNull final SignedStateNexus latestImmutableStateNexus,
             @NonNull final SavedStateController savedStateController,
-            @NonNull final ConsensusStateEventHandler consensusStateEventHandler, final NodeId selfId) {
+            @NonNull final ConsensusStateEventHandler<MerkleNodeState> consensusStateEventHandler,
+            final ReservedSignedStatePromise promise, final NodeId selfId) {
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
         this.threadManager = Objects.requireNonNull(threadManager);
         this.roster = Objects.requireNonNull(roster);
+        this.promise = promise;
         this.validator = new DefaultSignedStateValidator(platformContext, platformStateFacade);
         this.merkleCryptography = Objects.requireNonNull(merkleCryptography);
         this.reconnectConfig = platformContext.getConfiguration().getConfigData(
@@ -194,7 +193,7 @@ public class PlatformReconnecter implements Startable {
         logger.info(RECONNECT.getMarker(), "waiting for reconnect connection");
         try {
             logger.info(RECONNECT.getMarker(), "acquired reconnect connection");
-            try (final ReservedSignedState reservedState = gossip.receiveSignedState()) {
+            try (final ReservedSignedState reservedState = promise.get()) {
                 validator.validate(
                         reservedState.get(),
                         roster,
@@ -213,14 +212,14 @@ public class PlatformReconnecter implements Startable {
             logger.info(RECONNECT.getMarker(), "receiving signed state failed", e);
             return false;
         }
-        gossip.resume();;
+        platformWiring.resumeGossip();
         return true;
     }
 
     /** Pre-reconnect housekeeping. */
     public void prepareForReconnect(final MerkleNodeState currentState) {
         logger.info(RECONNECT.getMarker(), "Preparing for reconnect, stopping gossip");
-        gossip.pause();
+        platformWiring.pauseGossip();
         logger.info(RECONNECT.getMarker(), "Preparing for reconnect, start clearing queues");
         platformWiring.clear();
         logger.info(RECONNECT.getMarker(), "Queues have been cleared");
@@ -310,11 +309,6 @@ public class PlatformReconnecter implements Startable {
         }
     }
 
-    /** Bind the supplier that yields a negotiated reconnect reserved state (learner side). */
-
-    public void bind(@NonNull Gossip gossip) {
-        this.gossip = Objects.requireNonNull(gossip);
-    }
 
     @NonNull
     private Duration getTimeSinceStartup() {

@@ -23,6 +23,7 @@ import com.swirlds.platform.network.Connection;
 import com.swirlds.platform.network.NetworkProtocolException;
 import com.swirlds.platform.network.NetworkUtils;
 import com.swirlds.platform.network.protocol.PeerProtocol;
+import com.swirlds.platform.network.protocol.ReservedSignedStatePromise;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.SwirldStateManager;
 import com.swirlds.platform.state.service.PlatformStateFacade;
@@ -36,7 +37,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.hiero.base.concurrent.BlockingResourceProvider;
 import org.hiero.consensus.model.node.NodeId;
 import org.hiero.consensus.model.status.PlatformStatus;
 
@@ -52,7 +52,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
     private final Function<String, ReservedSignedState> lastCompleteSignedState;
     private final Duration reconnectSocketTimeout;
     private final ReconnectMetrics reconnectMetrics;
-    private final BlockingResourceProvider<ReservedSignedState> reference;
+    private final ReservedSignedStatePromise promise;
     private final PlatformStateFacade platformStateFacade;
     private final CountPerSecond reconnectRejectionMetrics;
     private InitiatedBy initiatedBy = InitiatedBy.NO_ONE;
@@ -63,7 +63,6 @@ public class StateSyncPeerProtocol implements PeerProtocol {
      */
     private final Supplier<PlatformStatus> platformStatusSupplier;
 
-    private final Configuration configuration;
     private ReservedSignedState teacherState;
     /**
      * A rate limited logger for when rejecting teacher role due to state being null.
@@ -88,6 +87,8 @@ public class StateSyncPeerProtocol implements PeerProtocol {
     private ReconnectMetrics statistics;
     private SwirldStateManager swirldStateManager;
     private StateConfig stateConfig;
+    private FallenBehindMonitor fallenBehindMonitor;
+
     /**
      * @param threadManager           responsible for creating and managing threads
      * @param peerId                  the ID of the peer we are communicating with
@@ -95,7 +96,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
      * @param lastCompleteSignedState provides the latest completely signed state
      * @param reconnectSocketTimeout  the socket timeout to use when executing a reconnect
      * @param reconnectMetrics        tracks reconnect metrics
-     * @param reference     controls reconnecting as a learner
+     * @param promise     controls reconnecting as a learner
      * @param platformStatusSupplier  provides the platform status
      * @param time                    the time object to use
      * @param platformStateFacade     provides access to the platform state
@@ -108,10 +109,12 @@ public class StateSyncPeerProtocol implements PeerProtocol {
             @NonNull final Function<String, ReservedSignedState> lastCompleteSignedState,
             @NonNull final Duration reconnectSocketTimeout,
             @NonNull final ReconnectMetrics reconnectMetrics,
-            @NonNull final BlockingResourceProvider<ReservedSignedState> reference,
+            @NonNull final ReservedSignedStatePromise promise,
             @NonNull final Supplier<PlatformStatus> platformStatusSupplier,
             @NonNull final Time time,
-            @NonNull final PlatformStateFacade platformStateFacade) {
+            @NonNull final PlatformStateFacade platformStateFacade,
+            final SwirldStateManager swirldStateManager,
+            final FallenBehindMonitor fallenBehindMonitor) {
 
         this.platformContext = Objects.requireNonNull(platformContext);
         this.threadManager = Objects.requireNonNull(threadManager);
@@ -120,9 +123,11 @@ public class StateSyncPeerProtocol implements PeerProtocol {
         this.lastCompleteSignedState = Objects.requireNonNull(lastCompleteSignedState);
         this.reconnectSocketTimeout = Objects.requireNonNull(reconnectSocketTimeout);
         this.reconnectMetrics = Objects.requireNonNull(reconnectMetrics);
-        this.reference = Objects.requireNonNull(reference);
+        this.promise = Objects.requireNonNull(promise);
         this.platformStatusSupplier = Objects.requireNonNull(platformStatusSupplier);
-        this.configuration = Objects.requireNonNull(platformContext.getConfiguration());
+        this.swirldStateManager = swirldStateManager;
+        this.fallenBehindMonitor = fallenBehindMonitor;
+        final Configuration configuration = Objects.requireNonNull(platformContext.getConfiguration());
         this.platformStateFacade = Objects.requireNonNull(platformStateFacade);
         Objects.requireNonNull(time);
 
@@ -150,11 +155,12 @@ public class StateSyncPeerProtocol implements PeerProtocol {
      */
     @Override
     public boolean shouldInitiate() {
-        //TODO: We should receive a list of nodes that would be better to sync with
-        // that information was queried from FallenBehindManager.
-
+        // if this neighbor has not told me I have fallen behind, I will not reconnect with him
+        if (!fallenBehindMonitor.hasPeerReported(peerId)) {
+            return false;
+        }
         // if a permit is acquired, it will be released by either initiateFailed or runProtocol
-        final boolean acquiredPermit = reference.acquireProvidePermit();
+        final boolean acquiredPermit = promise.acquire();
         if (acquiredPermit) {
             initiatedBy = InitiatedBy.SELF;
         }
@@ -166,7 +172,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
      */
     @Override
     public void initiateFailed() {
-        reference.releaseProvidePermit();
+        promise.release();
         initiatedBy = InitiatedBy.NO_ONE;
     }
 
@@ -224,7 +230,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
         // in this case, we want to finish teaching before we start learning
         // so we acquire the learner permit and release it when we are done teaching
         //TODO maybe change to an atomic boolean teaching in progress
-        if (!reference.tryBlockProvidePermit()) {
+        if (!promise.tryBlock()) {
             reconnectRejected();
             return false;
         }
@@ -233,7 +239,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
         final boolean reconnectPermittedByThrottle = teacherThrottle.initiateReconnect(peerId);
         if (!reconnectPermittedByThrottle) {
             reconnectRejected();
-            reference.releaseProvidePermit();
+            promise.release();
             return false;
         }
 
@@ -261,7 +267,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
         teacherState = null;
         teacherThrottle.reconnectAttemptFinished();
         // cancel the permit acquired in shouldAccept() so that we can start learning if we need to
-        reference.releaseProvidePermit();
+        promise.release();
     }
 
     /**
@@ -321,7 +327,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
                     () -> platformStateFacade.getInfoString(reservedSignedState.get().getState(), stateConfig.debugHashDepth()));
 
 
-            reference.provide(reservedSignedState);
+            promise.provide(reservedSignedState);
 
         } catch (final RuntimeException|  InterruptedException e) {
             if (Utilities.isOrCausedBySocketException(e)) {
@@ -358,7 +364,7 @@ public class StateSyncPeerProtocol implements PeerProtocol {
             teacherThrottle.reconnectAttemptFinished();
             teacherState = null;
             // cancel the permit acquired in shouldAccept() so that we can start learning if we need to
-            reference.releaseProvidePermit();
+            promise.release();
         }
     }
 
