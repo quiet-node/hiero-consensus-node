@@ -316,7 +316,7 @@ public class ParentTxnFactory {
         final var entityNumGenerator = new EntityNumGeneratorImpl(entityIdStore);
         final var writableStoreFactory =
                 new WritableStoreFactory(stack, serviceScopeLookup.getServiceName(txnInfo.txBody()), entityIdStore);
-        final var serviceApiFactory = new ServiceApiFactory(stack, config);
+        final var serviceApiFactory = new ServiceApiFactory(stack, config, apiProviders);
         final var priceCalculator =
                 new ResourcePriceCalculatorImpl(consensusNow, txnInfo, feeManager, readableStoreFactory);
         final var storeFactory = new StoreFactoryImpl(readableStoreFactory, writableStoreFactory, serviceApiFactory);

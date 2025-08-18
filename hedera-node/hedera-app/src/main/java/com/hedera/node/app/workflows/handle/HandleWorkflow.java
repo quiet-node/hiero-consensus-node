@@ -194,7 +194,8 @@ public class HandleWorkflow {
             @Nullable final AtomicBoolean systemEntitiesCreatedFlag,
             @NonNull final NodeRewardManager nodeRewardManager,
             @NonNull final PlatformStateFacade platformStateFacade,
-            @NonNull final BlockBufferService blockBufferService, Map<Class<?>, ServiceApiProvider<?>> apiProviders) {
+            @NonNull final BlockBufferService blockBufferService,
+            Map<Class<?>, ServiceApiProvider<?>> apiProviders) {
         this.networkInfo = requireNonNull(networkInfo);
         this.stakePeriodChanges = requireNonNull(stakePeriodChanges);
         this.dispatchProcessor = requireNonNull(dispatchProcessor);

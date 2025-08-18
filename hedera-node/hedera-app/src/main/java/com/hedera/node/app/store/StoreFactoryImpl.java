@@ -9,7 +9,6 @@ import com.hedera.node.app.spi.store.StoreFactory;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.State;
 import edu.umd.cs.findbugs.annotations.NonNull;
-
 import java.util.Map;
 
 /**

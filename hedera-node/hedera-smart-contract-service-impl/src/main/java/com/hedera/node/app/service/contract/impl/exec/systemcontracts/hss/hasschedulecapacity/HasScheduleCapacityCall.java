@@ -4,39 +4,57 @@ package com.hedera.node.app.service.contract.impl.exec.systemcontracts.hss.hassc
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.FullResult.successResult;
 import static com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.Call.PricedResult.gasOnly;
+import static java.util.Objects.requireNonNull;
 
 import com.esaulpaugh.headlong.abi.Tuple;
-import com.hedera.hapi.node.base.ResponseCodeEnum;
+import com.hedera.hapi.node.base.AccountID;
 import com.hedera.node.app.service.contract.impl.exec.gas.SystemContractGasCalculator;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.common.AbstractCall;
 import com.hedera.node.app.service.contract.impl.exec.systemcontracts.hss.HssCallAttempt;
 import com.hedera.node.app.service.contract.impl.hevm.HederaWorldUpdater;
+import com.hedera.node.app.service.schedule.ScheduleServiceApi;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 /**
- * An HSS call that simply dispatches a synthetic transaction body and returns a result that is an encoded
- * {@link ResponseCodeEnum}.
+ * An HSS call that uses the {@link ScheduleServiceApi#hasContractCallCapacity(long, long, AccountID)} to
+ * check if there is capacity to schedule a contract call at a given second with a given gas limit.
  */
-public class HasScheduleCapacityCallStub extends AbstractCall {
+public class HasScheduleCapacityCall extends AbstractCall {
+    private final long gasLimit;
+    private final long consensusSecond;
+    private final AccountID senderId;
 
-    public HasScheduleCapacityCallStub(@NonNull final HssCallAttempt attempt) {
-        this(attempt.enhancement(), attempt.systemContractGasCalculator());
+    public HasScheduleCapacityCall(
+            @NonNull final HssCallAttempt attempt, final long consensusSecond, final long gasLimit) {
+        this(
+                attempt.enhancement(),
+                attempt.systemContractGasCalculator(),
+                consensusSecond,
+                gasLimit,
+                attempt.senderId());
     }
 
-    public HasScheduleCapacityCallStub(
+    public HasScheduleCapacityCall(
             @NonNull final HederaWorldUpdater.Enhancement enhancement,
-            @NonNull final SystemContractGasCalculator gasCalculator) {
+            @NonNull final SystemContractGasCalculator gasCalculator,
+            final long consensusSecond,
+            final long gasLimit,
+            @NonNull final AccountID senderId) {
         super(gasCalculator, enhancement, true);
+        this.gasLimit = gasLimit;
+        this.consensusSecond = consensusSecond;
+        this.senderId = requireNonNull(senderId);
     }
 
     @Override
     public @NonNull PricedResult execute(@NonNull final MessageFrame frame) {
+        final boolean hasCapacity = nativeOperations().canScheduleContractCall(consensusSecond, gasLimit, senderId);
         return gasOnly(
                 successResult(
                         HasScheduleCapacityTranslator.HAS_SCHEDULE_CAPACITY
                                 .getOutputs()
-                                .encode(Tuple.singleton(true)),
+                                .encode(Tuple.singleton(hasCapacity)),
                         gasCalculator.viewGasRequirement()),
                 SUCCESS,
                 isViewCall);

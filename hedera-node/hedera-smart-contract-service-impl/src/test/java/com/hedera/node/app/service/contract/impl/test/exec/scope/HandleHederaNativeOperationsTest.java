@@ -45,6 +45,7 @@ import com.hedera.hapi.node.token.CryptoTransferTransactionBody;
 import com.hedera.hapi.node.transaction.TransactionBody;
 import com.hedera.node.app.service.contract.impl.exec.scope.HandleHederaNativeOperations;
 import com.hedera.node.app.service.contract.impl.exec.scope.VerificationStrategy;
+import com.hedera.node.app.service.schedule.ScheduleServiceApi;
 import com.hedera.node.app.service.token.ReadableAccountStore;
 import com.hedera.node.app.service.token.ReadableNftStore;
 import com.hedera.node.app.service.token.ReadableTokenRelationStore;
@@ -99,6 +100,9 @@ class HandleHederaNativeOperationsTest {
 
     @Mock
     private TokenServiceApi tokenServiceApi;
+
+    @Mock
+    private ScheduleServiceApi scheduleServiceApi;
 
     @Mock
     private ReadableNftStore nftStore;
@@ -220,6 +224,15 @@ class HandleHederaNativeOperationsTest {
         subject.finalizeHollowAccountAsContract(CANONICAL_ALIAS);
 
         verify(tokenServiceApi).finalizeHollowAccountAsContract(A_NEW_ACCOUNT_ID);
+    }
+
+    @Test
+    void scheduleCallCapacityCheckUsesApi() {
+        given(context.storeFactory()).willReturn(storeFactory);
+        given(storeFactory.serviceApi(ScheduleServiceApi.class)).willReturn(scheduleServiceApi);
+        given(scheduleServiceApi.hasContractCallCapacity(123L, 456L, AccountID.DEFAULT))
+                .willReturn(true);
+        assertTrue(subject.canScheduleContractCall(123L, 456L, AccountID.DEFAULT));
     }
 
     @Test

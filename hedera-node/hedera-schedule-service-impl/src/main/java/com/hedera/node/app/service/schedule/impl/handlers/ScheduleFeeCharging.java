@@ -11,9 +11,9 @@ import com.hedera.node.app.spi.fees.FeeCharging;
 import com.hedera.node.app.spi.fees.Fees;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.function.Supplier;
 
 /**
  * A fee charging strategy that delegates to the base fee charging strategy; but <b>only</b> for the service
@@ -43,7 +43,8 @@ public class ScheduleFeeCharging implements FeeCharging {
         requireNonNull(body);
         requireNonNull(function);
         requireNonNull(category);
-        return baseFeeCharging.get()
+        return baseFeeCharging
+                .get()
                 .validate(payer, creatorId, fees.onlyServiceComponent(), body, isDuplicate, function, category);
     }
 

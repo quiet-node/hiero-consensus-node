@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.store;
 
-import static com.hedera.node.app.service.token.impl.api.TokenServiceApiProvider.TOKEN_SERVICE_API_PROVIDER;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.ids.EntityIdService;
 import com.hedera.node.app.ids.WritableEntityIdStore;
-import com.hedera.node.app.service.token.api.TokenServiceApi;
 import com.hedera.node.app.spi.api.ServiceApiProvider;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.State;

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.schedule;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -7,9 +8,8 @@ import com.hedera.hapi.node.base.AccountID;
  */
 public interface ScheduleServiceApi {
     /**
-     * Checks if the schedule service has enough capacity to process a contract call
+     * Checks if the schedule service has enough capacity to schedule a contract call
      * at the given consensus second with the specified gas limit.
-     *
      * @param consensusSecond the consensus second at which the call is to be processed
      * @param gasLimit the gas limit for the contract call
      * @param payerId the ID of the account that will pay for the contract call

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.schedule.impl;
 
 import com.hedera.node.app.service.schedule.ScheduleServiceApi;
@@ -10,7 +11,6 @@ import com.hedera.node.app.spi.api.ServiceApiProvider;
 import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
-
 import javax.inject.Singleton;
 
 @Module

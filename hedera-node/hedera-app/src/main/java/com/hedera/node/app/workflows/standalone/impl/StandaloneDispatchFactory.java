@@ -120,8 +120,10 @@ public class StandaloneDispatchFactory {
         this.transactionChecker = requireNonNull(transactionChecker);
         requireNonNull(scheduleService);
         this.apiProviders = Map.of(
-                TokenServiceApi.class, TOKEN_SERVICE_API_PROVIDER,
-                ScheduleServiceApi.class, scheduleService.apiProvider());
+                TokenServiceApi.class,
+                TOKEN_SERVICE_API_PROVIDER,
+                ScheduleServiceApi.class,
+                scheduleService.apiProvider());
     }
 
     /**
@@ -158,7 +160,7 @@ public class StandaloneDispatchFactory {
         final var txnInfo = requireNonNull(preHandleResult.txInfo());
         final var writableStoreFactory =
                 new WritableStoreFactory(stack, serviceScopeLookup.getServiceName(txnInfo.txBody()), entityIdStore);
-        final var serviceApiFactory = new ServiceApiFactory(stack, config);
+        final var serviceApiFactory = new ServiceApiFactory(stack, config, apiProviders);
         final var priceCalculator =
                 new ResourcePriceCalculatorImpl(consensusNow, txnInfo, feeManager, readableStoreFactory);
         final var storeFactory = new StoreFactoryImpl(readableStoreFactory, writableStoreFactory, serviceApiFactory);

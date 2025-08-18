@@ -44,7 +44,6 @@ import dagger.Module;
 import dagger.Provides;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -77,8 +76,10 @@ public interface FacilityInitModule {
     static Map<Class<?>, ServiceApiProvider<?>> provideApiProviders(@NonNull final ScheduleService scheduleService) {
         requireNonNull(scheduleService);
         return Map.of(
-                TokenServiceApi.class, TOKEN_SERVICE_API_PROVIDER,
-                ScheduleServiceApi.class, scheduleService.apiProvider());
+                TokenServiceApi.class,
+                TOKEN_SERVICE_API_PROVIDER,
+                ScheduleServiceApi.class,
+                scheduleService.apiProvider());
     }
 
     @Binds
