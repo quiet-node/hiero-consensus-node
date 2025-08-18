@@ -45,7 +45,6 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
     public Stream<DynamicTest> besuNativeLibVerificationHaltsIfLibNotPresent() {
 
         final var envOverrides = Map.of("contracts.evm.nativeLibVerification.halt.enabled", "true");
-        final Map<String, String> envReset = Map.of();
 
         return hapiTest(blockingOrder(
                 freezeOnly().startingIn(5).seconds().payingWith(GENESIS).deferStatusResolution(),
@@ -57,8 +56,7 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                 doAdhoc(AbstractAltBnPrecompiledContract::disableNative),
                 doAdhoc(() -> new SECP256K1().disableNative()),
                 doAdhoc(() -> new SECP256R1().disableNative()),
-                restartNetwork(CURRENT_CONFIG_VERSION.get() + 1, envOverrides),
-                doAdhoc(() -> CURRENT_CONFIG_VERSION.set(CURRENT_CONFIG_VERSION.get() + 1)),
+                restartNetwork(CURRENT_CONFIG_VERSION.incrementAndGet(), envOverrides),
                 doingContextual(spec -> waitForAny(allNodes(), RESTART_TO_ACTIVE_TIMEOUT, STARTING_UP)),
                 doingContextual(spec -> waitForActive(allNodes(), RESTART_TO_ACTIVE_TIMEOUT)),
                 ifNotCi(
@@ -68,7 +66,11 @@ public class BesuNativeLibVerificationTest implements LifecycleTest {
                                 allNodes(),
                                 "is not present with halt mode enabled! Shutting down node.",
                                 Duration.ZERO)),
-                ifCi(assertHgcaaLogContains(
-                        allNodes(), "Native library verification Halt mode is enabled", Duration.ofSeconds(300)))));
+                ifCi(
+                        assertHgcaaLogContains(
+                                allNodes(),
+                                "Native library verification Halt mode is enabled",
+                                Duration.ofSeconds(300)),
+                        doAdhoc(LifecycleTest::restartAtNextConfigVersion))));
     }
 }
