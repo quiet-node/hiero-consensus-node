@@ -269,7 +269,6 @@ class ParentTxnTest {
                 blockRecordManager,
                 blockStreamManager,
                 childDispatchFactory,
-                softwareVersionFactory,
                 transactionChecker);
     }
 }

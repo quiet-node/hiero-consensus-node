@@ -31,6 +31,7 @@ import static com.hedera.node.app.spi.workflows.PreCheckException.validateTruePr
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.HederaFunctionality;
+import com.hedera.hapi.node.base.ResponseCodeEnum;
 import com.hedera.hapi.node.scheduled.SchedulableTransactionBody;
 import com.hedera.hapi.node.scheduled.ScheduleCreateTransactionBody;
 import com.hedera.hapi.node.state.schedule.Schedule;
@@ -62,6 +63,7 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.util.Collections;
 import java.util.Objects;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
@@ -197,13 +199,9 @@ public class ScheduleCreateHandler extends AbstractScheduleHandler implements Tr
                     .scheduledTransactionID(scheduledTxnId);
             throw new HandleException(IDENTICAL_SCHEDULE_ALREADY_CREATED);
         }
-        validateTrue(
-                scheduleStore.numSchedulesInState() + 1 <= schedulingConfig.maxNumber(),
-                MAX_ENTITIES_IN_PRICE_REGIME_HAVE_BEEN_CREATED);
-        final var capacityFraction = schedulingConfig.schedulableCapacityFraction();
-        final var usageSnapshots = scheduleStore.usageSnapshotsForScheduled(then);
-        final var throttle =
-                upToDateThrottle(then, capacityFraction.asApproxCapacitySplit(), usageSnapshots, scheduleStore);
+        final var maybeThrottle = loadThrottle(scheduleStore, schedulingConfig, then);
+        validateTrue(maybeThrottle.isPresent(), MAX_ENTITIES_IN_PRICE_REGIME_HAVE_BEEN_CREATED);
+        final var throttle = maybeThrottle.get();
         validateTrue(
                 throttle.allow(
                         provisionalSchedule.payerAccountIdOrThrow(),
@@ -260,6 +258,29 @@ public class ScheduleCreateHandler extends AbstractScheduleHandler implements Tr
                         sigValueObj,
                         schedulingConfig.longTermEnabled(),
                         ledgerConfig.scheduleTxExpiryTimeSecs()));
+    }
+
+    /**
+     * Checks if there is capacity to schedule execution of the given transaction in the given second; returns
+     * {@link ResponseCodeEnum#OK} if there is capacity, or the failure status if there is not.
+     * @param scheduleStore the writable schedule store
+     * @param schedulingConfig the scheduling configuration
+     * @param then the consensus second at which the transaction is to be scheduled
+     * @return the response code indicating whether there is capacity to schedule the transaction
+     */
+    public Optional<Throttle> loadThrottle(
+            @NonNull final WritableScheduleStore scheduleStore,
+            @NonNull final SchedulingConfig schedulingConfig,
+            final long then) {
+        requireNonNull(scheduleStore);
+        requireNonNull(schedulingConfig);
+        if (scheduleStore.numSchedulesInState() + 1 > schedulingConfig.maxNumber()) {
+            return Optional.empty();
+        }
+        final var capacityFraction = schedulingConfig.schedulableCapacityFraction();
+        final var usageSnapshots = scheduleStore.usageSnapshotsForScheduled(then);
+        return Optional.of(
+                upToDateThrottle(then, capacityFraction.asApproxCapacitySplit(), usageSnapshots, scheduleStore));
     }
 
     private @NonNull FeeData usageGiven(

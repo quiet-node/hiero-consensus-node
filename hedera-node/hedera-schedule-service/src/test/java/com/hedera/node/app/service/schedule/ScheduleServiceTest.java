@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.service.schedule;
 
+import com.hedera.node.app.spi.api.ServiceApiProvider;
 import com.hedera.node.app.spi.fees.FeeCharging;
 import com.hedera.node.app.spi.store.StoreFactory;
 import com.swirlds.state.lifecycle.SchemaRegistry;
@@ -20,6 +21,11 @@ class ScheduleServiceTest {
         @Override
         public void registerSchemas(@NonNull SchemaRegistry registry) {
             // No-op
+        }
+
+        @Override
+        public ServiceApiProvider<ScheduleServiceApi> apiProvider() {
+            throw new UnsupportedOperationException();
         }
 
         @Override

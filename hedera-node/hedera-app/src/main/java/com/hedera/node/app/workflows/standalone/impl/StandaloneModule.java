@@ -3,11 +3,14 @@ package com.hedera.node.app.workflows.standalone.impl;
 
 import static com.hedera.node.app.throttle.ThrottleAccumulator.ThrottleType.BACKEND_THROTTLE;
 import static com.hedera.node.app.throttle.ThrottleAccumulator.ThrottleType.NOOP_THROTTLE;
+import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.platform.state.PlatformState;
 import com.hedera.node.app.annotations.NodeSelfId;
 import com.hedera.node.app.metrics.StoreMetricsServiceImpl;
+import com.hedera.node.app.spi.AppContext;
+import com.hedera.node.app.spi.fees.FeeCharging;
 import com.hedera.node.app.spi.ids.EntityIdFactory;
 import com.hedera.node.app.spi.metrics.StoreMetricsService;
 import com.hedera.node.app.throttle.ThrottleAccumulator;
@@ -24,8 +27,10 @@ import dagger.Provides;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.time.InstantSource;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import javax.inject.Singleton;
 
 @Module
@@ -46,6 +51,13 @@ public interface StandaloneModule {
     static IntSupplier provideFrontendThrottleSplit() {
         return () -> 1;
     }
+
+//    @Provides
+//    @Singleton
+//    static Supplier<FeeCharging> provideBaseFeeCharging(@NonNull final AppContext appContext) {
+//        requireNonNull(appContext);
+//        return appContext.feeChargingSupplier();
+//    }
 
     @Provides
     @Singleton

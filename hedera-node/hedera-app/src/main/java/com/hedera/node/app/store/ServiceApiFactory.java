@@ -19,18 +19,20 @@ import java.util.Map;
 public class ServiceApiFactory {
     private final State state;
     private final Configuration configuration;
+    private final Map<Class<?>, ServiceApiProvider<?>> apiProviders;
 
-    private static final Map<Class<?>, ServiceApiProvider<?>> API_PROVIDER =
-            Map.of(TokenServiceApi.class, TOKEN_SERVICE_API_PROVIDER);
-
-    public ServiceApiFactory(@NonNull final State state, @NonNull final Configuration configuration) {
+    public ServiceApiFactory(
+            @NonNull final State state,
+            @NonNull final Configuration configuration,
+            @NonNull final Map<Class<?>, ServiceApiProvider<?>> apiProviders) {
         this.state = requireNonNull(state);
         this.configuration = requireNonNull(configuration);
+        this.apiProviders = requireNonNull(apiProviders);
     }
 
     public <C> C getApi(@NonNull final Class<C> apiInterface) throws IllegalArgumentException {
         requireNonNull(apiInterface);
-        final var provider = API_PROVIDER.get(apiInterface);
+        final var provider = apiProviders.get(apiInterface);
         if (provider != null) {
             final var writableStates = state.getWritableStates(provider.serviceName());
             final var entityCounters = new WritableEntityIdStore(state.getWritableStates(EntityIdService.NAME));

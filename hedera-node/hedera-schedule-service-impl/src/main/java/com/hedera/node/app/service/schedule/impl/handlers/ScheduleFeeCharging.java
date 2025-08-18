@@ -7,13 +7,13 @@ import com.hedera.hapi.node.base.AccountID;
 import com.hedera.hapi.node.base.HederaFunctionality;
 import com.hedera.hapi.node.state.token.Account;
 import com.hedera.hapi.node.transaction.TransactionBody;
-import com.hedera.node.app.service.schedule.ScheduleService;
 import com.hedera.node.app.spi.fees.FeeCharging;
 import com.hedera.node.app.spi.fees.Fees;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.function.Supplier;
 
 /**
  * A fee charging strategy that delegates to the base fee charging strategy; but <b>only</b> for the service
@@ -21,11 +21,11 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class ScheduleFeeCharging implements FeeCharging {
-    private final ScheduleService service;
+    private final Supplier<FeeCharging> baseFeeCharging;
 
     @Inject
-    public ScheduleFeeCharging(@NonNull final ScheduleService service) {
-        this.service = requireNonNull(service);
+    public ScheduleFeeCharging(@NonNull final Supplier<FeeCharging> baseFeeCharging) {
+        this.baseFeeCharging = requireNonNull(baseFeeCharging);
     }
 
     @Override
@@ -43,7 +43,7 @@ public class ScheduleFeeCharging implements FeeCharging {
         requireNonNull(body);
         requireNonNull(function);
         requireNonNull(category);
-        return service.baseFeeCharging()
+        return baseFeeCharging.get()
                 .validate(payer, creatorId, fees.onlyServiceComponent(), body, isDuplicate, function, category);
     }
 
@@ -52,13 +52,13 @@ public class ScheduleFeeCharging implements FeeCharging {
         requireNonNull(ctx);
         requireNonNull(validation);
         requireNonNull(fees);
-        return service.baseFeeCharging().charge(ctx, validation, fees.onlyServiceComponent());
+        return baseFeeCharging.get().charge(ctx, validation, fees.onlyServiceComponent());
     }
 
     @Override
     public void refund(@NonNull final Context ctx, @NonNull final Fees fees) {
         requireNonNull(ctx);
         requireNonNull(fees);
-        service.baseFeeCharging().refund(ctx, fees.onlyServiceComponent());
+        baseFeeCharging.get().refund(ctx, fees.onlyServiceComponent());
     }
 }

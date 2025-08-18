@@ -3,6 +3,7 @@ package com.hedera.node.app.service.schedule;
 
 import com.hedera.node.app.spi.RpcService;
 import com.hedera.node.app.spi.RpcServiceFactory;
+import com.hedera.node.app.spi.api.ServiceApiProvider;
 import com.hedera.node.app.spi.fees.FeeCharging;
 import com.hedera.node.app.spi.store.StoreFactory;
 import com.hedera.pbj.runtime.RpcServiceDefinition;
@@ -67,4 +68,9 @@ public interface ScheduleService extends RpcService {
      * @return the base fee charging implementation
      */
     FeeCharging baseFeeCharging();
+
+    /**
+     * Returns the API provider for the schedule service.
+     */
+    ServiceApiProvider<ScheduleServiceApi> apiProvider();
 }
