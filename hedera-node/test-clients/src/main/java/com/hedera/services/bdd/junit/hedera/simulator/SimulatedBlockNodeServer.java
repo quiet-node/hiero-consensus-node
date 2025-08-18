@@ -146,6 +146,7 @@ public class SimulatedBlockNodeServer {
             } catch (final Exception e) {
                 log.error("Error stopping simulated block node server on port {}", port, e);
             }
+            this.hasEverBeenShutdown = true;
         }
     }
 
@@ -219,6 +220,15 @@ public class SimulatedBlockNodeServer {
     }
 
     /**
+     * Updates the last verified block number.
+     *
+     * @param lastVerifiedBlock the last verified block number to update.
+     */
+    public void updateLastVerifiedBlock(final long lastVerifiedBlock) {
+        lastVerifiedBlockNumber.set(lastVerifiedBlock);
+    }
+
+    /**
      * Gets the last verified block number.
      *
      * @return the last verified block number, initially -1 if no blocks have been verified
@@ -261,10 +271,9 @@ public class SimulatedBlockNodeServer {
         }
     }
 
-    public void markAsBeingShutdown() {
-        this.hasEverBeenShutdown = true;
-    }
-
+    /**
+     * @return whether this server has ever been shutdown.
+     */
     public boolean hasEverBeenShutdown() {
         return hasEverBeenShutdown;
     }
@@ -336,7 +345,7 @@ public class SimulatedBlockNodeServer {
                                     final var header = item.blockHeader();
                                     final long blockNumber = header.number();
                                     final long lastVerifiedBlockNum = lastVerifiedBlockNumber.get();
-                                    if (lastVerifiedBlockNum != -1 && blockNumber - lastVerifiedBlockNum > 1) {
+                                    if (blockNumber - lastVerifiedBlockNum > 1) {
                                         handleBehindResponse(replies, blockNumber, lastVerifiedBlockNum);
                                         return;
                                     }

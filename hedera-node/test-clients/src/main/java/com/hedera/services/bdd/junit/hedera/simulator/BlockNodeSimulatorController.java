@@ -222,7 +222,6 @@ public class BlockNodeSimulatorController {
             final int port = server.getPort();
             shutdownSimulatorPorts.put(nodeId, port);
             server.stop();
-            server.markAsBeingShutdown();
         }
         log.info("Shutdown all {} simulators to simulate connection drops", simulatedBlockNodes.size());
     }
@@ -239,8 +238,20 @@ public class BlockNodeSimulatorController {
             final int port = server.getPort();
             shutdownSimulatorPorts.put(index, port);
             server.stop();
-            server.markAsBeingShutdown();
             log.info("Shutdown simulator {} on port {} to simulate connection drop", index, port);
+
+            // Iterate over all other simulators and update their last verified block number
+            // to ensure they are aware of the last verified block from the shutdown simulator.
+            final long lastVerifiedBlockNumber = server.getLastVerifiedBlockNumber();
+
+            for (final Map.Entry<Long, SimulatedBlockNodeServer> entry : simulatedBlockNodes.entrySet()) {
+                final long currentNodeId = entry.getKey();
+                // Exclude the simulator that was just shut down
+                if (currentNodeId != index) {
+                    final SimulatedBlockNodeServer otherSimulator = entry.getValue();
+                    otherSimulator.updateLastVerifiedBlock(lastVerifiedBlockNumber);
+                }
+            }
         } else {
             log.error("Invalid simulator index: {}, valid range is 0-{}", index, simulatedBlockNodes.size() - 1);
         }
