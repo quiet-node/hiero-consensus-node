@@ -41,7 +41,9 @@ public class HasScheduleCapacityCall extends AbstractCall {
             final long consensusSecond,
             final long gasLimit,
             @NonNull final AccountID senderId) {
-        super(gasCalculator, enhancement, true);
+        // A bit counterintuitive, but set isViewCall=false here so we externalize nothing
+        // (neither a dispatched transaction, nor a synthetic ContractFunctionResult)
+        super(gasCalculator, enhancement, false);
         this.gasLimit = gasLimit;
         this.consensusSecond = consensusSecond;
         this.senderId = requireNonNull(senderId);

@@ -87,7 +87,6 @@ open module com.hedera.node.test.clients {
     requires com.hedera.node.app;
     requires com.hedera.node.config;
     requires com.hedera.node.hapi;
-    requires com.hedera.node.test.clients;
     requires com.swirlds.base.test.fixtures;
     requires com.swirlds.base;
     requires com.swirlds.common;

@@ -5,7 +5,6 @@ import static com.hedera.services.bdd.junit.RepeatableReason.NEEDS_VIRTUAL_TIME_
 import static com.hedera.services.bdd.junit.TestTags.INTEGRATION;
 import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.REPEATABLE;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
-import static com.hedera.services.bdd.spec.assertions.ContractFnResultAsserts.anyResult;
 import static com.hedera.services.bdd.spec.assertions.ContractFnResultAsserts.resultWith;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
@@ -78,17 +77,14 @@ public class RepeatableHip1215Tests {
                                                     "hasScheduleCapacityProxy",
                                                     BigInteger.valueOf(targetExpiry),
                                                     BigInteger.valueOf(gasLimit))
-                                            .andAssert(txn -> txn.hasResults(
-                                                    resultWith()
-                                                            .resultThruAbi(
-                                                                    getABIFor(
-                                                                            FUNCTION,
-                                                                            "hasScheduleCapacityProxy",
-                                                                            contract.name()),
-                                                                    ContractFnResultAsserts.isLiteralResult(
-                                                                            new Object[] {i != numSchedulesBeforeFull
-                                                                            })),
-                                                    anyResult())),
+                                            .andAssert(txn -> txn.hasResults(resultWith()
+                                                    .resultThruAbi(
+                                                            getABIFor(
+                                                                    FUNCTION,
+                                                                    "hasScheduleCapacityProxy",
+                                                                    contract.name()),
+                                                            ContractFnResultAsserts.isLiteralResult(
+                                                                    new Object[] {i != numSchedulesBeforeFull})))),
                                     i == numSchedulesBeforeFull
                                             ? noOp()
                                             : scheduleCreate(
