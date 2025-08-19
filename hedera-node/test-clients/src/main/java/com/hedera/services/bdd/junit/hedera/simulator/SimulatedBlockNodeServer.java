@@ -10,6 +10,7 @@ import com.hedera.pbj.runtime.grpc.Pipeline;
 import com.hedera.pbj.runtime.grpc.ServiceInterface;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import io.helidon.webserver.ConnectionConfig;
 import io.helidon.webserver.WebServer;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hiero.block.api.BlockStreamPublishServiceInterface;
@@ -94,6 +96,8 @@ public class SimulatedBlockNodeServer {
 
     private final Random random = new Random();
 
+    private final Supplier<Long> externalLastVerifiedBlockNumberSupplier;
+
     private boolean hasEverBeenShutdown = false;
 
     private final AtomicBoolean sendingAcksEnabled = new AtomicBoolean(true);
@@ -102,10 +106,13 @@ public class SimulatedBlockNodeServer {
      * Creates a new simulated block node server on the specified port.
      *
      * @param port the port to listen on
+     * @param lastVerifiedBlockNumberSupplier an optional supplier that provides the last verified block number
+     * from an external source, can be null if not needed
      */
-    public SimulatedBlockNodeServer(final int port) {
+    public SimulatedBlockNodeServer(final int port, @Nullable final Supplier<Long> lastVerifiedBlockNumberSupplier) {
         this.port = port;
         this.serviceImpl = new MockBlockStreamServiceImpl();
+        this.externalLastVerifiedBlockNumberSupplier = lastVerifiedBlockNumberSupplier;
 
         final PbjConfig pbjConfig = PbjConfig.builder()
                 .name("pbj")
@@ -344,6 +351,15 @@ public class SimulatedBlockNodeServer {
                                 if (item.hasBlockHeader()) {
                                     final var header = item.blockHeader();
                                     final long blockNumber = header.number();
+
+                                    // We might want to catch up using a supplier from another BN simulator
+                                    if (externalLastVerifiedBlockNumberSupplier != null
+                                            && externalLastVerifiedBlockNumberSupplier.get()
+                                                            - lastVerifiedBlockNumber.get()
+                                                    > 1) {
+                                        lastVerifiedBlockNumber.set(externalLastVerifiedBlockNumberSupplier.get());
+                                    }
+
                                     final long lastVerifiedBlockNum = lastVerifiedBlockNumber.get();
                                     if (blockNumber - lastVerifiedBlockNum > 1) {
                                         handleBehindResponse(replies, blockNumber, lastVerifiedBlockNum);

@@ -362,8 +362,12 @@ public class BlockNodeSimulatorSuite {
                         blockNodeIds = {0},
                         blockNodePriorities = {0},
                         applicationPropertiesOverrides = {
-                            "blockStream.streamMode", "BLOCKS",
-                            "blockStream.writerMode", "FILE_AND_GRPC"
+                            "blockStream.buffer.blockTtl",
+                            "1m",
+                            "blockStream.streamMode",
+                            "BLOCKS",
+                            "blockStream.writerMode",
+                            "FILE_AND_GRPC"
                         })
             })
     @Order(6)
