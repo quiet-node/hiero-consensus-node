@@ -285,12 +285,12 @@ public class ScheduleCreateHandler extends AbstractScheduleHandler implements Tr
     }
 
     /**
-     * Checks if there is capacity to schedule execution of the given transaction in the given second; returns
-     * {@link ResponseCodeEnum#OK} if there is capacity, or the failure status if there is not.
+     * Assuming there is still capacity in state to schedule transactions, returns the throttle that would be used to
+     * check capacity for scheduling a transaction at a particular consensus second.
      * @param scheduleStore the writable schedule store
      * @param schedulingConfig the scheduling configuration
      * @param then the consensus second at which the transaction is to be scheduled
-     * @return the response code indicating whether there is capacity to schedule the transaction
+     * @return an {@link Optional} with the throttle, or empty if the max number of transactions are already scheduled
      */
     public Optional<Throttle> loadThrottle(
             @NonNull final WritableScheduleStore scheduleStore,
