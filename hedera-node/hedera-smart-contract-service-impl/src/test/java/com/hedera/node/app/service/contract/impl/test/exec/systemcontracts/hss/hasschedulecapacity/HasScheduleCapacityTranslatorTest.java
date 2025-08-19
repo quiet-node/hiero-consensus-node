@@ -4,8 +4,8 @@ package com.hedera.node.app.service.contract.impl.test.exec.systemcontracts.hss.
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SUCCESS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
@@ -88,7 +88,7 @@ class HasScheduleCapacityTranslatorTest extends CallAttemptTestBase {
                 .willReturn(true);
         final var pricedResult = call.execute(frame);
         assertThat(pricedResult).isNotNull();
-        assertTrue(pricedResult.isViewCall());
+        assertFalse(pricedResult.isViewCall());
         assertThat(pricedResult.responseCode()).isEqualTo(SUCCESS);
         assertThat(pricedResult.fullResult().output())
                 .isEqualTo(Bytes.wrap(HasScheduleCapacityTranslator.HAS_SCHEDULE_CAPACITY
