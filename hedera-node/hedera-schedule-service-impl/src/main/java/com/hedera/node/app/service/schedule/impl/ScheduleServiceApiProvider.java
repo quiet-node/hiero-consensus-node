@@ -2,6 +2,7 @@
 package com.hedera.node.app.service.schedule.impl;
 
 import static com.hedera.hapi.node.base.HederaFunctionality.CONTRACT_CALL;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.OK;
 import static java.util.Objects.requireNonNull;
 
 import com.hedera.hapi.node.base.AccountID;
@@ -13,6 +14,7 @@ import com.hedera.node.app.service.schedule.WritableScheduleStore;
 import com.hedera.node.app.service.schedule.impl.handlers.ScheduleCreateHandler;
 import com.hedera.node.app.spi.api.ServiceApiProvider;
 import com.hedera.node.app.spi.ids.WritableEntityCounters;
+import com.hedera.node.config.data.LedgerConfig;
 import com.hedera.node.config.data.SchedulingConfig;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.state.spi.WritableStates;
@@ -43,33 +45,52 @@ public class ScheduleServiceApiProvider implements ServiceApiProvider<ScheduleSe
         requireNonNull(configuration);
         requireNonNull(writableStates);
         requireNonNull(entityCounters);
-        return new Impl(
+        return new ScheduleServiceApiImpl(
                 new WritableScheduleStoreImpl(writableStates, entityCounters),
+                configuration.getConfigData(LedgerConfig.class),
                 configuration.getConfigData(SchedulingConfig.class));
     }
 
-    public class Impl implements ScheduleServiceApi {
+    /**
+     * Default implementation of the {@link ScheduleServiceApi} interface.
+     */
+    public class ScheduleServiceApiImpl implements ScheduleServiceApi {
         private final WritableScheduleStore scheduleStore;
+        private final LedgerConfig ledgerConfig;
         private final SchedulingConfig schedulingConfig;
 
-        public Impl(
-                @NonNull final WritableScheduleStore scheduleStore, @NonNull final SchedulingConfig schedulingConfig) {
+        public ScheduleServiceApiImpl(
+                @NonNull final WritableScheduleStore scheduleStore,
+                @NonNull final LedgerConfig ledgerConfig,
+                @NonNull final SchedulingConfig schedulingConfig) {
             this.scheduleStore = requireNonNull(scheduleStore);
+            this.ledgerConfig = requireNonNull(ledgerConfig);
             this.schedulingConfig = requireNonNull(schedulingConfig);
         }
 
         @Override
         public boolean hasContractCallCapacity(
-                final long consensusSecond, final long gasLimit, @NonNull final AccountID payerId) {
+                final long expiry,
+                @NonNull final Instant consensusNow,
+                final long gasLimit,
+                @NonNull final AccountID payerId) {
             requireNonNull(payerId);
-            final TransactionBody synthBody = TransactionBody.newBuilder()
+            requireNonNull(consensusNow);
+            if (!schedulingConfig.whitelist().functionalitySet().contains(CONTRACT_CALL)) {
+                return false;
+            }
+            final var expiryStatus =
+                    scheduleCreateHandler.checkExpiry(consensusNow, expiry, ledgerConfig, schedulingConfig);
+            if (expiryStatus != OK) {
+                return false;
+            }
+            final var synthBody = TransactionBody.newBuilder()
                     .contractCall(ContractCallTransactionBody.newBuilder().gas(gasLimit))
                     .build();
-            final var maybeThrottle =
-                    scheduleCreateHandler.loadThrottle(scheduleStore, schedulingConfig, consensusSecond);
+            // Empty if no throttle could be checked the number of allowed scheduled transactions in state is reached
+            final var maybeThrottle = scheduleCreateHandler.loadThrottle(scheduleStore, schedulingConfig, expiry);
             return maybeThrottle
-                    .map(throttle ->
-                            throttle.allow(payerId, synthBody, CONTRACT_CALL, Instant.ofEpochSecond(consensusSecond)))
+                    .map(throttle -> throttle.allow(payerId, synthBody, CONTRACT_CALL, Instant.ofEpochSecond(expiry)))
                     .orElse(false);
         }
     }

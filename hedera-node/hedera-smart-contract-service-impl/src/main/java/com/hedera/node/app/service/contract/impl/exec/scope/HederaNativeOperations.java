@@ -202,11 +202,11 @@ public interface HederaNativeOperations {
     void finalizeHollowAccountAsContract(@NonNull Bytes evmAddress);
 
     /**
-     * @param consensusSecond the consensus second at which the call is to be scheduled
+     * @param expiry the consensus second at which the call is to be scheduled
      * @param gasLimit the gas limit for the contract call
      * @param payerId the ID of the account that will pay for the contract call
      */
-    boolean canScheduleContractCall(long consensusSecond, long gasLimit, @NonNull AccountID payerId);
+    boolean canScheduleContractCall(long expiry, long gasLimit, @NonNull AccountID payerId);
 
     /**
      * Transfers value from one account or contract to another without creating a record in this {@link HandleHederaOperations},

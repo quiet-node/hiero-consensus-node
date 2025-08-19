@@ -154,11 +154,10 @@ public class HandleHederaNativeOperations implements HederaNativeOperations {
      * {@inheritDoc}
      */
     @Override
-    public boolean canScheduleContractCall(
-            final long consensusSecond, final long gasLimit, @NonNull final AccountID payerId) {
+    public boolean canScheduleContractCall(final long expiry, final long gasLimit, @NonNull final AccountID payerId) {
         requireNonNull(payerId);
         final var scheduleServiceApi = context.storeFactory().serviceApi(ScheduleServiceApi.class);
-        return scheduleServiceApi.hasContractCallCapacity(consensusSecond, gasLimit, payerId);
+        return scheduleServiceApi.hasContractCallCapacity(expiry, context.consensusNow(), gasLimit, payerId);
     }
 
     /**

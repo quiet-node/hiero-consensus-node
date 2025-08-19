@@ -8,6 +8,7 @@ import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TRANSACTION;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.INVALID_TRANSACTION_BODY;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.MAX_ENTITIES_IN_PRICE_REGIME_HAVE_BEEN_CREATED;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.MISSING_EXPIRY_TIME;
+import static com.hedera.hapi.node.base.ResponseCodeEnum.OK;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SCHEDULED_TRANSACTION_NOT_IN_WHITELIST;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SCHEDULE_EXPIRATION_TIME_MUST_BE_HIGHER_THAN_CONSENSUS_TIME;
 import static com.hedera.hapi.node.base.ResponseCodeEnum.SCHEDULE_EXPIRATION_TIME_TOO_FAR_IN_FUTURE;
@@ -156,13 +157,9 @@ public class ScheduleCreateHandler extends AbstractScheduleHandler implements Tr
         final var defaultLifetime = ledgerConfig.scheduleTxExpiryTimeSecs();
         final var provisionalSchedule =
                 createProvisionalSchedule(context.body(), consensusNow, defaultLifetime, isLongTermEnabled);
-        final var now = consensusNow.getEpochSecond();
         final var then = provisionalSchedule.calculatedExpirationSecond();
-        validateTrue(then > now, SCHEDULE_EXPIRATION_TIME_MUST_BE_HIGHER_THAN_CONSENSUS_TIME);
-        final var maxLifetime = isLongTermEnabled
-                ? schedulingConfig.maxExpirationFutureSeconds()
-                : ledgerConfig.scheduleTxExpiryTimeSecs();
-        validateTrue(then <= now + maxLifetime, SCHEDULE_EXPIRATION_TIME_TOO_FAR_IN_FUTURE);
+        final var expiryValidity = checkExpiry(consensusNow, then, ledgerConfig, schedulingConfig);
+        validateTrue(expiryValidity == OK, expiryValidity);
         validateTrue(
                 isAllowedFunction(provisionalSchedule.scheduledTransactionOrThrow(), schedulingConfig),
                 SCHEDULED_TRANSACTION_NOT_IN_WHITELIST);
@@ -258,6 +255,33 @@ public class ScheduleCreateHandler extends AbstractScheduleHandler implements Tr
                         sigValueObj,
                         schedulingConfig.longTermEnabled(),
                         ledgerConfig.scheduleTxExpiryTimeSecs()));
+    }
+
+    /**
+     * Returns a code indicating whether the given expiry is valid relative to the given consensus time,
+     * ledger configuration, and scheduling configuration.
+     * @param consensusNow the current consensus time
+     * @param expiry the expiry time to check
+     * @param ledgerConfig the ledger configuration
+     * @param schedulingConfig the scheduling configuration
+     * @return the response code indicating the validity of the expiry time
+     */
+    public ResponseCodeEnum checkExpiry(
+            @NonNull final Instant consensusNow,
+            final long expiry,
+            @NonNull final LedgerConfig ledgerConfig,
+            @NonNull final SchedulingConfig schedulingConfig) {
+        final long now = consensusNow.getEpochSecond();
+        if (expiry <= now) {
+            return SCHEDULE_EXPIRATION_TIME_MUST_BE_HIGHER_THAN_CONSENSUS_TIME;
+        }
+        final long maxLifetime = schedulingConfig.longTermEnabled()
+                ? schedulingConfig.maxExpirationFutureSeconds()
+                : ledgerConfig.scheduleTxExpiryTimeSecs();
+        if (expiry > now + maxLifetime) {
+            return SCHEDULE_EXPIRATION_TIME_TOO_FAR_IN_FUTURE;
+        }
+        return OK;
     }
 
     /**

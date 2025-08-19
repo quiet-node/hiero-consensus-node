@@ -17,7 +17,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 /**
- * An HSS call that uses the {@link ScheduleServiceApi#hasContractCallCapacity(long, long, AccountID)} to
+ * An HSS call that uses the {@link ScheduleServiceApi#hasContractCallCapacity(long, java.time.Instant, long, AccountID)} to
  * check if there is capacity to schedule a contract call at a given second with a given gas limit.
  */
 public class HasScheduleCapacityCall extends AbstractCall {

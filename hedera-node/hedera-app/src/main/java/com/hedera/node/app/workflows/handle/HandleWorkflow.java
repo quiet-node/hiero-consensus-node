@@ -56,6 +56,8 @@ import com.hedera.node.app.service.token.impl.handlers.staking.StakeInfoHelper;
 import com.hedera.node.app.service.token.impl.handlers.staking.StakePeriodManager;
 import com.hedera.node.app.services.NodeRewardManager;
 import com.hedera.node.app.spi.api.ServiceApiProvider;
+import com.hedera.node.app.spi.info.NetworkInfo;
+import com.hedera.node.app.spi.info.NodeInfo;
 import com.hedera.node.app.spi.workflows.record.StreamBuilder;
 import com.hedera.node.app.state.HederaRecordCache;
 import com.hedera.node.app.state.HederaRecordCache.DueDiligenceFailure;
@@ -85,8 +87,6 @@ import com.swirlds.platform.state.service.ReadablePlatformStateStore;
 import com.swirlds.platform.state.service.WritablePlatformStateStore;
 import com.swirlds.platform.system.InitTrigger;
 import com.swirlds.state.State;
-import com.swirlds.state.lifecycle.info.NetworkInfo;
-import com.swirlds.state.lifecycle.info.NodeInfo;
 import com.swirlds.state.spi.CommittableWritableStates;
 import com.swirlds.state.spi.WritableStates;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -195,7 +195,7 @@ public class HandleWorkflow {
             @NonNull final NodeRewardManager nodeRewardManager,
             @NonNull final PlatformStateFacade platformStateFacade,
             @NonNull final BlockBufferService blockBufferService,
-            Map<Class<?>, ServiceApiProvider<?>> apiProviders) {
+            @NonNull final Map<Class<?>, ServiceApiProvider<?>> apiProviders) {
         this.networkInfo = requireNonNull(networkInfo);
         this.stakePeriodChanges = requireNonNull(stakePeriodChanges);
         this.dispatchProcessor = requireNonNull(dispatchProcessor);

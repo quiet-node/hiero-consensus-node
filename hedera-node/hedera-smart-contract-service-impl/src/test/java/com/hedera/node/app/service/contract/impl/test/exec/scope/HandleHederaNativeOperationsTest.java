@@ -58,6 +58,7 @@ import com.hedera.node.app.spi.store.StoreFactory;
 import com.hedera.node.app.spi.workflows.HandleContext;
 import com.hedera.node.app.spi.workflows.record.DeleteCapableTransactionStreamBuilder;
 import com.hedera.node.config.testfixtures.HederaTestConfigBuilder;
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.SortedSet;
@@ -228,9 +229,11 @@ class HandleHederaNativeOperationsTest {
 
     @Test
     void scheduleCallCapacityCheckUsesApi() {
+        final var now = Instant.ofEpochSecond(1_234_567, 890);
         given(context.storeFactory()).willReturn(storeFactory);
+        given(context.consensusNow()).willReturn(now);
         given(storeFactory.serviceApi(ScheduleServiceApi.class)).willReturn(scheduleServiceApi);
-        given(scheduleServiceApi.hasContractCallCapacity(123L, 456L, AccountID.DEFAULT))
+        given(scheduleServiceApi.hasContractCallCapacity(123L, now, 456L, AccountID.DEFAULT))
                 .willReturn(true);
         assertTrue(subject.canScheduleContractCall(123L, 456L, AccountID.DEFAULT));
     }

@@ -115,14 +115,13 @@ public class QueryHederaNativeOperations implements HederaNativeOperations {
 
     /**
      * Refuses to schedule a contract call.
-     * @param consensusSecond the consensus second at which the call is to be scheduled
+     * @param expiry the consensus second at which the call is to be scheduled
      * @param gasLimit the gas limit for the contract call
      * @param payerId the ID of the account that will pay for the contract call
      * @return false
      */
     @Override
-    public boolean canScheduleContractCall(
-            final long consensusSecond, final long gasLimit, @NonNull final AccountID payerId) {
+    public boolean canScheduleContractCall(final long expiry, final long gasLimit, @NonNull final AccountID payerId) {
         return false;
     }
 
