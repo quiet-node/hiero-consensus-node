@@ -70,70 +70,6 @@ public class BlockNodeConnectionManager {
 
     private record Options(Optional<String> authority, String contentType) implements ServiceInterface.RequestOptions {}
 
-    /**
-     * Tracks health information for a block node across multiple connection instances.
-     * This data persists beyond individual BlockNodeConnection lifecycles to properly
-     * implement rate limiting and health monitoring.
-     */
-    private static class BlockNodeHealthTracker {
-        /**
-         * Queue for tracking EndOfStream response timestamps for rate limiting.
-         */
-        private final Queue<Instant> endOfStreamTimestamps = new ConcurrentLinkedQueue<>();
-        /**
-         * Total number of EndOfStream responses received from this node.
-         */
-        private volatile long totalEndOfStreamResponses = 0;
-
-        /**
-         * Records a new EndOfStream response timestamp.
-         * @param timestamp when the EndOfStream was received
-         */
-        void recordEndOfStream(Instant timestamp) {
-            endOfStreamTimestamps.add(timestamp);
-        }
-
-        /**
-         * Checks if the EndOfStream rate limit has been exceeded within the given timeframe.
-         * @param maxAllowed maximum number of EndOfStream responses allowed
-         * @param timeFrame time window to check
-         * @return true if rate limit exceeded
-         */
-        boolean hasExceededEndOfStreamLimit(int maxAllowed, Duration timeFrame) {
-            final Instant now = Instant.now();
-            final Instant cutoff = now.minus(timeFrame);
-
-            // Remove expired timestamps
-            final Iterator<Instant> it = endOfStreamTimestamps.iterator();
-            while (it.hasNext()) {
-                final Instant timestamp = it.next();
-                if (timestamp.isBefore(cutoff)) {
-                    it.remove();
-                } else {
-                    break;
-                }
-            }
-
-            return endOfStreamTimestamps.size() > maxAllowed;
-        }
-
-        /**
-         * Gets the current number of EndOfStream responses in the tracking window.
-         * @return current EndOfStream count
-         */
-        int getCurrentEndOfStreamCount() {
-            return endOfStreamTimestamps.size();
-        }
-
-        /**
-         * Gets the total number of EndOfStream responses ever received.
-         * @return total EndOfStream responses
-         */
-        long getTotalEndOfStreamResponses() {
-            return totalEndOfStreamResponses;
-        }
-    }
-
     private static final BlockNodeConnectionManager.Options OPTIONS =
             new BlockNodeConnectionManager.Options(Optional.empty(), ServiceInterface.RequestOptions.APPLICATION_GRPC);
 
@@ -160,7 +96,7 @@ public class BlockNodeConnectionManager {
      * Tracks health and connection history for each block node across multiple connection instances.
      * This data persists beyond individual BlockNodeConnection lifecycles.
      */
-    private final Map<BlockNodeConfig, BlockNodeHealthTracker> nodeHealthTrackers;
+    private final Map<BlockNodeConfig, BlockNodeStats> nodeStats;
     /**
      * Manager that maintains the block stream on this consensus node.
      */
@@ -213,8 +149,7 @@ public class BlockNodeConnectionManager {
      */
     private final AtomicLong streamingBlockNumber = new AtomicLong(-1);
     /**
-     * This connection streams requests (maintained by {@link BlockState}) in an orderly fashion. This value represents
-     * the index of the request that is being sent to the block node (or was last sent).
+     * This value represents the index of the request that is being sent to the block node (or was last sent).
      */
     private int requestIndex = 0;
     /**
@@ -251,7 +186,7 @@ public class BlockNodeConnectionManager {
         this.configProvider = requireNonNull(configProvider, "configProvider must not be null");
         this.blockBufferService = requireNonNull(blockBufferService, "blockBufferService must not be null");
         this.lastVerifiedBlockPerConnection = new ConcurrentHashMap<>();
-        this.nodeHealthTrackers = new ConcurrentHashMap<>();
+        this.nodeStats = new ConcurrentHashMap<>();
         this.blockStreamMetrics = requireNonNull(blockStreamMetrics, "blockStreamMetrics must not be null");
         this.sharedExecutorService = requireNonNull(sharedExecutorService, "sharedExecutorService must not be null");
 
@@ -620,7 +555,7 @@ public class BlockNodeConnectionManager {
 
         if (!selectNewBlockNodeForStreaming(false)) {
             isConnectionManagerActive.set(false);
-            throw new NoBlockNodesAvailableException();
+            logger.warn("{} No block nodes available for streaming, connection manager will not start", threadInfo());
         }
     }
 
@@ -806,8 +741,7 @@ public class BlockNodeConnectionManager {
         requireNonNull(blockNodeConfig);
         requireNonNull(timestamp);
 
-        final BlockNodeHealthTracker tracker =
-                nodeHealthTrackers.computeIfAbsent(blockNodeConfig, k -> new BlockNodeHealthTracker());
+        final BlockNodeStats tracker = nodeStats.computeIfAbsent(blockNodeConfig, k -> new BlockNodeStats());
         tracker.recordEndOfStream(timestamp);
     }
 
@@ -824,8 +758,8 @@ public class BlockNodeConnectionManager {
 
         requireNonNull(blockNodeConfig);
 
-        final BlockNodeHealthTracker tracker = nodeHealthTrackers.get(blockNodeConfig);
-        return tracker != null && tracker.hasExceededEndOfStreamLimit(maxEndOfStreamsAllowed, endOfStreamTimeFrame);
+        final BlockNodeStats stats = nodeStats.get(blockNodeConfig);
+        return stats != null && stats.hasExceededEndOfStreamLimit(maxEndOfStreamsAllowed, endOfStreamTimeFrame);
     }
 
     /**
@@ -836,33 +770,6 @@ public class BlockNodeConnectionManager {
     public Duration getEndOfStreamScheduleDelay() {
         return endOfStreamScheduleDelay;
     }
-
-    /**
-     * Gets health statistics for a specific block node.
-     * This is useful for monitoring and debugging connection health.
-     *
-     * @param blockNodeConfig the configuration for the block node
-     * @return health statistics, or null if no data exists for this node
-     */
-    public @Nullable BlockNodeHealthStats getNodeHealthStats(@NonNull final BlockNodeConfig blockNodeConfig) {
-        requireNonNull(blockNodeConfig);
-
-        final BlockNodeHealthTracker tracker = nodeHealthTrackers.get(blockNodeConfig);
-        if (tracker == null) {
-            return null;
-        }
-
-        return new BlockNodeHealthStats(
-                tracker.getCurrentEndOfStreamCount(),
-                tracker.getTotalEndOfStreamResponses());
-    }
-
-    /**
-     * Read-only health statistics for a block node.
-     */
-    public record BlockNodeHealthStats(
-            int currentEndOfStreamCount,
-            long totalEndOfStreamResponses) {}
 
     private void blockStreamWorkerLoop() {
         while (isConnectionManagerActive.get()) {
