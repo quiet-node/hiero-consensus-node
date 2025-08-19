@@ -174,10 +174,15 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
     /**
      * Creates a new bidi request pipeline for this block node connection.
      */
-    public synchronized void createRequestPipeline() {
-        if (requestPipeline == null) {
-            requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
-            updateConnectionState(ConnectionState.PENDING);
+    public void createRequestPipeline() {
+        try {
+            stateLock.lock();
+            if (requestPipeline == null) {
+                requestPipeline = blockStreamPublishServiceClient.publishBlockStream(this);
+                updateConnectionState(ConnectionState.PENDING);
+            }
+        } finally {
+            stateLock.unlock();
         }
     }
 
@@ -185,16 +190,21 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * Updates the connection's state in a thread-safe manner.
      * @param newState the new state to transition to
      */
-    public synchronized void updateConnectionState(@NonNull final ConnectionState newState) {
+    public void updateConnectionState(@NonNull final ConnectionState newState) {
         requireNonNull(newState, "newState must not be null");
-        final ConnectionState oldState = connectionState;
-        connectionState = newState;
-        logger.debug("{} [{}] Connection state transitioned from {} to {}", threadInfo(), this, oldState, newState);
+        try {
+            stateLock.lock();
+            final ConnectionState oldState = connectionState;
+            connectionState = newState;
+            logger.debug("{} [{}] Connection state transitioned from {} to {}", threadInfo(), this, oldState, newState);
 
-        if (newState == ConnectionState.ACTIVE) {
-            scheduleStreamReset();
-        } else {
-            cancelStreamReset();
+            if (newState == ConnectionState.ACTIVE) {
+                scheduleStreamReset();
+            } else {
+                cancelStreamReset();
+            }
+        } finally {
+            stateLock.unlock();
         }
     }
 

@@ -81,18 +81,6 @@ public class BlockNodeConnectionManager {
          */
         private final Queue<Instant> endOfStreamTimestamps = new ConcurrentLinkedQueue<>();
         /**
-         * Total number of connection attempts to this node.
-         */
-        private volatile long connectionAttempts = 0;
-        /**
-         * Total number of successful connections established.
-         */
-        private volatile long successfulConnections = 0;
-        /**
-         * Timestamp of the last successful connection.
-         */
-        private volatile Instant lastSuccessfulConnection = null;
-        /**
          * Total number of EndOfStream responses received from this node.
          */
         private volatile long totalEndOfStreamResponses = 0;
@@ -103,7 +91,6 @@ public class BlockNodeConnectionManager {
          */
         void recordEndOfStream(Instant timestamp) {
             endOfStreamTimestamps.add(timestamp);
-            totalEndOfStreamResponses++;
         }
 
         /**
@@ -128,29 +115,6 @@ public class BlockNodeConnectionManager {
             }
 
             return endOfStreamTimestamps.size() > maxAllowed;
-        }
-
-        /**
-         * Records a connection attempt.
-         */
-        void recordConnectionAttempt() {
-            connectionAttempts++;
-        }
-
-        /**
-         * Records a successful connection establishment.
-         */
-        void recordSuccessfulConnection() {
-            successfulConnections++;
-            lastSuccessfulConnection = Instant.now();
-        }
-
-        /**
-         * Gets the success rate for connections to this node.
-         * @return success rate between 0.0 and 1.0
-         */
-        double getSuccessRate() {
-            return connectionAttempts == 0 ? 0.0 : (double) successfulConnections / connectionAttempts;
         }
 
         /**
@@ -874,40 +838,6 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Records a connection attempt for the specified block node.
-     *
-     * @param blockNodeConfig the configuration for the block node
-     */
-    public void recordConnectionAttempt(@NonNull final BlockNodeConfig blockNodeConfig) {
-        if (!isStreamingEnabled.get()) {
-            return;
-        }
-
-        requireNonNull(blockNodeConfig);
-
-        final BlockNodeHealthTracker tracker =
-                nodeHealthTrackers.computeIfAbsent(blockNodeConfig, k -> new BlockNodeHealthTracker());
-        tracker.recordConnectionAttempt();
-    }
-
-    /**
-     * Records a successful connection establishment for the specified block node.
-     *
-     * @param blockNodeConfig the configuration for the block node
-     */
-    public void recordSuccessfulConnection(@NonNull final BlockNodeConfig blockNodeConfig) {
-        if (!isStreamingEnabled.get()) {
-            return;
-        }
-
-        requireNonNull(blockNodeConfig);
-
-        final BlockNodeHealthTracker tracker =
-                nodeHealthTrackers.computeIfAbsent(blockNodeConfig, k -> new BlockNodeHealthTracker());
-        tracker.recordSuccessfulConnection();
-    }
-
-    /**
      * Gets health statistics for a specific block node.
      * This is useful for monitoring and debugging connection health.
      *
@@ -923,10 +853,6 @@ public class BlockNodeConnectionManager {
         }
 
         return new BlockNodeHealthStats(
-                tracker.connectionAttempts,
-                tracker.successfulConnections,
-                tracker.getSuccessRate(),
-                tracker.lastSuccessfulConnection,
                 tracker.getCurrentEndOfStreamCount(),
                 tracker.getTotalEndOfStreamResponses());
     }
@@ -935,10 +861,6 @@ public class BlockNodeConnectionManager {
      * Read-only health statistics for a block node.
      */
     public record BlockNodeHealthStats(
-            long connectionAttempts,
-            long successfulConnections,
-            double successRate,
-            @Nullable Instant lastSuccessfulConnection,
             int currentEndOfStreamCount,
             long totalEndOfStreamResponses) {}
 
@@ -1185,9 +1107,6 @@ public class BlockNodeConnectionManager {
                     }
                 }
 
-                // Record the connection attempt
-                recordConnectionAttempt(connection.getNodeConfig());
-
                 connection.createRequestPipeline();
 
                 /*
@@ -1225,7 +1144,6 @@ public class BlockNodeConnectionManager {
                 final BlockNodeConnection activeConnectionForCAS = activeConnectionRef.get();
                 if (activeConnectionRef.compareAndSet(activeConnectionForCAS, connection)) {
                     // we were able to elevate this connection to the new active one
-                    recordSuccessfulConnection(connection.getNodeConfig());
                     connection.updateConnectionState(ConnectionState.ACTIVE);
                     final long blockToJumpTo =
                             blockNumber != null ? blockNumber : blockBufferService.getLowestUnackedBlockNumber();
