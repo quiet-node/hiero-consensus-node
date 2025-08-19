@@ -26,10 +26,12 @@ import com.hedera.node.app.spi.workflows.DispatchOptions;
 import com.hedera.node.app.spi.workflows.DispatchOptions.UsePresetTxnId;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 /**
@@ -129,8 +131,10 @@ public class DispatchForResponseCodeHssCall extends AbstractCall {
         var status = recordBuilder.status();
         if (status != SUCCESS) {
             recordBuilder.status(status);
+            return completionWith(gasRequirement, recordBuilder, encodedRc(status));
+        } else {
+            return completionWith(gasRequirement, recordBuilder, resultEncoder.apply(recordBuilder));
         }
-        return completionWith(gasRequirement, recordBuilder, resultEncoder.apply(recordBuilder));
     }
 
     /**
