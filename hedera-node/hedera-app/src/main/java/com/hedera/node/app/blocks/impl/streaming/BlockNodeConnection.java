@@ -648,14 +648,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * Processes responses received from the block node through the bidirectional gRPC stream.
      * Handles {@link BlockAcknowledgement}s, {@link EndOfStream} response signals, {@link SkipBlock} and {@link ResendBlock}.
      *
-     * <p>Optimized locking strategy:
-     * <ul>
-     *   <li>Uses minimal read lock to check connection state initially</li>
-     *   <li>Most responses (Acknowledgement, SkipBlock, ResendBlock when block exists) don't change state</li>
-     *   <li>Only acquires write lock when response will actually change connection state</li>
-     *   <li>Leverages gRPC guarantee: no more onNext() calls after onComplete()/onError()</li>
-     * </ul>
-     *
      * @param response the response received from block node
      */
     @Override
