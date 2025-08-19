@@ -5,6 +5,7 @@ import static com.hedera.services.bdd.junit.RepeatableReason.NEEDS_VIRTUAL_TIME_
 import static com.hedera.services.bdd.junit.TestTags.INTEGRATION;
 import static com.hedera.services.bdd.junit.hedera.embedded.EmbeddedMode.REPEATABLE;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
+import static com.hedera.services.bdd.spec.assertions.ContractFnResultAsserts.anyResult;
 import static com.hedera.services.bdd.spec.assertions.ContractFnResultAsserts.resultWith;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.contractCall;
 import static com.hedera.services.bdd.spec.transactions.TxnVerbs.cryptoCreate;
@@ -62,43 +63,42 @@ public class RepeatableHip1215Tests {
     @RepeatableHapiTest(NEEDS_VIRTUAL_TIME_FOR_FAST_EXECUTION)
     final Stream<DynamicTest> hasCapacityUntilFullyScheduled() {
         final long lifetime = 900;
-        // C.f. HIP1215Contract.sol
-        final long hip1215ContractGasPerSchedule = 2_000_000L;
+        final long gasLimit = 2_000_000L;
         final AtomicReference<Instant> startConsensusTime = new AtomicReference<>();
         return hapiTest(
                 miscContract.getInfo(),
                 cryptoCreate(CIVILIAN).balance(10 * ONE_HUNDRED_HBARS),
                 doingContextual(spec -> startConsensusTime.set(spec.consensusTime())),
                 sourcingContextual(spec -> {
-                    final int numSchedulesBeforeFull =
-                            (int) ((SCHEDULABLE_GAS_LIMIT + hip1215ContractGasPerSchedule - 1)
-                                    / hip1215ContractGasPerSchedule);
+                    final int numSchedulesBeforeFull = (int) ((SCHEDULABLE_GAS_LIMIT + gasLimit - 1) / gasLimit);
                     final long targetExpiry = startConsensusTime.get().getEpochSecond() + lifetime;
                     return blockingOrder(IntStream.rangeClosed(1, numSchedulesBeforeFull)
                             .mapToObj(i -> blockingOrder(
                                     contract.call(
-                                                    "hasScheduleCapacityExample",
-                                                    BigInteger.valueOf(targetExpiry
-                                                            - spec.consensusTime()
-                                                                    .getEpochSecond()))
-                                            .andAssert(txn -> txn.hasResults(resultWith()
-                                                    .resultThruAbi(
-                                                            getABIFor(
-                                                                    FUNCTION,
-                                                                    "hasScheduleCapacityExample",
-                                                                    contract.name()),
-                                                            ContractFnResultAsserts.isLiteralResult(
-                                                                    new Object[] {true})))),
+                                                    "hasScheduleCapacityProxy",
+                                                    BigInteger.valueOf(targetExpiry),
+                                                    BigInteger.valueOf(gasLimit))
+                                            .andAssert(txn -> txn.hasResults(
+                                                    resultWith()
+                                                            .resultThruAbi(
+                                                                    getABIFor(
+                                                                            FUNCTION,
+                                                                            "hasScheduleCapacityProxy",
+                                                                            contract.name()),
+                                                                    ContractFnResultAsserts.isLiteralResult(
+                                                                            new Object[] {i != numSchedulesBeforeFull
+                                                                            })),
+                                                    anyResult())),
                                     i == numSchedulesBeforeFull
                                             ? noOp()
                                             : scheduleCreate(
                                                             "call" + i,
                                                             contractCall(miscContract.name())
                                                                     .memo("memo" + i)
-                                                                    .gas(hip1215ContractGasPerSchedule))
+                                                                    .gas(gasLimit))
                                                     .waitForExpiry()
                                                     .expiringAt(targetExpiry)
-                                                    .payingWith(CIVILIAN)))
+                                                    .designatingPayer(CIVILIAN)))
                             .toArray(SpecOperation[]::new));
                 }));
     }
