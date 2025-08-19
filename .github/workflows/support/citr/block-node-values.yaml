@@ -84,3 +84,35 @@ blockNode:
       # this does not create a PVC.
       # should match PERSISTENCE_STORAGE_UNVERIFIED_ROOT_PATH, leave as is for default.
       mountPath: "/opt/hiero/block-node/data/unverified"
+  logs:
+    # Available Levels are (from most verbose to least verbose):
+    # ALL FINEST FINER FINE CONFIG INFO WARNING SEVERE OFF
+    level: "FINEST"
+    configMountPath: "/opt/hiero/block-node/logs/config"
+    loggingProperties:
+      io.helidon.webserver.level: "INFO"
+      io.helidon.webserver.access.level: "INFO"
+      io.helidon.config.level: "SEVERE"
+      io.helidon.security.level: "INFO"
+      io.helidon.common.level: "INFO"
+      handlers: "java.util.logging.ConsoleHandler, java.util.logging.FileHandler"
+      java.util.logging.ConsoleHandler.level: "FINE"
+      java.util.logging.ConsoleHandler.formatter: "java.util.logging.SimpleFormatter"
+      java.util.logging.FileHandler.pattern: "/opt/hiero/block-node/logs/blocknode-%g.log"
+      java.util.logging.FileHandler.append: "true"
+      java.util.logging.FileHandler.limit: "5_000_000"
+      java.util.logging.FileHandler.count: "5"
+      java.util.logging.FileHandler.level: "FINE"
+      java.util.logging.FileHandler.formatter: "java.util.logging.SimpleFormatter"
+      ################################################################################
+      # SimpleFormatter single-line format configuration
+      ################################################################################
+      # The format syntax uses java.util.Formatter.
+      # The parameters are:
+      #   %1$ - date/time (java.util.Date)
+      #   %2$ - source (usually class and method)
+      #   %3$ - logger?s name
+      #   %4$ - log level
+      #   %5$ - log message
+      #   %6$ - throwable trace
+      java.util.logging.SimpleFormatter.format: "%TF %<TT.%<TL%<Tz %4$-7s [%2$s] %5$s%6$s%n"
