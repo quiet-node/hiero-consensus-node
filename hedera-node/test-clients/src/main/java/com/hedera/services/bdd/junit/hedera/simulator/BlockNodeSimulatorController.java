@@ -271,9 +271,9 @@ public class BlockNodeSimulatorController {
 
         if (index >= 0 && index < simulatedBlockNodes.size()) {
             final int port = shutdownSimulatorPorts.get(index);
-            final long lastVerifiedBlock = simulatedBlockNodes.get(index).getLastVerifiedBlockNumber();
             // Create a new server on the same port
-            final SimulatedBlockNodeServer newServer = new SimulatedBlockNodeServer(port, () -> lastVerifiedBlock);
+            final SimulatedBlockNodeServer newServer =
+                    new SimulatedBlockNodeServer(port, simulatedBlockNodes.get(index)::getLastVerifiedBlockNumber);
             newServer.start();
 
             // Replace the old server in the list

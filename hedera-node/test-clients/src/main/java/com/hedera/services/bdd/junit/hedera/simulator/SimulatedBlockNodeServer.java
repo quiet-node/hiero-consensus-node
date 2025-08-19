@@ -227,15 +227,6 @@ public class SimulatedBlockNodeServer {
     }
 
     /**
-     * Updates the last verified block number.
-     *
-     * @param lastVerifiedBlock the last verified block number to update.
-     */
-    public void updateLastVerifiedBlock(final long lastVerifiedBlock) {
-        lastVerifiedBlockNumber.set(lastVerifiedBlock);
-    }
-
-    /**
      * Gets the last verified block number.
      *
      * @return the last verified block number, initially -1 if no blocks have been verified
