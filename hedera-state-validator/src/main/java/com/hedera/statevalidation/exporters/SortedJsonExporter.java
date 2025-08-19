@@ -174,8 +174,11 @@ public class SortedJsonExporter {
                 final OnDiskValue value = vm.get(key);
                     write(
                             writer,
-                            "{\"k\":\"%s\", \"v\":%s}\n"
-                                    .formatted(keyToJson(vm.getLabel(), key.getKey()), valueToJson(vm.getLabel(), value.getValue())));
+                            "{\"k\":\"%s\", \"v\":\"%s\"}\n"
+                                    .formatted(
+                                            keyToJson(vm.getLabel(), key.getKey()).replace("\\", "\\\\").replace("\"", "\\\""),
+                                            valueToJson(vm.getLabel(), value.getValue()).replace("\\", "\\\\").replace("\"", "\\\""))
+                    );
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -186,7 +189,7 @@ public class SortedJsonExporter {
         if (PRETTY_PRINT_ENABLED) {
             writer.write(value);
         } else {
-            writer.write(value.replaceAll("[\n\\s]", ""));
+            writer.write(value.replaceAll("[\\p{C}\\s]", ""));
             writer.newLine();
         }
     }
