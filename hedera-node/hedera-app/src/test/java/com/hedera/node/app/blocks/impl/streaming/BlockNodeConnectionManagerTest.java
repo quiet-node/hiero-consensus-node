@@ -13,6 +13,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -162,14 +163,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
     void testRescheduleAndSelectNode() {
         final BlockNodeConnection connection = mock(BlockNodeConnection.class);
         final Duration delay = Duration.ofSeconds(1);
-        doReturn(lock).when(connection).getLock();
-        doReturn(BlockNodeConfig.newBuilder()
-                        .address("localhost")
-                        .port(40840)
-                        .priority(0)
-                        .build())
-                .when(connection)
-                .getNodeConfig();
 
         connectionManager.rescheduleAndSelectNewNode(connection, delay);
 
@@ -736,6 +729,8 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
 
         verify(activeConnection).getNodeConfig();
         verify(newConnection).getNodeConfig();
+        verify(newConnection).close();
+        verify(newConnection, times(2)).getLock();
 
         verifyNoMoreInteractions(activeConnection);
         verifyNoMoreInteractions(newConnection);
@@ -1024,13 +1019,6 @@ class BlockNodeConnectionManagerTest extends BlockNodeCommunicationTestBase {
         doReturn(null).when(bufferService).getBlockState(10L);
         doReturn(11L).when(bufferService).getLastBlockNumberProduced();
         doReturn(lock).when(connection).getLock();
-        doReturn(BlockNodeConfig.newBuilder()
-                        .address("localhost")
-                        .port(40840)
-                        .priority(0)
-                        .build())
-                .when(connection)
-                .getNodeConfig();
 
         final boolean shouldSleep = invoke_processStreamingToBlockNode(connection);
 

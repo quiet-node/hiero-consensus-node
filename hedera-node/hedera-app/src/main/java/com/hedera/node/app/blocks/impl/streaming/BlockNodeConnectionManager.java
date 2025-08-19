@@ -686,14 +686,12 @@ public class BlockNodeConnectionManager {
                     currentStreamingBlockNumber,
                     latestBlockNumber);
 
-            connection.getLock().readLock().unlock();
             connection.getLock().writeLock().lock();
             try {
                 rescheduleAndSelectNewNode(connection, LONGER_RETRY_DELAY);
             } finally {
                 connection.getLock().writeLock().unlock();
             }
-            connection.getLock().readLock().lock();
 
             return true;
         }
