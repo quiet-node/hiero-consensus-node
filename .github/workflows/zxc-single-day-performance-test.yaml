@@ -72,7 +72,7 @@ env:
   #Release version from jFrog
   NLG_VERSION: 0.6.0
   BlockNode_version: 0.16.1
-  NUM_OF_BLOCK_NODES: 1
+  NUM_OF_BLOCK_NODES: 3
 
 jobs:
   performance-tests-start:
