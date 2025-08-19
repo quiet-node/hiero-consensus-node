@@ -76,9 +76,6 @@ public class ScheduleServiceApiProvider implements ServiceApiProvider<ScheduleSe
                 @NonNull final AccountID payerId) {
             requireNonNull(payerId);
             requireNonNull(consensusNow);
-            if (!schedulingConfig.whitelist().functionalitySet().contains(CONTRACT_CALL)) {
-                return false;
-            }
             final var expiryStatus =
                     scheduleCreateHandler.checkExpiry(consensusNow, expiry, ledgerConfig, schedulingConfig);
             if (expiryStatus != OK) {
