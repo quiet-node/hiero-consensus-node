@@ -1122,7 +1122,7 @@ public class BlockNodeConnectionManager {
                     currentActiveConnection.getLock().lock();
                     try {
                         // Double-check that this connection is still active after acquiring the lock
-                        if (activeConnectionRef.get() == currentActiveConnection) {
+                        if (currentActiveConnection.getConnectionState() == ConnectionState.ACTIVE) {
                             logger.debug("{} [{}] Closing old active connection", threadInfo(), this);
                             currentActiveConnection.close();
                         } else {
@@ -1134,8 +1134,6 @@ public class BlockNodeConnectionManager {
                                 threadInfo(),
                                 currentActiveConnection,
                                 e);
-                    } finally {
-                        currentActiveConnection.getLock().unlock();
                     }
                 }
 
@@ -1151,6 +1149,9 @@ public class BlockNodeConnectionManager {
                 } else {
                     // Another connection task has preempted this task... reschedule and try again
                     reschedule();
+                }
+                if (currentActiveConnection != null) {
+                    currentActiveConnection.getLock().unlock();
                 }
             } catch (final Exception e) {
                 logger.warn(
