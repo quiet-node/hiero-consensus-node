@@ -54,6 +54,26 @@ public class CrystalTransplantCommand extends AbstractCommand {
     @Override
     public Integer call() throws IOException {
 
+        validateOverrideNetworkJson();
+
+        printDiffsAndGetConfirmation();
+
+        truncatePCESFilesIfNotAFreezeState();
+
+        copyPCESFilesToCorrectDirectory();
+
+        performConfigBump();
+
         return RETURN_CODE_SUCCESS;
     }
+
+    private void validateOverrideNetworkJson() {}
+    
+    private void printDiffsAndGetConfirmation() {}
+
+    private void truncatePCESFilesIfNotAFreezeState() {}
+
+    private void copyPCESFilesToCorrectDirectory() {}
+
+    private void performConfigBump() {}
 }
