@@ -32,15 +32,16 @@ import com.google.protobuf.ByteString;
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.platform.event.StateSignatureTransaction;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
+import com.swirlds.base.time.Time;
 import com.swirlds.base.units.UnitConstants;
 import com.swirlds.base.utility.Pair;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.iterators.MerkleIterator;
 import com.swirlds.common.metrics.RunningAverageMetric;
 import com.swirlds.common.metrics.SpeedometerMetric;
 import com.swirlds.common.threading.framework.config.ThreadConfiguration;
 import com.swirlds.common.utility.AutoCloseableWrapper;
 import com.swirlds.common.utility.StopWatch;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.demo.merkle.map.FCMConfig;
 import com.swirlds.demo.merkle.map.MapValueData;
 import com.swirlds.demo.merkle.map.MapValueFCQ;
@@ -865,7 +866,7 @@ public class PlatformTestingToolMain extends DefaultSwirldMain<PlatformTestingTo
      */
     @Override
     @NonNull
-    public PlatformTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
+    public PlatformTestingToolState newStateRoot() {
         final PlatformTestingToolState state = new PlatformTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -879,7 +880,7 @@ public class PlatformTestingToolMain extends DefaultSwirldMain<PlatformTestingTo
      */
     @Override
     public Function<VirtualMap, PlatformTestingToolState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext) {
+            @NonNull Configuration configuration, @NonNull Metrics metrics, @NonNull Time time) {
         throw new UnsupportedOperationException();
     }
 

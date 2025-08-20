@@ -15,15 +15,18 @@ import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
 import com.hedera.hapi.platform.state.JudgeId;
 import com.hedera.hapi.platform.state.MinimumJudgeInfo;
+import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.Reservable;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.WeightGenerators;
-import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.common.test.fixtures.merkle.TestMerkleCryptoFactory;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
 import com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils;
 import com.swirlds.platform.config.StateConfig;
 import com.swirlds.platform.crypto.SignatureVerifier;
+import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.signed.SignedState;
 import com.swirlds.platform.test.fixtures.addressbook.RandomRosterBuilder;
 import com.swirlds.platform.test.fixtures.state.manager.SignatureVerificationTestUtils;
@@ -64,7 +67,7 @@ public class RandomSignedStateGenerator {
 
     final Random random;
 
-    private TestVirtualMapState state;
+    private MerkleNodeState state;
     private Long round;
     private Hash legacyRunningEventHash;
     private Roster roster;
@@ -153,7 +156,9 @@ public class RandomSignedStateGenerator {
             } else {
                 final String virtualMapLabel =
                         "vm-" + RandomSignedStateGenerator.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
-                stateInstance = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel, TestPlatformContextBuilder.create().build());
+
+                stateInstance = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(
+                        virtualMapLabel, CONFIGURATION, new NoOpMetrics(), Time.getCurrent());
             }
         } else {
             stateInstance = state;
@@ -309,7 +314,7 @@ public class RandomSignedStateGenerator {
      *
      * @return this object
      */
-    public RandomSignedStateGenerator setState(final TestVirtualMapState state) {
+    public RandomSignedStateGenerator setState(final MerkleNodeState state) {
         this.state = state;
         return this;
     }

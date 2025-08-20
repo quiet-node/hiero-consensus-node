@@ -12,13 +12,15 @@ package com.swirlds.demo.iss;
  */
 
 import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
-import com.swirlds.common.context.PlatformContext;
+import com.swirlds.base.time.Time;
 import com.swirlds.common.merkle.MerkleNode;
+import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
-import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.platform.state.PlatformStateAccessor;
 import com.swirlds.platform.system.InitTrigger;
@@ -84,8 +86,7 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
     private List<PlannedLogError> plannedLogErrorList = new LinkedList<>();
 
     public ISSTestingToolState() {
-        super(PlatformContext.create(
-                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
+        super(CONFIGURATION, new NoOpMetrics(), Time.getCurrent(), MerkleCryptographyFactory.create(CONFIGURATION));
     }
 
     public void initState(InitTrigger trigger, Platform platform) {
@@ -217,7 +218,7 @@ public class ISSTestingToolState extends MerkleStateRoot<ISSTestingToolState> im
     }
 
     @Override
-    protected ISSTestingToolState copyingConstructor(@NonNull final PlatformContext platformContext) {
+    protected ISSTestingToolState copyingConstructor() {
         return new ISSTestingToolState(this);
     }
 

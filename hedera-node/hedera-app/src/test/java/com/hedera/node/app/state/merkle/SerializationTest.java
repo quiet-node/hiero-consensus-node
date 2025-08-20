@@ -2,6 +2,7 @@
 package com.hedera.node.app.state.merkle;
 
 import static com.hedera.node.app.fixtures.AppTestBase.DEFAULT_CONFIG;
+import static com.swirlds.platform.test.fixtures.config.ConfigUtils.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.TestPlatformStateFacade.TEST_PLATFORM_STATE_FACADE;
 import static com.swirlds.state.merkle.MerkleStateRoot.MINIMUM_SUPPORTED_VERSION;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,9 +10,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.hedera.node.app.services.MigrationStateChanges;
 import com.hedera.node.config.data.HederaConfig;
+import com.swirlds.base.time.Time;
 import com.swirlds.common.io.utility.LegacyTemporaryFileBuilder;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
-import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.extensions.sources.SimpleConfigSource;
 import com.swirlds.config.extensions.test.fixtures.TestConfigBuilder;
@@ -198,7 +200,7 @@ class SerializationTest extends MerkleTestBase {
     @Test
     void snapshot() throws IOException {
         final var schemaV1 = createV1Schema();
-        final var originalTree = (TestVirtualMapState) createMerkleHederaState(schemaV1);
+        final var originalTree = (TestHederaVirtualMapState) createMerkleHederaState(schemaV1);
         final var tempDir = LegacyTemporaryFileBuilder.buildTemporaryDirectory(config);
 
         // prepare the tree and create a snapshot
@@ -264,8 +266,8 @@ class SerializationTest extends MerkleTestBase {
 
     private TestHederaVirtualMapState loadedMerkleTree(Schema schemaV1, byte[] serializedBytes) throws IOException {
         final VirtualMap virtualMap = parseTree(serializedBytes, dir);
-        final TestHederaVirtualMapState loadedTree = new TestHederaVirtualMapState(
-                virtualMap, TestPlatformContextBuilder.create().build());
+        final TestHederaVirtualMapState loadedTree =
+                new TestHederaVirtualMapState(virtualMap, CONFIGURATION, new NoOpMetrics(), Time.getCurrent());
         initServices(schemaV1, loadedTree);
 
         return loadedTree;

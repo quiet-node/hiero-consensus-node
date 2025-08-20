@@ -150,12 +150,15 @@ class StateFileManagerTests {
         MerkleDb.resetDefaultInstancePath();
         final PlatformContext platformContext =
                 TestPlatformContextBuilder.create().build();
-        final Configuration configuration = platformContext.getConfiguration();
         final DeserializedSignedState deserializedSignedState = readStateFile(
                 stateFile,
-                virtualMap -> new TestHederaVirtualMapState(virtualMap, platformContext),
+                virtualMap -> new TestHederaVirtualMapState(
+                        virtualMap,
+                        platformContext.getConfiguration(),
+                        platformContext.getMetrics(),
+                        platformContext.getTime()),
                 TEST_PLATFORM_STATE_FACADE,
-                platformContext.getConfiguration());
+                platformContext);
         SignedState signedState = deserializedSignedState.reservedSignedState().get();
         TestMerkleCryptoFactory.getInstance()
                 .digestTreeSync(signedState.getState().getRoot());
@@ -363,9 +366,13 @@ class StateFileManagerTests {
                     final SignedState stateFromDisk = assertDoesNotThrow(
                             () -> SignedStateFileReader.readStateFile(
                                             savedStateInfo.stateFile(),
-                                            virtualMap -> new TestHederaVirtualMapState(virtualMap, platformContext),
+                                            virtualMap -> new TestHederaVirtualMapState(
+                                                    virtualMap,
+                                                    platformContext.getConfiguration(),
+                                                    platformContext.getMetrics(),
+                                                    platformContext.getTime()),
                                             TEST_PLATFORM_STATE_FACADE,
-                                            PlatformContext.create(configuration))
+                                            platformContext)
                                     .reservedSignedState()
                                     .get(),
                             "should be able to read state on disk");

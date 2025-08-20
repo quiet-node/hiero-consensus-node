@@ -21,7 +21,6 @@ import com.hedera.hapi.platform.state.StateValue;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleInternal;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.crypto.MerkleCryptography;
@@ -135,8 +134,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     // but at this point all major rewrites seem to risky.
     private static final Map<String, Integer> INDEX_LOOKUP = new ConcurrentHashMap<>();
 
-    private final MerkleCryptography merkleCryptography;
-
     public Map<String, Map<String, StateMetadata<?, ?>>> getServices() {
         return services;
     }
@@ -171,22 +168,33 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      */
     private final RuntimeObjectRecord registryRecord;
 
+    private final Configuration configuration;
+
+    private final Metrics metrics;
+
+    private final Time time;
+
+    private final MerkleCryptography merkleCryptography;
     /**
      * Used to track the status of the Platform.
      * It is set to {@code true} if Platform status is not {@code PlatformStatus.ACTIVE}
      */
     private boolean startupMode = true;
 
-    private final PlatformContext platformContext;
-
     /**
      * Create a new instance. This constructor must be used for all creations of this class.
      */
-    public MerkleStateRoot(@NonNull final PlatformContext platformContext) {
+    public MerkleStateRoot(
+            @NonNull final Configuration configuration,
+            @NonNull final Metrics metrics,
+            @NonNull final Time time,
+            @NonNull final MerkleCryptography merkleCryptography) {
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
-        this.platformContext = platformContext;
-        this.merkleCryptography = platformContext.getMerkleCryptography();
-        this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
+        this.configuration = requireNonNull(configuration);
+        this.metrics = requireNonNull(metrics);
+        this.time = requireNonNull(time);
+        this.merkleCryptography = requireNonNull(merkleCryptography);
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
     }
 
     /**
@@ -198,9 +206,11 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         // Copy the Merkle route from the source instance
         super(from);
         this.registryRecord = RuntimeObjectRegistry.createRecord(getClass());
-        this.platformContext = from.platformContext;
+        this.configuration = from.configuration;
+        this.metrics = from.metrics;
+        this.time = from.time;
         this.merkleCryptography = from.merkleCryptography;
-        this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.platformContext.getMetrics());
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.metrics);
         this.listeners.addAll(from.listeners);
         this.startupMode = from.startupMode;
 
@@ -335,14 +345,14 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
         throwIfImmutable();
         throwIfDestroyed();
         setImmutable(true);
-        return copyingConstructor(platformContext);
+        return copyingConstructor();
     }
 
     /**
      * Creates a copy of the instance.
      * @return a copy of the instance
      */
-    protected abstract T copyingConstructor(@NonNull final PlatformContext platformContext);
+    protected abstract T copyingConstructor();
 
     /**
      * Puts the defined service state and its associated node into the merkle tree. The precondition
@@ -942,7 +952,6 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
      */
     @Override
     public void createSnapshot(@NonNull final Path targetPath) {
-        final Time time = platformContext.getTime();
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
         throwIfMutable();
@@ -958,7 +967,7 @@ public abstract class MerkleStateRoot<T extends MerkleStateRoot<T>> extends Part
     @SuppressWarnings("unchecked")
     @Override
     public T loadSnapshot(@NonNull Path targetPath) throws IOException {
-        return (T) MerkleTreeSnapshotReader.readStateFileData(platformContext.getConfiguration(), targetPath)
+        return (T) MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
                 .stateRoot();
     }
 

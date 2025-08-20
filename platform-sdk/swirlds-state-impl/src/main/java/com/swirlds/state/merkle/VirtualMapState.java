@@ -13,7 +13,6 @@ import com.hedera.pbj.runtime.ParseException;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
 import com.swirlds.base.time.Time;
 import com.swirlds.common.Reservable;
-import com.swirlds.common.context.PlatformContext;
 import com.swirlds.common.merkle.MerkleNode;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotReader;
 import com.swirlds.common.merkle.utility.MerkleTreeSnapshotWriter;
@@ -106,9 +105,13 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     private final List<StateChangeListener> listeners = new ArrayList<>();
 
-    private VirtualMap virtualMap;
+    private final Configuration configuration;
 
-    private final PlatformContext platformContext;
+    private final Metrics metrics;
+
+    private final Time time;
+
+    private VirtualMap virtualMap;
 
     /**
      * Used to track the status of the Platform.
@@ -119,13 +122,15 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     /**
      * Initializes a {@link VirtualMapState}.
      *
-     * @param platformContext the platform context
+     * @param configuration the platform configuration
+     * @param metrics       the platform metric
+     * @param time          the time instance
      */
-    public VirtualMapState(@NonNull final PlatformContext platformContext) {
-        this.platformContext = platformContext;
-
-        final Metrics metrics = platformContext.getMetrics();
-        final Configuration configuration = platformContext.getConfiguration();
+    public VirtualMapState(
+            @NonNull final Configuration configuration, @NonNull final Metrics metrics, @NonNull final Time time) {
+        this.configuration = requireNonNull(configuration);
+        this.metrics = requireNonNull(metrics);
+        this.time = requireNonNull(time);
         final MerkleDbDataSourceBuilder dsBuilder;
         final MerkleDbConfig merkleDbConfig = configuration.getConfigData(MerkleDbConfig.class);
         final var tableConfig = new MerkleDbTableConfig(
@@ -144,13 +149,21 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     /**
      * Initializes a {@link VirtualMapState} with the specified {@link VirtualMap}.
      *
-     * @param virtualMap      the virtual map with pre-registered metrics
-     * @param platformContext the platform context
+     * @param virtualMap    the virtual map with pre-registered metrics
+     * @param configuration the platform configuration
+     * @param metrics       the platform metric
+     * @param time          the time instance
      */
-    public VirtualMapState(@NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext) {
-        this.virtualMap = virtualMap;
-        this.platformContext = platformContext;
-        this.snapshotMetrics = new MerkleRootSnapshotMetrics(platformContext.getMetrics());
+    public VirtualMapState(
+            @NonNull final VirtualMap virtualMap,
+            @NonNull final Configuration configuration,
+            @NonNull final Metrics metrics,
+            @NonNull final Time time) {
+        this.virtualMap = requireNonNull(virtualMap);
+        this.configuration = requireNonNull(configuration);
+        this.metrics = requireNonNull(metrics);
+        this.time = requireNonNull(time);
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(metrics);
     }
 
     /**
@@ -160,9 +173,11 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     protected VirtualMapState(@NonNull final VirtualMapState<T> from) {
         this.virtualMap = from.virtualMap.copy();
-        this.platformContext = from.platformContext;
+        this.configuration = from.configuration;
+        this.metrics = from.metrics;
+        this.time = from.time;
         this.startupMode = from.startupMode;
-        this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.platformContext.getMetrics());
+        this.snapshotMetrics = new MerkleRootSnapshotMetrics(from.metrics);
         this.listeners.addAll(from.listeners);
 
         // Copy over the metadata
@@ -180,11 +195,13 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
     /**
      * Creates a new instance.
      *
-     * @param virtualMap      should have already registered metrics
-     * @param platformContext the platform context
+     * @param virtualMap    should have already registered metrics
+     * @param configuration
+     * @param metrics
+     * @param time
      */
     protected abstract T newInstance(
-            @NonNull final VirtualMap virtualMap, @NonNull final PlatformContext platformContext);
+            @NonNull final VirtualMap virtualMap, Configuration configuration, Metrics metrics, Time time);
 
     // State interface implementation
 
@@ -251,7 +268,6 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     @Override
     public void createSnapshot(@NonNull final Path targetPath) {
-        final Time time = platformContext.getTime();
         requireNonNull(time);
         requireNonNull(snapshotMetrics);
         virtualMap.throwIfMutable();
@@ -266,8 +282,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
      */
     @Override
     public T loadSnapshot(@NonNull Path targetPath) throws IOException {
-        final MerkleNode root = MerkleTreeSnapshotReader.readStateFileData(
-                        platformContext.getConfiguration(), targetPath)
+        final MerkleNode root = MerkleTreeSnapshotReader.readStateFileData(configuration, targetPath)
                 .stateRoot();
         if (!(root instanceof VirtualMap readVirtualMap)) {
             throw new IllegalStateException(
@@ -275,11 +290,11 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
         }
 
         final var mutableCopy = readVirtualMap.copy();
-        mutableCopy.registerMetrics(platformContext.getMetrics());
+        mutableCopy.registerMetrics(metrics);
         readVirtualMap.release();
         readVirtualMap = mutableCopy;
 
-        return newInstance(readVirtualMap, platformContext);
+        return newInstance(readVirtualMap, configuration, metrics, time);
     }
 
     // MerkleNodeState interface implementation
@@ -637,7 +652,7 @@ public abstract class VirtualMapState<T extends VirtualMapState<T>> implements S
         public void copyAndReleaseVirtualMap(@NonNull final String stateKey) {
             final var md = stateMetadata.get(stateKey);
             final var mutableCopy = virtualMap.copy();
-            mutableCopy.registerMetrics(platformContext.getMetrics());
+            mutableCopy.registerMetrics(metrics);
             virtualMap.release();
 
             virtualMap = mutableCopy; // so createReadableKVState below will do the job with updated map (copy)

@@ -5,7 +5,9 @@ import static com.swirlds.logging.legacy.LogMarker.STARTUP;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 
 import com.hedera.hapi.node.base.SemanticVersion;
-import com.swirlds.common.context.PlatformContext;
+import com.swirlds.base.time.Time;
+import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.DefaultSwirldMain;
 import com.swirlds.platform.system.Platform;
@@ -99,7 +101,7 @@ public class ISSTestingToolMain extends DefaultSwirldMain<ISSTestingToolState> {
      */
     @Override
     @NonNull
-    public ISSTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
+    public ISSTestingToolState newStateRoot() {
         final ISSTestingToolState state = new ISSTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -113,7 +115,7 @@ public class ISSTestingToolMain extends DefaultSwirldMain<ISSTestingToolState> {
      */
     @Override
     public Function<VirtualMap, ISSTestingToolState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext) {
+            @NonNull Configuration configuration, @NonNull Metrics metrics, @NonNull Time time) {
         throw new UnsupportedOperationException();
     }
 

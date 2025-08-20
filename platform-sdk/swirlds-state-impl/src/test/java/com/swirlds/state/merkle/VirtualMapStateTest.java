@@ -3,6 +3,7 @@ package com.swirlds.state.merkle;
 
 import static com.swirlds.common.test.fixtures.AssertionUtils.assertEventuallyDoesNotThrow;
 import static com.swirlds.merkledb.test.fixtures.MerkleDbTestUtils.assertAllDatabasesClosed;
+import static com.swirlds.platform.test.fixtures.config.ConfigUtils.CONFIGURATION;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
@@ -19,8 +20,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import com.hedera.hapi.node.state.primitives.ProtoBytes;
 import com.swirlds.base.state.MutabilityException;
+import com.swirlds.base.time.Time;
 import com.swirlds.common.io.utility.FileUtils;
-import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.merkledb.MerkleDb;
 import com.swirlds.platform.test.fixtures.state.MerkleTestBase;
 import com.swirlds.platform.test.fixtures.state.TestHederaVirtualMapState;
@@ -64,8 +66,7 @@ public class VirtualMapStateTest extends MerkleTestBase {
     void setUp() {
         MerkleDb.resetDefaultInstancePath();
         setupFruitMerkleMap();
-        virtualMapState =
-                new TestHederaVirtualMapState(TestPlatformContextBuilder.create().build());
+        virtualMapState = new TestHederaVirtualMapState(CONFIGURATION, new NoOpMetrics(), Time.getCurrent());
     }
 
     @Nested

@@ -17,6 +17,7 @@ module com.hedera.node.app {
     requires transitive com.hedera.node.config;
     requires transitive com.hedera.node.hapi;
     requires transitive com.hedera.pbj.runtime;
+    requires transitive com.swirlds.base;
     requires transitive com.swirlds.common;
     requires transitive com.swirlds.config.api;
     requires transitive com.swirlds.metrics.api;
@@ -44,7 +45,6 @@ module com.hedera.node.app {
     requires com.hedera.node.app.service.file;
     requires com.hedera.node.app.service.network.admin;
     requires com.hedera.node.app.service.util;
-    requires com.swirlds.base;
     requires com.swirlds.config.extensions;
     requires com.swirlds.logging;
     requires org.hiero.base.concurrent;
@@ -124,6 +124,8 @@ module com.hedera.node.app {
     exports com.hedera.node.app.roster.schemas;
     exports com.hedera.node.app.ids.schemas;
     exports com.hedera.node.app.hints.schemas;
+    exports com.hedera.node.app.constructable.constructors to
+            org.hiero.base.utility;
 
     provides com.swirlds.config.api.ConfigurationExtension with
             com.hedera.node.app.config.ServicesConfigExtension;

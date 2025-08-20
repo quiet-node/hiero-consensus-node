@@ -12,13 +12,15 @@ package com.swirlds.demo.stats;
  */
 
 import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
 
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
-import com.swirlds.common.context.PlatformContext;
-import com.swirlds.config.api.ConfigurationBuilder;
+import com.swirlds.base.time.Time;
+import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.platform.state.MerkleNodeState;
-import com.swirlds.state.merkle.MerkleStateRoot;
 import com.swirlds.platform.state.PlatformStateAccessor;
+import com.swirlds.state.merkle.MerkleStateRoot;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import org.hiero.base.constructable.ConstructableIgnored;
 
@@ -52,9 +54,7 @@ public class StatsDemoState extends MerkleStateRoot<StatsDemoState> implements M
     private static final long CLASS_ID = 0xc550a1cd94e91ca3L;
 
     public StatsDemoState() {
-        // no op
-        super(PlatformContext.create(
-                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
+        super(CONFIGURATION, new NoOpMetrics(), Time.getCurrent(), MerkleCryptographyFactory.create(CONFIGURATION));
     }
 
     private StatsDemoState(final StatsDemoState sourceState) {
@@ -103,7 +103,7 @@ public class StatsDemoState extends MerkleStateRoot<StatsDemoState> implements M
     }
 
     @Override
-    protected StatsDemoState copyingConstructor(@NonNull final PlatformContext platformContext) {
+    protected StatsDemoState copyingConstructor() {
         return new StatsDemoState(this);
     }
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.fixtures.state;
 
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
 import static com.swirlds.state.StateChangeListener.StateType.MAP;
 import static com.swirlds.state.StateChangeListener.StateType.QUEUE;
 import static com.swirlds.state.StateChangeListener.StateType.SINGLETON;
@@ -8,8 +9,10 @@ import static java.util.Objects.requireNonNull;
 
 import com.hedera.node.app.HederaStateRoot;
 import com.hedera.node.app.state.recordcache.RecordCacheService;
+import com.swirlds.base.time.Time;
 import com.swirlds.common.merkle.MerkleNode;
-import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
+import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.platform.state.MerkleNodeState;
 import com.swirlds.state.State;
 import com.swirlds.state.StateChangeListener;
@@ -40,7 +43,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import org.hiero.base.constructable.ConstructableIgnored;
 import org.hiero.base.crypto.Hash;
@@ -70,7 +72,12 @@ public class FakeState implements MerkleNodeState {
 
     @Override
     public MerkleNode getRoot() {
-        return new HederaStateRoot(TestPlatformContextBuilder.create().build()).getRoot();
+        return new HederaStateRoot(
+                        CONFIGURATION,
+                        new NoOpMetrics(),
+                        Time.getCurrent(),
+                        MerkleCryptographyFactory.create(CONFIGURATION))
+                .getRoot();
     }
 
     /**

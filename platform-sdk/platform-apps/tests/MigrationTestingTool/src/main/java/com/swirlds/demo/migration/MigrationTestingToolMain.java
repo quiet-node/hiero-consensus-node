@@ -8,10 +8,12 @@ import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitialize
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.hapi.node.state.roster.RosterEntry;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.context.PlatformContext;
+import com.swirlds.base.time.Time;
+import com.swirlds.config.api.Configuration;
 import com.swirlds.fcqueue.FCQueueStatistics;
 import com.swirlds.logging.legacy.payload.ApplicationFinishedPayload;
 import com.swirlds.merkle.map.MerkleMapMetrics;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.ParameterProvider;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.system.DefaultSwirldMain;
@@ -170,7 +172,7 @@ public class MigrationTestingToolMain extends DefaultSwirldMain<MigrationTesting
      */
     @NonNull
     @Override
-    public MigrationTestingToolState newStateRoot(@NonNull final PlatformContext platformContext) {
+    public MigrationTestingToolState newStateRoot() {
         final MigrationTestingToolState state = new MigrationTestingToolState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -184,7 +186,7 @@ public class MigrationTestingToolMain extends DefaultSwirldMain<MigrationTesting
      */
     @Override
     public Function<VirtualMap, MigrationTestingToolState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext) {
+            @NonNull Configuration configuration, @NonNull Metrics metrics, @NonNull Time time) {
         throw new UnsupportedOperationException();
     }
 

@@ -12,11 +12,9 @@ open module com.swirlds.state.impl.test.fixtures {
     requires transitive org.hiero.base.utility;
     requires transitive org.junit.jupiter.api;
     requires transitive org.junit.jupiter.params;
-    requires com.swirlds.base;
     requires com.swirlds.common.test.fixtures;
     requires com.swirlds.merkledb.test.fixtures;
     requires com.swirlds.merkledb;
-    requires com.swirlds.metrics.api;
     requires org.hiero.base.crypto;
     requires org.mockito;
     requires static transitive com.github.spotbugs.annotations;

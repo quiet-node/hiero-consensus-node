@@ -17,9 +17,11 @@ import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitialize
 
 import com.hedera.hapi.node.base.SemanticVersion;
 import com.hedera.pbj.runtime.io.buffer.Bytes;
-import com.swirlds.common.context.PlatformContext;
+import com.swirlds.base.time.Time;
 import com.swirlds.common.threading.framework.StoppableThread;
 import com.swirlds.common.threading.framework.config.StoppableThreadConfiguration;
+import com.swirlds.config.api.Configuration;
+import com.swirlds.metrics.api.Metrics;
 import com.swirlds.platform.ParameterProvider;
 import com.swirlds.platform.state.ConsensusStateEventHandler;
 import com.swirlds.platform.state.NoOpConsensusStateEventHandler;
@@ -126,7 +128,7 @@ public class StatsDemoMain extends DefaultSwirldMain<StatsDemoState> {
 
     @NonNull
     @Override
-    public StatsDemoState newStateRoot(@NonNull final PlatformContext platformContext) {
+    public StatsDemoState newStateRoot() {
         final StatsDemoState state = new StatsDemoState();
         TestingAppStateInitializer.DEFAULT.initStates(state);
         return state;
@@ -140,7 +142,7 @@ public class StatsDemoMain extends DefaultSwirldMain<StatsDemoState> {
      */
     @Override
     public Function<VirtualMap, StatsDemoState> stateRootFromVirtualMap(
-            @NonNull final PlatformContext platformContext) {
+            @NonNull Configuration configuration, @NonNull Metrics metrics, @NonNull Time time) {
         throw new UnsupportedOperationException();
     }
 

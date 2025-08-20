@@ -70,7 +70,11 @@ class StateTest {
         final String virtualMapLabel = "vm-" + StateTest.class.getSimpleName() + "-" + java.util.UUID.randomUUID();
         final PlatformContext platformContext =
                 TestPlatformContextBuilder.create().build();
-        MerkleNodeState merkleStateRoot = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(virtualMapLabel, platformContext);
+        MerkleNodeState merkleStateRoot = TestHederaVirtualMapState.createInstanceWithVirtualMapLabel(
+                virtualMapLabel,
+                platformContext.getConfiguration(),
+                platformContext.getMetrics(),
+                platformContext.getTime());
         boolean shouldSaveToDisk = random.nextBoolean();
         SignedState signedState = new SignedState(
                 platformContext.getConfiguration(),

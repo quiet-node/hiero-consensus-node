@@ -23,7 +23,6 @@ module com.swirlds.state.impl {
     requires transitive org.hiero.base.utility;
     requires com.swirlds.fcqueue;
     requires com.swirlds.logging;
-    requires com.swirlds.config.api;
     requires com.swirlds.merkledb;
     requires org.hiero.base.concurrent;
     requires org.apache.logging.log4j;

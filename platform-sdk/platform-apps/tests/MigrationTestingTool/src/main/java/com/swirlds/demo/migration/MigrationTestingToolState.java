@@ -2,10 +2,13 @@
 package com.swirlds.demo.migration;
 
 import static com.swirlds.platform.state.service.PlatformStateFacade.DEFAULT_PLATFORM_STATE_FACADE;
+import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.CONFIGURATION;
 
 import com.hedera.hapi.platform.state.ConsensusSnapshot;
-import com.swirlds.common.context.PlatformContext;
+import com.swirlds.base.time.Time;
 import com.swirlds.common.merkle.MerkleNode;
+import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.config.api.Configuration;
 import com.swirlds.config.api.ConfigurationBuilder;
 import com.swirlds.merkle.map.MerkleMap;
@@ -81,8 +84,7 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
     }
 
     public MigrationTestingToolState() {
-        super(PlatformContext.create(
-                ConfigurationBuilder.create().autoDiscoverExtensions().build()));
+        super(CONFIGURATION, new NoOpMetrics(), Time.getCurrent(), MerkleCryptographyFactory.create(CONFIGURATION));
     }
 
     private MigrationTestingToolState(final MigrationTestingToolState that) {
@@ -239,7 +241,7 @@ public class MigrationTestingToolState extends MerkleStateRoot<MigrationTestingT
     }
 
     @Override
-    protected MigrationTestingToolState copyingConstructor(@NonNull final PlatformContext platformContext) {
+    protected MigrationTestingToolState copyingConstructor() {
         return new MigrationTestingToolState(this);
     }
 }

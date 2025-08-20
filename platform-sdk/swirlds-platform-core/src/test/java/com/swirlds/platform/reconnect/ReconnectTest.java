@@ -2,6 +2,7 @@
 package com.swirlds.platform.reconnect;
 
 import static com.swirlds.common.threading.manager.AdHocThreadManager.getStaticThreadManager;
+import static com.swirlds.platform.test.fixtures.config.ConfigUtils.CONFIGURATION;
 import static com.swirlds.platform.test.fixtures.state.TestingAppStateInitializer.registerMerkleStateRootClassIds;
 import static org.hiero.base.utility.test.fixtures.RandomUtils.getRandomPrintSeed;
 import static org.mockito.Mockito.mock;
@@ -12,6 +13,8 @@ import com.hedera.hapi.node.state.roster.Roster;
 import com.swirlds.base.time.Time;
 import com.swirlds.base.utility.Pair;
 import com.swirlds.common.context.PlatformContext;
+import com.swirlds.common.merkle.crypto.MerkleCryptographyFactory;
+import com.swirlds.common.metrics.noop.NoOpMetrics;
 import com.swirlds.common.test.fixtures.WeightGenerators;
 import com.swirlds.common.test.fixtures.merkle.util.PairedStreams;
 import com.swirlds.common.test.fixtures.platform.TestPlatformContextBuilder;
@@ -119,7 +122,11 @@ final class ReconnectTest {
                     .setRoster(roster)
                     .setSigningNodeIds(nodeIds)
                     .setCalculateHash(true)
-                    .setState(new TestMerkleStateRoot(TestPlatformContextBuilder.create().build())) // FUTURE WORK: remove this line to use
+                    .setState(new TestMerkleStateRoot(
+                            CONFIGURATION,
+                            new NoOpMetrics(),
+                            Time.getCurrent(),
+                            MerkleCryptographyFactory.create(CONFIGURATION))) // FUTURE WORK: remove this line to use
                     // TestHederaVirtualMapState
                     .buildWithFacade();
             final SignedState signedState = signedStateFacadePair.left();
@@ -198,6 +205,7 @@ final class ReconnectTest {
                 RECONNECT_SOCKET_TIMEOUT,
                 reconnectMetrics,
                 platformStateFacade,
-                virtualMap -> new TestHederaVirtualMapState(virtualMap, testPlatformContext));
+                virtualMap ->
+                        new TestHederaVirtualMapState(virtualMap, CONFIGURATION, new NoOpMetrics(), Time.getCurrent()));
     }
 }
