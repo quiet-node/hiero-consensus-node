@@ -5,7 +5,6 @@ import static com.hedera.services.bdd.junit.TestTags.SMART_CONTRACT;
 import static com.hedera.services.bdd.spec.HapiSpec.hapiTest;
 import static com.hedera.services.bdd.spec.queries.QueryVerbs.getScheduleInfo;
 import static com.hedera.services.bdd.spec.utilops.CustomSpecAssert.allRunFor;
-import static com.hedera.services.bdd.spec.utilops.UtilVerbs.*;
 import static com.hedera.services.bdd.suites.contract.Utils.FunctionType.FUNCTION;
 import static com.hedera.services.bdd.suites.contract.Utils.asScheduleId;
 import static com.hedera.services.bdd.suites.contract.Utils.getABIFor;
@@ -19,6 +18,7 @@ import com.hedera.services.bdd.junit.support.TestLifecycle;
 import com.hedera.services.bdd.spec.assertions.ContractFnResultAsserts;
 import com.hedera.services.bdd.spec.dsl.annotations.Contract;
 import com.hedera.services.bdd.spec.dsl.entities.SpecContract;
+import com.hedera.services.bdd.spec.utilops.UtilVerbs;
 import com.hederahashgraph.api.proto.java.ResponseCodeEnum;
 import java.math.BigInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,12 +44,13 @@ public class HasScheduleCapacityTest {
 
     @BeforeAll
     public static void setup(final TestLifecycle lifecycle) {
-        lifecycle.doAdhoc(overriding("contracts.systemContract.scheduleService.scheduleCall.enabled", "true"));
+        lifecycle.doAdhoc(
+                UtilVerbs.overriding("contracts.systemContract.scheduleService.scheduleCall.enabled", "true"));
     }
 
     @AfterAll
     public static void shutdown(final TestLifecycle lifecycle) {
-        lifecycle.doAdhoc(restoreDefault("contracts.systemContract.scheduleService.scheduleCall.enabled"));
+        lifecycle.doAdhoc(UtilVerbs.restoreDefault("contracts.systemContract.scheduleService.scheduleCall.enabled"));
     }
 
     @HapiTest
@@ -79,7 +80,7 @@ public class HasScheduleCapacityTest {
             fees = "scheduled-contract-fees.json")
     @DisplayName("call hasScheduleCapacity -> scheduleCall -> deleteSchedule -> success")
     public Stream<DynamicTest> scheduleCallWithCapacityCheckAndDeleteTest() {
-        return hapiTest(withOpContext((spec, opLog) -> {
+        return hapiTest(UtilVerbs.withOpContext((spec, opLog) -> {
             // create schedule
             final var scheduleAddress = new AtomicReference<Address>();
             allRunFor(
