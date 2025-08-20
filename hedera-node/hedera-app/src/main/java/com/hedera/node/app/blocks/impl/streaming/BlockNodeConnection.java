@@ -12,7 +12,6 @@ import com.hedera.node.internal.network.BlockNodeConfig;
 import com.hedera.pbj.runtime.grpc.Pipeline;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.Flow;
 import java.util.concurrent.ScheduledExecutorService;
@@ -254,7 +253,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      */
     private void closeAndReschedule(@NonNull final Duration delay) {
         requireNonNull(delay, "delay must not be null");
-        blockNodeConnectionManager.closeConnectionAndReschedule(this, delay);
+        close();
+        blockNodeConnectionManager.rescheduleConnection(this, delay);
     }
 
     /**
@@ -268,7 +268,9 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
             @NonNull final PublishStreamRequest.EndStream.Code code, @NonNull final Duration delay) {
         requireNonNull(code, "code must not be null");
         requireNonNull(delay, "delay must not be null");
-        blockNodeConnectionManager.endStreamCloseAndReschedule(this, code, delay);
+
+        endTheStreamWith(code);
+        blockNodeConnectionManager.rescheduleConnection(this, delay);
     }
 
     /**
@@ -278,7 +280,8 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
      * @param blockNumber the block number to restart at
      */
     private void closeAndRestart(final long blockNumber) {
-        blockNodeConnectionManager.closeConnectionAndRestart(this, blockNumber);
+        close();
+        blockNodeConnectionManager.restartConnection(this, blockNumber);
     }
 
     /**
@@ -352,10 +355,6 @@ public class BlockNodeConnection implements Pipeline<PublishStreamResponse> {
                     this,
                     blockNumber,
                     responseCode);
-
-            // Record this EndOfStream response with the connection manager for persistent health tracking
-            final Instant now = Instant.now();
-            blockNodeConnectionManager.recordEndOfStream(blockNodeConfig, now);
 
             // Check if we've exceeded the EndOfStream rate limit using manager's persistent tracking
             if (blockNodeConnectionManager.hasExceededEndOfStreamLimit(blockNodeConfig)) {

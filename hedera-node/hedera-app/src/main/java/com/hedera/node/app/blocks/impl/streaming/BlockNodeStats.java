@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package com.hedera.node.app.blocks.impl.streaming;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
@@ -19,28 +20,25 @@ public class BlockNodeStats {
     private final Queue<Instant> endOfStreamTimestamps = new ConcurrentLinkedQueue<>();
 
     /**
-     * Records a new EndOfStream response timestamp.
-     * @param timestamp when the EndOfStream was received
-     */
-    void recordEndOfStream(Instant timestamp) {
-        endOfStreamTimestamps.add(timestamp);
-    }
-
-    /**
      * Checks if the EndOfStream rate limit has been exceeded within the given timeframe.
+     * @param timestamp the timestamp of the last EndOfStream response received
      * @param maxAllowed maximum number of EndOfStream responses allowed
      * @param timeFrame time window to check
      * @return true if rate limit exceeded
      */
-    boolean hasExceededEndOfStreamLimit(int maxAllowed, Duration timeFrame) {
+    public boolean hasExceededEndOfStreamLimit(
+            @NonNull Instant timestamp, int maxAllowed, @NonNull Duration timeFrame) {
+        // Add the current timestamp to the queue
+        endOfStreamTimestamps.add(timestamp);
+
         final Instant now = Instant.now();
         final Instant cutoff = now.minus(timeFrame);
 
         // Remove expired timestamps
         final Iterator<Instant> it = endOfStreamTimestamps.iterator();
         while (it.hasNext()) {
-            final Instant timestamp = it.next();
-            if (timestamp.isBefore(cutoff)) {
+            final Instant endOfStreamTimestamp = it.next();
+            if (endOfStreamTimestamp.isBefore(cutoff)) {
                 it.remove();
             } else {
                 break;

@@ -313,8 +313,7 @@ public class BlockNodeConnectionManager {
      * @param connection the connection to close and reschedule
      * @param delay the delay before attempting to reconnect
      */
-    public void closeConnectionAndReschedule(
-            @NonNull final BlockNodeConnection connection, @NonNull final Duration delay) {
+    public void rescheduleConnection(@NonNull final BlockNodeConnection connection, @NonNull final Duration delay) {
         if (!isStreamingEnabled.get()) {
             return;
         }
@@ -323,38 +322,6 @@ public class BlockNodeConnectionManager {
         requireNonNull(delay, "delay must not be null");
 
         logger.warn("{} [{}] Closing and rescheduling connection for reconnect attempt", threadInfo(), connection);
-
-        // Close the connection first
-        connection.close();
-
-        // Handle cleanup and rescheduling
-        handleConnectionCleanupAndReschedule(connection, delay);
-    }
-
-    /**
-     * Ends the stream with a specific code, closes the connection, and reschedules it.
-     * This method sends an end stream message before performing cleanup and retry logic.
-     *
-     * @param connection the connection to end, close, and reschedule
-     * @param code the end stream code to send
-     * @param delay the delay before attempting to reconnect
-     */
-    public void endStreamCloseAndReschedule(
-            @NonNull final BlockNodeConnection connection,
-            @NonNull final PublishStreamRequest.EndStream.Code code,
-            @NonNull final Duration delay) {
-        if (!isStreamingEnabled.get()) {
-            return;
-        }
-
-        requireNonNull(connection, "connection must not be null");
-        requireNonNull(code, "code must not be null");
-        requireNonNull(delay, "delay must not be null");
-
-        logger.warn("{} [{}] Ending stream, closing and rescheduling connection", threadInfo(), connection);
-
-        // Send end stream message and close the connection
-        connection.endTheStreamWith(code);
 
         // Handle cleanup and rescheduling
         handleConnectionCleanupAndReschedule(connection, delay);
@@ -367,7 +334,7 @@ public class BlockNodeConnectionManager {
      * @param connection the connection to close and restart
      * @param blockNumber the block number to restart at
      */
-    public void closeConnectionAndRestart(@NonNull final BlockNodeConnection connection, final long blockNumber) {
+    public void restartConnection(@NonNull final BlockNodeConnection connection, final long blockNumber) {
         if (!isStreamingEnabled.get()) {
             return;
         }
@@ -713,25 +680,6 @@ public class BlockNodeConnectionManager {
     }
 
     /**
-     * Records an EndOfStream response for the specified block node.
-     * This tracking persists across connection instances.
-     *
-     * @param blockNodeConfig the configuration for the block node
-     * @param timestamp when the EndOfStream was received
-     */
-    public void recordEndOfStream(@NonNull final BlockNodeConfig blockNodeConfig, @NonNull final Instant timestamp) {
-        if (!isStreamingEnabled.get()) {
-            return;
-        }
-
-        requireNonNull(blockNodeConfig);
-        requireNonNull(timestamp);
-
-        final BlockNodeStats tracker = nodeStats.computeIfAbsent(blockNodeConfig, k -> new BlockNodeStats());
-        tracker.recordEndOfStream(timestamp);
-    }
-
-    /**
      * Checks if the specified block node has exceeded the EndOfStream rate limit.
      *
      * @param blockNodeConfig the configuration for the block node
@@ -744,8 +692,10 @@ public class BlockNodeConnectionManager {
 
         requireNonNull(blockNodeConfig);
 
-        final BlockNodeStats stats = nodeStats.get(blockNodeConfig);
-        return stats != null && stats.hasExceededEndOfStreamLimit(maxEndOfStreamsAllowed, endOfStreamTimeFrame);
+        final Instant now = Instant.now();
+        final BlockNodeStats stats = nodeStats.computeIfAbsent(blockNodeConfig, k -> new BlockNodeStats());
+
+        return stats.hasExceededEndOfStreamLimit(now, maxEndOfStreamsAllowed, endOfStreamTimeFrame);
     }
 
     /**
@@ -837,7 +787,8 @@ public class BlockNodeConnectionManager {
                     currentStreamingBlockNumber,
                     latestBlockNumber);
 
-            closeConnectionAndReschedule(connection, LONGER_RETRY_DELAY);
+            connection.close();
+            rescheduleConnection(connection, LONGER_RETRY_DELAY);
             return true;
         }
 
