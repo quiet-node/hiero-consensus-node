@@ -198,7 +198,7 @@ public class SyncGossipModular implements Gossip {
      * @param fallenBehindMonitor
      * @return constructed ReconnectProtocol
      */
-    public StateSyncProtocol createReconnectProtocol(
+    private StateSyncProtocol createReconnectProtocol(
             @NonNull final PlatformContext platformContext,
             @NonNull final ThreadManager threadManager,
             @NonNull final Function<String, ReservedSignedState> latestCompleteState,

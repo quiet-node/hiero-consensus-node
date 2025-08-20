@@ -96,6 +96,7 @@ class PlatformWiringTests {
 
         final PlatformWiring wiring = new PlatformWiring(platformContext, model, applicationCallbacks, true);
 
+        final PlatformCoordinator coordinator = new PlatformCoordinator(wiring);
         final PlatformComponentBuilder componentBuilder =
                 new PlatformComponentBuilder(mock(PlatformBuildingBlocks.class));
 
@@ -170,8 +171,8 @@ class PlatformWiringTests {
                 mock(AppNotifier.class),
                 mock(PlatformPublisher.class));
 
-        wiring.start();
+        coordinator.start();
         assertFalse(wiring.getModel().checkForUnboundInputWires());
-        wiring.stop();
+        coordinator.stop();
     }
 }
