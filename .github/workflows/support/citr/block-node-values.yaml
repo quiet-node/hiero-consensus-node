@@ -87,7 +87,7 @@ blockNode:
   logs:
     # Available Levels are (from most verbose to least verbose):
     # ALL FINEST FINER FINE CONFIG INFO WARNING SEVERE OFF
-    level: "INFO"
+    level: "TRACE"
     configMountPath: "/opt/hiero/block-node/logs/config"
     loggingProperties:
       io.helidon.webserver.level: "INFO"
@@ -116,3 +116,7 @@ blockNode:
       #   %5$ - log message
       #   %6$ - throwable trace
       java.util.logging.SimpleFormatter.format: "%TF %<TT.%<TL%<Tz %4$-7s [%2$s] %5$s%6$s%n"
+      io.helidon.level: "INFO"
+      com.sun.net.httpserver.level: "WARNING"
+      com.sun.net.httpserver.ServerImpl.level: "WARNING"
+      com.sun.net.httpserver.ExchangeImpl.level: "WARNING"
